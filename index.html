@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>United We Rise</title>
+    <!-- External Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search United We Rise">
+        </div>
+        <div class="logo">
+            <a href="index.html">United We Rise</a>
+        </div>
+	<nav>
+	    <ul>
+		<li><a href="about.html">About</a></li>
+		<li><a href="donate.html">Donate</a></li>
+		<li><a href="#" id="loginLink">Login</a></li> <!-- Updated with ID -->
+	    </ul>
+	</nav>
+
+    </header>
+    <main>
+        <div id="map-container">
+            <div id="map"></div>
+            <div id="electionInfo" class="info-box">
+		<button id="closeButton">&times;</button> <!-- Close Button -->
+	    </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 United We Rise</p>
+    </footer>
+    <!-- External Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Custom JS -->
+    <script src="js/script.js"></script>
+<!-- Login Modal -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Login to United We Rise</h2>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required><br><br>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required><br><br>
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</div>
+<!-- Closable CTA Panel -->
+<div id="cta-panel" style="
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #F8F4E9;
+  border: 2px solid #6B8E23;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  padding: 16px 24px;
+  width: auto;
+  max-width: 90vw;
+  box-sizing: border-box;
+">
+  <button onclick="this.parentElement.style.display='none'" 
+    style="position: absolute; top: 8px; right: 8px; background: none; border: none; font-size: 1.2rem; color: #5A534A;">
+    ×
+  </button>
+  
+  <div style="text-align: left; margin: 0 10px;">
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">UnitedWeRise is a nonprofit platform connecting candidates directly with voters.</p>
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">No party machines. No corporate money.</p>
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
+    <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because UnitedWeRise!</p>
+  </div>
+
+  <div style="text-align: center;">
+<iframe 
+  src="https://docs.google.com/forms/d/e/1FAIpQLSeL3qSrhI476uTOHmCUx9xW_9fyQFXXL0k-RyLSqhuBSXcl9A/viewform?usp=dialog/viewform?embedded=true" 
+  width="100%" 
+  height="400" 
+  frameborder="0" 
+  style="border: none;"
+>
+  Your browser doesn't support iframes
+</iframe>
+  </div>
+</div>
+
+<script>
+  if (!localStorage.getItem('panelClosed')) {
+    document.getElementById('cta-panel').style.display = 'block';
+  }
+  document.querySelector('#cta-panel button').addEventListener('click', function() {
+    localStorage.setItem('panelClosed', 'true');
+  });
+</script>
+</body>
+</html>
