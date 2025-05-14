@@ -80,8 +80,8 @@ nav ul li a:hover {
     text-decoration: underline;
 }
 
-/* Disable ALL page scrolling */
-html, body {
+/* Disable ALL page scrolling on Index */
+#index-main {
   overflow: hidden; /* Kills scrollbars */
   height: 100%; 
   margin: 0;
@@ -246,4 +246,23 @@ h3 {
 
 .close-button:hover {
     color: red;
+}
+
+#about-main { 
+  margin-top: 60px;
+  padding: 20px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+  color: #3b3a2e;
+
+}
+
+#about-main section {
+  margin-bottom: 50px; /* or less */
+}
+
+#about-main section:last-child {
+  margin-bottom: 10;
 }
