@@ -2,63 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>United We Rise</title>
-    <!-- External Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-    <header>
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Search United We Rise">
-        </div>
-        <div class="logo">
-            <a href="index.html">United We Rise</a>
-        </div>
-	<nav>
-	    <ul>
-		<li><a href="about.html">About</a></li>
-		<li><a href="donate.html">Donate</a></li>
-		<li><a href="#" id="loginLink">Login</a></li> <!-- Updated with ID -->
-	    </ul>
-	</nav>
+    <title>United We Rise - Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
 
-    </header>
-    <main id="index-main">
-        <div id="map-container">
-            <div id="map"></div>
-            <div id="electionInfo" class="info-box">
-		<button id="closeButton">&times;</button> <!-- Close Button -->
-	    </div>
-        </div>
-    </main>
-    <footer>
-        <p>&copy; 2025 United We Rise</p>
-    </footer>
-    <!-- External Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Custom JS -->
-    <script src="js/script.js"></script>
-<!-- Login Modal -->
-<div id="loginModal" class="modal">
-    <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2>Login to United We Rise</h2>
-        <form id="loginForm">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required><br><br>
+<!-- Leaflet CSS/JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required><br><br>
+<style>
+  #mapContainer {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    transition: all 0.3s ease;
+    z-index: 5;
+  }
 
-            <button type="submit">Login</button>
-        </form>
-    </div>
-</div>
-<!-- Closable CTA Panel -->
-<div id="cta-panel" style="
+  #mapContainer.collapsed {
+    width: 25%;
+    height: 30%;
+    right: 0.5%;
+    top: 60px;
+    left: auto;
+    border: 2px solid #ccc;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  #mapToggleBtn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #aaa;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  #cta-panel {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #F8F4E9;
+    border: 2px solid #6B8E23;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 16px 24px;
+    width: auto;
+    max-width: 90vw;
+    box-sizing: border-box;
+    display: none;
+    z-index: 9999;
+  }
+
+  #cta-panel button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #5A534A;
+  }
+
+#mapToggleBtn {
+  position: fixed; /* instead of absolute */
+  top: 72px; /* accounts for nav bar */
+  right: 24px;
+  z-index: 9999;
+  background: white;
+  border: 1px solid #aaa;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#google-cta-panel {
   position: absolute;
   top: 20%;
   left: 50%;
@@ -71,33 +106,253 @@
   width: auto;
   max-width: 90vw;
   box-sizing: border-box;
-">
-  <button onclick="this.parentElement.style.display='none'" 
-    style="position: absolute; top: 8px; right: 8px; background: none; border: none; font-size: 1.2rem; color: #5A534A;">
-    ×
-  </button>
-  
-  <div style="text-align: left; margin: 0 10px;">
-    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">UnitedWeRise is a nonprofit platform connecting candidates directly with voters.</p>
-    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">No party machines. No corporate money.</p>
-    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
-    <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because UnitedWeRise!</p>
-  </div>
+  display: none;
+  z-index: 9999;
+}
+#google-cta-panel button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #5A534A;
+}
+</style>
+</head>
+<body>
+    <div class="top-bar">
+        <input class="search" type="text" placeholder="Search Name or Location">
+        <div class="logo">[Logo Placeholder] United We Rise</div>
+        <div class="nav">
+            <givebutter-widget id="p75ZaL"></givebutter-widget>
+            <a href="#">About UWR</a>
+            <a href="#">Login / Sign-Up</a>
+        </div>
+    </div>
+    <div class="container">
+        <div class="sidebar collapsed" id="sidebar">
+            <div class="thumbs">
+                <div class="thumb" onclick="togglePanel('trending')" title="Trending">🔥 <span class="label">Trending</span></div>
+                <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
+                <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+            </div>
+            <button id="toggleSidebar">⇄</button>
+        </div>
+        <div class="main" id="mainContent">
+            <h1>Main Content Area</h1>
+            <p>This is a placeholder for future content like search results or profiles.</p>
+        </div>
+    </div>
 
-  <div style="text-align: center;">
-<iframe 
-  src="https://docs.google.com/forms/d/e/1FAIpQLSeL3qSrhI476uTOHmCUx9xW_9fyQFXXL0k-RyLSqhuBSXcl9A/viewform?usp=dialog/viewform?embedded=true" 
-  width="100%" 
-  height="400" 
-  frameborder="0" 
-  style="border: none;"
->
-  Your browser doesn't support iframes
-</iframe>
-  </div>
+    <div id="panel-trending" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>Trending</span>
+            <button onclick="closePanel('trending')">X</button>
+        </div>
+        <div class="panel-body">
+            <details><summary>Local</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Zoning Issue', 2)">Generic Zoning Issue</a></li>
+                    <li><a href="#" onclick="openDetail('School District Issue', 2)">Generic School District Issue</a></li>
+                </ul>
+            </details>
+            <details><summary>State</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('State Tax Issue', 2)">Generic State Tax Issue</a></li>
+                </ul>
+            </details>
+            <details><summary>National</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Immigration Issue', 2)">Generic Immigration Issue</a></li>
+                    <li><a href="#" onclick="openDetail('Foreign Policy Issue', 2)">Generic Foreign Policy Issue</a></li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>Upcoming Contests</span>
+            <button onclick="closePanel('upcoming')">X</button>
+        </div>
+        <div class="panel-body">
+            <details><summary>Local</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Mayor', 2)">Mayor</a></li>
+                    <li><a href="#" onclick="openDetail('City Council', 2)">City Council</a></li>
+                    <li><a href="#" onclick="openDetail('School Board', 2)">School Board</a></li>
+                </ul>
+            </details>
+            <details><summary>State</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Governor', 2)">Governor</a></li>
+                    <li><a href="#" onclick="openDetail('State Senate', 2)">State Senate</a></li>
+                </ul>
+            </details>
+            <details><summary>National</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('President', 2)">President</a></li>
+                    <li><a href="#" onclick="openDetail('U.S. House', 2)">U.S. House</a></li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <div id="panel-officials" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>My Elected Officials</span>
+            <button onclick="closePanel('officials')">X</button>
+        </div>
+        <div class="panel-body">
+            <details><summary>Local</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('City Council', 2)">City Council</a></li>
+                    <li><a href="#" onclick="openDetail('Mayor', 2)">Mayor</a></li>
+                </ul>
+            </details>
+            <details><summary>State</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('State Legislators', 2)">State Legislators</a></li>
+                    <li><a href="#" onclick="openDetail('Governor', 2)">Governor</a></li>
+                </ul>
+            </details>
+            <details><summary>National</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Senators', 2)">Senators</a></li>
+                    <li><a href="#" onclick="openDetail('Representatives', 2)">Representatives</a></li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <div id="detail-panel" class="detail-panel hidden" data-offset="2">
+        <div class="panel-header">
+            <span id="detail-title">Detail</span>
+            <button onclick="closeDetail()">X</button>
+        </div>
+        <div class="panel-body">
+            <p id="detail-content">Placeholder content for selected topic.</p>
+        </div>
+    </div>
+
+<!-- Map Container -->
+<div id="mapContainer">
+  <button id="mapToggleBtn">Collapse</button>
+  <div id="map"></div>
 </div>
 
 <script>
+  const map = L.map('map', {
+    center: [37.8283, -98.5795],
+    zoom: 5,
+    zoomControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    tap: false,
+    touchZoom: false
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+  }).addTo(map);
+
+  const topics = [
+    { coords: [40.7128, -74.0060], text: '📢 Rent control in NYC gaining momentum!' },
+    { coords: [34.0522, -118.2437], text: '🚗 EV subsidies debated in California legislature.' },
+    { coords: [41.8781, -87.6298], text: '⚖️ Chicago voters discuss criminal justice reform.' },
+    { coords: [29.7604, -95.3698], text: '🗳️ Texas push for open primaries gaining traction.' },
+    { coords: [47.6062, -122.3321], text: '🌳 Seattle community organizing for green zoning laws.' },
+    { coords: [39.7392, -104.9903], text: '🏡 Denver debates housing-first initiatives.' },
+    { coords: [33.4484, -112.0740], text: '🚁 Phoenix drone delivery regulations spark debate.' },
+    { coords: [25.7617, -80.1918], text: '🏖️ Miami climate resiliency bonds trending.' },
+    { coords: [32.7767, -96.7970], text: '💼 Dallas campaign finance reform gaining traction.' },
+    { coords: [42.3601, -71.0589], text: '📚 Boston pushes universal childcare ballot measure.' },
+    { coords: [44.9778, -93.2650], text: '🩺 Minneapolis discusses community healthcare cooperatives.' },
+    { coords: [36.1627, -86.7816], text: '🎸 Nashville considers ranked-choice voting pilot.' },
+    { coords: [38.2527, -85.7585], text: '📉 Louisville debates wealth cap proposals.' },
+    { coords: [35.2271, -80.8431], text: '🚨 Charlotte residents petition for police demilitarization.' },
+    { coords: [37.7749, -122.4194], text: '💡 San Francisco explores public broadband network.' },
+    { coords: [45.5152, -122.6784], text: '🗳️ Portland sees surge in ballot initiative activity.' },
+    { coords: [39.9612, -82.9988], text: '📈 Columbus voters support state UBI pilot.' },
+    { coords: [30.2672, -97.7431], text: '📢 Austin rallies for stronger tenant protections.' },
+    { coords: [36.1699, -115.1398], text: '🎰 Las Vegas considers casino labor reform.' },
+    { coords: [43.0389, -87.9065], text: '🚲 Milwaukee debates bike equity infrastructure.' },
+    { coords: [35.1495, -90.0490], text: '🎓 Memphis students push for free college resolution.' },
+    { coords: [39.1031, -84.5120], text: '🔧 Cincinnati explores worker-owned cooperatives.' },
+    { coords: [40.4406, -79.9959], text: '🧾 Pittsburgh wants tax transparency reform.' },
+    { coords: [33.7490, -84.3880], text: '📬 Atlanta debates automatic voter registration.' },
+    { coords: [27.9506, -82.4572], text: '🌊 Tampa planning climate migration readiness.' },
+    { coords: [44.9537, -93.0900], text: '💸 St. Paul debates eliminating state income tax.' },
+    { coords: [35.0844, -106.6504], text: '🔫 Albuquerque pushes for expanded 2A sanctuary laws.' },
+    { coords: [27.6648, -81.5158], text: '🚸 Florida legislators propose school choice expansion.' },
+    { coords: [39.7684, -86.1581], text: '🏛️ Indiana debates anti-ESG investment protections.' },
+    { coords: [32.3547, -89.3985], text: '🏠 Mississippi town supports loosening zoning for tiny homes.' },
+    { coords: [46.7296, -94.6859], text: '🚜 Rural Minnesota calls for reduced farm regulation.' },
+    { coords: [44.3148, -85.6024], text: '⛽ Michigan residents push for gas tax holidays.' },
+    { coords: [31.9686, -99.9018], text: '📵 Texans argue for online censorship accountability.' },
+    { coords: [34.7465, -92.2896], text: '🧾 Arkansas groups demand single-rate flat tax.' },
+    { coords: [38.5733, -92.6038], text: '📜 Missouri debates constitutional carry expansion.' },
+    { coords: [40.2171, -74.7429], text: '🛠️ NJ business coalition calls for deregulation to spur growth.' }
+
+   ];
+
+
+  let usedTopics = new Map();
+
+  function showRandomPopups() {
+    const count = Math.floor(Math.random() * 2) + 1;
+    const now = Date.now();
+
+    const availableTopics = topics.filter(t => {
+      const lastShown = usedTopics.has(t.text) ? usedTopics.get(t.text) : 0;
+      return now - lastShown > 180000;
+    });
+
+    const shuffled = availableTopics.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, count);
+
+    selected.forEach(topic => {
+      const popup = L.popup({
+        closeButton: false,
+        autoClose: false,
+        closeOnClick: false,
+        autoPan: false
+      })
+        .setLatLng(topic.coords)
+        .setContent(topic.text)
+        .openOn(map);
+
+      usedTopics.set(topic.text, now);
+      setTimeout(() => map.closePopup(popup), 30000);
+    });
+
+    const nextDelay = Math.floor(Math.random() * 3000) + 13000;
+    setTimeout(showRandomPopups, nextDelay);
+  }
+
+  showRandomPopups();
+
+  // Toggle map collapse
+  const mapContainer = document.getElementById('mapContainer');
+  const toggleBtn = document.getElementById('mapToggleBtn');
+  const resizeObserver = new ResizeObserver(() => {
+  map.invalidateSize();
+});
+resizeObserver.observe(mapContainer);
+toggleBtn.addEventListener('click', () => {
+  const isCollapsing = !mapContainer.classList.contains('collapsed');
+  mapContainer.classList.toggle('collapsed');
+  toggleBtn.textContent = isCollapsing ? 'Expand' : 'Collapse';
+  map.setZoom(isCollapsing ? 3 : 5);
+});
+
+
+  // CTA popup logic
   if (!localStorage.getItem('panelClosed')) {
     document.getElementById('cta-panel').style.display = 'block';
   }
@@ -105,5 +360,42 @@
     localStorage.setItem('panelClosed', 'true');
   });
 </script>
+<!-- End Map Container -->
+
+<!-- CTA Panel (Google Form) -->
+<div id="google-cta-panel">
+  <button onclick="this.parentElement.style.display='none'">×</button>
+  <div style="text-align: left; margin: 0 10px;">
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">UnitedWeRise is a nonprofit platform connecting candidates directly with voters.</p>
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">No party machines. No corporate money.</p>
+    <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
+    <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because UnitedWeRise!</p>
+  </div>
+  <div style="text-align: center;">
+    <iframe 
+      src="https://docs.google.com/forms/d/e/1FAIpQLSeL3qSrhI476uTOHmCUx9xW_9fyQFXXL0k-RyLSqhuBSXcl9A/viewform?embedded=true" 
+      width="100%" height="400" frameborder="0" style="border: none;">
+    </iframe>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const panel = document.getElementById('google-cta-panel');
+  const closeBtn = panel?.querySelector('button');
+
+  // Always show it on load
+  if (panel) panel.style.display = 'block';
+
+  // Hide it on click
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      panel.style.display = 'none';
+    });
+  }
+});
+</script>
+<!-- End Closable CTA Panel -->
+
 </body>
 </html>
