@@ -1,0 +1,2041 @@
+.trending-updates-body {
+            max-height: 240px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            scrollbar-width: thin;
+        }
+        .trending-updates-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .trending-updates-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .trending-updates-body::-webkit-scrollbar-thumb {
+            background: #4b5c09;
+            border-radius: 3px;
+        }<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>United We Rise - Demo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        .top-bar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 55px;
+            padding-top: 2px;
+            padding-bottom: 3px;
+            background: #202e0c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+        .top-bar input.search {
+            padding: 5px;
+            width: 200px;
+        }
+        .top-bar .nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .top-bar .nav a, .top-bar .nav button {
+            color: white;
+            text-decoration: none;
+            white-space: nowrap;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: inherit;
+        }
+        .top-bar .nav button:hover {
+            text-decoration: underline;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .container {
+            display: flex;
+            margin-top: 55px;
+        }
+        .sidebar {
+            background: #4b5c09;
+            color: white;
+            width: 60px;
+            transition: width 0.3s ease;
+            position: fixed;
+            top: 55px;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 9;
+        }
+        .sidebar.expanded {
+            width: 200px;
+        }
+        .sidebar .thumbs {
+            display: flex;
+            flex-direction: column;
+            align-items: start;
+            padding-top: 1rem;
+            padding-left: 0.5rem;
+        }
+        .sidebar .thumb {
+            margin: 10px 0;
+            cursor: pointer;
+            font-size: 1.5rem;
+            white-space: nowrap;
+        }
+        .sidebar .thumb:hover {
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        .sidebar .label {
+            margin-left: 10px;
+            display: none;
+        }
+        .sidebar.expanded .label {
+            display: inline;
+        }
+        #toggleSidebar {
+            background: none;
+            border: none;
+            color: white;
+            padding: 1rem;
+            cursor: pointer;
+        }
+        .main {
+            margin-left: 60px;
+            margin-right: 26%; /* Permanently sized for collapsed map space */
+            padding: 1rem;
+            flex-grow: 1;
+        }
+        .sidebar.expanded ~ .main {
+            margin-left: 200px;
+        }
+        .info-panel, .detail-panel {
+            position: fixed;
+            top: 65px;
+            width: 300px;
+            background: #f0f4f8;
+            border: 1px solid #ccc;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 99;
+            transition: left 0.3s ease;
+        }
+        .detail-panel {
+            z-index: 100;
+        }
+        [data-offset="1"] { left: 60px; }
+        [data-offset="2"] { left: 370px; }
+        .sidebar.expanded ~ [data-offset="1"] { left: 200px; }
+        .sidebar.expanded ~ [data-offset="2"] { left: 510px; }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            background: #ccc;
+            padding: 0.5rem;
+            font-weight: bold;
+        }
+        .panel-body {
+            padding: 1rem;
+        }
+        .hidden {
+            display: none;
+        }
+        details {
+            margin-bottom: 0.5rem;
+        }
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            background: #f0f4f8;
+        }
+
+        /* Map Styles */
+        #mapContainer {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+
+        #mapContainer.collapsed {
+            width: 25%;
+            height: 30%;
+            right: 0.5%;
+            top: 60px;
+            left: auto;
+            border: 2px solid #ccc;
+            box-shadow: 0 0 12px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #mapToggleBtn {
+            position: fixed;
+            top: 72px;
+            right: 24px;
+            z-index: 9999;
+            background: white;
+            border: 1px solid #aaa;
+            padding: 6px 12px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        /* Hide Leaflet attribution */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+
+        /* Auth Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .modal-body {
+            margin-bottom: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background: #4b5c09;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .btn:hover {
+            background: #3a4707;
+        }
+        .btn-secondary {
+            background: #6B8E23;
+            margin-top: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: #556b1d;
+        }
+        .auth-switch {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .auth-switch a {
+            color: #4b5c09;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .error-message {
+            color: #d32f2f;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .success-message {
+            color: #2e7d32;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* CTA Panel Styles */
+        #google-cta-panel {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #F8F4E9;
+            border: 2px solid #6B8E23;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 16px 24px;
+            width: auto;
+            max-width: 90vw;
+            box-sizing: border-box;
+            display: none;
+            z-index: 9999;
+        }
+        #google-cta-panel button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #5A534A;
+            cursor: pointer;
+        }
+
+        /* Messages Panel Styles */
+        .messages-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            max-height: 400px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+        }
+        .messages-header {
+            background: #4b5c09;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .messages-body {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        .conversation-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .conversation-item:hover {
+            background: #f5f5f5;
+        }
+        .conversation-item:last-child {
+            border-bottom: none;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4b5c09;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .conversation-info {
+            flex: 1;
+        }
+        .conversation-name {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .conversation-preview {
+            font-size: 0.8rem;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* User Profile Panel Styles */
+        .profile-panel {
+            position: fixed;
+            top: 65px;
+            right: 20px;
+            width: 350px;
+            max-height: 80vh;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 998;
+            display: none;
+            overflow-y: auto;
+        }
+        .profile-header {
+            background: #4b5c09;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .profile-body {
+            padding: 1rem;
+        }
+        .profile-section {
+            margin-bottom: 1.5rem;
+        }
+        .profile-section h3 {
+            margin: 0 0 0.5rem 0;
+            color: #4b5c09;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.25rem;
+        }
+
+        /* Posts Container Styles */
+        .posts-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .post-composer {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .post-composer textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.75rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .post-composer-actions {
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .post-composer-actions .btn {
+            width: auto;
+            padding: 0.5rem 1rem;
+        }
+        .posts-feed {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .post-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .post-item:last-child {
+            border-bottom: none;
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.5rem;
+        }
+        .post-content {
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+        .post-actions {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .post-action {
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .post-action:hover {
+            background: #f0f0f0;
+        }
+        .post-action.liked {
+            color: #d32f2f;
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: relative;
+        }
+        .notification-badge::after {
+            content: attr(data-count);
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #d32f2f;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        /* Trending Updates Panel (under collapsed map) */
+        .trending-updates {
+            position: fixed;
+            top: calc(60px + 30vh + 10px); /* Below collapsed map */
+            right: 0.5%;
+            width: 25%; /* Match collapsed map width exactly */
+            max-height: 300px;
+            background: white;
+            border: 2px solid #4b5c09;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 4; /* Below expanded map (z-index 5) but above content */
+            display: none;
+            overflow: hidden;
+        }
+        .trending-updates.show {
+            display: block;
+        }
+        .trending-updates-header {
+            background: #4b5c09;
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .trending-updates.expanded {
+            max-height: calc(100vh - 60px - 30vh - 30px); /* Expand to bottom of screen minus padding */
+        }
+        .trending-updates.expanded .trending-updates-body {
+            max-height: calc(100vh - 60px - 30vh - 80px); /* Account for header height */
+        }
+        .trending-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .trending-item:last-child {
+            border-bottom: none;
+        }
+        .trending-item:hover {
+            background: #f9f9f9;
+        }
+        .trending-expand-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <input class="search" type="text" placeholder="Search Name or Location" id="searchInput">
+        <div class="logo">[Logo Placeholder] United We Rise</div>
+        <div class="nav">
+            <givebutter-widget id="p75ZaL"></givebutter-widget>
+            <a href="#">About UWR</a>
+            <div id="authSection">
+                <a href="#" onclick="openAuthModal('login')">Login / Sign-Up</a>
+            </div>
+            <div id="userSection" class="user-info" style="display: none;">
+                <span id="userGreeting"></span>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="authTitle">Login</h2>
+                <button onclick="closeAuthModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button class="btn" onclick="handleLogin()">Login</button>
+                    <div class="auth-switch">
+                        <a onclick="switchToRegister()">Don't have an account? Sign up</a>
+                    </div>
+                </div>
+                
+                <div id="registerForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerUsername">Username</label>
+                        <input type="text" id="registerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerFirstName">First Name</label>
+                        <input type="text" id="registerFirstName">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerLastName">Last Name</label>
+                        <input type="text" id="registerLastName">
+                    </div>
+                    <button class="btn" onclick="handleRegister()">Sign Up</button>
+                    <div class="auth-switch">
+                        <a onclick="switchToLogin()">Already have an account? Login</a>
+                    </div>
+                </div>
+                
+                <div id="authMessage"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar collapsed" id="sidebar">
+            <div class="thumbs">
+                <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
+                <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
+                <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+                <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
+                <div class="thumb" onclick="toggleProfile()" title="Profile" id="profileThumb" style="display: none;">👤 <span class="label">Profile</span></div>
+            </div>
+            <button id="toggleSidebar">⇄</button>
+        </div>
+        <div class="main" id="mainContent">
+            <div class="posts-container">
+                <div class="post-composer" id="postComposer" style="display: none;">
+                    <textarea id="postContent" placeholder="Share your thoughts on political issues..."></textarea>
+                    <div class="post-composer-actions">
+                        <label>
+                            <input type="checkbox" id="isPolitical"> Political post
+                        </label>
+                        <button class="btn" onclick="createPost()">Post</button>
+                    </div>
+                </div>
+                <div class="posts-feed" id="postsFeed">
+                    <h1>Welcome to United We Rise</h1>
+                    <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-trending" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>Trending</span>
+            <button onclick="closePanel('trending')">X</button>
+        </div>
+        <div class="panel-body">
+            <div id="trendingContent">
+                <details><summary>Local</summary>
+                    <ul>
+                        <li><a href="#" onclick="openDetail('Zoning Issue', 2)">Generic Zoning Issue</a></li>
+                        <li><a href="#" onclick="openDetail('School District Issue', 2)">Generic School District Issue</a></li>
+                    </ul>
+                </details>
+                <details><summary>State</summary>
+                    <ul>
+                        <li><a href="#" onclick="openDetail('State Tax Issue', 2)">Generic State Tax Issue</a></li>
+                    </ul>
+                </details>
+                <details><summary>National</summary>
+                    <ul>
+                        <li><a href="#" onclick="openDetail('Immigration Issue', 2)">Generic Immigration Issue</a></li>
+                        <li><a href="#" onclick="openDetail('Foreign Policy Issue', 2)">Generic Foreign Policy Issue</a></li>
+                    </ul>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>Upcoming Contests</span>
+            <button onclick="closePanel('upcoming')">X</button>
+        </div>
+        <div class="panel-body">
+            <details><summary>Local</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Mayor', 2)">Mayor</a></li>
+                    <li><a href="#" onclick="openDetail('City Council', 2)">City Council</a></li>
+                    <li><a href="#" onclick="openDetail('School Board', 2)">School Board</a></li>
+                </ul>
+            </details>
+            <details><summary>State</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('Governor', 2)">Governor</a></li>
+                    <li><a href="#" onclick="openDetail('State Senate', 2)">State Senate</a></li>
+                </ul>
+            </details>
+            <details><summary>National</summary>
+                <ul>
+                    <li><a href="#" onclick="openDetail('President', 2)">President</a></li>
+                    <li><a href="#" onclick="openDetail('U.S. House', 2)">U.S. House</a></li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <div id="panel-officials" class="info-panel hidden" data-offset="1">
+        <div class="panel-header">
+            <span>My Elected Officials</span>
+            <button onclick="closePanel('officials')">X</button>
+        </div>
+        <div class="panel-body">
+            <div id="officialsContent">
+                <p>Please log in and set your address to see your elected officials.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="detail-panel" class="detail-panel hidden" data-offset="2">
+        <div class="panel-header">
+            <span id="detail-title">Detail</span>
+            <button onclick="closeDetail()">X</button>
+        </div>
+        <div class="panel-body">
+            <p id="detail-content">Placeholder content for selected topic.</p>
+        </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messagesContainer" class="messages-container">
+        <div class="messages-header">
+            <span>Messages</span>
+            <button onclick="toggleMessages()" style="background: none; border: none; color: white; cursor: pointer;">&times;</button>
+        </div>
+        <div class="messages-body" id="messagesBody">
+            <div style="text-align: center; padding: 2rem; color: #666;">
+                <p>Loading conversations...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Panel -->
+    <div id="profilePanel" class="profile-panel">
+        <div class="profile-header">
+            <span>My Profile</span>
+            <button onclick="toggleProfile()" style="background: none; border: none; color: white; cursor: pointer;">&times;</button>
+        </div>
+        <div class="profile-body" id="profileBody">
+            <div style="text-align: center; padding: 2rem; color: #666;">
+                <p>Loading profile...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trending Updates Panel (under collapsed map) -->
+    <div id="trendingUpdates" class="trending-updates">
+        <div class="trending-updates-header">
+            <span>🔥 Trending Now</span>
+            <button class="trending-expand-btn" onclick="toggleTrendingExpansion()" id="trendingExpandBtn">More</button>
+        </div>
+        <div class="trending-updates-body" id="trendingUpdatesBody">
+            <div style="text-align: center; padding: 1rem; color: #666; font-size: 0.8rem;">
+                Loading trending topics...
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="mapContainer">
+        <button id="mapToggleBtn">Collapse</button>
+        <div id="map"></div>
+    </div>
+
+    <!-- CTA Panel -->
+    <div id="google-cta-panel">
+        <button onclick="this.parentElement.style.display='none'">&times;</button>
+        <div style="text-align: left; margin: 0 10px;">
+            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">UnitedWeRise is a nonprofit platform connecting candidates directly with voters.</p>
+            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">No party machines. No corporate money.</p>
+            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
+            <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because UnitedWeRise!</p>
+        </div>
+        <div style="text-align: center;">
+            <iframe 
+                src="https://docs.google.com/forms/d/e/1FAIpQLSeL3qSrhI476uTOHmCUx9xW_9fyQFXXL0k-RyLSqhuBSXcl9A/viewform?embedded=true" 
+                width="100%" height="400" frameborder="0" style="border: none;">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://localhost:3001/api';
+        let currentUser = null;
+        let authToken = null;
+
+        // Check for existing auth on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load GiveButter widget
+            const givebutterScript = document.createElement("script");
+            givebutterScript.src = "https://widgets.givebutter.com/latest.umd.cjs?acct=rfuBvOJ14QTerl5N&p=other";
+            givebutterScript.async = true;
+            document.head.appendChild(givebutterScript);
+
+            // Check for stored auth
+            authToken = localStorage.getItem('authToken');
+            if (authToken) {
+                verifyAndSetUser();
+            }
+
+            // Wait for Leaflet to load before initializing map
+            const initMapWhenReady = () => {
+                if (typeof L !== 'undefined') {
+                    initializeMap();
+                } else {
+                    // Check again in 100ms
+                    setTimeout(initMapWhenReady, 100);
+                }
+            };
+            
+            // Start checking immediately
+            initMapWhenReady();
+
+            // Show CTA panel if not dismissed
+            if (!localStorage.getItem('panelClosed')) {
+                document.getElementById('google-cta-panel').style.display = 'block';
+            }
+
+            // Start trending refresh interval
+            startTrendingRefresh();
+        });
+
+        // Authentication Functions
+        async function verifyAndSetUser() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setUserLoggedIn(data.user);
+                } else {
+                    // Token is invalid
+                    localStorage.removeItem('authToken');
+                    authToken = null;
+                }
+            } catch (error) {
+                console.error('Auth verification failed:', error);
+                localStorage.removeItem('authToken');
+                authToken = null;
+            }
+        }
+
+        function openAuthModal(mode = 'login') {
+            document.getElementById('authModal').style.display = 'block';
+            if (mode === 'login') {
+                switchToLogin();
+            } else {
+                switchToRegister();
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+            clearAuthForm();
+        }
+
+        function switchToLogin() {
+            document.getElementById('authTitle').textContent = 'Login';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            clearAuthForm();
+        }
+
+        function switchToRegister() {
+            document.getElementById('authTitle').textContent = 'Sign Up';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            clearAuthForm();
+        }
+
+        function clearAuthForm() {
+            document.getElementById('authMessage').innerHTML = '';
+            // Clear all form inputs
+            document.querySelectorAll('#authModal input').forEach(input => input.value = '');
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showAuthMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    setUserLoggedIn(data.user);
+                    closeAuthModal();
+                    showAuthMessage('Login successful!', 'success');
+                } else {
+                    showAuthMessage(data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAuthMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('registerEmail').value;
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const firstName = document.getElementById('registerFirstName').value;
+            const lastName = document.getElementById('registerLastName').value;
+
+            if (!email || !username || !password) {
+                showAuthMessage('Email, username, and password are required', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, username, password, firstName, lastName })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    setUserLoggedIn(data.user);
+                    closeAuthModal();
+                    showAuthMessage('Registration successful!', 'success');
+                } else {
+                    showAuthMessage(data.error || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAuthMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        function setUserLoggedIn(user) {
+            currentUser = user;
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'flex';
+            document.getElementById('userGreeting').textContent = `Hello, ${user.firstName || user.username}!`;
+            
+            // Show user-specific sidebar options
+            document.getElementById('messagesThumb').style.display = 'block';
+            document.getElementById('profileThumb').style.display = 'block';
+            document.getElementById('postComposer').style.display = 'block';
+            
+            // Load user-specific content
+            loadUserContent();
+            loadUserPosts();
+        }
+
+        function logout() {
+            currentUser = null;
+            authToken = null;
+            localStorage.removeItem('authToken');
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('userSection').style.display = 'none';
+            
+            // Hide user-specific elements
+            document.getElementById('messagesThumb').style.display = 'none';
+            document.getElementById('profileThumb').style.display = 'none';
+            document.getElementById('postComposer').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'none';
+            document.getElementById('profilePanel').style.display = 'none';
+            
+            // Reset panels to default content
+            resetPanelsToDefault();
+            
+            // Reset main content
+            document.getElementById('postsFeed').innerHTML = `
+                <h1>Welcome to United We Rise</h1>
+                <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
+            `;
+        }
+
+        function showAuthMessage(message, type) {
+            const messageEl = document.getElementById('authMessage');
+            messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
+
+        async function loadUserContent() {
+            // Load user's elected officials if they have an address
+            try {
+                const response = await fetch(`${API_BASE}/users/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.user.zipCode && data.user.state) {
+                        loadElectedOfficials(data.user.zipCode, data.user.state);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load user content:', error);
+            }
+        }
+
+        async function loadElectedOfficials(zipCode, state) {
+            try {
+                const response = await fetch(`${API_BASE}/political/local?zipCode=${zipCode}&state=${state}&politicalProfileType=ELECTED_OFFICIAL`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateOfficialsPanel(data.users);
+                }
+            } catch (error) {
+                console.error('Failed to load elected officials:', error);
+            }
+        }
+
+        function updateOfficialsPanel(officials) {
+            const content = document.getElementById('officialsContent');
+            if (officials.length === 0) {
+                content.innerHTML = '<p>No verified elected officials found in your area.</p>';
+                return;
+            }
+
+            let html = '<div>';
+            officials.forEach(official => {
+                html += `
+                    <div style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <strong>${official.firstName} ${official.lastName}</strong><br>
+                        <em>${official.officialTitle || official.office}</em><br>
+                        <small>@${official.username}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function resetPanelsToDefault() {
+            document.getElementById('officialsContent').innerHTML = '<p>Please log in and set your address to see your elected officials.</p>';
+        }
+
+        // Existing panel functions
+        function togglePanel(name) {
+            closeAllPanels();
+            document.getElementById(`panel-${name}`).classList.remove('hidden');
+        }
+
+        function closePanel(name) {
+            document.getElementById(`panel-${name}`).classList.add('hidden');
+        }
+
+        function closeAllPanels() {
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById('detail-panel').classList.add('hidden');
+        }
+
+        function openDetail(title, offset) {
+            const panel = document.getElementById('detail-panel');
+            document.getElementById('detail-title').innerText = title;
+            document.getElementById('detail-content').innerText = `Placeholder content for ${title}.`;
+            panel.dataset.offset = offset;
+            panel.classList.remove('hidden');
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-panel').classList.add('hidden');
+        }
+
+        // Sidebar toggle
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('expanded');
+        });
+
+        // Map initialization
+        function initializeMap() {
+            const map = L.map('map', {
+                center: [37.8283, -98.5795],
+                zoom: 5,
+                zoomControl: false,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                tap: false,
+                touchZoom: false
+            });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '', // Remove attribution
+                subdomains: 'abcd',
+            }).addTo(map);
+
+            const topics = [
+                { coords: [40.7128, -74.0060], text: '📢 Rent control in NYC gaining momentum!' },
+                { coords: [34.0522, -118.2437], text: '🚗 EV subsidies debated in California legislature.' },
+                { coords: [41.8781, -87.6298], text: '⚖️ Chicago voters discuss criminal justice reform.' },
+                { coords: [29.7604, -95.3698], text: '🗳️ Texas push for open primaries gaining traction.' },
+                { coords: [47.6062, -122.3321], text: '🌳 Seattle community organizing for green zoning laws.' },
+                { coords: [39.7392, -104.9903], text: '🏡 Denver debates housing-first initiatives.' },
+                { coords: [33.4484, -112.0740], text: '🚁 Phoenix drone delivery regulations spark debate.' },
+                { coords: [25.7617, -80.1918], text: '🏖️ Miami climate resiliency bonds trending.' },
+                { coords: [32.7767, -96.7970], text: '💼 Dallas campaign finance reform gaining traction.' },
+                { coords: [42.3601, -71.0589], text: '📚 Boston pushes universal childcare ballot measure.' }
+            ];
+
+            let usedTopics = new Map();
+
+            function showRandomPopups() {
+                const count = Math.floor(Math.random() * 2) + 1;
+                const now = Date.now();
+
+                const availableTopics = topics.filter(t => {
+                    const lastShown = usedTopics.has(t.text) ? usedTopics.get(t.text) : 0;
+                    return now - lastShown > 180000;
+                });
+
+                const shuffled = availableTopics.sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, count);
+
+                selected.forEach(topic => {
+                    const popup = L.popup({
+                        closeButton: false,
+                        autoClose: false,
+                        closeOnClick: false,
+                        autoPan: false
+                    })
+                        .setLatLng(topic.coords)
+                        .setContent(topic.text)
+                        .openOn(map);
+
+                    usedTopics.set(topic.text, now);
+                    setTimeout(() => map.closePopup(popup), 30000);
+                });
+
+                const nextDelay = Math.floor(Math.random() * 3000) + 13000;
+                setTimeout(showRandomPopups, nextDelay);
+            }
+
+            showRandomPopups();
+
+            // Toggle map collapse
+            const mapContainer = document.getElementById('mapContainer');
+            const toggleBtn = document.getElementById('mapToggleBtn');
+            const resizeObserver = new ResizeObserver(() => {
+                map.invalidateSize();
+            });
+            resizeObserver.observe(mapContainer);
+            
+            toggleBtn.addEventListener('click', () => {
+                const isCollapsing = !mapContainer.classList.contains('collapsed');
+                
+                mapContainer.classList.toggle('collapsed');
+                toggleBtn.textContent = isCollapsing ? 'Expand' : 'Collapse';
+                map.setZoom(isCollapsing ? 3 : 5);
+                
+                // CSS handles the main content adjustment automatically
+            });
+
+            return map;
+        }
+
+        // Close CTA panel permanently
+        document.getElementById('google-cta-panel').querySelector('button').addEventListener('click', function() {
+            localStorage.setItem('panelClosed', 'true');
+        });
+
+        // API Helper Functions
+        async function apiCall(endpoint, options = {}) {
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
+                ...options
+            };
+
+            const response = await fetch(`${API_BASE}${endpoint}`, config);
+            return response;
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query) {
+                    await performSearch(query);
+                }
+            }
+        });
+
+        async function performSearch(query) {
+            try {
+                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displaySearchResults(data.users, query);
+                } else {
+                    console.error('Search failed');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        function displaySearchResults(users, query) {
+            const mainContent = document.getElementById('mainContent');
+            
+            if (users.length === 0) {
+                mainContent.innerHTML = `
+                    <h1>Search Results</h1>
+                    <p>No users found for "${query}"</p>
+                `;
+                return;
+            }
+
+            let html = `
+                <h1>Search Results for "${query}"</h1>
+                <div style="display: grid; gap: 1rem;">
+            `;
+
+            users.forEach(user => {
+                const profileType = user.politicalProfileType || 'CITIZEN';
+                const typeEmoji = {
+                    'CANDIDATE': '🗳️',
+                    'ELECTED_OFFICIAL': '🏛️',
+                    'POLITICAL_ORG': '🏢',
+                    'CITIZEN': '👤'
+                }[profileType];
+
+                html += `
+                    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background: white;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.5rem;">${typeEmoji}</span>
+                            <div>
+                                <strong>${user.firstName || ''} ${user.lastName || ''}</strong>
+                                ${user.verified ? '<span style="color: #1976d2;">✓</span>' : ''}
+                                <br>
+                                <small style="color: #666;">@${user.username}</small>
+                            </div>
+                        </div>
+                        ${user.bio ? `<p style="margin: 0.5rem 0; color: #555;">${user.bio}</p>` : ''}
+                        ${user.office ? `<p style="margin: 0.25rem 0; font-style: italic;">${user.office}</p>` : ''}
+                        <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                            ${user.followersCount} followers
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            mainContent.innerHTML = html;
+        }
+
+        // Load trending posts for the trending panel
+        async function loadTrendingPosts() {
+            try {
+                const response = await apiCall('/feed/trending');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTrendingPanel(data.posts);
+                }
+            } catch (error) {
+                console.error('Failed to load trending posts:', error);
+            }
+        }
+
+        // Auto-refresh trending posts
+        let trendingRefreshInterval = null;
+
+        function startTrendingRefresh() {
+            // Load initial trending updates (but don't spam if backend isn't ready)
+            setTimeout(() => loadTrendingUpdates(), 2000);
+            
+            // Refresh trending every 50 seconds (new posts roll in at top, old ones roll off bottom)
+            trendingRefreshInterval = setInterval(() => {
+                // Only refresh if trending panel is visible
+                if (document.getElementById('trendingUpdates').classList.contains('show')) {
+                    loadTrendingUpdates();
+                }
+            }, 50000);
+        }
+
+        function stopTrendingRefresh() {
+            if (trendingRefreshInterval) {
+                clearInterval(trendingRefreshInterval);
+                trendingRefreshInterval = null;
+            }
+        }
+
+        // Load trending updates for the mini panel under map
+        async function loadTrendingUpdates() {
+            try {
+                // Check if backend is reachable first
+                const healthCheck = await fetch(`${API_BASE.replace('/api', '')}/health`);
+                if (!healthCheck.ok) {
+                    console.log('Backend not available, skipping trending updates');
+                    return;
+                }
+
+                const response = await apiCall('/feed/trending?limit=20');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTrendingUpdatesPanel(data.posts);
+                    
+                    // Show the panel when there's content
+                    const panel = document.getElementById('trendingUpdates');
+                    if (data.posts.length > 0) {
+                        panel.classList.add('show');
+                    }
+                } else {
+                    console.log('No trending posts available yet');
+                }
+            } catch (error) {
+                console.log('Trending updates not available:', error.message);
+                // Silently fail - don't spam console with errors
+            }
+        }
+
+        let allTrendingPosts = [];
+        let trendingExpanded = false;
+
+        function updateTrendingUpdatesPanel(posts) {
+            allTrendingPosts = posts;
+            const body = document.getElementById('trendingUpdatesBody');
+            
+            if (posts.length === 0) {
+                body.innerHTML = '<div style="text-align: center; padding: 1rem; color: #666; font-size: 0.8rem;">No trending topics</div>';
+                return;
+            }
+
+            const displayPosts = trendingExpanded ? posts : posts.slice(0, 5);
+            let html = '';
+            
+            displayPosts.forEach(post => {
+                const timeAgo = getTimeAgo(new Date(post.createdAt));
+                const preview = post.content.length > 80 ? post.content.substring(0, 80) + '...' : post.content;
+                
+                html += `
+                    <div class="trending-item">
+                        <div style="font-weight: bold; margin-bottom: 2px; font-size: 0.85rem;">@${post.author.username}</div>
+                        <div style="margin-bottom: 4px;">${preview}</div>
+                        <div style="color: #666; font-size: 0.75rem; margin-bottom: 4px;">
+                            <span style="cursor: pointer; margin-right: 8px;" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</span>
+                            <span style="cursor: pointer; margin-right: 8px;" onclick="showTrendingCommentBox('${post.id}')">💬 ${post.commentsCount}</span>
+                            <span>${timeAgo}</span>
+                        </div>
+                        <div id="trending-comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
+                            <textarea id="trending-comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 50px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical; font-size: 0.8rem;"></textarea>
+                            <div style="margin-top: 0.5rem;">
+                                <button onclick="addTrendingComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Comment</button>
+                                <button onclick="hideTrendingCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem; font-size: 0.8rem;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+        }
+
+        function toggleTrendingExpansion() {
+            const panel = document.getElementById('trendingUpdates');
+            const btn = document.getElementById('trendingExpandBtn');
+            
+            trendingExpanded = !trendingExpanded;
+            
+            if (trendingExpanded) {
+                panel.classList.add('expanded');
+                btn.textContent = 'Less';
+            } else {
+                panel.classList.remove('expanded');
+                btn.textContent = 'More';
+            }
+            
+            updateTrendingUpdatesPanel(allTrendingPosts);
+        }
+
+        function toggleTrendingPanel() {
+            const panel = document.getElementById('trendingUpdates');
+            if (panel.classList.contains('show')) {
+                panel.classList.remove('show');
+            } else {
+                loadTrendingUpdates(); // Load fresh data
+                panel.classList.add('show');
+            }
+        }
+
+        function openFullTrending() {
+            // This function kept for compatibility but now just expands in place
+            if (!trendingExpanded) {
+                toggleTrendingExpansion();
+            }
+        }
+
+        function viewTrendingPost(postId) {
+            // For now, just expand the trending if not already expanded
+            if (!trendingExpanded) {
+                toggleTrendingExpansion();
+            }
+        }
+
+        function updateTrendingPanel(posts) {
+            const content = document.getElementById('trendingContent');
+            
+            if (posts.length === 0) {
+                content.innerHTML = '<p>No trending posts available.</p>';
+                return;
+            }
+
+            let html = '<div>';
+            posts.forEach(post => {
+                const timeAgo = getTimeAgo(new Date(post.createdAt));
+                html += `
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; border-left: 3px solid #4b5c09; background: #f9f9f9;">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">
+                            @${post.author.username} • ${timeAgo}
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">${post.content}</div>
+                        <div style="font-size: 0.8rem; color: #888;">
+                            <span style="cursor: pointer; margin-right: 10px;" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</span>
+                            <span style="cursor: pointer;" onclick="showTrendingCommentBox('${post.id}')">💬 ${post.commentsCount}</span>
+                        </div>
+                        <div id="trending-comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
+                            <textarea id="trending-comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
+                            <div style="margin-top: 0.5rem;">
+                                <button onclick="addTrendingComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
+                                <button onclick="hideTrendingCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffDays > 0) return `${diffDays}d ago`;
+            if (diffHours > 0) return `${diffHours}h ago`;
+            return 'Just now';
+        }
+
+        // Override existing togglePanel to load live data
+        const originalTogglePanel = window.togglePanel;
+        window.togglePanel = function(name) {
+            originalTogglePanel(name);
+            
+            // Load live data when panels open
+            if (name === 'trending') {
+                loadTrendingPosts();
+            } else if (name === 'officials' && currentUser) {
+                loadUserContent();
+            }
+        };
+
+        // Messages Functions
+        function toggleMessages() {
+            const container = document.getElementById('messagesContainer');
+            if (container.style.display === 'none' || !container.style.display) {
+                container.style.display = 'block';
+                loadConversations();
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        async function loadConversations() {
+            if (!authToken) return;
+
+            try {
+                const response = await apiCall('/messages/conversations');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayConversations(data.conversations);
+                } else {
+                    document.getElementById('messagesBody').innerHTML = '<p style="text-align: center; padding: 1rem; color: #666;">Failed to load conversations</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load conversations:', error);
+                document.getElementById('messagesBody').innerHTML = '<p style="text-align: center; padding: 1rem; color: #666;">Error loading conversations</p>';
+            }
+        }
+
+        function displayConversations(conversations) {
+            const body = document.getElementById('messagesBody');
+            
+            if (conversations.length === 0) {
+                body.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>No conversations yet</p>
+                        <p style="font-size: 0.9rem;">Search for users and start a conversation!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            conversations.forEach(conv => {
+                const participant = conv.participants[0];
+                const timeAgo = conv.lastMessageAt ? getTimeAgo(new Date(conv.lastMessageAt)) : '';
+                
+                html += `
+                    <div class="conversation-item" onclick="openConversation('${conv.id}', '${participant.username}')">
+                        <div class="user-avatar">${(participant.firstName?.[0] || participant.username[0]).toUpperCase()}</div>
+                        <div class="conversation-info">
+                            <div class="conversation-name">${participant.firstName || participant.username}</div>
+                            <div class="conversation-preview">${conv.lastMessageContent || 'No messages yet'} ${timeAgo ? '• ' + timeAgo : ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+        }
+
+        function openConversation(conversationId, username) {
+            // TODO: Open individual conversation view
+            alert(`Opening conversation with ${username} (ID: ${conversationId})`);
+        }
+
+        // Profile Functions
+        function toggleProfile() {
+            const panel = document.getElementById('profilePanel');
+            if (panel.style.display === 'none' || !panel.style.display) {
+                panel.style.display = 'block';
+                loadUserProfile();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!authToken) return;
+
+            try {
+                const response = await apiCall('/users/profile');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayUserProfile(data.user);
+                } else {
+                    document.getElementById('profileBody').innerHTML = '<p style="color: #d32f2f;">Failed to load profile</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load profile:', error);
+                document.getElementById('profileBody').innerHTML = '<p style="color: #d32f2f;">Error loading profile</p>';
+            }
+        }
+
+        function displayUserProfile(user) {
+            const body = document.getElementById('profileBody');
+            
+            let html = `
+                <div class="profile-section">
+                    <h3>Basic Information</h3>
+                    <p><strong>Username:</strong> @${user.username}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    ${user.firstName ? `<p><strong>Name:</strong> ${user.firstName} ${user.lastName || ''}</p>` : ''}
+                    ${user.bio ? `<p><strong>Bio:</strong> ${user.bio}</p>` : ''}
+                    ${user.website ? `<p><strong>Website:</strong> <a href="${user.website}" target="_blank">${user.website}</a></p>` : ''}
+                </div>
+
+                <div class="profile-section">
+                    <h3>Social Stats</h3>
+                    <p><strong>Followers:</strong> ${user.followersCount}</p>
+                    <p><strong>Following:</strong> ${user.followingCount}</p>
+                </div>
+            `;
+
+            if (user.politicalProfileType && user.politicalProfileType !== 'CITIZEN') {
+                html += `
+                    <div class="profile-section">
+                        <h3>Political Profile</h3>
+                        <p><strong>Type:</strong> ${user.politicalProfileType.replace('_', ' ')}</p>
+                        ${user.office ? `<p><strong>Office:</strong> ${user.office}</p>` : ''}
+                        ${user.officialTitle ? `<p><strong>Title:</strong> ${user.officialTitle}</p>` : ''}
+                        <p><strong>Verification:</strong> ${user.verificationStatus}</p>
+                    </div>
+                `;
+            }
+
+            if (user.streetAddress) {
+                html += `
+                    <div class="profile-section">
+                        <h3>Location</h3>
+                        <p>${user.streetAddress}<br>${user.city}, ${user.state} ${user.zipCode}</p>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="profile-section">
+                    <button class="btn" onclick="editProfile()">Edit Profile</button>
+                </div>
+            `;
+
+            body.innerHTML = html;
+        }
+
+        function editProfile() {
+            const body = document.getElementById('profileBody');
+            
+            if (!currentUser) return;
+            
+            body.innerHTML = `
+                <form id="profileEditForm">
+                    <div class="profile-section">
+                        <h3>Basic Information</h3>
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text" id="editFirstName" value="${currentUser.firstName || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text" id="editLastName" value="${currentUser.lastName || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea id="editBio" style="width: 100%; height: 80px; box-sizing: border-box;">${currentUser.bio || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Website</label>
+                            <input type="url" id="editWebsite" value="${currentUser.website || ''}">
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <h3>Address (for finding your elected officials)</h3>
+                        <div class="form-group">
+                            <label>Street Address</label>
+                            <input type="text" id="editStreetAddress" value="${currentUser.streetAddress || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text" id="editCity" value="${currentUser.city || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>State</label>
+                            <input type="text" id="editState" value="${currentUser.state || ''}" placeholder="e.g., IL">
+                        </div>
+                        <div class="form-group">
+                            <label>Zip Code</label>
+                            <input type="text" id="editZipCode" value="${currentUser.zipCode || ''}">
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <button type="button" class="btn" onclick="saveProfile()">Save Changes</button>
+                        <button type="button" class="btn-secondary btn" onclick="cancelEditProfile()">Cancel</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        function cancelEditProfile() {
+            loadUserProfile(); // Reload the view mode
+        }
+
+        async function saveProfile() {
+            const profileData = {
+                firstName: document.getElementById('editFirstName').value,
+                lastName: document.getElementById('editLastName').value,
+                bio: document.getElementById('editBio').value,
+                website: document.getElementById('editWebsite').value
+            };
+
+            const politicalData = {
+                streetAddress: document.getElementById('editStreetAddress').value,
+                city: document.getElementById('editCity').value,
+                state: document.getElementById('editState').value,
+                zipCode: document.getElementById('editZipCode').value
+            };
+
+            try {
+                // Update basic profile
+                const profileResponse = await apiCall('/users/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify(profileData)
+                });
+
+                // Update political/address info if provided
+                if (politicalData.streetAddress && politicalData.city && politicalData.state && politicalData.zipCode) {
+                    await apiCall('/political/profile', {
+                        method: 'PUT',
+                        body: JSON.stringify(politicalData)
+                    });
+                }
+
+                if (profileResponse.ok) {
+                    // Update current user object
+                    const updatedProfile = await apiCall('/users/profile');
+                    if (updatedProfile.ok) {
+                        const data = await updatedProfile.json();
+                        currentUser = data.user;
+                    }
+                    
+                    loadUserProfile(); // Switch back to view mode
+                    alert('Profile updated successfully!');
+                } else {
+                    alert('Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Profile update error:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Trending-specific like and comment functions
+        async function likeTrendingPost(postId) {
+            if (!authToken) {
+                alert('Please log in to like posts');
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/posts/${postId}/like`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Just update the like count in place, don't refresh whole panel
+                    updateLikeCount(postId, data.liked);
+                }
+            } catch (error) {
+                console.error('Failed to like trending post:', error);
+            }
+        }
+
+        function updateLikeCount(postId, isLiked) {
+            // Find the like button for this post and update its count
+            const likeButtons = document.querySelectorAll(`[onclick*="likeTrendingPost('${postId}')"]`);
+            likeButtons.forEach(button => {
+                const currentText = button.textContent;
+                const currentCount = parseInt(currentText.match(/\d+/)?.[0] || '0');
+                const newCount = isLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+                button.innerHTML = `❤️ ${newCount}`;
+            });
+        }
+
+        function showTrendingCommentBox(postId) {
+            if (!authToken) {
+                alert('Please log in to comment');
+                return;
+            }
+            document.getElementById(`trending-comments-${postId}`).style.display = 'block';
+        }
+
+        function hideTrendingCommentBox(postId) {
+            document.getElementById(`trending-comments-${postId}`).style.display = 'none';
+            document.getElementById(`trending-comment-input-${postId}`).value = '';
+        }
+
+        async function addTrendingComment(postId) {
+            const content = document.getElementById(`trending-comment-input-${postId}`).value.trim();
+            
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/posts/${postId}/comments`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    hideTrendingCommentBox(postId);
+                    // Just update the comment count, don't refresh whole panel
+                    updateCommentCount(postId);
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to add comment');
+                }
+            } catch (error) {
+                console.error('Failed to add comment:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        function updateCommentCount(postId) {
+            // Find the comment button for this post and increment its count
+            const commentButtons = document.querySelectorAll(`[onclick*="showTrendingCommentBox('${postId}')"]`);
+            commentButtons.forEach(button => {
+                const currentText = button.textContent;
+                const currentCount = parseInt(currentText.match(/\d+/)?.[0] || '0');
+                const newCount = currentCount + 1;
+                button.innerHTML = `💬 ${newCount}`;
+            });
+        }
+
+        // Comment Functions
+        function showCommentBox(postId) {
+            document.getElementById(`comments-${postId}`).style.display = 'block';
+        }
+
+        function hideCommentBox(postId) {
+            document.getElementById(`comments-${postId}`).style.display = 'none';
+            document.getElementById(`comment-input-${postId}`).value = '';
+        }
+
+        async function addComment(postId) {
+            const content = document.getElementById(`comment-input-${postId}`).value.trim();
+            
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/posts/${postId}/comments`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content })
+                });
+
+                if (response.ok) {
+                    hideCommentBox(postId);
+                    // Reload posts to show updated comment count
+                    loadUserPosts();
+                    // Also refresh trending if that's open
+                    if (!document.getElementById('panel-trending').classList.contains('hidden')) {
+                        loadTrendingPosts();
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to add comment');
+                }
+            } catch (error) {
+                console.error('Failed to add comment:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Posts Functions
+        async function createPost() {
+            const content = document.getElementById('postContent').value.trim();
+            const isPolitical = document.getElementById('isPolitical').checked;
+
+            if (!content) {
+                alert('Please enter some content for your post');
+                return;
+            }
+
+            try {
+                const response = await apiCall('/posts', {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        content, 
+                        isPolitical: isPolitical 
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('postContent').value = '';
+                    document.getElementById('isPolitical').checked = false;
+                    loadUserPosts();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to create post');
+                }
+            } catch (error) {
+                console.error('Failed to create post:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        async function loadUserPosts() {
+            if (!authToken) return;
+
+            try {
+                const response = await apiCall('/posts/me');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPosts(data.posts);
+                }
+            } catch (error) {
+                console.error('Failed to load posts:', error);
+            }
+        }
+
+        function displayPosts(posts) {
+            const feed = document.getElementById('postsFeed');
+            
+            if (posts.length === 0) {
+                feed.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <h2>Your Posts</h2>
+                        <p>You haven't posted anything yet. Share your thoughts above!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<h2>Your Posts</h2>';
+            posts.forEach(post => {
+                const timeAgo = getTimeAgo(new Date(post.createdAt));
+                
+                html += `
+                    <div class="post-item">
+                        <div class="post-header">
+                            <div class="user-avatar">${(post.author.firstName?.[0] || post.author.username[0]).toUpperCase()}</div>
+                            <div>
+                                <strong>${post.author.firstName || post.author.username}</strong>
+                                ${post.author.verified ? '<span style="color: #1976d2;">✓</span>' : ''}
+                                <br>
+                                <small style="color: #666;">@${post.author.username} • ${timeAgo}</small>
+                            </div>
+                        </div>
+                        <div class="post-content">${post.content}</div>
+                        <div class="post-actions">
+                            <span class="post-action" onclick="likePost('${post.id}')">
+                                ❤️ ${post.likesCount}
+                            </span>
+                            <span class="post-action" onclick="showCommentBox('${post.id}')">
+                                💬 ${post.commentsCount}
+                            </span>
+                        </div>
+                        <div id="comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
+                            <textarea id="comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
+                            <div style="margin-top: 0.5rem;">
+                                <button onclick="addComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
+                                <button onclick="hideCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            feed.innerHTML = html;
+        }
+
+        async function likePost(postId) {
+            if (!authToken) return;
+
+            try {
+                const response = await apiCall(`/posts/${postId}/like`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    // Reload posts to update like counts
+                    loadUserPosts();
+                }
+            } catch (error) {
+                console.error('Failed to like post:', error);
+            }
+        }
+
+        function viewComments(postId) {
+            // TODO: Implement comments view
+            alert(`Viewing comments for post ${postId}`);
+        }
+
+        async function loadUserPosts() {
+            if (!authToken) return;
+
+            try {
+                const response = await apiCall('/posts/me');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayPosts(data.posts);
+                } else {
+                    console.error('Failed to load user posts');
+                }
+            } catch (error) {
+                console.error('Failed to load posts:', error);
+            }
+        }
+    </script>
+</body>
+</html>

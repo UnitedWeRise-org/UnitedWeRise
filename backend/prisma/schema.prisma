@@ -1,0 +1,286 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String   @unique
+  password    String
+  firstName   String?
+  lastName    String?
+  avatar      String?
+  bio         String?
+  website     String?
+  location    String?
+  verified    Boolean  @default(false)
+  embedding   Float[]  @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Address information for voting district
+  streetAddress String?
+  city          String?
+  state         String?
+  zipCode       String?
+  h3Index       String? // H3 geospatial index
+  
+  // Political profile information
+  politicalProfileType PoliticalProfileType @default(CITIZEN)
+  verificationStatus   VerificationStatus   @default(PENDING)
+  verificationDocuments String[] @default([]) // URLs to verification docs
+  
+  // Political profile details (only for candidates/officials)
+  politicalParty    String?
+  office           String? // "Mayor of Springfield", "State Senator District 5"
+  campaignWebsite  String?
+  officialTitle    String? // For elected officials
+  termStart        DateTime?
+  termEnd          DateTime?
+  
+  // Reset tokens
+  resetToken  String?
+  resetExpiry DateTime?
+  
+  // Social relationships
+  following   Follow[] @relation("Follower")
+  followers   Follow[] @relation("Following")
+  
+  // Content relationships
+  posts       Post[]
+  likes       Like[]
+  comments    Comment[]
+  
+  // Notification relationships
+  sentNotifications     Notification[] @relation("NotificationSender")
+  receivedNotifications Notification[] @relation("NotificationReceiver")
+
+  // Message relationships
+  conversations  ConversationParticipant[]
+  sentMessages   Message[] @relation("SentMessages")
+
+  // Online status
+  isOnline       Boolean   @default(false)
+  lastSeenAt     DateTime  @default(now())
+  
+  // Stats
+  followingCount Int @default(0)
+  followersCount Int @default(0)
+  
+  @@index([username])
+  @@index([createdAt])
+  @@index([h3Index]) // For geospatial queries
+  @@index([politicalProfileType])
+  @@index([zipCode, state]) // For district lookups
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower    User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  content     String
+  imageUrl    String?
+  authorId    String
+  embedding   Float[]  @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Political post features
+  isPolitical Boolean @default(false)
+  tags        String[] @default([])
+  
+  // Relationships
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes       Like[]
+  comments    Comment[]
+  
+  // Stats
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([likesCount])
+  @@index([isPolitical])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@index([postId])
+  @@index([userId])
+}
+
+model Notification {
+  id         String            @id @default(cuid())
+  type       NotificationType
+  senderId   String?
+  receiverId String
+  postId     String?
+  commentId  String?
+  message    String
+  read       Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  
+  sender     User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User  @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@index([receiverId, read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  MENTION
+  VERIFICATION_APPROVED
+  VERIFICATION_DENIED
+}
+
+enum PoliticalProfileType {
+  CITIZEN
+  CANDIDATE
+  ELECTED_OFFICIAL
+  POLITICAL_ORG
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  DENIED
+  NOT_REQUIRED
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Participants (for now, just 2-person DMs, but extensible to group chats)
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  // Last message info for conversation lists
+  lastMessageAt DateTime?
+  lastMessageContent String?
+  lastMessageSenderId String?
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  userId         String
+  conversationId String
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime @default(now())
+  
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, conversationId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  content        String
+  senderId       String
+  conversationId String
+  messageType    MessageType @default(TEXT)
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model ApiCache {
+  id           String   @id @default(cuid())
+  provider     String   // 'google_civic', 'ballotpedia', etc.
+  cacheKey     String   // 'officials_12345_IL' or 'district_39.7817_-89.6501'
+  responseData Json     // Cached API response
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  hitCount     Int      @default(0)
+  
+  @@unique([provider, cacheKey])
+  @@index([provider, cacheKey])
+  @@index([expiresAt])
+}
+
+model ExternalOfficial {
+  id           String   @id @default(cuid())
+  externalId   String   // ID from external API
+  provider     String   // 'google_civic', 'ballotpedia', etc.
+  name         String
+  office       String
+  district     String?
+  party        String?
+  contactInfo  Json?    // Phone, email, addresses
+  photoUrl     String?
+  zipCode      String   // For geographic lookup
+  state        String   // For geographic lookup
+  h3Index      String?  // For precise geographic matching
+  lastUpdated  DateTime @default(now())
+  
+  @@unique([provider, externalId])
+  @@index([zipCode, state])
+  @@index([h3Index])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+}
