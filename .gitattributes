@@ -1,0 +1,10 @@
+# Normalize line endings
+* text=auto
+
+# Explicitly use LF for code files
+*.js     text eol=lf
+*.ts     text eol=lf
+*.json   text eol=lf
+*.prisma text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf

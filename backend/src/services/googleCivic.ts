@@ -3,8 +3,8 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const GOOGLE_CIVIC_API_KEY = process.env.GOOGLE_CIVIC_API_KEY;
-const GOOGLE_CIVIC_BASE_URL = 'https://www.googleapis.com/civicinfo/v2';
+const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
+const GEOCODIO_BASE_URL = 'https://api.geocod.io/v1.7';
 
 export interface CivicOfficial {
     name: string;
@@ -36,7 +36,7 @@ export interface CivicResponse {
     }>;
 }
 
-export class GoogleCivicService {
+export class GeolocationService {
     /**
      * Get elected officials by address with caching
      */
@@ -46,8 +46,8 @@ export class GoogleCivicService {
         state?: string,
         forceRefresh: boolean = false
     ): Promise<CivicResponse | null> {
-        if (!GOOGLE_CIVIC_API_KEY) {
-            console.warn('Google Civic API key not configured');
+        if (!GEOCODIO_API_KEY) {
+            console.warn('Geocodio API key not configured');
             return null;
         }
 
@@ -58,34 +58,34 @@ export class GoogleCivicService {
 
         // Check cache first (unless forcing refresh)
         if (!forceRefresh) {
-            const cached = await ApiCacheService.get('google_civic', cacheKey);
+            const cached = await ApiCacheService.get('geocodio', cacheKey);
             if (cached) {
                 return cached as CivicResponse;
             }
         }
 
         try {
-            const url = `${GOOGLE_CIVIC_BASE_URL}/representatives`;
+            const url = `${GEOCODIO_BASE_URL}/geocode`;
             const params = new URLSearchParams({
-                key: GOOGLE_CIVIC_API_KEY,
-                address: address,
-                includeOffices: 'true',
+                api_key: GEOCODIO_API_KEY,
+                q: address,
+                fields: 'cd,cd116' // Congressional districts current and 116th
             });
 
             const response = await fetch(`${url}?${params}`);
 
             if (!response.ok) {
-                console.error('Google Civic API error:', response.status, await response.text());
+                console.error('Geocodio API error:', response.status, await response.text());
                 return null;
             }
 
             const data = await response.json();
 
             // Transform the response to our format
-            const civicResponse = this.transformGoogleResponse(data);
+            const civicResponse = this.transformGeocodioResponse(data);
 
             // Cache the response (30 days TTL for elected officials)
-            await ApiCacheService.set('google_civic', cacheKey, civicResponse, 30 * 24 * 60);
+            await ApiCacheService.set('geocodio', cacheKey, civicResponse, 30 * 24 * 60);
 
             // Store officials in our database for enhanced lookup
             if (zipCode && state) {
@@ -94,77 +94,88 @@ export class GoogleCivicService {
 
             return civicResponse;
         } catch (error) {
-            console.error('Google Civic API request failed:', error);
+            console.error('Geocodio API request failed:', error);
             return null;
         }
     }
 
     /**
-     * Transform Google's response format to our standardized format
+     * Transform Geocodio's response format to our standardized format
      */
-    private static transformGoogleResponse(googleData: any): CivicResponse {
+    private static transformGeocodioResponse(geocodioData: any): CivicResponse {
         const officials: CivicOfficial[] = [];
         const offices: any[] = [];
 
-        if (!googleData.officials || !googleData.offices) {
+        if (!geocodioData.results || geocodioData.results.length === 0) {
             return { officials: [], offices: [] };
         }
 
-        // Transform officials
-        googleData.officials.forEach((official: any) => {
-            officials.push({
-                name: official.name || 'Unknown',
-                office: '', // Will be filled from offices data
-                party: official.party,
-                phones: official.phones || [],
-                emails: official.emails || [],
-                urls: official.urls || [],
-                photoUrl: official.photoUrl,
-                address: official.address ? {
-                    line1: official.address[0]?.line1,
-                    city: official.address[0]?.city,
-                    state: official.address[0]?.state,
-                    zip: official.address[0]?.zip
-                } : undefined,
-                channels: official.channels || []
+        // Get the first result (most accurate)
+        const result = geocodioData.results[0];
+        const fields = result.fields || {};
+        const congressionalDistrict = fields.congressional_districts?.[0] || fields.congressional_district;
+
+        if (!congressionalDistrict) {
+            return { officials: [], offices: [] };
+        }
+
+        // Create officials from congressional district data
+        if (congressionalDistrict.current_legislators) {
+            congressionalDistrict.current_legislators.forEach((legislator: any) => {
+                const official: CivicOfficial = {
+                    name: `${legislator.bio?.first_name || ''} ${legislator.bio?.last_name || ''}`.trim() || 'Unknown',
+                    office: this.formatOfficeTitle(legislator.type, congressionalDistrict.district_number, congressionalDistrict.state_abbreviation),
+                    party: legislator.bio?.party,
+                    phones: legislator.contact?.phone ? [legislator.contact.phone] : [],
+                    emails: legislator.contact?.contact_form ? [] : [], // Geocodio doesn't provide direct emails
+                    urls: legislator.references?.bioguide_id ? 
+                        [`https://bioguide.congress.gov/search/bio/${legislator.references.bioguide_id}`] : [],
+                    photoUrl: legislator.bio?.photo_url,
+                    address: legislator.contact?.address ? {
+                        line1: legislator.contact.address,
+                        city: legislator.contact.city,
+                        state: legislator.contact.state,
+                        zip: legislator.contact.zip
+                    } : undefined,
+                    channels: [] // Geocodio doesn't provide social media channels
+                };
+                officials.push(official);
+
+                // Create corresponding office entry
+                offices.push({
+                    name: official.office,
+                    level: this.determineLevelFromType(legislator.type),
+                    roles: [legislator.type],
+                    officials: [officials.length - 1] // Index of the official we just added
+                });
             });
-        });
-
-        // Transform offices and link to officials
-        googleData.offices.forEach((office: any) => {
-            const transformedOffice = {
-                name: office.name,
-                level: this.determineLevel(office.levels?.[0] || ''),
-                roles: office.roles || [],
-                officials: office.officialIndices || []
-            };
-
-            // Update officials with office names
-            transformedOffice.officials.forEach((officialIndex: number) => {
-                if (officials[officialIndex]) {
-                    officials[officialIndex].office = office.name;
-                }
-            });
-
-            offices.push(transformedOffice);
-        });
+        }
 
         return { officials, offices };
     }
 
     /**
-     * Determine government level from Google's level codes
+     * Format office title from legislator type and district info
      */
-    private static determineLevel(googleLevel: string): string {
-        const levelMap: { [key: string]: string } = {
-            'country': 'federal',
-            'administrativeArea1': 'state',
-            'administrativeArea2': 'county',
-            'locality': 'local',
-            'subLocality1': 'local',
-            'subLocality2': 'local'
-        };
-        return levelMap[googleLevel] || 'local';
+    private static formatOfficeTitle(type: string, districtNumber: number, state: string): string {
+        switch (type) {
+            case 'representative':
+                return `U.S. Representative, ${state}-${districtNumber}`;
+            case 'senator':
+                return `U.S. Senator, ${state}`;
+            default:
+                return `${type}, ${state}`;
+        }
+    }
+
+    /**
+     * Determine government level from legislator type
+     */
+    private static determineLevelFromType(type: string): string {
+        if (type === 'representative' || type === 'senator') {
+            return 'federal';
+        }
+        return 'federal'; // Geocodio CD data is federal only
     }
 
     /**
@@ -179,7 +190,7 @@ export class GoogleCivicService {
             // Clear existing officials for this location to avoid duplicates
             await prisma.externalOfficial.deleteMany({
                 where: {
-                    provider: 'google_civic',
+                    provider: 'geocodio',
                     zipCode,
                     state
                 }
@@ -192,7 +203,7 @@ export class GoogleCivicService {
                 await prisma.externalOfficial.create({
                     data: {
                         externalId: `${official.name}_${official.office}`.replace(/[^a-zA-Z0-9]/g, '_'),
-                        provider: 'google_civic',
+                        provider: 'geocodio',
                         name: official.name,
                         office: official.office,
                         party: official.party,
@@ -226,7 +237,7 @@ export class GoogleCivicService {
         try {
             const officials = await prisma.externalOfficial.findMany({
                 where: {
-                    provider: 'google_civic',
+                    provider: 'geocodio',
                     zipCode,
                     state,
                     lastUpdated: {
@@ -265,3 +276,5 @@ export class GoogleCivicService {
         return result !== null;
     }
 }
+
+export const googleCivicService = GeolocationService;

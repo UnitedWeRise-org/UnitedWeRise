@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'United We Rise Dashboards'
+    orgId: 1
+    folder: 'United We Rise'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

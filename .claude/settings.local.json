@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "WebFetch(domain:www.geocod.io)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(touch:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)"
+    ],
+    "deny": []
+  }
+}

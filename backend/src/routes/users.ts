@@ -2,6 +2,7 @@ import { createNotification } from './notifications';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { validateProfileUpdate } from '../middleware/validation';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -24,7 +25,19 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 verified: true,
                 followersCount: true,
                 followingCount: true,
-                createdAt: true
+                createdAt: true,
+                // Address fields
+                streetAddress: true,
+                city: true,
+                state: true,
+                zipCode: true,
+                // Political profile fields
+                politicalProfileType: true,
+                verificationStatus: true,
+                office: true,
+                officialTitle: true,
+                politicalParty: true,
+                campaignWebsite: true
             }
         });
 
@@ -36,7 +49,7 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Update current user's profile
-router.put('/profile', requireAuth, async (req: AuthRequest, res) => {
+router.put('/profile', requireAuth, validateProfileUpdate, async (req: AuthRequest, res: express.Response) => {
     try {
         const { firstName, lastName, bio, website, location } = req.body;
 
@@ -190,7 +203,7 @@ router.delete('/follow/:userId', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Search users
-router.get('/search', async (req, res) => {
+router.get('/search', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { q, limit = 10, offset = 0 } = req.query;
 
@@ -202,6 +215,8 @@ router.get('/search', async (req, res) => {
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
 
+        const currentUserId = req.user!.id;
+        
         const users = await prisma.user.findMany({
             where: {
                 OR: [
@@ -233,7 +248,15 @@ router.get('/search', async (req, res) => {
                 avatar: true,
                 bio: true,
                 verified: true,
-                followersCount: true
+                followersCount: true,
+                state: true,
+                zipCode: true,
+                city: true,
+                office: true, // May contain district info
+                followers: {
+                    where: { followerId: currentUserId },
+                    select: { id: true }
+                }
             },
             take: limitNum,
             skip: offsetNum,
@@ -243,12 +266,19 @@ router.get('/search', async (req, res) => {
             ]
         });
 
+        // Transform to include isFollowing flag
+        const usersWithFollowStatus = users.map(user => ({
+            ...user,
+            isFollowing: user.followers.length > 0,
+            followers: undefined // Remove the followers array from response
+        }));
+
         res.json({
-            users,
+            users: usersWithFollowStatus,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: users.length
+                count: usersWithFollowStatus.length
             }
         });
     } catch (error) {
@@ -287,6 +317,116 @@ router.get('/:username', async (req, res) => {
         res.json({ user });
     } catch (error) {
         console.error('Get user profile error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get followers list
+router.get('/:userId/followers', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const limitNum = parseInt(limit.toString());
+        const offsetNum = parseInt(offset.toString());
+
+        const followers = await prisma.follow.findMany({
+            where: { followingId: userId },
+            include: {
+                follower: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true,
+                        followersCount: true
+                    }
+                }
+            },
+            take: limitNum,
+            skip: offsetNum,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json({
+            followers: followers.map(f => f.follower),
+            pagination: {
+                limit: limitNum,
+                offset: offsetNum,
+                count: followers.length
+            }
+        });
+    } catch (error) {
+        console.error('Get followers error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get following list
+router.get('/:userId/following', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const limitNum = parseInt(limit.toString());
+        const offsetNum = parseInt(offset.toString());
+
+        const following = await prisma.follow.findMany({
+            where: { followerId: userId },
+            include: {
+                following: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true,
+                        followersCount: true
+                    }
+                }
+            },
+            take: limitNum,
+            skip: offsetNum,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json({
+            following: following.map(f => f.following),
+            pagination: {
+                limit: limitNum,
+                offset: offsetNum,
+                count: following.length
+            }
+        });
+    } catch (error) {
+        console.error('Get following error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Check if current user is following another user
+router.get('/follow-status/:userId', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+
+        const followRelation = await prisma.follow.findUnique({
+            where: {
+                followerId_followingId: {
+                    followerId: currentUserId,
+                    followingId: userId
+                }
+            }
+        });
+
+        res.json({ 
+            isFollowing: !!followRelation 
+        });
+    } catch (error) {
+        console.error('Check follow status error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -1,6 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { validateMessage } from '../middleware/validation';
+import { messageLimiter } from '../middleware/rateLimiting';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -254,7 +256,7 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
 });
 
 // Send message via REST API (for testing)
-router.post('/conversations/:conversationId/messages', requireAuth, async (req: AuthRequest, res) => {
+router.post('/conversations/:conversationId/messages', requireAuth, messageLimiter, validateMessage, async (req: AuthRequest, res) => {
   try {
     const { conversationId } = req.params;
     const { content } = req.body;

@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093  # Uncomment when you add Alertmanager
+
+scrape_configs:
+  # United We Rise Application
+  - job_name: 'united-we-rise'
+    static_configs:
+      - targets: ['host.docker.internal:3001']  # Adjust if running differently
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scheme: 'http'
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor (Container Metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Grafana (Optional)
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']

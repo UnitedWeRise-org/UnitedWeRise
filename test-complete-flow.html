@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Complete Address & Representatives Flow</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        button { padding: 10px 15px; margin: 5px; }
+        input, select { padding: 8px; margin: 5px; width: 200px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Complete Address & Representatives Test</h1>
+    
+    <div class="section">
+        <h2>1. Login</h2>
+        <input type="email" id="email" placeholder="Email" value="test@example.com">
+        <input type="password" id="password" placeholder="Password" value="password">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Update Address</h2>
+        <input type="text" id="streetAddress" placeholder="Street Address" value="100 N Main St">
+        <input type="text" id="city" placeholder="City" value="Springfield">
+        <select id="state">
+            <option value="">Select State</option>
+            <option value="IL" selected>IL</option>
+            <option value="NY">NY</option>
+            <option value="CA">CA</option>
+        </select>
+        <input type="text" id="zipCode" placeholder="ZIP Code" value="62701">
+        <button onclick="updateAddress()">Update Address</button>
+        <div id="addressResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Get Profile (Check Address Saved)</h2>
+        <button onclick="getProfile()">Get Profile</button>
+        <div id="profileResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. Get Representatives</h2>
+        <button onclick="getRepresentatives()">Get Representatives</button>
+        <div id="repsResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        let authToken = null;
+
+        async function apiCall(endpoint, options = {}) {
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
+                ...options
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                const data = await response.json();
+                return { ok: response.ok, status: response.status, data };
+            } catch (error) {
+                return { ok: false, error: error.message };
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await apiCall('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+
+            const resultDiv = document.getElementById('loginResult');
+            if (result.ok) {
+                authToken = result.data.token;
+                resultDiv.innerHTML = `<div class="success">✅ Login successful!</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Login failed: ${result.data?.error || result.error}</div>`;
+            }
+        }
+
+        async function updateAddress() {
+            const addressData = {
+                streetAddress: document.getElementById('streetAddress').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                zipCode: document.getElementById('zipCode').value
+            };
+
+            const result = await apiCall('/political/profile', {
+                method: 'PUT',
+                body: JSON.stringify(addressData)
+            });
+
+            const resultDiv = document.getElementById('addressResult');
+            if (result.ok) {
+                resultDiv.innerHTML = `<div class="success">✅ Address updated successfully!</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Address update failed: ${result.data?.error || result.error}</div>`;
+            }
+        }
+
+        async function getProfile() {
+            const result = await apiCall('/users/profile');
+
+            const resultDiv = document.getElementById('profileResult');
+            if (result.ok) {
+                const user = result.data.user;
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Profile loaded successfully!</div>
+                    <h4>Address Info: <button onclick="toggleAddressInfo()" id="toggleAddressBtn">Show</button></h4>
+                    <div id="addressInfo" style="display: none;">
+                        <ul>
+                            <li>Street: ${user.streetAddress || 'Not set'}</li>
+                            <li>City: ${user.city || 'Not set'}</li>
+                            <li>State: ${user.state || 'Not set'}</li>
+                            <li>ZIP: ${user.zipCode || 'Not set'}</li>
+                        </ul>
+                    </div>
+                    <h4>Full Profile:</h4>
+                    <pre>${JSON.stringify(user, null, 2)}</pre>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Profile load failed: ${result.data?.error || result.error}</div>`;
+            }
+        }
+
+        async function getRepresentatives() {
+            const result = await apiCall('/political/representatives');
+
+            const resultDiv = document.getElementById('repsResult');
+            if (result.ok) {
+                const data = result.data;
+                let html = `<div class="success">✅ Representatives loaded successfully!</div>`;
+                html += `<h4>Summary:</h4>`;
+                html += `<ul>`;
+                html += `<li>Total: ${data.totalCount}</li>`;
+                html += `<li>Federal: ${data.representatives.federal?.length || 0}</li>`;
+                html += `<li>State: ${data.representatives.state?.length || 0}</li>`;
+                html += `<li>Local: ${data.representatives.local?.length || 0}</li>`;
+                html += `<li>Source: ${data.source}</li>`;
+                html += `</ul>`;
+                
+                if (data.representatives.federal?.length > 0) {
+                    html += `<h4>Federal Representatives:</h4>`;
+                    data.representatives.federal.forEach(rep => {
+                        html += `<div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">`;
+                        html += `<strong>${rep.name}</strong> (${rep.party})<br>`;
+                        html += `${rep.office}<br>`;
+                        if (rep.phones?.length > 0) html += `📞 ${rep.phones[0]}<br>`;
+                        if (rep.urls?.length > 0) html += `🌐 <a href="${rep.urls[0]}" target="_blank">Website</a><br>`;
+                        html += `</div>`;
+                    });
+                }
+                
+                html += `<h4>Full Response:</h4>`;
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Representatives load failed: ${result.data?.error || result.error}</div>`;
+            }
+        }
+
+        function toggleAddressInfo() {
+            const addressInfo = document.getElementById('addressInfo');
+            const toggleBtn = document.getElementById('toggleAddressBtn');
+            
+            if (addressInfo.style.display === 'none') {
+                addressInfo.style.display = 'block';
+                toggleBtn.textContent = 'Hide';
+            } else {
+                addressInfo.style.display = 'none';
+                toggleBtn.textContent = 'Show';
+            }
+        }
+    </script>
+</body>
+</html>

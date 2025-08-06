@@ -2,12 +2,15 @@ import { createNotification } from './notifications';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { validatePost, validateComment } from '../middleware/validation';
+import { postLimiter } from '../middleware/rateLimiting';
+import { checkUserSuspension, moderateContent, contentFilter, addContentWarnings } from '../middleware/moderation';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Create a new post
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {
     try {
         const { content, imageUrl } = req.body;
         const userId = req.user!.id;
@@ -240,7 +243,7 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Add comment to post
-router.post('/:postId/comments', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter, validateComment, moderateContent('COMMENT'), async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
         const { content } = req.body;
@@ -316,7 +319,7 @@ router.post('/:postId/comments', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Get comments for a post
-router.get('/:postId/comments', async (req, res) => {
+router.get('/:postId/comments', addContentWarnings, async (req, res) => {
     try {
         const { postId } = req.params;
         const { limit = 20, offset = 0 } = req.query;
@@ -362,6 +365,71 @@ router.get('/:postId/comments', async (req, res) => {
         });
     } catch (error) {
         console.error('Get comments error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get posts by a specific user
+router.get('/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const limitNum = parseInt(limit.toString());
+        const offsetNum = parseInt(offset.toString());
+
+        // Verify user exists
+        const userExists = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true }
+        });
+
+        if (!userExists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const posts = await prisma.post.findMany({
+            where: { authorId: userId },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true
+                    }
+                },
+                _count: {
+                    select: {
+                        likes: true,
+                        comments: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limitNum,
+            skip: offsetNum
+        });
+
+        const postsWithCounts = posts.map(post => ({
+            ...post,
+            likesCount: post._count.likes,
+            commentsCount: post._count.comments,
+            _count: undefined
+        }));
+
+        res.json({
+            posts: postsWithCounts,
+            pagination: {
+                limit: limitNum,
+                offset: offsetNum,
+                count: posts.length
+            }
+        });
+    } catch (error) {
+        console.error('Get user posts error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

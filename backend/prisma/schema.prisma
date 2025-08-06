@@ -49,6 +49,17 @@ model User {
   termStart        DateTime?
   termEnd          DateTime?
   
+  // Email verification
+  emailVerified     Boolean   @default(false)
+  emailVerifyToken  String?   @unique
+  emailVerifyExpiry DateTime?
+  
+  // Phone verification
+  phoneNumber       String?
+  phoneVerified     Boolean   @default(false)
+  phoneVerifyCode   String?
+  phoneVerifyExpiry DateTime?
+  
   // Reset tokens
   resetToken  String?
   resetExpiry DateTime?
@@ -73,6 +84,31 @@ model User {
   // Online status
   isOnline       Boolean   @default(false)
   lastSeenAt     DateTime  @default(now())
+  
+  // Moderation relationships
+  reports               Report[] @relation("UserReports")
+  moderatedReports      Report[] @relation("ModeratedReports")
+  resolvedFlags         ContentFlag[] @relation("ResolvedFlags")
+  moderationLogs        ModerationLog[] @relation("ModerationLogs")
+  receivedWarnings      UserWarning[] @relation("ReceivedWarnings")
+  issuedWarnings        UserWarning[] @relation("IssuedWarnings")
+  suspensions           UserSuspension[] @relation("UserSuspensions")
+  moderatorSuspensions  UserSuspension[] @relation("ModeratorSuspensions")
+  appeals               Appeal[] @relation("UserAppeals")
+  reviewedAppeals       Appeal[] @relation("ReviewedAppeals")
+  
+  // Moderation status
+  isModerator           Boolean @default(false)
+  isAdmin               Boolean @default(false)
+  isSuspended           Boolean @default(false)
+  
+  // Onboarding tracking
+  onboardingData      Json?     // Store onboarding progress and data
+  onboardingCompleted Boolean   @default(false)
+  interests           String[]  @default([])
+  politicalExperience String?   // new, casual, engaged, activist
+  notificationPreferences Json? // Store notification settings
+  displayName         String?   // User's preferred display name
   
   // Stats
   followingCount Int @default(0)
@@ -283,4 +319,233 @@ enum MessageType {
   TEXT
   IMAGE
   SYSTEM
+}
+
+// Content Moderation Models
+model Report {
+  id          String     @id @default(cuid())
+  reporterId  String
+  targetType  ReportTargetType
+  targetId    String     // Post ID, Comment ID, or User ID
+  reason      ReportReason
+  description String?    // Additional details from reporter
+  status      ReportStatus @default(PENDING)
+  priority    ReportPriority @default(LOW)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Moderation action taken
+  moderatedAt DateTime?
+  moderatorId String?
+  moderatorNotes String?
+  actionTaken ModerationAction?
+  
+  // Relationships
+  reporter    User @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator   User? @relation("ModeratedReports", fields: [moderatorId], references: [id], onDelete: SetNull)
+  
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status, priority])
+  @@index([createdAt])
+}
+
+model ContentFlag {
+  id         String        @id @default(cuid())
+  contentType ContentType
+  contentId  String
+  flagType   FlagType
+  confidence Float         // 0.0 - 1.0, confidence score from AI detection
+  source     FlagSource    // AUTOMATED, USER_REPORT, MANUAL_REVIEW
+  details    Json?         // Additional context (keywords, scores, etc.)
+  resolved   Boolean       @default(false)
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+  
+  resolver   User? @relation("ResolvedFlags", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([contentType, contentId])
+  @@index([flagType, resolved])
+  @@index([confidence])
+  @@index([createdAt])
+}
+
+model ModerationLog {
+  id          String           @id @default(cuid())
+  moderatorId String
+  targetType  ReportTargetType
+  targetId    String
+  action      ModerationAction
+  reason      String
+  notes       String?
+  metadata    Json?            // Additional context
+  createdAt   DateTime         @default(now())
+  
+  moderator   User @relation("ModerationLogs", fields: [moderatorId], references: [id], onDelete: Cascade)
+  
+  @@index([moderatorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model UserWarning {
+  id          String   @id @default(cuid())
+  userId      String
+  moderatorId String
+  reason      String
+  severity    WarningSeverity
+  notes       String?
+  acknowledged Boolean @default(false)
+  acknowledgedAt DateTime?
+  expiresAt   DateTime? // For temporary warnings
+  createdAt   DateTime @default(now())
+  
+  user        User @relation("ReceivedWarnings", fields: [userId], references: [id], onDelete: Cascade)
+  moderator   User @relation("IssuedWarnings", fields: [moderatorId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([severity, expiresAt])
+  @@index([createdAt])
+}
+
+model UserSuspension {
+  id          String          @id @default(cuid())
+  userId      String
+  moderatorId String
+  reason      String
+  type        SuspensionType
+  startsAt    DateTime        @default(now())
+  endsAt      DateTime?       // null for permanent bans
+  notes       String?
+  appealed    Boolean         @default(false)
+  appealedAt  DateTime?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  
+  user        User @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
+  moderator   User @relation("ModeratorSuspensions", fields: [moderatorId], references: [id], onDelete: Cascade)
+  appeal      Appeal?
+  
+  @@index([userId, isActive])
+  @@index([endsAt])
+  @@index([createdAt])
+}
+
+// Enums for content moderation
+enum ReportTargetType {
+  POST
+  COMMENT
+  USER
+  MESSAGE
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  MISINFORMATION
+  INAPPROPRIATE_CONTENT
+  FAKE_ACCOUNT
+  IMPERSONATION
+  COPYRIGHT_VIOLATION
+  VIOLENCE_THREATS
+  SELF_HARM
+  ILLEGAL_CONTENT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ModerationAction {
+  NO_ACTION
+  WARNING_ISSUED
+  CONTENT_HIDDEN
+  CONTENT_DELETED
+  USER_WARNED
+  USER_SUSPENDED
+  USER_BANNED
+  APPEAL_APPROVED
+  APPEAL_DENIED
+}
+
+enum ContentType {
+  POST
+  COMMENT
+  USER_PROFILE
+  MESSAGE
+}
+
+enum FlagType {
+  SPAM
+  TOXICITY
+  HATE_SPEECH
+  MISINFORMATION
+  INAPPROPRIATE_LANGUAGE
+  FAKE_ENGAGEMENT
+  DUPLICATE_CONTENT
+  SUSPICIOUS_ACTIVITY
+}
+
+enum FlagSource {
+  AUTOMATED
+  USER_REPORT
+  MANUAL_REVIEW
+}
+
+enum WarningSeverity {
+  MINOR
+  MODERATE
+  MAJOR
+  FINAL
+}
+
+enum SuspensionType {
+  TEMPORARY
+  PERMANENT
+  POSTING_RESTRICTED
+  COMMENTING_RESTRICTED
+}
+
+// Appeals system
+model Appeal {
+  id              String        @id @default(cuid())
+  userId          String
+  suspensionId    String        @unique
+  reason          String        // User's appeal reason
+  additionalInfo  String?       // Additional context from user
+  status          AppealStatus  @default(PENDING)
+  reviewNotes     String?       // Moderator's review notes
+  reviewedBy      String?       // Moderator who reviewed
+  reviewedAt      DateTime?     // When reviewed
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relationships
+  user            User @relation("UserAppeals", fields: [userId], references: [id], onDelete: Cascade)
+  suspension      UserSuspension @relation(fields: [suspensionId], references: [id], onDelete: Cascade)
+  reviewedByUser  User? @relation("ReviewedAppeals", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum AppealStatus {
+  PENDING
+  APPROVED
+  DENIED
 }

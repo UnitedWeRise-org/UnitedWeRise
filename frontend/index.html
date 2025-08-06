@@ -20,8 +20,21 @@
     <title>United We Rise - Demo</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <script src="src/components/AddressForm.js"></script>
+    <script src="src/components/VerificationFlow.js"></script>
+    <script src="src/components/ContentReporting.js"></script>
+    <script src="src/integrations/backend-integration.js"></script>
     
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevent page scrolling */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
         .top-bar {
             position: fixed;
             top: 0;
@@ -67,7 +80,9 @@
         }
         .container {
             display: flex;
+            height: calc(100vh - 55px); /* Full height minus top bar */
             margin-top: 55px;
+            overflow: hidden; /* Prevent container overflow */
         }
         .sidebar {
             background: #4b5c09;
@@ -121,11 +136,56 @@
         .main {
             margin-left: 60px;
             margin-right: 26%; /* Permanently sized for collapsed map space */
-            padding: 1rem;
+            padding-top: 1vh; /* Small top padding in vh */
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-bottom: 1vh;
             flex-grow: 1;
+            height: calc(100vh - 55px); /* Full viewport height minus top bar */
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent main container from scrolling */
         }
         .sidebar.expanded ~ .main {
             margin-left: 200px;
+        }
+        .search-container {
+            position: fixed;
+            top: 6.5vh; /* Below top bar */
+            left: 60px; /* After sidebar */
+            width: calc(50vw - 80px); /* Half screen width minus sidebar and padding */
+            height: calc(50vh - 10px); /* Half screen height */
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1vh;
+            border-bottom: 1px solid #eee;
+            background: #f9f9f9;
+            border-radius: 8px 8px 0 0;
+        }
+        .search-filters {
+            display: flex;
+            gap: 1rem;
+        }
+        .search-filters label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
         }
         .info-panel, .detail-panel {
             position: fixed;
@@ -209,6 +269,71 @@
             height: 100%;
             position: relative;
         }
+        
+        .map-controls {
+            position: absolute;
+            top: 1vh;
+            left: 5vw; 
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+            transition: opacity 0.3s ease;
+        }
+        
+        #mapContainer.collapsed .map-controls {
+            top: 0.5%;
+            left: 0;
+            padding: 0.4rem;
+            gap: 0.5rem;
+            scale: 0.9;
+        }
+        
+        #mapContainer.collapsed .zoom-filters label {
+            font-size: 0.75rem;
+        }
+        
+        #mapContainer.collapsed .location-input input {
+            width: 120px !important;
+            font-size: 0.7rem !important;
+            padding: 0.2rem !important;
+        }
+        
+        #mapContainer.collapsed .location-input button {
+            font-size: 0.7rem !important;
+            padding: 0.2rem 0.4rem !important;
+        }
+        
+        .map-controls.hiding {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .zoom-filters {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .zoom-filters label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        
+        .location-input {
+            display: flex;
+            align-items: center;
+        }
+        
         /* Hide Leaflet attribution */
         .leaflet-control-attribution {
             display: none !important;
@@ -438,7 +563,15 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
+            position: fixed;
+            top: 6.5vh; /* 6.5% from top of screen */
+            bottom: 0.5vh; /* 0.5% from bottom of screen */
+            left: 60px; /* Account for sidebar */
+            right: 26%; /* Account for map area */
+            margin: 0 1rem; /* Side margins */
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
         }
         .post-composer {
             padding: 1rem;
@@ -464,8 +597,10 @@
             padding: 0.5rem 1rem;
         }
         .posts-feed {
-            max-height: 500px;
+            flex-grow: 1; /* Take up remaining space in posts-container */
             overflow-y: auto;
+            padding: 1rem;
+            box-sizing: border-box;
         }
         .post-item {
             padding: 1rem;
@@ -489,6 +624,15 @@
             gap: 1rem;
             font-size: 0.9rem;
             color: #666;
+        }
+        .comments-modal {
+            backdrop-filter: blur(4px);
+        }
+        .comments-modal-content {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .comment-item:hover {
+            background-color: #f9f9f9;
         }
         .post-action {
             cursor: pointer;
@@ -577,11 +721,68 @@
             font-size: 0.8rem;
             text-decoration: underline;
         }
+        
+        /* Password Input Styling */
+        .password-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 1;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .password-toggle:hover {
+            opacity: 1;
+        }
+        
+        .password-status {
+            position: absolute;
+            right: 40px;
+            font-size: 1.2rem;
+            color: #28a745;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .password-requirements {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .requirement {
+            margin: 0.2rem 0;
+            transition: color 0.2s;
+            color: #dc3545; /* Red by default */
+        }
+        
+        .requirement.met {
+            color: #28a745; /* Green when met */
+        }
+        
+        .requirement.met::before {
+            content: '✓ ';
+            font-weight: bold;
+        }
+        
+        /* hCaptcha styling */
+        .h-captcha {
+            margin: 1rem 0;
+        }
     </style>
 </head>
 <body>
     <div class="top-bar">
-        <input class="search" type="text" placeholder="Search Name or Location" id="searchInput">
+        <input class="search" type="text" placeholder="Search Name or Location" id="searchInput" onfocus="openSearch()" oninput="performGlobalSearch(this.value)">
         <div class="logo">[Logo Placeholder] United We Rise</div>
         <div class="nav">
             <givebutter-widget id="p75ZaL"></givebutter-widget>
@@ -630,7 +831,18 @@
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" required>
+                        <div class="password-input-container">
+                            <input type="password" id="registerPassword" required>
+                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('registerPassword')">👁️</button>
+                            <div class="password-status" id="password-status">✓</div>
+                        </div>
+                        <div class="password-requirements" id="password-requirements" style="display: none;">
+                            <div class="requirement" id="req-length">• At least 8 characters</div>
+                            <div class="requirement" id="req-uppercase">• One uppercase letter</div>
+                            <div class="requirement" id="req-lowercase">• One lowercase letter</div>
+                            <div class="requirement" id="req-number">• One number</div>
+                            <div class="requirement" id="req-special">• One special character</div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="registerFirstName">First Name</label>
@@ -639,6 +851,10 @@
                     <div class="form-group">
                         <label for="registerLastName">Last Name</label>
                         <input type="text" id="registerLastName">
+                    </div>
+                    <div class="form-group">
+                        <!-- Use production key with proper domain (test.unitedwerise.com) -->
+                        <div class="h-captcha" data-sitekey="9c5af3a8-5066-446c-970e-1c18d9fe8d9e" id="hcaptcha-register"></div>
                     </div>
                     <button class="btn" onclick="handleRegister()">Sign Up</button>
                     <div class="auth-switch">
@@ -677,6 +893,18 @@
                     <h1>Welcome to United We Rise</h1>
                     <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-container" id="searchContainer" style="display: none;">
+        <div class="search-header">
+            <h3 style="margin: 0; color: #4b5c09;">Search Results</h3>
+            <button onclick="closeSearch()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        <div class="search-results" id="globalSearchResults">
+            <div style="text-align: center; color: #666; padding: 2rem;">
+                Start typing to search for users
             </div>
         </div>
     </div>
@@ -801,6 +1029,17 @@
     <!-- Map Container -->
     <div id="mapContainer">
         <button id="mapToggleBtn">Collapse</button>
+        <div class="map-controls">
+            <div class="zoom-filters">
+                <label><input type="radio" name="zoomLevel" value="national" checked onchange="setZoomLevel('national')"> National</label>
+                <label><input type="radio" name="zoomLevel" value="state" onchange="setZoomLevel('state')"> State</label>
+                <label><input type="radio" name="zoomLevel" value="local" onchange="setZoomLevel('local')"> Local</label>
+            </div>
+            <div class="location-input">
+                <input type="text" id="locationInput" placeholder="Enter location (or use current)" style="width: 200px; padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
+                <button onclick="geocodeAndZoom()" style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-left: 0.25rem;">Go</button>
+            </div>
+        </div>
         <div id="map"></div>
     </div>
 
@@ -813,12 +1052,6 @@
             <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
             <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because UnitedWeRise!</p>
         </div>
-        <div style="text-align: center;">
-            <iframe 
-                src="https://docs.google.com/forms/d/e/1FAIpQLSeL3qSrhI476uTOHmCUx9xW_9fyQFXXL0k-RyLSqhuBSXcl9A/viewform?embedded=true" 
-                width="100%" height="400" frameborder="0" style="border: none;">
-            </iframe>
-        </div>
     </div>
 
     <script>
@@ -826,6 +1059,7 @@
         const API_BASE = 'http://localhost:3001/api';
         let currentUser = null;
         let authToken = null;
+        let addressForm = null;
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -837,7 +1071,10 @@
 
             // Check for stored auth
             authToken = localStorage.getItem('authToken');
+            console.log('Stored auth token:', authToken ? 'Present' : 'None');
+            console.log('API Base URL:', API_BASE);
             if (authToken) {
+                console.log('Attempting to verify user...');
                 verifyAndSetUser();
             }
 
@@ -866,17 +1103,22 @@
         // Authentication Functions
         async function verifyAndSetUser() {
             try {
+                console.log('Verifying token with /auth/me...');
                 const response = await fetch(`${API_BASE}/auth/me`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
 
+                console.log('Auth verification response status:', response.status);
+                
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('Auth verification successful:', data.user);
                     setUserLoggedIn(data.user);
                 } else {
                     // Token is invalid
+                    console.log('Token invalid, removing from storage');
                     localStorage.removeItem('authToken');
                     authToken = null;
                 }
@@ -962,9 +1204,30 @@
             const password = document.getElementById('registerPassword').value;
             const firstName = document.getElementById('registerFirstName').value;
             const lastName = document.getElementById('registerLastName').value;
+            
+            // Get hCaptcha response
+            let hcaptchaResponse = null;
+            try {
+                if (window.hcaptcha) {
+                    hcaptchaResponse = window.hcaptcha.getResponse();
+                }
+            } catch (e) {
+                console.error('hCaptcha error:', e);
+            }
 
             if (!email || !username || !password) {
                 showAuthMessage('Email, username, and password are required', 'error');
+                return;
+            }
+            
+            if (!hcaptchaResponse) {
+                showAuthMessage('Please complete the captcha verification', 'error');
+                return;
+            }
+            
+            // Validate password
+            if (!validatePassword(password)) {
+                showAuthMessage('Password must meet all requirements', 'error');
                 return;
             }
 
@@ -974,7 +1237,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email, username, password, firstName, lastName })
+                    body: JSON.stringify({ email, username, password, firstName, lastName, hcaptchaToken: hcaptchaResponse })
                 });
 
                 const data = await response.json();
@@ -987,10 +1250,18 @@
                     showAuthMessage('Registration successful!', 'success');
                 } else {
                     showAuthMessage(data.error || 'Registration failed', 'error');
+                    // Reset hCaptcha on error
+                    if (window.hcaptcha) {
+                        window.hcaptcha.reset();
+                    }
                 }
             } catch (error) {
                 console.error('Registration error:', error);
                 showAuthMessage('Network error. Please try again.', 'error');
+                // Reset hCaptcha on error
+                if (window.hcaptcha) {
+                    window.hcaptcha.reset();
+                }
             }
         }
 
@@ -1000,6 +1271,8 @@
             document.getElementById('userSection').style.display = 'flex';
             document.getElementById('userGreeting').textContent = `Hello, ${user.firstName || user.username}!`;
             
+            // Address info will be loaded by loadUserContent()
+            
             // Show user-specific sidebar options
             document.getElementById('messagesThumb').style.display = 'block';
             document.getElementById('profileThumb').style.display = 'block';
@@ -1008,6 +1281,35 @@
             // Load user-specific content
             loadUserContent();
             loadUserPosts();
+        }
+
+
+        // Enable/disable radio buttons based on available location data
+        function updateRadioButtonAvailability() {
+            const stateRadio = document.querySelector('input[name="zoomLevel"][value="state"]');
+            const localRadio = document.querySelector('input[name="zoomLevel"][value="local"]');
+            const stateLabel = stateRadio?.parentElement;
+            const localLabel = localRadio?.parentElement;
+            
+            // Check if user has location data
+            const hasState = currentUser && currentUser.state;
+            const hasAddress = currentUser && (currentUser.zipCode || currentUser.city) && currentUser.state;
+            
+            // Enable/disable state radio
+            if (stateRadio && stateLabel) {
+                stateRadio.disabled = !hasState;
+                stateLabel.style.opacity = hasState ? '1' : '0.5';
+                stateLabel.style.cursor = hasState ? 'pointer' : 'not-allowed';
+            }
+            
+            // Enable/disable local radio
+            if (localRadio && localLabel) {
+                localRadio.disabled = !hasAddress;
+                localLabel.style.opacity = hasAddress ? '1' : '0.5';
+                localLabel.style.cursor = hasAddress ? 'pointer' : 'not-allowed';
+            }
+            
+            console.log(`Radio button availability - State: ${hasState}, Local: ${hasAddress}`);
         }
 
         function logout() {
@@ -1042,16 +1344,28 @@
         async function loadUserContent() {
             // Load user's elected officials if they have an address
             try {
-                const response = await fetch(`${API_BASE}/users/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+                const response = await apiCall('/users/profile');
 
                 if (response.ok) {
-                    const data = await response.json();
-                    if (data.user.zipCode && data.user.state) {
-                        loadElectedOfficials(data.user.zipCode, data.user.state);
+                    const data = response.data;
+                    
+                    // UPDATE: Merge the complete profile data into currentUser
+                    if (data.user) {
+                        currentUser = { ...currentUser, ...data.user };
+                        console.log('User profile data merged into currentUser:', currentUser);
+                        
+                        // Update radio button availability now that we have address data
+                        updateRadioButtonAvailability();
+                        
+                        // Load representatives if we have address
+                        if (data.user.zipCode && data.user.state) {
+                            loadElectedOfficials(data.user.zipCode, data.user.state);
+                        }
+                        
+                        // Update map location if we have address
+                        if (mapInstance && currentUser.state) {
+                            getCurrentUserLocation();
+                        }
                     }
                 }
             } catch (error) {
@@ -1061,34 +1375,151 @@
 
         async function loadElectedOfficials(zipCode, state) {
             try {
-                const response = await fetch(`${API_BASE}/political/local?zipCode=${zipCode}&state=${state}&politicalProfileType=ELECTED_OFFICIAL`);
+                const response = await apiCall('/political/representatives');
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    updateOfficialsPanel(data.users);
+                if (response.ok && response.data) {
+                    const representatives = response.data.representatives;
+                    updateOfficialsPanel(representatives);
+                    
+                    // Extract district information for boundary loading
+                    console.log('Representatives data received:', representatives);
+                    
+                    if (representatives && representatives.federal) {
+                        console.log('Federal representatives:', representatives.federal);
+                        
+                        const districtRep = representatives.federal.find(rep => 
+                            rep.office && rep.office.includes('Representative')
+                        );
+                        
+                        console.log('Found district rep:', districtRep);
+                        
+                        if (districtRep) {
+                            let districtNumber = null;
+                            let stateAbbr = null;
+                            
+                            // First try to use the district field directly
+                            if (districtRep.district) {
+                                console.log('District field found:', districtRep.district);
+                                
+                                // District field might be like "IL-10" or just "10"  
+                                const districtMatch = districtRep.district.match(/(?:(\w{2})-)?(\d+)/);
+                                if (districtMatch) {
+                                    stateAbbr = districtMatch[1] || (currentUser && currentUser.state);
+                                    districtNumber = districtMatch[2];
+                                }
+                            }
+                            
+                            // Fallback: try to extract from office title
+                            if (!districtNumber && districtRep.office) {
+                                console.log('Fallback: parsing office title:', districtRep.office);
+                                const officeMatch = districtRep.office.match(/(\w{2})-(\d+)/);
+                                if (officeMatch) {
+                                    stateAbbr = officeMatch[1];
+                                    districtNumber = officeMatch[2];
+                                }
+                            }
+                            
+                            if (districtNumber && stateAbbr) {
+                                // Store district info for boundary loading
+                                if (!currentUser) currentUser = {};
+                                currentUser.district = districtNumber;
+                                currentUser.state = stateAbbr;
+                                
+                                console.log(`District info extracted: ${currentUser.state}-${currentUser.district}`);
+                                
+                                // Load boundary if currently at local zoom
+                                if (currentZoomLevel === 'local' && boundaryManager && currentLocation) {
+                                    console.log('Loading district boundary...');
+                                    boundaryManager.loadBoundary('district', currentUser.district, currentUser.state);
+                                }
+                            } else {
+                                console.warn('Could not extract district information from representative data');
+                            }
+                        } else {
+                            console.warn('No district representative found in federal representatives');
+                        }
+                    } else {
+                        console.warn('No federal representatives found in response');
+                    }
+                } else {
+                    console.log('No representatives data available yet - may need address in profile');
                 }
             } catch (error) {
-                console.error('Failed to load elected officials:', error);
+                console.error('Failed to load representatives:', error);
             }
         }
 
-        function updateOfficialsPanel(officials) {
+        function updateOfficialsPanel(representatives) {
             const content = document.getElementById('officialsContent');
-            if (officials.length === 0) {
-                content.innerHTML = '<p>No verified elected officials found in your area.</p>';
+            
+            // Check if representatives object has any data
+            const totalReps = (representatives.federal || []).length + 
+                            (representatives.state || []).length + 
+                            (representatives.local || []).length;
+            
+            if (totalReps === 0) {
+                content.innerHTML = '<p>No representatives found. Please add your complete address in your profile.</p>';
                 return;
             }
 
             let html = '<div>';
-            officials.forEach(official => {
-                html += `
-                    <div style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-                        <strong>${official.firstName} ${official.lastName}</strong><br>
-                        <em>${official.officialTitle || official.office}</em><br>
-                        <small>@${official.username}</small>
-                    </div>
-                `;
-            });
+            
+            // Federal representatives
+            if (representatives.federal && representatives.federal.length > 0) {
+                html += '<h4>Federal Representatives</h4>';
+                representatives.federal.forEach(rep => {
+                    html += `
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                                ${rep.photoUrl ? `<img src="${rep.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">' + rep.name.charAt(0) + '</div>'}
+                                <div>
+                                    <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
+                                    <em>${rep.office}</em>
+                                </div>
+                            </div>
+                            ${rep.phones && rep.phones.length > 0 ? `<div>📞 ${rep.phones[0]}</div>` : ''}
+                            ${rep.urls && rep.urls.length > 0 ? `<div>🌐 <a href="${rep.urls[0]}" target="_blank">Website</a></div>` : ''}
+                            ${rep.social && rep.social.twitter ? `<div>🐦 @${rep.social.twitter}</div>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            // State representatives
+            if (representatives.state && representatives.state.length > 0) {
+                html += '<h4>State Representatives</h4>';
+                representatives.state.forEach(rep => {
+                    html += `
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                                ${rep.photoUrl ? `<img src="${rep.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8E23; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">' + rep.name.charAt(0) + '</div>'}
+                                <div>
+                                    <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
+                                    <em>${rep.office}</em>
+                                </div>
+                            </div>
+                            ${rep.phones && rep.phones.length > 0 ? `<div>📞 ${rep.phones[0]}</div>` : ''}
+                            ${rep.urls && rep.urls.length > 0 ? `<div>🌐 <a href="${rep.urls[0]}" target="_blank">Website</a></div>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            // Local representatives
+            if (representatives.local && representatives.local.length > 0) {
+                html += '<h4>Local Representatives</h4>';
+                representatives.local.forEach(rep => {
+                    html += `
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f0f8f0;">
+                            <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
+                            <em>${rep.office}</em><br>
+                            ${rep.phones && rep.phones.length > 0 ? `📞 ${rep.phones[0]}<br>` : ''}
+                            ${rep.urls && rep.urls.length > 0 ? `🌐 <a href="${rep.urls[0]}" target="_blank">Website</a>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
             html += '</div>';
             content.innerHTML = html;
         }
@@ -1207,13 +1638,41 @@
             
             toggleBtn.addEventListener('click', () => {
                 const isCollapsing = !mapContainer.classList.contains('collapsed');
+                const mapControls = document.querySelector('.map-controls');
                 
-                mapContainer.classList.toggle('collapsed');
-                toggleBtn.textContent = isCollapsing ? 'Expand' : 'Collapse';
-                map.setZoom(isCollapsing ? 3 : 5);
+                // Store current zoom level state before collapsing
+                const currentRadio = document.querySelector('input[name="zoomLevel"]:checked');
+                const currentLevel = currentRadio ? currentRadio.value : 'national';
+                
+                // Fade out controls
+                mapControls.classList.add('hiding');
+                
+                // Wait for fade out, then toggle map and fade back in
+                setTimeout(async () => {
+                    mapContainer.classList.toggle('collapsed');
+                    toggleBtn.textContent = isCollapsing ? 'Expand' : 'Collapse';
+                    
+                    // Don't set hardcoded zoom - let setZoomLevel handle it properly
+                    // Restore zoom level state and apply proper zoom for current map size
+                    currentZoomLevel = currentLevel;
+                    updateRadioButtonState(currentLevel);
+                    
+                    // Apply the zoom level with proper settings for expanded/collapsed state
+                    if (currentLocation || currentLevel === 'national') {
+                        await setZoomLevel(currentLevel);
+                    }
+                    
+                    // Fade controls back in after a short delay for repositioning
+                    setTimeout(() => {
+                        mapControls.classList.remove('hiding');
+                    }, 50);
+                }, 300);
                 
                 // CSS handles the main content adjustment automatically
             });
+
+            // Set map instance for zoom controls
+            setMapInstance(map);
 
             return map;
         }
@@ -1223,8 +1682,32 @@
             localStorage.setItem('panelClosed', 'true');
         });
 
+        // API Response Cache
+        const apiCache = new Map();
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for general API calls
+        const REPRESENTATIVES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for representatives (they don't change often)
+
         // API Helper Functions
         async function apiCall(endpoint, options = {}) {
+            // Check cache for GET requests (unless explicitly bypassing cache)
+            const isGet = !options.method || options.method === 'GET';
+            const bypassCache = options.bypassCache;
+            
+            if (isGet && !bypassCache) {
+                const cacheKey = `${endpoint}${authToken ? `_${authToken.substring(0, 10)}` : ''}`;
+                const cached = apiCache.get(cacheKey);
+                
+                // Use longer cache duration for representatives data
+                const cacheDuration = endpoint.includes('representatives') || endpoint.includes('officials') 
+                    ? REPRESENTATIVES_CACHE_DURATION 
+                    : CACHE_DURATION;
+                
+                if (cached && (Date.now() - cached.timestamp) < cacheDuration) {
+                    console.log(`Using cached API response for ${endpoint} (${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`);
+                    return cached.data;
+                }
+            }
+            
             const config = {
                 headers: {
                     'Content-Type': 'application/json',
@@ -1232,9 +1715,59 @@
                 },
                 ...options
             };
+            
+            // Remove custom options before fetch
+            delete config.bypassCache;
 
-            const response = await fetch(`${API_BASE}${endpoint}`, config);
-            return response;
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                
+                // Create a response object with ok status and parsed data
+                const result = {
+                    ok: response.ok,
+                    status: response.status,
+                    data: null
+                };
+
+                // Try to parse JSON response
+                try {
+                    const text = await response.text();
+                    if (text) {
+                        result.data = JSON.parse(text);
+                    }
+                } catch (parseError) {
+                    console.warn('Failed to parse JSON response:', parseError);
+                    result.data = { error: 'Invalid response format' };
+                }
+                
+                // Cache GET responses
+                if (isGet && !bypassCache && result.ok) {
+                    const cacheKey = `${endpoint}${authToken ? `_${authToken.substring(0, 10)}` : ''}`;
+                    apiCache.set(cacheKey, {
+                        timestamp: Date.now(),
+                        data: result
+                    });
+                    
+                    // Clean old cache entries periodically
+                    if (apiCache.size > 100) {
+                        const cutoff = Date.now() - Math.max(CACHE_DURATION, REPRESENTATIVES_CACHE_DURATION);
+                        for (const [key, value] of apiCache.entries()) {
+                            if (value.timestamp < cutoff) {
+                                apiCache.delete(key);
+                            }
+                        }
+                    }
+                }
+
+                return result;
+            } catch (networkError) {
+                console.error('Network error:', networkError);
+                return {
+                    ok: false,
+                    status: 0,
+                    data: { error: 'Network error. Please check your connection.' }
+                };
+            }
         }
 
         // Search functionality
@@ -1252,8 +1785,8 @@
                 const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    displaySearchResults(data.users, query);
+                    // Only use the global search results container, not the feed area
+                    displayGlobalSearchResults(response.data.users);
                 } else {
                     console.error('Search failed');
                 }
@@ -1317,8 +1850,9 @@
                 const response = await apiCall('/feed/trending');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    updateTrendingPanel(data.posts);
+                    updateTrendingPanel(response.data.posts);
+                } else {
+                    console.error('Failed to load trending posts:', response.data?.error);
                 }
             } catch (error) {
                 console.error('Failed to load trending posts:', error);
@@ -1361,12 +1895,11 @@
                 const response = await apiCall('/feed/trending?limit=20');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    updateTrendingUpdatesPanel(data.posts);
+                    updateTrendingUpdatesPanel(response.data.posts);
                     
                     // Show the panel when there's content
                     const panel = document.getElementById('trendingUpdates');
-                    if (data.posts.length > 0) {
+                    if (response.data.posts.length > 0) {
                         panel.classList.add('show');
                     }
                 } else {
@@ -1403,7 +1936,8 @@
                         <div style="margin-bottom: 4px;">${preview}</div>
                         <div style="color: #666; font-size: 0.75rem; margin-bottom: 4px;">
                             <span style="cursor: pointer; margin-right: 8px;" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</span>
-                            <span style="cursor: pointer; margin-right: 8px;" onclick="showTrendingCommentBox('${post.id}')">💬 ${post.commentsCount}</span>
+                            <span style="cursor: pointer; margin-right: 8px;" onclick="showTrendingCommentBox('${post.id}')">💬 Add</span>
+                            ${post.commentsCount > 0 ? `<span style="cursor: pointer; margin-right: 8px; color: #4b5c09;" onclick="viewComments('${post.id}')">👁️ ${post.commentsCount}</span>` : ''}
                             <span>${timeAgo}</span>
                         </div>
                         <div id="trending-comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
@@ -1480,7 +2014,8 @@
                         <div style="margin-bottom: 0.5rem;">${post.content}</div>
                         <div style="font-size: 0.8rem; color: #888;">
                             <span style="cursor: pointer; margin-right: 10px;" onclick="likeTrendingPost('${post.id}')">❤️ ${post.likesCount}</span>
-                            <span style="cursor: pointer;" onclick="showTrendingCommentBox('${post.id}')">💬 ${post.commentsCount}</span>
+                            <span style="cursor: pointer; margin-right: 10px;" onclick="showTrendingCommentBox('${post.id}')">💬 Add</span>
+                            ${post.commentsCount > 0 ? `<span style="cursor: pointer; color: #4b5c09;" onclick="viewComments('${post.id}')">👁️ View ${post.commentsCount}</span>` : ''}
                         </div>
                         <div id="trending-comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
                             <textarea id="trending-comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
@@ -1538,8 +2073,7 @@
                 const response = await apiCall('/messages/conversations');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    displayConversations(data.conversations);
+                    displayConversations(response.data.conversations);
                 } else {
                     document.getElementById('messagesBody').innerHTML = '<p style="text-align: center; padding: 1rem; color: #666;">Failed to load conversations</p>';
                 }
@@ -1552,38 +2086,211 @@
         function displayConversations(conversations) {
             const body = document.getElementById('messagesBody');
             
-            if (conversations.length === 0) {
+            if (!authToken) {
                 body.innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #666;">
-                        <p>No conversations yet</p>
-                        <p style="font-size: 0.9rem;">Search for users and start a conversation!</p>
+                        <p>Please log in to view messages</p>
+                        <button onclick="openAuthModal('login')" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Log In
+                        </button>
                     </div>
                 `;
                 return;
             }
-
-            let html = '';
-            conversations.forEach(conv => {
-                const participant = conv.participants[0];
-                const timeAgo = conv.lastMessageAt ? getTimeAgo(new Date(conv.lastMessageAt)) : '';
-                
+            
+            let html = `
+                <div style="padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
+                    <button onclick="showNewConversationForm()" style="width: 100%; padding: 0.5vh; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        + New Conversation
+                    </button>
+                </div>
+            `;
+            
+            if (conversations.length === 0) {
                 html += `
-                    <div class="conversation-item" onclick="openConversation('${conv.id}', '${participant.username}')">
-                        <div class="user-avatar">${(participant.firstName?.[0] || participant.username[0]).toUpperCase()}</div>
-                        <div class="conversation-info">
-                            <div class="conversation-name">${participant.firstName || participant.username}</div>
-                            <div class="conversation-preview">${conv.lastMessageContent || 'No messages yet'} ${timeAgo ? '• ' + timeAgo : ''}</div>
-                        </div>
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>No conversations yet</p>
+                        <p style="font-size: 0.9rem;">Start your first conversation!</p>
                     </div>
                 `;
-            });
+            } else {
+                conversations.forEach(conv => {
+                    const participant = conv.participants[0];
+                    const timeAgo = conv.lastMessageAt ? getTimeAgo(new Date(conv.lastMessageAt)) : '';
+                    
+                    html += `
+                        <div class="conversation-item" onclick="openConversation('${conv.id}', '${participant.username}')">
+                            <div class="user-avatar">${(participant.firstName?.[0] || participant.username[0]).toUpperCase()}</div>
+                            <div class="conversation-info">
+                                <div class="conversation-name">${participant.firstName || participant.username}</div>
+                                <div class="conversation-preview">${conv.lastMessageContent || 'No messages yet'} ${timeAgo ? '• ' + timeAgo : ''}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
 
             body.innerHTML = html;
         }
 
-        function openConversation(conversationId, username) {
-            // TODO: Open individual conversation view
-            alert(`Opening conversation with ${username} (ID: ${conversationId})`);
+        function showNewConversationForm() {
+            const body = document.getElementById('messagesBody');
+            
+            body.innerHTML = `
+                <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
+                    <button onclick="backToConversations()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
+                    <span style="font-weight: bold;">New Conversation</span>
+                </div>
+                
+                <div style="padding: 1rem; text-align: center;">
+                    <div style="color: #666; margin-bottom: 1rem;">
+                        <p>To start a new conversation, use the search bar at the top of the page to find users.</p>
+                        <p style="font-size: 0.9rem;">Search results will include options to message, follow, and add as friend.</p>
+                    </div>
+                    <button onclick="document.getElementById('searchInput').focus(); openSearch();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Open Search
+                    </button>
+                </div>
+            `;
+            
+            // Focus on search input
+            setTimeout(() => {
+                document.getElementById('userSearchInput')?.focus();
+            }, 100);
+        }
+
+
+        async function startConversationWithUser(userId, username) {
+            try {
+                const response = await apiCall('/messages/conversations', {
+                    method: 'POST',
+                    body: JSON.stringify({ participantId: userId })
+                });
+
+                if (response.ok) {
+                    // Open the conversation
+                    openConversation(response.data.conversation.id, username);
+                } else {
+                    alert('Failed to start conversation');
+                }
+            } catch (error) {
+                console.error('Failed to start conversation:', error);
+                alert('Error starting conversation');
+            }
+        }
+
+        async function openConversation(conversationId, username) {
+            try {
+                // Load messages for this conversation
+                const response = await apiCall(`/messages/conversations/${conversationId}/messages`);
+                
+                if (response.ok) {
+                    showConversationView(conversationId, username, response.data.messages);
+                } else {
+                    alert('Failed to load conversation');
+                }
+            } catch (error) {
+                console.error('Failed to load conversation:', error);
+                alert('Error loading conversation');
+            }
+        }
+
+        function showConversationView(conversationId, username, messages) {
+            const body = document.getElementById('messagesBody');
+            
+            body.innerHTML = `
+                <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
+                    <button onclick="backToConversations()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
+                    <div class="user-avatar" style="margin-right: 0.5rem;">${username[0].toUpperCase()}</div>
+                    <span style="font-weight: bold;">${username}</span>
+                </div>
+                
+                <div id="messagesArea" style="height: 250px; overflow-y: auto; padding: 0.5rem; background: white;">
+                    ${messages.length === 0 ? 
+                        '<div style="text-align: center; padding: 2rem; color: #666;">No messages yet. Start the conversation!</div>' :
+                        messages.map(msg => `
+                            <div style="margin-bottom: 0.75rem; ${msg.sender.id === currentUser?.id ? 'text-align: right;' : ''}">
+                                <div style="display: inline-block; max-width: 80%; padding: 0.5rem 0.75rem; border-radius: 12px; ${
+                                    msg.sender.id === currentUser?.id ? 
+                                    'background: #4b5c09; color: white;' : 
+                                    'background: #f0f0f0; color: black;'
+                                }">
+                                    <div style="font-size: 0.9rem;">${msg.content}</div>
+                                    <div style="font-size: 0.7rem; margin-top: 0.25rem; opacity: 0.8;">
+                                        ${msg.sender.id === currentUser?.id ? '' : msg.sender.username + ' • '}${new Date(msg.createdAt).toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+                
+                <div style="display: flex; padding: 1vh; border-top: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
+                    <input 
+                        type="text" 
+                        id="messageInput-${conversationId}" 
+                        placeholder="Type a message..." 
+                        style="flex: 1; padding: 0.5vh; border: 1px solid #ddd; border-radius: 20px; margin-right: 0.5rem; outline: none;"
+                        onkeypress="handleMessageKeyPress(event, '${conversationId}')"
+                    >
+                    <button 
+                        onclick="sendMessage('${conversationId}')" 
+                        style="background: #4b5c09; color: white; border: none; padding: 0.5vh 1rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem;"
+                    >
+                        Send
+                    </button>
+                </div>
+            `;
+            
+            // Scroll to bottom of messages
+            setTimeout(() => {
+                const messagesArea = document.getElementById('messagesArea');
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }, 100);
+            
+            // Focus on input
+            setTimeout(() => {
+                document.getElementById(`messageInput-${conversationId}`)?.focus();
+            }, 100);
+        }
+
+        function backToConversations() {
+            loadConversations();
+        }
+
+        function handleMessageKeyPress(event, conversationId) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage(conversationId);
+            }
+        }
+
+        async function sendMessage(conversationId) {
+            const input = document.getElementById(`messageInput-${conversationId}`);
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            try {
+                const response = await apiCall(`/messages/conversations/${conversationId}/messages`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    // Refresh the conversation to show the new message
+                    const username = document.querySelector('#messagesBody span[style*="font-weight: bold"]')?.textContent;
+                    if (username) {
+                        openConversation(conversationId, username);
+                    }
+                } else {
+                    alert('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                alert('Error sending message');
+            }
         }
 
         // Profile Functions
@@ -1598,20 +2305,34 @@
         }
 
         async function loadUserProfile() {
-            if (!authToken) return;
+            if (!authToken) {
+                document.getElementById('profileBody').innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>Please log in to view your profile</p>
+                        <button onclick="openAuthModal('login')" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Log In
+                        </button>
+                    </div>
+                `;
+                return;
+            }
 
             try {
+                console.log('Loading user profile...');
                 const response = await apiCall('/users/profile');
                 
+                console.log('Profile response:', response);
+                
                 if (response.ok) {
-                    const data = await response.json();
+                    const data = response.data;
                     displayUserProfile(data.user);
                 } else {
-                    document.getElementById('profileBody').innerHTML = '<p style="color: #d32f2f;">Failed to load profile</p>';
+                    const errorMsg = response.data?.error || 'Failed to load profile';
+                    document.getElementById('profileBody').innerHTML = `<p style="color: #d32f2f;">Error: ${errorMsg}</p>`;
                 }
             } catch (error) {
                 console.error('Failed to load profile:', error);
-                document.getElementById('profileBody').innerHTML = '<p style="color: #d32f2f;">Error loading profile</p>';
+                document.getElementById('profileBody').innerHTML = '<p style="color: #d32f2f;">Network error loading profile</p>';
             }
         }
 
@@ -1630,8 +2351,8 @@
 
                 <div class="profile-section">
                     <h3>Social Stats</h3>
-                    <p><strong>Followers:</strong> ${user.followersCount}</p>
-                    <p><strong>Following:</strong> ${user.followingCount}</p>
+                    <p><strong>Followers:</strong> <a href="#" onclick="showFollowersList('${user.id}')" style="color: #4b5c09; text-decoration: none;">${user.followersCount}</a></p>
+                    <p><strong>Following:</strong> <a href="#" onclick="showFollowingList('${user.id}')" style="color: #4b5c09; text-decoration: none;">${user.followingCount}</a></p>
                 </div>
             `;
 
@@ -1693,23 +2414,66 @@
                     </div>
                     
                     <div class="profile-section">
+                        <h3>Political Profile</h3>
+                        <div class="form-group">
+                            <label>Profile Type</label>
+                            <select id="editPoliticalType" onchange="updatePoliticalFields()" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="CITIZEN" ${(currentUser.politicalProfileType || 'CITIZEN') === 'CITIZEN' ? 'selected' : ''}>Citizen</option>
+                                <option value="CANDIDATE" ${currentUser.politicalProfileType === 'CANDIDATE' ? 'selected' : ''}>Political Candidate</option>
+                                <option value="ELECTED_OFFICIAL" ${currentUser.politicalProfileType === 'ELECTED_OFFICIAL' ? 'selected' : ''}>Elected Official</option>
+                                <option value="POLITICAL_ORG" ${currentUser.politicalProfileType === 'POLITICAL_ORG' ? 'selected' : ''}>Political Organization</option>
+                            </select>
+                        </div>
+                        
+                        <div id="politicalFieldsContainer">
+                            <!-- Political fields will be populated here -->
+                        </div>
+                        
+                        <div id="verificationSection" style="display: none;">
+                            <div style="background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-top: 1rem;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: #4b5c09;">Political Verification</h4>
+                                <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #666;">
+                                    Political candidates and elected officials require verification. Upload supporting documents to verify your political status.
+                                </p>
+                                
+                                <div class="form-group">
+                                    <label>Current Verification Status</label>
+                                    <div style="padding: 0.5rem; background: ${getVerificationStatusColor(currentUser.verificationStatus)}; border-radius: 4px; font-weight: bold;">
+                                        ${getVerificationStatusText(currentUser.verificationStatus)}
+                                    </div>
+                                </div>
+                                
+                                ${currentUser.verificationStatus === 'PENDING' || currentUser.verificationStatus === 'DENIED' ? `
+                                <div class="form-group">
+                                    <label>Upload Verification Documents</label>
+                                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
+                                        Upload documents that verify your political status (e.g., filing papers, official campaign documents, government ID with title, etc.)
+                                    </p>
+                                    <input type="file" id="verificationDocs" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="width: 100%;">
+                                    <button type="button" onclick="uploadVerificationDocs()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        Upload Documents
+                                    </button>
+                                </div>
+                                ` : ''}
+                                
+                                ${currentUser.verificationStatus === 'APPROVED' ? `
+                                <div style="color: #2e7d32; font-weight: bold;">
+                                    ✅ Your political profile has been verified!
+                                </div>
+                                ` : ''}
+                                
+                                ${currentUser.verificationStatus === 'DENIED' ? `
+                                <div style="color: #d32f2f; font-weight: bold;">
+                                    ❌ Verification was denied. Please upload additional documentation or contact support.
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
                         <h3>Address (for finding your elected officials)</h3>
-                        <div class="form-group">
-                            <label>Street Address</label>
-                            <input type="text" id="editStreetAddress" value="${currentUser.streetAddress || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>City</label>
-                            <input type="text" id="editCity" value="${currentUser.city || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>State</label>
-                            <input type="text" id="editState" value="${currentUser.state || ''}" placeholder="e.g., IL">
-                        </div>
-                        <div class="form-group">
-                            <label>Zip Code</label>
-                            <input type="text" id="editZipCode" value="${currentUser.zipCode || ''}">
-                        </div>
+                        <div id="profileAddressForm"></div>
                     </div>
                     
                     <div class="profile-section">
@@ -1718,6 +2482,130 @@
                     </div>
                 </form>
             `;
+            
+            // Initialize the address form
+            addressForm = createAddressForm({
+                containerId: 'profileAddressForm',
+                initialValues: {
+                    streetAddress: currentUser.streetAddress || '',
+                    city: currentUser.city || '',
+                    state: currentUser.state || '',
+                    zipCode: currentUser.zipCode || ''
+                },
+                onChange: (data) => {
+                    // Address data changed - could trigger validation or auto-save
+                    console.log('Address updated:', data);
+                },
+                required: false
+            });
+            
+            // Initialize political fields
+            updatePoliticalFields();
+        }
+
+        function getVerificationStatusColor(status) {
+            switch(status) {
+                case 'APPROVED': return '#e8f5e8';
+                case 'DENIED': return '#ffebee';
+                case 'PENDING': return '#fff3e0';
+                default: return '#f5f5f5';
+            }
+        }
+
+        function getVerificationStatusText(status) {
+            switch(status) {
+                case 'APPROVED': return '✅ Verified';
+                case 'DENIED': return '❌ Verification Denied';
+                case 'PENDING': return '⏳ Verification Pending';
+                case 'NOT_REQUIRED': return 'Not Required';
+                default: return 'Unknown';
+            }
+        }
+
+        function updatePoliticalFields() {
+            const politicalType = document.getElementById('editPoliticalType')?.value;
+            const container = document.getElementById('politicalFieldsContainer');
+            const verificationSection = document.getElementById('verificationSection');
+            
+            if (!container) return;
+            
+            let fieldsHtml = '';
+            
+            if (politicalType === 'CANDIDATE') {
+                fieldsHtml = `
+                    <div class="form-group">
+                        <label>Political Party (optional)</label>
+                        <input type="text" id="editPoliticalParty" value="${currentUser.politicalParty || ''}" placeholder="e.g., Democratic, Republican, Independent">
+                    </div>
+                    <div class="form-group">
+                        <label>Office Seeking</label>
+                        <input type="text" id="editOffice" value="${currentUser.office || ''}" placeholder="e.g., Mayor of Springfield, State Senator District 5">
+                    </div>
+                    <div class="form-group">
+                        <label>Campaign Website (optional)</label>
+                        <input type="url" id="editCampaignWebsite" value="${currentUser.campaignWebsite || ''}" placeholder="https://...">
+                    </div>
+                `;
+                verificationSection.style.display = 'block';
+            } else if (politicalType === 'ELECTED_OFFICIAL') {
+                fieldsHtml = `
+                    <div class="form-group">
+                        <label>Political Party (optional)</label>
+                        <input type="text" id="editPoliticalParty" value="${currentUser.politicalParty || ''}" placeholder="e.g., Democratic, Republican, Independent">
+                    </div>
+                    <div class="form-group">
+                        <label>Current Office</label>
+                        <input type="text" id="editOffice" value="${currentUser.office || ''}" placeholder="e.g., Mayor of Springfield, State Senator District 5">
+                    </div>
+                    <div class="form-group">
+                        <label>Official Title</label>
+                        <input type="text" id="editOfficialTitle" value="${currentUser.officialTitle || ''}" placeholder="e.g., The Honorable, Mayor, Senator">
+                    </div>
+                    <div class="form-group">
+                        <label>Term Start Date (optional)</label>
+                        <input type="date" id="editTermStart" value="${currentUser.termStart ? new Date(currentUser.termStart).toISOString().split('T')[0] : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Term End Date (optional)</label>
+                        <input type="date" id="editTermEnd" value="${currentUser.termEnd ? new Date(currentUser.termEnd).toISOString().split('T')[0] : ''}">
+                    </div>
+                `;
+                verificationSection.style.display = 'block';
+            } else if (politicalType === 'POLITICAL_ORG') {
+                fieldsHtml = `
+                    <div class="form-group">
+                        <label>Organization Type</label>
+                        <input type="text" id="editOffice" value="${currentUser.office || ''}" placeholder="e.g., PAC, SuperPAC, Campaign Committee, Party Organization">
+                    </div>
+                    <div class="form-group">
+                        <label>Organization Website (optional)</label>
+                        <input type="url" id="editCampaignWebsite" value="${currentUser.campaignWebsite || ''}" placeholder="https://...">
+                    </div>
+                `;
+                verificationSection.style.display = 'block';
+            } else {
+                // CITIZEN - no additional fields needed
+                verificationSection.style.display = 'none';
+            }
+            
+            container.innerHTML = fieldsHtml;
+        }
+
+        async function uploadVerificationDocs() {
+            const fileInput = document.getElementById('verificationDocs');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Please select files to upload');
+                return;
+            }
+            
+            // In a real implementation, you would upload these files to your server
+            // For now, we'll just simulate the upload
+            alert(`${files.length} document(s) selected for upload. In a real implementation, these would be uploaded to the server for review.`);
+            
+            // Update verification status to pending after upload
+            // This would normally be handled by the server after successful upload
         }
 
         function cancelEditProfile() {
@@ -1725,6 +2613,12 @@
         }
 
         async function saveProfile() {
+            // Validate address form first
+            if (addressForm && !addressForm.validate()) {
+                alert('Please fix address form errors before saving');
+                return;
+            }
+
             const profileData = {
                 firstName: document.getElementById('editFirstName').value,
                 lastName: document.getElementById('editLastName').value,
@@ -1732,12 +2626,37 @@
                 website: document.getElementById('editWebsite').value
             };
 
+            // Get address data from the address form
+            const addressData = addressForm ? addressForm.getData() : {};
+            
+            // Get political profile data
+            const politicalType = document.getElementById('editPoliticalType').value;
             const politicalData = {
-                streetAddress: document.getElementById('editStreetAddress').value,
-                city: document.getElementById('editCity').value,
-                state: document.getElementById('editState').value,
-                zipCode: document.getElementById('editZipCode').value
+                streetAddress: addressData.streetAddress || '',
+                city: addressData.city || '',
+                state: addressData.state || '',
+                zipCode: addressData.zipCode || '',
+                politicalProfileType: politicalType
             };
+
+            // Add political-specific fields based on type
+            if (politicalType === 'CANDIDATE') {
+                politicalData.politicalParty = document.getElementById('editPoliticalParty')?.value || '';
+                politicalData.office = document.getElementById('editOffice')?.value || '';
+                politicalData.campaignWebsite = document.getElementById('editCampaignWebsite')?.value || '';
+            } else if (politicalType === 'ELECTED_OFFICIAL') {
+                politicalData.politicalParty = document.getElementById('editPoliticalParty')?.value || '';
+                politicalData.office = document.getElementById('editOffice')?.value || '';
+                politicalData.officialTitle = document.getElementById('editOfficialTitle')?.value || '';
+                
+                const termStart = document.getElementById('editTermStart')?.value;
+                const termEnd = document.getElementById('editTermEnd')?.value;
+                if (termStart) politicalData.termStart = new Date(termStart).toISOString();
+                if (termEnd) politicalData.termEnd = new Date(termEnd).toISOString();
+            } else if (politicalType === 'POLITICAL_ORG') {
+                politicalData.office = document.getElementById('editOffice')?.value || ''; // Using office field for org type
+                politicalData.campaignWebsite = document.getElementById('editCampaignWebsite')?.value || '';
+            }
 
             try {
                 // Update basic profile
@@ -1746,15 +2665,15 @@
                     body: JSON.stringify(profileData)
                 });
 
-                // Update political/address info if provided
-                if (politicalData.streetAddress && politicalData.city && politicalData.state && politicalData.zipCode) {
-                    await apiCall('/political/profile', {
-                        method: 'PUT',
-                        body: JSON.stringify(politicalData)
-                    });
-                }
+                // Update political/address info
+                const politicalResponse = await apiCall('/political/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify(politicalData)
+                });
+                
+                console.log('Political profile update response:', politicalResponse.status);
 
-                if (profileResponse.ok) {
+                if (profileResponse.ok && politicalResponse.ok) {
                     // Update current user object
                     const updatedProfile = await apiCall('/users/profile');
                     if (updatedProfile.ok) {
@@ -1763,9 +2682,15 @@
                     }
                     
                     loadUserProfile(); // Switch back to view mode
-                    alert('Profile updated successfully!');
+                    
+                    // Show different messages based on political type change
+                    if (politicalType !== 'CITIZEN' && (currentUser.politicalProfileType === 'CITIZEN' || currentUser.verificationStatus === 'PENDING')) {
+                        alert('Profile updated successfully! Your political profile will need to be verified by our team. Please upload verification documents if you haven\'t already.');
+                    } else {
+                        alert('Profile updated successfully!');
+                    }
                 } else {
-                    alert('Failed to update profile');
+                    alert('Failed to update profile. Please try again.');
                 }
             } catch (error) {
                 console.error('Profile update error:', error);
@@ -1939,8 +2864,9 @@
                 const response = await apiCall('/posts/me');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    displayPosts(data.posts);
+                    displayPosts(response.data.posts);
+                } else {
+                    console.error('Failed to load user posts:', response.data?.error);
                 }
             } catch (error) {
                 console.error('Failed to load posts:', error);
@@ -1965,7 +2891,7 @@
                 const timeAgo = getTimeAgo(new Date(post.createdAt));
                 
                 html += `
-                    <div class="post-item">
+                    <div class="post-item" data-post-id="${post.id}">
                         <div class="post-header">
                             <div class="user-avatar">${(post.author.firstName?.[0] || post.author.username[0]).toUpperCase()}</div>
                             <div>
@@ -1981,8 +2907,9 @@
                                 ❤️ ${post.likesCount}
                             </span>
                             <span class="post-action" onclick="showCommentBox('${post.id}')">
-                                💬 ${post.commentsCount}
+                                💬 Add Comment
                             </span>
+                            ${post.commentsCount > 0 ? `<span class="post-action" onclick="viewComments('${post.id}')" style="color: #4b5c09;">👁️ View ${post.commentsCount} Comment${post.commentsCount === 1 ? '' : 's'}</span>` : ''}
                         </div>
                         <div id="comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
                             <textarea id="comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
@@ -2015,10 +2942,130 @@
             }
         }
 
-        function viewComments(postId) {
-            // TODO: Implement comments view
-            alert(`Viewing comments for post ${postId}`);
+        async function viewComments(postId) {
+            const commentsContainer = document.getElementById(`post-comments-${postId}`);
+            
+            // If comments are already visible, hide them
+            if (commentsContainer && commentsContainer.style.display === 'block') {
+                commentsContainer.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Load comments
+                const response = await apiCall(`/posts/${postId}/comments?limit=50`);
+                if (!response.ok) {
+                    alert('Failed to load comments');
+                    return;
+                }
+                const data = response.data;
+
+                showCommentsInline(postId, data.comments);
+            } catch (error) {
+                console.error('Failed to load comments:', error);
+                alert('Network error. Please try again.');
+            }
         }
+
+        function showCommentsInline(postId, comments) {
+            let commentsContainer = document.getElementById(`post-comments-${postId}`);
+            
+            // Create comments container if it doesn't exist
+            if (!commentsContainer) {
+                const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                if (!postElement) return;
+                
+                commentsContainer = document.createElement('div');
+                commentsContainer.id = `post-comments-${postId}`;
+                commentsContainer.style.cssText = 'margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; background: #f9f9f9; border-radius: 8px; padding: 1rem;';
+                postElement.appendChild(commentsContainer);
+            }
+
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; color: #4b5c09;">Comments (${comments.length})</h4>
+                    <button onclick="hideComments('${postId}')" style="background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                </div>
+            `;
+
+            if (comments.length === 0) {
+                html += '<div style="text-align: center; color: #666; padding: 1rem;">No comments yet</div>';
+            } else {
+                comments.forEach(comment => {
+                    html += `
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                            <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                <img src="${comment.user.avatar || '/default-avatar.png'}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem;">
+                                <div>
+                                    <div style="font-weight: bold; font-size: 0.85rem;">${comment.user.firstName || comment.user.username} ${comment.user.lastName || ''}</div>
+                                    <div style="color: #666; font-size: 0.75rem;">@${comment.user.username}</div>
+                                </div>
+                                ${comment.user.verified ? '<span style="color: #1d9bf0; margin-left: 5px; font-size: 0.8rem;">✓</span>' : ''}
+                                <div style="margin-left: auto; color: #666; font-size: 0.75rem;">
+                                    ${new Date(comment.createdAt).toLocaleString()}
+                                </div>
+                            </div>
+                            <div style="margin-left: 32px; line-height: 1.4;">
+                                ${comment.content}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Add comment form if user is logged in
+            if (authToken) {
+                html += `
+                    <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                        <textarea id="inline-comment-input-${postId}" placeholder="Add a comment..." style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
+                        <div style="margin-top: 0.75rem; text-align: right;">
+                            <button onclick="addInlineComment('${postId}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Post Comment</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            commentsContainer.innerHTML = html;
+            commentsContainer.style.display = 'block';
+        }
+
+        function hideComments(postId) {
+            const commentsContainer = document.getElementById(`post-comments-${postId}`);
+            if (commentsContainer) {
+                commentsContainer.style.display = 'none';
+            }
+        }
+
+        async function addInlineComment(postId) {
+            const content = document.getElementById(`inline-comment-input-${postId}`).value.trim();
+            
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/posts/${postId}/comments`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content })
+                });
+
+                if (response.ok) {
+                    // Refresh the comments display
+                    viewComments(postId);
+                    
+                    // Update comment counts in main feeds
+                    updateCommentCount(postId);
+                } else {
+                    const error = response.data || {};
+                    alert(error.error || 'Failed to add comment');
+                }
+            } catch (error) {
+                console.error('Failed to add comment:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
 
         async function loadUserPosts() {
             if (!authToken) return;
@@ -2027,15 +3074,1081 @@
                 const response = await apiCall('/posts/me');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    displayPosts(data.posts);
+                    displayPosts(response.data.posts);
                 } else {
-                    console.error('Failed to load user posts');
+                    console.error('Failed to load user posts:', response.data?.error);
                 }
             } catch (error) {
                 console.error('Failed to load posts:', error);
             }
         }
+
+        // Check follow status and render appropriate button
+        async function renderFollowButton(userId, containerElement) {
+            if (!currentUser || userId === currentUser.id) return '';
+            
+            try {
+                const response = await apiCall(`/users/follow-status/${userId}`);
+                
+                if (response.ok) {
+                    const isFollowing = response.data.isFollowing;
+                    
+                    const buttonHtml = `
+                        <button onclick="toggleFollow('${userId}', this)" 
+                            data-user-id="${userId}"
+                            data-following="${isFollowing}"
+                            style="padding: 0.25rem 0.5rem; background: ${isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            ${isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                    `;
+                    
+                    return buttonHtml;
+                } else {
+                    return `
+                        <button onclick="toggleFollow('${userId}', this)" 
+                            data-user-id="${userId}"
+                            data-following="false"
+                            style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            Follow
+                        </button>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to check follow status:', error);
+                return '';
+            }
+        }
+
+        // Toggle follow/unfollow based on current state
+        async function toggleFollow(userId, buttonElement) {
+            const isCurrentlyFollowing = buttonElement.dataset.following === 'true';
+            
+            if (isCurrentlyFollowing) {
+                await unfollowUser(userId, buttonElement);
+            } else {
+                await followUser(userId, buttonElement);
+            }
+        }
+
+        // Follow/Unfollow functionality
+        async function followUser(userId, buttonElement) {
+            try {
+                const response = await apiCall(`/users/follow/${userId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    // Update button to show Following state
+                    if (buttonElement) {
+                        buttonElement.textContent = 'Following';
+                        buttonElement.style.background = '#666';
+                        buttonElement.dataset.following = 'true';
+                    }
+                    // Refresh current view if it's profile or user search
+                    loadUserProfile();
+                } else {
+                    alert(response.data?.error || 'Failed to follow user');
+                }
+            } catch (error) {
+                console.error('Failed to follow user:', error);
+                alert('Error following user');
+            }
+        }
+
+        async function unfollowUser(userId, buttonElement) {
+            try {
+                const response = await apiCall(`/users/follow/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // Update button back to Follow state
+                    if (buttonElement) {
+                        buttonElement.textContent = 'Follow';
+                        buttonElement.style.background = '#4b5c09';
+                        buttonElement.dataset.following = 'false';
+                    }
+                    // Refresh current view
+                    loadUserProfile();
+                } else {
+                    alert(response.data?.error || 'Failed to unfollow user');
+                }
+            } catch (error) {
+                console.error('Failed to unfollow user:', error);
+                alert('Error unfollowing user');
+            }
+        }
+
+        async function showFollowersList(userId) {
+            try {
+                const response = await apiCall(`/users/${userId}/followers`);
+                
+                if (response.ok) {
+                    displayUsersList(response.data.followers, 'Followers');
+                } else {
+                    alert('Failed to load followers');
+                }
+            } catch (error) {
+                console.error('Failed to load followers:', error);
+                alert('Error loading followers');
+            }
+        }
+
+        async function showFollowingList(userId) {
+            try {
+                const response = await apiCall(`/users/${userId}/following`);
+                
+                if (response.ok) {
+                    displayUsersList(response.data.following, 'Following');
+                } else {
+                    alert('Failed to load following list');
+                }
+            } catch (error) {
+                console.error('Failed to load following list:', error);
+                alert('Error loading following list');
+            }
+        }
+
+        function displayUsersList(users, title) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                background: rgba(0,0,0,0.5); z-index: 1000; 
+                display: flex; align-items: center; justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1vh; padding: 1vh; min-height: 2vh;">
+                        <h3 style="margin: 0;">${title}</h3>
+                        <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                    </div>
+                    <div>
+                        ${users.length === 0 ? 
+                            `<p style="text-align: center; color: #666; padding: 2rem;">No ${title.toLowerCase()} yet</p>` :
+                            users.map(user => `
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #eee;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div class="user-avatar" style="margin-right: 0.75rem;">${(user.firstName?.[0] || user.username[0]).toUpperCase()}</div>
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 0.9rem;">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
+                                            <div style="color: #666; font-size: 0.8rem;">@${user.username}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        ${user.id !== currentUser?.id ? `
+                                            <button onclick="followUser('${user.id}', this)" 
+                                                style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                                Follow
+                                            </button>
+                                            <button onclick="startConversationWithUser('${user.id}', '${user.username}')" 
+                                                style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                                Message
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            `;
+            
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+            
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Global search functionality
+        function openSearch() {
+            document.getElementById('searchContainer').style.display = 'flex';
+            closeAllPanels(); // Close other panels
+            document.getElementById('searchInput').focus();
+        }
+
+        function closeSearch() {
+            document.getElementById('searchContainer').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('globalSearchResults').innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    Start typing to search for users
+                </div>
+            `;
+        }
+
+        let globalSearchTimeout;
+        async function performGlobalSearch(query) {
+            clearTimeout(globalSearchTimeout);
+            
+            if (!query || query.length < 2) {
+                document.getElementById('globalSearchResults').innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        Type at least 2 characters to search
+                    </div>
+                `;
+                return;
+            }
+
+            globalSearchTimeout = setTimeout(async () => {
+                await executeGlobalSearch(query);
+            }, 300);
+        }
+
+        async function executeGlobalSearch(query) {
+            if (!authToken) {
+                document.getElementById('globalSearchResults').innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        Please log in to search for users
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}&limit=20`);
+                
+                if (response.ok) {
+                    displayGlobalSearchResults(response.data.users);
+                } else {
+                    document.getElementById('globalSearchResults').innerHTML = `
+                        <div style="text-align: center; color: #d32f2f; padding: 2rem;">
+                            Error searching users
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Global search error:', error);
+                document.getElementById('globalSearchResults').innerHTML = `
+                    <div style="text-align: center; color: #d32f2f; padding: 2rem;">
+                        Network error occurred
+                    </div>
+                `;
+            }
+        }
+
+        async function displayGlobalSearchResults(users) {
+            const resultsContainer = document.getElementById('globalSearchResults');
+            
+            if (users.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        No users found
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            users.forEach(user => {
+                html += `
+                    <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer;" onclick="openUserFeed('${user.id}', '${user.username}')">
+                        <div class="user-avatar" style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 1rem;">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
+                            <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
+                            <div style="color: #666; font-size: 0.8rem;">${user.followersCount} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+                            ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
+                            ${user.id !== currentUser?.id ? `
+                                <button onclick="toggleFollow('${user.id}', this)" 
+                                    data-user-id="${user.id}"
+                                    data-following="${user.isFollowing || false}"
+                                    style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
+                                    ${user.isFollowing ? 'Following' : 'Follow'}
+                                </button>
+                                <button onclick="addFriend('${user.id}')" 
+                                    style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
+                                    Add Friend
+                                </button>
+                                <button onclick="startConversationWithUser('${user.id}', '${user.username}')" 
+                                    style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                    Message
+                                </button>
+                            ` : '<span style="color: #666; font-size: 0.8rem;">You</span>'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsContainer.innerHTML = html;
+        }
+
+        // Open user feed in main area
+        async function openUserFeed(userId, username) {
+            try {
+                closeSearch();
+                
+                // Show loading state
+                const feedElement = document.getElementById('postsFeed');
+                feedElement.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Loading @${username}'s Profile</h2>
+                        <p>Loading profile and posts...</p>
+                    </div>
+                `;
+
+                // Load user's profile and posts in parallel
+                const [profileResponse, postsResponse] = await Promise.all([
+                    apiCall(`/users/${username}`),
+                    apiCall(`/posts/user/${userId}`)
+                ]);
+                
+                if (profileResponse.ok && postsResponse.ok) {
+                    const userProfile = profileResponse.data.user;
+                    const posts = postsResponse.data.posts || [];
+                    
+                    // Create profile header
+                    let html = `
+                        <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 2rem; margin-bottom: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold;">
+                                        ${(userProfile.firstName?.[0] || userProfile.username[0]).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h1 style="margin: 0; font-size: 1.8rem;">
+                                            ${userProfile.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}` : userProfile.username}
+                                            ${userProfile.verified ? '<span style="color: #ffd700; margin-left: 0.5rem;">✓</span>' : ''}
+                                        </h1>
+                                        <p style="margin: 0.25rem 0; font-size: 1.1rem; opacity: 0.9;">@${userProfile.username}</p>
+                                        <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.8;">
+                                            <span><strong>${userProfile.followersCount || 0}</strong> followers</span>
+                                            <span><strong>${userProfile.followingCount || 0}</strong> following</span>
+                                            <span>Joined ${new Date(userProfile.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onclick="loadTrendingPosts(); showMainFeed();" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer;">
+                                    Back to Main Feed
+                                </button>
+                            </div>
+                            
+                            ${userProfile.bio ? `<div style="margin-bottom: 1rem; font-size: 1rem; line-height: 1.4;">${userProfile.bio}</div>` : ''}
+                            
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.9rem; opacity: 0.9;">
+                                ${userProfile.location ? `<span>📍 ${userProfile.location}</span>` : ''}
+                                ${userProfile.website ? `<span>🔗 <a href="${userProfile.website}" target="_blank" style="color: #ffd700;">${userProfile.website}</a></span>` : ''}
+                            </div>
+                            
+                            ${userId !== currentUser?.id ? `
+                                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                    <button onclick="toggleFollow('${userId}', this)" 
+                                        data-user-id="${userId}"
+                                        style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                        Follow
+                                    </button>
+                                    <button onclick="startConversationWithUser('${userId}', '${username}')" 
+                                        style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer;">
+                                        Message
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div style="border-bottom: 2px solid #4b5c09; margin-bottom: 1rem; padding-bottom: 0.5rem;">
+                            <h2 style="margin: 0; color: #4b5c09; font-size: 1.3rem;">Posts (${posts.length})</h2>
+                        </div>
+                    `;
+                    
+                    if (posts.length === 0) {
+                        html += `
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <p style="margin: 0; font-size: 1.1rem;">This user hasn't posted anything yet.</p>
+                            </div>
+                        `;
+                    } else {
+                        // Render posts
+                        posts.forEach(post => {
+                            html += `
+                                <div class="post-item" data-post-id="${post.id}" style="background: white; padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                        <div style="display: flex; align-items: center;">
+                                            <div class="user-avatar" style="margin-right: 0.75rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">${(post.author.firstName?.[0] || post.author.username[0]).toUpperCase()}</div>
+                                            <div>
+                                                <div style="font-weight: bold;">
+                                                    ${post.author.firstName ? `${post.author.firstName} ${post.author.lastName || ''}` : post.author.username}
+                                                    ${post.author.verified ? '<span style="color: #1d9bf0; margin-left: 0.25rem;">✓</span>' : ''}
+                                                </div>
+                                                <div style="color: #666; font-size: 0.9rem;">@${post.author.username} • ${new Date(post.createdAt).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                        <div style="color: #666; font-size: 0.8rem;">${new Date(post.createdAt).toLocaleTimeString()}</div>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 1rem; line-height: 1.5;">
+                                        ${post.content}
+                                    </div>
+                                    
+                                    ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 1rem;">` : ''}
+                                    
+                                    <div style="display: flex; gap: 1rem; color: #666; font-size: 0.9rem; border-top: 1px solid #eee; padding-top: 0.75rem;">
+                                        <button onclick="likePost('${post.id}')" style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
+                                            <span>👍</span> ${post.likesCount || 0}
+                                        </button>
+                                        <button onclick="toggleComments('${post.id}')" style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
+                                            <span>💬</span> ${post.commentsCount || 0}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    feedElement.innerHTML = html;
+                } else {
+                    feedElement.innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <h2>Error Loading Profile</h2>
+                            <p style="color: #d32f2f;">Unable to load @${username}'s profile and posts</p>
+                            <button onclick="loadTrendingPosts(); showMainFeed();" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Back to Main Feed
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading user feed:', error);
+                const feedElement = document.getElementById('postsFeed');
+                feedElement.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Network Error</h2>
+                        <p style="color: #d32f2f;">Unable to load @${username}'s profile</p>
+                        <button onclick="loadTrendingPosts(); showMainFeed();" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Back to Main Feed
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function showMainFeed() {
+            // Reset to main feed view - could load trending or user's own posts
+            loadTrendingPosts();
+        }
+
+        async function addFriend(userId) {
+            console.log('Adding friend:', userId);
+            // TODO: Implement friend request functionality
+        }
+
+        // Map zoom and location functionality
+        let mapInstance = null;
+        let currentLocation = null;
+        let currentZoomLevel = 'national'; // Track current zoom level (default to match radio button)
+        let boundaryManager = null;
+
+        // Boundary management class
+        class BoundaryManager {
+            constructor(map) {
+                this.map = map;
+                this.layers = new Map();
+                this.cache = new Map();
+                this.loadLocalCache();
+            }
+            
+            // Load cached boundary data from localStorage
+            loadLocalCache() {
+                try {
+                    const cached = localStorage.getItem('boundaryCache');
+                    if (cached) {
+                        const parsedCache = JSON.parse(cached);
+                        // Check if cache is less than 30 days old
+                        const cacheAge = Date.now() - (parsedCache.timestamp || 0);
+                        if (cacheAge < 30 * 24 * 60 * 60 * 1000) { // 30 days
+                            Object.entries(parsedCache.data || {}).forEach(([key, value]) => {
+                                this.cache.set(key, value);
+                            });
+                            console.log(`Loaded ${this.cache.size} cached boundaries from localStorage`);
+                        } else {
+                            localStorage.removeItem('boundaryCache');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to load boundary cache:', error);
+                    localStorage.removeItem('boundaryCache');
+                }
+            }
+            
+            // Save boundary cache to localStorage
+            saveLocalCache() {
+                try {
+                    const cacheData = {
+                        timestamp: Date.now(),
+                        data: Object.fromEntries(this.cache)
+                    };
+                    localStorage.setItem('boundaryCache', JSON.stringify(cacheData));
+                } catch (error) {
+                    console.warn('Failed to save boundary cache:', error);
+                }
+            }
+            
+            async loadBoundary(type, identifier, state) {
+                const key = `${type}-${state}-${identifier || 'state'}`;
+                
+                // Check cache first
+                if (this.cache.has(key)) {
+                    console.log(`Using cached boundary for ${key}`);
+                    this.displayBoundary(key, this.cache.get(key), type);
+                    return;
+                }
+                
+                // Try multiple sources for boundary data
+                const sources = [
+                    // Primary source - raw GitHub content (more reliable)
+                    {
+                        name: 'GitHub raw',
+                        getUrl: (type, state, identifier) => {
+                            if (type === 'district') {
+                                return `https://raw.githubusercontent.com/unitedstates/districts/main/cds/2012/${state}-${identifier}/shape.geojson`;
+                            } else if (type === 'state') {
+                                return `https://raw.githubusercontent.com/unitedstates/districts/main/states/${state}/shape.geojson`;
+                            }
+                        }
+                    },
+                    // Fallback to theunitedstates.io (if SSL issue is fixed)
+                    {
+                        name: 'theunitedstates.io',
+                        getUrl: (type, state, identifier) => {
+                            if (type === 'district') {
+                                return `https://theunitedstates.io/districts/cds/2012/${state}-${identifier}/shape.geojson`;
+                            } else if (type === 'state') {
+                                return `https://theunitedstates.io/districts/states/${state}/shape.geojson`;
+                            }
+                        }
+                    }
+                ];
+                
+                for (const source of sources) {
+                    try {
+                        const url = source.getUrl(type, state, identifier);
+                        if (!url) continue;
+                        
+                        console.log(`Fetching boundary data from ${source.name}: ${url}`);
+                        
+                        const response = await fetch(url, {
+                            mode: 'cors',
+                            credentials: 'omit'
+                        });
+                        
+                        if (!response.ok) {
+                            console.warn(`HTTP ${response.status} from ${source.name}`);
+                            continue;
+                        }
+                        
+                        const geojsonData = await response.json();
+                        
+                        // Cache the data in memory and localStorage
+                        this.cache.set(key, geojsonData);
+                        this.saveLocalCache();
+                        
+                        console.log(`Successfully loaded boundary from ${source.name}`);
+                        
+                        // Display boundary
+                        this.displayBoundary(key, geojsonData, type);
+                        return;
+                        
+                    } catch (error) {
+                        console.warn(`Failed to load boundary from ${source.name}:`, error);
+                        continue;
+                    }
+                }
+                
+                console.error(`Failed to load ${type} boundary from all sources for ${key}`);
+            }
+            
+            displayBoundary(key, geojsonData, type) {
+                // Remove existing layer if present
+                this.removeBoundary(key);
+                
+                const style = type === 'district' ? {
+                    color: '#ff6b35',
+                    weight: 3,
+                    opacity: 0.8,
+                    fillColor: '#ff6b35',
+                    fillOpacity: 0.1
+                } : {
+                    color: '#4b5c09',
+                    weight: 2,
+                    opacity: 0.6,
+                    fillColor: '#4b5c09',
+                    fillOpacity: 0.05
+                };
+                
+                const layer = L.geoJSON(geojsonData, { style }).addTo(this.map);
+                this.layers.set(key, layer);
+                console.log(`${type} boundary loaded and displayed`);
+            }
+            
+            removeBoundary(key) {
+                if (this.layers.has(key)) {
+                    this.map.removeLayer(this.layers.get(key));
+                    this.layers.delete(key);
+                }
+            }
+            
+            clearAll() {
+                this.layers.forEach(layer => this.map.removeLayer(layer));
+                this.layers.clear();
+            }
+        }
+
+        function setMapInstance(map) {
+            mapInstance = map;
+            boundaryManager = new BoundaryManager(map);
+            
+            // Try to get user location, with fallback
+            setTimeout(() => {
+                if (currentUser && currentUser.state) {
+                    getCurrentUserLocation();
+                } else {
+                    currentLocation = { lat: 37.8283, lng: -98.5795 }; // Center of US
+                }
+            }, 500); // Wait for user data to load
+        }
+
+        async function getCurrentUserLocation() {
+            try {
+                if (currentUser && currentUser.zipCode && currentUser.state) {
+                    // Use user's stored address for location
+                    const address = currentUser.city ? 
+                        `${currentUser.city}, ${currentUser.state} ${currentUser.zipCode}` :
+                        `${currentUser.zipCode}, ${currentUser.state}`;
+                    
+                    const coords = await geocodeLocation(address);
+                    if (coords) {
+                        currentLocation = coords;
+                        // Only set zoom level if we're not at national level (to avoid moving away from default)
+                        if (currentZoomLevel !== 'national') {
+                            await setZoomLevel(currentZoomLevel);
+                        }
+                        
+                        // Load representative data to get district info
+                        loadElectedOfficials();
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting user location:', error);
+                currentLocation = { lat: 37.8283, lng: -98.5795 }; // Fallback
+            }
+        }
+
+        async function geocodeLocation(address) {
+            try {
+                // Using a free geocoding service - you might want to use your existing Geocod.io API
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon)
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                return null;
+            }
+        }
+
+        async function geocodeAndZoom() {
+            const locationInput = document.getElementById('locationInput');
+            const address = locationInput.value.trim();
+            
+            if (!address) {
+                // Use current location if no address provided
+                getCurrentUserLocation();
+                return;
+            }
+
+            const coords = await geocodeLocation(address);
+            if (coords) {
+                currentLocation = coords;
+                // Apply current zoom level to new location
+                await setZoomLevel(currentZoomLevel);
+            } else {
+                alert('Location not found. Please try a different address.');
+            }
+        }
+
+        async function setZoomLevel(level) {
+            if (!mapInstance) return;
+
+            // Update current zoom level and radio button state
+            currentZoomLevel = level;
+            updateRadioButtonState(level);
+
+            let zoom, bounds;
+            
+            // Clear existing boundaries
+            if (boundaryManager) {
+                boundaryManager.clearAll();
+            }
+            
+            console.log(`Setting zoom level: ${level}`);
+            console.log(`Current user:`, currentUser);
+            console.log(`Current user state: ${currentUser?.state}, district: ${currentUser?.district}`);
+            console.log(`Current location:`, currentLocation);
+            
+            switch(level) {
+                case 'national':
+                    // Show national view - different zoom levels for expanded vs collapsed
+                    const isCollapsed = document.getElementById('mapContainer').classList.contains('collapsed');
+                    zoom = isCollapsed ? 3 : 5;
+                    mapInstance.setView([37.8283, -98.5795], zoom); // Center of US
+                    console.log(`Set to national view (zoom: ${zoom}, collapsed: ${isCollapsed})`);
+                    // No boundaries at national level
+                    break;
+                    
+                case 'state':
+                    // Zoom to show state and surrounding areas - adjust zoom for map size
+                    const isCollapsedState = document.getElementById('mapContainer').classList.contains('collapsed');
+                    zoom = isCollapsedState ? 5 : 7;
+                    
+                    console.log(`STATE ZOOM: Checking if currentUser.state exists:`, currentUser?.state);
+                    
+                    if (currentUser && currentUser.state) {
+                        console.log(`Flying to state geographic center for: ${currentUser.state}`);
+                        // Get state center coordinates and fly there
+                        const stateCenter = await getStateCenterCoordinates(currentUser.state);
+                        console.log(`State center result:`, stateCenter);
+                        if (stateCenter) {
+                            console.log(`Flying to state center: ${stateCenter.lat}, ${stateCenter.lng} with zoom ${zoom}`);
+                            mapInstance.setView([stateCenter.lat, stateCenter.lng], zoom);
+                            console.log(`Map setView called successfully`);
+                            
+                            // Load state boundary
+                            if (boundaryManager) {
+                                console.log(`Loading state boundary for: ${currentUser.state}`);
+                                boundaryManager.loadBoundary('state', null, currentUser.state);
+                            }
+                        } else {
+                            console.log('State center not found, using US center fallback');
+                            mapInstance.setView([37.8283, -98.5795], zoom);
+                        }
+                    } else {
+                        console.log('ERROR: No user state info available - this should not happen for State zoom!');
+                        console.log('Current user object:', currentUser);
+                        // DO NOT fall back to US center for State zoom - that's wrong!
+                        console.error('State zoom requested but no state data available');
+                    }
+                    break;
+                    
+                case 'local':
+                    // Zoom to user's actual address - adjust zoom for map size
+                    const isCollapsedLocal = document.getElementById('mapContainer').classList.contains('collapsed');
+                    zoom = isCollapsedLocal ? 9 : 11;
+                    
+                    console.log(`LOCAL ZOOM: Checking user address data - zipCode: ${currentUser?.zipCode}, city: ${currentUser?.city}, state: ${currentUser?.state}`);
+                    
+                    if (currentUser && (currentUser.zipCode || currentUser.city) && currentUser.state) {
+                        // Build address from user profile
+                        let userAddress = '';
+                        if (currentUser.streetAddress && currentUser.city) {
+                            userAddress = `${currentUser.streetAddress}, ${currentUser.city}, ${currentUser.state}`;
+                            if (currentUser.zipCode) userAddress += ` ${currentUser.zipCode}`;
+                        } else if (currentUser.city) {
+                            userAddress = `${currentUser.city}, ${currentUser.state}`;
+                        } else if (currentUser.zipCode) {
+                            userAddress = `${currentUser.zipCode}, ${currentUser.state}`;
+                        }
+                        
+                        console.log(`Flying to user's address: ${userAddress}`);
+                        
+                        // Geocode the user's address and fly there
+                        const addressCoords = await geocodeLocation(userAddress);
+                        console.log(`Address geocoding result:`, addressCoords);
+                        if (addressCoords) {
+                            console.log(`Flying to address coordinates: ${addressCoords.lat}, ${addressCoords.lng} with zoom ${zoom}`);
+                            mapInstance.setView([addressCoords.lat, addressCoords.lng], zoom);
+                            console.log(`Map setView called for address successfully`);
+                            
+                            // Load district boundary if we have district info
+                            if (boundaryManager && currentUser.district) {
+                                console.log(`Loading district boundary: ${currentUser.state}-${currentUser.district}`);
+                                boundaryManager.loadBoundary('district', currentUser.district, currentUser.state);
+                            }
+                        } else {
+                            console.log('Address geocoding failed, using state center fallback');
+                            // Fallback to state center
+                            const stateCenter = await getStateCenterCoordinates(currentUser.state);
+                            if (stateCenter) {
+                                mapInstance.setView([stateCenter.lat, stateCenter.lng], zoom);
+                            } else {
+                                mapInstance.setView([37.8283, -98.5795], zoom);
+                            }
+                        }
+                    } else {
+                        console.log('ERROR: No user address info available - this should not happen for Local zoom!');
+                        console.log('User address fields:', {
+                            streetAddress: currentUser?.streetAddress,
+                            city: currentUser?.city,
+                            state: currentUser?.state,
+                            zipCode: currentUser?.zipCode
+                        });
+                        // DO NOT fall back to US center for Local zoom - that's wrong!
+                        console.error('Local zoom requested but no address data available');
+                    }
+                    break;
+            }
+        }
+        
+        function updateRadioButtonState(level) {
+            // Update radio button to match current zoom level
+            const radios = document.querySelectorAll('input[name="zoomLevel"]');
+            radios.forEach(radio => {
+                radio.checked = radio.value === level;
+            });
+        }
+
+        // Helper function to get state center coordinates
+        async function getStateCenterCoordinates(stateAbbr) {
+            // State center coordinates (approximate geographic centers)
+            const stateCenters = {
+                'AL': { lat: 32.806671, lng: -86.791130 },
+                'AK': { lat: 61.370716, lng: -152.404419 },
+                'AZ': { lat: 33.729759, lng: -111.431221 },
+                'AR': { lat: 34.969704, lng: -92.373123 },
+                'CA': { lat: 36.116203, lng: -119.681564 },
+                'CO': { lat: 39.059811, lng: -105.311104 },
+                'CT': { lat: 41.597782, lng: -72.755371 },
+                'DE': { lat: 39.318523, lng: -75.507141 },
+                'FL': { lat: 27.766279, lng: -81.686783 },
+                'GA': { lat: 33.040619, lng: -83.643074 },
+                'HI': { lat: 21.094318, lng: -157.498337 },
+                'ID': { lat: 44.240459, lng: -114.478828 },
+                'IL': { lat: 40.349457, lng: -88.986137 },
+                'IN': { lat: 39.849426, lng: -86.258278 },
+                'IA': { lat: 42.011539, lng: -93.210526 },
+                'KS': { lat: 38.526600, lng: -96.726486 },
+                'KY': { lat: 37.668140, lng: -84.670067 },
+                'LA': { lat: 31.169546, lng: -91.867805 },
+                'ME': { lat: 44.693947, lng: -69.381927 },
+                'MD': { lat: 39.063946, lng: -76.802101 },
+                'MA': { lat: 42.230171, lng: -71.530106 },
+                'MI': { lat: 43.326618, lng: -84.536095 },
+                'MN': { lat: 45.694454, lng: -93.900192 },
+                'MS': { lat: 32.741646, lng: -89.678696 },
+                'MO': { lat: 38.456085, lng: -92.288368 },
+                'MT': { lat: 47.097633, lng: -110.362566 },
+                'NE': { lat: 41.492537, lng: -99.901813 },
+                'NV': { lat: 38.313515, lng: -117.055374 },
+                'NH': { lat: 43.452492, lng: -71.563896 },
+                'NJ': { lat: 40.298904, lng: -74.521011 },
+                'NM': { lat: 34.840515, lng: -106.248482 },
+                'NY': { lat: 42.165726, lng: -74.948051 },
+                'NC': { lat: 35.630066, lng: -79.806419 },
+                'ND': { lat: 47.528912, lng: -99.784012 },
+                'OH': { lat: 40.388783, lng: -82.764915 },
+                'OK': { lat: 35.565342, lng: -96.928917 },
+                'OR': { lat: 44.572021, lng: -122.070938 },
+                'PA': { lat: 40.590752, lng: -77.209755 },
+                'RI': { lat: 41.680893, lng: -71.51178 },
+                'SC': { lat: 33.856892, lng: -80.945007 },
+                'SD': { lat: 44.299782, lng: -99.438828 },
+                'TN': { lat: 35.747845, lng: -86.692345 },
+                'TX': { lat: 31.054487, lng: -97.563461 },
+                'UT': { lat: 40.150032, lng: -111.862434 },
+                'VT': { lat: 44.045876, lng: -72.710686 },
+                'VA': { lat: 37.769337, lng: -78.169968 },
+                'WA': { lat: 47.400902, lng: -121.490494 },
+                'WV': { lat: 38.491226, lng: -80.954570 },
+                'WI': { lat: 44.268543, lng: -89.616508 },
+                'WY': { lat: 42.755966, lng: -107.302490 }
+            };
+            
+            return stateCenters[stateAbbr.toUpperCase()] || null;
+        }
+
+        // Helper function to get district center coordinates
+        async function getDistrictCenterCoordinates(stateAbbr, districtNumber) {
+            try {
+                // Try to fetch the district boundary data to calculate center
+                const url = `https://theunitedstates.io/districts/cds/2012/${stateAbbr.toUpperCase()}-${districtNumber}/shape.geojson`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    const geojsonData = await response.json();
+                    
+                    // Calculate the center of the district from its geometry
+                    const center = calculateGeometryCenter(geojsonData);
+                    if (center) {
+                        console.log(`District center calculated: ${center.lat}, ${center.lng}`);
+                        return center;
+                    }
+                }
+                
+                console.warn(`Could not fetch district boundary for ${stateAbbr}-${districtNumber}`);
+                return null;
+            } catch (error) {
+                console.error('Error getting district center:', error);
+                return null;
+            }
+        }
+
+        // Helper function to calculate the center of a GeoJSON geometry
+        function calculateGeometryCenter(geojsonData) {
+            try {
+                if (!geojsonData.features || geojsonData.features.length === 0) {
+                    return null;
+                }
+                
+                let totalLat = 0;
+                let totalLng = 0;
+                let pointCount = 0;
+                
+                geojsonData.features.forEach(feature => {
+                    if (feature.geometry.type === 'Polygon') {
+                        const coordinates = feature.geometry.coordinates[0]; // First ring (exterior)
+                        coordinates.forEach(coord => {
+                            totalLng += coord[0];
+                            totalLat += coord[1];
+                            pointCount++;
+                        });
+                    } else if (feature.geometry.type === 'MultiPolygon') {
+                        feature.geometry.coordinates.forEach(polygon => {
+                            const coordinates = polygon[0]; // First ring of each polygon
+                            coordinates.forEach(coord => {
+                                totalLng += coord[0];
+                                totalLat += coord[1];
+                                pointCount++;
+                            });
+                        });
+                    }
+                });
+                
+                if (pointCount > 0) {
+                    return {
+                        lat: totalLat / pointCount,
+                        lng: totalLng / pointCount
+                    };
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error calculating geometry center:', error);
+                return null;
+            }
+        }
+
+        // Initialize location input with user's address if available
+        function updateLocationPlaceholder() {
+            setTimeout(() => {
+                if (currentUser && currentUser.city && currentUser.state) {
+                    const locationInput = document.getElementById('locationInput');
+                    if (locationInput) {
+                        locationInput.placeholder = `${currentUser.city}, ${currentUser.state}`;
+                    }
+                }
+            }, 100);
+        }
+
+        // Call when user data is loaded
+        window.addEventListener('load', () => {
+            setTimeout(updateLocationPlaceholder, 1000);
+        });
+
+        // Password validation and UI functions
+        function togglePasswordVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            const button = field.nextElementSibling;
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                field.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+            };
+
+            const isValid = Object.values(requirements).every(req => req);
+            const hasContent = password.length > 0;
+            
+            // Show/hide requirements based on focus and content
+            const reqContainer = document.getElementById('password-requirements');
+            const statusIndicator = document.getElementById('password-status');
+            
+            if (hasContent && !isValid) {
+                // Show detailed requirements when typing but not valid
+                reqContainer.style.display = 'block';
+                statusIndicator.style.display = 'none';
+            } else if (isValid) {
+                // Show green checkmark when valid, hide requirements
+                reqContainer.style.display = 'none';
+                statusIndicator.style.display = 'block';
+            } else {
+                // Hide both when empty
+                reqContainer.style.display = 'none';
+                statusIndicator.style.display = 'none';
+            }
+
+            // Update individual requirement indicators
+            updateRequirement('req-length', requirements.length);
+            updateRequirement('req-uppercase', requirements.uppercase);
+            updateRequirement('req-lowercase', requirements.lowercase);
+            updateRequirement('req-number', requirements.number);
+            updateRequirement('req-special', requirements.special);
+
+            return isValid;
+        }
+
+        function updateRequirement(elementId, met) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                if (met) {
+                    element.classList.add('met');
+                    element.textContent = element.textContent.replace('• ', '');
+                } else {
+                    element.classList.remove('met');
+                    if (!element.textContent.startsWith('• ')) {
+                        element.textContent = '• ' + element.textContent.replace('✓ ', '');
+                    }
+                }
+            }
+        }
+
+        // Add real-time password validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordField = document.getElementById('registerPassword');
+            if (passwordField) {
+                passwordField.addEventListener('input', function() {
+                    validatePassword(this.value);
+                });
+            }
+        });
+
+        // Debug hCaptcha loading
+        function checkHCaptchaStatus() {
+            console.log('hCaptcha status:', {
+                loaded: typeof window.hcaptcha !== 'undefined',
+                widgetExists: document.getElementById('hcaptcha-register') !== null,
+                sitekey: document.querySelector('[data-sitekey]')?.getAttribute('data-sitekey')
+            });
+        }
+
+        // Check hCaptcha after page load
+        window.addEventListener('load', function() {
+            setTimeout(checkHCaptchaStatus, 2000);
+        });
     </script>
 </body>
 </html>

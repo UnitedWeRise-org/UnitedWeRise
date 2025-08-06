@@ -1,0 +1,268 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "United We Rise - Production Monitoring",
+    "tags": ["united-we-rise", "production", "monitoring"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"united-we-rise\"}",
+            "legendFormat": "Service Status",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [
+              {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+            ],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "Requests/sec",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(http_errors_total[5m]) / rate(http_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {"label": "Error Rate %", "min": 0, "max": 100},
+          {"show": false}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [5], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 4,
+        "title": "Response Times",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Response Time (s)", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "User Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "users_registered_total",
+            "legendFormat": "Total Users",
+            "refId": "A"
+          },
+          {
+            "expr": "active_users",
+            "legendFormat": "Active Users (1h)",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Users", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Content Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(posts_created_total[1h])",
+            "legendFormat": "Posts/hour",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(comments_created_total[1h])",
+            "legendFormat": "Comments/hour",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Content/hour", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Moderation Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16},
+        "targets": [
+          {
+            "expr": "pending_reports",
+            "legendFormat": "Pending Reports",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(reports_submitted_total[1h])",
+            "legendFormat": "Reports/hour",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Count", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "System Resources",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "memory_usage_bytes / 1024 / 1024",
+            "legendFormat": "Memory Usage (MB)",
+            "refId": "A"
+          },
+          {
+            "expr": "cpu_usage_percent",
+            "legendFormat": "CPU Usage %",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Usage", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Database Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "database_connections",
+            "legendFormat": "Active Connections",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(database_queries_total[5m])",
+            "legendFormat": "Queries/sec",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th %ile Query Time",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Count/Time", "min": 0},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Authentication Activity",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "auth_attempts_total",
+            "legendFormat": "{{success}}",
+            "refId": "A",
+            "instant": true,
+            "format": "table"
+          },
+          {
+            "expr": "auth_failures_total",
+            "legendFormat": "Failures",
+            "refId": "B",
+            "instant": true,
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          }
+        ]
+      }
+    ],
+    "time": {"from": "now-1h", "to": "now"},
+    "timepicker": {},
+    "templating": {"list": []},
+    "annotations": {"list": []},
+    "links": []
+  }
+}

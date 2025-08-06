@@ -3,13 +3,14 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { createNotification } from './notifications';
 import { addressToH3, getNearbyH3Indexes } from '../utils/geospatial';
-import { GoogleCivicService } from '../services/googleCivic';
+import { RepresentativeService } from '../services/representativeService';
+import { validatePoliticalProfile } from '../middleware/validation';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Update user's address and political info (existing route - enhanced)
-router.put('/profile', requireAuth, async (req: AuthRequest, res) => {
+router.put('/profile', requireAuth, validatePoliticalProfile, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const {
@@ -18,7 +19,12 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res) => {
       state,
       zipCode,
       politicalParty,
-      campaignWebsite
+      campaignWebsite,
+      politicalProfileType,
+      office,
+      officialTitle,
+      termStart,
+      termEnd
     } = req.body;
 
     // Basic validation
@@ -39,17 +45,42 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res) => {
       });
     }
 
+    // Prepare update data
+    const updateData: any = {
+      streetAddress,
+      city,
+      state,
+      zipCode,
+      h3Index,
+      politicalParty,
+      campaignWebsite,
+      office,
+      officialTitle
+    };
+
+    // Add political profile type if provided
+    if (politicalProfileType) {
+      updateData.politicalProfileType = politicalProfileType;
+      
+      // If changing to a political role, set verification to pending
+      if (politicalProfileType !== 'CITIZEN') {
+        updateData.verificationStatus = 'PENDING';
+      } else {
+        updateData.verificationStatus = 'NOT_REQUIRED';
+      }
+    }
+
+    // Add date fields if provided
+    if (termStart) {
+      updateData.termStart = new Date(termStart);
+    }
+    if (termEnd) {
+      updateData.termEnd = new Date(termEnd);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        streetAddress,
-        city,
-        state,
-        zipCode,
-        h3Index,
-        politicalParty,
-        campaignWebsite
-      },
+      data: updateData,
       select: {
         id: true,
         username: true,
@@ -64,19 +95,21 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res) => {
         politicalParty: true,
         campaignWebsite: true,
         office: true,
-        officialTitle: true
+        officialTitle: true,
+        termStart: true,
+        termEnd: true
       }
     });
 
     // If user provided full address, pre-load their elected officials
     if (streetAddress && city && state && zipCode) {
       // Background task - don't wait for it
-      GoogleCivicService.getOfficialsByAddress(
+      RepresentativeService.getRepresentativesByAddress(
         `${streetAddress}, ${city}, ${state} ${zipCode}`,
         zipCode,
         state
       ).catch(error => {
-        console.error('Background official loading failed:', error);
+        console.error('Background representative loading failed:', error);
       });
     }
 
@@ -108,74 +141,128 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
       });
     }
 
-    let officials: any[] = [];
+    let representatives: any[] = [];
+    let responseSource = 'cache';
 
     // Try to get from our database cache first (fastest)
     if (forceRefresh !== 'true') {
-      officials = await GoogleCivicService.getCachedOfficialsByLocation(
+      representatives = await RepresentativeService.getCachedRepresentativesByLocation(
         user.zipCode, 
         user.state
       );
     }
 
-    // If no cached data or force refresh, get from Google Civic API
-    if (officials.length === 0 || forceRefresh === 'true') {
+    // If no cached data or force refresh, get from API
+    if (representatives.length === 0 || forceRefresh === 'true') {
       const fullAddress = user.streetAddress 
         ? `${user.streetAddress}, ${user.city}, ${user.state} ${user.zipCode}`
         : `${user.zipCode}, ${user.state}`;
 
-      const civicResponse = await GoogleCivicService.getOfficialsByAddress(
+      const repResponse = await RepresentativeService.getRepresentativesByAddress(
         fullAddress,
         user.zipCode,
         user.state,
         forceRefresh === 'true'
       );
 
-      officials = civicResponse?.officials || [];
+      representatives = repResponse?.representatives || [];
+      responseSource = repResponse?.source || 'none';
     }
 
-    // Group officials by government level
-    const groupedOfficials = {
-      federal: officials.filter(o => 
-        o.office.toLowerCase().includes('president') ||
-        o.office.toLowerCase().includes('senator') ||
-        o.office.toLowerCase().includes('representative') ||
-        o.office.toLowerCase().includes('congress')
-      ),
-      state: officials.filter(o => 
-        o.office.toLowerCase().includes('governor') ||
-        o.office.toLowerCase().includes('state') ||
-        o.office.toLowerCase().includes('assembly')
-      ),
-      local: officials.filter(o => 
-        o.office.toLowerCase().includes('mayor') ||
-        o.office.toLowerCase().includes('council') ||
-        o.office.toLowerCase().includes('commissioner') ||
-        o.office.toLowerCase().includes('sheriff') ||
-        (!o.office.toLowerCase().includes('president') && 
-         !o.office.toLowerCase().includes('senator') && 
-         !o.office.toLowerCase().includes('representative') &&
-         !o.office.toLowerCase().includes('congress') &&
-         !o.office.toLowerCase().includes('governor') &&
-         !o.office.toLowerCase().includes('state') &&
-         !o.office.toLowerCase().includes('assembly'))
-      )
+    // Group representatives by government level
+    const groupedRepresentatives = {
+      federal: representatives.filter(r => r.level === 'federal'),
+      state: representatives.filter(r => r.level === 'state'),
+      local: representatives.filter(r => r.level === 'local')
     };
 
     res.json({
-      officials: groupedOfficials,
-      totalCount: officials.length,
+      representatives: groupedRepresentatives,
+      totalCount: representatives.length,
       location: {
         zipCode: user.zipCode,
         state: user.state,
         city: user.city
       },
+      source: responseSource,
       lastUpdated: new Date().toISOString(),
       cached: forceRefresh !== 'true'
     });
 
   } catch (error) {
-    console.error('Get elected officials error:', error);
+    console.error('Get representatives error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Alias for /officials endpoint (for frontend compatibility)
+router.get('/representatives', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { forceRefresh } = req.query;
+
+    // Get user's address
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { streetAddress: true, city: true, state: true, zipCode: true }
+    });
+
+    if (!user?.zipCode || !user?.state) {
+      return res.status(400).json({ 
+        error: 'Please add your address in profile settings to see your representatives' 
+      });
+    }
+
+    let representatives: any[] = [];
+    let responseSource = 'cache';
+
+    // Try to get from our database cache first (fastest)
+    if (forceRefresh !== 'true') {
+      representatives = await RepresentativeService.getCachedRepresentativesByLocation(
+        user.zipCode, 
+        user.state
+      );
+    }
+
+    // If no cached data or force refresh, get from API
+    if (representatives.length === 0 || forceRefresh === 'true') {
+      const fullAddress = user.streetAddress 
+        ? `${user.streetAddress}, ${user.city}, ${user.state} ${user.zipCode}`
+        : `${user.zipCode}, ${user.state}`;
+
+      const repResponse = await RepresentativeService.getRepresentativesByAddress(
+        fullAddress,
+        user.zipCode,
+        user.state,
+        forceRefresh === 'true'
+      );
+
+      representatives = repResponse?.representatives || [];
+      responseSource = repResponse?.source || 'none';
+    }
+
+    // Group representatives by government level
+    const groupedRepresentatives = {
+      federal: representatives.filter(r => r.level === 'federal'),
+      state: representatives.filter(r => r.level === 'state'),
+      local: representatives.filter(r => r.level === 'local')
+    };
+
+    res.json({
+      representatives: groupedRepresentatives,
+      totalCount: representatives.length,
+      location: {
+        zipCode: user.zipCode,
+        state: user.state,
+        city: user.city
+      },
+      source: responseSource,
+      lastUpdated: new Date().toISOString(),
+      cached: forceRefresh !== 'true'
+    });
+
+  } catch (error) {
+    console.error('Get representatives error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -196,11 +283,11 @@ router.post('/officials/refresh', requireAuth, async (req: AuthRequest, res) => 
       });
     }
 
-    const success = await GoogleCivicService.refreshLocation(user.zipCode, user.state);
+    const success = await RepresentativeService.refreshLocation(user.zipCode, user.state);
 
     if (success) {
       res.json({ 
-        message: 'Elected officials data refreshed successfully',
+        message: 'Representatives data refreshed successfully',
         refreshed: true 
       });
     } else {
@@ -211,7 +298,7 @@ router.post('/officials/refresh', requireAuth, async (req: AuthRequest, res) => 
     }
 
   } catch (error) {
-    console.error('Refresh officials error:', error);
+    console.error('Refresh representatives error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -229,36 +316,39 @@ router.get('/officials/:zipCode/:state', async (req, res) => {
       });
     }
 
-    let officials: any[] = [];
+    let representatives: any[] = [];
+    let responseSource = 'cache';
 
     // Get cached data first
     if (forceRefresh !== 'true') {
-      officials = await GoogleCivicService.getCachedOfficialsByLocation(
-        zipCode.toUpperCase(), 
+      representatives = await RepresentativeService.getCachedRepresentativesByLocation(
+        zipCode, 
         state.toUpperCase()
       );
     }
 
     // Get fresh data if needed
-    if (officials.length === 0 || forceRefresh === 'true') {
-      const civicResponse = await GoogleCivicService.getOfficialsByAddress(
+    if (representatives.length === 0 || forceRefresh === 'true') {
+      const repResponse = await RepresentativeService.getRepresentativesByAddress(
         `${zipCode}, ${state}`,
         zipCode,
         state.toUpperCase(),
         forceRefresh === 'true'
       );
 
-      officials = civicResponse?.officials || [];
+      representatives = repResponse?.representatives || [];
+      responseSource = repResponse?.source || 'none';
     }
 
     res.json({
-      officials,
+      representatives,
       location: { zipCode, state: state.toUpperCase() },
-      count: officials.length
+      count: representatives.length,
+      source: responseSource
     });
 
   } catch (error) {
-    console.error('Get officials by location error:', error);
+    console.error('Get representatives by location error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
