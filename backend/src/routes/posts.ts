@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validatePost, validateComment } from '../middleware/validation';
 import { postLimiter } from '../middleware/rateLimiting';
 import { checkUserSuspension, moderateContent, contentFilter, addContentWarnings } from '../middleware/moderation';
+import { EmbeddingService } from '../services/embeddingService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -23,12 +24,22 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             return res.status(400).json({ error: 'Post content must be 500 characters or less' });
         }
 
+        // Generate embedding for AI topic clustering
+        let embedding: number[] = [];
+        try {
+            const analysis = await EmbeddingService.analyzeText(content.trim());
+            embedding = analysis.embedding;
+        } catch (error) {
+            console.warn('Failed to generate embedding for post:', error);
+            // Continue without embedding rather than failing the post creation
+        }
+
         const post = await prisma.post.create({
             data: {
                 content: content.trim(),
                 imageUrl,
                 authorId: userId,
-                embedding: [] // Empty for now, will populate with AI later
+                embedding
             },
             include: {
                 author: {

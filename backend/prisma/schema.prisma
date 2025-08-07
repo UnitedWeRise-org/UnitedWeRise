@@ -118,6 +118,9 @@ model User {
   candidateProfile Candidate?    // If user is running for office
   endorsements    Endorsement[]  // Candidates this user has endorsed
   
+  // Relationships - Topic System
+  topicComments   TopicComment[] // Comments on topics/sub-topics
+  
   @@index([username])
   @@index([createdAt])
   @@index([h3Index]) // For geospatial queries
@@ -156,6 +159,9 @@ model Post {
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   likes       Like[]
   comments    Comment[]
+  
+  // Topic system relationships
+  topics      TopicPost[]  // Topics this post belongs to
   
   // Stats
   likesCount    Int @default(0)
@@ -448,6 +454,129 @@ model Endorsement {
   @@unique([userId, candidateId]) // Prevent duplicate endorsements
   @@index([candidateId])
   @@index([userId])
+}
+
+// AI-Powered Topic Analysis System
+model Topic {
+  id          String   @id @default(cuid())
+  title       String   // AI-generated topic title
+  description String?  // Brief description of the topic
+  
+  // AI-generated content embeddings (centroid of related posts)
+  embedding   Float[]  @default([])
+  
+  // AI-generated argument analysis
+  argumentsFor     String[] @default([]) // Key arguments supporting the topic
+  argumentsAgainst String[] @default([]) // Key arguments opposing the topic
+  neutralSummary   String?              // AI-generated neutral summary
+  
+  // Topic classification
+  category         String?  // e.g., "Healthcare", "Economy", "Environment"
+  politicalLean    Float?   // -1 (liberal) to 1 (conservative), null for neutral
+  controversyScore Float    @default(0) // 0-1 scale of how contentious the topic is
+  
+  // Engagement metrics
+  postCount        Int     @default(0)   // Number of posts in this topic
+  participantCount Int     @default(0)   // Unique users who've posted/commented
+  viewCount        Int     @default(0)   // How many times topic has been viewed
+  
+  // Trending calculation
+  trendingScore    Float   @default(0)   // Algorithm-calculated trending score
+  isActive         Boolean @default(true) // Whether topic is still active
+  lastActivityAt   DateTime @default(now()) // Last post/comment in topic
+  
+  // Geographic relevance (optional)
+  state           String?  // If topic is state-specific
+  district        String?  // If topic is district-specific
+  
+  // Relationships
+  posts           TopicPost[]     // Posts assigned to this topic
+  subTopics       SubTopic[]      // Sub-discussions within the topic
+  topicComments   TopicComment[]  // Direct comments on the topic
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([trendingScore, lastActivityAt])
+  @@index([category, isActive])
+  @@index([controversyScore])
+  @@index([state, district])
+}
+
+model SubTopic {
+  id            String @id @default(cuid())
+  parentTopicId String
+  parentTopic   Topic  @relation(fields: [parentTopicId], references: [id], onDelete: Cascade)
+  
+  title         String   // Sub-topic title (e.g., "Funding Mechanisms" under "Healthcare Reform")
+  summary       String?  // AI-generated summary of this sub-discussion
+  embedding     Float[]  @default([]) // Embedding for this sub-topic
+  
+  // Engagement metrics
+  commentCount  Int     @default(0)
+  participantCount Int  @default(0)
+  
+  // Relationships  
+  comments      TopicComment[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([parentTopicId])
+}
+
+// Junction table linking posts to topics (posts can belong to multiple topics)
+model TopicPost {
+  id        String @id @default(cuid())
+  topicId   String
+  postId    String
+  
+  topic     Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Relevance scoring
+  relevanceScore Float @default(0.5) // 0-1 how relevant this post is to the topic
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([topicId, postId]) // Prevent duplicate assignments
+  @@index([topicId, relevanceScore])
+}
+
+// Comments specifically on topics and sub-topics (separate from post comments)
+model TopicComment {
+  id          String @id @default(cuid())
+  content     String
+  authorId    String
+  author      User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Can be attached to either a topic or sub-topic
+  topicId     String?
+  topic       Topic?    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subTopicId  String?
+  subTopic    SubTopic? @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+  
+  // Threading support for replies
+  parentId    String?
+  parent      TopicComment? @relation("TopicCommentReplies", fields: [parentId], references: [id])
+  replies     TopicComment[] @relation("TopicCommentReplies")
+  
+  // AI analysis
+  embedding   Float[]  @default([])
+  sentiment   Float?   // -1 to 1, sentiment analysis of the comment
+  hostilityScore Float @default(0) // 0-1, hostility detection
+  
+  // Moderation
+  isHidden    Boolean  @default(false)
+  hideReason  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([topicId, createdAt])
+  @@index([subTopicId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
 }
 
 model Conversation {

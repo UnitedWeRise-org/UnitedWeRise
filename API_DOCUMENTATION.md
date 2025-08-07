@@ -401,6 +401,138 @@ Content-Type: application/json
 }
 ```
 
+### Topics (`/api/topics`)
+
+The AI-powered topic analysis system that clusters related posts into trending discussions with neutral argument summaries.
+
+#### Get Trending Topics
+```http
+GET /api/topics/trending?limit=10&category=healthcare&timeframe=24
+```
+
+**Query Parameters:**
+- `limit` (optional): Maximum topics to return (1-50, default: 10)
+- `category` (optional): Filter by topic category  
+- `timeframe` (optional): Hours for trending calculation (default: 24)
+
+**Response:**
+```json
+{
+  "topics": [
+    {
+      "id": "topic-id",
+      "title": "Healthcare Reform & Policy",
+      "description": "Discussion about healthcare policy changes",
+      "category": "healthcare",
+      "argumentsFor": [
+        "Universal healthcare would reduce costs...",
+        "Evidence from other countries shows..."
+      ],
+      "argumentsAgainst": [
+        "Implementation costs are too high...",
+        "Market-based solutions work better..."
+      ],
+      "neutralSummary": "The debate centers on cost vs access...",
+      "postCount": 25,
+      "participantCount": 18,
+      "viewCount": 342,
+      "trendingScore": 8.5,
+      "controversyScore": 0.7,
+      "lastActivityAt": "2024-08-07T15:30:00.000Z",
+      "posts": [
+        {
+          "post": {
+            "id": "post-id",
+            "content": "Healthcare reform is crucial...",
+            "author": {
+              "username": "citizen_jane",
+              "firstName": "Jane",
+              "lastName": "Smith"
+            }
+          },
+          "relevanceScore": 0.95
+        }
+      ],
+      "subTopics": [
+        {
+          "id": "subtopic-id",
+          "title": "Funding Mechanisms",
+          "summary": "Discussion of how to fund healthcare reforms",
+          "commentCount": 8
+        }
+      ]
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Get Topic Details
+```http
+GET /api/topics/{id}
+```
+
+**Response includes:**
+- Full topic information with all posts
+- Sub-topics with threaded comments
+- Direct topic comments with replies
+- AI-generated argument analysis
+
+#### Add Comment to Topic
+```http
+POST /api/topics/{id}/comment
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "I think this perspective overlooks...",
+  "parentId": "comment-id-for-reply"
+}
+```
+
+#### Add Comment to Sub-Topic
+```http
+POST /api/topics/{id}/subtopics/{subTopicId}/comment
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "Regarding funding mechanisms...",
+  "parentId": "parent-comment-id"
+}
+```
+
+#### Search Topics
+```http
+GET /api/topics/search?q=climate&category=environment&limit=20
+```
+
+**Query Parameters:**
+- `q` (optional): Search query for title/description
+- `category` (optional): Filter by category
+- `limit` (optional): Maximum results (default: 20)
+
+#### Trigger Topic Analysis (Admin/Moderator Only)
+```http
+POST /api/topics/analyze/recent
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "timeframe": 24,
+  "maxPosts": 500
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Topic analysis completed successfully",
+  "topicsCreated": 5,
+  "postsAnalyzed": 147
+}
+```
+
 ### Verification (`/api/verification`)
 
 #### Send Email Verification
