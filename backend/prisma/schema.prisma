@@ -114,6 +114,10 @@ model User {
   followingCount Int @default(0)
   followersCount Int @default(0)
   
+  // Relationships - Political/Election
+  candidateProfile Candidate?    // If user is running for office
+  endorsements    Endorsement[]  // Candidates this user has endorsed
+  
   @@index([username])
   @@index([createdAt])
   @@index([h3Index]) // For geospatial queries
@@ -231,6 +235,219 @@ enum VerificationStatus {
   APPROVED
   DENIED
   NOT_REQUIRED
+}
+
+enum ElectionType {
+  PRIMARY
+  GENERAL
+  SPECIAL
+  LOCAL
+  RUNOFF
+}
+
+enum ElectionLevel {
+  FEDERAL
+  STATE
+  LOCAL
+  MUNICIPAL
+}
+
+enum OfficeLevel {
+  FEDERAL
+  STATE
+  LOCAL
+  MUNICIPAL
+}
+
+enum BallotMeasureType {
+  PROPOSITION
+  BOND_MEASURE
+  CONSTITUTIONAL_AMENDMENT
+  INITIATIVE
+  REFERENDUM
+}
+
+// Election infrastructure models
+model Election {
+  id             String       @id @default(cuid())
+  name           String       // "2024 General Election"
+  type           ElectionType
+  level          ElectionLevel
+  date           DateTime
+  registrationDeadline DateTime?
+  
+  // Geographic scope
+  state          String       // Two-letter state code
+  county         String?      // For local elections
+  city           String?      // For municipal elections
+  district       String?      // Congressional/state legislative district
+  
+  // Status and metadata
+  isActive       Boolean      @default(true)
+  description    String?
+  officialUrl    String?      // Link to official election info
+  
+  // Relationships
+  offices        Office[]
+  ballotMeasures BallotMeasure[]
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  @@index([state, date])
+  @@index([level, date])
+}
+
+model Office {
+  id          String      @id @default(cuid())
+  title       String      // "President", "Governor", "Mayor", "City Council District 3"
+  level       OfficeLevel
+  description String?     // Brief description of the office
+  
+  // Geographic scope
+  state       String      // Two-letter state code
+  district    String?     // District number/identifier if applicable
+  jurisdiction String?    // City, county, or other local jurisdiction
+  
+  // Term information
+  termLength  Int?        // Length in years
+  salary      Decimal?    // Annual salary if public
+  
+  // Election relationship
+  electionId  String
+  election    Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  
+  // Candidates running for this office
+  candidates  Candidate[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@index([electionId])
+  @@index([state, level])
+}
+
+model Candidate {
+  id              String    @id @default(cuid())
+  
+  // Basic information
+  name            String
+  party           String?   // Political party affiliation
+  isIncumbent     Boolean   @default(false)
+  
+  // Contact and campaign info
+  campaignWebsite String?
+  campaignEmail   String?
+  campaignPhone   String?
+  
+  // Platform and positions
+  platformSummary String?   // Brief campaign summary
+  keyIssues       String[]  @default([]) // Array of key campaign issues
+  embedding       Float[]   @default([]) // AI embedding for issue matching
+  
+  // Verification and status
+  isVerified      Boolean   @default(false)
+  isWithdrawn     Boolean   @default(false)
+  withdrawnAt     DateTime?
+  withdrawnReason String?
+  
+  // Link to platform user (if they have an account)
+  userId          String?   @unique // Optional link to User model
+  user            User?     @relation(fields: [userId], references: [id])
+  
+  // Office they're running for
+  officeId        String
+  office          Office    @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  
+  // Financial data
+  financialData   FinancialData?
+  
+  // User interactions
+  endorsements    Endorsement[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([officeId])
+  @@index([party])
+  @@index([userId])
+}
+
+model BallotMeasure {
+  id          String            @id @default(cuid())
+  title       String            // Short title
+  description String            // Full description/summary
+  type        BallotMeasureType
+  number      String?           // Ballot number (e.g., "Proposition 1")
+  
+  // Full text and details
+  fullText    String?           // Complete text of the measure
+  fiscalImpact String?          // Economic impact analysis
+  arguments   Json?             // Arguments for/against
+  
+  // Geographic scope
+  state       String            // Two-letter state code
+  county      String?
+  city        String?
+  
+  // Election relationship
+  electionId  String
+  election    Election          @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  @@index([electionId])
+  @@index([state, type])
+}
+
+model FinancialData {
+  id               String    @id @default(cuid())
+  candidateId      String    @unique
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Financial summary
+  totalRaised      Decimal   @default(0)
+  totalSpent       Decimal   @default(0)
+  cashOnHand       Decimal   @default(0)
+  debts            Decimal   @default(0)
+  
+  // Donation info
+  individualDonations  Decimal @default(0)
+  pacDonations        Decimal @default(0)
+  selfFunding         Decimal @default(0)
+  publicFunding       Decimal @default(0)
+  
+  // Reporting period
+  reportingPeriod  String?   // "Q1 2024", "Pre-Primary"
+  lastUpdated      DateTime  @default(now())
+  sourceUrl        String?   // Link to official filing
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Endorsement {
+  id          String    @id @default(cuid())
+  
+  // Who endorsed
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Who was endorsed
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Endorsement details
+  reason      String?   // Why they endorsed
+  isPublic    Boolean   @default(false) // Whether endorsement is public
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@unique([userId, candidateId]) // Prevent duplicate endorsements
+  @@index([candidateId])
+  @@index([userId])
 }
 
 model Conversation {

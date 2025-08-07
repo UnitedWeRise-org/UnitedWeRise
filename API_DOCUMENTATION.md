@@ -95,7 +95,7 @@ Authorization: Bearer <token>
 
 #### Get User Profile
 ```http
-GET /api/users/{userId}
+GET /api/users/{username}
 ```
 
 #### Update Profile
@@ -135,15 +135,12 @@ Content-Type: application/json
 
 {
   "content": "This is my political opinion about...",
-  "imageUrl": "https://example.com/image.jpg",
-  "isPolitical": true,
-  "tags": ["politics", "democracy"]
+  "imageUrl": "https://example.com/image.jpg"
 }
 ```
 
 #### Get Posts
 ```http
-GET /api/posts?page=1&limit=20
 GET /api/posts/user/{userId}
 GET /api/posts/me
 ```
@@ -202,6 +199,205 @@ Content-Type: application/json
   "politicalParty": "Independent",
   "office": "Mayor of Springfield",
   "campaignWebsite": "https://campaign.com"
+}
+```
+
+### Elections (`/api/elections`)
+
+#### Get Elections by Location
+```http
+GET /api/elections?state=CA&level=FEDERAL&includeUpcoming=true
+```
+
+**Query Parameters:**
+- `state` (optional): Two-letter state code
+- `level` (optional): Election level (FEDERAL, STATE, LOCAL, MUNICIPAL)
+- `zipCode` (optional): ZIP code for precise location matching
+- `includeUpcoming` (optional): Include only upcoming elections (default: true)
+
+**Response:**
+```json
+{
+  "elections": [
+    {
+      "id": "election-id",
+      "name": "2024 General Election",
+      "type": "GENERAL",
+      "level": "FEDERAL",
+      "date": "2024-11-05T00:00:00.000Z",
+      "state": "CA",
+      "offices": [
+        {
+          "id": "office-id",
+          "title": "President",
+          "level": "FEDERAL",
+          "candidates": [
+            {
+              "id": "candidate-id",
+              "name": "John Smith",
+              "party": "Democratic",
+              "isIncumbent": false,
+              "platformSummary": "Fighting for working families...",
+              "keyIssues": ["healthcare", "economy", "environment"]
+            }
+          ]
+        }
+      ],
+      "ballotMeasures": []
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Get Election Details
+```http
+GET /api/elections/{id}
+```
+
+#### Get Candidates for Election
+```http
+GET /api/elections/{id}/candidates?party=Democratic&office=office-id
+```
+
+#### Register as Candidate
+```http
+POST /api/elections/{id}/register-candidate
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "officeId": "office-id",
+  "name": "Jane Doe",
+  "party": "Democratic",
+  "platformSummary": "Building a better future for all...",
+  "keyIssues": ["education", "healthcare", "jobs"],
+  "campaignWebsite": "https://janedoe2024.com",
+  "campaignEmail": "contact@janedoe2024.com"
+}
+```
+
+#### Compare Candidates
+```http
+POST /api/elections/candidates/compare
+Content-Type: application/json
+
+{
+  "candidateIds": ["candidate-id-1", "candidate-id-2"]
+}
+```
+
+### Candidates (`/api/candidates`)
+
+#### Search Candidates
+```http
+GET /api/candidates?party=Democratic&state=CA&incumbent=false&search=john
+```
+
+**Query Parameters:**
+- `party` (optional): Filter by political party
+- `office` (optional): Filter by office type
+- `state` (optional): Filter by state
+- `incumbent` (optional): Filter by incumbent status
+- `search` (optional): Search candidate names
+
+#### Get Candidate Profile
+```http
+GET /api/candidates/{id}
+```
+
+**Response:**
+```json
+{
+  "id": "candidate-id",
+  "name": "John Smith",
+  "party": "Democratic",
+  "isIncumbent": false,
+  "platformSummary": "Fighting for working families...",
+  "keyIssues": ["healthcare", "economy", "environment"],
+  "campaignWebsite": "https://johnsmith2024.com",
+  "office": {
+    "id": "office-id",
+    "title": "Governor",
+    "level": "STATE",
+    "election": {
+      "id": "election-id",
+      "name": "2024 General Election",
+      "date": "2024-11-05T00:00:00.000Z"
+    }
+  },
+  "user": {
+    "id": "user-id",
+    "username": "johnsmith",
+    "firstName": "John",
+    "lastName": "Smith",
+    "verified": true
+  },
+  "financialData": {
+    "totalRaised": 150000.00,
+    "totalSpent": 75000.00,
+    "cashOnHand": 75000.00
+  },
+  "endorsements": [
+    {
+      "id": "endorsement-id",
+      "reason": "Strong advocate for healthcare reform",
+      "isPublic": true,
+      "user": {
+        "username": "supporter1",
+        "firstName": "Jane",
+        "lastName": "Doe"
+      }
+    }
+  ]
+}
+```
+
+#### Endorse Candidate
+```http
+POST /api/candidates/{id}/endorse
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "reason": "Strong record on environmental issues",
+  "isPublic": true
+}
+```
+
+#### Remove Endorsement
+```http
+DELETE /api/candidates/{id}/endorse
+Authorization: Bearer <token>
+```
+
+#### Get My Candidate Profiles
+```http
+GET /api/candidates/my-candidacy
+Authorization: Bearer <token>
+```
+
+#### Update Candidate Platform
+```http
+PUT /api/candidates/{id}/update-platform
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "platformSummary": "Updated platform summary...",
+  "keyIssues": ["healthcare", "education", "climate"],
+  "campaignWebsite": "https://updated-website.com"
+}
+```
+
+#### Withdraw Candidacy
+```http
+POST /api/candidates/{id}/withdraw
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "reason": "Personal reasons"
 }
 ```
 

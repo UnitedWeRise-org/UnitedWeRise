@@ -4,7 +4,10 @@
       "Bash(curl:*)",
       "Bash(npx prisma db pull:*)",
       "Bash(npx prisma db push:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

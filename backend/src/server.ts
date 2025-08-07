@@ -16,6 +16,8 @@ import moderationRoutes from './routes/moderation';
 import adminRoutes from './routes/admin';
 import appealsRoutes from './routes/appeals';
 import onboardingRoutes from './routes/onboarding';
+import electionRoutes from './routes/elections';
+import candidateRoutes from './routes/candidates';
 import { initializeWebSocket } from './websocket';
 import { apiLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
@@ -93,6 +95,8 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/appeals', appealsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/elections', electionRoutes);
+app.use('/api/candidates', candidateRoutes);
 
 // API Documentation
 if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true') {
