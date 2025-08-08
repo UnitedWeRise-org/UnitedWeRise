@@ -1,0 +1,173 @@
+/* Officials System Styles for United We Rise Frontend */
+
+.officials-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+    margin: 2rem;
+    width: 100%;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    background: linear-gradient(135deg, #1a365d, #2d5a87);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: -0.5rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+/* Animation for notifications */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Enhanced officials display styles */
+.officials-enhanced .level-section {
+    margin-bottom: 2rem;
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.officials-enhanced .level-section h3 {
+    color: #1a365d;
+    border-bottom: 2px solid #1a365d;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.officials-enhanced .rep-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+}
+
+.officials-enhanced .rep-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #1a365d;
+}
+
+.officials-enhanced .rep-name {
+    font-weight: 600;
+    color: #1a365d;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.officials-enhanced .rep-position {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.officials-enhanced .rep-party {
+    background: #e9ecef;
+    color: #495057;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.officials-enhanced .rep-contact {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+.officials-enhanced .rep-contact a {
+    color: #1a365d;
+    text-decoration: none;
+}
+
+.officials-enhanced .rep-contact a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .modal-container {
+        margin: 1rem;
+        max-height: 90vh;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .contact-methods {
+        grid-template-columns: 1fr;
+    }
+}

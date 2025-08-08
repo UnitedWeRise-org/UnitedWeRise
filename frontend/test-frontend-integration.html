@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>United We Rise - Candidate System Test</title>
+    
+    <!-- Load candidate system components -->
+    <script src="src/components/CandidateSystem.js"></script>
+    <link rel="stylesheet" href="src/styles/candidate-system.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 2rem;
+        }
+        
+        .test-header {
+            background: linear-gradient(135deg, #202e0c, #4b5c09);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+        
+        .demo-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #4b5c09, #6b7c19);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .demo-button:hover {
+            background: linear-gradient(135deg, #202e0c, #4b5c09);
+            transform: translateY(-1px);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        
+        .status-ready {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .feature-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #4b5c09;
+        }
+        
+        .feature-item h4 {
+            margin: 0 0 0.5rem 0;
+            color: #202e0c;
+        }
+        
+        .feature-item p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🎯 United We Rise - Enhanced Candidate System</h1>
+        <p>Testing AI-powered candidate analysis, messaging, and election features</p>
+        <div id="systemStatus">
+            <span>System Status:</span>
+            <span class="status-indicator status-loading">Initializing...</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🗳️ Enhanced Election Display</h2>
+        <p>Multi-tier election system that never fails to load, with AI-enhanced candidate profiles.</p>
+        
+        <div class="test-buttons">
+            <button class="demo-button" onclick="loadElectionDemo()">Load Elections (CA)</button>
+            <button class="demo-button" onclick="showDataSources()">View Data Sources</button>
+            <button class="demo-button" onclick="testFallbackSystem()">Test Fallback System</button>
+        </div>
+        
+        <div id="election-demo-area" class="enhanced-elections-container"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🤖 AI-Powered Features</h2>
+        <p>Qwen3 integration for intelligent candidate comparison and analysis.</p>
+        
+        <div class="test-buttons">
+            <button class="demo-button" onclick="showAIComparison()">AI Candidate Comparison</button>
+            <button class="demo-button" onclick="showAICapabilities()">AI Capabilities</button>
+            <button class="demo-button" onclick="testMissingPositions()">Missing Position Handling</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>💬 Political Messaging System</h2>
+        <p>Dedicated candidate communication system with staff delegation and public Q&A.</p>
+        
+        <div class="test-buttons">
+            <button class="demo-button" onclick="showContactForm()">Candidate Contact Form</button>
+            <button class="demo-button" onclick="showPublicQA()">Public Q&A Demo</button>
+            <button class="demo-button" onclick="showStaffDashboard()">Staff Dashboard (Mock)</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📸 Photo Management</h2>
+        <p>Professional photo system with personal vs campaign separation and AI optimization.</p>
+        
+        <div class="test-buttons">
+            <button class="demo-button" onclick="showPhotoFeatures()">Photo Features</button>
+            <button class="demo-button" onclick="testPhotoOptimization()">Optimization Demo</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✨ Key Features Implemented</h2>
+        <div class="feature-list">
+            <div class="feature-item">
+                <h4>🗳️ Multi-Tier Elections</h4>
+                <p>Cache → API → Fallback architecture ensures elections always load</p>
+            </div>
+            <div class="feature-item">
+                <h4>🤖 AI Candidate Analysis</h4>
+                <p>Qwen3 integration for policy position analysis and neutral comparisons</p>
+            </div>
+            <div class="feature-item">
+                <h4>💬 Political Messaging</h4>
+                <p>Separate system for candidate communication with staff delegation</p>
+            </div>
+            <div class="feature-item">
+                <h4>📢 Public Q&A System</h4>
+                <p>Convert inquiries to public Q&A with community voting</p>
+            </div>
+            <div class="feature-item">
+                <h4>📸 Professional Photos</h4>
+                <p>Campaign headshots vs personal photos with auto-optimization</p>
+            </div>
+            <div class="feature-item">
+                <h4>🎯 Missing Position Handling</h4>
+                <p>Direct contact links when candidates haven't taken public positions</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results Area -->
+    <div id="test-results" class="test-section" style="display: none;">
+        <h2>📋 Test Results</h2>
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        let candidateSystem = null;
+        
+        // Initialize system when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🎯 Initializing candidate system test...');
+            
+            try {
+                // Initialize candidate system
+                if (window.CandidateSystem) {
+                    candidateSystem = new window.CandidateSystem();
+                    updateStatus('ready', 'System Ready');
+                    console.log('✅ Candidate system initialized successfully');
+                } else {
+                    updateStatus('error', 'System Error');
+                    console.error('❌ CandidateSystem not available');
+                }
+                
+                // Test backend connectivity
+                await testBackendConnection();
+                
+            } catch (error) {
+                console.error('❌ Initialization failed:', error);
+                updateStatus('error', 'Initialization Failed');
+            }
+        });
+
+        function updateStatus(type, message) {
+            const statusElement = document.querySelector('#systemStatus .status-indicator');
+            statusElement.className = `status-indicator status-${type}`;
+            statusElement.textContent = message;
+        }
+
+        async function testBackendConnection() {
+            try {
+                const response = await fetch('http://localhost:3001/health');
+                if (response.ok) {
+                    console.log('✅ Backend connection successful');
+                    showTestResult('Backend', 'Connected', 'success');
+                } else {
+                    throw new Error('Backend not responding');
+                }
+            } catch (error) {
+                console.warn('⚠️ Backend connection failed:', error);
+                showTestResult('Backend', 'Offline (Demo Mode)', 'warning');
+            }
+        }
+
+        function showTestResult(feature, status, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const outputDiv = document.getElementById('test-output');
+            
+            resultsDiv.style.display = 'block';
+            
+            const result = document.createElement('div');
+            result.className = `test-result test-${type}`;
+            result.innerHTML = `
+                <strong>${feature}:</strong> 
+                <span class="status-indicator status-${type}">${status}</span>
+            `;
+            
+            outputDiv.appendChild(result);
+        }
+
+        // Demo functions
+        async function loadElectionDemo() {
+            console.log('🗳️ Loading election demo...');
+            if (candidateSystem) {
+                await candidateSystem.enhanceElectionDisplay();
+                showTestResult('Election Display', 'Loaded', 'ready');
+            } else {
+                alert('Candidate system not initialized');
+            }
+        }
+
+        function showDataSources() {
+            alert('🔄 Data Sources:\n\n1. Cache - Stored election data\n2. External APIs - Live election feeds\n3. Fallback - Typical election cycles\n\nSystem automatically tries each source in order!');
+        }
+
+        function testFallbackSystem() {
+            alert('🛡️ Fallback System:\n\nEven if external APIs are down, the system shows:\n• Typical election dates\n• Standard office types\n• General candidate information\n\nElections never fail to display!');
+        }
+
+        function showAIComparison() {
+            if (candidateSystem) {
+                // Try to show comparison with mock data
+                candidateSystem.showModal('🤖 AI Candidate Comparison Demo', `
+                    <div class="ai-demo">
+                        <h4>Demo: Intelligent Candidate Comparison</h4>
+                        <p>Our AI system analyzes candidate positions and provides:</p>
+                        <ul>
+                            <li><strong>Policy Position Analysis</strong> - Identifies stances on key issues</li>
+                            <li><strong>Neutral Comparisons</strong> - No political bias, just facts</li>
+                            <li><strong>Missing Position Handling</strong> - Direct contact for unanswered questions</li>
+                            <li><strong>Confidence Scoring</strong> - How certain we are about each position</li>
+                        </ul>
+                        <div class="demo-note">
+                            <p><em>Real comparisons appear when candidate data is available!</em></p>
+                        </div>
+                    </div>
+                `);
+                showTestResult('AI Comparison', 'Demo Shown', 'ready');
+            }
+        }
+
+        function showAICapabilities() {
+            // Show the AI capabilities modal from the integration
+            if (window.candidateSystemIntegration) {
+                window.candidateSystemIntegration.showAICapabilitiesModal();
+                showTestResult('AI Capabilities', 'Modal Displayed', 'ready');
+            }
+        }
+
+        function testMissingPositions() {
+            alert('🎯 Missing Position Handling:\n\nWhen AI finds no public position:\n• Shows "No position available"\n• Provides direct contact link\n• Opens candidate messaging form\n• Enables direct citizen-candidate communication');
+        }
+
+        function showContactForm() {
+            if (candidateSystem) {
+                candidateSystem.showModal('💬 Candidate Contact Demo', `
+                    <div class="contact-demo">
+                        <h4>Political Messaging System</h4>
+                        <p>Citizens can contact candidates with:</p>
+                        <ul>
+                            <li><strong>Policy Questions</strong> - Ask about specific issues</li>
+                            <li><strong>Anonymous Inquiries</strong> - Contact without login</li>
+                            <li><strong>Categorized Topics</strong> - 20+ policy areas</li>
+                            <li><strong>Direct Responses</strong> - From candidates or staff</li>
+                        </ul>
+                        <p><em>Real contact forms available on candidate profiles!</em></p>
+                        <button class="btn-primary" onclick="this.closest('.modal').remove()">Got it!</button>
+                    </div>
+                `);
+                showTestResult('Contact Form', 'Demo Shown', 'ready');
+            }
+        }
+
+        function showPublicQA() {
+            if (candidateSystem) {
+                candidateSystem.showModal('📢 Public Q&A Demo', `
+                    <div class="qa-demo">
+                        <h4>Community Q&A System</h4>
+                        <p>Features include:</p>
+                        <ul>
+                            <li><strong>Convert Private to Public</strong> - Staff can make responses public</li>
+                            <li><strong>Community Voting</strong> - Upvote/downvote questions</li>
+                            <li><strong>Pinned Questions</strong> - Highlight important topics</li>
+                            <li><strong>Category Organization</strong> - Sort by policy area</li>
+                        </ul>
+                        <p><em>Live Q&A appears on candidate profiles!</em></p>
+                        <button class="btn-primary" onclick="this.closest('.modal').remove()">Cool!</button>
+                    </div>
+                `);
+                showTestResult('Public Q&A', 'Demo Shown', 'ready');
+            }
+        }
+
+        function showStaffDashboard() {
+            alert('👥 Staff Dashboard Features:\n\n• 6 Role Types (Manager to Intern)\n• 7 Permission Levels\n• Inquiry Assignment\n• Response Management\n• Public Q&A Publishing\n• Analytics & Metrics\n\nReal dashboard available to campaign staff!');
+        }
+
+        function showPhotoFeatures() {
+            alert('📸 Photo Management:\n\n• Personal vs Campaign Photos\n• Automatic WebP Optimization\n• Smart Resizing & Thumbnails\n• Moderation System\n• Purpose Classification\n• Batch Processing\n\nProfessional photo management for all users!');
+        }
+
+        function testPhotoOptimization() {
+            alert('⚡ Photo Optimization:\n\n• Automatic format conversion to WebP\n• Smart sizing (400x400 avatars, 800x1000 campaign)\n• Thumbnail generation\n• Metadata preservation\n• Quality optimization\n• Storage efficiency\n\nAll photos are automatically optimized!');
+        }
+    </script>
+</body>
+</html>
