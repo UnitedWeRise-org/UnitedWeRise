@@ -1,6 +1,6 @@
 {
   "name": "unitedwerise-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "United We Rise Frontend",
   "scripts": {
     "test": "echo \"No tests specified\" && exit 0",
