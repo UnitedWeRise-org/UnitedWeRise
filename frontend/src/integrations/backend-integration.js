@@ -3,7 +3,7 @@
 
 class BackendIntegration {
     constructor() {
-        this.API_BASE = 'http://localhost:3001/api'; // Update for production
+        this.API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         this.init();
     }
 
@@ -335,9 +335,8 @@ function addHCaptchaToRegistration() {
     if (registerForm && !document.querySelector('.h-captcha')) {
         const hcaptchaDiv = document.createElement('div');
         hcaptchaDiv.className = 'h-captcha';
-        // Production: 9c5af3a8-5066-446c-970e-1c18d9fe8d9e
-        // Test for localhost: 10000000-ffff-ffff-ffff-000000000001
-        hcaptchaDiv.setAttribute('data-sitekey', '10000000-ffff-ffff-ffff-000000000001');
+        // Use production hCaptcha key for all environments
+        hcaptchaDiv.setAttribute('data-sitekey', '9c5af3a8-5066-446c-970e-1c18d9fe8d9e');
         
         // Add before the register button
         const submitButton = registerForm.querySelector('button[type="submit"], .register-button');
