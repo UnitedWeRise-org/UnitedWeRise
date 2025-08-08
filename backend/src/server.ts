@@ -18,8 +18,11 @@ import appealsRoutes from './routes/appeals';
 import onboardingRoutes from './routes/onboarding';
 import electionRoutes from './routes/elections';
 import candidateRoutes from './routes/candidates';
+import candidateMessagesRoutes from './routes/candidateMessages';
 import topicRoutes from './routes/topics';
+import photoRoutes from './routes/photos';
 import { initializeWebSocket } from './websocket';
+import { PhotoService } from './services/photoService';
 import { apiLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -28,6 +31,10 @@ import { metricsService } from './services/metricsService';
 dotenv.config();
 
 const app = express();
+
+// Configure trust proxy for Azure Container Apps (1 proxy layer)
+app.set('trust proxy', 1);
+
 const httpServer = http.createServer(app);
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
@@ -62,7 +69,11 @@ app.use(cors({
       return;
     }
     
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow any Azure Static Web Apps origin or unitedwerise.org domain
+    if (!origin || 
+        allowedOrigins.includes(origin) ||
+        origin.includes('azurestaticapps.net') ||
+        origin.includes('unitedwerise.org')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -98,7 +109,12 @@ app.use('/api/appeals', appealsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/elections', electionRoutes);
 app.use('/api/candidates', candidateRoutes);
+app.use('/api/candidate-messages', candidateMessagesRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api/photos', photoRoutes);
+
+// Serve uploaded photos statically
+app.use('/uploads', express.static('uploads'));
 
 // API Documentation
 if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true') {
@@ -186,9 +202,13 @@ app.get('/api/health/detailed', async (req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Initialize photo service directories
+PhotoService.initializeDirectories().catch(console.error);
+
 // Use httpServer instead of app for WebSocket support
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server active`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Photo uploads: enabled with automatic resizing`);
 });
