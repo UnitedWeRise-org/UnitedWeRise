@@ -1,0 +1,467 @@
+/* Trending System Styles for United We Rise Frontend */
+
+/* Modal and Overlay Styles */
+.trending-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    margin: 2rem;
+    width: 100%;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: -0.5rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+/* Filter Modal Styles */
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.filter-section {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1rem;
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-section h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.filter-group label:hover {
+    background: #f8f9fa;
+}
+
+.filter-group input[type="radio"],
+.filter-group input[type="checkbox"] {
+    margin: 0;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.filter-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.filter-btn.primary {
+    background: #ff6b35;
+    color: white;
+}
+
+.filter-btn.primary:hover {
+    background: #e55a2b;
+}
+
+.filter-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.filter-btn.secondary:hover {
+    background: #5a6268;
+}
+
+/* Settings Modal Styles */
+.settings-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setting-group {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1rem;
+}
+
+.setting-group:last-child {
+    border-bottom: none;
+}
+
+.setting-group h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.toggle-switch:hover {
+    background: #f8f9fa;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 24px;
+    margin-right: 1rem;
+    transition: 0.4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.4s;
+}
+
+.toggle-switch input:checked + .slider {
+    background-color: #ff6b35;
+}
+
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.radio-group label:hover {
+    background: #f8f9fa;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.settings-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.settings-btn.primary {
+    background: #ff6b35;
+    color: white;
+}
+
+.settings-btn.primary:hover {
+    background: #e55a2b;
+}
+
+.settings-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.settings-btn.secondary:hover {
+    background: #5a6268;
+}
+
+/* Enhanced Trending Updates Panel */
+.trending-updates.enhanced {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.trending-updates.enhanced .trending-updates-header {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.trending-updates.enhanced .trending-updates-body {
+    background: white;
+    max-height: none;
+}
+
+/* Error States */
+.trending-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #666;
+}
+
+.trending-error .error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.trending-error h3 {
+    margin: 0 0 0.5rem 0;
+    color: #ff6b35;
+    font-size: 1.5rem;
+}
+
+.trending-error p {
+    margin: 0 0 2rem 0;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.error-btn {
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.error-btn:hover {
+    background: linear-gradient(135deg, #e55a2b, #d67e1a);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Animation for slideIn */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Trending Item Animations */
+.trending-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced trending item styles */
+.trending-item.enhanced {
+    border-left: 3px solid #ff6b35;
+    background: linear-gradient(135deg, #fff8f5, #ffffff);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.trending-item.enhanced:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+}
+
+/* Trending panel view mode button */
+.trending-view-mode-btn:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: scale(1.05);
+}
+
+/* Context menu animation */
+.trending-context-menu {
+    animation: contextMenuAppear 0.2s ease-out;
+}
+
+@keyframes contextMenuAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .modal-container {
+        margin: 1rem;
+        max-height: 90vh;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .filter-actions,
+    .settings-actions {
+        flex-direction: column;
+    }
+    
+    .filter-btn,
+    .settings-btn {
+        width: 100%;
+    }
+    
+    .trending-context-menu {
+        left: 50% !important;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 200px;
+    }
+    
+    .toggle-switch {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .slider {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
