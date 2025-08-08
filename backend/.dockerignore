@@ -1,0 +1,89 @@
+# Node modules
+node_modules
+npm-debug.log*
+.npm
+
+# Build outputs
+dist
+build
+
+# Environment files
+.env
+.env.local
+.env.*.local
+azure-config*.env
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+docs
+
+# Test files
+test
+tests
+__tests__
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Coverage reports
+coverage
+
+# Temporary files
+*.tmp
+*.temp
+*.lock
+
+# Logs
+logs
+*.log
+
+# Development scripts
+scripts/dev*
+scripts/test*
+
+# Database files
+*.db
+*.sqlite
+
+# Docker files
+docker-compose*
+
+# Cache directories
+.cache
+.yarn
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
