@@ -595,8 +595,26 @@ class VerificationFlow {
     }
 }
 
-// Initialize verification flow
-const verificationFlow = new VerificationFlow();
+// Initialize verification flow when DOM is ready
+function initializeVerificationFlow() {
+    if (document.body) {
+        const verificationFlow = new VerificationFlow();
+        // Make it globally available
+        window.verificationFlow = verificationFlow;
+    } else {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                const verificationFlow = new VerificationFlow();
+                window.verificationFlow = verificationFlow;
+            });
+        } else {
+            // DOM is already ready
+            const verificationFlow = new VerificationFlow();
+            window.verificationFlow = verificationFlow;
+        }
+    }
+}
 
-// Make it globally available
-window.verificationFlow = verificationFlow;
+// Initialize
+initializeVerificationFlow();

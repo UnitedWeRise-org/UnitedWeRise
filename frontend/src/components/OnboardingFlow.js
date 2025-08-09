@@ -897,7 +897,8 @@ class OnboardingFlow {
 
     async loadSteps() {
         try {
-            const response = await fetch('/api/onboarding/steps', {
+            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const response = await fetch(`${API_BASE}/onboarding/steps`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
@@ -918,7 +919,8 @@ class OnboardingFlow {
 
     async loadInterests() {
         try {
-            const response = await fetch('/api/onboarding/interests');
+            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const response = await fetch(`${API_BASE}/onboarding/interests`);
             if (response.ok) {
                 const data = await response.json();
                 this.populateInterests(data.interests);
@@ -980,7 +982,8 @@ class OnboardingFlow {
         btn.textContent = 'Finding representatives...';
 
         try {
-            const response = await fetch('/api/onboarding/location/validate', {
+            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const response = await fetch(`${API_BASE}/onboarding/location/validate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1200,7 +1203,8 @@ class OnboardingFlow {
         }
 
         try {
-            await fetch('/api/onboarding/skip-step', {
+            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            await fetch(`${API_BASE}/onboarding/skip-step`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1270,7 +1274,8 @@ class OnboardingFlow {
     async completeCurrentStep(step) {
         const stepData = this.stepData[step.id] || this.stepData[step.id.replace('step-', '')];
         
-        const response = await fetch('/api/onboarding/complete-step', {
+        const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        const response = await fetch(`${API_BASE}/onboarding/complete-step`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1345,7 +1350,8 @@ window.onboardingFlow = onboardingFlow;
 document.addEventListener('DOMContentLoaded', async () => {
     if (authToken) {
         try {
-            const response = await fetch('/api/onboarding/progress', {
+            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const response = await fetch(`${API_BASE}/onboarding/progress`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }

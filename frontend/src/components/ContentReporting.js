@@ -494,18 +494,32 @@ class ContentReporting {
     }
 }
 
-// Initialize content reporting
-const contentReporting = new ContentReporting();
-
-// Make it globally available
-window.contentReporting = contentReporting;
-
-// Check moderation status when auth token is available
-document.addEventListener('DOMContentLoaded', () => {
-    if (authToken) {
-        contentReporting.checkModerationStatus();
+// Initialize content reporting when DOM is ready
+function initializeContentReporting() {
+    if (document.body) {
+        const contentReporting = new ContentReporting();
+        // Make it globally available
+        window.contentReporting = contentReporting;
+        
+        // Check moderation status when auth token is available
+        if (typeof authToken !== 'undefined' && authToken) {
+            contentReporting.checkModerationStatus();
+        }
+    } else {
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const contentReporting = new ContentReporting();
+            window.contentReporting = contentReporting;
+            
+            if (typeof authToken !== 'undefined' && authToken) {
+                contentReporting.checkModerationStatus();
+            }
+        });
     }
-});
+}
+
+// Initialize
+initializeContentReporting();
 
 // Also check when user logs in
 document.addEventListener('userLoggedIn', () => {
