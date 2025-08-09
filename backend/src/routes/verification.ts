@@ -6,7 +6,7 @@ import {
   validatePhoneVerification, 
   validatePhoneCode 
 } from '../middleware/validation';
-import { authLimiter } from '../middleware/rateLimiting';
+import { verificationLimiter } from '../middleware/rateLimiting';
 import { emailService } from '../services/emailService';
 import { smsService } from '../services/smsService';
 import { captchaService } from '../services/captchaService';
@@ -16,7 +16,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Send email verification
-router.post('/email/send', requireAuth, authLimiter, async (req: AuthRequest, res) => {
+router.post('/email/send', requireAuth, verificationLimiter, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     
@@ -143,7 +143,7 @@ router.post('/email/verify', validateEmailVerification, async (req, res) => {
 });
 
 // Send phone verification code
-router.post('/phone/send', requireAuth, authLimiter, validatePhoneVerification, async (req: AuthRequest, res) => {
+router.post('/phone/send', requireAuth, verificationLimiter, validatePhoneVerification, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { phoneNumber, hcaptchaToken } = req.body;
