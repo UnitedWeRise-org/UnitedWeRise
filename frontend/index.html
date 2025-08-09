@@ -1221,7 +1221,7 @@
             }
             
             if (!hcaptchaResponse) {
-                showAuthMessage('Please complete the captcha verification', 'error');
+                showAuthMessage('Please complete the captcha verification by clicking the checkbox above', 'error');
                 return;
             }
             
@@ -4152,32 +4152,12 @@
             });
         }
 
-        // Initialize hCaptcha when available
-        function initializeHCaptcha() {
-            if (window.hcaptcha && document.getElementById('hcaptcha-register')) {
-                try {
-                    // Render hCaptcha widget explicitly
-                    const widgetId = window.hcaptcha.render('hcaptcha-register', {
-                        sitekey: '9c5af3a8-5066-446c-970e-1c18d9fe8d9e',
-                        callback: function(response) {
-                            console.log('hCaptcha completed:', response ? 'success' : 'failed');
-                        },
-                        'error-callback': function(error) {
-                            console.error('hCaptcha error:', error);
-                        }
-                    });
-                    console.log('hCaptcha widget rendered with ID:', widgetId);
-                } catch (error) {
-                    console.error('Failed to render hCaptcha:', error);
-                }
-            }
-        }
-
-        // Check hCaptcha after page load
+        // Check hCaptcha after page load (let it auto-render)
         window.addEventListener('load', function() {
             setTimeout(() => {
                 checkHCaptchaStatus();
-                initializeHCaptcha();
+                // No manual rendering needed - hCaptcha script auto-renders widgets with data-sitekey
+                console.log('Relying on hCaptcha auto-render via data-sitekey attribute');
             }, 2000);
         });
     </script>

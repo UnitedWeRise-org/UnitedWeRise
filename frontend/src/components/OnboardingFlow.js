@@ -896,6 +896,12 @@ class OnboardingFlow {
     }
 
     async loadSteps() {
+        // Don't load steps if user is not logged in
+        if (!authToken || authToken === 'None') {
+            console.log('No auth token available, skipping onboarding steps load');
+            return;
+        }
+        
         try {
             const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
             const response = await fetch(`${API_BASE}/onboarding/steps`, {
