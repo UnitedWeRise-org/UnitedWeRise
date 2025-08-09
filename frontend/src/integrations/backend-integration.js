@@ -267,12 +267,24 @@ class BackendIntegration {
     }
 
     getHCaptchaToken() {
-        // Get the hCaptcha token from the specific widget
+        // First, try to get the token from the global variable set by callback
+        if (window.hCaptchaToken) {
+            return window.hCaptchaToken;
+        }
+        
+        // Fallback: Get the hCaptcha token from the API
         if (window.hcaptcha && window.hcaptcha.getResponse) {
             const widget = document.getElementById('hcaptcha-register');
             if (widget && widget.querySelector('iframe')) {
                 try {
-                    return window.hcaptcha.getResponse();
+                    // Try to get the widget ID from the data attribute
+                    const widgetId = widget.getAttribute('data-hcaptcha-widget-id');
+                    if (widgetId) {
+                        return window.hcaptcha.getResponse(widgetId);
+                    } else {
+                        // Fallback: try without widget ID (works if there's only one widget)
+                        return window.hcaptcha.getResponse();
+                    }
                 } catch (error) {
                     console.log('hCaptcha not ready yet:', error.message);
                     return null;
@@ -283,11 +295,19 @@ class BackendIntegration {
     }
 
     resetHCaptcha() {
+        // Clear the stored token
+        window.hCaptchaToken = null;
+        
         if (window.hcaptcha && window.hcaptcha.reset) {
             const widget = document.getElementById('hcaptcha-register');
             if (widget && widget.querySelector('iframe')) {
                 try {
-                    window.hcaptcha.reset();
+                    const widgetId = widget.getAttribute('data-hcaptcha-widget-id');
+                    if (widgetId) {
+                        window.hcaptcha.reset(widgetId);
+                    } else {
+                        window.hcaptcha.reset();
+                    }
                 } catch (error) {
                     console.log('Could not reset hCaptcha:', error.message);
                 }

@@ -844,7 +844,7 @@
                     </div>
                     <div class="form-group">
                         <!-- Use production key with proper domain (test.unitedwerise.com) -->
-                        <div class="h-captcha" data-sitekey="9c5af3a8-5066-446c-970e-1c18d9fe8d9e" id="hcaptcha-register"></div>
+                        <div class="h-captcha" data-sitekey="9c5af3a8-5066-446c-970e-1c18d9fe8d9e" data-callback="onHCaptchaCallback" id="hcaptcha-register"></div>
                     </div>
                     <button class="btn" onclick="handleRegister()">Sign Up</button>
                     <div class="auth-switch">
@@ -4140,10 +4140,17 @@
         function checkHCaptchaStatus() {
             const widget = document.getElementById('hcaptcha-register');
             const hasIframe = widget && widget.querySelector('iframe');
+            const widgetId = widget ? widget.getAttribute('data-hcaptcha-widget-id') : null;
             let response = null;
             
             try {
-                response = window.hcaptcha && window.hcaptcha.getResponse ? window.hcaptcha.getResponse() : null;
+                if (window.hcaptcha && window.hcaptcha.getResponse) {
+                    if (widgetId) {
+                        response = window.hcaptcha.getResponse(widgetId);
+                    } else {
+                        response = window.hcaptcha.getResponse();
+                    }
+                }
             } catch (error) {
                 console.log('hCaptcha getResponse error:', error.message);
             }
@@ -4152,11 +4159,20 @@
                 loaded: typeof window.hcaptcha !== 'undefined',
                 widgetExists: widget !== null,
                 hasIframe: hasIframe !== null,
+                widgetId: widgetId,
                 sitekey: document.querySelector('[data-sitekey]')?.getAttribute('data-sitekey'),
                 currentResponse: response ? 'has response' : 'no response',
+                responseLength: response ? response.length : 0,
                 domain: window.location.hostname
             });
         }
+
+        // Global hCaptcha callback function
+        window.onHCaptchaCallback = function(token) {
+            console.log('hCaptcha completed successfully!', { tokenLength: token ? token.length : 0 });
+            // Store the token in a global variable for easy access
+            window.hCaptchaToken = token;
+        };
 
         // Check hCaptcha after page load (let it auto-render)
         window.addEventListener('load', function() {
