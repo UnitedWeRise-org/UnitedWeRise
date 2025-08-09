@@ -1199,10 +1199,20 @@
             let hcaptchaResponse = null;
             try {
                 if (window.hcaptcha) {
+                    const widget = document.getElementById('hcaptcha-register');
+                    const hasIframe = widget && widget.querySelector('iframe');
+                    
+                    console.log('hCaptcha check before registration:', {
+                        widget: widget ? 'exists' : 'missing',
+                        iframe: hasIframe ? 'exists' : 'missing',
+                        hcaptchaLoaded: typeof window.hcaptcha !== 'undefined'
+                    });
+                    
                     hcaptchaResponse = window.hcaptcha.getResponse();
+                    console.log('hCaptcha response length:', hcaptchaResponse ? hcaptchaResponse.length : 0);
                 }
             } catch (e) {
-                console.error('hCaptcha error:', e);
+                console.error('hCaptcha getResponse error:', e);
             }
 
             if (!email || !username || !password) {
@@ -4128,16 +4138,47 @@
 
         // Debug hCaptcha loading
         function checkHCaptchaStatus() {
+            const widget = document.getElementById('hcaptcha-register');
+            const hasIframe = widget && widget.querySelector('iframe');
+            const response = window.hcaptcha ? window.hcaptcha.getResponse() : null;
+            
             console.log('hCaptcha status:', {
                 loaded: typeof window.hcaptcha !== 'undefined',
-                widgetExists: document.getElementById('hcaptcha-register') !== null,
-                sitekey: document.querySelector('[data-sitekey]')?.getAttribute('data-sitekey')
+                widgetExists: widget !== null,
+                hasIframe: hasIframe !== null,
+                sitekey: document.querySelector('[data-sitekey]')?.getAttribute('data-sitekey'),
+                currentResponse: response ? 'has response' : 'no response',
+                domain: window.location.hostname
             });
+        }
+
+        // Initialize hCaptcha when available
+        function initializeHCaptcha() {
+            if (window.hcaptcha && document.getElementById('hcaptcha-register')) {
+                try {
+                    // Render hCaptcha widget explicitly
+                    const widgetId = window.hcaptcha.render('hcaptcha-register', {
+                        sitekey: '9c5af3a8-5066-446c-970e-1c18d9fe8d9e',
+                        callback: function(response) {
+                            console.log('hCaptcha completed:', response ? 'success' : 'failed');
+                        },
+                        'error-callback': function(error) {
+                            console.error('hCaptcha error:', error);
+                        }
+                    });
+                    console.log('hCaptcha widget rendered with ID:', widgetId);
+                } catch (error) {
+                    console.error('Failed to render hCaptcha:', error);
+                }
+            }
         }
 
         // Check hCaptcha after page load
         window.addEventListener('load', function() {
-            setTimeout(checkHCaptchaStatus, 2000);
+            setTimeout(() => {
+                checkHCaptchaStatus();
+                initializeHCaptcha();
+            }, 2000);
         });
     </script>
 </body>

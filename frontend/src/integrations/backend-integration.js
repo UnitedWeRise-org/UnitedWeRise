@@ -231,7 +231,8 @@ class BackendIntegration {
             setUserLoggedOut();
         }
         
-        showMessage('Session expired. Please log in again.', 'warning');
+        // Use alert for now, could be enhanced with a proper notification system
+        alert('Session expired. Please log in again.');
         
         setTimeout(() => {
             openAuthModal('login');
@@ -239,7 +240,7 @@ class BackendIntegration {
     }
 
     handleSuspensionError(errorData) {
-        showMessage('Your account has been suspended.', 'error');
+        alert('Your account has been suspended.');
         
         if (errorData.suspension) {
             contentReporting.showModerationStatus({
