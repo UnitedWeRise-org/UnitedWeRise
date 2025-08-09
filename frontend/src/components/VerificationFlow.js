@@ -12,6 +12,17 @@ class VerificationFlow {
     init() {
         this.createVerificationModal();
         this.loadHCaptcha();
+        this.setupMessageListeners();
+    }
+    
+    setupMessageListeners() {
+        // Listen for email verification completion from verify-email.html
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'EMAIL_VERIFIED' && event.data.success) {
+                console.log('Email verification detected, refreshing status...');
+                this.checkEmailVerification();
+            }
+        });
     }
 
     createVerificationModal() {
@@ -332,12 +343,37 @@ class VerificationFlow {
         
         // Check current verification status
         this.checkVerificationStatus();
+        
+        // Start periodic status checking while modal is open
+        this.startStatusChecking();
+    }
+    
+    startStatusChecking() {
+        // Clear any existing interval
+        if (this.statusCheckInterval) {
+            clearInterval(this.statusCheckInterval);
+        }
+        
+        // Check status every 10 seconds while modal is open
+        this.statusCheckInterval = setInterval(() => {
+            if (document.getElementById('verificationModal').style.display !== 'none') {
+                this.checkVerificationStatus();
+            } else {
+                // Modal is closed, stop checking
+                clearInterval(this.statusCheckInterval);
+                this.statusCheckInterval = null;
+            }
+        }, 10000);
     }
 
     hideVerificationModal() {
         document.getElementById('verificationModal').style.display = 'none';
         if (this.phoneVerificationTimer) {
             clearInterval(this.phoneVerificationTimer);
+        }
+        if (this.statusCheckInterval) {
+            clearInterval(this.statusCheckInterval);
+            this.statusCheckInterval = null;
         }
     }
 
