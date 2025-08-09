@@ -105,6 +105,10 @@ model User {
   // Onboarding tracking
   onboardingData      Json?     // Store onboarding progress and data
   onboardingCompleted Boolean   @default(false)
+  
+  // Anti-bot protection
+  deviceFingerprint   Json?     // Store device fingerprint data for bot detection
+  riskScore          Int       @default(0)
   interests           String[]  @default([])
   politicalExperience String?   // new, casual, engaged, activist
   notificationPreferences Json? // Store notification settings
@@ -120,6 +124,18 @@ model User {
   
   // Relationships - Topic System
   topicComments   TopicComment[] // Comments on topics/sub-topics
+  
+  // Relationships - Photo System
+  photos          Photo[]        // User's uploaded photos
+  flaggedPhotos   Photo[] @relation("FlaggedPhotos") // Photos flagged by this moderator
+  
+  // Relationships - Political Messaging System
+  candidateStaffRoles CandidateStaff[]     // Staff roles for candidates
+  politicalInquiries  PoliticalInquiry[] @relation("PoliticalInquiries") // Inquiries sent to candidates
+  publicQAVotes       PublicQAVote[] @relation("PublicQAVotes") // Votes on public Q&A
+  
+  // Relationships - Candidate Registration System
+  candidateRegistrations CandidateRegistration[] // User's candidate registrations
   
   @@index([username])
   @@index([createdAt])
@@ -371,6 +387,14 @@ model Candidate {
   // User interactions
   endorsements    Endorsement[]
   
+  // Campaign photos
+  photos          Photo[]
+  
+  // Political messaging system
+  inbox           CandidateInbox?    // Candidate's messaging inbox
+  politicalInquiries PoliticalInquiry[] // Inquiries received
+  publicQAs       PublicQA[]         // Public Q&A entries
+  
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -472,7 +496,8 @@ model Topic {
   
   // Topic classification
   category         String?  // e.g., "Healthcare", "Economy", "Environment"
-  politicalLean    Float?   // -1 (liberal) to 1 (conservative), null for neutral
+  complexityScore  Float    @default(0) // 0-1 scale of how nuanced/complex the topic is
+  evidenceQuality  Float    @default(0) // 0-1 scale of how well-supported arguments are
   controversyScore Float    @default(0) // 0-1 scale of how contentious the topic is
   
   // Engagement metrics
@@ -562,9 +587,12 @@ model TopicComment {
   replies     TopicComment[] @relation("TopicCommentReplies")
   
   // AI analysis
-  embedding   Float[]  @default([])
-  sentiment   Float?   // -1 to 1, sentiment analysis of the comment
-  hostilityScore Float @default(0) // 0-1, hostility detection
+  embedding        Float[]  @default([])
+  sentiment        Float?   // -1 to 1, sentiment analysis of the comment
+  hostilityScore   Float @default(0) // 0-1, hostility detection
+  argumentStrength Float @default(0) // 0-1, how well-reasoned the argument is
+  evidenceLevel    Float @default(0) // 0-1, quality of supporting evidence
+  topicRelevance   Float @default(0) // 0-1, how relevant to the core discussion
   
   // Moderation
   isHidden    Boolean  @default(false)
@@ -894,4 +922,397 @@ enum AppealStatus {
   PENDING
   APPROVED
   DENIED
+}
+
+// Election data cache for multi-tier system
+model ElectionCache {
+  id          String   @id @default(cuid())
+  stateCode   String   @unique // Two-letter state code
+  data        String   // JSON string of cached election data
+  source      String   // 'cache', 'api', or 'fallback'
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([stateCode])
+  @@index([lastUpdated])
+}
+
+// Photo management system for users and candidates
+model Photo {
+  id          String     @id @default(cuid())
+  userId      String
+  filename    String     // Original filename for reference
+  url         String     // Storage URL (S3, local, etc.)
+  thumbnailUrl String?   // Optimized thumbnail URL
+  photoType   PhotoType
+  purpose     PhotoPurpose @default(PERSONAL)
+  
+  // Image metadata
+  originalSize Int       // Original file size in bytes
+  compressedSize Int     // Compressed file size in bytes
+  width       Int
+  height      Int
+  mimeType    String
+  
+  // Moderation
+  isApproved  Boolean   @default(false)
+  flaggedBy   String?   // Moderator who flagged
+  flagReason  String?
+  moderatedAt DateTime?
+  
+  // Photo context (for candidates)
+  candidateId String?   // If this is a candidate campaign photo
+  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relationships
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  flaggedByUser User?   @relation("FlaggedPhotos", fields: [flaggedBy], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([candidateId])
+  @@index([photoType, purpose])
+  @@index([isApproved, isActive])
+  @@index([createdAt])
+}
+
+enum PhotoType {
+  AVATAR        // Profile picture
+  COVER         // Cover/banner photo
+  CAMPAIGN      // Campaign headshot
+  VERIFICATION  // Identity verification photo
+  EVENT         // Event photos
+  GALLERY       // General gallery photos
+}
+
+enum PhotoPurpose {
+  PERSONAL      // Personal use (shows on user profile)
+  CAMPAIGN      // Campaign use (shows on candidate profile)
+  BOTH          // Can be used for both personal and campaign
+}
+
+// ========================================
+// POLITICAL MESSAGING SYSTEM
+// ========================================
+
+model CandidateInbox {
+  id              String   @id @default(cuid())
+  candidateId     String   @unique
+  isActive        Boolean  @default(true)
+  allowPublicQ    Boolean  @default(true)  // Allow public Q&A
+  autoResponse    String?  // Auto-response message
+  staffEmails     String[] @default([])    // Email notifications for staff
+  categories      String[] @default([])    // Policy categories for filtering
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  candidate       Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  staffMembers    CandidateStaff[]
+  
+  @@index([candidateId])
+}
+
+model CandidateStaff {
+  id              String   @id @default(cuid())
+  inboxId         String
+  userId          String
+  role            StaffRole @default(VOLUNTEER)
+  permissions     StaffPermission[]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  inbox           CandidateInbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedInquiries PoliticalInquiry[] @relation("AssignedStaff")
+  responses       InquiryResponse[]
+  
+  @@unique([inboxId, userId])
+  @@index([userId])
+  @@index([inboxId, isActive])
+}
+
+model PoliticalInquiry {
+  id              String   @id @default(cuid())
+  candidateId     String
+  inquirerId      String?  // Null for anonymous inquiries
+  subject         String
+  content         String
+  category        InquiryCategory @default(GENERAL)
+  priority        InquiryPriority @default(NORMAL)
+  status          InquiryStatus   @default(OPEN)
+  isPublic        Boolean  @default(false)  // Public Q&A
+  isAnonymous     Boolean  @default(false)  // Anonymous inquiry
+  
+  // Contact info for anonymous inquiries
+  contactEmail    String?
+  contactName     String?
+  
+  // Policy position request
+  policyTopic     String?  // e.g., "Healthcare", "Education"
+  specificQuestion String? // Specific policy question
+  
+  // Tracking
+  respondedAt     DateTime?
+  assignedAt      DateTime?
+  assignedTo      String?  // Staff member ID
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  candidate       Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  inquirer        User?            @relation("PoliticalInquiries", fields: [inquirerId], references: [id], onDelete: SetNull)
+  assignedStaff   CandidateStaff?  @relation("AssignedStaff", fields: [assignedTo], references: [id], onDelete: SetNull)
+  responses       InquiryResponse[]
+  publicQASource  PublicQA? @relation("PublicQASource")
+  
+  @@index([candidateId, status])
+  @@index([inquirerId])
+  @@index([category, priority])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model InquiryResponse {
+  id              String   @id @default(cuid())
+  inquiryId       String
+  responderId     String   // Staff member or candidate
+  content         String
+  responseType    ResponseType @default(DIRECT)
+  isPublic        Boolean  @default(false)  // Public response for Q&A
+  isFromCandidate Boolean  @default(false)  // Direct from candidate vs staff
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  inquiry         PoliticalInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  responder       CandidateStaff   @relation(fields: [responderId], references: [id], onDelete: Cascade)
+  
+  @@index([inquiryId])
+  @@index([responderId])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model PublicQA {
+  id              String   @id @default(cuid())
+  candidateId     String
+  question        String
+  answer          String
+  category        InquiryCategory @default(GENERAL)
+  isVisible       Boolean  @default(true)
+  isPinned        Boolean  @default(false)
+  upvotes         Int      @default(0)
+  views           Int      @default(0)
+  
+  // Source inquiry (if from inquiry conversion)
+  sourceInquiryId String?  @unique
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  candidate       Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  sourceInquiry   PoliticalInquiry? @relation("PublicQASource", fields: [sourceInquiryId], references: [id], onDelete: SetNull)
+  votes           PublicQAVote[]
+  
+  @@index([candidateId, isVisible])
+  @@index([category])
+  @@index([isPinned, upvotes])
+  @@index([createdAt])
+}
+
+model PublicQAVote {
+  id              String   @id @default(cuid())
+  qaId            String
+  userId          String
+  voteType        VoteType
+  createdAt       DateTime @default(now())
+  
+  qa              PublicQA @relation(fields: [qaId], references: [id], onDelete: Cascade)
+  user            User     @relation("PublicQAVotes", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([qaId, userId])
+  @@index([qaId])
+  @@index([userId])
+}
+
+// ========================================
+// CANDIDATE REGISTRATION SYSTEM
+// ========================================
+
+model CandidateRegistration {
+  id                  String   @id @default(cuid())
+  userId              String
+  registrationId      String   @unique // Tracking ID for user reference
+  
+  // Personal Information
+  firstName           String
+  lastName            String
+  email               String
+  phone               String
+  
+  // Address Information
+  street              String
+  city                String
+  state               String
+  zipCode             String
+  district            String?
+  
+  // Position Information
+  positionTitle       String   // "Mayor", "City Council", "State Senator"
+  positionLevel       String   // "federal", "state", "county", "city", "local"
+  positionDistrict    String?
+  electionDate        DateTime
+  
+  // Campaign Information
+  campaignName        String
+  campaignWebsite     String?
+  campaignSlogan      String?
+  campaignDescription String?
+  
+  // Registration Status and Flow
+  status              CandidateRegistrationStatus @default(PENDING_VERIFICATION)
+  officeLevel         String   // "local", "regional", "state", "federal", "presidential"
+  registrationFee     Float
+  originalFee         Float    // Original fee before any waivers/discounts
+  feeWaiverStatus     String   @default("none") // "none", "hardship_pending", "hardship_approved", "community_endorsed"
+  
+  // Financial Hardship Waiver
+  hasFinancialHardship Boolean @default(false)
+  hardshipReason      String?
+  
+  // Community Endorsement
+  communityEndorsementCount Int @default(0)
+  
+  // ID.me Verification
+  idmeVerified        Boolean  @default(false)
+  idmeUserId          String?
+  idmeVerifiedAt      DateTime?
+  verifiedFirstName   String?  // From ID.me verification
+  verifiedLastName    String?  // From ID.me verification
+  verifiedEmail       String?  // From ID.me verification
+  
+  // Payment Processing
+  paidAt              DateTime?
+  paymentMethod       String?  // "card", "bank", "crypto"
+  paymentIntentId     String?  // Stripe Payment Intent ID
+  
+  // Admin Review
+  verifiedAt          DateTime? // When admin approved
+  verifiedBy          String?   // Admin who approved
+  verificationNotes   String?   // Admin notes
+  rejectedAt          DateTime? // If rejected
+  rejectedBy          String?   // Admin who rejected
+  rejectionReason     String?   // Reason for rejection
+  refundIssued        Boolean   @default(false)
+  
+  // Legal and Compliance
+  termsAcceptedAt     DateTime
+  
+  // Withdrawal and Refund Policy
+  withdrawnAt         DateTime?
+  withdrawalReason    String?
+  refundProcessedAt   DateTime?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relationships
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([registrationId])
+  @@index([status])
+  @@index([officeLevel, state])
+  @@index([electionDate])
+  @@index([feeWaiverStatus])
+  @@index([hasFinancialHardship])
+  @@index([createdAt])
+}
+
+// ========================================
+// POLITICAL MESSAGING ENUMS
+// ========================================
+
+enum StaffRole {
+  CAMPAIGN_MANAGER
+  COMMUNICATIONS_DIRECTOR
+  POLICY_ADVISOR
+  VOLUNTEER_COORDINATOR
+  VOLUNTEER
+  INTERN
+}
+
+enum StaffPermission {
+  READ_INQUIRIES      // Can view inquiries
+  RESPOND_INQUIRIES   // Can respond to inquiries
+  ASSIGN_INQUIRIES    // Can assign inquiries to others
+  MANAGE_STAFF        // Can manage staff permissions
+  MANAGE_SETTINGS     // Can change inbox settings
+  PUBLISH_QA          // Can publish to public Q&A
+  MODERATE_QA         // Can moderate public Q&A
+}
+
+enum InquiryCategory {
+  GENERAL
+  HEALTHCARE
+  EDUCATION
+  ECONOMY
+  ENVIRONMENT
+  IMMIGRATION
+  FOREIGN_POLICY
+  CRIMINAL_JUSTICE
+  INFRASTRUCTURE
+  HOUSING
+  LABOR
+  TECHNOLOGY
+  CIVIL_RIGHTS
+  BUDGET_TAXES
+  ENERGY
+  AGRICULTURE
+  VETERANS
+  SENIORS
+  YOUTH
+  FAMILY_VALUES
+  OTHER
+}
+
+enum InquiryPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum InquiryStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CANDIDATE
+  RESOLVED
+  CLOSED
+  ARCHIVED
+}
+
+enum ResponseType {
+  DIRECT          // Direct response to inquirer
+  PUBLIC_QA       // Convert to public Q&A
+  POLICY_STATEMENT // Official policy statement
+  REFERRAL        // Refer to existing content/website
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum CandidateRegistrationStatus {
+  PENDING_VERIFICATION    // Waiting for ID.me verification
+  PENDING_PAYMENT        // Verified, waiting for payment
+  PENDING_APPROVAL       // Paid, waiting for admin approval
+  APPROVED              // Approved, candidate profile created
+  REJECTED              // Rejected by admin
+  REFUNDED              // Payment refunded
 }

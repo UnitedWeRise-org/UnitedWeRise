@@ -45,6 +45,16 @@ class BackendIntegration {
             }
 
             try {
+                // Generate device fingerprint for anti-bot protection
+                let deviceData = null;
+                if (window.deviceFingerprinting) {
+                    try {
+                        deviceData = await window.deviceFingerprinting.getFingerprintData();
+                    } catch (e) {
+                        console.warn('Device fingerprinting failed:', e);
+                    }
+                }
+
                 const response = await fetch(`${this.API_BASE}/auth/register`, {
                     method: 'POST',
                     headers: {
@@ -57,7 +67,8 @@ class BackendIntegration {
                         firstName, 
                         lastName,
                         phoneNumber,
-                        hcaptchaToken
+                        hcaptchaToken,
+                        deviceFingerprint: deviceData
                     })
                 });
 
@@ -398,8 +409,14 @@ document.addEventListener('DOMContentLoaded', addHCaptchaToRegistration);
 // Also add when auth modal is opened (in case it's dynamically created)
 document.addEventListener('authModalOpened', addHCaptchaToRegistration);
 
-// Load onboarding component
+// Load components
 document.addEventListener('DOMContentLoaded', () => {
+    // Load device fingerprinting for anti-bot protection
+    const fingerprintingScript = document.createElement('script');
+    fingerprintingScript.src = '/src/services/deviceFingerprinting.js';
+    fingerprintingScript.async = true;
+    document.head.appendChild(fingerprintingScript);
+    
     // Load onboarding flow script
     const onboardingScript = document.createElement('script');
     onboardingScript.src = '/src/components/OnboardingFlow.js';

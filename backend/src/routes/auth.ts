@@ -93,7 +93,7 @@ const prisma = new PrismaClient();
 // Register
 router.post('/register', authLimiter, validateRegistration, async (req: express.Request, res: express.Response) => {
   try {
-    const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken } = req.body;
+    const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint } = req.body;
 
     // Verify captcha
     const captchaResult = await captchaService.verifyCaptcha(hcaptchaToken, req.ip);
@@ -102,6 +102,31 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
         error: 'Captcha verification failed. Please try again.',
         captchaError: captchaResult.error 
       });
+    }
+
+    // Process device fingerprint for anti-bot protection
+    let riskScore = 0;
+    let deviceFingerprintData = null;
+    
+    if (deviceFingerprint) {
+      riskScore = deviceFingerprint.riskScore || 0;
+      deviceFingerprintData = {
+        fingerprint: deviceFingerprint.fingerprint,
+        riskScore,
+        components: deviceFingerprint.components,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip,
+        timestamp: new Date()
+      };
+      
+      // Log high-risk registrations for review
+      if (riskScore > 30) {
+        console.warn(`High-risk registration attempt: ${email}, risk score: ${riskScore}`, {
+          fingerprint: deviceFingerprint.fingerprint,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+      }
     }
 
     // Check if user exists
@@ -145,7 +170,9 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
         phoneNumber: phoneNumber || null,
         emailVerifyToken,
         emailVerifyExpiry,
-        embedding: [] // Empty array for future AI features
+        embedding: [], // Empty array for future AI features
+        deviceFingerprint: deviceFingerprintData,
+        riskScore
       },
       select: {
         id: true,
