@@ -4140,7 +4140,13 @@
         function checkHCaptchaStatus() {
             const widget = document.getElementById('hcaptcha-register');
             const hasIframe = widget && widget.querySelector('iframe');
-            const response = window.hcaptcha ? window.hcaptcha.getResponse() : null;
+            let response = null;
+            
+            try {
+                response = window.hcaptcha && window.hcaptcha.getResponse ? window.hcaptcha.getResponse() : null;
+            } catch (error) {
+                console.log('hCaptcha getResponse error:', error.message);
+            }
             
             console.log('hCaptcha status:', {
                 loaded: typeof window.hcaptcha !== 'undefined',

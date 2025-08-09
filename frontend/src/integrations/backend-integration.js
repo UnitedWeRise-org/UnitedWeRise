@@ -267,17 +267,31 @@ class BackendIntegration {
     }
 
     getHCaptchaToken() {
-        // This would get the hCaptcha token from the widget
-        // Implementation depends on how hCaptcha is integrated
+        // Get the hCaptcha token from the specific widget
         if (window.hcaptcha && window.hcaptcha.getResponse) {
-            return window.hcaptcha.getResponse();
+            const widget = document.getElementById('hcaptcha-register');
+            if (widget && widget.querySelector('iframe')) {
+                try {
+                    return window.hcaptcha.getResponse();
+                } catch (error) {
+                    console.log('hCaptcha not ready yet:', error.message);
+                    return null;
+                }
+            }
         }
         return null;
     }
 
     resetHCaptcha() {
         if (window.hcaptcha && window.hcaptcha.reset) {
-            window.hcaptcha.reset();
+            const widget = document.getElementById('hcaptcha-register');
+            if (widget && widget.querySelector('iframe')) {
+                try {
+                    window.hcaptcha.reset();
+                } catch (error) {
+                    console.log('Could not reset hCaptcha:', error.message);
+                }
+            }
         }
     }
 
