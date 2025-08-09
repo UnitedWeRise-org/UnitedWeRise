@@ -92,9 +92,9 @@ class VerificationFlow {
                             <p>Phone verification helps secure your account and enables important notifications.</p>
                             
                             <div class="phone-input-section">
-                                <label for="phoneNumber">Phone Number (International Format)</label>
-                                <input type="tel" id="phoneNumber" placeholder="+1234567890" class="form-input">
-                                <small>Include country code (e.g., +1 for US)</small>
+                                <label for="phoneNumber">Phone Number</label>
+                                <input type="tel" id="phoneNumber" placeholder="(555) 123-4567" class="form-input">
+                                <small>Enter your US phone number. International numbers can include country code (+1, +44, etc.)</small>
                                 
                                 <div id="hcaptcha-phone" class="hcaptcha-container"></div>
                                 
@@ -117,7 +117,7 @@ class VerificationFlow {
                             </div>
                             
                             <button onclick="verificationFlow.skipPhoneVerification()" class="btn btn-text">
-                                Skip for now
+                                Skip (Email verification is sufficient)
                             </button>
                         </div>
 
@@ -614,8 +614,38 @@ class VerificationFlow {
                         sitekey: '10000000-ffff-ffff-ffff-000000000001'
                     });
                 }
+                
+                // Add phone number formatting
+                this.setupPhoneFormatting();
             }, 100);
         }
+    }
+    
+    setupPhoneFormatting() {
+        const phoneInput = document.getElementById('phoneNumber');
+        if (!phoneInput) return;
+        
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            let formattedValue = '';
+            
+            // Don't format if it looks like international (starts with country code other than 1)
+            if (value.length > 0 && value[0] !== '1' && value.length > 10) {
+                e.target.value = value; // Keep raw international format
+                return;
+            }
+            
+            // Format US numbers: (555) 123-4567
+            if (value.length >= 6) {
+                formattedValue = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+            } else if (value.length >= 3) {
+                formattedValue = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+            } else {
+                formattedValue = value;
+            }
+            
+            e.target.value = formattedValue;
+        });
     }
 
     showMessage(text, type = 'info') {
