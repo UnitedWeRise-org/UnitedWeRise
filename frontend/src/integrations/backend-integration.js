@@ -252,7 +252,7 @@ class BackendIntegration {
 
     handleRateLimitError(errorData) {
         const retryAfter = errorData.retryAfter || 60;
-        showMessage(`Too many requests. Please wait ${retryAfter} seconds before trying again.`, 'warning');
+        this.showMessage(`Too many requests. Please wait ${retryAfter} seconds before trying again.`, 'warning');
     }
 
     // Utility functions
