@@ -428,7 +428,7 @@ if (originalSetUserLoggedInEnhanced) {
         // Check onboarding status after login
         setTimeout(async () => {
             try {
-                const response = await fetch('/api/onboarding/progress', {
+                const response = await fetch(`${this.API_BASE}/onboarding/progress`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }

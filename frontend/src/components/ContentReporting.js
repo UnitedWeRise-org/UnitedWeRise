@@ -1,6 +1,7 @@
 // Content reporting and moderation interface for United We Rise
 class ContentReporting {
     constructor() {
+        this.API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         this.init();
     }
 
@@ -393,7 +394,7 @@ class ContentReporting {
         }
         
         try {
-            const response = await fetch('/api/moderation/reports', {
+            const response = await fetch(`${this.API_BASE}/moderation/reports`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -451,7 +452,7 @@ class ContentReporting {
         if (!authToken) return;
         
         try {
-            const response = await fetch('/api/auth/me', {
+            const response = await fetch(`${this.API_BASE}/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }

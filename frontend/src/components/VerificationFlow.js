@@ -5,6 +5,7 @@ class VerificationFlow {
         this.userData = {};
         this.hcaptchaWidgetId = null;
         this.phoneVerificationTimer = null;
+        this.API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         this.init();
     }
 
@@ -342,7 +343,7 @@ class VerificationFlow {
 
     async checkVerificationStatus() {
         try {
-            const response = await fetch('/api/verification/status', {
+            const response = await fetch(`${this.API_BASE}/verification/status`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
@@ -372,7 +373,7 @@ class VerificationFlow {
 
     async sendInitialEmailVerification() {
         try {
-            const response = await fetch('/api/verification/email/send', {
+            const response = await fetch(`${this.API_BASE}/verification/email/send`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -392,7 +393,7 @@ class VerificationFlow {
 
     async checkEmailVerification() {
         try {
-            const response = await fetch('/api/verification/status', {
+            const response = await fetch(`${this.API_BASE}/verification/status`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
@@ -432,7 +433,7 @@ class VerificationFlow {
         }
         
         try {
-            const response = await fetch('/api/verification/phone/send', {
+            const response = await fetch(`${this.API_BASE}/verification/phone/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -468,7 +469,7 @@ class VerificationFlow {
         }
         
         try {
-            const response = await fetch('/api/verification/phone/verify', {
+            const response = await fetch(`${this.API_BASE}/verification/phone/verify`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
