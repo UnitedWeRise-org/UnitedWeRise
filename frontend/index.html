@@ -7,6 +7,7 @@
     
     <!-- External CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" />
     
     <!-- Application CSS -->
     <link rel="stylesheet" href="src/styles/main.css">
@@ -23,6 +24,7 @@
     
     <!-- External JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     
     <!-- Application JavaScript -->
@@ -37,6 +39,7 @@
     <script src="src/integrations/elections-system-integration.js"></script>
     <script src="src/integrations/trending-system-integration.js"></script>
     <script src="src/js/mobile-navigation.js"></script>
+    <script src="src/js/map-maplibre.js"></script>
 </head>
 <body>
     <div class="top-bar">
@@ -852,8 +855,17 @@
             document.getElementById('sidebar').classList.toggle('expanded');
         });
 
-        // Map initialization
+        // Map initialization - Toggle between Leaflet and MapLibre
+        const USE_MAPLIBRE = true; // Set to false to use Leaflet during migration
+        
         function initializeMap() {
+            if (USE_MAPLIBRE) {
+                // Use new MapLibre implementation
+                initializeMapLibre();
+                return;
+            }
+            
+            // Original Leaflet implementation (fallback)
             const map = L.map('map', {
                 center: [37.8283, -98.5795],
                 zoom: 5,
