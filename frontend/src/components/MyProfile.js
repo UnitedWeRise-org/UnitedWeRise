@@ -135,7 +135,12 @@ class MyProfile {
                     <div class="empty-state">
                         <h3>No posts yet</h3>
                         <p>Share your thoughts to get started!</p>
-                        <button onclick="window.myProfile.createFirstPost()" class="btn">Create Your First Post</button>
+                        <div class="quick-post-composer">
+                            <textarea id="quickPostContent" placeholder="What's on your mind?" rows="4"></textarea>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="window.myProfile.submitQuickPost()" class="btn">Post</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -395,19 +400,36 @@ class MyProfile {
         }
     }
 
-    // Method to handle creating first post
-    createFirstPost() {
-        // Show the post composer
-        const postComposer = document.getElementById('postComposer');
-        if (postComposer) {
-            postComposer.style.display = 'block';
+    // Method to submit a quick post from the profile
+    async submitQuickPost() {
+        const textarea = document.getElementById('quickPostContent');
+        if (!textarea || !textarea.value.trim()) {
+            alert('Please enter some content for your post');
+            return;
         }
+
+        const content = textarea.value.trim();
         
-        // Focus on the post composer textarea
-        const postContent = document.getElementById('postContent');
-        if (postContent) {
-            postContent.focus();
-            postContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try {
+            const response = await window.apiCall('/posts', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    content: content,
+                    isPolitical: false 
+                })
+            });
+
+            if (response.ok) {
+                // Clear the textarea
+                textarea.value = '';
+                // Reload the profile to show the new post
+                this.render('mainContent');
+            } else {
+                alert('Failed to create post. Please try again.');
+            }
+        } catch (error) {
+            console.error('Post creation error:', error);
+            alert('Error creating post.');
         }
     }
 
@@ -779,6 +801,27 @@ class MyProfile {
 
             .empty-state h3 {
                 margin-bottom: 1rem;
+            }
+
+            .quick-post-composer {
+                max-width: 500px;
+                margin: 2rem auto 0;
+            }
+
+            .quick-post-composer textarea {
+                width: 100%;
+                padding: 1rem;
+                border: 2px solid #eee;
+                border-radius: 8px;
+                font-size: 1rem;
+                font-family: inherit;
+                resize: vertical;
+                transition: border-color 0.2s;
+            }
+
+            .quick-post-composer textarea:focus {
+                outline: none;
+                border-color: #4b5c09;
             }
 
             .btn {
