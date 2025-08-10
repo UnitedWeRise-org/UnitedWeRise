@@ -1,0 +1,187 @@
+/* United We Rise - Map System Styles */
+
+/* ========================================
+   MAP CONTAINER
+======================================== */
+
+#mapContainer {
+    position: absolute;
+    top: 5.5vh;
+    right: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    transition: all 0.3s ease;
+    z-index: 5;
+}
+
+#mapContainer.collapsed {
+    width: 25%;
+    height: 30%;
+    right: 0.5%;
+    top: 60px;
+    left: auto;
+    border: 2px solid #ccc;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#mapToggleBtn {
+    position: fixed;
+    top: 72px;
+    right: 24px;
+    z-index: 9999;
+    background: white;
+    border: 1px solid #aaa;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* ========================================
+   MAP CONTROLS
+======================================== */
+
+.map-controls {
+    position: absolute;
+    top: 1vh;
+    left: 5vw; 
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    transition: opacity 0.3s ease;
+}
+
+#mapContainer.collapsed .map-controls {
+    top: 0.5%;
+    left: 0;
+    padding: 0.4rem;
+    gap: 0.5rem;
+    scale: 0.9;
+}
+
+#mapContainer.collapsed .zoom-filters label {
+    font-size: 0.75rem;
+}
+
+#mapContainer.collapsed .location-input input {
+    width: 120px !important;
+    font-size: 0.7rem !important;
+    padding: 0.2rem !important;
+}
+
+#mapContainer.collapsed .location-input button {
+    font-size: 0.7rem !important;
+    padding: 0.2rem 0.4rem !important;
+}
+
+.map-controls.hiding {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.zoom-filters {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.zoom-filters label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.location-input {
+    display: flex;
+    align-items: center;
+}
+
+/* Hide Leaflet attribution */
+.leaflet-control-attribution {
+    display: none !important;
+}
+
+/* ========================================
+   TRENDING UPDATES PANEL
+======================================== */
+
+/* Trending Updates Panel (under collapsed map) */
+.trending-updates {
+    position: fixed;
+    top: calc(60px + 30vh + 10px); /* Below collapsed map */
+    right: 0.5%;
+    width: 25%; /* Match collapsed map width exactly */
+    max-height: 300px;
+    background: white;
+    border: 2px solid #4b5c09;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 4; /* Below expanded map (z-index 5) but above content */
+    display: none;
+    overflow: hidden;
+}
+
+.trending-updates.show {
+    display: block;
+}
+
+.trending-updates-header {
+    background: #4b5c09;
+    color: white;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.trending-updates.expanded {
+    max-height: calc(100vh - 60px - 30vh - 30px); /* Expand to bottom of screen minus padding */
+}
+
+.trending-updates.expanded .trending-updates-body {
+    max-height: calc(100vh - 60px - 30vh - 80px); /* Account for header height */
+}
+
+.trending-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.trending-item:last-child {
+    border-bottom: none;
+}
+
+.trending-item:hover {
+    background: #f9f9f9;
+}
+
+.trending-expand-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-decoration: underline;
+}

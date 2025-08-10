@@ -1,0 +1,127 @@
+/* United We Rise - Posts and Feed Styles */
+
+/* ========================================
+   POSTS CONTAINER
+======================================== */
+
+.posts-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 6.5vh; /* 6.5% from top of screen */
+    bottom: 0.5vh; /* 0.5% from bottom of screen */
+    left: 3vw; /* Account for sidebar */
+    right: 26%; /* Account for map area */
+    margin: 0 1rem; /* Side margins */
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+}
+
+/* ========================================
+   POST COMPOSER
+======================================== */
+
+.post-composer {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.post-composer textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.75rem;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.post-composer-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.post-composer-actions .btn {
+    width: auto;
+    padding: 0.5rem 1rem;
+}
+
+/* ========================================
+   POSTS FEED
+======================================== */
+
+.posts-feed {
+    flex-grow: 1; /* Take up remaining space in posts-container */
+    overflow-y: auto;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.feed-header {
+    background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%);
+    color: white;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+}
+
+.feed-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+}
+
+.feed-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* ========================================
+   POST ITEMS
+======================================== */
+
+.post-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.post-item:last-child {
+    border-bottom: none;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.5rem;
+}
+
+.post-content {
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.post-actions {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.post-action {
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.post-action:hover {
+    background: #f0f0f0;
+}
+
+.post-action.liked {
+    color: #d32f2f;
+}
