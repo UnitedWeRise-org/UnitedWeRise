@@ -92,6 +92,13 @@ X-Session-ID: <session-id>
 - **Photo uploads**: 10 uploads per 15 minutes  
 - **General API**: 100 requests per 15 minutes
 
+### Anti-Bot Protection (New!)
+Device fingerprinting system automatically detects and prevents bot registrations:
+- **Device fingerprinting**: Collects browser characteristics, canvas/WebGL signatures
+- **Risk scoring**: Calculates risk based on suspicious patterns (0-100 scale)
+- **Automatic blocking**: High-risk registrations (score > 70) are rejected
+- **Zero cost**: No external SMS or captcha services required beyond hCaptcha
+
 ## Core Endpoints
 
 ### Authentication (`/api/auth`)
@@ -108,7 +115,19 @@ Content-Type: application/json
   "firstName": "John",
   "lastName": "Doe",
   "phoneNumber": "+1234567890",
-  "hcaptchaToken": "captcha-token-here"
+  "hcaptchaToken": "captcha-token-here",
+  "deviceFingerprint": {
+    "fingerprint": "abc123...",
+    "components": {
+      "screen": "1920x1080",
+      "timezone": "America/New_York",
+      "language": "en-US",
+      "userAgent": "Mozilla/5.0...",
+      "canvas": "canvas_hash_123",
+      "webgl": "webgl_hash_456"
+    },
+    "riskScore": 15
+  }
 }
 ```
 
@@ -226,6 +245,76 @@ Content-Type: application/json
 ```http
 GET /api/posts/{postId}/comments?page=1&limit=20
 ```
+
+### Feed System (`/api/feed`)
+
+#### Get Personalized Feed (Advanced Algorithm)
+```http
+GET /api/feed
+Authorization: Bearer <token>
+
+# Optional query parameters:
+# ?limit=50                                                    # Number of posts (default: 50)
+# ?weights={"recency":0.4,"similarity":0.3,"social":0.2,"trending":0.1}  # Custom algorithm weights for A/B testing
+```
+
+**Response (200)**:
+```json
+{
+  "posts": [
+    {
+      "id": "post-id",
+      "content": "Post content...",
+      "author": {
+        "username": "user123",
+        "firstName": "John",
+        "lastName": "Doe",
+        "avatar": "https://...",
+        "verified": true
+      },
+      "likesCount": 15,
+      "commentsCount": 3,
+      "isLiked": false,
+      "createdAt": "2025-08-10T12:00:00Z"
+    }
+  ],
+  "algorithm": "probability-cloud",
+  "weights": {
+    "recency": 0.35,
+    "similarity": 0.25, 
+    "social": 0.25,
+    "trending": 0.15
+  },
+  "stats": {
+    "candidateCount": 150,
+    "avgRecencyScore": 0.73,
+    "avgSimilarityScore": 0.42,
+    "avgSocialScore": 0.31,
+    "avgTrendingScore": 0.18
+  },
+  "pagination": {
+    "limit": 50,
+    "count": 47
+  }
+}
+```
+
+**Algorithm Details**:
+- **Probability Cloud Sampling**: Posts selected from weighted probability distribution (not just top scores)
+- **4-Factor Scoring System**: 
+  - **Recency (35%)**: Exponential decay with 24-hour half-life
+  - **Similarity (25%)**: Cosine similarity using AI embeddings from user interaction history  
+  - **Social (25%)**: Boost for posts from followed users
+  - **Trending (15%)**: Engagement velocity (likes + comments per hour)
+- **Intelligent Discovery**: 30-day content pool balanced for freshness vs variety
+- **Tunable Weights**: Custom weights via query parameter for A/B testing and personalization
+
+#### Get Trending Posts
+```http
+GET /api/feed/trending?limit=20
+```
+
+**Response**: Same format as personalized feed, sorted by engagement in last 24 hours.
 
 ### Political Information (`/api/political`)
 
