@@ -242,9 +242,56 @@ function toggleBodyScroll(disable) {
     }
 }
 
+// Check if user is logged in (looks for authToken)
+function isUserLoggedIn() {
+    return localStorage.getItem('authToken') !== null || window.authToken !== null;
+}
+
+// Show/hide mobile navigation based on login status
+function updateMobileNavVisibility() {
+    const mobileNav = document.querySelector('.mobile-nav');
+    if (!mobileNav) return;
+    
+    if (window.innerWidth <= 767) {
+        if (isUserLoggedIn()) {
+            mobileNav.style.display = 'flex';
+        } else {
+            mobileNav.style.display = 'none';
+            // Show only search and map for logged-out mobile users
+            showLoggedOutMobileView();
+        }
+    } else {
+        mobileNav.style.display = 'none'; // Hide on desktop
+    }
+}
+
+// Show limited mobile view for logged-out users
+function showLoggedOutMobileView() {
+    if (window.innerWidth > 767) return;
+    
+    // Hide authenticated features
+    const postsContainer = document.querySelector('.posts-container');
+    const profilePanel = document.querySelector('.profile-panel');
+    const messagesContainer = document.querySelector('.messages-container');
+    
+    if (postsContainer) postsContainer.style.display = 'none';
+    if (profilePanel) profilePanel.style.display = 'none';
+    if (messagesContainer) messagesContainer.style.display = 'none';
+    
+    // Show search by default for logged-out users
+    const searchContainer = document.querySelector('.search-container');
+    if (searchContainer) {
+        searchContainer.style.display = 'flex';
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initMobileNavigation();
+    updateMobileNavVisibility();
+    
+    // Listen for auth changes
+    window.addEventListener('authStateChanged', updateMobileNavVisibility);
 });
 
 // Handle back button on mobile
@@ -253,5 +300,66 @@ window.addEventListener('popstate', function(event) {
         if (currentMobileView !== 'feed') {
             showMobileFeed();
         }
+    }
+});
+
+// Mobile search toggle function
+function toggleMobileSearch() {
+    if (window.innerWidth <= 767) {
+        showMobileSearch();
+    }
+}
+
+// Notification functions
+function toggleNotifications() {
+    // TODO: Implement notification panel
+    console.log('Notifications clicked - to be implemented');
+}
+
+// Update authentication UI elements
+function updateAuthenticationUI(isLoggedIn, user = null) {
+    const authSection = document.getElementById('authSection');
+    const userSection = document.getElementById('userSection');
+    const notificationSection = document.getElementById('notificationSection');
+    const logoutThumb = document.getElementById('logoutThumb');
+    
+    if (isLoggedIn && user) {
+        // Show authenticated UI
+        if (authSection) authSection.style.display = 'none';
+        if (userSection) {
+            userSection.style.display = 'flex';
+            const userGreeting = document.getElementById('userGreeting');
+            if (userGreeting) {
+                userGreeting.textContent = `Hello, ${user.firstName || user.username}!`;
+            }
+        }
+        if (notificationSection) notificationSection.style.display = 'block';
+        if (logoutThumb) logoutThumb.style.display = 'block';
+        
+        // Update mobile nav visibility
+        updateMobileNavVisibility();
+        
+    } else {
+        // Show logged-out UI  
+        if (authSection) authSection.style.display = 'block';
+        if (userSection) userSection.style.display = 'none';
+        if (notificationSection) notificationSection.style.display = 'none';
+        if (logoutThumb) logoutThumb.style.display = 'none';
+        
+        // Update mobile nav visibility
+        updateMobileNavVisibility();
+    }
+}
+
+// Listen for auth state changes and update UI
+window.addEventListener('load', function() {
+    // Check initial auth state
+    const isLoggedIn = isUserLoggedIn();
+    if (isLoggedIn) {
+        // Get user data from storage or API
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        updateAuthenticationUI(true, userData);
+    } else {
+        updateAuthenticationUI(false);
     }
 });

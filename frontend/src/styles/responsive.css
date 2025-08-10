@@ -13,6 +13,16 @@
 
 @media screen and (max-width: 1024px) and (min-width: 768px) {
     
+    /* Hide donation widget on tablet */
+    .donation-widget {
+        display: none !important;
+    }
+    
+    /* Adjust search bar for tablet */
+    .desktop-search {
+        width: 200px;
+    }
+    
     /* Sidebar adjustments for tablet */
     .sidebar {
         width: 60px; /* Fixed width instead of vw */
@@ -111,20 +121,46 @@
         margin-bottom: 0.25rem;
     }
     
+    /* Hide donation widget on mobile */
+    .donation-widget {
+        display: none !important;
+    }
+    
+    /* Hide desktop search, show mobile search button */
+    .desktop-search {
+        display: none;
+    }
+    
+    .mobile-search-btn {
+        display: block !important;
+    }
+    
     /* Adjust top bar for mobile */
     .top-bar {
         height: 60px;
         padding: 0.5rem;
     }
     
-    .top-bar input.search {
-        width: 150px;
-        font-size: 0.9rem;
+    .top-bar-left {
+        flex: 0;
     }
     
-    .top-bar .nav {
+    .logo {
+        font-size: 1rem;
+    }
+    
+    .desktop-nav {
         gap: 0.5rem;
+    }
+    
+    .nav-link {
         font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .login-btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
     }
     
     /* Main container adjustments */

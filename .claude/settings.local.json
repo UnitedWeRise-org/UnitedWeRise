@@ -39,7 +39,12 @@
       "WebFetch(domain:unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io)",
       "Bash(npx prisma db pull:*)",
       "Bash(npx prisma:*)",
-      "WebFetch(domain:www.unitedwerise.org)"
+      "WebFetch(domain:www.unitedwerise.org)",
+      "Bash(mkdir:*)",
+      "Bash(brew install:*)",
+      "Bash(gh auth:*)",
+      "Bash(git config:*)",
+      "Bash(gh repo view:*)"
     ],
     "deny": []
   }
