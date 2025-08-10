@@ -134,7 +134,7 @@
             flex-grow: 1;
             height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
             box-sizing: border-box;
-            overflow: hidden; /* Prevent main container from scrolling */
+            overflow-y: auto; /* Allow main container to scroll vertically */
         }
         .sidebar.expanded ~ .main {
             margin-left: 10vw;

@@ -430,6 +430,8 @@ class MyProfile {
                 padding: 2rem;
                 background: white;
                 min-height: calc(100vh - 7.5vh);
+                overflow-y: auto;
+                max-height: calc(100vh - 7.5vh);
             }
 
             .profile-header {
@@ -473,7 +475,7 @@ class MyProfile {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                color: #666;
+                color: #333;
             }
 
             .profile-placeholder p {
@@ -503,7 +505,7 @@ class MyProfile {
 
             .full-name {
                 font-size: 1.2rem;
-                color: #666;
+                color: #333;
                 margin: 0 0 1rem 0;
             }
 
@@ -535,7 +537,7 @@ class MyProfile {
             }
 
             .stat span {
-                color: #666;
+                color: #333;
                 font-size: 0.9rem;
             }
 
@@ -624,7 +626,7 @@ class MyProfile {
             }
 
             .help-text {
-                color: #666;
+                color: #555;
                 font-style: italic;
                 margin-top: 1rem;
             }
@@ -662,14 +664,14 @@ class MyProfile {
                 align-items: center;
                 margin-bottom: 1rem;
                 font-size: 0.9rem;
-                color: #666;
+                color: #555;
             }
 
             .post-menu button {
                 background: none;
                 border: none;
                 cursor: pointer;
-                color: #666;
+                color: #555;
                 margin-left: 0.5rem;
             }
 
@@ -692,7 +694,7 @@ class MyProfile {
                 display: flex;
                 gap: 1rem;
                 font-size: 0.9rem;
-                color: #666;
+                color: #555;
             }
 
             .political-tag {
@@ -703,7 +705,7 @@ class MyProfile {
             .empty-state {
                 text-align: center;
                 padding: 3rem;
-                color: #666;
+                color: #555;
             }
 
             .empty-state h3 {
