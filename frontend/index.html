@@ -10,6 +10,7 @@
     <script src="src/components/VerificationFlow.js"></script>
     <script src="src/components/ContentReporting.js"></script>
     <script src="src/components/CandidateSystem.js"></script>
+    <script src="src/components/MyProfile.js"></script>
     <script src="src/integrations/backend-integration.js"></script>
     <script src="src/integrations/candidate-system-integration.js"></script>
     <script src="src/integrations/officials-system-integration.js"></script>
@@ -768,6 +769,23 @@
         .h-captcha {
             margin: 1rem 0;
         }
+
+        /* Basic button styling */
+        .btn {
+            background: #4b5c09;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: #3d4a08;
+        }
     </style>
 </head>
 <body>
@@ -864,7 +882,7 @@
                 <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
-                <div class="thumb" onclick="toggleProfile()" title="Profile" id="profileThumb" style="display: none;">👤 <span class="label">Profile</span></div>
+                <div class="thumb" onclick="showMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
             <button id="toggleSidebar">⇄</button>
         </div>
@@ -2293,15 +2311,28 @@
             }
         }
 
-        // Profile Functions
+        // Profile Functions - Updated to use main content area
         function toggleProfile() {
-            const panel = document.getElementById('profilePanel');
-            if (panel.style.display === 'none' || !panel.style.display) {
-                panel.style.display = 'block';
-                loadUserProfile();
-            } else {
-                panel.style.display = 'none';
+            // Use the new My Profile component instead of the old side panel
+            showMyProfile();
+        }
+
+        // New function to show My Profile in main content area
+        function showMyProfile() {
+            if (!authToken) {
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <h2>Please log in to view your profile</h2>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    </div>
+                `;
+                return;
             }
+
+            // Hide all panels and show profile in main content
+            document.getElementById('profilePanel').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'none';
+            window.myProfile.render('mainContent');
         }
 
         async function loadUserProfile() {
