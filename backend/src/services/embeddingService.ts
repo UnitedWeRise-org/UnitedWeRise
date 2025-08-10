@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
+import { SentenceTransformersService } from './sentenceTransformersService';
+// import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
 
 const prisma = new PrismaClient();
 
@@ -17,18 +19,22 @@ interface TextAnalysisResult {
   sentiment?: number; // -1 to 1
   topics?: string[];
   category?: string;
-  politicalLean?: number; // -1 to 1
   hostilityScore?: number; // 0 to 1
+  argumentStrength?: number; // 0 to 1 - logical coherence
+  evidenceLevel?: number; // 0 to 1 - quality of supporting evidence
+  topicRelevance?: number; // 0 to 1 - relevance to discussion
+  argumentType?: string; // type of argument being made
 }
 
 export class EmbeddingService {
-  private static readonly EMBEDDING_DIMENSION = 1536; // Standard for most models
-  private static readonly QWEN3_API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000'; // HuggingFace local deployment
-  private static readonly MODEL_NAME = 'Qwen/Qwen2.5-3B'; // Or your preferred Qwen3 model
+  private static readonly EMBEDDING_DIMENSION = 384; // Sentence Transformers dimension
+  private static readonly QWEN3_API_URL = process.env.QWEN3_API_URL || 'http://localhost:8000';
+  private static readonly MODEL_NAME = 'Qwen/Qwen2.5-3B';
   private static readonly API_KEY = process.env.HUGGINGFACE_API_KEY || process.env.QWEN3_API_KEY;
+  private static readonly USE_QDRANT = process.env.QDRANT_URL !== undefined;
 
   /**
-   * Generate embedding for text using Qwen3
+   * Generate embedding using Sentence Transformers (fast, CPU-based)
    */
   static async generateEmbedding(text: string): Promise<number[]> {
     try {
@@ -36,54 +42,12 @@ export class EmbeddingService {
         return new Array(this.EMBEDDING_DIMENSION).fill(0);
       }
 
-      // Clean and prepare text
-      const cleanText = this.cleanText(text);
+      // Use Sentence Transformers for fast embeddings
+      const result = await SentenceTransformersService.generateEmbedding(text);
+      return result.embedding;
       
-      // Try HuggingFace API first
-      if (this.API_KEY) {
-        try {
-          const response = await axios.post(
-            `https://api-inference.huggingface.co/models/${this.MODEL_NAME}`,
-            { inputs: cleanText },
-            {
-              headers: {
-                'Authorization': `Bearer ${this.API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: 30000
-            }
-          );
-
-          if (response.data && Array.isArray(response.data)) {
-            return response.data;
-          }
-        } catch (hfError) {
-          console.warn('HuggingFace API failed, falling back to local deployment:', hfError);
-        }
-      }
-
-      // Fallback to local deployment
-      const response = await axios.post(
-        `${this.QWEN3_API_URL}/embed`,
-        {
-          text: cleanText,
-          model: this.MODEL_NAME
-        },
-        {
-          timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.data.embedding) {
-        return response.data.embedding;
-      }
-
-      throw new Error('Invalid embedding response format');
     } catch (error) {
-      console.error('Embedding generation failed:', error);
+      console.error('Sentence Transformers embedding failed:', error);
       
       // Return zero vector as fallback to prevent system failure
       return new Array(this.EMBEDDING_DIMENSION).fill(0);
@@ -98,15 +62,19 @@ export class EmbeddingService {
       const cleanText = this.cleanText(text);
       const embedding = await this.generateEmbedding(cleanText);
       
-      // For now, we'll implement basic analysis
-      // Later this can be enhanced with more sophisticated Qwen3 analysis
+      // Use hybrid approach: Sentence Transformers for basic analysis + custom logic
+      const basicAnalysis = SentenceTransformersService.analyzeContent(cleanText);
+      
       const result: TextAnalysisResult = {
         embedding,
-        sentiment: this.estimateSentiment(cleanText),
+        sentiment: basicAnalysis.sentiment,
         topics: this.extractTopics(cleanText),
-        category: this.classifyCategory(cleanText),
-        politicalLean: this.estimatePoliticalLean(cleanText),
-        hostilityScore: this.assessHostility(cleanText)
+        category: basicAnalysis.category,
+        hostilityScore: this.assessHostility(cleanText),
+        argumentStrength: this.assessArgumentStrength(cleanText),
+        evidenceLevel: this.assessEvidenceLevel(cleanText),
+        topicRelevance: 1.0, // Will be calculated relative to specific topics
+        argumentType: basicAnalysis.argumentType
       };
 
       return result;
@@ -126,42 +94,60 @@ export class EmbeddingService {
    * Calculate cosine similarity between two embeddings
    */
   static calculateSimilarity(embedding1: number[], embedding2: number[]): number {
-    if (embedding1.length !== embedding2.length) {
-      return 0;
-    }
-
-    let dotProduct = 0;
-    let norm1 = 0;
-    let norm2 = 0;
-
-    for (let i = 0; i < embedding1.length; i++) {
-      dotProduct += embedding1[i] * embedding2[i];
-      norm1 += embedding1[i] * embedding1[i];
-      norm2 += embedding2[i] * embedding2[i];
-    }
-
-    if (norm1 === 0 || norm2 === 0) {
-      return 0;
-    }
-
-    return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+    return SentenceTransformersService.calculateSimilarity(embedding1, embedding2);
   }
 
   /**
-   * Find posts similar to a given embedding
+   * Find posts similar to a given embedding using Qdrant or fallback to PostgreSQL
    */
   static async findSimilarPosts(
     targetEmbedding: number[], 
     limit: number = 10, 
-    minSimilarity: number = 0.7
+    minSimilarity: number = 0.7,
+    categoryFilter?: string
   ) {
     try {
-      // For now, we'll fetch posts and calculate similarity in memory
-      // Later this should be moved to Qdrant for performance
+      // Use Qdrant if available for better performance
+      if (this.USE_QDRANT && false) { // Temporarily disabled until Qdrant is installed
+        // QdrantService temporarily unavailable
+        const results: any[] = [];
+
+        // Convert Qdrant results to Post format
+        const postIds = results.map(result => result.payload.postId);
+        if (postIds.length === 0) return [];
+
+        const posts = await prisma.post.findMany({
+          where: {
+            id: { in: postIds }
+          },
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                avatar: true
+              }
+            }
+          }
+        });
+
+        // Merge posts with similarity scores
+        return posts.map(post => {
+          const result = results.find(r => r.payload.postId === post.id);
+          return {
+            ...post,
+            similarity: result?.score || 0
+          };
+        }).sort((a, b) => b.similarity - a.similarity);
+      }
+
+      // Fallback to PostgreSQL search
       const posts = await prisma.post.findMany({
         where: {
           embedding: {
-            not: { equals: [] } // Only posts with embeddings
+            isEmpty: false // Only posts with embeddings
           }
         },
         include: {
@@ -198,20 +184,45 @@ export class EmbeddingService {
   }
 
   /**
-   * Update post embedding
+   * Update post embedding in both PostgreSQL and Qdrant
    */
   static async updatePostEmbedding(postId: string, content: string) {
     try {
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+      if (!post) {
+        throw new Error(`Post ${postId} not found`);
+      }
+
       const analysis = await this.analyzeText(content);
       
+      // Update PostgreSQL
       await prisma.post.update({
         where: { id: postId },
         data: {
           embedding: analysis.embedding
-          // Add other analysis fields to Post model if needed
         }
       });
 
+      // Update Qdrant if available (temporarily disabled)
+      if (this.USE_QDRANT && false) {
+        // QdrantService temporarily unavailable
+        console.log('Qdrant update skipped - service not available yet');
+      }
+
+      console.log(`✓ Updated embeddings for post ${postId}`);
       return analysis;
     } catch (error) {
       console.error(`Failed to update post embedding for ${postId}:`, error);
@@ -228,10 +239,9 @@ export class EmbeddingService {
       
       const postsWithoutEmbeddings = await prisma.post.findMany({
         where: {
-          OR: [
-            { embedding: { equals: [] } },
-            { embedding: { equals: null as any } }
-          ]
+          embedding: {
+            isEmpty: true
+          }
         },
         select: {
           id: true,
@@ -273,23 +283,7 @@ export class EmbeddingService {
       .slice(0, 2000); // Limit length for API
   }
 
-  private static estimateSentiment(text: string): number {
-    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'positive', 'support', 'agree', 'love'];
-    const negativeWords = ['bad', 'terrible', 'awful', 'negative', 'hate', 'disagree', 'wrong', 'fail'];
-    
-    const lowerText = text.toLowerCase();
-    let score = 0;
-    
-    positiveWords.forEach(word => {
-      if (lowerText.includes(word)) score += 0.1;
-    });
-    
-    negativeWords.forEach(word => {
-      if (lowerText.includes(word)) score -= 0.1;
-    });
-    
-    return Math.max(-1, Math.min(1, score));
-  }
+  // Sentiment analysis moved to SentenceTransformersService
 
   private static extractTopics(text: string): string[] {
     const topics = [];
@@ -312,27 +306,141 @@ export class EmbeddingService {
     return topics;
   }
 
-  private static classifyCategory(text: string): string | undefined {
-    const topics = this.extractTopics(text);
-    return topics[0]; // Return primary topic
+  private static assessArgumentStrength(text: string): number {
+    const lowerText = text.toLowerCase();
+    let score = 0.5; // Start neutral
+    
+    // Positive indicators of strong reasoning
+    const strongIndicators = [
+      'because', 'therefore', 'evidence shows', 'research indicates', 'data suggests',
+      'for example', 'specifically', 'in contrast', 'however', 'on the other hand',
+      'studies show', 'according to', 'as demonstrated by'
+    ];
+    
+    // Negative indicators (weak reasoning)
+    const weakIndicators = [
+      'obviously', 'clearly', 'everyone knows', 'it\'s common sense',
+      'just because', 'always', 'never', 'all', 'none'
+    ];
+    
+    strongIndicators.forEach(indicator => {
+      if (lowerText.includes(indicator)) score += 0.1;
+    });
+    
+    weakIndicators.forEach(indicator => {
+      if (lowerText.includes(indicator)) score -= 0.1;
+    });
+    
+    // Check for question marks (shows consideration of complexity)
+    const questionCount = (text.match(/\?/g) || []).length;
+    if (questionCount > 0) score += 0.05;
+    
+    return Math.max(0, Math.min(1, score));
   }
-
-  private static estimatePoliticalLean(text: string): number {
-    const liberalKeywords = ['progressive', 'liberal', 'democratic', 'social justice', 'equality'];
-    const conservativeKeywords = ['conservative', 'traditional', 'republican', 'free market', 'liberty'];
+  
+  private static assessEvidenceLevel(text: string): number {
+    const lowerText = text.toLowerCase();
+    let score = 0;
+    
+    // Evidence indicators
+    const evidenceKeywords = [
+      'study', 'research', 'data', 'statistics', 'survey', 'poll',
+      'report', 'analysis', 'findings', 'results', 'peer-reviewed',
+      'university', 'institute', 'organization', 'source:', 'according to',
+      'published', 'journal', 'expert', 'professor'
+    ];
+    
+    evidenceKeywords.forEach(keyword => {
+      if (lowerText.includes(keyword)) score += 0.15;
+    });
+    
+    // URL/link presence (suggests external sources)
+    if (text.includes('http') || text.includes('www.')) score += 0.2;
+    
+    // Specific numbers or percentages
+    if (text.match(/\d+%/) || text.match(/\$[\d,]+/) || text.match(/\d+,\d+/)) {
+      score += 0.15;
+    }
+    
+    return Math.max(0, Math.min(1, score));
+  }
+  
+  private static estimateSentiment(text: string): number {
+    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'positive', 'support', 'agree', 'love'];
+    const negativeWords = ['bad', 'terrible', 'awful', 'negative', 'hate', 'disagree', 'wrong', 'fail'];
     
     const lowerText = text.toLowerCase();
     let score = 0;
     
-    liberalKeywords.forEach(word => {
-      if (lowerText.includes(word)) score -= 0.2;
+    positiveWords.forEach(word => {
+      if (lowerText.includes(word)) score += 0.1;
     });
     
-    conservativeKeywords.forEach(word => {
-      if (lowerText.includes(word)) score += 0.2;
+    negativeWords.forEach(word => {
+      if (lowerText.includes(word)) score -= 0.1;
     });
     
     return Math.max(-1, Math.min(1, score));
+  }
+
+  private static detectCategory(text: string): string {
+    const topics = this.extractTopics(text);
+    return topics[0] || 'general';
+  }
+
+  private static classifyArgumentType(text: string): string {
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('cost') || lowerText.includes('budget') || 
+        lowerText.includes('tax') || lowerText.includes('economic')) {
+      return 'economic_concern';
+    }
+    
+    if (lowerText.includes('how') || lowerText.includes('implement') || 
+        lowerText.includes('practical') || lowerText.includes('logistics')) {
+      return 'implementation_focus';
+    }
+    
+    if (lowerText.includes('right') || lowerText.includes('wrong') || 
+        lowerText.includes('moral') || lowerText.includes('ethical')) {
+      return 'ethical_position';
+    }
+    
+    if (lowerText.includes('experience') || lowerText.includes('happened to me') || 
+        lowerText.includes('i\'ve seen') || lowerText.includes('in my')) {
+      return 'personal_experience';
+    }
+    
+    if (lowerText.includes('research') || lowerText.includes('study') || 
+        lowerText.includes('data') || lowerText.includes('evidence')) {
+      return 'evidence_based';
+    }
+    
+    return 'general_opinion';
+  }
+
+  private static generateFallbackEmbedding(text: string): number[] {
+    // Create a deterministic embedding based on text content
+    const hash = this.simpleHash(text);
+    const embedding = new Array(this.EMBEDDING_DIMENSION);
+    
+    for (let i = 0; i < this.EMBEDDING_DIMENSION; i++) {
+      // Use hash to create pseudo-random but deterministic values
+      const seed = (hash + i) % 1000;
+      embedding[i] = (Math.sin(seed) + Math.cos(seed * 2)) / 2;
+    }
+    
+    return embedding;
+  }
+
+  private static simpleHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
   }
 
   private static assessHostility(text: string): number {

@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ElectionService } from '../services/electionService';
+import { EnhancedElectionService } from '../services/enhancedElectionService';
 import { metricsService } from '../services/metricsService';
 
 const router = express.Router();
@@ -58,24 +59,49 @@ router.get('/', async (req, res) => {
   try {
     const { state, zipCode, level, includeUpcoming } = req.query;
     
-    const searchParams = {
-      state: state as string,
-      zipCode: zipCode as string,
-      level: level as any,
-      includeUpcoming: includeUpcoming !== 'false'
-    };
+    // Validate required state parameter
+    if (!state || typeof state !== 'string' || state.length !== 2) {
+      return res.status(400).json({
+        error: 'Invalid state parameter',
+        message: 'State must be a two-letter code (e.g., CA, NY)'
+      });
+    }
+
+    console.log(`🗳️  Election request: ${state.toUpperCase()}${zipCode ? ` (${zipCode})` : ''}`);
     
-    const elections = await ElectionService.getElectionsByLocation(searchParams);
+    // Use enhanced multi-tier election service
+    const electionData = await EnhancedElectionService.getElectionData(
+      state as string, 
+      zipCode as string
+    );
+    
+    // Filter by level if specified
+    let filteredElections = electionData.elections;
+    if (level && typeof level === 'string') {
+      filteredElections = filteredElections.filter(e => e.level === level.toUpperCase());
+    }
+    
+    // Filter by upcoming if specified
+    if (includeUpcoming !== 'false') {
+      const now = new Date();
+      filteredElections = filteredElections.filter(e => new Date(e.date) >= now);
+    }
     
     // Track election searches for analytics
     metricsService.incrementCounter('election_searches_total', {
       state: state as string || 'unknown',
-      level: level as string || 'all'
+      level: level as string || 'all',
+      source: electionData.source
     });
     
+    console.log(`✅ Returning ${filteredElections.length} elections (${electionData.source})`);
+    
     res.json({
-      elections,
-      count: elections.length
+      elections: filteredElections,
+      count: filteredElections.length,
+      source: electionData.source,
+      lastUpdated: electionData.lastUpdated,
+      message: electionData.message
     });
   } catch (error) {
     console.error('Election search error:', error);
@@ -400,6 +426,62 @@ router.post('/candidates/compare', async (req, res) => {
   } catch (error) {
     console.error('Candidate comparison error:', error);
     res.status(500).json({ error: 'Failed to compare candidates' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/elections/cache/refresh:
+ *   post:
+ *     tags: [Elections]
+ *     summary: Refresh election cache (Admin only)
+ *     description: Force refresh of election data cache for a specific state or all states
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               state:
+ *                 type: string
+ *                 pattern: '^[A-Z]{2}$'
+ *                 description: State to refresh (leave empty for all states)
+ *     responses:
+ *       200:
+ *         description: Cache refreshed successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ */
+router.post('/cache/refresh', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { user } = req;
+    
+    // Only admins can refresh cache
+    if (!user?.isAdmin) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Admin access required'
+      });
+    }
+    
+    const { state } = req.body;
+    
+    console.log(`🗑️  Admin ${user.username} refreshing election cache${state ? ` for ${state}` : ''}`);
+    
+    await EnhancedElectionService.refreshCache(state);
+    
+    res.json({
+      message: `Election cache refreshed successfully${state ? ` for ${state}` : ''}`,
+      timestamp: new Date()
+    });
+    
+  } catch (error) {
+    console.error('Cache refresh error:', error);
+    res.status(500).json({ error: 'Failed to refresh cache' });
   }
 });
 

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,134 +8,92 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  username    String   @unique
-  password    String
-  firstName   String?
-  lastName    String?
-  avatar      String?
-  bio         String?
-  website     String?
-  location    String?
-  verified    Boolean  @default(false)
-  embedding   Float[]  @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Address information for voting district
-  streetAddress String?
-  city          String?
-  state         String?
-  zipCode       String?
-  h3Index       String? // H3 geospatial index
-  
-  // Political profile information
-  politicalProfileType PoliticalProfileType @default(CITIZEN)
-  verificationStatus   VerificationStatus   @default(PENDING)
-  verificationDocuments String[] @default([]) // URLs to verification docs
-  
-  // Political profile details (only for candidates/officials)
-  politicalParty    String?
-  office           String? // "Mayor of Springfield", "State Senator District 5"
-  campaignWebsite  String?
-  officialTitle    String? // For elected officials
-  termStart        DateTime?
-  termEnd          DateTime?
-  
-  // Email verification
-  emailVerified     Boolean   @default(false)
-  emailVerifyToken  String?   @unique
-  emailVerifyExpiry DateTime?
-  
-  // Phone verification
-  phoneNumber       String?
-  phoneVerified     Boolean   @default(false)
-  phoneVerifyCode   String?
-  phoneVerifyExpiry DateTime?
-  
-  // Reset tokens
-  resetToken  String?
-  resetExpiry DateTime?
-  
-  // Social relationships
-  following   Follow[] @relation("Follower")
-  followers   Follow[] @relation("Following")
-  
-  // Content relationships
-  posts       Post[]
-  likes       Like[]
-  comments    Comment[]
-  
-  // Notification relationships
-  sentNotifications     Notification[] @relation("NotificationSender")
-  receivedNotifications Notification[] @relation("NotificationReceiver")
+  id                      String                    @id @default(cuid())
+  email                   String                    @unique
+  username                String                    @unique
+  password                String
+  firstName               String?
+  lastName                String?
+  avatar                  String?
+  bio                     String?
+  website                 String?
+  location                String?
+  verified                Boolean                   @default(false)
+  embedding               Float[]                   @default([])
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  streetAddress           String?
+  city                    String?
+  state                   String?
+  zipCode                 String?
+  h3Index                 String?
+  politicalProfileType    PoliticalProfileType      @default(CITIZEN)
+  verificationStatus      VerificationStatus        @default(PENDING)
+  verificationDocuments   String[]                  @default([])
+  politicalParty          String?
+  office                  String?
+  campaignWebsite         String?
+  officialTitle           String?
+  termStart               DateTime?
+  termEnd                 DateTime?
+  emailVerified           Boolean                   @default(false)
+  emailVerifyToken        String?                   @unique
+  emailVerifyExpiry       DateTime?
+  phoneNumber             String?
+  phoneVerified           Boolean                   @default(false)
+  phoneVerifyCode         String?
+  phoneVerifyExpiry       DateTime?
+  resetToken              String?
+  resetExpiry             DateTime?
+  isOnline                Boolean                   @default(false)
+  lastSeenAt              DateTime                  @default(now())
+  isModerator             Boolean                   @default(false)
+  isAdmin                 Boolean                   @default(false)
+  isSuspended             Boolean                   @default(false)
+  onboardingData          Json?
+  onboardingCompleted     Boolean                   @default(false)
+  interests               String[]                  @default([])
+  politicalExperience     String?
+  notificationPreferences Json?
+  displayName             String?
+  followingCount          Int                       @default(0)
+  followersCount          Int                       @default(0)
+  deviceFingerprint       Json?
+  riskScore               Int                       @default(0)
+  reviewedAppeals         Appeal[]                  @relation("ReviewedAppeals")
+  appeals                 Appeal[]                  @relation("UserAppeals")
+  candidateProfile        Candidate?
+  candidateRegistrations  CandidateRegistration[]
+  candidateStaffRoles     CandidateStaff[]
+  comments                Comment[]
+  resolvedFlags           ContentFlag[]             @relation("ResolvedFlags")
+  conversations           ConversationParticipant[]
+  endorsements            Endorsement[]
+  following               Follow[]                  @relation("Follower")
+  followers               Follow[]                  @relation("Following")
+  likes                   Like[]
+  sentMessages            Message[]                 @relation("SentMessages")
+  moderationLogs          ModerationLog[]           @relation("ModerationLogs")
+  receivedNotifications   Notification[]            @relation("NotificationReceiver")
+  sentNotifications       Notification[]            @relation("NotificationSender")
+  flaggedPhotos           Photo[]                   @relation("FlaggedPhotos")
+  photos                  Photo[]
+  politicalInquiries      PoliticalInquiry[]        @relation("PoliticalInquiries")
+  posts                   Post[]
+  publicQAVotes           PublicQAVote[]            @relation("PublicQAVotes")
+  moderatedReports        Report[]                  @relation("ModeratedReports")
+  reports                 Report[]                  @relation("UserReports")
+  topicComments           TopicComment[]
+  moderatorSuspensions    UserSuspension[]          @relation("ModeratorSuspensions")
+  suspensions             UserSuspension[]          @relation("UserSuspensions")
+  issuedWarnings          UserWarning[]             @relation("IssuedWarnings")
+  receivedWarnings        UserWarning[]             @relation("ReceivedWarnings")
 
-  // Message relationships
-  conversations  ConversationParticipant[]
-  sentMessages   Message[] @relation("SentMessages")
-
-  // Online status
-  isOnline       Boolean   @default(false)
-  lastSeenAt     DateTime  @default(now())
-  
-  // Moderation relationships
-  reports               Report[] @relation("UserReports")
-  moderatedReports      Report[] @relation("ModeratedReports")
-  resolvedFlags         ContentFlag[] @relation("ResolvedFlags")
-  moderationLogs        ModerationLog[] @relation("ModerationLogs")
-  receivedWarnings      UserWarning[] @relation("ReceivedWarnings")
-  issuedWarnings        UserWarning[] @relation("IssuedWarnings")
-  suspensions           UserSuspension[] @relation("UserSuspensions")
-  moderatorSuspensions  UserSuspension[] @relation("ModeratorSuspensions")
-  appeals               Appeal[] @relation("UserAppeals")
-  reviewedAppeals       Appeal[] @relation("ReviewedAppeals")
-  
-  // Moderation status
-  isModerator           Boolean @default(false)
-  isAdmin               Boolean @default(false)
-  isSuspended           Boolean @default(false)
-  
-  // Onboarding tracking
-  onboardingData      Json?     // Store onboarding progress and data
-  onboardingCompleted Boolean   @default(false)
-  
-  // Anti-bot protection
-  deviceFingerprint   Json?     // Store device fingerprint data for bot detection
-  riskScore          Int       @default(0)
-  interests           String[]  @default([])
-  politicalExperience String?   // new, casual, engaged, activist
-  notificationPreferences Json? // Store notification settings
-  displayName         String?   // User's preferred display name
-  
-  // Stats
-  followingCount Int @default(0)
-  followersCount Int @default(0)
-  
-  // Relationships - Political/Election
-  candidateProfile Candidate?    // If user is running for office
-  endorsements    Endorsement[]  // Candidates this user has endorsed
-  
-  // Relationships - Topic System
-  topicComments   TopicComment[] // Comments on topics/sub-topics
-  
-  // Relationships - Photo System
-  photos          Photo[]        // User's uploaded photos
-  flaggedPhotos   Photo[] @relation("FlaggedPhotos") // Photos flagged by this moderator
-  
-  // Relationships - Political Messaging System
-  candidateStaffRoles CandidateStaff[]     // Staff roles for candidates
-  politicalInquiries  PoliticalInquiry[] @relation("PoliticalInquiries") // Inquiries sent to candidates
-  publicQAVotes       PublicQAVote[] @relation("PublicQAVotes") // Votes on public Q&A
-  
-  // Relationships - Candidate Registration System
-  candidateRegistrations CandidateRegistration[] // User's candidate registrations
-  
   @@index([username])
   @@index([createdAt])
-  @@index([h3Index]) // For geospatial queries
+  @@index([h3Index])
   @@index([politicalProfileType])
-  @@index([zipCode, state]) // For district lookups
+  @@index([zipCode, state])
 }
 
 model Follow {
@@ -149,40 +101,31 @@ model Follow {
   followerId  String
   followingId String
   createdAt   DateTime @default(now())
-  
-  follower    User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
-  
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
 }
 
 model Post {
-  id          String   @id @default(cuid())
-  content     String
-  imageUrl    String?
-  authorId    String
-  embedding   Float[]  @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Political post features
-  isPolitical Boolean @default(false)
-  tags        String[] @default([])
-  
-  // Relationships
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes       Like[]
-  comments    Comment[]
-  
-  // Topic system relationships
-  topics      TopicPost[]  // Topics this post belongs to
-  
-  // Stats
-  likesCount    Int @default(0)
-  commentsCount Int @default(0)
-  
+  id            String      @id @default(cuid())
+  content       String
+  imageUrl      String?
+  authorId      String
+  embedding     Float[]     @default([])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  isPolitical   Boolean     @default(false)
+  tags          String[]    @default([])
+  likesCount    Int         @default(0)
+  commentsCount Int         @default(0)
+  comments      Comment[]
+  likes         Like[]
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  topics        TopicPost[]
+
   @@index([authorId])
   @@index([createdAt])
   @@index([likesCount])
@@ -194,10 +137,9 @@ model Like {
   userId    String
   postId    String
   createdAt DateTime @default(now())
-  
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, postId])
   @@index([postId])
   @@index([userId])
@@ -210,29 +152,681 @@ model Comment {
   postId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([postId])
   @@index([userId])
 }
 
 model Notification {
-  id         String            @id @default(cuid())
+  id         String           @id @default(cuid())
   type       NotificationType
   senderId   String?
   receiverId String
   postId     String?
   commentId  String?
   message    String
-  read       Boolean           @default(false)
-  createdAt  DateTime          @default(now())
-  
-  sender     User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User  @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  receiver   User             @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User?            @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+
   @@index([receiverId, read])
+  @@index([createdAt])
+}
+
+model Election {
+  id                   String          @id @default(cuid())
+  name                 String
+  type                 ElectionType
+  level                ElectionLevel
+  date                 DateTime
+  registrationDeadline DateTime?
+  state                String
+  county               String?
+  city                 String?
+  district             String?
+  isActive             Boolean         @default(true)
+  description          String?
+  officialUrl          String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  ballotMeasures       BallotMeasure[]
+  offices              Office[]
+
+  @@index([state, date])
+  @@index([level, date])
+}
+
+model Office {
+  id           String      @id @default(cuid())
+  title        String
+  level        OfficeLevel
+  description  String?
+  state        String
+  district     String?
+  jurisdiction String?
+  termLength   Int?
+  salary       Decimal?
+  electionId   String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  candidates   Candidate[]
+  election     Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  @@index([electionId])
+  @@index([state, level])
+}
+
+model Candidate {
+  id                 String             @id @default(cuid())
+  name               String
+  party              String?
+  isIncumbent        Boolean            @default(false)
+  campaignWebsite    String?
+  campaignEmail      String?
+  campaignPhone      String?
+  platformSummary    String?
+  keyIssues          String[]           @default([])
+  embedding          Float[]            @default([])
+  isVerified         Boolean            @default(false)
+  isWithdrawn        Boolean            @default(false)
+  withdrawnAt        DateTime?
+  withdrawnReason    String?
+  userId             String?            @unique
+  officeId           String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  office             Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  user               User?              @relation(fields: [userId], references: [id])
+  inbox              CandidateInbox?
+  endorsements       Endorsement[]
+  financialData      FinancialData?
+  photos             Photo[]
+  politicalInquiries PoliticalInquiry[]
+  publicQAs          PublicQA[]
+
+  @@index([officeId])
+  @@index([party])
+  @@index([userId])
+}
+
+model BallotMeasure {
+  id           String            @id @default(cuid())
+  title        String
+  description  String
+  type         BallotMeasureType
+  number       String?
+  fullText     String?
+  fiscalImpact String?
+  arguments    Json?
+  state        String
+  county       String?
+  city         String?
+  electionId   String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  election     Election          @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  @@index([electionId])
+  @@index([state, type])
+}
+
+model FinancialData {
+  id                  String    @id @default(cuid())
+  candidateId         String    @unique
+  totalRaised         Decimal   @default(0)
+  totalSpent          Decimal   @default(0)
+  cashOnHand          Decimal   @default(0)
+  debts               Decimal   @default(0)
+  individualDonations Decimal   @default(0)
+  pacDonations        Decimal   @default(0)
+  selfFunding         Decimal   @default(0)
+  publicFunding       Decimal   @default(0)
+  reportingPeriod     String?
+  lastUpdated         DateTime  @default(now())
+  sourceUrl           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  candidate           Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model Endorsement {
+  id          String    @id @default(cuid())
+  userId      String
+  candidateId String
+  reason      String?
+  isPublic    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, candidateId])
+  @@index([candidateId])
+  @@index([userId])
+}
+
+model Topic {
+  id               String         @id @default(cuid())
+  title            String
+  description      String?
+  embedding        Float[]        @default([])
+  argumentsFor     String[]       @default([])
+  argumentsAgainst String[]       @default([])
+  neutralSummary   String?
+  category         String?
+  complexityScore  Float          @default(0)
+  evidenceQuality  Float          @default(0)
+  controversyScore Float          @default(0)
+  postCount        Int            @default(0)
+  participantCount Int            @default(0)
+  viewCount        Int            @default(0)
+  trendingScore    Float          @default(0)
+  isActive         Boolean        @default(true)
+  lastActivityAt   DateTime       @default(now())
+  state            String?
+  district         String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  subTopics        SubTopic[]
+  topicComments    TopicComment[]
+  posts            TopicPost[]
+
+  @@index([trendingScore, lastActivityAt])
+  @@index([category, isActive])
+  @@index([controversyScore])
+  @@index([state, district])
+}
+
+model SubTopic {
+  id               String         @id @default(cuid())
+  parentTopicId    String
+  title            String
+  summary          String?
+  embedding        Float[]        @default([])
+  commentCount     Int            @default(0)
+  participantCount Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  parentTopic      Topic          @relation(fields: [parentTopicId], references: [id], onDelete: Cascade)
+  comments         TopicComment[]
+
+  @@index([parentTopicId])
+}
+
+model TopicPost {
+  id             String   @id @default(cuid())
+  topicId        String
+  postId         String
+  relevanceScore Float    @default(0.5)
+  createdAt      DateTime @default(now())
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  topic          Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, postId])
+  @@index([topicId, relevanceScore])
+}
+
+model TopicComment {
+  id               String         @id @default(cuid())
+  content          String
+  authorId         String
+  topicId          String?
+  subTopicId       String?
+  parentId         String?
+  embedding        Float[]        @default([])
+  sentiment        Float?
+  hostilityScore   Float          @default(0)
+  argumentStrength Float          @default(0)
+  evidenceLevel    Float          @default(0)
+  topicRelevance   Float          @default(0)
+  isHidden         Boolean        @default(false)
+  hideReason       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  author           User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent           TopicComment?  @relation("TopicCommentReplies", fields: [parentId], references: [id])
+  replies          TopicComment[] @relation("TopicCommentReplies")
+  subTopic         SubTopic?      @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
+  topic            Topic?         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, createdAt])
+  @@index([subTopicId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model Conversation {
+  id                  String                    @id @default(cuid())
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  lastMessageAt       DateTime?
+  lastMessageContent  String?
+  lastMessageSenderId String?
+  participants        ConversationParticipant[]
+  messages            Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  userId         String
+  conversationId String
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  senderId       String
+  conversationId String
+  messageType    MessageType  @default(TEXT)
+  imageUrl       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model ApiCache {
+  id           String   @id @default(cuid())
+  provider     String
+  cacheKey     String
+  responseData Json
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  hitCount     Int      @default(0)
+
+  @@unique([provider, cacheKey])
+  @@index([provider, cacheKey])
+  @@index([expiresAt])
+}
+
+model ExternalOfficial {
+  id          String   @id @default(cuid())
+  externalId  String
+  provider    String
+  name        String
+  office      String
+  district    String?
+  party       String?
+  contactInfo Json?
+  photoUrl    String?
+  zipCode     String
+  state       String
+  h3Index     String?
+  lastUpdated DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([zipCode, state])
+  @@index([h3Index])
+}
+
+model Report {
+  id             String            @id @default(cuid())
+  reporterId     String
+  targetType     ReportTargetType
+  targetId       String
+  reason         ReportReason
+  description    String?
+  status         ReportStatus      @default(PENDING)
+  priority       ReportPriority    @default(LOW)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  moderatedAt    DateTime?
+  moderatorId    String?
+  moderatorNotes String?
+  actionTaken    ModerationAction?
+  moderator      User?             @relation("ModeratedReports", fields: [moderatorId], references: [id])
+  reporter       User              @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status, priority])
+  @@index([createdAt])
+}
+
+model ContentFlag {
+  id          String      @id @default(cuid())
+  contentType ContentType
+  contentId   String
+  flagType    FlagType
+  confidence  Float
+  source      FlagSource
+  details     Json?
+  resolved    Boolean     @default(false)
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  resolver    User?       @relation("ResolvedFlags", fields: [resolvedBy], references: [id])
+
+  @@index([contentType, contentId])
+  @@index([flagType, resolved])
+  @@index([confidence])
+  @@index([createdAt])
+}
+
+model ModerationLog {
+  id          String           @id @default(cuid())
+  moderatorId String
+  targetType  ReportTargetType
+  targetId    String
+  action      ModerationAction
+  reason      String
+  notes       String?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  moderator   User             @relation("ModerationLogs", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([moderatorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model UserWarning {
+  id             String          @id @default(cuid())
+  userId         String
+  moderatorId    String
+  reason         String
+  severity       WarningSeverity
+  notes          String?
+  acknowledged   Boolean         @default(false)
+  acknowledgedAt DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime        @default(now())
+  moderator      User            @relation("IssuedWarnings", fields: [moderatorId], references: [id], onDelete: Cascade)
+  user           User            @relation("ReceivedWarnings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([severity, expiresAt])
+  @@index([createdAt])
+}
+
+model UserSuspension {
+  id          String         @id @default(cuid())
+  userId      String
+  moderatorId String
+  reason      String
+  type        SuspensionType
+  startsAt    DateTime       @default(now())
+  endsAt      DateTime?
+  notes       String?
+  appealed    Boolean        @default(false)
+  appealedAt  DateTime?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  appeal      Appeal?
+  moderator   User           @relation("ModeratorSuspensions", fields: [moderatorId], references: [id], onDelete: Cascade)
+  user        User           @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([endsAt])
+  @@index([createdAt])
+}
+
+model Appeal {
+  id             String         @id @default(cuid())
+  userId         String
+  suspensionId   String         @unique
+  reason         String
+  additionalInfo String?
+  status         AppealStatus   @default(PENDING)
+  reviewNotes    String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  reviewedByUser User?          @relation("ReviewedAppeals", fields: [reviewedBy], references: [id])
+  suspension     UserSuspension @relation(fields: [suspensionId], references: [id], onDelete: Cascade)
+  user           User           @relation("UserAppeals", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ElectionCache {
+  id          String   @id @default(cuid())
+  stateCode   String   @unique
+  data        String
+  source      String
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([stateCode])
+  @@index([lastUpdated])
+}
+
+model Photo {
+  id             String       @id @default(cuid())
+  userId         String
+  filename       String
+  url            String
+  thumbnailUrl   String?
+  photoType      PhotoType
+  purpose        PhotoPurpose @default(PERSONAL)
+  originalSize   Int
+  compressedSize Int
+  width          Int
+  height         Int
+  mimeType       String
+  isApproved     Boolean      @default(false)
+  flaggedBy      String?
+  flagReason     String?
+  moderatedAt    DateTime?
+  candidateId    String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  candidate      Candidate?   @relation(fields: [candidateId], references: [id])
+  flaggedByUser  User?        @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([candidateId])
+  @@index([photoType, purpose])
+  @@index([isApproved, isActive])
+  @@index([createdAt])
+}
+
+model CandidateInbox {
+  id           String           @id @default(cuid())
+  candidateId  String           @unique
+  isActive     Boolean          @default(true)
+  allowPublicQ Boolean          @default(true)
+  autoResponse String?
+  staffEmails  String[]         @default([])
+  categories   String[]         @default([])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  candidate    Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  staffMembers CandidateStaff[]
+
+  @@index([candidateId])
+}
+
+model CandidateStaff {
+  id                String             @id @default(cuid())
+  inboxId           String
+  userId            String
+  role              StaffRole          @default(VOLUNTEER)
+  permissions       StaffPermission[]
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  inbox             CandidateInbox     @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses         InquiryResponse[]
+  assignedInquiries PoliticalInquiry[] @relation("AssignedStaff")
+
+  @@unique([inboxId, userId])
+  @@index([userId])
+  @@index([inboxId, isActive])
+}
+
+model PoliticalInquiry {
+  id               String            @id @default(cuid())
+  candidateId      String
+  inquirerId       String?
+  subject          String
+  content          String
+  category         InquiryCategory   @default(GENERAL)
+  priority         InquiryPriority   @default(NORMAL)
+  status           InquiryStatus     @default(OPEN)
+  isPublic         Boolean           @default(false)
+  isAnonymous      Boolean           @default(false)
+  contactEmail     String?
+  contactName      String?
+  policyTopic      String?
+  specificQuestion String?
+  respondedAt      DateTime?
+  assignedAt       DateTime?
+  assignedTo       String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  responses        InquiryResponse[]
+  assignedStaff    CandidateStaff?   @relation("AssignedStaff", fields: [assignedTo], references: [id])
+  candidate        Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  inquirer         User?             @relation("PoliticalInquiries", fields: [inquirerId], references: [id])
+  publicQASource   PublicQA?         @relation("PublicQASource")
+
+  @@index([candidateId, status])
+  @@index([inquirerId])
+  @@index([category, priority])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model InquiryResponse {
+  id              String           @id @default(cuid())
+  inquiryId       String
+  responderId     String
+  content         String
+  responseType    ResponseType     @default(DIRECT)
+  isPublic        Boolean          @default(false)
+  isFromCandidate Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  inquiry         PoliticalInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  responder       CandidateStaff   @relation(fields: [responderId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+  @@index([responderId])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model PublicQA {
+  id              String            @id @default(cuid())
+  candidateId     String
+  question        String
+  answer          String
+  category        InquiryCategory   @default(GENERAL)
+  isVisible       Boolean           @default(true)
+  isPinned        Boolean           @default(false)
+  upvotes         Int               @default(0)
+  views           Int               @default(0)
+  sourceInquiryId String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  candidate       Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  sourceInquiry   PoliticalInquiry? @relation("PublicQASource", fields: [sourceInquiryId], references: [id])
+  votes           PublicQAVote[]
+
+  @@index([candidateId, isVisible])
+  @@index([category])
+  @@index([isPinned, upvotes])
+  @@index([createdAt])
+}
+
+model PublicQAVote {
+  id        String   @id @default(cuid())
+  qaId      String
+  userId    String
+  voteType  VoteType
+  createdAt DateTime @default(now())
+  qa        PublicQA @relation(fields: [qaId], references: [id], onDelete: Cascade)
+  user      User     @relation("PublicQAVotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([qaId, userId])
+  @@index([qaId])
+  @@index([userId])
+}
+
+model CandidateRegistration {
+  id                        String                      @id @default(cuid())
+  userId                    String
+  registrationId            String                      @unique
+  firstName                 String
+  lastName                  String
+  email                     String
+  phone                     String
+  street                    String
+  city                      String
+  state                     String
+  zipCode                   String
+  district                  String?
+  positionTitle             String
+  positionLevel             String
+  positionDistrict          String?
+  electionDate              DateTime
+  campaignName              String
+  campaignWebsite           String?
+  campaignSlogan            String?
+  campaignDescription       String?
+  status                    CandidateRegistrationStatus @default(PENDING_VERIFICATION)
+  officeLevel               String
+  registrationFee           Float
+  originalFee               Float
+  feeWaiverStatus           String                      @default("none")
+  hasFinancialHardship      Boolean                     @default(false)
+  hardshipReason            String?
+  communityEndorsementCount Int                         @default(0)
+  idmeVerified              Boolean                     @default(false)
+  idmeUserId                String?
+  idmeVerifiedAt            DateTime?
+  verifiedFirstName         String?
+  verifiedLastName          String?
+  verifiedEmail             String?
+  paidAt                    DateTime?
+  paymentMethod             String?
+  paymentIntentId           String?
+  verifiedAt                DateTime?
+  verifiedBy                String?
+  verificationNotes         String?
+  rejectedAt                DateTime?
+  rejectedBy                String?
+  rejectionReason           String?
+  refundIssued              Boolean                     @default(false)
+  termsAcceptedAt           DateTime
+  withdrawnAt               DateTime?
+  withdrawalReason          String?
+  refundProcessedAt         DateTime?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  user                      User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([registrationId])
+  @@index([status])
+  @@index([officeLevel, state])
+  @@index([electionDate])
+  @@index([feeWaiverStatus])
+  @@index([hasFinancialHardship])
   @@index([createdAt])
 }
 
@@ -289,525 +883,12 @@ enum BallotMeasureType {
   REFERENDUM
 }
 
-// Election infrastructure models
-model Election {
-  id             String       @id @default(cuid())
-  name           String       // "2024 General Election"
-  type           ElectionType
-  level          ElectionLevel
-  date           DateTime
-  registrationDeadline DateTime?
-  
-  // Geographic scope
-  state          String       // Two-letter state code
-  county         String?      // For local elections
-  city           String?      // For municipal elections
-  district       String?      // Congressional/state legislative district
-  
-  // Status and metadata
-  isActive       Boolean      @default(true)
-  description    String?
-  officialUrl    String?      // Link to official election info
-  
-  // Relationships
-  offices        Office[]
-  ballotMeasures BallotMeasure[]
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  
-  @@index([state, date])
-  @@index([level, date])
-}
-
-model Office {
-  id          String      @id @default(cuid())
-  title       String      // "President", "Governor", "Mayor", "City Council District 3"
-  level       OfficeLevel
-  description String?     // Brief description of the office
-  
-  // Geographic scope
-  state       String      // Two-letter state code
-  district    String?     // District number/identifier if applicable
-  jurisdiction String?    // City, county, or other local jurisdiction
-  
-  // Term information
-  termLength  Int?        // Length in years
-  salary      Decimal?    // Annual salary if public
-  
-  // Election relationship
-  electionId  String
-  election    Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  
-  // Candidates running for this office
-  candidates  Candidate[]
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  @@index([electionId])
-  @@index([state, level])
-}
-
-model Candidate {
-  id              String    @id @default(cuid())
-  
-  // Basic information
-  name            String
-  party           String?   // Political party affiliation
-  isIncumbent     Boolean   @default(false)
-  
-  // Contact and campaign info
-  campaignWebsite String?
-  campaignEmail   String?
-  campaignPhone   String?
-  
-  // Platform and positions
-  platformSummary String?   // Brief campaign summary
-  keyIssues       String[]  @default([]) // Array of key campaign issues
-  embedding       Float[]   @default([]) // AI embedding for issue matching
-  
-  // Verification and status
-  isVerified      Boolean   @default(false)
-  isWithdrawn     Boolean   @default(false)
-  withdrawnAt     DateTime?
-  withdrawnReason String?
-  
-  // Link to platform user (if they have an account)
-  userId          String?   @unique // Optional link to User model
-  user            User?     @relation(fields: [userId], references: [id])
-  
-  // Office they're running for
-  officeId        String
-  office          Office    @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  
-  // Financial data
-  financialData   FinancialData?
-  
-  // User interactions
-  endorsements    Endorsement[]
-  
-  // Campaign photos
-  photos          Photo[]
-  
-  // Political messaging system
-  inbox           CandidateInbox?    // Candidate's messaging inbox
-  politicalInquiries PoliticalInquiry[] // Inquiries received
-  publicQAs       PublicQA[]         // Public Q&A entries
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([officeId])
-  @@index([party])
-  @@index([userId])
-}
-
-model BallotMeasure {
-  id          String            @id @default(cuid())
-  title       String            // Short title
-  description String            // Full description/summary
-  type        BallotMeasureType
-  number      String?           // Ballot number (e.g., "Proposition 1")
-  
-  // Full text and details
-  fullText    String?           // Complete text of the measure
-  fiscalImpact String?          // Economic impact analysis
-  arguments   Json?             // Arguments for/against
-  
-  // Geographic scope
-  state       String            // Two-letter state code
-  county      String?
-  city        String?
-  
-  // Election relationship
-  electionId  String
-  election    Election          @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
-  @@index([electionId])
-  @@index([state, type])
-}
-
-model FinancialData {
-  id               String    @id @default(cuid())
-  candidateId      String    @unique
-  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  
-  // Financial summary
-  totalRaised      Decimal   @default(0)
-  totalSpent       Decimal   @default(0)
-  cashOnHand       Decimal   @default(0)
-  debts            Decimal   @default(0)
-  
-  // Donation info
-  individualDonations  Decimal @default(0)
-  pacDonations        Decimal @default(0)
-  selfFunding         Decimal @default(0)
-  publicFunding       Decimal @default(0)
-  
-  // Reporting period
-  reportingPeriod  String?   // "Q1 2024", "Pre-Primary"
-  lastUpdated      DateTime  @default(now())
-  sourceUrl        String?   // Link to official filing
-  
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-}
-
-model Endorsement {
-  id          String    @id @default(cuid())
-  
-  // Who endorsed
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Who was endorsed
-  candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  
-  // Endorsement details
-  reason      String?   // Why they endorsed
-  isPublic    Boolean   @default(false) // Whether endorsement is public
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  @@unique([userId, candidateId]) // Prevent duplicate endorsements
-  @@index([candidateId])
-  @@index([userId])
-}
-
-// AI-Powered Topic Analysis System
-model Topic {
-  id          String   @id @default(cuid())
-  title       String   // AI-generated topic title
-  description String?  // Brief description of the topic
-  
-  // AI-generated content embeddings (centroid of related posts)
-  embedding   Float[]  @default([])
-  
-  // AI-generated argument analysis
-  argumentsFor     String[] @default([]) // Key arguments supporting the topic
-  argumentsAgainst String[] @default([]) // Key arguments opposing the topic
-  neutralSummary   String?              // AI-generated neutral summary
-  
-  // Topic classification
-  category         String?  // e.g., "Healthcare", "Economy", "Environment"
-  complexityScore  Float    @default(0) // 0-1 scale of how nuanced/complex the topic is
-  evidenceQuality  Float    @default(0) // 0-1 scale of how well-supported arguments are
-  controversyScore Float    @default(0) // 0-1 scale of how contentious the topic is
-  
-  // Engagement metrics
-  postCount        Int     @default(0)   // Number of posts in this topic
-  participantCount Int     @default(0)   // Unique users who've posted/commented
-  viewCount        Int     @default(0)   // How many times topic has been viewed
-  
-  // Trending calculation
-  trendingScore    Float   @default(0)   // Algorithm-calculated trending score
-  isActive         Boolean @default(true) // Whether topic is still active
-  lastActivityAt   DateTime @default(now()) // Last post/comment in topic
-  
-  // Geographic relevance (optional)
-  state           String?  // If topic is state-specific
-  district        String?  // If topic is district-specific
-  
-  // Relationships
-  posts           TopicPost[]     // Posts assigned to this topic
-  subTopics       SubTopic[]      // Sub-discussions within the topic
-  topicComments   TopicComment[]  // Direct comments on the topic
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([trendingScore, lastActivityAt])
-  @@index([category, isActive])
-  @@index([controversyScore])
-  @@index([state, district])
-}
-
-model SubTopic {
-  id            String @id @default(cuid())
-  parentTopicId String
-  parentTopic   Topic  @relation(fields: [parentTopicId], references: [id], onDelete: Cascade)
-  
-  title         String   // Sub-topic title (e.g., "Funding Mechanisms" under "Healthcare Reform")
-  summary       String?  // AI-generated summary of this sub-discussion
-  embedding     Float[]  @default([]) // Embedding for this sub-topic
-  
-  // Engagement metrics
-  commentCount  Int     @default(0)
-  participantCount Int  @default(0)
-  
-  // Relationships  
-  comments      TopicComment[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([parentTopicId])
-}
-
-// Junction table linking posts to topics (posts can belong to multiple topics)
-model TopicPost {
-  id        String @id @default(cuid())
-  topicId   String
-  postId    String
-  
-  topic     Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
-  // Relevance scoring
-  relevanceScore Float @default(0.5) // 0-1 how relevant this post is to the topic
-  
-  createdAt DateTime @default(now())
-  
-  @@unique([topicId, postId]) // Prevent duplicate assignments
-  @@index([topicId, relevanceScore])
-}
-
-// Comments specifically on topics and sub-topics (separate from post comments)
-model TopicComment {
-  id          String @id @default(cuid())
-  content     String
-  authorId    String
-  author      User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  // Can be attached to either a topic or sub-topic
-  topicId     String?
-  topic       Topic?    @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  subTopicId  String?
-  subTopic    SubTopic? @relation(fields: [subTopicId], references: [id], onDelete: Cascade)
-  
-  // Threading support for replies
-  parentId    String?
-  parent      TopicComment? @relation("TopicCommentReplies", fields: [parentId], references: [id])
-  replies     TopicComment[] @relation("TopicCommentReplies")
-  
-  // AI analysis
-  embedding        Float[]  @default([])
-  sentiment        Float?   // -1 to 1, sentiment analysis of the comment
-  hostilityScore   Float @default(0) // 0-1, hostility detection
-  argumentStrength Float @default(0) // 0-1, how well-reasoned the argument is
-  evidenceLevel    Float @default(0) // 0-1, quality of supporting evidence
-  topicRelevance   Float @default(0) // 0-1, how relevant to the core discussion
-  
-  // Moderation
-  isHidden    Boolean  @default(false)
-  hideReason  String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([topicId, createdAt])
-  @@index([subTopicId, createdAt])
-  @@index([authorId])
-  @@index([parentId])
-}
-
-model Conversation {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Participants (for now, just 2-person DMs, but extensible to group chats)
-  participants ConversationParticipant[]
-  messages     Message[]
-  
-  // Last message info for conversation lists
-  lastMessageAt DateTime?
-  lastMessageContent String?
-  lastMessageSenderId String?
-}
-
-model ConversationParticipant {
-  id             String   @id @default(cuid())
-  userId         String
-  conversationId String
-  joinedAt       DateTime @default(now())
-  lastReadAt     DateTime @default(now())
-  
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, conversationId])
-  @@index([userId])
-  @@index([conversationId])
-}
-
-model Message {
-  id             String   @id @default(cuid())
-  content        String
-  senderId       String
-  conversationId String
-  messageType    MessageType @default(TEXT)
-  imageUrl       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  @@index([conversationId, createdAt])
-  @@index([senderId])
-}
-
-model ApiCache {
-  id           String   @id @default(cuid())
-  provider     String   // 'google_civic', 'ballotpedia', etc.
-  cacheKey     String   // 'officials_12345_IL' or 'district_39.7817_-89.6501'
-  responseData Json     // Cached API response
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  hitCount     Int      @default(0)
-  
-  @@unique([provider, cacheKey])
-  @@index([provider, cacheKey])
-  @@index([expiresAt])
-}
-
-model ExternalOfficial {
-  id           String   @id @default(cuid())
-  externalId   String   // ID from external API
-  provider     String   // 'google_civic', 'ballotpedia', etc.
-  name         String
-  office       String
-  district     String?
-  party        String?
-  contactInfo  Json?    // Phone, email, addresses
-  photoUrl     String?
-  zipCode      String   // For geographic lookup
-  state        String   // For geographic lookup
-  h3Index      String?  // For precise geographic matching
-  lastUpdated  DateTime @default(now())
-  
-  @@unique([provider, externalId])
-  @@index([zipCode, state])
-  @@index([h3Index])
-}
-
 enum MessageType {
   TEXT
   IMAGE
   SYSTEM
 }
 
-// Content Moderation Models
-model Report {
-  id          String     @id @default(cuid())
-  reporterId  String
-  targetType  ReportTargetType
-  targetId    String     // Post ID, Comment ID, or User ID
-  reason      ReportReason
-  description String?    // Additional details from reporter
-  status      ReportStatus @default(PENDING)
-  priority    ReportPriority @default(LOW)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  // Moderation action taken
-  moderatedAt DateTime?
-  moderatorId String?
-  moderatorNotes String?
-  actionTaken ModerationAction?
-  
-  // Relationships
-  reporter    User @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
-  moderator   User? @relation("ModeratedReports", fields: [moderatorId], references: [id], onDelete: SetNull)
-  
-  @@index([reporterId])
-  @@index([targetType, targetId])
-  @@index([status, priority])
-  @@index([createdAt])
-}
-
-model ContentFlag {
-  id         String        @id @default(cuid())
-  contentType ContentType
-  contentId  String
-  flagType   FlagType
-  confidence Float         // 0.0 - 1.0, confidence score from AI detection
-  source     FlagSource    // AUTOMATED, USER_REPORT, MANUAL_REVIEW
-  details    Json?         // Additional context (keywords, scores, etc.)
-  resolved   Boolean       @default(false)
-  resolvedBy String?
-  resolvedAt DateTime?
-  createdAt  DateTime      @default(now())
-  
-  resolver   User? @relation("ResolvedFlags", fields: [resolvedBy], references: [id], onDelete: SetNull)
-  
-  @@index([contentType, contentId])
-  @@index([flagType, resolved])
-  @@index([confidence])
-  @@index([createdAt])
-}
-
-model ModerationLog {
-  id          String           @id @default(cuid())
-  moderatorId String
-  targetType  ReportTargetType
-  targetId    String
-  action      ModerationAction
-  reason      String
-  notes       String?
-  metadata    Json?            // Additional context
-  createdAt   DateTime         @default(now())
-  
-  moderator   User @relation("ModerationLogs", fields: [moderatorId], references: [id], onDelete: Cascade)
-  
-  @@index([moderatorId])
-  @@index([targetType, targetId])
-  @@index([action])
-  @@index([createdAt])
-}
-
-model UserWarning {
-  id          String   @id @default(cuid())
-  userId      String
-  moderatorId String
-  reason      String
-  severity    WarningSeverity
-  notes       String?
-  acknowledged Boolean @default(false)
-  acknowledgedAt DateTime?
-  expiresAt   DateTime? // For temporary warnings
-  createdAt   DateTime @default(now())
-  
-  user        User @relation("ReceivedWarnings", fields: [userId], references: [id], onDelete: Cascade)
-  moderator   User @relation("IssuedWarnings", fields: [moderatorId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([severity, expiresAt])
-  @@index([createdAt])
-}
-
-model UserSuspension {
-  id          String          @id @default(cuid())
-  userId      String
-  moderatorId String
-  reason      String
-  type        SuspensionType
-  startsAt    DateTime        @default(now())
-  endsAt      DateTime?       // null for permanent bans
-  notes       String?
-  appealed    Boolean         @default(false)
-  appealedAt  DateTime?
-  isActive    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  
-  user        User @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
-  moderator   User @relation("ModeratorSuspensions", fields: [moderatorId], references: [id], onDelete: Cascade)
-  appeal      Appeal?
-  
-  @@index([userId, isActive])
-  @@index([endsAt])
-  @@index([createdAt])
-}
-
-// Enums for content moderation
 enum ReportTargetType {
   POST
   COMMENT
@@ -894,348 +975,26 @@ enum SuspensionType {
   COMMENTING_RESTRICTED
 }
 
-// Appeals system
-model Appeal {
-  id              String        @id @default(cuid())
-  userId          String
-  suspensionId    String        @unique
-  reason          String        // User's appeal reason
-  additionalInfo  String?       // Additional context from user
-  status          AppealStatus  @default(PENDING)
-  reviewNotes     String?       // Moderator's review notes
-  reviewedBy      String?       // Moderator who reviewed
-  reviewedAt      DateTime?     // When reviewed
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relationships
-  user            User @relation("UserAppeals", fields: [userId], references: [id], onDelete: Cascade)
-  suspension      UserSuspension @relation(fields: [suspensionId], references: [id], onDelete: Cascade)
-  reviewedByUser  User? @relation("ReviewedAppeals", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-}
-
 enum AppealStatus {
   PENDING
   APPROVED
   DENIED
 }
 
-// Election data cache for multi-tier system
-model ElectionCache {
-  id          String   @id @default(cuid())
-  stateCode   String   @unique // Two-letter state code
-  data        String   // JSON string of cached election data
-  source      String   // 'cache', 'api', or 'fallback'
-  lastUpdated DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([stateCode])
-  @@index([lastUpdated])
-}
-
-// Photo management system for users and candidates
-model Photo {
-  id          String     @id @default(cuid())
-  userId      String
-  filename    String     // Original filename for reference
-  url         String     // Storage URL (S3, local, etc.)
-  thumbnailUrl String?   // Optimized thumbnail URL
-  photoType   PhotoType
-  purpose     PhotoPurpose @default(PERSONAL)
-  
-  // Image metadata
-  originalSize Int       // Original file size in bytes
-  compressedSize Int     // Compressed file size in bytes
-  width       Int
-  height      Int
-  mimeType    String
-  
-  // Moderation
-  isApproved  Boolean   @default(false)
-  flaggedBy   String?   // Moderator who flagged
-  flagReason  String?
-  moderatedAt DateTime?
-  
-  // Photo context (for candidates)
-  candidateId String?   // If this is a candidate campaign photo
-  
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // Relationships
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
-  flaggedByUser User?   @relation("FlaggedPhotos", fields: [flaggedBy], references: [id], onDelete: SetNull)
-  
-  @@index([userId])
-  @@index([candidateId])
-  @@index([photoType, purpose])
-  @@index([isApproved, isActive])
-  @@index([createdAt])
-}
-
 enum PhotoType {
-  AVATAR        // Profile picture
-  COVER         // Cover/banner photo
-  CAMPAIGN      // Campaign headshot
-  VERIFICATION  // Identity verification photo
-  EVENT         // Event photos
-  GALLERY       // General gallery photos
+  AVATAR
+  COVER
+  CAMPAIGN
+  VERIFICATION
+  EVENT
+  GALLERY
 }
 
 enum PhotoPurpose {
-  PERSONAL      // Personal use (shows on user profile)
-  CAMPAIGN      // Campaign use (shows on candidate profile)
-  BOTH          // Can be used for both personal and campaign
+  PERSONAL
+  CAMPAIGN
+  BOTH
 }
-
-// ========================================
-// POLITICAL MESSAGING SYSTEM
-// ========================================
-
-model CandidateInbox {
-  id              String   @id @default(cuid())
-  candidateId     String   @unique
-  isActive        Boolean  @default(true)
-  allowPublicQ    Boolean  @default(true)  // Allow public Q&A
-  autoResponse    String?  // Auto-response message
-  staffEmails     String[] @default([])    // Email notifications for staff
-  categories      String[] @default([])    // Policy categories for filtering
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  candidate       Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  staffMembers    CandidateStaff[]
-  
-  @@index([candidateId])
-}
-
-model CandidateStaff {
-  id              String   @id @default(cuid())
-  inboxId         String
-  userId          String
-  role            StaffRole @default(VOLUNTEER)
-  permissions     StaffPermission[]
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  inbox           CandidateInbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedInquiries PoliticalInquiry[] @relation("AssignedStaff")
-  responses       InquiryResponse[]
-  
-  @@unique([inboxId, userId])
-  @@index([userId])
-  @@index([inboxId, isActive])
-}
-
-model PoliticalInquiry {
-  id              String   @id @default(cuid())
-  candidateId     String
-  inquirerId      String?  // Null for anonymous inquiries
-  subject         String
-  content         String
-  category        InquiryCategory @default(GENERAL)
-  priority        InquiryPriority @default(NORMAL)
-  status          InquiryStatus   @default(OPEN)
-  isPublic        Boolean  @default(false)  // Public Q&A
-  isAnonymous     Boolean  @default(false)  // Anonymous inquiry
-  
-  // Contact info for anonymous inquiries
-  contactEmail    String?
-  contactName     String?
-  
-  // Policy position request
-  policyTopic     String?  // e.g., "Healthcare", "Education"
-  specificQuestion String? // Specific policy question
-  
-  // Tracking
-  respondedAt     DateTime?
-  assignedAt      DateTime?
-  assignedTo      String?  // Staff member ID
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relationships
-  candidate       Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  inquirer        User?            @relation("PoliticalInquiries", fields: [inquirerId], references: [id], onDelete: SetNull)
-  assignedStaff   CandidateStaff?  @relation("AssignedStaff", fields: [assignedTo], references: [id], onDelete: SetNull)
-  responses       InquiryResponse[]
-  publicQASource  PublicQA? @relation("PublicQASource")
-  
-  @@index([candidateId, status])
-  @@index([inquirerId])
-  @@index([category, priority])
-  @@index([isPublic])
-  @@index([createdAt])
-}
-
-model InquiryResponse {
-  id              String   @id @default(cuid())
-  inquiryId       String
-  responderId     String   // Staff member or candidate
-  content         String
-  responseType    ResponseType @default(DIRECT)
-  isPublic        Boolean  @default(false)  // Public response for Q&A
-  isFromCandidate Boolean  @default(false)  // Direct from candidate vs staff
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  inquiry         PoliticalInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  responder       CandidateStaff   @relation(fields: [responderId], references: [id], onDelete: Cascade)
-  
-  @@index([inquiryId])
-  @@index([responderId])
-  @@index([isPublic])
-  @@index([createdAt])
-}
-
-model PublicQA {
-  id              String   @id @default(cuid())
-  candidateId     String
-  question        String
-  answer          String
-  category        InquiryCategory @default(GENERAL)
-  isVisible       Boolean  @default(true)
-  isPinned        Boolean  @default(false)
-  upvotes         Int      @default(0)
-  views           Int      @default(0)
-  
-  // Source inquiry (if from inquiry conversion)
-  sourceInquiryId String?  @unique
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  candidate       Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  sourceInquiry   PoliticalInquiry? @relation("PublicQASource", fields: [sourceInquiryId], references: [id], onDelete: SetNull)
-  votes           PublicQAVote[]
-  
-  @@index([candidateId, isVisible])
-  @@index([category])
-  @@index([isPinned, upvotes])
-  @@index([createdAt])
-}
-
-model PublicQAVote {
-  id              String   @id @default(cuid())
-  qaId            String
-  userId          String
-  voteType        VoteType
-  createdAt       DateTime @default(now())
-  
-  qa              PublicQA @relation(fields: [qaId], references: [id], onDelete: Cascade)
-  user            User     @relation("PublicQAVotes", fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([qaId, userId])
-  @@index([qaId])
-  @@index([userId])
-}
-
-// ========================================
-// CANDIDATE REGISTRATION SYSTEM
-// ========================================
-
-model CandidateRegistration {
-  id                  String   @id @default(cuid())
-  userId              String
-  registrationId      String   @unique // Tracking ID for user reference
-  
-  // Personal Information
-  firstName           String
-  lastName            String
-  email               String
-  phone               String
-  
-  // Address Information
-  street              String
-  city                String
-  state               String
-  zipCode             String
-  district            String?
-  
-  // Position Information
-  positionTitle       String   // "Mayor", "City Council", "State Senator"
-  positionLevel       String   // "federal", "state", "county", "city", "local"
-  positionDistrict    String?
-  electionDate        DateTime
-  
-  // Campaign Information
-  campaignName        String
-  campaignWebsite     String?
-  campaignSlogan      String?
-  campaignDescription String?
-  
-  // Registration Status and Flow
-  status              CandidateRegistrationStatus @default(PENDING_VERIFICATION)
-  officeLevel         String   // "local", "regional", "state", "federal", "presidential"
-  registrationFee     Float
-  originalFee         Float    // Original fee before any waivers/discounts
-  feeWaiverStatus     String   @default("none") // "none", "hardship_pending", "hardship_approved", "community_endorsed"
-  
-  // Financial Hardship Waiver
-  hasFinancialHardship Boolean @default(false)
-  hardshipReason      String?
-  
-  // Community Endorsement
-  communityEndorsementCount Int @default(0)
-  
-  // ID.me Verification
-  idmeVerified        Boolean  @default(false)
-  idmeUserId          String?
-  idmeVerifiedAt      DateTime?
-  verifiedFirstName   String?  // From ID.me verification
-  verifiedLastName    String?  // From ID.me verification
-  verifiedEmail       String?  // From ID.me verification
-  
-  // Payment Processing
-  paidAt              DateTime?
-  paymentMethod       String?  // "card", "bank", "crypto"
-  paymentIntentId     String?  // Stripe Payment Intent ID
-  
-  // Admin Review
-  verifiedAt          DateTime? // When admin approved
-  verifiedBy          String?   // Admin who approved
-  verificationNotes   String?   // Admin notes
-  rejectedAt          DateTime? // If rejected
-  rejectedBy          String?   // Admin who rejected
-  rejectionReason     String?   // Reason for rejection
-  refundIssued        Boolean   @default(false)
-  
-  // Legal and Compliance
-  termsAcceptedAt     DateTime
-  
-  // Withdrawal and Refund Policy
-  withdrawnAt         DateTime?
-  withdrawalReason    String?
-  refundProcessedAt   DateTime?
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  // Relationships
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([registrationId])
-  @@index([status])
-  @@index([officeLevel, state])
-  @@index([electionDate])
-  @@index([feeWaiverStatus])
-  @@index([hasFinancialHardship])
-  @@index([createdAt])
-}
-
-// ========================================
-// POLITICAL MESSAGING ENUMS
-// ========================================
 
 enum StaffRole {
   CAMPAIGN_MANAGER
@@ -1247,13 +1006,13 @@ enum StaffRole {
 }
 
 enum StaffPermission {
-  READ_INQUIRIES      // Can view inquiries
-  RESPOND_INQUIRIES   // Can respond to inquiries
-  ASSIGN_INQUIRIES    // Can assign inquiries to others
-  MANAGE_STAFF        // Can manage staff permissions
-  MANAGE_SETTINGS     // Can change inbox settings
-  PUBLISH_QA          // Can publish to public Q&A
-  MODERATE_QA         // Can moderate public Q&A
+  READ_INQUIRIES
+  RESPOND_INQUIRIES
+  ASSIGN_INQUIRIES
+  MANAGE_STAFF
+  MANAGE_SETTINGS
+  PUBLISH_QA
+  MODERATE_QA
 }
 
 enum InquiryCategory {
@@ -1297,10 +1056,10 @@ enum InquiryStatus {
 }
 
 enum ResponseType {
-  DIRECT          // Direct response to inquirer
-  PUBLIC_QA       // Convert to public Q&A
-  POLICY_STATEMENT // Official policy statement
-  REFERRAL        // Refer to existing content/website
+  DIRECT
+  PUBLIC_QA
+  POLICY_STATEMENT
+  REFERRAL
 }
 
 enum VoteType {
@@ -1309,10 +1068,10 @@ enum VoteType {
 }
 
 enum CandidateRegistrationStatus {
-  PENDING_VERIFICATION    // Waiting for ID.me verification
-  PENDING_PAYMENT        // Verified, waiting for payment
-  PENDING_APPROVAL       // Paid, waiting for admin approval
-  APPROVED              // Approved, candidate profile created
-  REJECTED              // Rejected by admin
-  REFUNDED              // Payment refunded
+  PENDING_VERIFICATION
+  PENDING_PAYMENT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  REFUNDED
 }

@@ -2,10 +2,48 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ElectionService } from '../services/electionService';
+import { EnhancedCandidateService } from '../services/enhancedCandidateService';
+import { QwenService } from '../services/qwenService';
 import { metricsService } from '../services/metricsService';
+import { z } from 'zod';
+import crypto from 'crypto';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// Validation schemas for candidate registration
+const candidateRegistrationSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email(),
+  phone: z.string().min(10).max(20),
+  address: z.object({
+    street: z.string().min(1).max(200),
+    city: z.string().min(1).max(100),
+    state: z.string().min(2).max(50),
+    zipCode: z.string().min(5).max(10),
+    district: z.string().optional()
+  }),
+  position: z.object({
+    title: z.string().min(1).max(200),
+    level: z.enum(['federal', 'state', 'county', 'city', 'local']),
+    district: z.string().optional(),
+    electionDate: z.string().transform(str => new Date(str))
+  }),
+  campaign: z.object({
+    name: z.string().min(1).max(200),
+    website: z.string().url().optional(),
+    slogan: z.string().max(500).optional(),
+    description: z.string().max(2000).optional()
+  }),
+  officeLevel: z.enum(['local', 'regional', 'state', 'federal', 'presidential']),
+  hasFinancialHardship: z.boolean().default(false),
+  hardshipReason: z.string().optional(),
+  communityEndorsements: z.array(z.string()).optional(), // Array of endorsement IDs or names
+  agreeToTerms: z.boolean().refine(val => val === true, {
+    message: "Must agree to terms and conditions"
+  })
+});
 
 /**
  * @swagger
@@ -119,6 +157,69 @@ router.get('/', async (req, res) => {
  *       404:
  *         description: Candidate not found
  */
+// GET /api/candidates/pricing - Get candidate registration pricing
+router.get('/pricing', (req, res) => {
+  res.json({
+    success: true,
+    message: 'As a nonprofit supporting grassroots democracy, our fees are designed to deter unserious candidates while remaining accessible to genuine community leaders.',
+    pricing: {
+      local: {
+        name: 'Local Office',
+        price: 50.00,
+        examples: ['School Board', 'City Council', 'Local Judges', 'Township Offices'],
+        description: 'Community-level positions serving local constituencies'
+      },
+      regional: {
+        name: 'Regional Office', 
+        price: 100.00,
+        examples: ['Mayor', 'County Supervisor', 'State House', 'State Senate'],
+        description: 'Regional positions with broader jurisdictional responsibility'
+      },
+      state: {
+        name: 'State Office',
+        price: 200.00,
+        examples: ['US House of Representatives', 'Governor', 'Attorney General'],
+        description: 'Statewide or federal district-level positions'
+      },
+      federal: {
+        name: 'Federal Office',
+        price: 400.00,
+        examples: ['US Senate', 'Lieutenant Governor'],
+        description: 'Federal senate or major statewide executive positions'
+      },
+      presidential: {
+        name: 'Presidential',
+        price: 1000.00,
+        examples: ['President of the United States'],
+        description: 'Presidential campaign registration'
+      }
+    },
+    policies: {
+      refunds: {
+        no_questions_asked: '48 hours from registration',
+        lockout_period: '7 days before re-registration allowed',
+        special_circumstances: 'Case-by-case review available by contacting support'
+      },
+      waivers: {
+        financial_hardship: 'Application-based fee waiver for qualifying candidates',
+        community_endorsement: 'Fee reduction available with sufficient community support',
+        contact: 'Email waivers@unitedwerise.org for waiver applications'
+      }
+    },
+    features: [
+      'Verified candidate profile on platform',
+      'Direct voter messaging system',
+      'AI-powered policy comparison',
+      'Campaign photo management',
+      'Public Q&A system',
+      'Staff delegation tools',
+      'Analytics and engagement metrics',
+      'Integration with election data',
+      'Mobile-optimized candidate pages'
+    ]
+  });
+});
+
 // Get candidate profile
 router.get('/:id', async (req, res) => {
   try {
@@ -536,6 +637,824 @@ router.post('/:id/withdraw', requireAuth, async (req: AuthRequest, res) => {
     }
     
     res.status(500).json({ error: 'Failed to withdraw candidacy' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/candidates/{id}/enhanced:
+ *   get:
+ *     tags: [Candidates]
+ *     summary: Get enhanced candidate profile with AI analysis
+ *     description: Retrieve candidate profile with photos and AI-analyzed policy positions
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate ID
+ *     responses:
+ *       200:
+ *         description: Enhanced candidate profile with AI analysis
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 candidate:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     party:
+ *                       type: string
+ *                     photos:
+ *                       type: object
+ *                       properties:
+ *                         avatar:
+ *                           type: object
+ *                         campaignHeadshot:
+ *                           type: object
+ *                         gallery:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                     policyPositions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           issue:
+ *                             type: string
+ *                           position:
+ *                             type: string
+ *                           stance:
+ *                             type: string
+ *                             enum: [for, against, neutral, nuanced]
+ *                           confidence:
+ *                             type: number
+ *                             minimum: 0
+ *                             maximum: 1
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.get('/:id/enhanced', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`🤖 Loading enhanced profile for candidate ${id}`);
+
+    const candidate = await EnhancedCandidateService.getCandidateProfile(id);
+
+    if (!candidate) {
+      return res.status(404).json({
+        error: 'Candidate not found',
+        message: 'The requested candidate profile could not be found'
+      });
+    }
+
+    // Track enhanced profile requests
+    metricsService.incrementCounter('candidate_enhanced_profile_requests', {
+      candidateId: id,
+      hasAIAnalysis: (candidate.policyPositions?.length || 0) > 0 ? 'true' : 'false'
+    });
+
+    res.json({
+      candidate,
+      aiAnalysisEnabled: (candidate.policyPositions?.length || 0) > 0,
+      photoCount: (candidate.photos.gallery?.length || 0) + (candidate.photos.avatar ? 1 : 0) + (candidate.photos.campaignHeadshot ? 1 : 0)
+    });
+
+  } catch (error) {
+    console.error('Enhanced candidate profile error:', error);
+    res.status(500).json({ error: 'Failed to load enhanced candidate profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/candidates/compare:
+ *   post:
+ *     tags: [Candidates]
+ *     summary: AI-powered candidate comparison
+ *     description: Compare multiple candidates using Qwen3 AI analysis
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               candidateIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 minItems: 2
+ *                 maxItems: 6
+ *                 description: List of candidate IDs to compare (2-6 candidates)
+ *               officeId:
+ *                 type: string
+ *                 description: Optional office ID to ensure candidates are for same office
+ *             required:
+ *               - candidateIds
+ *     responses:
+ *       200:
+ *         description: AI-powered candidate comparison
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 comparison:
+ *                   type: object
+ *                   properties:
+ *                     candidates:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     sharedIssues:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           issue:
+ *                             type: string
+ *                           positions:
+ *                             type: array
+ *                           agreement:
+ *                             type: string
+ *                             enum: [agree, disagree, mixed, unclear]
+ *                           summary:
+ *                             type: string
+ *                     uniqueIssues:
+ *                       type: array
+ *                     overallSummary:
+ *                       type: string
+ *                     generatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 aiEnabled:
+ *                   type: boolean
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         description: Comparison failed
+ */
+router.post('/compare', async (req, res) => {
+  try {
+    const { candidateIds, officeId } = req.body;
+
+    if (!candidateIds || !Array.isArray(candidateIds)) {
+      return res.status(400).json({
+        error: 'Invalid candidate IDs',
+        message: 'candidateIds must be an array of candidate IDs'
+      });
+    }
+
+    if (candidateIds.length < 2) {
+      return res.status(400).json({
+        error: 'Insufficient candidates',
+        message: 'At least 2 candidates are required for comparison'
+      });
+    }
+
+    if (candidateIds.length > 6) {
+      return res.status(400).json({
+        error: 'Too many candidates',
+        message: 'Maximum 6 candidates can be compared at once'
+      });
+    }
+
+    console.log(`🤖 Starting AI-powered comparison of ${candidateIds.length} candidates`);
+
+    const comparison = await EnhancedCandidateService.compareCandidates(candidateIds, officeId);
+
+    if (!comparison) {
+      return res.status(500).json({
+        error: 'Comparison failed',
+        message: 'Failed to generate candidate comparison'
+      });
+    }
+
+    // Track comparison requests
+    metricsService.incrementCounter('candidate_ai_comparisons', {
+      candidateCount: candidateIds.length.toString(),
+      hasOfficeFilter: officeId ? 'true' : 'false'
+    });
+
+    res.json({
+      comparison: comparison.comparison,
+      candidates: comparison.candidates,
+      aiEnabled: true,
+      comparisonType: 'ai_powered',
+      candidateCount: comparison.candidates.length
+    });
+
+  } catch (error: any) {
+    console.error('Candidate comparison error:', error);
+    
+    if (error.message.includes('At least 2 candidates')) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: 'Comparison failed',
+      message: 'Failed to generate candidate comparison'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/candidates/office/{officeId}/enhanced:
+ *   get:
+ *     tags: [Candidates]
+ *     summary: Get enhanced candidates for an office
+ *     description: Get all candidates for an office with AI analysis and photos
+ *     parameters:
+ *       - in: path
+ *         name: officeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Office ID
+ *       - in: query
+ *         name: includeAnalysis
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include AI policy analysis (may be slower)
+ *     responses:
+ *       200:
+ *         description: Enhanced candidates for the office
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 candidates:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Candidate'
+ *                 count:
+ *                   type: integer
+ *                 officeId:
+ *                   type: string
+ *                 aiAnalysisIncluded:
+ *                   type: boolean
+ */
+router.get('/office/:officeId/enhanced', async (req, res) => {
+  try {
+    const { officeId } = req.params;
+    const { includeAnalysis } = req.query;
+
+    const includeAI = includeAnalysis !== 'false';
+
+    console.log(`📋 Loading enhanced candidates for office ${officeId} (AI: ${includeAI})`);
+
+    const candidates = await EnhancedCandidateService.getCandidatesByOffice(officeId, includeAI);
+
+    // Track office candidate requests
+    metricsService.incrementCounter('office_enhanced_candidates_requests', {
+      officeId,
+      candidateCount: candidates.length.toString(),
+      aiEnabled: includeAI ? 'true' : 'false'
+    });
+
+    res.json({
+      candidates,
+      count: candidates.length,
+      officeId,
+      aiAnalysisIncluded: includeAI
+    });
+
+  } catch (error) {
+    console.error('Enhanced office candidates error:', error);
+    res.status(500).json({ error: 'Failed to load enhanced candidates for office' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/candidates/ai/health:
+ *   get:
+ *     tags: [Candidates]
+ *     summary: Check AI analysis system health
+ *     description: Test Qwen3 AI system connectivity and performance
+ *     responses:
+ *       200:
+ *         description: AI system status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 qwen3:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [healthy, unhealthy]
+ *                     model:
+ *                       type: string
+ *                     details:
+ *                       type: object
+ *                 capabilities:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       503:
+ *         description: AI system unavailable
+ */
+router.get('/ai/health', async (req, res) => {
+  try {
+    console.log('🤖 Checking AI analysis system health...');
+
+    const qwenHealth = await QwenService.healthCheck();
+    const usageStats = await QwenService.getUsageStats();
+
+    const response = {
+      qwen3: qwenHealth,
+      usageStats,
+      capabilities: [
+        'Policy position analysis',
+        'Multi-candidate comparison',
+        'Neutral summary generation',
+        'Missing position handling',
+        'Stance classification (for/against/neutral/nuanced)',
+        'Confidence scoring',
+        'Evidence extraction'
+      ],
+      lastChecked: new Date()
+    };
+
+    if (qwenHealth.status === 'healthy') {
+      res.json(response);
+    } else {
+      res.status(503).json(response);
+    }
+
+  } catch (error) {
+    console.error('AI health check error:', error);
+    res.status(503).json({
+      qwen3: { status: 'unhealthy', error: 'Health check failed' },
+      capabilities: [],
+      lastChecked: new Date()
+    });
+  }
+});
+
+// POST /api/candidates/register - Register as a candidate
+router.post('/register', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    
+    // Validate input
+    const validationResult = candidateRegistrationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid registration data',
+        errors: validationResult.error.issues
+      });
+    }
+    
+    const validatedData = validationResult.data;
+    
+    // Check if user already has a pending or active candidate registration
+    const existingRegistration = await prisma.candidateRegistration.findFirst({
+      where: {
+        userId,
+        status: { in: ['PENDING_VERIFICATION', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'APPROVED'] }
+      }
+    });
+    
+    if (existingRegistration) {
+      return res.status(400).json({
+        success: false,
+        message: `You already have a ${existingRegistration.status.replace('_', ' ')} candidate registration`
+      });
+    }
+    
+    // Generate registration ID for tracking
+    const registrationId = crypto.randomBytes(16).toString('hex');
+    
+    // Calculate registration fee based on office level
+    const fees = {
+      local: 50.00,
+      regional: 100.00, 
+      state: 200.00,
+      federal: 400.00,
+      presidential: 1000.00
+    };
+    
+    let registrationFee = fees[validatedData.officeLevel];
+    
+    // Check for potential fee waivers
+    let feeWaiverStatus = 'none';
+    let finalFee = registrationFee;
+    
+    if (validatedData.hasFinancialHardship) {
+      feeWaiverStatus = 'hardship_pending';
+      // Fee waiver will be reviewed by admin
+    }
+    
+    if (validatedData.communityEndorsements && validatedData.communityEndorsements.length >= 10) {
+      // Community endorsement fee reduction (50% off)
+      finalFee = registrationFee * 0.5;
+      feeWaiverStatus = 'community_endorsed';
+    }
+    
+    // Create candidate registration record
+    const registration = await prisma.candidateRegistration.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId,
+        registrationId,
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        street: validatedData.address.street,
+        city: validatedData.address.city,
+        state: validatedData.address.state,
+        zipCode: validatedData.address.zipCode,
+        district: validatedData.address.district,
+        positionTitle: validatedData.position.title,
+        positionLevel: validatedData.position.level,
+        positionDistrict: validatedData.position.district,
+        electionDate: validatedData.position.electionDate,
+        campaignName: validatedData.campaign.name,
+        campaignWebsite: validatedData.campaign.website,
+        campaignSlogan: validatedData.campaign.slogan,
+        campaignDescription: validatedData.campaign.description,
+        officeLevel: validatedData.officeLevel,
+        registrationFee: finalFee,
+        originalFee: registrationFee,
+        feeWaiverStatus,
+        hasFinancialHardship: validatedData.hasFinancialHardship,
+        hardshipReason: validatedData.hardshipReason,
+        communityEndorsementCount: validatedData.communityEndorsements?.length || 0,
+        status: 'PENDING_VERIFICATION',
+        termsAcceptedAt: new Date()
+      }
+    });
+    
+    // Track registration attempts
+    metricsService.incrementCounter('candidate_registrations_initiated');
+    
+    res.status(201).json({
+      success: true,
+      message: 'Candidate registration initiated',
+      registration: {
+        id: registration.id,
+        registrationId,
+        status: registration.status,
+        officeLevel: registration.officeLevel,
+        registrationFee: finalFee,
+        originalFee: registrationFee,
+        feeWaiverStatus,
+        nextSteps: {
+          verification: 'Complete ID.me verification',
+          payment: feeWaiverStatus === 'hardship_pending' ? 'Fee waiver under review' : `Payment of $${finalFee} required after verification`,
+          approval: 'Admin review after payment'
+        },
+        policies: {
+          refund_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours from now
+          withdrawal_lockout: '7 days after refund before re-registration allowed'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error registering candidate:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register candidate'
+    });
+  }
+});
+
+// POST /api/candidates/registration/:id/verify-idme - Handle ID.me verification
+router.post('/registration/:id/verify-idme', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { verificationToken, idmeUserId, verified, userData } = req.body;
+    
+    const registration = await prisma.candidateRegistration.findFirst({
+      where: {
+        id,
+        userId: req.user!.id
+      }
+    });
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found'
+      });
+    }
+    
+    if (verified) {
+      await prisma.candidateRegistration.update({
+        where: { id },
+        data: {
+          idmeVerified: true,
+          idmeUserId,
+          idmeVerifiedAt: new Date(),
+          status: 'PENDING_PAYMENT',
+          // Store verified identity data
+          verifiedFirstName: userData?.firstName,
+          verifiedLastName: userData?.lastName,
+          verifiedEmail: userData?.email
+        }
+      });
+      
+      metricsService.incrementCounter('candidate_idme_verifications_success');
+      
+      res.json({
+        success: true,
+        message: 'ID.me verification successful',
+        nextStep: 'payment'
+      });
+    } else {
+      metricsService.incrementCounter('candidate_idme_verifications_failed');
+      
+      res.status(400).json({
+        success: false,
+        message: 'ID.me verification failed'
+      });
+    }
+  } catch (error) {
+    console.error('Error processing ID.me verification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process verification'
+    });
+  }
+});
+
+// POST /api/candidates/registration/:id/payment - Process payment
+router.post('/registration/:id/payment', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod, stripePaymentIntentId } = req.body;
+    
+    const registration = await prisma.candidateRegistration.findFirst({
+      where: {
+        id,
+        userId: req.user!.id
+      }
+    });
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found'
+      });
+    }
+    
+    if (!registration.idmeVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID.me verification required before payment'
+      });
+    }
+    
+    // TODO: Integrate with actual payment processor (Stripe)
+    // For now, simulate payment processing
+    const paymentSuccessful = true;
+    
+    if (paymentSuccessful) {
+      await prisma.candidateRegistration.update({
+        where: { id },
+        data: {
+          status: 'PENDING_APPROVAL',
+          paidAt: new Date(),
+          paymentIntentId: stripePaymentIntentId,
+          paymentMethod
+        }
+      });
+      
+      // TODO: Notify admins of new candidate pending approval
+      
+      metricsService.incrementCounter('candidate_payments_success');
+      
+      res.json({
+        success: true,
+        message: 'Payment processed successfully',
+        nextStep: 'admin_approval'
+      });
+    } else {
+      metricsService.incrementCounter('candidate_payments_failed');
+      
+      res.status(400).json({
+        success: false,
+        message: 'Payment processing failed'
+      });
+    }
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process payment'
+    });
+  }
+});
+
+// POST /api/candidates/registration/:id/withdraw - Withdraw registration with potential refund
+router.post('/registration/:id/withdraw', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    const registration = await prisma.candidateRegistration.findFirst({
+      where: {
+        id,
+        userId: req.user!.id
+      }
+    });
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found'
+      });
+    }
+    
+    if (registration.status === 'REJECTED' || registration.status === 'REFUNDED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration already closed'
+      });
+    }
+    
+    const now = new Date();
+    const registrationTime = new Date(registration.createdAt);
+    const hoursSinceRegistration = (now.getTime() - registrationTime.getTime()) / (1000 * 60 * 60);
+    
+    let refundEligible = false;
+    let refundAmount = 0;
+    
+    // 48-hour no-questions-asked refund window
+    if (hoursSinceRegistration <= 48) {
+      refundEligible = true;
+      refundAmount = registration.registrationFee || 0;
+      
+      // Create 7-day lockout record
+      const lockoutUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      
+      await prisma.candidateRegistration.update({
+        where: { id },
+        data: {
+          status: 'REFUNDED',
+          rejectedAt: now,
+          rejectionReason: `Withdrawn by candidate: ${reason || 'No reason provided'}`,
+          refundIssued: true
+        }
+      });
+      
+      // TODO: Process actual refund through payment processor
+      // TODO: Create lockout record to prevent re-registration for 7 days
+      
+      metricsService.incrementCounter('candidate_registrations_withdrawn_48h');
+      
+      res.json({
+        success: true,
+        message: 'Registration withdrawn successfully',
+        refund: {
+          eligible: true,
+          amount: refundAmount,
+          processing_time: '3-5 business days'
+        },
+        lockout: {
+          until: lockoutUntil,
+          message: 'You cannot register again for 7 days to prevent spam'
+        }
+      });
+    } else {
+      // Outside 48-hour window - mark as withdrawn but no automatic refund
+      await prisma.candidateRegistration.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          rejectedAt: now,
+          rejectionReason: `Withdrawn by candidate after 48h: ${reason || 'No reason provided'}`,
+          refundIssued: false
+        }
+      });
+      
+      metricsService.incrementCounter('candidate_registrations_withdrawn_late');
+      
+      res.json({
+        success: true,
+        message: 'Registration withdrawn',
+        refund: {
+          eligible: false,
+          message: '48-hour refund window has passed. Contact support@unitedwerise.org for special circumstances.'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error withdrawing registration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process withdrawal'
+    });
+  }
+});
+
+// POST /api/candidates/request-waiver - Request fee waiver
+router.post('/request-waiver', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { registrationId, waiverType, reason, documentation } = req.body;
+    
+    const registration = await prisma.candidateRegistration.findFirst({
+      where: {
+        id: registrationId,
+        userId: req.user!.id,
+        status: { in: ['PENDING_VERIFICATION', 'PENDING_PAYMENT'] }
+      }
+    });
+    
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found or not eligible for waiver'
+      });
+    }
+    
+    // Update registration to show waiver requested
+    await prisma.candidateRegistration.update({
+      where: { id: registrationId },
+      data: {
+        feeWaiverStatus: waiverType === 'hardship' ? 'hardship_pending' : 'community_pending',
+        hardshipReason: reason
+      }
+    });
+    
+    // TODO: Notify admins of waiver request
+    // TODO: Store documentation files
+    
+    metricsService.incrementCounter('candidate_waiver_requests', { type: waiverType });
+    
+    res.json({
+      success: true,
+      message: 'Waiver request submitted for admin review',
+      estimatedReview: '2-3 business days',
+      contact: 'waivers@unitedwerise.org'
+    });
+  } catch (error) {
+    console.error('Error requesting waiver:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit waiver request'
+    });
+  }
+});
+
+// GET /api/candidates/my-registrations - Get user's candidate registrations
+router.get('/my-registrations', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    
+    const registrations = await prisma.candidateRegistration.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Check for any active lockouts
+    const now = new Date();
+    const recentWithdrawals = registrations.filter(r => 
+      r.status === 'REFUNDED' && 
+      r.rejectedAt &&
+      (now.getTime() - new Date(r.rejectedAt).getTime()) < (7 * 24 * 60 * 60 * 1000)
+    );
+    
+    const isLocked = recentWithdrawals.length > 0;
+    const lockoutUntil = isLocked ? new Date(new Date(recentWithdrawals[0].rejectedAt!).getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+    
+    res.json({
+      success: true,
+      registrations,
+      count: registrations.length,
+      lockout: {
+        active: isLocked,
+        until: lockoutUntil,
+        message: isLocked ? 'Registration locked due to recent withdrawal. Please wait before registering again.' : null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching registrations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch registrations'
+    });
   }
 });
 

@@ -1,0 +1,327 @@
+# Topic API Response Examples and Documentation
+
+components:
+  examples:
+    # Trending Topics Response
+    TrendingTopicsResponse:
+      summary: "Trending topics with engagement data"
+      value:
+        topics:
+          - id: "clp3k5m2x0001abc123def456"
+            title: "Healthcare Reform & Policy"
+            description: "Discussion about healthcare policy changes and universal healthcare implementation"
+            category: "healthcare"
+            argumentsFor:
+              - "Universal healthcare would reduce administrative costs and provide coverage for all citizens"
+              - "Evidence from other countries shows successful implementation of single-payer systems"
+              - "Healthcare costs would be more predictable and controlled under government oversight"
+            argumentsAgainst:
+              - "Implementation costs are too high and would require significant tax increases"
+              - "Market-based solutions provide more choice and innovation than government systems"
+              - "Wait times for non-emergency procedures could increase under government-run healthcare"
+            neutralSummary: "The debate centers on cost vs access, with supporters emphasizing universal coverage benefits and critics focusing on implementation challenges and fiscal concerns."
+            complexityScore: 0.8
+            evidenceQuality: 0.6
+            controversyScore: 0.7
+            postCount: 25
+            participantCount: 18
+            viewCount: 342
+            trendingScore: 8.5
+            isActive: true
+            lastActivityAt: "2024-08-07T15:30:00.000Z"
+            state: null
+            district: null
+            createdAt: "2024-08-06T09:15:00.000Z"
+            updatedAt: "2024-08-07T15:30:00.000Z"
+            posts:
+              - post:
+                  id: "clp3k5n1a0002xyz789ghi012"
+                  content: "Healthcare reform is crucial for our nation's economic stability. We need to look at successful models from other countries."
+                  isPolitical: true
+                  createdAt: "2024-08-06T14:22:00.000Z"
+                  author:
+                    id: "clp3k5o2b0003lmn345opq678"
+                    username: "policy_analyst_jane"
+                    firstName: "Jane"
+                    lastName: "Smith"
+                    avatar: "https://example.com/avatars/jane.jpg"
+                relevanceScore: 0.95
+            subTopics:
+              - id: "clp3k5p3c0004rst901uvw234"
+                title: "Funding Mechanisms"
+                summary: "Discussion of various approaches to funding healthcare reforms including taxes, premiums, and hybrid models"
+                commentCount: 8
+                participantCount: 6
+        count: 1
+
+    # Topic Details Response
+    TopicDetailsResponse:
+      summary: "Complete topic information with posts and comments"
+      value:
+        id: "clp3k5m2x0001abc123def456"
+        title: "Healthcare Reform & Policy"
+        description: "Discussion about healthcare policy changes and universal healthcare implementation"
+        category: "healthcare"
+        argumentsFor:
+          - "Universal healthcare would reduce administrative costs"
+          - "Evidence from other countries shows successful implementation"
+        argumentsAgainst:
+          - "Implementation costs are too high"
+          - "Market-based solutions provide more choice"
+        neutralSummary: "The debate centers on cost vs access, with valid concerns on both sides."
+        complexityScore: 0.8
+        evidenceQuality: 0.6
+        controversyScore: 0.7
+        postCount: 25
+        participantCount: 18
+        viewCount: 343
+        trendingScore: 8.5
+        isActive: true
+        lastActivityAt: "2024-08-07T15:30:00.000Z"
+        posts:
+          - post:
+              id: "clp3k5n1a0002xyz789ghi012"
+              content: "Healthcare reform is crucial for our nation's economic stability."
+              isPolitical: true
+              createdAt: "2024-08-06T14:22:00.000Z"
+              author:
+                id: "clp3k5o2b0003lmn345opq678"
+                username: "policy_analyst_jane"
+                firstName: "Jane"
+                lastName: "Smith"
+                verified: true
+            relevanceScore: 0.95
+        subTopics:
+          - id: "clp3k5p3c0004rst901uvw234"
+            title: "Funding Mechanisms"
+            summary: "Discussion of funding approaches"
+            commentCount: 8
+            participantCount: 6
+            comments:
+              - id: "clp3k5q4d0005bcd567efg890"
+                content: "Tax-based funding seems most equitable, but we need to consider economic impacts."
+                authorId: "clp3k5o2b0003lmn345opq678"
+                author:
+                  username: "policy_analyst_jane"
+                  firstName: "Jane"
+                  lastName: "Smith"
+                  avatar: "https://example.com/avatars/jane.jpg"
+                sentiment: 0.1
+                hostilityScore: 0.0
+                argumentStrength: 0.7
+                evidenceLevel: 0.4
+                topicRelevance: 0.9
+                createdAt: "2024-08-07T10:15:00.000Z"
+                replies: []
+        topicComments:
+          - id: "clp3k5r5e0006hij123klm456"
+            content: "This is a complex issue that requires careful consideration of multiple perspectives."
+            authorId: "clp3k5s6f0007nop789qrs012"
+            author:
+              username: "concerned_citizen"
+              firstName: "Mike"
+              lastName: "Johnson"
+              avatar: null
+            sentiment: 0.0
+            hostilityScore: 0.0
+            argumentStrength: 0.6
+            evidenceLevel: 0.2
+            topicRelevance: 0.8
+            createdAt: "2024-08-07T12:00:00.000Z"
+            replies:
+              - id: "clp3k5t7g0008tuv345wxy678"
+                content: "I agree, we need bipartisan solutions."
+                authorId: "clp3k5u8h0009zab901cde234"
+                author:
+                  username: "bipartisan_voter"
+                  firstName: "Sarah"
+                  lastName: "Davis"
+                createdAt: "2024-08-07T13:30:00.000Z"
+
+    # Topic Comment Response
+    TopicCommentResponse:
+      summary: "Successfully created topic comment"
+      value:
+        message: "Comment added successfully"
+        comment:
+          id: "clp3k5v9i0010fgh567ijk890"
+          content: "I think this perspective overlooks the implementation challenges we've seen in other states."
+          authorId: "clp3k5w0j0011lmn123opq456"
+          author:
+            id: "clp3k5w0j0011lmn123opq456"
+            username: "state_policy_expert"
+            firstName: "Alex"
+            lastName: "Rivera"
+            avatar: "https://example.com/avatars/alex.jpg"
+          topicId: "clp3k5m2x0001abc123def456"
+          subTopicId: null
+          parentId: null
+          sentiment: -0.1
+          hostilityScore: 0.0
+          argumentStrength: 0.6
+          evidenceLevel: 0.3
+          topicRelevance: 0.8
+          createdAt: "2024-08-07T16:45:00.000Z"
+          updatedAt: "2024-08-07T16:45:00.000Z"
+
+    # Topic Analysis Response
+    TopicAnalysisResponse:
+      summary: "Topic analysis completion status"
+      value:
+        message: "Topic analysis completed successfully"
+        topicsCreated: 5
+        postsAnalyzed: 147
+
+    # Topic Search Response
+    TopicSearchResponse:
+      summary: "Search results with metadata"
+      value:
+        topics:
+          - id: "clp3k5m2x0001abc123def456"
+            title: "Climate Change & Environmental Policy"
+            description: "Discussion about climate action and environmental regulations"
+            category: "environment"
+            postCount: 18
+            participantCount: 12
+            viewCount: 156
+            trendingScore: 6.8
+            createdAt: "2024-08-06T08:30:00.000Z"
+        count: 1
+        query: "climate"
+        category: "environment"
+
+    # Error Responses
+    TopicNotFoundError:
+      summary: "Topic not found"
+      value:
+        error: "Not Found"
+        message: "Topic not found"
+
+    TopicValidationError:
+      summary: "Comment validation failed"
+      value:
+        error: "Validation failed"
+        message: "Comment content is required"
+        details:
+          - field: "content"
+            message: "Content must be between 1 and 2000 characters"
+
+    InactiveTopicError:
+      summary: "Topic is inactive"
+      value:
+        error: "Bad Request"
+        message: "Cannot comment on inactive topic"
+
+    AdminRequiredError:
+      summary: "Admin access required"
+      value:
+        error: "Forbidden"
+        message: "Admin or moderator access required"
+
+    TopicAnalysisError:
+      summary: "Analysis failed"
+      value:
+        error: "Internal Server Error"
+        message: "Topic analysis failed"
+
+    # Election Examples
+    ElectionResponse:
+      summary: "Election with candidates and ballot measures"
+      value:
+        elections:
+          - id: "clp3k5x1k0012rst789uvw012"
+            name: "2024 General Election"
+            type: "GENERAL"
+            level: "FEDERAL"
+            date: "2024-11-05T00:00:00.000Z"
+            registrationDeadline: "2024-10-15T23:59:59.000Z"
+            state: "CA"
+            county: null
+            city: null
+            district: null
+            isActive: true
+            description: "Federal general election for President, Congress, and state offices"
+            officialUrl: "https://sos.ca.gov/elections"
+            offices:
+              - id: "clp3k5y2l0013xyz345abc678"
+                title: "President"
+                level: "FEDERAL"
+                description: "President of the United States"
+                state: "CA"
+                candidates:
+                  - id: "clp3k5z3m0014def901ghi234"
+                    name: "John Smith"
+                    party: "Democratic"
+                    isIncumbent: false
+                    campaignWebsite: "https://johnsmith2024.com"
+                    platformSummary: "Fighting for working families with policies focused on healthcare, education, and climate action."
+                    keyIssues: ["healthcare", "economy", "environment"]
+                    isVerified: true
+                    financialData:
+                      totalRaised: 150000.00
+                      totalSpent: 75000.00
+                      cashOnHand: 75000.00
+            ballotMeasures: []
+        count: 1
+
+    # Candidate Examples
+    CandidateProfileResponse:
+      summary: "Complete candidate profile with endorsements"
+      value:
+        id: "clp3k5z3m0014def901ghi234"
+        name: "John Smith"
+        party: "Democratic"
+        isIncumbent: false
+        platformSummary: "Fighting for working families with comprehensive policies on healthcare, education, and environmental protection."
+        keyIssues: ["healthcare", "economy", "environment", "education"]
+        campaignWebsite: "https://johnsmith2024.com"
+        campaignEmail: "contact@johnsmith2024.com"
+        campaignPhone: "+1-555-SMITH-24"
+        isVerified: true
+        isWithdrawn: false
+        office:
+          id: "clp3k5y2l0013xyz345abc678"
+          title: "Governor"
+          level: "STATE"
+          state: "CA"
+          election:
+            id: "clp3k5x1k0012rst789uvw012"
+            name: "2024 General Election"
+            date: "2024-11-05T00:00:00.000Z"
+        user:
+          id: "clp3k60no0015jkl567mno890"
+          username: "johnsmith_ca"
+          firstName: "John"
+          lastName: "Smith"
+          verified: true
+          avatar: "https://example.com/avatars/johnsmith.jpg"
+        financialData:
+          totalRaised: 150000.00
+          totalSpent: 75000.00
+          cashOnHand: 75000.00
+          debts: 0.00
+          individualDonations: 120000.00
+          pacDonations: 25000.00
+          selfFunding: 5000.00
+          reportingPeriod: "Q2 2024"
+          lastUpdated: "2024-07-31T23:59:59.000Z"
+        endorsements:
+          - id: "clp3k61op0016pqr123stu456"
+            reason: "Strong advocate for healthcare reform and environmental protection"
+            isPublic: true
+            createdAt: "2024-08-01T14:30:00.000Z"
+            user:
+              username: "environmental_advocate"
+              firstName: "Jane"
+              lastName: "Doe"
+              avatar: "https://example.com/avatars/jane.jpg"
+
+    EndorsementResponse:
+      summary: "Successful endorsement"
+      value:
+        message: "Endorsement added successfully"
+        endorsement:
+          id: "clp3k62pq0017vwx789yza012"
+          reason: "Strong record on environmental issues and commitment to renewable energy"
+          isPublic: true
+          createdAt: "2024-08-07T16:45:00.000Z"

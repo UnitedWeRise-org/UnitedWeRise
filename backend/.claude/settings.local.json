@@ -7,7 +7,14 @@
       "Bash(npx prisma:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(docker compose:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(python:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }

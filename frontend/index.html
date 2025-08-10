@@ -2429,14 +2429,6 @@
                         </div>
                     `;
                 }
-                } else {
-                    document.getElementById('myFeedPosts').innerHTML = `
-                        <div style="text-align: center; padding: 2rem;">
-                            <p>Unable to load feed. Please try again.</p>
-                            <button onclick="showMyFeed()" class="btn">Retry</button>
-                        </div>
-                    `;
-                }
             } catch (error) {
                 console.error('Feed loading error:', error);
                 document.getElementById('myFeedPosts').innerHTML = `

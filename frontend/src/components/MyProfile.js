@@ -414,8 +414,7 @@ class MyProfile {
             const response = await window.apiCall('/posts', {
                 method: 'POST',
                 body: JSON.stringify({ 
-                    content: content,
-                    isPolitical: false 
+                    content: content
                 })
             });
 

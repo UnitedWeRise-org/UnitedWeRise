@@ -40,7 +40,7 @@ export class TopicService {
         where: {
           createdAt: { gte: cutoffDate },
           embedding: {
-            not: { equals: [] }
+            isEmpty: false
           }
         },
         include: {
@@ -106,6 +106,8 @@ export class TopicService {
             argumentsFor: cluster.argumentsFor,
             argumentsAgainst: cluster.argumentsAgainst,
             category: cluster.category,
+            complexityScore: this.calculateComplexityScore(cluster),
+            evidenceQuality: this.calculateEvidenceQuality(cluster),
             postCount: cluster.posts.length,
             participantCount: new Set(cluster.posts.map(p => p.authorId)).size,
             trendingScore: this.calculateTrendingScore(cluster),
@@ -319,7 +321,10 @@ export class TopicService {
         parentId,
         embedding: analysis.embedding,
         sentiment: analysis.sentiment,
-        hostilityScore: analysis.hostilityScore
+        hostilityScore: analysis.hostilityScore,
+        argumentStrength: analysis.argumentStrength || 0,
+        evidenceLevel: analysis.evidenceLevel || 0,
+        topicRelevance: analysis.topicRelevance || 1.0
       },
       include: {
         author: {
@@ -500,16 +505,18 @@ export class TopicService {
         cluster.title = 'Discussion Topic';
       }
 
-      // Basic argument extraction (can be enhanced with AI)
+      // Extract arguments based on content analysis rather than sentiment
       cluster.argumentsFor = cluster.posts
-        .filter(p => (EmbeddingService as any).estimateSentiment?.(p.content) > 0)
+        .filter(p => this.isPositiveArgument(p.content))
+        .sort((a, b) => b.content.length - a.content.length) // Sort by content length as simple quality proxy
         .slice(0, 3)
-        .map(p => p.content.slice(0, 200));
+        .map(p => this.extractKeyPoint(p.content));
       
       cluster.argumentsAgainst = cluster.posts
-        .filter(p => (EmbeddingService as any).estimateSentiment?.(p.content) < 0)
+        .filter(p => this.isNegativeArgument(p.content))
+        .sort((a, b) => b.content.length - a.content.length) // Sort by content length as simple quality proxy
         .slice(0, 3)
-        .map(p => p.content.slice(0, 200));
+        .map(p => this.extractKeyPoint(p.content));
 
       // Set category based on content analysis
       const topics = cluster.posts.flatMap(p => 
@@ -547,5 +554,130 @@ export class TopicService {
     score *= (1 + (topic.controversyScore || 0) * 0.5);
     
     return Math.max(0, score);
+  }
+
+  private static calculateComplexityScore(cluster: any): number {
+    // Analyze how nuanced and multi-faceted the discussion is
+    const uniqueArgumentTypes = new Set();
+    let totalWords = 0;
+    let questionsCount = 0;
+    
+    cluster.posts.forEach((post: any) => {
+      const content = post.content.toLowerCase();
+      totalWords += content.split(/\s+/).length;
+      
+      // Count questions (indicates consideration of complexity)
+      questionsCount += (content.match(/\?/g) || []).length;
+      
+      // Identify different argument types
+      if (content.includes('however') || content.includes('but') || content.includes('although')) {
+        uniqueArgumentTypes.add('counterargument');
+      }
+      if (content.includes('evidence') || content.includes('study') || content.includes('research')) {
+        uniqueArgumentTypes.add('evidence_based');
+      }
+      if (content.includes('experience') || content.includes('personally')) {
+        uniqueArgumentTypes.add('experiential');
+      }
+      if (content.includes('cost') || content.includes('budget') || content.includes('economic')) {
+        uniqueArgumentTypes.add('economic');
+      }
+    });
+    
+    const avgWordsPerPost = totalWords / cluster.posts.length;
+    const questionRatio = questionsCount / cluster.posts.length;
+    const argumentDiversity = uniqueArgumentTypes.size;
+    
+    // Score based on multiple factors
+    let score = 0;
+    score += Math.min(0.3, avgWordsPerPost / 100); // Longer posts suggest more thought
+    score += Math.min(0.3, questionRatio * 2); // Questions suggest complexity consideration
+    score += Math.min(0.4, argumentDiversity / 5); // Diverse argument types
+    
+    return Math.max(0, Math.min(1, score));
+  }
+  
+  private static calculateEvidenceQuality(cluster: any): number {
+    let evidenceScore = 0;
+    let totalPosts = cluster.posts.length;
+    
+    cluster.posts.forEach((post: any) => {
+      const content = post.content.toLowerCase();
+      let postEvidence = 0;
+      
+      // Evidence indicators
+      const evidenceKeywords = [
+        'study', 'research', 'data', 'statistics', 'survey',
+        'report', 'analysis', 'university', 'published',
+        'source', 'according to', 'expert'
+      ];
+      
+      evidenceKeywords.forEach(keyword => {
+        if (content.includes(keyword)) postEvidence += 0.2;
+      });
+      
+      // Links/URLs suggest external sources
+      if (post.content.includes('http') || post.content.includes('www.')) {
+        postEvidence += 0.3;
+      }
+      
+      // Specific numbers/data
+      if (post.content.match(/\d+%/) || post.content.match(/\$[\d,]+/)) {
+        postEvidence += 0.2;
+      }
+      
+      evidenceScore += Math.min(1, postEvidence);
+    });
+    
+    return evidenceScore / totalPosts; // Average evidence quality
+  }
+  
+  private static isPositiveArgument(content: string): boolean {
+    const lowerContent = content.toLowerCase();
+    const positiveIndicators = [
+      'supports', 'benefits', 'advantages', 'helps', 'improves',
+      'good for', 'positive', 'works', 'successful', 'effective',
+      'should', 'will help', 'can improve', 'enables', 'strengthens'
+    ];
+    
+    return positiveIndicators.some(indicator => lowerContent.includes(indicator));
+  }
+  
+  private static isNegativeArgument(content: string): boolean {
+    const lowerContent = content.toLowerCase();
+    const negativeIndicators = [
+      'problems', 'issues', 'concerns', 'harmful', 'dangerous',
+      'won\'t work', 'fails', 'ineffective', 'waste', 'costly',
+      'shouldn\'t', 'will hurt', 'damages', 'weakens', 'threatens'
+    ];
+    
+    return negativeIndicators.some(indicator => lowerContent.includes(indicator));
+  }
+  
+  private static extractKeyPoint(content: string): string {
+    // Extract the most important sentence or phrase
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    // Find sentence with most substantive content
+    let bestSentence = sentences[0] || content;
+    let maxScore = 0;
+    
+    sentences.forEach(sentence => {
+      let score = 0;
+      const lowerSentence = sentence.toLowerCase();
+      
+      // Score based on key argument indicators
+      if (lowerSentence.includes('because')) score += 2;
+      if (lowerSentence.includes('evidence') || lowerSentence.includes('data')) score += 2;
+      if (lowerSentence.includes('will') || lowerSentence.includes('would')) score += 1;
+      if (sentence.length > 20 && sentence.length < 200) score += 1;
+      
+      if (score > maxScore) {
+        maxScore = score;
+        bestSentence = sentence;
+      }
+    });
+    
+    return bestSentence.trim().slice(0, 200);
   }
 }

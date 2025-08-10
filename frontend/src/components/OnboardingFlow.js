@@ -897,7 +897,8 @@ class OnboardingFlow {
 
     async loadSteps() {
         // Don't load steps if user is not logged in
-        if (!authToken || authToken === 'None') {
+        const token = localStorage.getItem('authToken');
+        if (!token || token === 'None') {
             console.log('No auth token available, skipping onboarding steps load');
             return;
         }
@@ -906,7 +907,7 @@ class OnboardingFlow {
             const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
             const response = await fetch(`${API_BASE}/onboarding/steps`, {
                 headers: {
-                    'Authorization': `Bearer ${authToken}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -1202,6 +1203,7 @@ class OnboardingFlow {
 
     async skipStep() {
         const currentStep = this.steps[this.currentStepIndex];
+        const token = localStorage.getItem('authToken');
         
         if (currentStep.required) {
             this.showMessage('This step is required', 'error');
@@ -1214,7 +1216,7 @@ class OnboardingFlow {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ stepId: currentStep.id })
             });
@@ -1279,13 +1281,14 @@ class OnboardingFlow {
 
     async completeCurrentStep(step) {
         const stepData = this.stepData[step.id] || this.stepData[step.id.replace('step-', '')];
+        const token = localStorage.getItem('authToken');
         
         const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         const response = await fetch(`${API_BASE}/onboarding/complete-step`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 stepId: step.id,
@@ -1354,12 +1357,13 @@ window.onboardingFlow = onboardingFlow;
 
 // Auto-show onboarding for new users
 document.addEventListener('DOMContentLoaded', async () => {
-    if (authToken) {
+    const token = localStorage.getItem('authToken');
+    if (token) {
         try {
             const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
             const response = await fetch(`${API_BASE}/onboarding/progress`, {
                 headers: {
-                    'Authorization': `Bearer ${authToken}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
             
