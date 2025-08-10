@@ -154,6 +154,7 @@
                 <div class="thumb" onclick="showMyFeed()" title="My Feed" id="feedThumb" style="display: none;">📰 <span class="label">My Feed</span></div>
                 <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+                <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="showMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
@@ -309,18 +310,29 @@
         </div>
     </div>
 
-    <!-- Map Container -->
-    <div id="mapContainer">
-        <button id="mapToggleBtn">Collapse</button>
+    <!-- Map Loading State -->
+    <div id="mapLoadingState" class="map-loading-state">
+        <div class="map-loading-spinner"></div>
+        <div class="map-loading-text">Loading Map...</div>
+    </div>
+
+    <!-- Map Container (hidden initially) -->
+    <div id="mapContainer" style="display: none;">
+        <div class="map-action-buttons">
+            <button class="map-action-btn" onclick="toggleMapView('national')">National</button>
+            <button class="map-action-btn" onclick="toggleMapView('state')">State</button>
+            <button class="map-action-btn" onclick="toggleMapView('local')">Local</button>
+            <button class="map-action-btn primary" id="mapToggleBtn">Collapse</button>
+            <button class="map-action-btn danger" onclick="window.map && window.map.closeMap ? window.map.closeMap() : closeMap()">Close</button>
+        </div>
+        
         <div class="map-controls">
-            <div class="zoom-filters">
-                <label><input type="radio" name="zoomLevel" value="national" checked onchange="setZoomLevel('national')"> National</label>
-                <label><input type="radio" name="zoomLevel" value="state" onchange="setZoomLevel('state')"> State</label>
-                <label><input type="radio" name="zoomLevel" value="local" onchange="setZoomLevel('local')"> Local</label>
-            </div>
             <div class="location-input">
-                <input type="text" id="locationInput" placeholder="Enter location (or use current)" style="width: 200px; padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
-                <button onclick="geocodeAndZoom()" style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-left: 0.25rem;">Go</button>
+                <div class="location-input-title">Location Search</div>
+                <div class="location-input-controls">
+                    <input type="text" id="locationInput" placeholder="Enter address or city">
+                    <button onclick="window.map && window.map.geocodeAndZoom ? window.map.geocodeAndZoom() : geocodeAndZoom()">Go</button>
+                </div>
             </div>
         </div>
         <div id="map"></div>
@@ -361,18 +373,9 @@
                 verifyAndSetUser();
             }
 
-            // Wait for Leaflet to load before initializing map
-            const initMapWhenReady = () => {
-                if (typeof L !== 'undefined') {
-                    initializeMap();
-                } else {
-                    // Check again in 100ms
-                    setTimeout(initMapWhenReady, 100);
-                }
-            };
-            
-            // Start checking immediately
-            initMapWhenReady();
+            // Map initialization is now handled by map-maplibre.js to avoid conflicts
+            // The script automatically initializes when loaded
+            console.log('Map initialization delegated to map-maplibre.js script');
 
             // Show CTA panel if not dismissed
             if (!localStorage.getItem('panelClosed')) {
@@ -932,53 +935,94 @@
 
             showRandomPopups();
 
-            // Toggle map collapse
+            // Toggle map collapse - Updated for MapLibre
             const mapContainer = document.getElementById('mapContainer');
             const toggleBtn = document.getElementById('mapToggleBtn');
-            const resizeObserver = new ResizeObserver(() => {
-                map.invalidateSize();
-            });
-            resizeObserver.observe(mapContainer);
             
-            toggleBtn.addEventListener('click', () => {
-                const isCollapsing = !mapContainer.classList.contains('collapsed');
-                const mapControls = document.querySelector('.map-controls');
-                
-                // Store current zoom level state before collapsing
-                const currentRadio = document.querySelector('input[name="zoomLevel"]:checked');
-                const currentLevel = currentRadio ? currentRadio.value : 'national';
-                
-                // Fade out controls
-                mapControls.classList.add('hiding');
-                
-                // Wait for fade out, then toggle map and fade back in
-                setTimeout(async () => {
-                    mapContainer.classList.toggle('collapsed');
-                    toggleBtn.textContent = isCollapsing ? 'Expand' : 'Collapse';
+            if (toggleBtn) {
+                // Add multiple ways to ensure the button click is captured
+                toggleBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
                     
-                    // Don't set hardcoded zoom - let setZoomLevel handle it properly
-                    // Restore zoom level state and apply proper zoom for current map size
-                    currentZoomLevel = currentLevel;
-                    updateRadioButtonState(currentLevel);
+                    console.log('🔥 BUTTON CLICKED! Event captured');
+                    console.log('🔍 window.map exists:', !!window.map);
+                    console.log('🔍 window.map object:', window.map);
                     
-                    // Apply the zoom level with proper settings for expanded/collapsed state
-                    if (currentLocation || currentLevel === 'national') {
-                        await setZoomLevel(currentLevel);
+                    if (window.map && typeof window.map.toggleCollapsed === 'function') {
+                        console.log('✅ Calling window.map.toggleCollapsed()');
+                        try {
+                            const result = window.map.toggleCollapsed();
+                            console.log('✅ toggleCollapsed result:', result);
+                        } catch (error) {
+                            console.error('❌ Error in toggleCollapsed:', error);
+                        }
+                    } else {
+                        console.log('⚠️ window.map.toggleCollapsed not available, using fallback');
+                        // Direct CSS toggle as fallback
+                        const isCollapsed = mapContainer.classList.contains('collapsed');
+                        mapContainer.classList.toggle('collapsed');
+                        toggleBtn.textContent = isCollapsed ? 'Collapse' : 'Expand';
+                        console.log('⚠️ Fallback toggle applied, collapsed:', !isCollapsed);
                     }
-                    
-                    // Fade controls back in after a short delay for repositioning
-                    setTimeout(() => {
-                        mapControls.classList.remove('hiding');
-                    }, 50);
-                }, 300);
+                }, true); // Use capture phase
                 
-                // CSS handles the main content adjustment automatically
-            });
+                // Also add onclick as backup
+                toggleBtn.onclick = function() {
+                    console.log('🔥 ONCLICK BACKUP FIRED');
+                };
+            }
 
             // Set map instance for zoom controls
             setMapInstance(map);
 
             return map;
+        }
+
+        // MapLibre initialization function
+        function initializeMapLibre() {
+            console.log('initializeMapLibre() called');
+            
+            // Set loading start time for minimum loading duration
+            window.mapLoadStartTime = Date.now();
+            
+            // CRITICAL FIX: Show the map container BEFORE initializing MapLibre
+            // MapLibre needs the container to be visible to measure dimensions correctly
+            const mapContainer = document.getElementById('mapContainer');
+            const loadingState = document.getElementById('mapLoadingState');
+            
+            console.log('Showing map container for MapLibre initialization...');
+            if (mapContainer && loadingState) {
+                // Hide loading state and show map container immediately
+                loadingState.classList.add('hidden');
+                mapContainer.style.display = 'block';
+                console.log('Map container is now visible');
+            }
+            
+            // Initialize MapLibre through the class in map-maplibre.js
+            if (typeof initMapLibre === 'function') {
+                console.log('Found initMapLibre function, calling it...');
+                initMapLibre();
+            } else {
+                console.error('initMapLibre function not found - map-maplibre.js may not have loaded correctly');
+                
+                // Fallback: Initialize directly if the function isn't available
+                if (typeof UWRMapLibre !== 'undefined') {
+                    console.log('UWRMapLibre class found, initializing directly...');
+                    const mapInstance = new UWRMapLibre('map');
+                    mapInstance.initialize().then(map => {
+                        console.log('Direct MapLibre initialization complete');
+                        // The window.map object will be created by the UWRMapLibre class
+                    }).catch(error => {
+                        console.error('Direct MapLibre initialization failed:', error);
+                    });
+                } else {
+                    console.error('UWRMapLibre class not found - falling back to Leaflet');
+                    // Fall back to Leaflet if MapLibre fails completely
+                    USE_MAPLIBRE = false;
+                    initializeMap();
+                }
+            }
         }
 
         // Close CTA panel permanently
@@ -3206,8 +3250,16 @@
         }
 
         async function setZoomLevel(level) {
+            if (USE_MAPLIBRE && window.map && window.map.setZoomLevel) {
+                // Use MapLibre zoom level method
+                window.map.setZoomLevel(level);
+                updateRadioButtonState(level);
+                return;
+            }
+            
             if (!mapInstance) return;
 
+            // Original Leaflet implementation
             // Update current zoom level and radio button state
             currentZoomLevel = level;
             updateRadioButtonState(level);
