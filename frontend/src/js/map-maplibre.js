@@ -87,6 +87,12 @@ class UWRMapLibre {
             console.error('MapLibre error:', e);
             this.showLoadingError();
         });
+
+        // FALLBACK: Force show map after maximum wait time (for localhost testing)
+        setTimeout(() => {
+            console.log('TIMEOUT FALLBACK: Force showing map after 5 seconds');
+            this.showMapContainer();
+        }, 5000);
         
         return this.map;
     }
