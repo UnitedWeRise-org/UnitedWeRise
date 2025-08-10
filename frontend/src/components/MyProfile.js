@@ -422,8 +422,14 @@ class MyProfile {
             if (response.ok) {
                 // Clear the textarea
                 textarea.value = '';
-                // Reload the profile to show the new post
-                this.render('mainContent');
+                // Add the new post to the userPosts array
+                const newPost = response.data.post;
+                this.userPosts.unshift(newPost);
+                // Re-render just the tab content
+                const tabContent = document.querySelector('.tab-content');
+                if (tabContent) {
+                    tabContent.innerHTML = this.renderTabContent();
+                }
             } else {
                 alert('Failed to create post. Please try again.');
             }

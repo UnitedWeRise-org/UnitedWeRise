@@ -600,6 +600,24 @@
             padding: 1rem;
             box-sizing: border-box;
         }
+        
+        .feed-header {
+            background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%);
+            color: white;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+        
+        .feed-header h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.5rem;
+        }
+        
+        .feed-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
         .post-item {
             padding: 1rem;
             border-bottom: 1px solid #eee;
@@ -886,6 +904,7 @@
         <div class="sidebar collapsed" id="sidebar">
             <div class="thumbs">
                 <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
+                <div class="thumb" onclick="showMyFeed()" title="My Feed" id="feedThumb" style="display: none;">📰 <span class="label">My Feed</span></div>
                 <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
@@ -1301,6 +1320,7 @@
             // Show user-specific sidebar options
             document.getElementById('messagesThumb').style.display = 'block';
             document.getElementById('profileThumb').style.display = 'block';
+            document.getElementById('feedThumb').style.display = 'block';
             document.getElementById('postComposer').style.display = 'block';
             
             // Load user-specific content
@@ -1347,6 +1367,7 @@
             // Hide user-specific elements
             document.getElementById('messagesThumb').style.display = 'none';
             document.getElementById('profileThumb').style.display = 'none';
+            document.getElementById('feedThumb').style.display = 'none';
             document.getElementById('postComposer').style.display = 'none';
             document.getElementById('messagesContainer').style.display = 'none';
             document.getElementById('profilePanel').style.display = 'none';
@@ -2340,6 +2361,120 @@
             document.getElementById('profilePanel').style.display = 'none';
             document.getElementById('messagesContainer').style.display = 'none';
             window.myProfile.render('mainContent');
+        }
+
+        // New function to show My Feed - personalized feed based on who user follows
+        async function showMyFeed() {
+            if (!authToken) {
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <h2>Please log in to view your feed</h2>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Hide side panels
+            document.getElementById('profilePanel').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'none';
+
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = `
+                <div class="posts-container">
+                    <div class="feed-header">
+                        <h2>📰 My Feed</h2>
+                        <p>Posts from people you follow and recommendations</p>
+                    </div>
+                    <div class="post-composer" id="feedPostComposer">
+                        <textarea id="feedPostContent" placeholder="What's on your mind?"></textarea>
+                        <div class="post-composer-actions">
+                            <label>
+                                <input type="checkbox" id="feedIsPolitical"> Political post
+                            </label>
+                            <button onclick="createPostFromFeed()">Post</button>
+                        </div>
+                    </div>
+                    <div class="posts-feed" id="myFeedPosts">
+                        <div style="text-align: center; padding: 2rem;">
+                            <div class="loading-spinner"></div>
+                            <p>Loading your personalized feed...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Load personalized feed
+            try {
+                const response = await apiCall('/feed');
+                
+                if (response.ok && response.data.posts) {
+                    const feedContainer = document.getElementById('myFeedPosts');
+                    
+                    if (response.data.posts.length === 0) {
+                        // If user doesn't follow anyone, show trending posts as fallback
+                        const trendingResponse = await apiCall('/feed/trending');
+                        
+                        if (trendingResponse.ok && trendingResponse.data.posts) {
+                            feedContainer.innerHTML = `
+                                <div style="background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                                    <p style="margin: 0;">👋 Start following people to personalize your feed. Here are trending posts to get you started:</p>
+                                </div>
+                            `;
+                            displayPosts(trendingResponse.data.posts, 'myFeedPosts', true);
+                        }
+                    } else {
+                        displayPosts(response.data.posts, 'myFeedPosts', false);
+                    }
+                } else {
+                    document.getElementById('myFeedPosts').innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <p>Unable to load feed. Please try again.</p>
+                            <button onclick="showMyFeed()" class="btn">Retry</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Feed loading error:', error);
+                document.getElementById('myFeedPosts').innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <p>Error loading feed</p>
+                        <button onclick="showMyFeed()" class="btn">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Function to create post from feed view
+        async function createPostFromFeed() {
+            const content = document.getElementById('feedPostContent').value.trim();
+            const isPolitical = document.getElementById('feedIsPolitical').checked;
+
+            if (!content) {
+                alert('Please enter some content for your post');
+                return;
+            }
+
+            try {
+                const response = await apiCall('/posts', {
+                    method: 'POST',
+                    body: JSON.stringify({ content, isPolitical })
+                });
+
+                if (response.ok) {
+                    // Clear the textarea
+                    document.getElementById('feedPostContent').value = '';
+                    document.getElementById('feedIsPolitical').checked = false;
+                    
+                    // Refresh the feed to show the new post
+                    showMyFeed();
+                } else {
+                    alert('Failed to create post. Please try again.');
+                }
+            } catch (error) {
+                console.error('Post creation error:', error);
+                alert('Error creating post');
+            }
         }
 
         async function loadUserProfile() {
