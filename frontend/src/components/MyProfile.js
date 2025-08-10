@@ -397,28 +397,17 @@ class MyProfile {
 
     // Method to handle creating first post
     createFirstPost() {
-        // Focus on the post composer if it exists
+        // Show the post composer
+        const postComposer = document.getElementById('postComposer');
+        if (postComposer) {
+            postComposer.style.display = 'block';
+        }
+        
+        // Focus on the post composer textarea
         const postContent = document.getElementById('postContent');
         if (postContent) {
             postContent.focus();
             postContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-            // If post composer doesn't exist, show the trending feed where they can post
-            if (window.loadTrendingPosts) {
-                window.loadTrendingPosts();
-            }
-            // Show the post composer
-            const postComposer = document.getElementById('postComposer');
-            if (postComposer) {
-                postComposer.style.display = 'block';
-            }
-            // Try focusing again after a short delay
-            setTimeout(() => {
-                const postContentDelayed = document.getElementById('postContent');
-                if (postContentDelayed) {
-                    postContentDelayed.focus();
-                }
-            }, 100);
         }
     }
 
@@ -442,6 +431,52 @@ class MyProfile {
     deletePost(postId) {
         if (confirm('Are you sure you want to delete this post?')) {
             alert(`Delete post ${postId} - coming soon!`);
+        }
+    }
+
+    // Verification methods
+    async resendEmailVerification() {
+        try {
+            const response = await window.apiCall('/verification/email/send', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                alert('Verification email sent! Please check your inbox.');
+            } else {
+                alert('Failed to send verification email. Please try again.');
+            }
+        } catch (error) {
+            console.error('Email verification error:', error);
+            alert('Error sending verification email.');
+        }
+    }
+
+    async verifyPhone() {
+        // Open verification modal if available
+        if (window.verificationFlow) {
+            window.verificationFlow.showModal();
+        } else {
+            alert('Phone verification coming soon!');
+        }
+    }
+
+    // Settings methods
+    changePassword() {
+        alert('Password change coming soon!');
+    }
+
+    downloadData() {
+        alert('Data download coming soon!');
+    }
+
+    toggleProfileVisibility(isPublic) {
+        alert(`Profile visibility: ${isPublic ? 'Public' : 'Private'} - coming soon!`);
+    }
+
+    deactivateAccount() {
+        if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
+            alert('Account deactivation coming soon!');
         }
     }
 
