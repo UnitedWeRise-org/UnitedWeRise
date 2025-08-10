@@ -915,11 +915,8 @@
         <div class="main" id="mainContent">
             <div class="posts-container">
                 <div class="post-composer" id="postComposer" style="display: none;">
-                    <textarea id="postContent" placeholder="Share your thoughts on political issues..."></textarea>
+                    <textarea id="postContent" placeholder="Share your thoughts..."></textarea>
                     <div class="post-composer-actions">
-                        <label>
-                            <input type="checkbox" id="isPolitical"> Political post
-                        </label>
                         <button class="btn" onclick="createPost()">Post</button>
                     </div>
                 </div>
@@ -2389,9 +2386,6 @@
                     <div class="post-composer" id="feedPostComposer">
                         <textarea id="feedPostContent" placeholder="What's on your mind?"></textarea>
                         <div class="post-composer-actions">
-                            <label>
-                                <input type="checkbox" id="feedIsPolitical"> Political post
-                            </label>
                             <button onclick="createPostFromFeed()">Post</button>
                         </div>
                     </div>
@@ -2404,28 +2398,37 @@
                 </div>
             `;
 
-            // Load personalized feed
+            // Load personalized feed using probability cloud algorithm
             try {
                 const response = await apiCall('/feed');
+                const feedContainer = document.getElementById('myFeedPosts');
                 
                 if (response.ok && response.data.posts) {
-                    const feedContainer = document.getElementById('myFeedPosts');
-                    
                     if (response.data.posts.length === 0) {
-                        // If user doesn't follow anyone, show trending posts as fallback
-                        const trendingResponse = await apiCall('/feed/trending');
-                        
-                        if (trendingResponse.ok && trendingResponse.data.posts) {
-                            feedContainer.innerHTML = `
-                                <div style="background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
-                                    <p style="margin: 0;">👋 Start following people to personalize your feed. Here are trending posts to get you started:</p>
-                                </div>
-                            `;
-                            displayPosts(trendingResponse.data.posts, 'myFeedPosts', true);
-                        }
+                        feedContainer.innerHTML = `
+                            <div style="background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+                                <p style="margin: 0;">👋 Welcome! Start following people and creating posts to build your personalized feed.</p>
+                            </div>
+                        `;
                     } else {
+                        // Show algorithm info if available (for debugging/tuning)
+                        if (response.data.algorithm && response.data.weights) {
+                            console.log('Feed Algorithm:', response.data.algorithm, 'Weights:', response.data.weights);
+                            if (response.data.stats) {
+                                console.log('Feed Stats:', response.data.stats);
+                            }
+                        }
+                        
                         displayPosts(response.data.posts, 'myFeedPosts', false);
                     }
+                } else {
+                    feedContainer.innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <p>Unable to load your personalized feed. Please try again.</p>
+                            <button onclick="showMyFeed()" class="btn">Retry</button>
+                        </div>
+                    `;
+                }
                 } else {
                     document.getElementById('myFeedPosts').innerHTML = `
                         <div style="text-align: center; padding: 2rem;">
@@ -2445,10 +2448,10 @@
             }
         }
 
+
         // Function to create post from feed view
         async function createPostFromFeed() {
             const content = document.getElementById('feedPostContent').value.trim();
-            const isPolitical = document.getElementById('feedIsPolitical').checked;
 
             if (!content) {
                 alert('Please enter some content for your post');
@@ -2458,13 +2461,12 @@
             try {
                 const response = await apiCall('/posts', {
                     method: 'POST',
-                    body: JSON.stringify({ content, isPolitical })
+                    body: JSON.stringify({ content })
                 });
 
                 if (response.ok) {
                     // Clear the textarea
                     document.getElementById('feedPostContent').value = '';
-                    document.getElementById('feedIsPolitical').checked = false;
                     
                     // Refresh the feed to show the new post
                     showMyFeed();
@@ -3000,7 +3002,6 @@
         // Posts Functions
         async function createPost() {
             const content = document.getElementById('postContent').value.trim();
-            const isPolitical = document.getElementById('isPolitical').checked;
 
             if (!content) {
                 alert('Please enter some content for your post');
@@ -3011,14 +3012,12 @@
                 const response = await apiCall('/posts', {
                     method: 'POST',
                     body: JSON.stringify({ 
-                        content, 
-                        isPolitical: isPolitical 
+                        content
                     })
                 });
 
                 if (response.ok) {
                     document.getElementById('postContent').value = '';
-                    document.getElementById('isPolitical').checked = false;
                     loadUserPosts();
                 } else {
                     const error = await response.json();
