@@ -135,7 +135,7 @@ class MyProfile {
                     <div class="empty-state">
                         <h3>No posts yet</h3>
                         <p>Share your thoughts to get started!</p>
-                        <button onclick="document.getElementById('postContent').focus()" class="btn">Create Your First Post</button>
+                        <button onclick="window.myProfile.createFirstPost()" class="btn">Create Your First Post</button>
                     </div>
                 </div>
             `;
@@ -395,6 +395,33 @@ class MyProfile {
         }
     }
 
+    // Method to handle creating first post
+    createFirstPost() {
+        // Focus on the post composer if it exists
+        const postContent = document.getElementById('postContent');
+        if (postContent) {
+            postContent.focus();
+            postContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // If post composer doesn't exist, show the trending feed where they can post
+            if (window.loadTrendingPosts) {
+                window.loadTrendingPosts();
+            }
+            // Show the post composer
+            const postComposer = document.getElementById('postComposer');
+            if (postComposer) {
+                postComposer.style.display = 'block';
+            }
+            // Try focusing again after a short delay
+            setTimeout(() => {
+                const postContentDelayed = document.getElementById('postContent');
+                if (postContentDelayed) {
+                    postContentDelayed.focus();
+                }
+            }, 100);
+        }
+    }
+
     // Placeholder methods for edit functionality
     editDemographics() {
         alert('Demographics editing coming soon!');
@@ -432,6 +459,13 @@ class MyProfile {
                 min-height: calc(100vh - 7.5vh);
                 overflow-y: auto;
                 max-height: calc(100vh - 7.5vh);
+                /* Hide scrollbar */
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none; /* IE and Edge */
+            }
+            
+            .my-profile::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, Opera */
             }
 
             .profile-header {

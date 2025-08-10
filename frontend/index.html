@@ -135,6 +135,13 @@
             height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
             box-sizing: border-box;
             overflow-y: auto; /* Allow main container to scroll vertically */
+            /* Hide scrollbar */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        .main::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
         .sidebar.expanded ~ .main {
             margin-left: 10vw;
