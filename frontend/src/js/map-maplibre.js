@@ -22,6 +22,12 @@ class UWRMapLibre {
         this.currentJurisdiction = 'national';
         this.trendingPopups = [];
         this.trendingInterval = null;
+        this.bubbleCycles = []; // Track bubble cycles with timestamps
+        
+        // Map layers system
+        this.activeLayers = new Set(['trending', 'events', 'news', 'civic', 'community']); // Default active layers
+        this.layerPopups = new Map(); // Track popups by layer
+        this.layerIntervals = new Map(); // Track intervals by layer
         
         // Civic social infrastructure
         this.civicGroups = new Map();
@@ -59,17 +65,26 @@ class UWRMapLibre {
                 glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf'
             },
             center: this.US_CENTER,
-            zoom: 4,
-            minZoom: 3,
+            zoom: 3.6,
+            bearing: 0, // Lock to north
+            pitch: 0,   // No 3D tilt
+            minZoom: 2,
             maxZoom: 18,
-            attributionControl: false
+            attributionControl: false,
+            // Disable rotation and pitch
+            dragRotate: false,
+            pitchWithRotate: false
         });
 
         // Store globally for compatibility
         window.mapLibre = this.map;
         
-        // Add navigation controls
-        this.map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        // No navigation controls - use mouse/touch only
+        
+        // Disable rotation on touch devices while keeping zoom
+        this.map.on('load', () => {
+            this.map.touchZoomRotate.disableRotation();
+        });
         
         // Setup responsive behavior
         this.setupResponsiveBehavior();
@@ -80,6 +95,12 @@ class UWRMapLibre {
         // Show map container when fully loaded
         this.map.on('load', () => {
             this.showMapContainer();
+            
+            // Display dummy civic events on the map
+            this.displayCivicEvents();
+            
+            // Start trending comments system
+            this.startTrendingComments();
         });
 
         // Handle map errors
@@ -585,27 +606,34 @@ class UWRMapLibre {
 
     // Loading state management
     showMapContainer() {
-        console.log('showMapContainer called');
+        console.log('showMapContainer called - hiding loading state');
         const loadingState = document.getElementById('mapLoadingState');
         const mapContainer = document.getElementById('mapContainer');
         
         if (loadingState && mapContainer) {
-            // Check if container is already visible (we now show it before initialization)
-            const containerAlreadyVisible = mapContainer.style.display === 'block';
-            console.log('Container already visible:', containerAlreadyVisible);
+            // Add minimum loading time to prevent flickering
+            const minLoadingTime = 1000; // 1 second minimum
+            const loadStartTime = window.mapLoadStartTime || Date.now();
+            const elapsed = Date.now() - loadStartTime;
+            const remainingTime = Math.max(0, minLoadingTime - elapsed);
             
-            if (!containerAlreadyVisible) {
-                // Hide loading state and show map container
-                loadingState.classList.add('hidden');
-                mapContainer.style.display = 'block';
-                console.log('Map container shown');
-            }
+            console.log(`Loading for ${elapsed}ms, waiting ${remainingTime}ms more`);
             
-            // Always trigger resize to ensure map renders correctly
             setTimeout(() => {
-                console.log('Triggering map resize');
-                this.handleResize();
-            }, 100);
+                // Hide loading state - map should now be ready
+                loadingState.classList.add('hidden');
+                loadingState.style.display = 'none';
+                console.log('Loading state hidden, map should be visible');
+                
+                // Ensure map container is visible
+                mapContainer.style.display = 'block';
+                
+                // Trigger resize to ensure map renders correctly
+                setTimeout(() => {
+                    console.log('Triggering map resize');
+                    this.handleResize();
+                }, 100);
+            }, remainingTime);
         }
     }
 
@@ -625,23 +653,293 @@ class UWRMapLibre {
         }
     }
 
+    // Display civic events on map
+    displayCivicEvents() {
+        const dummyContent = getDummyCivicContent();
+        
+        // Clear existing event markers
+        this.clearEventMarkers();
+        
+        // Add markers for each event
+        dummyContent.events.forEach(event => {
+            const el = document.createElement('div');
+            el.className = 'civic-event-marker';
+            el.innerHTML = `
+                <div style="
+                    background: ${event.type === 'council_meeting' ? '#4b5c09' : 
+                               event.type === 'town_hall' ? '#2c5aa0' :
+                               event.type === 'rally' ? '#dc3545' :
+                               event.type === 'school_board' ? '#6f42c1' :
+                               '#ffc107'};
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    white-space: nowrap;
+                ">
+                    📅 ${event.title.substring(0, 20)}...
+                </div>
+            `;
+            
+            const marker = new maplibregl.Marker(el)
+                .setLngLat(event.coordinates)
+                .addTo(this.map);
+            
+            // Add popup on click
+            el.addEventListener('click', () => {
+                this.showEventDetails(event);
+            });
+            
+            this.eventMarkers = this.eventMarkers || [];
+            this.eventMarkers.push(marker);
+        });
+    }
+    
+    clearEventMarkers() {
+        if (this.eventMarkers) {
+            this.eventMarkers.forEach(marker => marker.remove());
+            this.eventMarkers = [];
+        }
+    }
+    
+    showEventDetails(event) {
+        const popup = new maplibregl.Popup({ closeOnClick: true })
+            .setLngLat(event.coordinates)
+            .setHTML(`
+                <div style="max-width: 300px; padding: 10px;">
+                    <h3 style="margin: 0 0 10px 0; color: #4b5c09;">${event.title}</h3>
+                    <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${event.date}</p>
+                    <p style="margin: 5px 0;"><strong>📍 Location:</strong> ${event.location}</p>
+                    <p style="margin: 10px 0;">${event.description}</p>
+                    <p style="margin: 5px 0;"><strong>👥 Expected Attendees:</strong> ${event.attendees}</p>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button onclick="alert('RSVP feature coming soon!')" style="
+                            background: #4b5c09;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">RSVP</button>
+                        <button onclick="alert('Share feature coming soon!')" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">Share</button>
+                    </div>
+                </div>
+            `)
+            .addTo(this.map);
+    }
+
     // Trending Comments System
     startTrendingComments() {
-        // Clear existing interval
+        // Stop any existing interval
         if (this.trendingInterval) {
             clearInterval(this.trendingInterval);
         }
         
-        // Clear existing popups
+        // Clear existing popups and cycles
         this.clearTrendingPopups();
+        this.bubbleCycles = [];
         
-        // Start showing trending comments every 8 seconds
+        // Start the cycling system with 15-second intervals
         this.trendingInterval = setInterval(() => {
-            this.showNextTrendingComment();
-        }, 8000);
+            this.manageBubbleCycles();
+        }, 15000);
         
-        // Show first one immediately
-        setTimeout(() => this.showNextTrendingComment(), 2000);
+        // Start first cycle after brief delay
+        setTimeout(() => this.manageBubbleCycles(), 3000);
+    }
+
+    async manageBubbleCycles() {
+        try {
+            const currentTime = Date.now();
+            
+            // Remove cycles that are 45+ seconds old (3 cycles * 15 seconds)
+            this.bubbleCycles = this.bubbleCycles.filter(cycle => {
+                const age = currentTime - cycle.timestamp;
+                if (age >= 45000) {
+                    // Fade out these bubbles
+                    cycle.popups.forEach(popup => this.fadeOutBubble(popup));
+                    return false;
+                }
+                return true;
+            });
+            
+            // Create new cycle
+            await this.createNewBubbleCycle(currentTime);
+            
+        } catch (error) {
+            console.error('Error managing bubble cycles:', error);
+        }
+    }
+
+    async createNewBubbleCycle(timestamp) {
+        const popupCount = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        const newCycle = {
+            timestamp: timestamp,
+            popups: []
+        };
+        
+        for (let i = 0; i < popupCount; i++) {
+            const comment = await this.fetchTrendingComment(this.currentJurisdiction);
+            if (comment) {
+                // Stagger bubble creation to avoid overlap
+                setTimeout(async () => {
+                    const popup = await this.displayTrendingPopup(comment);
+                    if (popup) {
+                        newCycle.popups.push(popup);
+                        this.fadeInBubble(popup);
+                    }
+                }, i * 300); // 300ms stagger
+            }
+        }
+        
+        this.bubbleCycles.push(newCycle);
+    }
+
+    fadeInBubble(popup) {
+        // Add fade-in class after a brief delay to ensure element is rendered
+        setTimeout(() => {
+            const popupElement = popup.getElement();
+            if (popupElement) {
+                popupElement.classList.add('fade-in');
+            }
+        }, 50);
+    }
+
+    fadeOutBubble(popup) {
+        const popupElement = popup.getElement();
+        if (popupElement) {
+            popupElement.classList.add('fade-out');
+            popupElement.classList.remove('fade-in');
+            
+            // Remove popup after fade animation completes
+            setTimeout(() => {
+                if (popup && popup.remove) {
+                    popup.remove();
+                    // Remove from main tracking array
+                    this.trendingPopups = this.trendingPopups.filter(p => p !== popup);
+                }
+            }, 400); // Match CSS transition duration
+        }
+    }
+
+    // Map transition methods for smooth bubble handling
+    hideAllBubblesDuringTransition() {
+        console.log('🔄 Hiding all bubbles for map transition...');
+        this.trendingPopups.forEach(popup => {
+            const popupElement = popup.getElement();
+            if (popupElement) {
+                popupElement.classList.add('fade-out');
+                popupElement.classList.remove('fade-in');
+            }
+        });
+    }
+
+    showAllBubblesAfterTransition() {
+        console.log('✨ Restoring all bubbles after map transition...');
+        // Wait for map transition to complete, then restore bubbles
+        setTimeout(() => {
+            this.trendingPopups.forEach(popup => {
+                const popupElement = popup.getElement();
+                if (popupElement) {
+                    popupElement.classList.remove('fade-out');
+                    popupElement.classList.add('fade-in');
+                }
+            });
+        }, 350); // Slightly after CSS transition completes
+    }
+
+    // Map container state adjustment with different zoom levels
+    adjustForContainerState(isCollapsed) {
+        console.log(`🗺️ Adjusting map for container state: ${isCollapsed ? 'collapsed' : 'expanded'}`);
+        console.log(`🔍 Current jurisdiction: ${this.currentJurisdiction}`);
+        console.log(`🔍 Map object exists: ${!!this.map}`);
+        
+        // Wait for container CSS transition to complete
+        setTimeout(() => {
+            try {
+                // Get current map state before adjustment
+                const beforeZoom = this.map.getZoom();
+                const beforeCenter = this.map.getCenter();
+                console.log(`📊 Before adjustment - Zoom: ${beforeZoom.toFixed(2)}, Center: [${beforeCenter.lng.toFixed(2)}, ${beforeCenter.lat.toFixed(2)}]`);
+                
+                // Debug map properties that might prevent zoom changes
+                console.log(`🔍 Map debug info:`);
+                console.log(`   - Min zoom: ${this.map.getMinZoom()}`);
+                console.log(`   - Max zoom: ${this.map.getMaxZoom()}`);
+                console.log(`   - Is moving: ${this.map.isMoving()}`);
+                console.log(`   - Is zooming: ${this.map.isZooming()}`);
+                console.log(`   - Is rotating: ${this.map.isRotating()}`);
+                console.log(`   - Map loaded: ${this.map.loaded()}`);
+                
+                // Resize map to fit new container
+                console.log('🔄 Calling map.resize()...');
+                this.map.resize();
+                
+                // Set appropriate view based on current jurisdiction and container state
+                if (this.currentJurisdiction === 'national') {
+                    if (isCollapsed) {
+                        console.log('📍 Setting COLLAPSED state: Zoom way out to fit US in small container');
+                        // Collapsed: Use jumpTo for immediate zoom change
+                        console.log('🚀 Using jumpTo() for immediate zoom change...');
+                        this.map.jumpTo({
+                            center: [-97.5, 39],  // Center on continental US
+                            zoom: 2.1             // Maximum zoom out for full US overview
+                        });
+                    } else {
+                        console.log('📍 Setting EXPANDED state: Zoom in for detail in large container');
+                        // Expanded: Use jumpTo for immediate zoom change
+                        console.log('🚀 Using jumpTo() for immediate zoom change...');
+                        this.map.jumpTo({
+                            center: [-97.5, 39],  // Center on continental US
+                            zoom: 3.6             // Match default zoom level
+                        });
+                    }
+                    
+                    // Log the change after animation completes
+                    setTimeout(() => {
+                        const afterZoom = this.map.getZoom();
+                        const afterCenter = this.map.getCenter();
+                        console.log(`📊 After adjustment - Zoom: ${afterZoom.toFixed(2)}, Center: [${afterCenter.lng.toFixed(2)}, ${afterCenter.lat.toFixed(2)}]`);
+                        console.log(`📈 Zoom change: ${beforeZoom.toFixed(2)} → ${afterZoom.toFixed(2)} (${afterZoom > beforeZoom ? '+' : ''}${(afterZoom - beforeZoom).toFixed(2)})`);
+                        
+                        // Double-check if zoom didn't change as expected
+                        const expectedZoom = isCollapsed ? 2.1 : 3.6;
+                        if (Math.abs(afterZoom - expectedZoom) > 0.1) {
+                            console.warn(`⚠️ Zoom didn't reach expected level! Expected: ${expectedZoom}, Actual: ${afterZoom.toFixed(2)}`);
+                            console.log(`🔄 Attempting to force zoom to ${expectedZoom}...`);
+                            this.map.setZoom(expectedZoom);
+                            
+                            // Verify the forced zoom worked
+                            setTimeout(() => {
+                                const finalZoom = this.map.getZoom();
+                                console.log(`✅ Final zoom after force: ${finalZoom.toFixed(2)}`);
+                            }, 100);
+                        }
+                    }, 500); // Wait longer for easeTo animation
+                    
+                } else {
+                    console.log('🔄 Non-national jurisdiction, just resizing...');
+                    // For state/local views, just resize without changing bounds
+                    this.map.resize();
+                }
+                
+                console.log('✅ Map adjusted for new container state');
+            } catch (error) {
+                console.error('❌ Error adjusting map for container state:', error);
+            }
+        }, 320); // After CSS transition (300ms) + small buffer
     }
 
     async showNextTrendingComment() {
@@ -660,7 +958,37 @@ class UWRMapLibre {
         const userState = this.getUserState();
         const userDistrict = this.getUserDistrict();
         
-        // Mock data reflecting the corrected vision - replace with real API calls
+        // Use dummy civic content for testing
+        const dummyContent = getDummyCivicContent();
+        
+        // Filter content by jurisdiction and active layers
+        const filteredTopics = dummyContent.trendingTopics.filter(topic => {
+            // Check jurisdiction match
+            const jurisdictionMatch = jurisdiction === 'national' || topic.jurisdiction === jurisdiction;
+            
+            // Check if any of the topic's layers are active
+            const layerMatch = topic.layers.some(layer => this.activeLayers.has(layer));
+            
+            return jurisdictionMatch && layerMatch;
+        });
+        
+        // Randomly select a topic
+        if (filteredTopics.length > 0) {
+            const topic = filteredTopics[Math.floor(Math.random() * filteredTopics.length)];
+            return {
+                id: topic.id,
+                summary: topic.content,
+                topic: topic.title,
+                location: topic.location,
+                coordinates: topic.coordinates,
+                engagement: topic.engagement,
+                time: `${Math.floor(Math.random() * 60) + 1} minutes ago`,
+                tags: topic.tags,
+                layers: topic.layers
+            };
+        }
+        
+        // Fallback to original mock data if no dummy content matches
         const mockComments = {
             national: [
                 // Nationally relevant posts from anywhere
@@ -807,64 +1135,136 @@ class UWRMapLibre {
     }
 
     displayTrendingPopup(comment) {
-        // Clear previous trending popup
-        this.clearTrendingPopups();
+        // Adjust coordinates slightly to prevent overlapping popups
+        const adjustedCoords = [
+            comment.coordinates[0] + (Math.random() - 0.5) * 2, // ±1 degree longitude
+            comment.coordinates[1] + (Math.random() - 0.5) * 1   // ±0.5 degree latitude
+        ];
 
+        // Simple, minimal chat bubble with just the content
         const popupHtml = `
-            <div class="trending-popup">
-                <div class="trending-popup-header">
-                    <span class="trending-topic">${comment.topic}</span>
-                    <span class="trending-location">${comment.location}</span>
-                </div>
-                <div class="trending-popup-content">
-                    ${comment.summary}
-                </div>
-                <div class="trending-popup-footer">
-                    <span class="trending-engagement">💬 ${comment.engagement}</span>
-                    <span class="trending-time">${comment.timestamp}</span>
-                </div>
-                <div class="trending-popup-actions">
-                    <button class="popup-action-btn primary" onclick="window.navigateToComment && window.navigateToComment(${comment.id}); event.stopPropagation();">
-                        📖 Join Discussion
-                    </button>
-                    <button class="popup-action-btn secondary" onclick="window.uwrMap.joinCivicGroup('${this.currentJurisdiction}', '${comment.topic}'); event.stopPropagation();">
-                        👥 Find Community
-                    </button>
-                    ${comment.actionable ? `
-                        <button class="popup-action-btn action" onclick="window.uwrMap.takeAction('${comment.id}', '${comment.actionType}'); event.stopPropagation();">
-                            🎯 Take Action
-                        </button>
-                    ` : ''}
-                </div>
+            <div class="trending-bubble" onclick="window.navigateToComment && window.navigateToComment('${comment.id}')">
+                ${comment.summary}
             </div>
         `;
 
         const popup = new maplibregl.Popup({
             closeButton: false,
             closeOnClick: false,
-            className: 'trending-comment-popup',
-            maxWidth: '300px',
-            anchor: 'bottom'
+            className: 'trending-bubble-popup',
+            maxWidth: '200px',
+            anchor: 'bottom',
+            offset: 12
         })
-        .setLngLat(comment.coordinates)
+        .setLngLat(adjustedCoords)
         .setHTML(popupHtml)
         .addTo(this.map);
 
         // Store popup reference
         this.trendingPopups.push(popup);
 
-        // Auto-close after 7 seconds
-        setTimeout(() => {
-            if (this.trendingPopups.includes(popup)) {
-                popup.remove();
-                this.trendingPopups = this.trendingPopups.filter(p => p !== popup);
-            }
-        }, 7000);
+        // Return the popup for cycle management
+        return popup;
     }
 
     clearTrendingPopups() {
         this.trendingPopups.forEach(popup => popup.remove());
         this.trendingPopups = [];
+    }
+
+    // Layer Management System
+    toggleLayer(layerName) {
+        console.log(`🔧 Toggling layer: ${layerName}`);
+        
+        if (this.activeLayers.has(layerName)) {
+            // Deactivate layer
+            this.activeLayers.delete(layerName);
+            this.clearLayerPopups(layerName);
+            console.log(`❌ Layer ${layerName} deactivated`);
+        } else {
+            // Activate layer
+            this.activeLayers.add(layerName);
+            this.startLayerContent(layerName);
+            console.log(`✅ Layer ${layerName} activated`);
+        }
+    }
+
+    clearLayerPopups(layerName) {
+        if (this.layerPopups.has(layerName)) {
+            this.layerPopups.get(layerName).forEach(popup => popup.remove());
+            this.layerPopups.delete(layerName);
+        }
+        
+        if (layerName === 'trending') {
+            this.clearTrendingPopups();
+        }
+    }
+
+    startLayerContent(layerName) {
+        // Start showing content for the specified layer
+        if (layerName === 'trending') {
+            this.startTrendingComments();
+        }
+        // Add other layer types here as they're implemented
+    }
+
+    setJurisdiction(jurisdiction) {
+        console.log(`🗺️ Setting jurisdiction to: ${jurisdiction}`);
+        this.currentJurisdiction = jurisdiction;
+        
+        // Update map view based on jurisdiction
+        let zoomLevel;
+        switch (jurisdiction) {
+            case 'national':
+                // Use fitBounds to show full US regardless of container size
+                this.map.fitBounds([
+                    [-130, 24], // Southwest corner (Alaska/Hawaii included)
+                    [-65, 50]   // Northeast corner
+                ], {
+                    padding: 20,
+                    duration: 1000
+                });
+                break;
+            case 'state':
+                zoomLevel = 6;
+                const userState = this.getUserState();
+                if (userState) {
+                    const stateCoords = this.getStateCapitolCoords(userState);
+                    this.map.flyTo({
+                        center: stateCoords,
+                        zoom: zoomLevel,
+                        duration: 1000
+                    });
+                }
+                break;
+            case 'local':
+                zoomLevel = 10;
+                const userDistrict = this.getUserDistrict();
+                if (userDistrict) {
+                    const localCoords = this.getSecureLocalCoordinates(userDistrict);
+                    this.map.flyTo({
+                        center: localCoords,
+                        zoom: zoomLevel,
+                        duration: 1000
+                    });
+                }
+                break;
+        }
+        
+        // Refresh content for new jurisdiction
+        this.refreshActiveLayersContent();
+    }
+
+    refreshActiveLayersContent() {
+        // Clear all current popups
+        this.activeLayers.forEach(layer => {
+            this.clearLayerPopups(layer);
+        });
+        
+        // Restart content for active layers
+        this.activeLayers.forEach(layer => {
+            this.startLayerContent(layer);
+        });
     }
 
     // Civic Social Infrastructure Methods
@@ -1059,6 +1459,214 @@ class UWRMapLibre {
 // Initialize when ready
 let uwrMap = null;
 
+// Dummy civic content for testing
+function getDummyCivicContent() {
+    return {
+        events: [
+            {
+                id: 'event1',
+                title: 'City Council Meeting - Budget Review',
+                date: '2025-01-15 18:00',
+                location: 'City Hall, Main Chamber',
+                coordinates: [-98.4936, 29.4241], // San Antonio
+                type: 'council_meeting',
+                description: 'Public hearing on 2025 budget allocation',
+                attendees: 45,
+                jurisdiction: 'local'
+            },
+            {
+                id: 'event2', 
+                title: 'Town Hall: Healthcare Reform',
+                date: '2025-01-20 14:00',
+                location: 'Community Center',
+                coordinates: [-74.006, 40.7128], // New York
+                type: 'town_hall',
+                description: 'Representative Johnson discussing healthcare policy',
+                attendees: 120,
+                jurisdiction: 'state'
+            },
+            {
+                id: 'event3',
+                title: 'Climate Action Rally',
+                date: '2025-01-25 12:00',
+                location: 'State Capitol Steps',
+                coordinates: [-121.4944, 38.5816], // Sacramento
+                type: 'rally',
+                description: 'Citizens demanding climate policy action',
+                attendees: 500,
+                jurisdiction: 'state'
+            },
+            {
+                id: 'event4',
+                title: 'School Board Meeting',
+                date: '2025-01-18 19:00',
+                location: 'District Office',
+                coordinates: [-87.6298, 41.8781], // Chicago
+                type: 'school_board',
+                description: 'Discussion on new curriculum standards',
+                attendees: 75,
+                jurisdiction: 'local'
+            },
+            {
+                id: 'event5',
+                title: 'Voter Registration Drive',
+                date: '2025-01-22 10:00',
+                location: 'Public Library',
+                coordinates: [-84.388, 33.749], // Atlanta
+                type: 'voter_registration',
+                description: 'Help citizens register to vote',
+                attendees: 30,
+                jurisdiction: 'local'
+            }
+        ],
+        
+        trendingTopics: [
+            {
+                id: 'topic1',
+                title: 'Infrastructure Bill Impact',
+                content: 'New federal infrastructure funding allocates $2.3B to our state for road improvements and public transit upgrades.',
+                location: 'Texas',
+                coordinates: [-99.9018, 31.9686],
+                engagement: 1250,
+                jurisdiction: 'state',
+                tags: ['infrastructure', 'federal_funding', 'transportation'],
+                layers: ['news', 'civic']
+            },
+            {
+                id: 'topic2',
+                title: 'Local Housing Crisis',
+                content: 'City council debates rent control measures as housing costs rise 30% in past year.',
+                location: 'Austin, TX',
+                coordinates: [-97.7431, 30.2672],
+                engagement: 890,
+                jurisdiction: 'local',
+                tags: ['housing', 'rent_control', 'affordability'],
+                layers: ['trending', 'civic']
+            },
+            {
+                id: 'topic3',
+                title: 'Education Funding Debate',
+                content: 'State legislature considers increasing teacher salaries by 15% amid budget negotiations.',
+                location: 'California',
+                coordinates: [-119.4179, 36.7783],
+                engagement: 2100,
+                jurisdiction: 'state',
+                tags: ['education', 'teachers', 'budget'],
+                layers: ['news', 'civic', 'community']
+            },
+            {
+                id: 'topic4',
+                title: 'Environmental Protection Act',
+                content: 'National debate on new EPA regulations affecting local businesses and industry.',
+                location: 'Washington, DC',
+                coordinates: [-77.0369, 38.9072],
+                engagement: 5400,
+                jurisdiction: 'national',
+                tags: ['environment', 'regulation', 'business'],
+                layers: ['news', 'trending']
+            },
+            {
+                id: 'topic5',
+                title: 'Police Reform Initiative',
+                content: 'Community-led police reform proposal gains traction with city officials.',
+                location: 'Minneapolis, MN',
+                coordinates: [-93.265, 44.9778],
+                engagement: 1800,
+                jurisdiction: 'local',
+                tags: ['police_reform', 'community', 'public_safety'],
+                layers: ['trending', 'community', 'civic']
+            },
+            {
+                id: 'topic6',
+                title: 'Downtown Concert Series',
+                content: 'Local band performs at city hall plaza fundraiser for community center renovations.',
+                location: 'Phoenix, AZ',
+                coordinates: [-112.074, 33.4484],
+                engagement: 340,
+                jurisdiction: 'local',
+                tags: ['community', 'arts', 'fundraiser'],
+                layers: ['events', 'community']
+            },
+            {
+                id: 'topic7',
+                title: 'Breaking: Supreme Court Rules',
+                content: 'Supreme Court decision on redistricting case affects elections in 12 states.',
+                location: 'Washington, DC',
+                coordinates: [-77.0369, 38.9072],
+                engagement: 8900,
+                jurisdiction: 'national',
+                tags: ['supreme_court', 'redistricting', 'elections'],
+                layers: ['news', 'trending', 'civic']
+            },
+            {
+                id: 'topic8',
+                title: 'Neighborhood Watch Meeting',
+                content: 'Monthly community safety discussion and new member orientation.',
+                location: 'Denver, CO',
+                coordinates: [-104.991, 39.7392],
+                engagement: 85,
+                jurisdiction: 'local',
+                tags: ['public_safety', 'neighborhood', 'volunteer'],
+                layers: ['events', 'community']
+            }
+        ],
+        
+        civicGroups: [
+            {
+                id: 'group1',
+                name: 'Citizens for Transparent Government',
+                members: 450,
+                jurisdiction: 'state',
+                focus: 'Government accountability and transparency',
+                nextMeeting: '2025-01-16 19:00'
+            },
+            {
+                id: 'group2',
+                name: 'Green Future Coalition',
+                members: 320,
+                jurisdiction: 'local',
+                focus: 'Environmental protection and sustainability',
+                nextMeeting: '2025-01-19 18:30'
+            },
+            {
+                id: 'group3',
+                name: 'Education First Alliance',
+                members: 280,
+                jurisdiction: 'state',
+                focus: 'Improving public education funding and policy',
+                nextMeeting: '2025-01-21 17:00'
+            }
+        ],
+        
+        representatives: [
+            {
+                id: 'rep1',
+                name: 'Senator Jane Smith',
+                role: 'U.S. Senator',
+                party: 'Independent',
+                nextTownHall: '2025-01-23 14:00',
+                keyIssues: ['Healthcare', 'Climate', 'Education']
+            },
+            {
+                id: 'rep2',
+                name: 'Rep. Michael Johnson',
+                role: 'State Representative',
+                party: 'Democrat',
+                nextTownHall: '2025-01-20 18:00',
+                keyIssues: ['Housing', 'Transportation', 'Jobs']
+            },
+            {
+                id: 'rep3',
+                name: 'Mayor Sarah Williams',
+                role: 'City Mayor',
+                party: 'Republican',
+                nextTownHall: '2025-01-25 19:00',
+                keyIssues: ['Public Safety', 'Infrastructure', 'Business']
+            }
+        ]
+    };
+}
+
 function initializeMapLibre() {
     // Only initialize if container exists
     const mapContainer = document.getElementById('mapContainer');
@@ -1082,15 +1690,22 @@ function initializeMapLibre() {
     if (useMapLibre) {
         console.log('Initializing MapLibre GL map...');
         
-        // CRITICAL FIX: Show map container BEFORE initializing MapLibre
+        // IMPROVED FIX: Show map container but keep loading state visible during initialization
         // MapLibre needs the container to be visible to measure dimensions correctly
         const mapContainer = document.getElementById('mapContainer');
         const loadingState = document.getElementById('mapLoadingState');
         
-        if (mapContainer && loadingState && !mapWasClosed) {
+        if (mapContainer && !mapWasClosed) {
             console.log('Making map container visible for MapLibre initialization...');
-            loadingState.classList.add('hidden');
+            // Show the map container immediately (loading state is now inside as overlay)
             mapContainer.style.display = 'block';
+            
+            if (loadingState) {
+                // Ensure loading state is visible as overlay
+                loadingState.style.display = 'flex';
+                loadingState.classList.remove('hidden');
+                console.log('Loading state shown as overlay');
+            }
         }
         
         uwrMap = new UWRMapLibre('map');
@@ -1124,12 +1739,20 @@ function initializeMapLibre() {
                 },
                 closeMap: () => uwrMap.closeMap(),
                 showMap: () => uwrMap.showMap(),
+                // Transition methods for smooth bubble handling
+                hideBubbles: () => uwrMap.hideAllBubblesDuringTransition(),
+                showBubbles: () => uwrMap.showAllBubblesAfterTransition(),
+                // Map container state adjustment
+                adjustForContainerState: (isCollapsed) => uwrMap.adjustForContainerState(isCollapsed),
                 setZoomLevel: (level) => {
                     uwrMap.setZoomLevel(level);
                     // Update button states
                     updateMapViewButtons(level);
                 },
                 geocodeAndZoom: () => uwrMap.geocodeAndZoom(),
+                // Layer management system
+                toggleLayer: (layerName) => uwrMap.toggleLayer(layerName),
+                setJurisdiction: (jurisdiction) => uwrMap.setJurisdiction(jurisdiction),
                 // MapLibre instance for advanced use
                 _maplibre: map,
                 _uwrMap: uwrMap
@@ -1197,6 +1820,23 @@ window.updateMapViewButtons = function(currentLevel) {
         }
     });
 };
+
+// Auto-initialize the map when the script loads
+console.log('map-maplibre.js script loaded, initializing...');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM ready, calling initializeMapLibre()');
+    initializeMapLibre();
+});
+
+// Also initialize immediately if DOM is already ready
+if (document.readyState === 'loading') {
+    // DOM is still loading, wait for DOMContentLoaded
+    console.log('DOM still loading, waiting for DOMContentLoaded event');
+} else {
+    // DOM already loaded, initialize immediately
+    console.log('DOM already ready, calling initializeMapLibre() immediately');
+    initializeMapLibre();
+}
 
 // Global navigation function for trending comment clicks
 window.navigateToComment = function(commentId) {

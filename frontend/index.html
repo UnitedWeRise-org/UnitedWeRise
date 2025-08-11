@@ -310,31 +310,59 @@
         </div>
     </div>
 
-    <!-- Map Loading State -->
-    <div id="mapLoadingState" class="map-loading-state">
-        <div class="map-loading-spinner"></div>
-        <div class="map-loading-text">Loading Map...</div>
-    </div>
-
     <!-- Map Container (hidden initially) -->
     <div id="mapContainer" style="display: none;">
-        <div class="map-action-buttons">
-            <button class="map-action-btn" onclick="toggleMapView('national')">National</button>
-            <button class="map-action-btn" onclick="toggleMapView('state')">State</button>
-            <button class="map-action-btn" onclick="toggleMapView('local')">Local</button>
-            <button class="map-action-btn primary" id="mapToggleBtn">Collapse</button>
-            <button class="map-action-btn danger" onclick="window.map && window.map.closeMap ? window.map.closeMap() : closeMap()">Close</button>
+        <!-- Map Loading State (overlay) -->
+        <div id="mapLoadingState" class="map-loading-state">
+            <div class="map-loading-spinner"></div>
+            <div class="map-loading-text">Loading Map...</div>
         </div>
         
-        <div class="map-controls">
-            <div class="location-input">
-                <div class="location-input-title">Location Search</div>
-                <div class="location-input-controls">
-                    <input type="text" id="locationInput" placeholder="Enter address or city">
-                    <button onclick="window.map && window.map.geocodeAndZoom ? window.map.geocodeAndZoom() : geocodeAndZoom()">Go</button>
+        <div class="map-action-buttons">
+            <!-- Main button row -->
+            <div class="zoom-buttons-group">
+                <button class="map-action-btn" onclick="toggleMapView('national')">National</button>
+                <button class="map-action-btn" onclick="toggleMapView('state')">State</button>
+                <button class="map-action-btn" onclick="toggleMapView('local')">Local</button>
+                <button class="map-action-btn control-btn primary" id="mapToggleBtn">Collapse</button>
+                <button class="map-action-btn control-btn close-btn" onclick="window.map && window.map.closeMap ? window.map.closeMap() : closeMap()">×</button>
+            </div>
+            
+            <!-- Layer dropdown toggle - positioned relative to button group -->
+            <div class="map-layer-dropdown">
+                <button class="layer-dropdown-btn" onclick="toggleLayerDropdown()">
+                    Layers ▼
+                </button>
+                <div class="layer-dropdown-content" id="layerDropdown">
+                    <label class="layer-toggle">
+                        <input type="checkbox" checked onchange="toggleMapLayer('trending')" data-layer="trending">
+                        <span class="layer-icon">💬</span>
+                        <span>Trending</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" checked onchange="toggleMapLayer('events')" data-layer="events">
+                        <span class="layer-icon">📅</span>
+                        <span>Events</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" checked onchange="toggleMapLayer('news')" data-layer="news">
+                        <span class="layer-icon">📰</span>
+                        <span>News</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" checked onchange="toggleMapLayer('civic')" data-layer="civic">
+                        <span class="layer-icon">🏛️</span>
+                        <span>Civic</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" checked onchange="toggleMapLayer('community')" data-layer="community">
+                        <span class="layer-icon">👥</span>
+                        <span>Community</span>
+                    </label>
                 </div>
             </div>
         </div>
+        
         <div id="map"></div>
     </div>
 
@@ -356,6 +384,222 @@
         let authToken = null;
         let addressForm = null;
 
+        // Setup collapse button handler function
+        function setupCollapseButton() {
+            console.log('🔧 Setting up collapse button handler...');
+            
+            // Wait for DOM elements to be available
+            setTimeout(() => {
+                const mapContainer = document.getElementById('mapContainer');
+                const toggleBtn = document.getElementById('mapToggleBtn');
+                
+                console.log('🔍 mapContainer found:', !!mapContainer);
+                console.log('🔍 toggleBtn found:', !!toggleBtn);
+                
+                if (toggleBtn && mapContainer) {
+                    // Remove any existing listeners
+                    toggleBtn.replaceWith(toggleBtn.cloneNode(true));
+                    const newToggleBtn = document.getElementById('mapToggleBtn');
+                    
+                    // Add click handler
+                    newToggleBtn.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        console.log('🔥 COLLAPSE BUTTON CLICKED!');
+                        
+                        // Debug current state
+                        const isCollapsed = mapContainer.classList.contains('collapsed');
+                        console.log('🔍 Current collapsed state:', isCollapsed);
+                        console.log('🔍 mapContainer classes before:', mapContainer.className);
+                        console.log('🔍 mapContainer computed width before:', getComputedStyle(mapContainer).width);
+                        
+                        // Hide bubbles before transition
+                        if (window.map && window.map.hideBubbles) {
+                            window.map.hideBubbles();
+                        }
+                        
+                        // Toggle the class
+                        mapContainer.classList.toggle('collapsed');
+                        const newIsCollapsed = mapContainer.classList.contains('collapsed');
+                        
+                        // Debug after toggle
+                        console.log('🔍 mapContainer classes after:', mapContainer.className);
+                        console.log('🔍 mapContainer computed width after:', getComputedStyle(mapContainer).width);
+                        
+                        // Update button text
+                        newToggleBtn.textContent = isCollapsed ? 'Collapse' : 'Expand';
+                        
+                        // Visual feedback
+                        newToggleBtn.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            newToggleBtn.style.transform = '';
+                        }, 150);
+                        
+                        console.log(`✅ Map should now be ${isCollapsed ? 'expanded' : 'collapsed'}`);
+                        
+                        // Force a style recalculation
+                        mapContainer.offsetHeight; // Trigger reflow
+                        
+                        // Adjust map for new container size with appropriate zoom
+                        if (window.map && window.map.adjustForContainerState) {
+                            window.map.adjustForContainerState(newIsCollapsed);
+                        }
+                        
+                        // Show bubbles after transition completes
+                        if (window.map && window.map.showBubbles) {
+                            window.map.showBubbles();
+                        }
+                    }, false);
+                    
+                    console.log('✅ Collapse button handler attached successfully');
+                } else {
+                    console.error('❌ Could not find button or container elements');
+                }
+            }, 2000); // Wait 2 seconds for map to fully load
+        }
+
+        // Setup close button handler function
+        function setupCloseButton() {
+            console.log('🔧 Setting up close button handler...');
+            
+            setTimeout(() => {
+                const closeBtn = document.querySelector('.map-action-btn.close-btn');
+                console.log('🔍 closeBtn found:', !!closeBtn);
+                
+                if (closeBtn) {
+                    // Remove existing onclick and replace with proper handler
+                    closeBtn.removeAttribute('onclick');
+                    closeBtn.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        console.log('🔥 CLOSE BUTTON CLICKED!');
+                        
+                        if (window.map && window.map.closeMap) {
+                            console.log('✅ Calling window.map.closeMap()');
+                            window.map.closeMap();
+                        } else {
+                            console.log('⚠️ Fallback: hiding map container directly');
+                            const mapContainer = document.getElementById('mapContainer');
+                            if (mapContainer) {
+                                mapContainer.style.display = 'none';
+                                localStorage.setItem('mapClosed', 'true');
+                                
+                                // Show sidebar button
+                                const mapThumb = document.getElementById('mapThumb');
+                                if (mapThumb) {
+                                    mapThumb.style.display = 'block';
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Close button handler attached successfully');
+                } else {
+                    console.error('❌ Could not find close button element');
+                }
+            }, 2000);
+        }
+
+        // Setup sidebar map button handler function
+        function setupSidebarMapButton() {
+            console.log('🔧 Setting up sidebar map button handler...');
+            
+            const mapThumb = document.getElementById('mapThumb');
+            console.log('🔍 mapThumb found:', !!mapThumb);
+            
+            if (mapThumb) {
+                // Remove existing onclick and replace with proper handler
+                mapThumb.removeAttribute('onclick');
+                mapThumb.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    console.log('🔥 SIDEBAR MAP BUTTON CLICKED!');
+                    
+                    if (window.map && window.map.showMap) {
+                        console.log('✅ Calling window.map.showMap()');
+                        window.map.showMap();
+                    } else {
+                        console.log('⚠️ Fallback: showing map container directly');
+                        const mapContainer = document.getElementById('mapContainer');
+                        if (mapContainer) {
+                            mapContainer.style.display = 'block';
+                            localStorage.removeItem('mapClosed');
+                            
+                            // Hide sidebar button
+                            mapThumb.style.display = 'none';
+                            
+                            console.log('✅ Map restored via fallback method');
+                        }
+                    }
+                });
+                
+                console.log('✅ Sidebar map button handler attached successfully');
+            } else {
+                console.error('❌ Could not find sidebar map button element');
+            }
+        }
+
+        // Map layer toggle function
+        function toggleMapLayer(layerName) {
+            console.log(`🔧 Toggling map layer: ${layerName}`);
+            
+            if (window.map && typeof window.map.toggleLayer === 'function') {
+                window.map.toggleLayer(layerName);
+            } else {
+                console.warn('Map layer toggle not available - map may not be initialized yet');
+            }
+        }
+
+        // Layer dropdown toggle function
+        function toggleLayerDropdown() {
+            const dropdown = document.getElementById('layerDropdown');
+            const btn = document.querySelector('.layer-dropdown-btn');
+            
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                btn.textContent = 'Layers ▼';
+            } else {
+                dropdown.classList.add('show');
+                btn.textContent = 'Layers ▲';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('layerDropdown');
+            const dropdownContainer = document.querySelector('.map-layer-dropdown');
+            
+            if (dropdown && dropdownContainer && !dropdownContainer.contains(event.target)) {
+                dropdown.classList.remove('show');
+                const btn = document.querySelector('.layer-dropdown-btn');
+                if (btn) btn.textContent = 'Layers ▼';
+            }
+        });
+
+        // Map view toggle function
+        function toggleMapView(jurisdiction) {
+            console.log(`🔧 Switching map view to: ${jurisdiction}`);
+            
+            // Update active button styling
+            const buttons = document.querySelectorAll('.zoom-buttons-group .map-action-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent.toLowerCase() === jurisdiction.toLowerCase()) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            if (window.map && typeof window.map.setJurisdiction === 'function') {
+                window.map.setJurisdiction(jurisdiction);
+            } else {
+                console.warn('Map jurisdiction change not available - map may not be initialized yet');
+            }
+        }
+
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Load GiveButter widget
@@ -376,6 +620,15 @@
             // Map initialization is now handled by map-maplibre.js to avoid conflicts
             // The script automatically initializes when loaded
             console.log('Map initialization delegated to map-maplibre.js script');
+            
+            // Setup collapse button handler (runs regardless of map system)
+            setupCollapseButton();
+            
+            // Setup close button handler 
+            setupCloseButton();
+            
+            // Setup sidebar map button handler
+            setupSidebarMapButton();
 
             // Show CTA panel if not dismissed
             if (!localStorage.getItem('panelClosed')) {
@@ -935,43 +1188,6 @@
 
             showRandomPopups();
 
-            // Toggle map collapse - Updated for MapLibre
-            const mapContainer = document.getElementById('mapContainer');
-            const toggleBtn = document.getElementById('mapToggleBtn');
-            
-            if (toggleBtn) {
-                // Add multiple ways to ensure the button click is captured
-                toggleBtn.addEventListener('click', function(event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    
-                    console.log('🔥 BUTTON CLICKED! Event captured');
-                    console.log('🔍 window.map exists:', !!window.map);
-                    console.log('🔍 window.map object:', window.map);
-                    
-                    if (window.map && typeof window.map.toggleCollapsed === 'function') {
-                        console.log('✅ Calling window.map.toggleCollapsed()');
-                        try {
-                            const result = window.map.toggleCollapsed();
-                            console.log('✅ toggleCollapsed result:', result);
-                        } catch (error) {
-                            console.error('❌ Error in toggleCollapsed:', error);
-                        }
-                    } else {
-                        console.log('⚠️ window.map.toggleCollapsed not available, using fallback');
-                        // Direct CSS toggle as fallback
-                        const isCollapsed = mapContainer.classList.contains('collapsed');
-                        mapContainer.classList.toggle('collapsed');
-                        toggleBtn.textContent = isCollapsed ? 'Collapse' : 'Expand';
-                        console.log('⚠️ Fallback toggle applied, collapsed:', !isCollapsed);
-                    }
-                }, true); // Use capture phase
-                
-                // Also add onclick as backup
-                toggleBtn.onclick = function() {
-                    console.log('🔥 ONCLICK BACKUP FIRED');
-                };
-            }
 
             // Set map instance for zoom controls
             setMapInstance(map);
@@ -1012,7 +1228,41 @@
                     const mapInstance = new UWRMapLibre('map');
                     mapInstance.initialize().then(map => {
                         console.log('Direct MapLibre initialization complete');
-                        // The window.map object will be created by the UWRMapLibre class
+                        
+                        // Create window.map object manually since initializeMapLibre() wasn't called
+                        window.map = {
+                            // Wrapper methods for Leaflet compatibility
+                            setView: (center, zoom) => mapInstance.setView(center, zoom),
+                            invalidateSize: () => mapInstance.invalidateSize(),
+                            closePopup: () => mapInstance.closeAllPopups(),
+                            fitBounds: (bounds) => mapInstance.fitBounds(bounds),
+                            // New MapLibre-specific methods
+                            toggleCollapsed: () => {
+                                console.log('window.map.toggleCollapsed called');
+                                return mapInstance.toggleCollapsed();
+                            },
+                            closeMap: () => mapInstance.closeMap(),
+                            showMap: () => mapInstance.showMap(),
+                            // Transition methods for smooth bubble handling
+                            hideBubbles: () => mapInstance.hideAllBubblesDuringTransition(),
+                            showBubbles: () => mapInstance.showAllBubblesAfterTransition(),
+                            // Map container state adjustment
+                            adjustForContainerState: (isCollapsed) => mapInstance.adjustForContainerState(isCollapsed),
+                            setZoomLevel: (level) => {
+                                mapInstance.setZoomLevel(level);
+                                // Update button states
+                                updateMapViewButtons(level);
+                            },
+                            geocodeAndZoom: () => mapInstance.geocodeAndZoom(),
+                            // Layer management system
+                            toggleLayer: (layerName) => mapInstance.toggleLayer(layerName),
+                            setJurisdiction: (jurisdiction) => mapInstance.setJurisdiction(jurisdiction),
+                            // MapLibre instance for advanced use
+                            _maplibre: map,
+                            _uwrMap: mapInstance
+                        };
+                        
+                        console.log('window.map object created with adjustForContainerState:', !!window.map.adjustForContainerState);
                     }).catch(error => {
                         console.error('Direct MapLibre initialization failed:', error);
                     });
@@ -2372,8 +2622,8 @@
                         </div>
                         <div class="post-content">${post.content}</div>
                         <div class="post-actions">
-                            <span class="post-action" onclick="likePost('${post.id}')">
-                                ❤️ ${post.likesCount}
+                            <span class="post-action" onclick="likePost('${post.id}', event)" style="cursor: pointer; transition: transform 0.2s;">
+                                ${post.isLiked ? '❤️' : '👍'} ${post.likesCount || 0}
                             </span>
                             <span class="post-action" onclick="showCommentBox('${post.id}')">
                                 💬 Add Comment
@@ -2394,8 +2644,15 @@
             feed.innerHTML = html;
         }
 
-        async function likePost(postId) {
-            if (!authToken) return;
+        async function likePost(postId, event) {
+            if (!authToken) {
+                alert('Please log in to like posts');
+                return;
+            }
+
+            // Find the like button element
+            const likeElement = event ? event.target.closest('[onclick*="likePost"]') : document.querySelector(`[onclick*="likePost('${postId}'"]`);
+            if (!likeElement) return;
 
             try {
                 const response = await apiCall(`/posts/${postId}/like`, {
@@ -2403,11 +2660,33 @@
                 });
 
                 if (response.ok) {
-                    // Reload posts to update like counts
-                    loadUserPosts();
+                    const data = await response.json();
+                    
+                    // Update the UI immediately
+                    if (likeElement.tagName === 'BUTTON') {
+                        // For button-style like elements (in feed)
+                        const countSpan = likeElement.querySelector('span:last-child') || likeElement;
+                        const currentCount = parseInt(countSpan.textContent) || 0;
+                        const newCount = data.liked ? currentCount + 1 : Math.max(0, currentCount - 1);
+                        
+                        // Update the display
+                        likeElement.innerHTML = `<span>${data.liked ? '❤️' : '👍'}</span> ${newCount}`;
+                    } else if (likeElement.classList.contains('post-action')) {
+                        // For span-style like elements (in profile)
+                        const currentCount = parseInt(likeElement.textContent.match(/\d+/)?.[0] || '0');
+                        const newCount = data.liked ? currentCount + 1 : Math.max(0, currentCount - 1);
+                        likeElement.innerHTML = `${data.liked ? '❤️' : '👍'} ${newCount}`;
+                    }
+                    
+                    // Add visual feedback
+                    likeElement.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        likeElement.style.transform = '';
+                    }, 200);
                 }
             } catch (error) {
                 console.error('Failed to like post:', error);
+                alert('Failed to like post. Please try again.');
             }
         }
 
@@ -2960,8 +3239,8 @@
                                     ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 1rem;">` : ''}
                                     
                                     <div style="display: flex; gap: 1rem; color: #666; font-size: 0.9rem; border-top: 1px solid #eee; padding-top: 0.75rem;">
-                                        <button onclick="likePost('${post.id}')" style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
-                                            <span>👍</span> ${post.likesCount || 0}
+                                        <button onclick="likePost('${post.id}', event)" style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
+                                            <span>${post.isLiked ? '❤️' : '👍'}</span> <span>${post.likesCount || 0}</span>
                                         </button>
                                         <button onclick="toggleComments('${post.id}')" style="background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
                                             <span>💬</span> ${post.commentsCount || 0}

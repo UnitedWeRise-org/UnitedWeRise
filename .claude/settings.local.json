@@ -44,7 +44,11 @@
       "Bash(brew install:*)",
       "Bash(gh auth:*)",
       "Bash(git config:*)",
-      "Bash(gh repo view:*)"
+      "Bash(gh repo view:*)",
+      "Bash(python3:*)",
+      "Bash(/opt/homebrew/bin/az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars \"ALLOWED_ORIGINS=https://www.unitedwerise.org,https://yellow-mud-043d1ca0f.2.azurestaticapps.net,http://localhost:3000,http://localhost:8080\")",
+      "Bash(lsof:*)",
+      "WebFetch(domain:maplibre.org)"
     ],
     "deny": []
   }

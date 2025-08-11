@@ -12,8 +12,20 @@ The United We Rise API is a comprehensive REST API for a political social media 
 - **Officials Panel** - Federal/state/local representatives with contact options and voting records
 - **Elections Management** - Dynamic calendar, voter guide, registration status, contest analytics
 - **Trending System** - Multiple view modes, content filtering, analytics dashboard
-- **Responsive Design** - Proper positioning relative to navigation bar with minimal gap
+- **Responsive Design** - 3-tier system (Desktop >1024px, Tablet 768-1024px, Mobile <768px)
 - **Map Integration** - Smart overlay system preserving map functionality
+
+### MapLibre GL Migration (Fully Complete!)
+- **Modern Mapping** - Migrated from Leaflet to MapLibre GL for better responsive behavior
+- **Responsive Maps** - Map maintains visible area (not zoom) when container resizes
+- **Clean Interface** - Removed navigation clutter, north-locked orientation, mouse/touch-only zoom
+- **Professional Controls** - Redesigned button layout: [National] [State] [Local] [Collapse] [×]
+- **Perfect Collapse/Expand** - Toggle between full-screen and corner view (25% width, 30% height)
+- **Complete Show/Hide** - Close map entirely, restore from sidebar with seamless state management
+- **Smooth Loading** - Proper loading overlay prevents ugly initialization flash
+- **Performance Boost** - Hardware-accelerated vector rendering with WebGL
+- **Full Compatibility** - Seamless integration with existing codebase via compatibility layer
+- **Local Development Ready** - CORS configured for localhost:8080 API access
 
 ### Multi-Tier Election System
 - **Never fails** - Cache → API → Fallback architecture ensures election data is always available
