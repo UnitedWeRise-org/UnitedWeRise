@@ -1141,10 +1141,19 @@ class UWRMapLibre {
             comment.coordinates[1] + (Math.random() - 0.5) * 1   // ±0.5 degree latitude
         ];
 
-        // Simple, minimal chat bubble with just the content
+        // Enhanced chat bubble with visual feedback and engagement info
         const popupHtml = `
-            <div class="trending-bubble" onclick="window.navigateToComment && window.navigateToComment('${comment.id}')">
-                ${comment.summary}
+            <div class="trending-bubble" onclick="window.navigateToComment && window.navigateToComment('${comment.id}')" 
+                 title="Click to view full conversation" 
+                 data-comment-id="${comment.id}">
+                <div class="bubble-content">
+                    ${comment.summary}
+                </div>
+                <div class="bubble-meta">
+                    <span class="engagement">💬 ${comment.engagement || 0}</span>
+                    <span class="time">${comment.time || 'now'}</span>
+                    <span class="click-hint">👆 Click to discuss</span>
+                </div>
             </div>
         `;
 
@@ -1152,13 +1161,30 @@ class UWRMapLibre {
             closeButton: false,
             closeOnClick: false,
             className: 'trending-bubble-popup',
-            maxWidth: '200px',
+            maxWidth: '220px',
             anchor: 'bottom',
             offset: 12
         })
         .setLngLat(adjustedCoords)
         .setHTML(popupHtml)
         .addTo(this.map);
+
+        // Add hover effect to the bubble
+        const bubbleElement = popup.getElement();
+        if (bubbleElement) {
+            const bubble = bubbleElement.querySelector('.trending-bubble');
+            if (bubble) {
+                bubble.style.cursor = 'pointer';
+                bubble.addEventListener('mouseenter', () => {
+                    bubble.style.transform = 'scale(1.02)';
+                    bubble.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                });
+                bubble.addEventListener('mouseleave', () => {
+                    bubble.style.transform = 'scale(1)';
+                    bubble.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                });
+            }
+        }
 
         // Store popup reference
         this.trendingPopups.push(popup);
@@ -1841,13 +1867,195 @@ if (document.readyState === 'loading') {
 // Global navigation function for trending comment clicks
 window.navigateToComment = function(commentId) {
     console.log('Navigating to comment:', commentId);
-    // TODO: Implement navigation to specific comment/conversation
-    // This would typically:
-    // 1. Close any open panels
-    // 2. Open the posts/conversation panel
-    // 3. Navigate to the specific comment thread
-    // 4. Highlight the comment
-    alert(`Would navigate to comment ${commentId} (not yet implemented)`);
+    
+    try {
+        // Get the main content area
+        const postsFeed = document.getElementById('postsFeed');
+        if (!postsFeed) {
+            console.error('Posts feed not found');
+            return;
+        }
+
+        // Get the comment data from the dummy content
+        const dummyContent = getDummyCivicContent();
+        const topicData = dummyContent.trendingTopics.find(topic => topic.id === commentId);
+        
+        if (topicData) {
+            console.log('Found topic data, populating main content...');
+            
+            // Create conversation view in main content area
+            const conversationHtml = `
+                <div class="conversation-view">
+                    <div class="conversation-header">
+                        <button onclick="goBackToFeed()" class="back-btn">← Back to Feed</button>
+                        <div class="conversation-meta">
+                            <h2 class="conversation-title">${topicData.title}</h2>
+                            <div class="conversation-location">
+                                📍 ${topicData.location} • 
+                                <span class="engagement-count">💬 ${topicData.engagement} people discussing</span>
+                            </div>
+                            <div class="conversation-tags">
+                                ${topicData.tags.map(tag => `<span class="tag">#${tag}</span>`).join(' ')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="conversation-content">
+                        <div class="main-post">
+                            <div class="post-header">
+                                <div class="post-author">
+                                    <div class="author-avatar">🗣️</div>
+                                    <div class="author-info">
+                                        <div class="author-name">Community Discussion</div>
+                                        <div class="post-time">From your area • Trending now</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="post-body">
+                                <p>${topicData.content}</p>
+                            </div>
+                            <div class="post-actions">
+                                <button class="action-btn like-btn">❤️ Like</button>
+                                <button class="action-btn comment-btn">💬 Comment</button>
+                                <button class="action-btn share-btn">📤 Share</button>
+                            </div>
+                        </div>
+                        
+                        <div class="comments-section">
+                            <div class="add-comment">
+                                <textarea placeholder="Add your thoughts to this discussion..." rows="3"></textarea>
+                                <button class="btn comment-submit-btn">Post Comment</button>
+                            </div>
+                            
+                            <div class="comments-list">
+                                <div class="comment">
+                                    <div class="comment-avatar">👤</div>
+                                    <div class="comment-content">
+                                        <div class="comment-header">
+                                            <span class="comment-author">@LocalCitizen</span>
+                                            <span class="comment-time">2 hours ago</span>
+                                        </div>
+                                        <div class="comment-body">
+                                            This is exactly what our community needs. I've been following this issue closely and the impact will be significant for local families.
+                                        </div>
+                                        <div class="comment-actions">
+                                            <button class="comment-action">❤️ 12</button>
+                                            <button class="comment-action">💬 Reply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="comment">
+                                    <div class="comment-avatar">👩</div>
+                                    <div class="comment-content">
+                                        <div class="comment-header">
+                                            <span class="comment-author">@ConcernedParent</span>
+                                            <span class="comment-time">1 hour ago</span>
+                                        </div>
+                                        <div class="comment-body">
+                                            Has anyone attended the recent town halls about this? I'd love to hear firsthand accounts of what was discussed.
+                                        </div>
+                                        <div class="comment-actions">
+                                            <button class="comment-action">❤️ 8</button>
+                                            <button class="comment-action">💬 Reply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="comment">
+                                    <div class="comment-avatar">🏛️</div>
+                                    <div class="comment-content">
+                                        <div class="comment-header">
+                                            <span class="comment-author">@CivicVolunteer</span>
+                                            <span class="comment-time">30 minutes ago</span>
+                                        </div>
+                                        <div class="comment-body">
+                                            I can help connect people with the right representatives to voice concerns. DM me if you want contact information for your district officials.
+                                        </div>
+                                        <div class="comment-actions">
+                                            <button class="comment-action">❤️ 15</button>
+                                            <button class="comment-action">💬 Reply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Update the main content
+            postsFeed.innerHTML = conversationHtml;
+            
+            // Scroll to top of conversation
+            postsFeed.scrollTop = 0;
+            
+            // Show a brief success message
+            console.log('✅ Conversation loaded in main content area');
+            
+        } else {
+            console.log('Topic data not found, showing general message');
+            
+            // Show a general "join the conversation" view
+            const generalHtml = `
+                <div class="conversation-view">
+                    <div class="conversation-header">
+                        <button onclick="goBackToFeed()" class="back-btn">← Back to Feed</button>
+                        <h2 class="conversation-title">Join the Discussion</h2>
+                    </div>
+                    
+                    <div class="conversation-content">
+                        <div class="main-post">
+                            <div class="post-body">
+                                <p>💬 <strong>Looking for discussion ID: ${commentId}</strong></p>
+                                <p>This conversation is part of the trending political discussions in your area. 
+                                   Check out the latest trending topics below or start your own discussion.</p>
+                            </div>
+                            <div class="post-actions">
+                                <button class="btn" onclick="if(window.toggleTrendingPanel) window.toggleTrendingPanel()">View All Trending 🔥</button>
+                                <button class="btn" onclick="goBackToFeed()">Back to Feed</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            postsFeed.innerHTML = generalHtml;
+        }
+        
+    } catch (error) {
+        console.error('Error navigating to comment:', error);
+        // Fallback: show error message in main content
+        const postsFeed = document.getElementById('postsFeed');
+        if (postsFeed) {
+            postsFeed.innerHTML = `
+                <div class="error-message">
+                    <h2>Unable to Load Conversation</h2>
+                    <p>There was an error loading the discussion. Please try again.</p>
+                    <button class="btn" onclick="goBackToFeed()">Back to Feed</button>
+                </div>
+            `;
+        }
+    }
+};
+
+// Function to go back to the main feed
+window.goBackToFeed = function() {
+    console.log('Going back to main feed...');
+    const postsFeed = document.getElementById('postsFeed');
+    if (postsFeed) {
+        postsFeed.innerHTML = `
+            <h1>Welcome to United We Rise</h1>
+            <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
+            <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4b5c09;">
+                <h3 style="margin: 0 0 0.5rem 0; color: #4b5c09;">💬 Want to see what's trending?</h3>
+                <p style="margin: 0 0 1rem 0;">Check out the hottest political discussions in your area by clicking the map bubbles or browsing trending topics.</p>
+                <button class="btn" onclick="if(window.toggleTrendingPanel) window.toggleTrendingPanel()" style="background: #4b5c09; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    🔥 View Trending
+                </button>
+            </div>
+        `;
+    }
 };
 
 // Export for use in other modules

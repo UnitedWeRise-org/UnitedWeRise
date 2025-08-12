@@ -9,7 +9,8 @@ This document outlines best practices and procedures for developing the United W
 - **`CURRENT_API_STATUS.md`** - Real-time API implementation status
 - **`API_DOCUMENTATION.md`** - Complete API endpoint reference
 - **`TEST_FILES_TRACKER.md`** - **⚠️ IMPORTANT: Track all test files here for cleanup**
-- **`SESSION_HANDOFF_2025-08-08.md`** - Latest development session notes
+- **`SESSION_HANDOFF_2025-08-11-FINAL.md`** - Latest comprehensive session handoff
+- **`SESSION_UPDATE_2025-08-12-CONVERSATION_BUBBLES.md`** - Map conversation bubbles implementation
 
 ### Deployment Documentation
 - **`PRODUCTION_DEPLOYMENT_GUIDE.md`** - Azure deployment procedures
@@ -120,12 +121,39 @@ mv test-[feature]-*.js test-archive/[YYYY-MM]/
 # Edit TEST_FILES_TRACKER.md to note archived location
 ```
 
+## 🗺️ Map Conversation System
+
+### Architecture Overview
+The map conversation bubbles use a three-layer system:
+1. **Map Layer**: Interactive bubbles showing trending topics (`map-maplibre.js`)
+2. **Navigation Layer**: `navigateToComment()` function handles clicks
+3. **Content Layer**: Populates main content area with conversation view
+
+### Key Files
+- **`frontend/src/js/map-maplibre.js`**: Bubble display and navigation
+- **`frontend/src/styles/main.css`**: Conversation view styling
+- **`frontend/src/styles/map.css`**: Bubble animations and interactions
+
+### Testing Conversation Bubbles
+1. Open `frontend/index.html` in browser
+2. Login with test account (test@test.com / test123)
+3. View map conversation bubbles (appear every 15 seconds)
+4. Click bubble to open conversation in main content area
+5. Test back navigation with "← Back to Feed" button
+
+### Development Notes
+- Bubbles cycle every 15 seconds with fade animations
+- Sample data includes realistic community discussions
+- UI ready for backend integration (comment forms, action buttons)
+- Responsive design works on all screen sizes
+
 ## 📝 Session Handoff
 
 When ending a development session:
 1. Document current state in `SESSION_HANDOFF_[date].md`
 2. Update `TEST_FILES_TRACKER.md` with new test files
-3. Commit all documentation changes
+3. Update feature-specific documentation if major changes made
+4. Commit all documentation changes
 4. Note any pending cleanups needed
 
 ## 🚀 Deployment Checklist

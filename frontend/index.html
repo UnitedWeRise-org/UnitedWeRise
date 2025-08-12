@@ -1656,7 +1656,7 @@
             posts.forEach(post => {
                 const timeAgo = getTimeAgo(new Date(post.createdAt));
                 html += `
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; border-left: 3px solid #4b5c09; background: #f9f9f9;">
+                    <div data-post-id="${post.id}" style="margin-bottom: 1rem; padding: 0.75rem; border-left: 3px solid #4b5c09; background: #f9f9f9; border-radius: 4px; transition: all 0.3s ease;">
                         <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">
                             @${post.author.username} • ${timeAgo}
                         </div>
