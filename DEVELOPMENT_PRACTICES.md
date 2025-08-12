@@ -48,10 +48,40 @@ Every Friday:
 
 ## 🔄 Development Workflow
 
+### Local Development Setup
+
+#### Frontend Development
+The frontend is a static HTML application that can be run directly:
+
+**Option 1: Direct File Access (Recommended for quick testing)**
+1. Open `frontend/index.html` directly in your browser
+2. The app automatically detects file:// protocol and uses localhost backend
+3. hCaptcha is automatically bypassed for local development
+
+**Option 2: Local Web Server**
+```bash
+cd frontend
+npx http-server . -p 3000
+# Then visit http://localhost:3000
+```
+
+#### Backend Development
+```bash
+cd backend
+npm install
+npm run dev  # Starts on http://localhost:3001
+```
+
+#### Local Development Features
+- **Automatic Environment Detection**: Frontend detects localhost/file:// and adjusts API endpoints
+- **hCaptcha Bypass**: Disabled for local development (see Security Notes below)
+- **CORS Configuration**: Backend allows localhost origins for development
+
 ### Before Starting Work
 1. Pull latest changes: `git pull origin main`
 2. Check `SESSION_HANDOFF_*.md` for latest status
 3. Review `TEST_FILES_TRACKER.md` for cleanup needs
+4. Start backend server: `cd backend && npm run dev`
 
 ### During Development
 1. Create test files as needed
@@ -105,6 +135,20 @@ Before deploying:
 2. Ensure no test files in production build
 3. Verify all temporary files removed
 4. Update documentation with deployment notes
+5. **Security Check**: Ensure hCaptcha bypass only works in development
+
+## 🔒 Security Notes
+
+### Local Development hCaptcha Bypass
+- **Purpose**: Allows registration/testing without working hCaptcha on localhost
+- **Implementation**: Backend detects local IPs (127.0.0.1, ::1, 192.168.x.x, 10.x.x.x) and NODE_ENV=development
+- **Security**: Only bypassed for local/private network IPs, never in production
+- **Monitoring**: Console logs when bypass is triggered for debugging
+
+### Production Security
+- hCaptcha is always required in production environments
+- Only bypassed for localhost, 127.0.0.1, and private network ranges
+- All production deployments must verify hCaptcha is working properly
 
 ## 📊 Documentation Maintenance
 

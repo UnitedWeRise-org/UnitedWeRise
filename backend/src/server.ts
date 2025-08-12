@@ -21,6 +21,7 @@ import candidateRoutes from './routes/candidates';
 import candidateMessagesRoutes from './routes/candidateMessages';
 import topicRoutes from './routes/topics';
 import photoRoutes from './routes/photos';
+import googleCivicRoutes from './routes/googleCivic';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
 import { apiLimiter } from './middleware/rateLimiting';
@@ -112,6 +113,7 @@ app.use('/api/candidates', candidateRoutes);
 app.use('/api/candidate-messages', candidateMessagesRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/photos', photoRoutes);
+app.use('/api/google-civic', googleCivicRoutes);
 
 // Serve uploaded photos statically
 app.use('/uploads', express.static('uploads'));

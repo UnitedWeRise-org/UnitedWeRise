@@ -444,7 +444,116 @@ class MyProfile {
     }
 
     editAddress() {
-        alert('Address editing coming soon!');
+        const user = this.userProfile;
+        
+        // Create modal for address editing
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>Edit Address</h2>
+                    <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editStreetAddress">Street Address</label>
+                        <input type="text" id="editStreetAddress" value="${user.streetAddress || ''}" placeholder="123 Main St">
+                    </div>
+                    <div class="form-group">
+                        <label for="editCity">City</label>
+                        <input type="text" id="editCity" value="${user.city || ''}" placeholder="City">
+                    </div>
+                    <div class="form-group">
+                        <label for="editState">State</label>
+                        <input type="text" id="editState" value="${user.state || ''}" placeholder="State (e.g., CA)" maxlength="2">
+                    </div>
+                    <div class="form-group">
+                        <label for="editZipCode">ZIP Code</label>
+                        <input type="text" id="editZipCode" value="${user.zipCode || ''}" placeholder="12345" maxlength="5">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button onclick="window.myProfile.saveAddress()" class="btn" style="background: #4b5c09;">Save Address</button>
+                        <button onclick="this.closest('.modal').remove()" class="btn" style="background: #666;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // If Google Maps is available, initialize autocomplete
+        if (window.google && window.google.maps) {
+            setTimeout(() => {
+                const input = document.getElementById('editStreetAddress');
+                const autocomplete = new google.maps.places.Autocomplete(input, {
+                    types: ['address'],
+                    componentRestrictions: { country: 'us' },
+                    fields: ['formatted_address', 'address_components']
+                });
+                
+                autocomplete.addListener('place_changed', () => {
+                    const place = autocomplete.getPlace();
+                    if (place.address_components) {
+                        place.address_components.forEach(component => {
+                            const types = component.types;
+                            if (types.includes('locality')) {
+                                document.getElementById('editCity').value = component.long_name;
+                            }
+                            if (types.includes('administrative_area_level_1')) {
+                                document.getElementById('editState').value = component.short_name;
+                            }
+                            if (types.includes('postal_code')) {
+                                document.getElementById('editZipCode').value = component.long_name;
+                            }
+                        });
+                    }
+                });
+            }, 100);
+        }
+    }
+    
+    async saveAddress() {
+        const streetAddress = document.getElementById('editStreetAddress').value;
+        const city = document.getElementById('editCity').value;
+        const state = document.getElementById('editState').value;
+        const zipCode = document.getElementById('editZipCode').value;
+        
+        try {
+            const response = await window.apiCall('/political/profile', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    streetAddress,
+                    city,
+                    state,
+                    zipCode
+                })
+            });
+            
+            if (response.ok) {
+                // Update local profile data
+                this.userProfile.streetAddress = streetAddress;
+                this.userProfile.city = city;
+                this.userProfile.state = state;
+                this.userProfile.zipCode = zipCode;
+                
+                // Close modal and refresh view
+                document.querySelector('.modal').remove();
+                this.switchTab('demographics');
+                
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4b5c09; color: white; padding: 15px; border-radius: 4px; z-index: 10000;';
+                successMsg.textContent = '✓ Address updated successfully!';
+                document.body.appendChild(successMsg);
+                setTimeout(() => successMsg.remove(), 3000);
+            } else {
+                alert('Failed to save address. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error saving address:', error);
+            alert('Error saving address. Please try again.');
+        }
     }
 
     editPolitical() {
@@ -480,12 +589,7 @@ class MyProfile {
     }
 
     async verifyPhone() {
-        // Open verification modal if available
-        if (window.verificationFlow) {
-            window.verificationFlow.showModal();
-        } else {
-            alert('Phone verification coming soon!');
-        }
+        alert('📱 Phone verification is not yet fully implemented.\n\nThis feature will be available in a future update when SMS costs can be supported.');
     }
 
     // Settings methods

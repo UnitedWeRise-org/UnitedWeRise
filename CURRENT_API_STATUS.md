@@ -2,6 +2,24 @@
 
 > **Note**: For test file management, see `TEST_FILES_TRACKER.md` to track and clean up test files created during development.
 
+## Anonymous Access Features - IMPLEMENTED ✅
+
+### Public Read-Only Access (No Authentication Required)
+- **Trending Posts**: `/api/feed/trending` - View most popular civic discussions
+- **Individual Posts**: `/api/posts/:postId` - Read specific posts and discussions
+- **Post Comments**: `/api/posts/:postId/comments` - View all comments and replies
+- **User Posts**: `/api/posts/user/:userId` - Browse any user's public posts
+- **Representative Lookup**: `/api/political/representatives/lookup?address=...` - Find elected officials by address
+- **Public User Profiles**: `/api/users/:userId` - View basic civic profile information
+- **Address Autocomplete**: Google Maps integration works for all visitors
+
+### Write Operations (Authentication Required)
+- Creating posts, comments, likes
+- Following/unfollowing users
+- Direct messaging
+- Profile updates and personal settings
+- Personalized feed generation
+
 ## Database Schema - IMPLEMENTED ✅
 
 ### Core User System
@@ -47,10 +65,13 @@
 
 ### Political Features ✅
 - **Representative Lookup**
-  - Geocoding with Geocodio API
+  - **Google Civic Information API** (primary source with nonprofit credits)
+  - **Geocodio API** (enhanced data for school districts, state legislative info)
+  - Intelligent data merging from multiple sources
   - H3 geospatial indexing
   - District-based representative matching
-  - External API caching (Google Civic API)
+  - External API caching (7-30 day TTL)
+  - Address autocomplete with Google Places API
 
 ### Administrative Features ✅
 - **Basic Admin System**
@@ -82,8 +103,10 @@
 - `POST /api/posts/:id/comments` - Add comment ✅
 
 ### Political
-- `GET /api/political/representatives` - Get representatives by location ✅
+- `GET /api/political/representatives` - Get representatives by location (merged data) ✅
 - `POST /api/political/lookup` - Lookup representatives ✅
+- `GET /api/google-civic/representatives` - Get reps via Google Civic API ✅
+- `GET /api/google-civic/elections` - Get election information ✅
 
 ### Verification
 - `POST /api/verification/email/send` - Send email verification ✅

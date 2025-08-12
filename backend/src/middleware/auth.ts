@@ -10,6 +10,8 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     username: string;
+    firstName?: string;
+    lastName?: string;
     isModerator?: boolean;
     isAdmin?: boolean;
   };
@@ -36,7 +38,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, username: true, isModerator: true, isAdmin: true }
+      select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true }
     });
 
     if (!user) {

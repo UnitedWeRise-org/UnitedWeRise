@@ -89,6 +89,9 @@ class VerificationFlow {
                         <div id="phoneStep" class="verification-step" style="display: none;">
                             <div class="step-icon">📱</div>
                             <h3>Verify Your Phone Number</h3>
+                            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                                <strong>⚠️ Note:</strong> Phone verification is not yet fully implemented. Please click "Skip" to continue.
+                            </div>
                             <p>Phone verification helps secure your account and enables important notifications.</p>
                             
                             <div class="phone-input-section">
@@ -116,8 +119,8 @@ class VerificationFlow {
                                 </button>
                             </div>
                             
-                            <button onclick="verificationFlow.skipPhoneVerification()" class="btn btn-text">
-                                Skip (Email verification is sufficient)
+                            <button onclick="verificationFlow.skipPhoneVerification()" class="btn btn-text" style="background: #4b5c09; color: white; padding: 12px 24px; font-weight: bold;">
+                                Skip Phone Verification (Recommended)
                             </button>
                         </div>
 
@@ -389,7 +392,8 @@ class VerificationFlow {
                 const status = await response.json();
                 
                 if (status.email.verified) {
-                    this.currentStep = status.phone.verified ? 'complete' : 'phone';
+                    // Skip phone verification - go directly to complete
+                    this.currentStep = 'complete';
                 } else {
                     this.currentStep = 'email';
                 }
@@ -438,9 +442,10 @@ class VerificationFlow {
             if (response.ok) {
                 const status = await response.json();
                 if (status.email.verified) {
-                    this.currentStep = 'phone';
+                    // Skip phone verification since it's not implemented
+                    this.currentStep = 'complete';
                     this.updateStep();
-                    this.showMessage('Email verified successfully!', 'success');
+                    this.showMessage('Email verified successfully! Phone verification skipped.', 'success');
                 } else {
                     this.showMessage('Email not yet verified. Please check your inbox.', 'warning');
                 }

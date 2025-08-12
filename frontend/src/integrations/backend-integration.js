@@ -3,7 +3,14 @@
 
 class BackendIntegration {
     constructor() {
-        this.API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        // Use same environment detection as main app
+        this.API_BASE = (window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' || 
+                        window.location.protocol === 'file:')
+            ? 'http://localhost:3001/api' 
+            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        
+        console.log('🔧 Backend Integration API Base:', this.API_BASE);
         this.init();
     }
 
@@ -242,12 +249,16 @@ class BackendIntegration {
             setUserLoggedOut();
         }
         
-        // Use alert for now, could be enhanced with a proper notification system
-        alert('Session expired. Please log in again.');
+        // More user-friendly session expiry notification
+        const expiredMsg = document.createElement('div');
+        expiredMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; z-index: 10000; border: 1px solid #f5c6cb; max-width: 300px;';
+        expiredMsg.innerHTML = '⏰ Your session has expired. Please log in again to continue.';
+        document.body.appendChild(expiredMsg);
         
         setTimeout(() => {
+            expiredMsg.remove();
             openAuthModal('login');
-        }, 1500);
+        }, 3000);
     }
 
     handleSuspensionError(errorData) {

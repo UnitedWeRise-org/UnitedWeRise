@@ -95,13 +95,27 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
   try {
     const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint } = req.body;
 
-    // Verify captcha
-    const captchaResult = await captchaService.verifyCaptcha(hcaptchaToken, req.ip);
-    if (!captchaResult.success) {
-      return res.status(400).json({ 
-        error: 'Captcha verification failed. Please try again.',
-        captchaError: captchaResult.error 
-      });
+    // Check if running in local development environment
+    const isLocalDevelopment = process.env.NODE_ENV === 'development' || 
+                              req.ip === '127.0.0.1' || 
+                              req.ip === '::1' || 
+                              req.ip?.startsWith('192.168.') ||
+                              req.ip?.startsWith('10.') ||
+                              req.ip?.startsWith('172.16.') ||
+                              req.hostname === 'localhost';
+
+    // Verify captcha (skip for local development)
+    if (!isLocalDevelopment) {
+      const captchaResult = await captchaService.verifyCaptcha(hcaptchaToken, req.ip);
+      if (!captchaResult.success) {
+        return res.status(400).json({ 
+          error: 'Captcha verification failed. Please try again.',
+          captchaError: captchaResult.error 
+        });
+      }
+    } else {
+      console.log('🔧 Local development detected: Bypassing hCaptcha verification');
+      console.log(`   IP: ${req.ip}, NODE_ENV: ${process.env.NODE_ENV}`);
     }
 
     // Process device fingerprint for anti-bot protection
@@ -377,6 +391,43 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Create test user endpoint (local development only)
+router.post('/create-test-user', async (req, res) => {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development' && req.ip !== '127.0.0.1' && req.ip !== '::1') {
+    return res.status(403).json({ error: 'Not allowed in production' });
+  }
+
+  try {
+    const hashedPassword = await hashPassword('test123');
+    
+    const testUser = await prisma.user.upsert({
+      where: { email: 'test@test.com' },
+      update: {},
+      create: {
+        email: 'test@test.com',
+        username: 'testuser',
+        password: hashedPassword,
+        firstName: 'Test',
+        lastName: 'User',
+        emailVerified: true,
+        verificationStatus: 'NOT_REQUIRED'
+      }
+    });
+
+    res.json({ 
+      message: 'Test user created/updated',
+      credentials: {
+        email: 'test@test.com',
+        password: 'test123'
+      }
+    });
+  } catch (error) {
+    console.error('Error creating test user:', error);
+    res.status(500).json({ error: 'Failed to create test user' });
   }
 });
 

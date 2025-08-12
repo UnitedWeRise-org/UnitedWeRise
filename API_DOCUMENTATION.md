@@ -184,10 +184,24 @@ Authorization: Bearer <token>
 
 ### User Management (`/api/users`)
 
-#### Get User Profile
+#### Get Public User Profile (No Auth Required)
 ```http
-GET /api/users/{username}
+GET /api/users/{userId}
 ```
+
+**Returns:** Public profile information only:
+- Basic info (name, username, bio, avatar)
+- Social metrics (followers, following counts)  
+- Political profile (if candidate/official)
+- Excludes private data (email, address, etc.)
+
+#### Get Current User Profile (Authenticated)
+```http
+GET /api/users/profile
+Authorization: Bearer <token>
+```
+
+**Returns:** Full profile including private information (email, address, etc.)
 
 #### Update Profile
 ```http
@@ -330,11 +344,26 @@ GET /api/feed/trending?limit=20
 
 ### Political Information (`/api/political`)
 
-#### Get User's Representatives
+#### Get User's Representatives (Authenticated)
 ```http
 GET /api/political/representatives
 Authorization: Bearer <token>
+Query: ?forceRefresh=true (optional - bypasses cache)
 ```
+
+**Note:** Uses user's saved address. Returns comprehensive merged data from multiple sources.
+
+#### Get Representatives by Address (Public - No Auth Required)
+```http
+GET /api/political/representatives/lookup?address=123+Main+St+Springfield+IL
+Query: ?forceRefresh=true (optional - bypasses cache)
+```
+
+**Features:**
+- Works for anonymous users
+- Google Civic Information API (primary - using nonprofit credits)
+- Geocodio API (enhanced data - school districts, state legislative info)
+- Returns comprehensive representative data with all available information
 
 #### Search Representatives by Address
 ```http
@@ -345,6 +374,31 @@ Content-Type: application/json
   "address": "123 Main St, Springfield, IL 62701"
 }
 ```
+
+### Google Civic Information (`/api/google-civic`)
+
+#### Get Representatives via Google Civic API
+```http
+GET /api/google-civic/representatives?address=123+Main+St+Springfield+IL
+Authorization: Bearer <token>
+```
+
+**Response includes:**
+- Federal, state, and local officials
+- Contact information and social media
+- Office addresses and photos
+
+#### Get Election Information
+```http
+GET /api/google-civic/elections?address=123+Main+St+Springfield+IL
+Authorization: Bearer <token>
+```
+
+**Response includes:**
+- Upcoming elections
+- Polling locations
+- Voter registration information
+- Candidate lists for elections
 
 #### Update Political Profile
 ```http

@@ -98,7 +98,7 @@ export class ProbabilityFeedService {
             }),
             prisma.follow.findMany({
                 where: { followerId: userId },
-                select: { followedId: true }
+                select: { followingId: true }
             }),
             prisma.like.findMany({
                 where: { userId },
@@ -116,7 +116,7 @@ export class ProbabilityFeedService {
 
         return {
             user,
-            followedUserIds: new Set(followedUsers.map(f => f.followedId)),
+            followedUserIds: new Set(followedUsers.map(f => f.followingId)),
             interactionEmbeddings: [
                 ...likedPosts.map(l => l.post.embedding).filter(e => e.length > 0),
                 ...userPosts.map(p => p.embedding).filter(e => e.length > 0)

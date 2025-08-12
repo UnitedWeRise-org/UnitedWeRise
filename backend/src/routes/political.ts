@@ -165,15 +165,26 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
         forceRefresh === 'true'
       );
 
-      representatives = repResponse?.representatives || [];
+      const repsData = repResponse?.representatives || [];
+      
+      // Handle both array and grouped formats
+      if (Array.isArray(repsData)) {
+        representatives = repsData;
+      } else {
+        representatives = [
+          ...(repsData.federal || []),
+          ...(repsData.state || []),
+          ...(repsData.local || [])
+        ];
+      }
       responseSource = repResponse?.source || 'none';
     }
 
     // Group representatives by government level
     const groupedRepresentatives = {
-      federal: representatives.filter(r => r.level === 'federal'),
-      state: representatives.filter(r => r.level === 'state'),
-      local: representatives.filter(r => r.level === 'local')
+      federal: representatives.filter((r: any) => r.level === 'federal'),
+      state: representatives.filter((r: any) => r.level === 'state'),
+      local: representatives.filter((r: any) => r.level === 'local')
     };
 
     res.json({
@@ -237,15 +248,26 @@ router.get('/representatives', requireAuth, async (req: AuthRequest, res) => {
         forceRefresh === 'true'
       );
 
-      representatives = repResponse?.representatives || [];
+      const repsData = repResponse?.representatives || [];
+      
+      // Handle both array and grouped formats
+      if (Array.isArray(repsData)) {
+        representatives = repsData;
+      } else {
+        representatives = [
+          ...(repsData.federal || []),
+          ...(repsData.state || []),
+          ...(repsData.local || [])
+        ];
+      }
       responseSource = repResponse?.source || 'none';
     }
 
     // Group representatives by government level
     const groupedRepresentatives = {
-      federal: representatives.filter(r => r.level === 'federal'),
-      state: representatives.filter(r => r.level === 'state'),
-      local: representatives.filter(r => r.level === 'local')
+      federal: representatives.filter((r: any) => r.level === 'federal'),
+      state: representatives.filter((r: any) => r.level === 'state'),
+      local: representatives.filter((r: any) => r.level === 'local')
     };
 
     res.json({
@@ -263,6 +285,67 @@ router.get('/representatives', requireAuth, async (req: AuthRequest, res) => {
 
   } catch (error) {
     console.error('Get representatives error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get representatives by address (PUBLIC - no authentication required)
+router.get('/representatives/lookup', async (req, res) => {
+  try {
+    const { address, forceRefresh } = req.query;
+
+    if (!address) {
+      return res.status(400).json({ 
+        error: 'Address parameter is required' 
+      });
+    }
+
+    // Call the representative service with the provided address
+    const repResponse = await RepresentativeService.getRepresentativesByAddress(
+      address as string,
+      undefined, // zipCode - will be extracted from address
+      undefined, // state - will be extracted from address  
+      forceRefresh === 'true'
+    );
+
+    if (!repResponse) {
+      return res.status(404).json({ 
+        error: 'No representatives found for this address' 
+      });
+    }
+
+    // Group representatives by government level
+    const repsData = repResponse.representatives || [];
+    let representatives: any[] = [];
+    
+    // Handle both array and grouped formats
+    if (Array.isArray(repsData)) {
+      representatives = repsData;
+    } else {
+      representatives = [
+        ...(repsData.federal || []),
+        ...(repsData.state || []),
+        ...(repsData.local || [])
+      ];
+    }
+
+    const groupedRepresentatives = {
+      federal: representatives.filter((r: any) => r.level === 'federal'),
+      state: representatives.filter((r: any) => r.level === 'state'),
+      local: representatives.filter((r: any) => r.level === 'local')
+    };
+
+    res.json({
+      representatives: groupedRepresentatives,
+      totalCount: representatives.length,
+      location: repResponse.location || {},
+      source: repResponse.source,
+      lastUpdated: new Date().toISOString(),
+      cached: forceRefresh !== 'true'
+    });
+
+  } catch (error) {
+    console.error('Get representatives by address error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -336,7 +419,18 @@ router.get('/officials/:zipCode/:state', async (req, res) => {
         forceRefresh === 'true'
       );
 
-      representatives = repResponse?.representatives || [];
+      const repsData = repResponse?.representatives || [];
+      
+      // Handle both array and grouped formats
+      if (Array.isArray(repsData)) {
+        representatives = repsData;
+      } else {
+        representatives = [
+          ...(repsData.federal || []),
+          ...(repsData.state || []),
+          ...(repsData.local || [])
+        ];
+      }
       responseSource = repResponse?.source || 'none';
     }
 

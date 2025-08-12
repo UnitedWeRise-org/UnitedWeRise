@@ -40,6 +40,10 @@
     <script src="src/integrations/trending-system-integration.js"></script>
     <script src="src/js/mobile-navigation.js"></script>
     <script src="src/js/map-maplibre.js"></script>
+    <script src="src/js/google-address-autocomplete.js"></script>
+    <script src="src/js/legal-modal.js"></script>
+    <!-- Google Maps API for Address Autocomplete -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADKVnUgGhANln2rKTh9Qvcra_2bTG91oE&libraries=places&callback=initGoogleMaps"></script>
 </head>
 <body>
     <div class="top-bar">
@@ -133,6 +137,14 @@
                         <input type="text" id="registerLastName">
                     </div>
                     <div class="form-group">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="termsAgreement" required>
+                            <span class="checkmark"></span>
+                            I agree to the <a href="#" onclick="openLegalModal('terms'); return false;">Terms of Service</a> 
+                            and <a href="#" onclick="openLegalModal('privacy'); return false;">Privacy Policy</a>
+                        </label>
+                    </div>
+                    <div class="form-group">
                         <!-- Use production key with proper domain (test.unitedwerise.com) -->
                         <div class="h-captcha" data-sitekey="9c5af3a8-5066-446c-970e-1c18d9fe8d9e" data-callback="onHCaptchaCallback" id="hcaptcha-register"></div>
                     </div>
@@ -143,6 +155,21 @@
                 </div>
                 
                 <div id="authMessage"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Documents Modal -->
+    <div id="legalModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="legalTitle">Legal Documents</h2>
+                <button onclick="closeLegalModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="legalContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
             </div>
         </div>
     </div>
@@ -251,12 +278,12 @@
 
     <div id="panel-officials" class="info-panel hidden" data-offset="1">
         <div class="panel-header">
-            <span>My Elected Officials</span>
+            <span>Find Representatives</span>
             <button onclick="closePanel('officials')">X</button>
         </div>
         <div class="panel-body">
             <div id="officialsContent">
-                <p>Please log in and set your address to see your elected officials.</p>
+                <p>Enter any address to find elected representatives.</p>
             </div>
         </div>
     </div>
@@ -378,8 +405,12 @@
     </div>
 
     <script>
-        // API Configuration
-        const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        // API Configuration - Environment-based
+        const API_BASE = (window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' || 
+                         window.location.protocol === 'file:')
+            ? 'http://localhost:3001/api' 
+            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         let currentUser = null;
         let authToken = null;
         let addressForm = null;
@@ -744,6 +775,7 @@
             const firstName = document.getElementById('registerFirstName').value;
             const lastName = document.getElementById('registerLastName').value;
             
+            
             // Get hCaptcha response
             let hcaptchaResponse = null;
             try {
@@ -768,8 +800,20 @@
                 showAuthMessage('Email, username, and password are required', 'error');
                 return;
             }
+
+            // Check terms agreement checkbox
+            const termsAgreement = document.getElementById('termsAgreement');
+            if (!termsAgreement || !termsAgreement.checked) {
+                showAuthMessage('You must agree to the Terms of Service and Privacy Policy to continue', 'error');
+                return;
+            }
             
-            if (!hcaptchaResponse) {
+            // Skip hCaptcha entirely for local development
+            const isLocalDev = window.location.protocol === 'file:' || 
+                             window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1';
+
+            if (!isLocalDev && !hcaptchaResponse) {
                 showAuthMessage('Please complete the captcha verification by clicking the checkbox above', 'error');
                 return;
             }
@@ -786,7 +830,14 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email, username, password, firstName, lastName, hcaptchaToken: hcaptchaResponse })
+                    body: JSON.stringify({ 
+                        email, 
+                        username, 
+                        password, 
+                        firstName, 
+                        lastName, 
+                        hcaptchaToken: hcaptchaResponse || null
+                    })
                 });
 
                 const data = await response.json();

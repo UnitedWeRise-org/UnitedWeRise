@@ -1,14 +1,40 @@
 # Representative API Setup
 
-Since Google shut down their Representatives API on April 30, 2025, we've implemented alternative solutions for finding elected representatives by address.
+We use a hybrid approach combining multiple APIs for comprehensive representative data.
 
-## Available API Options
+## Primary Configuration - Google Civic Information API
 
-### 1. Geocodio (Recommended)
+### Google Maps Platform (with Nonprofit Credits)
+- **Status**: PRIMARY SOURCE - Using Google for Nonprofits free credits
+- **Features**: 
+  - Address autocomplete (Places API)
+  - Representative lookup (Civic Information API)
+  - Election information and polling locations
+- **Data**: Federal, state, and local officials with photos and social media
+
+**Setup:**
+1. Apply for Google for Nonprofits at https://www.google.com/nonprofits/
+2. Once approved, get Google Maps Platform credits
+3. Create two API keys in Google Cloud Console:
+   - Frontend key (HTTP referrer restrictions)
+   - Backend key (IP address restrictions)
+4. Enable these APIs:
+   - Maps JavaScript API (frontend)
+   - Places API (frontend)
+   - Civic Information API (backend)
+   - Geocoding API (backend)
+
+## Secondary Configuration - Enhanced Data
+
+### 1. Geocodio (Enhanced Data Source)
+- **Status**: ACTIVE - Used for additional data not in Google Civic
 - **Free Tier**: 2,500 lookups per day
-- **Features**: Address → Congressional district + representative info
-- **Accuracy**: High (uses precise coordinates vs ZIP-only)
-- **Data**: Federal representatives + contact info
+- **Unique Features**: 
+  - School district boundaries
+  - State legislative districts
+  - Biographical information
+  - Campaign finance IDs
+- **Data**: Federal + state legislative + school districts
 
 **Setup:**
 1. Sign up at https://www.geocod.io/
@@ -37,12 +63,15 @@ Since Google shut down their Representatives API on April 30, 2025, we've implem
 
 ## Current Implementation
 
-The system now uses a fallback approach:
+The system now uses an intelligent merge approach:
 
-1. **First**: Try Geocodio API (most comprehensive)
-2. **Fallback**: Try FEC API (federal only)
-3. **Cache**: Store results for 30 days in database
-4. **Database**: Query cached representatives for fast responses
+1. **Parallel Fetch**: Query both Google Civic and Geocodio simultaneously
+2. **Data Merge**: Combine results for comprehensive coverage:
+   - Google Civic provides base federal/state/local officials
+   - Geocodio adds school districts and enhanced metadata
+   - Duplicate detection by name with field enhancement
+3. **Caching**: Store merged results for 7-30 days
+4. **Source Tracking**: Response indicates data sources used
 
 ## API Endpoints
 
