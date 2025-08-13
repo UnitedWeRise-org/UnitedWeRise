@@ -470,19 +470,31 @@
                 console.log('User isAdmin:', data.user?.isAdmin);
 
                 if (response.ok) {
-                    // Check if user object exists and has admin privileges
-                    if (data.user && data.user.isAdmin === true) {
-                        authToken = data.token;
-                        currentUser = data.user;
+                    authToken = data.token;
+                    currentUser = data.user;
+                    
+                    // Since current backend doesn't return isAdmin, we'll check via admin API
+                    console.log('Login successful, checking admin privileges...');
+                    
+                    try {
+                        const adminCheckResponse = await fetch(`${BACKEND_URL}/api/admin/dashboard`, {
+                            headers: { 'Authorization': `Bearer ${authToken}` }
+                        });
                         
-                        localStorage.setItem('authToken', authToken);
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        
-                        console.log('Admin verified, showing dashboard');
-                        showDashboard();
-                    } else {
-                        console.log('Not admin:', data.user);
-                        showError('Admin access required. This account does not have admin privileges.');
+                        if (adminCheckResponse.ok) {
+                            // If admin dashboard API works, user is admin
+                            localStorage.setItem('authToken', authToken);
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            
+                            console.log('Admin verified via dashboard API, showing dashboard');
+                            showDashboard();
+                        } else {
+                            console.log('Admin check failed:', adminCheckResponse.status);
+                            showError('Admin access required. This account does not have admin privileges.');
+                        }
+                    } catch (adminError) {
+                        console.error('Admin check error:', adminError);
+                        showError('Unable to verify admin privileges. Please try again.');
                     }
                 } else {
                     showError(data.error || 'Login failed');
