@@ -394,6 +394,46 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Debug endpoint to check test user data (local development only)
+router.get('/debug-test-user', async (req, res) => {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development' && req.ip !== '127.0.0.1' && req.ip !== '::1') {
+    return res.status(403).json({ error: 'Not allowed in production' });
+  }
+
+  try {
+    const testUser = await prisma.user.findUnique({
+      where: { email: 'test@test.com' },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        emailVerified: true,
+        verificationStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!testUser) {
+      return res.json({ message: 'Test user not found', exists: false });
+    }
+
+    res.json({ 
+      message: 'Test user data',
+      exists: true,
+      user: testUser,
+      hasFirstName: !!testUser.firstName,
+      hasLastName: !!testUser.lastName
+    });
+  } catch (error) {
+    console.error('Error checking test user:', error);
+    res.status(500).json({ error: 'Failed to check test user' });
+  }
+});
+
 // Create test user endpoint (local development only)
 router.post('/create-test-user', async (req, res) => {
   // Only allow in development
@@ -404,9 +444,16 @@ router.post('/create-test-user', async (req, res) => {
   try {
     const hashedPassword = await hashPassword('test123');
     
+    // Always update the test user to ensure it has all fields
     const testUser = await prisma.user.upsert({
       where: { email: 'test@test.com' },
-      update: {},
+      update: {
+        firstName: 'Test',
+        lastName: 'User',
+        username: 'testuser',
+        emailVerified: true,
+        verificationStatus: 'NOT_REQUIRED'
+      },
       create: {
         email: 'test@test.com',
         username: 'testuser',

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - User Feedback Dashboard</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <style>
+        .feedback-dashboard {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .feedback-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            color: #4b5c09;
+        }
+        
+        .feedback-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4b5c09;
+        }
+        
+        .feedback-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .feedback-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+        }
+        
+        .feedback-item.high-priority {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .feedback-item.medium-priority {
+            border-left: 4px solid #ffd93d;
+        }
+        
+        .feedback-item.low-priority {
+            border-left: 4px solid #6bcf7f;
+        }
+        
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .feedback-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .feedback-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .badge-suggestion { background: #e3f2fd; color: #1976d2; }
+        .badge-bug { background: #ffebee; color: #d32f2f; }
+        .badge-concern { background: #fff3e0; color: #f57c00; }
+        .badge-feature { background: #e8f5e8; color: #388e3c; }
+        
+        .badge-ui { background: #f3e5f5; color: #7b1fa2; }
+        .badge-performance { background: #e0f2f1; color: #00796b; }
+        .badge-functionality { background: #e1f5fe; color: #0277bd; }
+        
+        .feedback-content {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            font-style: italic;
+        }
+        
+        .feedback-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-acknowledge { background: #e3f2fd; color: #1976d2; }
+        .btn-acknowledge:hover { background: #bbdefb; }
+        
+        .btn-resolve { background: #e8f5e8; color: #388e3c; }
+        .btn-resolve:hover { background: #c8e6c9; }
+        
+        .btn-dismiss { background: #ffebee; color: #d32f2f; }
+        .btn-dismiss:hover { background: #ffcdd2; }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ffd93d 50%, #6bcf7f 100%);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="feedback-dashboard">
+        <div class="dashboard-header">
+            <div>
+                <h1>🎯 User Feedback Dashboard</h1>
+                <p>AI-detected suggestions and concerns about UnitedWeRise</p>
+            </div>
+            <div>
+                <button onclick="refreshFeedback()" class="btn">🔄 Refresh</button>
+                <button onclick="window.location.href='index.html'" class="btn" style="background: #6c757d;">← Back to Site</button>
+            </div>
+        </div>
+
+        <div class="feedback-filters">
+            <div class="filter-group">
+                <label>Type:</label>
+                <select id="typeFilter" onchange="applyFilters()">
+                    <option value="">All Types</option>
+                    <option value="suggestion">Suggestions</option>
+                    <option value="bug_report">Bug Reports</option>
+                    <option value="concern">Concerns</option>
+                    <option value="feature_request">Feature Requests</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Category:</label>
+                <select id="categoryFilter" onchange="applyFilters()">
+                    <option value="">All Categories</option>
+                    <option value="ui_ux">UI/UX</option>
+                    <option value="performance">Performance</option>
+                    <option value="functionality">Functionality</option>
+                    <option value="accessibility">Accessibility</option>
+                    <option value="moderation">Moderation</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Priority:</label>
+                <select id="priorityFilter" onchange="applyFilters()">
+                    <option value="">All Priorities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="statusFilter" onchange="applyFilters()">
+                    <option value="">All Status</option>
+                    <option value="new">New</option>
+                    <option value="acknowledged">Acknowledged</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="dismissed">Dismissed</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="feedback-stats" id="feedbackStats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalFeedback">-</div>
+                <div>Total Feedback</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="newFeedback">-</div>
+                <div>New Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="highPriority">-</div>
+                <div>High Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgConfidence">-</div>
+                <div>Avg Confidence</div>
+            </div>
+        </div>
+
+        <div id="loadingMessage" class="loading">
+            Loading feedback data...
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;">
+        </div>
+
+        <div class="feedback-list" id="feedbackList">
+            <!-- Feedback items will be populated here -->
+        </div>
+    </div>
+
+    <script src="src/js/backend-integration.js"></script>
+    <script src="admin-feedback.js"></script>
+</body>
+</html>

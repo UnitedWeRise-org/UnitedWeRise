@@ -110,26 +110,35 @@ model Follow {
 }
 
 model Post {
-  id            String      @id @default(cuid())
-  content       String
-  imageUrl      String?
-  authorId      String
-  embedding     Float[]     @default([])
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  isPolitical   Boolean     @default(false)
-  tags          String[]    @default([])
-  likesCount    Int         @default(0)
-  commentsCount Int         @default(0)
-  comments      Comment[]
-  likes         Like[]
-  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  topics        TopicPost[]
+  id                 String      @id @default(cuid())
+  content            String
+  imageUrl           String?
+  authorId           String
+  embedding          Float[]     @default([])
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  isPolitical        Boolean     @default(false)
+  tags               String[]    @default([])
+  likesCount         Int         @default(0)
+  commentsCount      Int         @default(0)
+  // AI Feedback Detection Fields
+  containsFeedback   Boolean?    @default(false)
+  feedbackType       String?
+  feedbackCategory   String?
+  feedbackPriority   String?
+  feedbackConfidence Float?
+  feedbackSummary    String?
+  feedbackStatus     String?     @default("new")
+  comments           Comment[]
+  likes              Like[]
+  author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  topics             TopicPost[]
 
   @@index([authorId])
   @@index([createdAt])
   @@index([likesCount])
   @@index([isPolitical])
+  @@index([containsFeedback, feedbackType, feedbackPriority])
 }
 
 model Like {

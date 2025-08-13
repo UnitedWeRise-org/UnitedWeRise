@@ -147,6 +147,9 @@ frontend/
 - **Accessibility**: ARIA labels, keyboard navigation, screen reader support
 - **Performance**: Optimized loading with lazy loading and caching
 - **Real-time Updates**: Live content updates without page refresh
+- **Toggle Navigation**: Consistent window toggle behavior across all interfaces
+- **Edge-Positioned Controls**: Sidebar toggle button with directional arrows
+- **Reduced Visual Clutter**: Smaller sidebar fonts for better proportion
 
 ## 🔧 Recent Major Updates (August 2025)
 
@@ -169,6 +172,20 @@ frontend/
 - **Testing Coverage**: Automated testing for critical features
 - **Performance**: Optimized database queries and API responses
 - **Monitoring**: Application monitoring and logging
+
+### UI/UX Enhancements (August 13, 2025)
+- **Window Toggle System**: Implemented consistent toggle behavior for all windows
+  - Profile window: `toggleMyProfile()` replaces `showMyProfile()` with state detection
+  - Messages window: Enhanced `toggleMessages()` with default view return
+  - Sidebar panels: Updated `togglePanel()` for true toggle functionality
+- **Default View Logic**: Added `showDefaultView()` function
+  - Returns to My Feed for authenticated users
+  - Shows map or welcome screen for logged-out users
+- **Sidebar Improvements**: 
+  - Toggle button moved to sidebar edge with directional arrows (▶/◀)
+  - Reduced font sizes: thumbs (1.5rem→1.1rem), labels (0.8rem), logout (1.0rem)
+  - Dark gray arrows (#2c2c2c) for better contrast
+  - Dynamic positioning with sidebar expansion (3vw→10vw)
 
 ## 🎯 Production Status
 
@@ -263,7 +280,7 @@ frontend/
 
 ---
 
-*Last Updated: August 10, 2025*
-*Platform Status: Production Ready with Advanced Feed Algorithm*
-*Current Version: v2.2 (Probability Cloud Feed)*
-*Next Documentation Review: August 17, 2025*
+*Last Updated: August 13, 2025*
+*Platform Status: Production Ready with Enhanced UI Navigation*
+*Current Version: v2.3 (Toggle Navigation System)*
+*Next Documentation Review: August 20, 2025*

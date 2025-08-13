@@ -59,3 +59,10 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     res.status(401).json({ error: 'Invalid token.' });
   }
 };
+
+export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+  next();
+};

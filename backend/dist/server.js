@@ -25,7 +25,10 @@ const elections_1 = __importDefault(require("./routes/elections"));
 const candidates_1 = __importDefault(require("./routes/candidates"));
 const candidateMessages_1 = __importDefault(require("./routes/candidateMessages"));
 const topics_1 = __importDefault(require("./routes/topics"));
+const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
 const photos_1 = __importDefault(require("./routes/photos"));
+const googleCivic_1 = __importDefault(require("./routes/googleCivic"));
+const feedback_1 = __importDefault(require("./routes/feedback"));
 const websocket_1 = require("./websocket");
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -104,7 +107,10 @@ app.use('/api/elections', elections_1.default);
 app.use('/api/candidates', candidates_1.default);
 app.use('/api/candidate-messages', candidateMessages_1.default);
 app.use('/api/topics', topics_1.default);
+app.use('/api/topic-navigation', topicNavigation_1.default);
 app.use('/api/photos', photos_1.default);
+app.use('/api/google-civic', googleCivic_1.default);
+app.use('/api/feedback', feedback_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
 // API Documentation

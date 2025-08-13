@@ -9,16 +9,16 @@ interface BasicAnalysis {
     evidenceKeywords: string[];
 }
 export declare class SentenceTransformersService {
-    private static hf;
+    private static embeddingPipeline;
     private static readonly MODEL_NAME;
     private static readonly FALLBACK_DIMENSION;
     /**
-     * Initialize Hugging Face client
+     * Initialize local embedding pipeline
      */
-    private static getClient;
+    private static getEmbeddingPipeline;
     /**
-     * Generate embedding using Sentence Transformers
-     * Fast, lightweight, runs on CPU
+     * Generate embedding using local Sentence Transformers
+     * Tries local @xenova/transformers first, falls back to semantic analysis
      */
     static generateEmbedding(text: string): Promise<EmbeddingResult>;
     /**
@@ -35,6 +35,11 @@ export declare class SentenceTransformersService {
      */
     static calculateSimilarity(embedding1: number[], embedding2: number[]): number;
     private static cleanText;
+    /**
+     * Generate semantic embedding locally without API calls
+     * Creates embeddings based on word frequency, sentiment, and topic features
+     */
+    private static generateSemanticEmbedding;
     private static generateFallbackEmbedding;
     private static simpleHash;
     private static detectCategory;

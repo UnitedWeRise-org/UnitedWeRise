@@ -38,9 +38,23 @@ export declare class QdrantService {
      */
     static upsertVectors(points: VectorPoint[]): Promise<void>;
     /**
+     * Store embedding for a post
+     */
+    static storeEmbedding(postId: string, embedding: number[], metadata: {
+        content: string;
+        authorId: string;
+        category?: string;
+        createdAt?: string;
+        [key: string]: any;
+    }): Promise<void>;
+    /**
      * Search for similar vectors
      */
-    static searchSimilar(queryVector: number[], limit?: number, minScore?: number, categoryFilter?: string): Promise<SearchResult[]>;
+    static searchSimilar(queryVector: number[], options?: {
+        limit?: number;
+        scoreThreshold?: number;
+        categoryFilter?: string;
+    }): Promise<SearchResult[]>;
     /**
      * Delete a vector by ID
      */

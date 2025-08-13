@@ -3,23 +3,37 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmbeddingService = void 0;
 const client_1 = require("@prisma/client");
 const sentenceTransformersService_1 = require("./sentenceTransformersService");
+const azureOpenAIService_1 = require("./azureOpenAIService");
+const azureConfig_1 = require("../config/azureConfig");
 // import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
 const prisma = new client_1.PrismaClient();
 class EmbeddingService {
     /**
-     * Generate embedding using Sentence Transformers (fast, CPU-based)
+     * Generate embedding using best available service (Azure OpenAI > Local)
      */
     static async generateEmbedding(text) {
         try {
             if (!text || text.trim().length === 0) {
                 return new Array(this.EMBEDDING_DIMENSION).fill(0);
             }
-            // Use Sentence Transformers for fast embeddings
+            const config = (0, azureConfig_1.getSemanticConfig)();
+            // Use Azure OpenAI in production or if explicitly configured
+            if (config.provider === 'azure' || ((0, azureConfig_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
+                try {
+                    const result = await azureOpenAIService_1.azureOpenAI.generateEmbedding(text);
+                    console.log(`✓ Generated Azure OpenAI embedding (${result.processingTime}ms)`);
+                    return result.embedding;
+                }
+                catch (azureError) {
+                    console.warn('Azure OpenAI failed, falling back to local:', azureError);
+                }
+            }
+            // Fallback to local Sentence Transformers
             const result = await sentenceTransformersService_1.SentenceTransformersService.generateEmbedding(text);
             return result.embedding;
         }
         catch (error) {
-            console.error('Sentence Transformers embedding failed:', error);
+            console.error('All embedding methods failed:', error);
             // Return zero vector as fallback to prevent system failure
             return new Array(this.EMBEDDING_DIMENSION).fill(0);
         }
@@ -63,44 +77,46 @@ class EmbeddingService {
         return sentenceTransformersService_1.SentenceTransformersService.calculateSimilarity(embedding1, embedding2);
     }
     /**
-     * Find posts similar to a given embedding using Qdrant or fallback to PostgreSQL
+     * Find posts similar to a given embedding using PostgreSQL vector operations
      */
-    static async findSimilarPosts(targetEmbedding, limit = 10, minSimilarity = 0.7, categoryFilter) {
+    static async findSimilarPosts(targetEmbedding, limit = 10, minSimilarity = 0.6, categoryFilter) {
         try {
-            // Use Qdrant if available for better performance
-            if (this.USE_QDRANT && false) { // Temporarily disabled until Qdrant is installed
-                // QdrantService temporarily unavailable
-                const results = [];
-                // Convert Qdrant results to Post format
-                const postIds = results.map(result => result.payload.postId);
-                if (postIds.length === 0)
-                    return [];
-                const posts = await prisma.post.findMany({
-                    where: {
-                        id: { in: postIds }
-                    },
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                firstName: true,
-                                lastName: true,
-                                avatar: true
-                            }
-                        }
-                    }
-                });
-                // Merge posts with similarity scores
-                return posts.map(post => {
-                    const result = results.find(r => r.payload.postId === post.id);
-                    return {
-                        ...post,
-                        similarity: result?.score || 0
-                    };
-                }).sort((a, b) => b.similarity - a.similarity);
+            const config = (0, azureConfig_1.getSemanticConfig)();
+            // Use PostgreSQL vector operations if available (production)
+            if ((0, azureConfig_1.isProduction)() && process.env.ENABLE_VECTOR_SEARCH === 'true') {
+                try {
+                    // Use raw SQL for vector similarity search
+                    const embeddingString = `[${targetEmbedding.join(',')}]`;
+                    const similarPosts = await prisma.$queryRaw `
+            SELECT 
+              p.id,
+              p.content,
+              p."createdAt",
+              p."authorId",
+              p."isPolitical",
+              p."likesCount",
+              p."commentsCount",
+              u.username,
+              u."firstName", 
+              u."lastName",
+              u.avatar,
+              1 - (p.embedding <=> ${embeddingString}::vector) as similarity
+            FROM "Post" p
+            JOIN "User" u ON p."authorId" = u.id
+            WHERE p.embedding IS NOT NULL 
+              AND array_length(p.embedding, 1) > 0
+              AND 1 - (p.embedding <=> ${embeddingString}::vector) >= ${minSimilarity}
+            ORDER BY p.embedding <=> ${embeddingString}::vector
+            LIMIT ${limit};
+          `;
+                    console.log(`✓ Found ${similarPosts.length} similar posts using PostgreSQL vector search`);
+                    return similarPosts;
+                }
+                catch (vectorError) {
+                    console.warn('PostgreSQL vector search failed, falling back to in-memory:', vectorError);
+                }
             }
-            // Fallback to PostgreSQL search
+            // Fallback to in-memory similarity calculation
             const posts = await prisma.post.findMany({
                 where: {
                     embedding: {
@@ -131,6 +147,7 @@ class EmbeddingService {
                 .filter(post => post.similarity >= minSimilarity)
                 .sort((a, b) => b.similarity - a.similarity)
                 .slice(0, limit);
+            console.log(`✓ Found ${similarPosts.length} similar posts using in-memory search`);
             return similarPosts;
         }
         catch (error) {

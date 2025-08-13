@@ -20,8 +20,10 @@ import electionRoutes from './routes/elections';
 import candidateRoutes from './routes/candidates';
 import candidateMessagesRoutes from './routes/candidateMessages';
 import topicRoutes from './routes/topics';
+import topicNavigationRoutes from './routes/topicNavigation';
 import photoRoutes from './routes/photos';
 import googleCivicRoutes from './routes/googleCivic';
+import feedbackRoutes from './routes/feedback';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
 import { apiLimiter } from './middleware/rateLimiting';
@@ -112,8 +114,10 @@ app.use('/api/elections', electionRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/candidate-messages', candidateMessagesRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api/topic-navigation', topicNavigationRoutes);
 app.use('/api/photos', photoRoutes);
 app.use('/api/google-civic', googleCivicRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Serve uploaded photos statically
 app.use('/uploads', express.static('uploads'));

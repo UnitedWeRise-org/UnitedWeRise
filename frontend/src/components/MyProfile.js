@@ -129,61 +129,150 @@ class MyProfile {
     }
 
     renderPostsTab() {
-        if (this.userPosts.length === 0) {
-            return `
-                <div class="tab-pane">
-                    <div class="empty-state">
-                        <h3>No posts yet</h3>
-                        <p>Share your thoughts to get started!</p>
-                        <div class="quick-post-composer">
-                            <textarea id="quickPostContent" placeholder="What's on your mind?" rows="4"></textarea>
-                            <div style="margin-top: 1rem;">
-                                <button onclick="window.myProfile.submitQuickPost()" class="btn">Post</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
+        // Always show the post composer at the top
         let postsHtml = `
             <div class="tab-pane">
-                <div class="posts-header">
-                    <h3>Your Posts (${this.userPosts.length})</h3>
-                    <p>View and manage your posts, see engagement stats</p>
-                </div>
-                <div class="posts-grid">
-        `;
-
-        this.userPosts.forEach(post => {
-            postsHtml += `
-                <div class="post-card">
-                    <div class="post-header">
-                        <span class="post-date">${new Date(post.createdAt).toLocaleDateString()}</span>
-                        <div class="post-menu">
-                            <button onclick="window.myProfile.editPost('${post.id}')">Edit</button>
-                            <button onclick="window.myProfile.deletePost('${post.id}')" class="delete-btn">Delete</button>
+                <!-- Sticky post composer wrapper -->
+                <div class="sticky-composer-wrapper" id="stickyComposerWrapper">
+                    <div class="quick-post-composer">
+                        <textarea id="quickPostContent" placeholder="What's on your mind?" rows="4"></textarea>
+                        <div style="margin-top: 1rem;">
+                            <button onclick="window.myProfile.submitQuickPost()" class="btn">Create Post</button>
                         </div>
                     </div>
-                    <div class="post-content">
-                        ${post.content}
-                    </div>
-                    ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-image">` : ''}
-                    <div class="post-stats">
-                        <span>❤️ ${post.likesCount || 0} likes</span>
-                        <span>💬 ${post.commentsCount || 0} comments</span>
-                        ${post.isPolitical ? '<span class="political-tag">🗳️ Political</span>' : ''}
-                    </div>
                 </div>
-            `;
+                
+                ${this.userPosts.length === 0 ? `
+                    <div class="empty-state" style="margin-top: 2rem;">
+                        <h3>No posts yet</h3>
+                        <p>Share your thoughts above to get started!</p>
+                    </div>
+                ` : `
+                    <div class="posts-header" style="margin-top: 2rem; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        <h3>Your Posts (${this.userPosts.length})</h3>
+                        <p>View and manage your posts, see engagement stats</p>
+                    </div>
+                    <div class="posts-list">
+                `}
+        `;
+
+        // Use the standardized post component for consistency
+        this.userPosts.forEach(post => {
+            // Add isOwner flag for menu options
+            post.isOwner = true;
+            postsHtml += window.postComponent ? 
+                window.postComponent.renderPost(post, { 
+                    showAuthor: false, // Don't show author in own profile
+                    showTimestamp: true 
+                }) :
+                this.renderFallbackPost(post);
         });
 
+        if (this.userPosts.length > 0) {
+            postsHtml += `
+                    </div>
+                `;
+        }
+        
         postsHtml += `
-                </div>
             </div>
         `;
 
+        // After rendering, set up sticky behavior
+        setTimeout(() => this.setupStickyComposer(), 100);
+        
         return postsHtml;
+    }
+    
+    /**
+     * Fallback post renderer in case PostComponent isn't loaded
+     */
+    renderFallbackPost(post) {
+        const timeAgo = this.getTimeAgo(new Date(post.createdAt));
+        return `
+            <div class="post-card">
+                <div class="post-header">
+                    <span class="post-date">${timeAgo}</span>
+                    <div class="post-menu">
+                        <button onclick="window.myProfile.editPost('${post.id}')">Edit</button>
+                        <button onclick="window.myProfile.deletePost('${post.id}')" class="delete-btn">Delete</button>
+                    </div>
+                </div>
+                <div class="post-content">${post.content}</div>
+                ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-image">` : ''}
+                <div class="post-stats">
+                    <span>❤️ ${post.likesCount || 0} likes</span>
+                    <span>💬 ${post.commentsCount || 0} comments</span>
+                    ${post.isPolitical ? '<span class="political-tag">🗳️ Political</span>' : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Get time ago string
+     */
+    getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        const intervals = {
+            year: 31536000,
+            month: 2592000,
+            week: 604800,
+            day: 86400,
+            hour: 3600,
+            minute: 60
+        };
+        
+        for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+            const interval = Math.floor(seconds / secondsInUnit);
+            if (interval >= 1) {
+                return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
+            }
+        }
+        return 'just now';
+    }
+    
+    setupStickyComposer() {
+        // Now work with the profile container's scroll since it's the scrolling element
+        const profileContainer = document.querySelector('.my-profile');
+        const composer = document.getElementById('stickyComposerWrapper');
+        
+        if (!profileContainer || !composer) {
+            // Try again after a short delay as the profile might still be rendering
+            setTimeout(() => this.setupStickyComposer(), 100);
+            return;
+        }
+        
+        // Remove any existing scroll listeners to avoid duplicates
+        const existingListener = profileContainer._stickyScrollListener;
+        if (existingListener) {
+            profileContainer.removeEventListener('scroll', existingListener);
+        }
+        
+        // Get initial position
+        const composerRect = composer.getBoundingClientRect();
+        const profileRect = profileContainer.getBoundingClientRect();
+        const initialOffset = composerRect.top - profileRect.top;
+        
+        const scrollListener = () => {
+            const scrollTop = profileContainer.scrollTop;
+            
+            // When scrolled past initial position, add sticky class
+            if (scrollTop > initialOffset + 50) {
+                if (!composer.classList.contains('sticky')) {
+                    composer.classList.add('sticky');
+                }
+            } else {
+                // Remove sticky when scrolled back to top
+                if (composer.classList.contains('sticky')) {
+                    composer.classList.remove('sticky');
+                }
+            }
+        };
+        
+        // Store reference to listener for cleanup
+        profileContainer._stickyScrollListener = scrollListener;
+        profileContainer.addEventListener('scroll', scrollListener);
     }
 
     renderDemographicsTab() {
@@ -424,18 +513,103 @@ class MyProfile {
                 // Add the new post to the userPosts array
                 const newPost = response.data.post;
                 this.userPosts.unshift(newPost);
-                // Re-render just the tab content
-                const tabContent = document.querySelector('.tab-content');
-                if (tabContent) {
-                    tabContent.innerHTML = this.renderTabContent();
-                }
+                
+                // Smooth insertion without full re-render
+                this.insertNewPostSmoothly(newPost);
             } else {
-                alert('Failed to create post. Please try again.');
+                console.error('Post creation failed:', response);
+                const errorMsg = response.error || response.message || 'Failed to create post';
+                alert(`Failed to create post: ${errorMsg}. Please try again.`);
             }
         } catch (error) {
             console.error('Post creation error:', error);
-            alert('Error creating post.');
+            if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                alert('Network error: Cannot connect to server. Please check if the backend server is running on localhost:3001');
+            } else {
+                alert(`Error creating post: ${error.message}`);
+            }
         }
+    }
+
+    /**
+     * Smoothly insert a new post without re-rendering the entire view
+     */
+    insertNewPostSmoothly(newPost) {
+        // Find the posts container
+        const postsGrid = document.querySelector('.posts-grid');
+        const emptyState = document.querySelector('.empty-state');
+        const postsHeader = document.querySelector('.posts-header');
+        
+        // If this is the first post, we need to replace empty state with posts grid
+        if (emptyState) {
+            emptyState.style.opacity = '0';
+            setTimeout(() => {
+                emptyState.style.display = 'none';
+                
+                // Create posts header and list
+                const headerHtml = `
+                    <div class="posts-header" style="margin-top: 2rem; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        <h3>Your Posts (${this.userPosts.length})</h3>
+                        <p>View and manage your posts, see engagement stats</p>
+                    </div>
+                    <div class="posts-list"></div>
+                `;
+                
+                emptyState.insertAdjacentHTML('afterend', headerHtml);
+                
+                // Now insert the post
+                setTimeout(() => {
+                    this.insertPostIntoGrid(newPost);
+                }, 100);
+            }, 300);
+            return;
+        }
+        
+        // Update post count in header
+        if (postsHeader) {
+            const countElement = postsHeader.querySelector('h3');
+            if (countElement) {
+                countElement.textContent = `Your Posts (${this.userPosts.length})`;
+            }
+        }
+        
+        // Insert into existing grid
+        this.insertPostIntoGrid(newPost);
+    }
+    
+    /**
+     * Insert a post into the posts grid with smooth animation
+     */
+    insertPostIntoGrid(newPost) {
+        const postsGrid = document.querySelector('.posts-list');
+        if (!postsGrid) return;
+        
+        // Add isOwner flag for menu options
+        newPost.isOwner = true;
+        
+        // Create the post HTML
+        const postHtml = window.postComponent ? 
+            window.postComponent.renderPost(newPost, { 
+                showAuthor: false,
+                showTimestamp: true 
+            }) :
+            this.renderFallbackPost(newPost);
+        
+        // Create a container for the new post
+        const postContainer = document.createElement('div');
+        postContainer.innerHTML = postHtml;
+        postContainer.style.opacity = '0';
+        postContainer.style.transform = 'translateY(-20px)';
+        postContainer.style.transition = 'all 0.5s ease';
+        
+        // Insert at the beginning of the grid
+        postsGrid.insertBefore(postContainer, postsGrid.firstChild);
+        
+        // Trigger smooth fade-in
+        setTimeout(() => {
+            postContainer.style.opacity = '1';
+            postContainer.style.transform = 'translateY(0)';
+        }, 50);
     }
 
     // Placeholder methods for edit functionality

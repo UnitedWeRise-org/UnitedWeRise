@@ -1141,18 +1141,20 @@ class UWRMapLibre {
             comment.coordinates[1] + (Math.random() - 0.5) * 1   // ±0.5 degree latitude
         ];
 
-        // Enhanced chat bubble with visual feedback and engagement info
+        // Truncate text to appropriate length for bubble display
+        const maxLength = 120; // Character limit for bubble text
+        let displayText = comment.summary || comment.content || '';
+        if (displayText.length > maxLength) {
+            displayText = displayText.substring(0, maxLength).trim() + '...';
+        }
+
+        // Simplified chat bubble with only text content
         const popupHtml = `
             <div class="trending-bubble" onclick="window.navigateToComment && window.navigateToComment('${comment.id}')" 
                  title="Click to view full conversation" 
                  data-comment-id="${comment.id}">
                 <div class="bubble-content">
-                    ${comment.summary}
-                </div>
-                <div class="bubble-meta">
-                    <span class="engagement">💬 ${comment.engagement || 0}</span>
-                    <span class="time">${comment.time || 'now'}</span>
-                    <span class="click-hint">👆 Click to discuss</span>
+                    ${displayText}
                 </div>
             </div>
         `;

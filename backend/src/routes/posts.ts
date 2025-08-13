@@ -6,6 +6,8 @@ import { validatePost, validateComment } from '../middleware/validation';
 import { postLimiter } from '../middleware/rateLimiting';
 import { checkUserSuspension, moderateContent, contentFilter, addContentWarnings } from '../middleware/moderation';
 import { EmbeddingService } from '../services/embeddingService';
+import { QdrantService } from '../services/qdrantService';
+import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -34,12 +36,37 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             // Continue without embedding rather than failing the post creation
         }
 
+        // Analyze for site feedback (suggestions, concerns, bug reports)
+        let feedbackData = {};
+        try {
+            const feedbackAnalysis = await feedbackAnalysisService.analyzePost(content.trim(), userId);
+            
+            if (feedbackAnalysis.isFeedback && feedbackAnalysis.confidence > 0.6) {
+                feedbackData = {
+                    containsFeedback: true,
+                    feedbackType: feedbackAnalysis.type,
+                    feedbackCategory: feedbackAnalysis.category,
+                    feedbackPriority: feedbackAnalysis.priority,
+                    feedbackConfidence: feedbackAnalysis.confidence,
+                    feedbackSummary: feedbackAnalysis.summary,
+                    feedbackStatus: 'new'
+                };
+                
+                console.log(`Detected ${feedbackAnalysis.type} feedback with ${Math.round(feedbackAnalysis.confidence * 100)}% confidence:`, 
+                           feedbackAnalysis.summary);
+            }
+        } catch (error) {
+            console.warn('Failed to analyze post for feedback:', error);
+            // Continue without feedback analysis rather than failing the post creation
+        }
+
         const post = await prisma.post.create({
             data: {
                 content: content.trim(),
                 imageUrl,
                 authorId: userId,
-                embedding
+                embedding,
+                ...feedbackData
             },
             include: {
                 author: {
@@ -60,6 +87,27 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 }
             }
         });
+
+        // Store in Qdrant for vector similarity search (async, don't block response)
+        if (embedding.length > 0) {
+            QdrantService.storeEmbedding(post.id, embedding, {
+                content: post.content,
+                postId: post.id,
+                authorId: post.authorId,
+                createdAt: post.createdAt.toISOString(),
+                // Include feedback metadata for filtering
+                ...((feedbackData as any).containsFeedback && {
+                    containsFeedback: true,
+                    feedbackType: (feedbackData as any).feedbackType,
+                    feedbackCategory: (feedbackData as any).feedbackCategory,
+                    feedbackPriority: (feedbackData as any).feedbackPriority,
+                    feedbackConfidence: (feedbackData as any).feedbackConfidence
+                })
+            }).catch(error => {
+                console.warn('Failed to store post in Qdrant:', error);
+                // Don't fail the request if Qdrant storage fails
+            });
+        }
 
         res.status(201).json({
             message: 'Post created successfully',

@@ -50,7 +50,13 @@
       "Bash(lsof:*)",
       "WebFetch(domain:maplibre.org)",
       "Bash(dir:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(python:*)",
+      "Bash(npm run:*)",
+      "Bash(python:*)",
+      "Bash(start http://localhost:8080)",
+      "Bash(npm start)"
     ],
     "deny": []
   }

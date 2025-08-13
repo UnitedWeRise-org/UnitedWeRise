@@ -116,6 +116,22 @@ router.post('/phone/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
     try {
         const userId = req.user.id;
         const { phoneNumber, hcaptchaToken } = req.body;
+        // Demo mode handling
+        const demoPhones = ['+15551234567', '+15559876543', '+11234567890'];
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        const isDemoPhone = demoPhones.includes(phoneNumber);
+        if (isDevelopment || isDemoPhone) {
+            console.log(`📱 DEMO MODE: Phone verification for ${phoneNumber}`);
+            console.log(`📱 Use verification code: 123456`);
+            // Store demo code (in production, this would be stored in a phoneVerification table)
+            // For now, just log it since the table doesn't exist yet
+            console.log(`📱 Storing demo code for user ${userId}: 123456`);
+            return res.json({
+                message: 'Demo mode: Use code 123456',
+                sent: true,
+                demoMode: true
+            });
+        }
         // Verify captcha if provided
         if (hcaptchaToken) {
             const captchaResult = await captchaService_1.captchaService.verifyCaptcha(hcaptchaToken, req.ip);

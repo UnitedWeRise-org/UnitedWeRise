@@ -140,14 +140,49 @@ export class QdrantService {
   }
 
   /**
+   * Store embedding for a post
+   */
+  static async storeEmbedding(
+    postId: string,
+    embedding: number[],
+    metadata: {
+      content: string;
+      authorId: string;
+      category?: string;
+      createdAt?: string;
+      [key: string]: any;
+    }
+  ): Promise<void> {
+    const point: VectorPoint = {
+      id: postId,
+      vector: embedding,
+      payload: {
+        content: metadata.content,
+        postId: postId,
+        authorId: metadata.authorId,
+        category: metadata.category,
+        createdAt: metadata.createdAt || new Date().toISOString(),
+        argumentStrength: metadata.argumentStrength,
+        evidenceLevel: metadata.evidenceLevel,
+        hostilityScore: metadata.hostilityScore
+      }
+    };
+    
+    return this.upsertVector(point);
+  }
+
+  /**
    * Search for similar vectors
    */
   static async searchSimilar(
     queryVector: number[],
-    limit: number = 10,
-    minScore: number = 0.7,
-    categoryFilter?: string
+    options: {
+      limit?: number;
+      scoreThreshold?: number;
+      categoryFilter?: string;
+    } = {}
   ): Promise<SearchResult[]> {
+    const { limit = 10, scoreThreshold = 0.7, categoryFilter } = options;
     try {
       const client = this.getClient();
       
@@ -168,7 +203,7 @@ export class QdrantService {
       const searchResult = await client.search(this.COLLECTION_NAME, {
         vector: queryVector,
         limit,
-        score_threshold: minScore,
+        score_threshold: scoreThreshold,
         with_payload: true,
         filter: Object.keys(filter).length > 0 ? filter : undefined,
       });

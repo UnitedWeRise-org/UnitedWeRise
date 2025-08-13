@@ -6,71 +6,49 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
+const probabilityFeedService_1 = require("../services/probabilityFeedService");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
-// Get news feed (posts from followed users)
+// Get personalized feed using probability cloud algorithm
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 20, offset = 0 } = req.query;
+        const { limit = 50 } = req.query;
+        // Parse custom weights if provided (for A/B testing or user preferences)
+        const customWeights = req.query.weights ? JSON.parse(req.query.weights) : undefined;
         const limitNum = parseInt(limit.toString());
-        const offsetNum = parseInt(offset.toString());
-        // Get posts from users that the current user follows
-        const feedPosts = await prisma.post.findMany({
+        // Generate feed using probability-based algorithm
+        const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, limitNum, customWeights);
+        // Add user's like status to each post
+        const postIds = feedResult.posts.map(p => p.id);
+        const userLikes = await prisma.like.findMany({
             where: {
-                author: {
-                    followers: {
-                        some: {
-                            followerId: userId
-                        }
-                    }
-                }
+                userId,
+                postId: { in: postIds }
             },
-            include: {
-                author: {
-                    select: {
-                        id: true,
-                        username: true,
-                        firstName: true,
-                        lastName: true,
-                        avatar: true,
-                        verified: true
-                    }
-                },
-                likes: {
-                    where: { userId },
-                    select: { id: true }
-                },
-                _count: {
-                    select: {
-                        likes: true,
-                        comments: true
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: limitNum,
-            skip: offsetNum
+            select: { postId: true }
         });
-        const formattedPosts = feedPosts.map(post => ({
+        const likedPostIds = new Set(userLikes.map(like => like.postId));
+        const postsWithLikeStatus = feedResult.posts.map(post => ({
             ...post,
             likesCount: post._count.likes,
             commentsCount: post._count.comments,
-            isLiked: post.likes.length > 0,
-            likes: undefined,
+            isLiked: likedPostIds.has(post.id),
             _count: undefined
         }));
         res.json({
-            posts: formattedPosts,
+            posts: postsWithLikeStatus,
+            algorithm: feedResult.algorithm,
+            weights: feedResult.weights,
+            stats: feedResult.stats,
             pagination: {
                 limit: limitNum,
-                offset: offsetNum,
-                count: feedPosts.length
+                count: postsWithLikeStatus.length
             }
         });
     }
     catch (error) {
-        console.error('Get feed error:', error);
+        console.error('Feed error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

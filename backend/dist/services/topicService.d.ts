@@ -52,6 +52,13 @@ export declare class TopicService {
                 tags: string[];
                 likesCount: number;
                 commentsCount: number;
+                containsFeedback: boolean | null;
+                feedbackType: string | null;
+                feedbackCategory: string | null;
+                feedbackPriority: string | null;
+                feedbackConfidence: number | null;
+                feedbackSummary: string | null;
+                feedbackStatus: string | null;
             };
         } & {
             id: string;
@@ -78,10 +85,11 @@ export declare class TopicService {
         updatedAt: Date;
         state: string | null;
         description: string | null;
+        district: string | null;
         isActive: boolean;
         category: string | null;
-        district: string | null;
         title: string;
+        trendingScore: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
@@ -91,7 +99,6 @@ export declare class TopicService {
         postCount: number;
         participantCount: number;
         viewCount: number;
-        trendingScore: number;
         lastActivityAt: Date;
     })[]>;
     /**
@@ -100,12 +107,6 @@ export declare class TopicService {
     static getTopicDetails(topicId: string): Promise<{
         posts: ({
             post: {
-                likes: {
-                    userId: string;
-                    id: string;
-                    createdAt: Date;
-                    postId: string;
-                }[];
                 comments: ({
                     user: {
                         id: string;
@@ -121,6 +122,12 @@ export declare class TopicService {
                     content: string;
                     postId: string;
                 })[];
+                likes: {
+                    userId: string;
+                    id: string;
+                    createdAt: Date;
+                    postId: string;
+                }[];
                 author: {
                     id: string;
                     username: string;
@@ -141,6 +148,13 @@ export declare class TopicService {
                 tags: string[];
                 likesCount: number;
                 commentsCount: number;
+                containsFeedback: boolean | null;
+                feedbackType: string | null;
+                feedbackCategory: string | null;
+                feedbackPriority: string | null;
+                feedbackConfidence: number | null;
+                feedbackSummary: string | null;
+                feedbackStatus: string | null;
             };
         } & {
             id: string;
@@ -270,10 +284,11 @@ export declare class TopicService {
         updatedAt: Date;
         state: string | null;
         description: string | null;
+        district: string | null;
         isActive: boolean;
         category: string | null;
-        district: string | null;
         title: string;
+        trendingScore: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
@@ -283,7 +298,6 @@ export declare class TopicService {
         postCount: number;
         participantCount: number;
         viewCount: number;
-        trendingScore: number;
         lastActivityAt: Date;
     }>;
     /**

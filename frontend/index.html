@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="src/styles/elections-system.css">
     <link rel="stylesheet" href="src/styles/officials-system.css">
     <link rel="stylesheet" href="src/styles/trending-system.css">
+    <link rel="stylesheet" href="src/styles/post-component.css">
     <link rel="stylesheet" href="src/styles/responsive.css">
     
     <!-- External JavaScript -->
@@ -32,6 +33,7 @@
     <script src="src/components/VerificationFlow.js"></script>
     <script src="src/components/ContentReporting.js"></script>
     <script src="src/components/CandidateSystem.js"></script>
+    <script src="src/components/PostComponent.js"></script>
     <script src="src/components/MyProfile.js"></script>
     <script src="src/integrations/backend-integration.js"></script>
     <script src="src/integrations/candidate-system-integration.js"></script>
@@ -70,7 +72,7 @@
                     <button onclick="openAuthModal('login')" class="login-btn">Login</button>
                 </div>
                 <div id="userSection" class="user-info" style="display: none;">
-                    <span id="userGreeting"></span>
+                    <span id="userGreeting" style="display: none;"></span>
                 </div>
             </div>
             
@@ -175,7 +177,7 @@
     </div>
 
     <div class="container">
-        <div class="sidebar collapsed" id="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="thumbs">
                 <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
                 <div class="thumb" onclick="showMyFeed()" title="My Feed" id="feedThumb" style="display: none;">📰 <span class="label">My Feed</span></div>
@@ -183,27 +185,23 @@
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
-                <div class="thumb" onclick="showMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
+                <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
-                <button id="toggleSidebar">⇄</button>
                 <div class="thumb logout-thumb" onclick="logout()" title="Logout" id="logoutThumb" style="display: none;">
                     🚪 <span class="label">Logout</span>
                 </div>
             </div>
         </div>
+        <!-- Sidebar Toggle Button (on the edge) -->
+        <button id="toggleSidebar" class="sidebar-toggle-edge" title="Expand Sidebar">
+            <span class="arrow-icon">▶</span>
+        </button>
         <div class="main" id="mainContent">
-            <div class="posts-container">
-                <div class="post-composer" id="postComposer" style="display: none;">
-                    <textarea id="postContent" placeholder="Share your thoughts..."></textarea>
-                    <div class="post-composer-actions">
-                        <button class="btn" onclick="createPost()">Post</button>
-                    </div>
-                </div>
-                <div class="posts-feed" id="postsFeed">
-                    <h1>Welcome to United We Rise</h1>
-                    <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-                </div>
+            <!-- Content will be dynamically inserted here -->
+            <div class="welcome-content">
+                <h1>Welcome to United We Rise</h1>
+                <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
             </div>
         </div>
     </div>
@@ -414,6 +412,26 @@
         let currentUser = null;
         let authToken = null;
         let addressForm = null;
+        
+        // Utility function to fix auth-related localStorage issues without clearing everything
+        function fixAuthStorageIssues() {
+            console.log('🔧 Fixing auth storage issues...');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            authToken = null;
+            currentUser = null;
+            
+            // Reset UI to logged out state
+            document.getElementById('authSection').style.display = 'flex';
+            document.getElementById('userSection').style.display = 'none';
+            document.getElementById('userGreeting').textContent = '';
+            
+            console.log('✅ Auth storage cleared. Please log in again.');
+            return 'Auth storage cleared. Please refresh the page and log in again.';
+        }
+        
+        // Make function available in console for easy debugging
+        window.fixAuthStorageIssues = fixAuthStorageIssues;
 
         // Setup collapse button handler function
         function setupCollapseButton() {
@@ -633,6 +651,9 @@
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Initial state: ensure UI is in logged out state
+            setUserLoggedOut();
+            
             // Load GiveButter widget
             const givebutterScript = document.createElement("script");
             givebutterScript.src = "https://widgets.givebutter.com/latest.umd.cjs?acct=rfuBvOJ14QTerl5N&p=other";
@@ -646,6 +667,10 @@
             if (authToken) {
                 console.log('Attempting to verify user...');
                 verifyAndSetUser();
+            } else {
+                console.log('No auth token, ensuring logged out UI state');
+                // Explicitly ensure logged out state
+                setUserLoggedOut();
             }
 
             // Map initialization is now handled by map-maplibre.js to avoid conflicts
@@ -685,17 +710,32 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('Auth verification successful:', data.user);
-                    setUserLoggedIn(data.user);
+                    
+                    // Only set user logged in if we actually have user data
+                    if (data.user && data.user.id) {
+                        setUserLoggedIn(data.user);
+                    } else {
+                        console.warn('Invalid user data received:', data);
+                        // Clear invalid session
+                        localStorage.removeItem('authToken');
+                        authToken = null;
+                        // Ensure UI shows logged out state
+                        setUserLoggedOut();
+                    }
                 } else {
                     // Token is invalid
                     console.log('Token invalid, removing from storage');
                     localStorage.removeItem('authToken');
                     authToken = null;
+                    // Ensure UI shows logged out state
+                    setUserLoggedOut();
                 }
             } catch (error) {
                 console.error('Auth verification failed:', error);
                 localStorage.removeItem('authToken');
                 authToken = null;
+                // Ensure UI shows logged out state
+                setUserLoggedOut();
             }
         }
 
@@ -865,11 +905,65 @@
             }
         }
 
-        function setUserLoggedIn(user) {
-            currentUser = user;
+        async function refreshUserDataIfNeeded(user) {
+            // If user data is missing firstName, refresh it from the backend
+            if (!user.firstName && authToken) {
+                console.log('User data missing firstName, refreshing...');
+                try {
+                    const response = await fetch(`${API_BASE}/auth/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const freshUser = await response.json();
+                        console.log('Refreshed user data:', freshUser);
+                        
+                        // Update localStorage with fresh data
+                        localStorage.setItem('currentUser', JSON.stringify(freshUser));
+                        
+                        return freshUser;
+                    }
+                } catch (error) {
+                    console.warn('Could not refresh user data:', error);
+                }
+            }
+            return user;
+        }
+
+        async function setUserLoggedIn(user) {
+            // Safety check - don't process if no user data
+            if (!user || !user.id) {
+                console.error('Invalid user data passed to setUserLoggedIn:', user);
+                setUserLoggedOut();
+                return;
+            }
+            
+            // Refresh user data if needed
+            const refreshedUser = await refreshUserDataIfNeeded(user);
+            currentUser = refreshedUser;
+            
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('userSection').style.display = 'flex';
-            document.getElementById('userGreeting').textContent = `Hello, ${user.firstName || user.username}!`;
+            
+            // More robust greeting with multiple fallbacks
+            const displayName = refreshedUser.firstName || refreshedUser.username || 'User';
+            console.log('🔍 Setting greeting - firstName:', refreshedUser.firstName, 'username:', refreshedUser.username, 'displayName:', displayName);
+            const greetingElement = document.getElementById('userGreeting');
+            if (greetingElement) {
+                greetingElement.textContent = `Hello, ${displayName}!`;
+                greetingElement.style.display = 'inline'; // Show the greeting span
+                console.log('✅ Greeting set to:', greetingElement.textContent, 'visible:', greetingElement.style.display);
+                
+                // Debug: Check if anything clears this immediately
+                setTimeout(() => {
+                    console.log('🔍 Greeting after 100ms:', greetingElement.textContent, 'visible:', greetingElement.style.display);
+                }, 100);
+                setTimeout(() => {
+                    console.log('🔍 Greeting after 1s:', greetingElement.textContent, 'visible:', greetingElement.style.display);
+                }, 1000);
+            }
             
             // Address info will be loaded by loadUserContent()
             
@@ -877,11 +971,43 @@
             document.getElementById('messagesThumb').style.display = 'block';
             document.getElementById('profileThumb').style.display = 'block';
             document.getElementById('feedThumb').style.display = 'block';
-            document.getElementById('postComposer').style.display = 'block';
+            // Note: postComposer is now part of feed view, not a standalone element
+            document.getElementById('logoutThumb').style.display = 'block';
             
             // Load user-specific content
             loadUserContent();
             loadUserPosts();
+        }
+        
+        function setUserLoggedOut() {
+            currentUser = null;
+            authToken = null;
+            
+            // Reset UI to logged out state
+            document.getElementById('authSection').style.display = 'flex';
+            document.getElementById('userSection').style.display = 'none';
+            const greetingElement = document.getElementById('userGreeting');
+            if (greetingElement) {
+                greetingElement.textContent = '';
+                greetingElement.style.display = 'none'; // Hide the greeting span
+            }
+            
+            // Hide user-specific sidebar options
+            document.getElementById('messagesThumb').style.display = 'none';
+            document.getElementById('profileThumb').style.display = 'none';
+            document.getElementById('feedThumb').style.display = 'none';
+            document.getElementById('logoutThumb').style.display = 'none';
+            
+            // Reset main content to welcome message
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.innerHTML = `
+                    <div class="welcome-content">
+                        <h1>Welcome to United We Rise</h1>
+                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
+                    </div>
+                `;
+            }
         }
 
 
@@ -914,17 +1040,13 @@
         }
 
         function logout() {
-            currentUser = null;
-            authToken = null;
             localStorage.removeItem('authToken');
-            document.getElementById('authSection').style.display = 'block';
-            document.getElementById('userSection').style.display = 'none';
+            localStorage.removeItem('currentUser');
             
-            // Hide user-specific elements
-            document.getElementById('messagesThumb').style.display = 'none';
-            document.getElementById('profileThumb').style.display = 'none';
-            document.getElementById('feedThumb').style.display = 'none';
-            document.getElementById('postComposer').style.display = 'none';
+            // Use the new centralized logout function
+            setUserLoggedOut();
+            
+            // Hide additional elements
             document.getElementById('messagesContainer').style.display = 'none';
             document.getElementById('profilePanel').style.display = 'none';
             
@@ -932,10 +1054,15 @@
             resetPanelsToDefault();
             
             // Reset main content
-            document.getElementById('postsFeed').innerHTML = `
-                <h1>Welcome to United We Rise</h1>
-                <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-            `;
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.innerHTML = `
+                    <div class="welcome-content">
+                        <h1>Welcome to United We Rise</h1>
+                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
+                    </div>
+                `;
+            }
         }
 
         function showAuthMessage(message, type) {
@@ -953,8 +1080,27 @@
                     
                     // UPDATE: Merge the complete profile data into currentUser
                     if (data.user) {
-                        currentUser = { ...currentUser, ...data.user };
+                        // Debug: Check what's in the profile data
+                        console.log('🔍 Profile data before merge:', data.user);
+                        console.log('🔍 currentUser before merge:', currentUser);
+                        
+                        // Only merge non-null values to avoid overwriting good data with undefined
+                        const mergedUser = { ...currentUser };
+                        for (const [key, value] of Object.entries(data.user)) {
+                            if (value !== null && value !== undefined) {
+                                mergedUser[key] = value;
+                            }
+                        }
+                        currentUser = mergedUser;
                         console.log('User profile data merged into currentUser:', currentUser);
+                        
+                        // Re-update the greeting if it got cleared
+                        const displayName = currentUser.firstName || currentUser.username || 'User';
+                        const greetingElement = document.getElementById('userGreeting');
+                        if (greetingElement) {
+                            greetingElement.textContent = `Hello, ${displayName}!`;
+                            console.log('🔧 Re-set greeting after profile merge to:', greetingElement.textContent);
+                        }
                         
                         // Update radio button availability now that we have address data
                         updateRadioButtonAvailability();
@@ -1132,8 +1278,18 @@
 
         // Existing panel functions
         function togglePanel(name) {
-            closeAllPanels();
-            document.getElementById(`panel-${name}`).classList.remove('hidden');
+            const panel = document.getElementById(`panel-${name}`);
+            const isHidden = panel.classList.contains('hidden');
+            
+            if (isHidden) {
+                // Panel is hidden, show it (close others first)
+                closeAllPanels();
+                panel.classList.remove('hidden');
+            } else {
+                // Panel is visible, hide it and show default view
+                panel.classList.add('hidden');
+                showDefaultView();
+            }
         }
 
         function closePanel(name) {
@@ -1159,7 +1315,40 @@
 
         // Sidebar toggle
         document.getElementById('toggleSidebar').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('expanded');
+            const sidebar = document.getElementById('sidebar');
+            const toggleButton = document.getElementById('toggleSidebar');
+            const arrow = document.querySelector('.arrow-icon');
+            
+            sidebar.classList.toggle('expanded');
+            
+            // Update arrow direction and tooltip based on sidebar state
+            if (sidebar.classList.contains('expanded')) {
+                arrow.textContent = '◀'; // Arrow pointing left when expanded (to collapse)
+                toggleButton.title = 'Collapse Sidebar';
+                console.log('Sidebar expanded - arrow should point left');
+            } else {
+                arrow.textContent = '▶'; // Arrow pointing right when collapsed (to expand)
+                toggleButton.title = 'Expand Sidebar';
+                console.log('Sidebar collapsed - arrow should point right');
+            }
+        });
+
+        // Set initial arrow state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleButton = document.getElementById('toggleSidebar');
+            const arrow = document.querySelector('.arrow-icon');
+            
+            if (sidebar && toggleButton && arrow) {
+                if (sidebar.classList.contains('expanded')) {
+                    arrow.textContent = '◀';
+                    toggleButton.title = 'Collapse Sidebar';
+                } else {
+                    arrow.textContent = '▶';
+                    toggleButton.title = 'Expand Sidebar';
+                }
+                console.log('Initial sidebar state set');
+            }
         });
 
         // Map initialization - Toggle between Leaflet and MapLibre
@@ -1694,13 +1883,18 @@
         // Override existing togglePanel to load live data
         const originalTogglePanel = window.togglePanel;
         window.togglePanel = function(name) {
+            const panel = document.getElementById(`panel-${name}`);
+            const wasHidden = panel.classList.contains('hidden');
+            
             originalTogglePanel(name);
             
-            // Load live data when panels open
-            if (name === 'trending') {
-                loadTrendingPosts();
-            } else if (name === 'officials' && currentUser) {
-                loadUserContent();
+            // Load live data when panels are opened (not when closed)
+            if (wasHidden) {
+                if (name === 'trending') {
+                    loadTrendingPosts();
+                } else if (name === 'officials' && currentUser) {
+                    loadUserContent();
+                }
             }
         };
 
@@ -1712,6 +1906,8 @@
                 loadConversations();
             } else {
                 container.style.display = 'none';
+                // Show default view when messages are closed
+                showDefaultView();
             }
         }
 
@@ -1964,6 +2160,58 @@
             document.getElementById('profilePanel').style.display = 'none';
             document.getElementById('messagesContainer').style.display = 'none';
             window.myProfile.render('mainContent');
+        }
+
+        // New function to toggle My Profile - shows/hides profile window
+        function toggleMyProfile() {
+            if (!authToken) {
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <h2>Please log in to view your profile</h2>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const mainContent = document.getElementById('mainContent');
+            const isProfileCurrentlyShown = mainContent.querySelector('.my-profile') !== null;
+            
+            if (isProfileCurrentlyShown) {
+                // Profile is currently shown, hide it and show default view
+                showDefaultView();
+            } else {
+                // Profile is not shown, show it
+                showMyProfile();
+            }
+        }
+
+        // Function to show default view when all windows are closed
+        function showDefaultView() {
+            // Hide all side panels
+            document.getElementById('profilePanel').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'none';
+            closeAllPanels();
+            
+            // Show My Feed as default, or map if user is not logged in
+            if (authToken) {
+                showMyFeed();
+            } else {
+                // For logged-out users, show the map or welcome screen
+                if (window.map && typeof window.map.showMap === 'function') {
+                    window.map.showMap();
+                } else {
+                    // Fallback to welcome screen
+                    document.getElementById('mainContent').innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <h2>Welcome to United We Rise</h2>
+                            <p>Connect with your community and engage in meaningful political discourse.</p>
+                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                            <button onclick="openAuthModal('register')" class="btn" style="margin-left: 1rem;">Sign Up</button>
+                        </div>
+                    `;
+                }
+            }
         }
 
         // New function to show My Feed - personalized feed based on who user follows
@@ -2634,7 +2882,8 @@
                 const response = await apiCall('/posts/me');
                 
                 if (response.ok) {
-                    displayPosts(response.data.posts);
+                    // Store posts for later display when feed view is shown
+                    window.userPostsCache = response.data.posts;
                 } else {
                     console.error('Failed to load user posts:', response.data?.error);
                 }
@@ -2643,8 +2892,12 @@
             }
         }
 
-        function displayPosts(posts) {
-            const feed = document.getElementById('postsFeed');
+        function displayPosts(posts, containerId = 'postsFeed', showHeader = true) {
+            const feed = document.getElementById(containerId);
+            if (!feed) {
+                console.warn('Feed container not found:', containerId);
+                return;
+            }
             
             if (posts.length === 0) {
                 feed.innerHTML = `
@@ -2656,7 +2909,34 @@
                 return;
             }
 
-            let html = '<h2>Your Posts</h2>';
+            // Use the standardized PostComponent if available
+            if (window.postComponent) {
+                let html = showHeader ? '<h2>Your Posts</h2>' : '';
+                html += '<div class="posts-list">';
+                
+                posts.forEach(post => {
+                    html += window.postComponent.renderPost(post, {
+                        showActions: true,
+                        showComments: true,
+                        showAuthor: true,
+                        showTimestamp: true,
+                        compactView: false
+                    });
+                });
+                
+                html += '</div>';
+                feed.innerHTML = html;
+            } else {
+                // Fallback to original rendering if PostComponent not available
+                displayPostsFallback(posts, containerId, showHeader);
+            }
+        }
+
+        function displayPostsFallback(posts, containerId, showHeader = true) {
+            const feed = document.getElementById(containerId);
+            if (!feed) return;
+
+            let html = showHeader ? '<h2>Your Posts</h2>' : '';
             posts.forEach(post => {
                 const timeAgo = getTimeAgo(new Date(post.createdAt));
                 
@@ -2866,21 +3146,7 @@
         }
 
 
-        async function loadUserPosts() {
-            if (!authToken) return;
-
-            try {
-                const response = await apiCall('/posts/me');
-                
-                if (response.ok) {
-                    displayPosts(response.data.posts);
-                } else {
-                    console.error('Failed to load user posts:', response.data?.error);
-                }
-            } catch (error) {
-                console.error('Failed to load posts:', error);
-            }
-        }
+        // Duplicate removed - using the one defined earlier
 
         // Check follow status and render appropriate button
         async function renderFollowButton(userId, containerElement) {

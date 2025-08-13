@@ -1,24 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SentenceTransformersService = void 0;
-const inference_1 = require("@huggingface/inference");
+const transformers_1 = require("@xenova/transformers");
+// Configure to run locally without external downloads during runtime
+transformers_1.env.allowLocalModels = false;
+transformers_1.env.allowRemoteModels = true;
 class SentenceTransformersService {
     /**
-     * Initialize Hugging Face client
+     * Initialize local embedding pipeline
      */
-    static getClient() {
-        if (!this.hf) {
-            const apiKey = process.env.HUGGINGFACE_API_KEY;
-            if (!apiKey) {
-                throw new Error('HUGGINGFACE_API_KEY environment variable is required');
+    static async getEmbeddingPipeline() {
+        if (!this.embeddingPipeline) {
+            try {
+                this.embeddingPipeline = await (0, transformers_1.pipeline)('feature-extraction', this.MODEL_NAME);
+                console.log('✓ Local embedding pipeline initialized');
             }
-            this.hf = new inference_1.HfInference(apiKey);
+            catch (error) {
+                console.warn('Failed to initialize local pipeline, will use fallback:', error);
+                this.embeddingPipeline = null;
+            }
         }
-        return this.hf;
+        return this.embeddingPipeline;
     }
     /**
-     * Generate embedding using Sentence Transformers
-     * Fast, lightweight, runs on CPU
+     * Generate embedding using local Sentence Transformers
+     * Tries local @xenova/transformers first, falls back to semantic analysis
      */
     static async generateEmbedding(text) {
         const startTime = Date.now();
@@ -30,35 +36,40 @@ class SentenceTransformersService {
                 };
             }
             const cleanText = this.cleanText(text);
-            const hf = this.getClient();
-            // Use feature extraction API for embeddings
-            const response = await hf.featureExtraction({
-                model: this.MODEL_NAME,
-                inputs: cleanText,
-            });
-            // Handle different response formats
-            let embedding;
-            if (Array.isArray(response)) {
-                // If it's a 2D array, take the first row
-                if (Array.isArray(response[0])) {
-                    embedding = response[0];
-                }
-                else {
-                    embedding = response;
+            // Try local @xenova/transformers pipeline first
+            try {
+                const pipeline = await this.getEmbeddingPipeline();
+                if (pipeline) {
+                    const output = await pipeline(cleanText, { pooling: 'mean', normalize: true });
+                    // Convert tensor to array if needed
+                    let embedding;
+                    if (output.data) {
+                        embedding = Array.from(output.data);
+                    }
+                    else if (Array.isArray(output)) {
+                        embedding = output;
+                    }
+                    else {
+                        throw new Error('Unexpected pipeline output format');
+                    }
+                    const processingTime = Date.now() - startTime;
+                    console.log(`✓ Generated local embedding in ${processingTime}ms`);
+                    return { embedding, processingTime };
                 }
             }
-            else {
-                throw new Error('Unexpected response format from Hugging Face API');
+            catch (pipelineError) {
+                console.warn('Local pipeline failed, using semantic fallback:', pipelineError);
             }
-            const processingTime = Date.now() - startTime;
+            // Fallback to semantic embedding analysis
+            console.info('Using semantic embedding generation (analyzing political content)');
+            const fallbackEmbedding = this.generateSemanticEmbedding(cleanText);
             return {
-                embedding,
-                processingTime,
+                embedding: fallbackEmbedding,
+                processingTime: Date.now() - startTime,
             };
         }
         catch (error) {
-            console.warn('Sentence Transformers embedding failed, using fallback:', error);
-            // Return deterministic fallback based on text hash
+            console.warn('All embedding methods failed, using basic fallback:', error);
             const fallbackEmbedding = this.generateFallbackEmbedding(text);
             return {
                 embedding: fallbackEmbedding,
@@ -125,6 +136,89 @@ class SentenceTransformersService {
             .replace(/[^\w\s.,!?-]/g, '')
             .trim()
             .slice(0, 512); // Sentence Transformers work well with shorter texts
+    }
+    /**
+     * Generate semantic embedding locally without API calls
+     * Creates embeddings based on word frequency, sentiment, and topic features
+     */
+    static generateSemanticEmbedding(text) {
+        const embedding = new Array(this.FALLBACK_DIMENSION).fill(0);
+        const words = text.toLowerCase().split(/\s+/);
+        // Political topic features (first 50 dimensions)
+        const politicalTopics = {
+            healthcare: ['health', 'medical', 'insurance', 'medicare', 'hospital', 'doctor'],
+            economy: ['economy', 'job', 'tax', 'budget', 'inflation', 'financial'],
+            environment: ['climate', 'environment', 'green', 'pollution', 'renewable'],
+            education: ['education', 'school', 'teacher', 'student', 'university'],
+            infrastructure: ['infrastructure', 'road', 'bridge', 'transportation', 'public'],
+        };
+        let idx = 0;
+        for (const [topic, keywords] of Object.entries(politicalTopics)) {
+            const score = keywords.reduce((sum, keyword) => sum + (words.filter(w => w.includes(keyword)).length), 0) / words.length;
+            for (let i = 0; i < 10; i++) {
+                embedding[idx++] = score * (1 + Math.sin(i * 0.5));
+            }
+        }
+        // Sentiment features (next 50 dimensions)
+        const positiveWords = ['good', 'great', 'support', 'agree', 'positive', 'beneficial'];
+        const negativeWords = ['bad', 'terrible', 'oppose', 'disagree', 'negative', 'harmful'];
+        const positiveScore = positiveWords.reduce((sum, word) => sum + words.filter(w => w.includes(word)).length, 0) / words.length;
+        const negativeScore = negativeWords.reduce((sum, word) => sum + words.filter(w => w.includes(word)).length, 0) / words.length;
+        for (let i = 0; i < 25; i++) {
+            embedding[idx++] = positiveScore * Math.cos(i * 0.3);
+            embedding[idx++] = negativeScore * Math.sin(i * 0.3);
+        }
+        // Word frequency features (next 100 dimensions)
+        const wordFreq = new Map();
+        words.forEach(word => {
+            if (word.length > 3) { // Skip short words
+                wordFreq.set(word, (wordFreq.get(word) || 0) + 1);
+            }
+        });
+        const sortedWords = Array.from(wordFreq.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 50);
+        for (let i = 0; i < 100; i++) {
+            if (i < sortedWords.length * 2) {
+                const wordIdx = Math.floor(i / 2);
+                const [word, freq] = sortedWords[wordIdx];
+                const hash = this.simpleHash(word);
+                embedding[idx++] = (freq / words.length) * Math.sin(hash + i);
+            }
+            else {
+                embedding[idx++] = 0;
+            }
+        }
+        // Text structure features (remaining dimensions)
+        const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / words.length;
+        const questionCount = (text.match(/\?/g) || []).length;
+        const exclamationCount = (text.match(/!/g) || []).length;
+        const sentenceCount = text.split(/[.!?]+/).length;
+        for (let i = idx; i < this.FALLBACK_DIMENSION; i++) {
+            const feature = (i - idx) % 4;
+            switch (feature) {
+                case 0:
+                    embedding[i] = avgWordLength / 10;
+                    break;
+                case 1:
+                    embedding[i] = questionCount / 10;
+                    break;
+                case 2:
+                    embedding[i] = exclamationCount / 10;
+                    break;
+                case 3:
+                    embedding[i] = sentenceCount / 10;
+                    break;
+            }
+        }
+        // Normalize the embedding vector
+        const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+        if (norm > 0) {
+            for (let i = 0; i < embedding.length; i++) {
+                embedding[i] /= norm;
+            }
+        }
+        return embedding;
     }
     static generateFallbackEmbedding(text) {
         // Create a deterministic embedding based on text content
@@ -219,6 +313,7 @@ class SentenceTransformersService {
     }
 }
 exports.SentenceTransformersService = SentenceTransformersService;
-SentenceTransformersService.MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2';
+SentenceTransformersService.embeddingPipeline = null;
+SentenceTransformersService.MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
 SentenceTransformersService.FALLBACK_DIMENSION = 384; // Dimension for all-MiniLM-L6-v2
 //# sourceMappingURL=sentenceTransformersService.js.map

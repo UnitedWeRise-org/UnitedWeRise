@@ -503,7 +503,7 @@ details {
 .sidebar .thumb {
     margin: 10px 0;
     cursor: pointer;
-    font-size: 1.5rem;
+    font-size: 1.1rem; /* Reduced from 1.5rem */
     white-space: nowrap;
     padding: 2px 4px;
     border-radius: 4px;
@@ -517,6 +517,7 @@ details {
 .sidebar .label {
     margin-left: 10px;
     display: none;
+    font-size: 0.8rem; /* Smaller text for labels */
 }
 
 .sidebar.expanded .label {
@@ -535,6 +536,7 @@ details {
     align-items: flex-start;
 }
 
+/* Old toggle sidebar styles - keeping for legacy compatibility */
 #toggleSidebar {
     background: none;
     border: none;
@@ -546,8 +548,51 @@ details {
     margin-bottom: 0.5rem;
 }
 
+/* New edge toggle button styles */
+.sidebar-toggle-edge {
+    position: fixed;
+    top: 50%;
+    left: 3vw; /* Position at the edge of collapsed sidebar */
+    transform: translateY(-50%) translateX(-50%); /* Center on the edge */
+    background: #4b5c09;
+    border: 2px solid rgba(255,255,255,0.2);
+    color: white;
+    width: 30px;
+    height: 60px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 8px; /* Rounded on all sides since it's centered on edge */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.sidebar-toggle-edge:hover {
+    background: #5a6b0a;
+    border-color: rgba(255,255,255,0.4);
+}
+
+.sidebar-toggle-edge:hover .arrow-icon {
+    color: #1a1a1a; /* Even darker on hover for extra visibility */
+}
+
+/* Adjust toggle button position when sidebar is expanded */
+.sidebar.expanded ~ .sidebar-toggle-edge {
+    left: 10vw; /* Position at the edge of expanded sidebar */
+}
+
+/* Arrow icon styling */
+.arrow-icon {
+    transition: all 0.3s ease;
+    display: inline-block;
+    color: #2c2c2c; /* Dark gray for contrast against olive green and greige */
+    font-weight: bold;
+}
+
 .logout-thumb {
-    font-size: 1.2rem;
+    font-size: 1.0rem; /* Reduced from 1.2rem to match smaller sidebar text */
     color: rgba(255,255,255,0.8);
     margin: 0;
 }
@@ -567,16 +612,182 @@ details {
     flex-grow: 1;
     height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
     box-sizing: border-box;
-    overflow-y: auto; /* Allow main container to scroll vertically */
-    /* Hide scrollbar */
+    overflow: hidden; /* Prevent main container from scrolling - let content handle it */
+}
+
+/* Main content should not scroll - interfaces handle their own scrolling */
+
+.sidebar.expanded ~ .main {
+    margin-left: 10vw;
+}
+
+/* Welcome content styling */
+.welcome-content {
+    padding: 2rem;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* My Profile Component Styles */
+.my-profile {
+    position: fixed;
+    left: 3.5vw;
+    right: 26%;
+    top: 6vh;
+    bottom: 0;
+    background: white;
+    overflow-y: auto;
+    padding: 2rem;
+    box-sizing: border-box;
+    z-index: 10;
+    /* Hide scrollbar but keep functionality */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
 
-.main::-webkit-scrollbar {
+.my-profile::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
 }
 
-.sidebar.expanded ~ .main {
-    margin-left: 10vw;
+/* Adjust profile position when sidebar is expanded */
+.sidebar.expanded ~ .main .my-profile {
+    left: 10.5vw;
+}
+
+.my-profile .profile-header {
+    display: flex;
+    gap: 3rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.my-profile .profile-picture-container {
+    flex-shrink: 0;
+}
+
+.my-profile .profile-picture {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.my-profile .profile-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.my-profile .profile-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.my-profile .tab-button {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+    transition: all 0.3s;
+}
+
+.my-profile .tab-button.active {
+    color: #4b5c09;
+    border-bottom: 2px solid #4b5c09;
+    margin-bottom: -2px;
+}
+
+.my-profile .tab-pane {
+    /* Remove scroll from tab pane - let main container handle scrolling */
+    position: relative;
+}
+
+/* Sticky Post Composer */
+.sticky-composer-wrapper {
+    background: white;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 3; /* Below map (z-index: 5) and modals */
+}
+
+.sticky-composer-wrapper.sticky {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 0.25rem 0.5rem; /* Minimal padding - just enough border */
+    margin: -0.25rem -0.5rem 1rem -0.5rem;
+    background: #ffffff;
+    z-index: 3; /* Keep below map layer */
+    top: -32px; /* Compensate for container padding to position higher */
+}
+
+.quick-post-composer {
+    background: #f8f9fa;
+    padding: 1rem; /* Reduced from 1.5rem */
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.quick-post-composer textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box; /* Fix textarea protruding from container */
+    font-family: inherit;
+}
+
+.quick-post-composer .btn {
+    background: #4b5c09;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+.quick-post-composer .btn:hover {
+    background: #3a4807;
+}
+
+.my-profile .posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 600px; /* Centered, not too wide */
+    margin: 0 auto; /* Center the posts */
+}
+
+.my-profile .post-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.3s;
+}
+
+.my-profile .post-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.my-profile .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
 }

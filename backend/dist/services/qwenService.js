@@ -144,6 +144,23 @@ Provide a balanced summary:`;
         }
     }
     /**
+     * Simple text generation for general use cases
+     */
+    static async generateResponse(prompt, maxTokens = 500) {
+        try {
+            const response = await this.makeAPIRequest({
+                prompt,
+                maxTokens,
+                temperature: 0.2
+            });
+            return response.choices[0]?.message?.content || '';
+        }
+        catch (error) {
+            console.error('QwenService generateResponse error:', error);
+            throw error;
+        }
+    }
+    /**
      * Generate default message for missing policy positions
      */
     static generateMissingPositionMessage(candidateName, issue, candidateId) {

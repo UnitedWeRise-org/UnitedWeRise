@@ -63,6 +63,10 @@ export declare class QwenService {
         position: string;
     }[]): Promise<string>;
     /**
+     * Simple text generation for general use cases
+     */
+    static generateResponse(prompt: string, maxTokens?: number): Promise<string>;
+    /**
      * Generate default message for missing policy positions
      */
     static generateMissingPositionMessage(candidateName: string, issue: string, candidateId: string): string;

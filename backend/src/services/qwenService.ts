@@ -237,6 +237,24 @@ Provide a balanced summary:`;
   }
 
   /**
+   * Simple text generation for general use cases
+   */
+  static async generateResponse(prompt: string, maxTokens: number = 500): Promise<string> {
+    try {
+      const response = await this.makeAPIRequest({
+        prompt,
+        maxTokens,
+        temperature: 0.2
+      });
+
+      return response.choices[0]?.message?.content || '';
+    } catch (error) {
+      console.error('QwenService generateResponse error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Generate default message for missing policy positions
    */
   static generateMissingPositionMessage(

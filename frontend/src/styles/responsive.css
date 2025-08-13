@@ -32,6 +32,16 @@
         width: 200px; /* Fixed width instead of vw */
     }
     
+    /* Sidebar toggle button adjustments for tablet */
+    .sidebar-toggle-edge {
+        left: 60px; /* Match fixed sidebar width */
+        transform: translateY(-50%) translateX(-50%); /* Keep centered on edge */
+    }
+    
+    .sidebar.expanded ~ .sidebar-toggle-edge {
+        left: 200px; /* Match expanded sidebar width */
+    }
+    
     /* Main content area adjustments */
     .main {
         margin-left: 60px; /* Match sidebar width */
@@ -81,6 +91,11 @@
     
     /* Hide desktop elements that don't work on mobile */
     .sidebar {
+        display: none;
+    }
+    
+    /* Hide sidebar toggle button on mobile */
+    .sidebar-toggle-edge {
         display: none;
     }
     

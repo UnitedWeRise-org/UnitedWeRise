@@ -16,7 +16,7 @@ export declare class EmbeddingService {
     private static readonly API_KEY;
     private static readonly USE_QDRANT;
     /**
-     * Generate embedding using Sentence Transformers (fast, CPU-based)
+     * Generate embedding using best available service (Azure OpenAI > Local)
      */
     static generateEmbedding(text: string): Promise<number[]>;
     /**
@@ -28,29 +28,9 @@ export declare class EmbeddingService {
      */
     static calculateSimilarity(embedding1: number[], embedding2: number[]): number;
     /**
-     * Find posts similar to a given embedding using Qdrant or fallback to PostgreSQL
+     * Find posts similar to a given embedding using PostgreSQL vector operations
      */
-    static findSimilarPosts(targetEmbedding: number[], limit?: number, minSimilarity?: number, categoryFilter?: string): Promise<{
-        similarity: any;
-        author: {
-            id: string;
-            username: string;
-            firstName: string;
-            lastName: string;
-            avatar: string;
-        };
-        id: string;
-        embedding: number[];
-        createdAt: Date;
-        updatedAt: Date;
-        content: string;
-        imageUrl: string | null;
-        authorId: string;
-        isPolitical: boolean;
-        tags: string[];
-        likesCount: number;
-        commentsCount: number;
-    }[]>;
+    static findSimilarPosts(targetEmbedding: number[], limit?: number, minSimilarity?: number, categoryFilter?: string): Promise<any[]>;
     /**
      * Update post embedding in both PostgreSQL and Qdrant
      */

@@ -165,17 +165,9 @@ class BackendIntegration {
     }
 
     setupVerificationFlow() {
-        // Hook into successful login to check verification status
-        const originalSetUserLoggedIn = window.setUserLoggedIn;
-        
-        window.setUserLoggedIn = (user) => {
-            originalSetUserLoggedIn(user);
-            
-            // Check if verification is needed
-            setTimeout(() => {
-                this.checkVerificationNeeded(user);
-            }, 1000);
-        };
+        // DISABLED: This was causing race conditions with auth state
+        // The verification flow override was interfering with the main login process
+        // by calling non-existent /verification/status endpoint after 1 second delay
         
         // Set up verification completion callback
         window.onVerificationComplete = () => {
@@ -448,34 +440,36 @@ window.onVerificationComplete = () => {
 };
 
 // Handle successful login to check onboarding status
-const originalSetUserLoggedInEnhanced = window.setUserLoggedIn;
-if (originalSetUserLoggedInEnhanced) {
-    window.setUserLoggedIn = (user) => {
-        originalSetUserLoggedInEnhanced(user);
-        
-        // Check onboarding status after login
-        setTimeout(async () => {
-            try {
-                const response = await fetch(`${this.API_BASE}/onboarding/progress`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const progress = await response.json();
-                    
-                    // Show onboarding if not complete and user has been registered for less than 7 days
-                    const userAge = Date.now() - new Date(user.createdAt).getTime();
-                    const weekInMs = 7 * 24 * 60 * 60 * 1000;
-                    
-                    if (!progress.isComplete && userAge < weekInMs && window.onboardingFlow) {
-                        onboardingFlow.show();
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to check onboarding status:', error);
-            }
-        }, 2000);
-    };
-}
+// DISABLED: This was causing issues with the login flow by using incorrect API_BASE
+// const originalSetUserLoggedInEnhanced = window.setUserLoggedIn;
+// if (originalSetUserLoggedInEnhanced) {
+//     window.setUserLoggedIn = (user) => {
+//         originalSetUserLoggedInEnhanced(user);
+//         
+//         // Check onboarding status after login
+//         setTimeout(async () => {
+//             try {
+//                 // BUG: this.API_BASE doesn't exist here - this code is outside the class
+//                 const response = await fetch(`${this.API_BASE}/onboarding/progress`, {
+//                     headers: {
+//                         'Authorization': `Bearer ${authToken}`
+//                     }
+//                 });
+//                 
+//                 if (response.ok) {
+//                     const progress = await response.json();
+//                     
+//                     // Show onboarding if not complete and user has been registered for less than 7 days
+//                     const userAge = Date.now() - new Date(user.createdAt).getTime();
+//                     const weekInMs = 7 * 24 * 60 * 60 * 1000;
+//                     
+//                     if (!progress.isComplete && userAge < weekInMs && window.onboardingFlow) {
+//                         onboardingFlow.show();
+//                     }
+//                 }
+//             } catch (error) {
+//                 console.error('Failed to check onboarding status:', error);
+//             }
+//         }, 2000);
+//     };
+// }

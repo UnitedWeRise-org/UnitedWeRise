@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireAuth = void 0;
+exports.requireAdmin = exports.requireAuth = void 0;
 const auth_1 = require("../utils/auth");
 const client_1 = require("@prisma/client");
 const sessionManager_1 = require("../services/sessionManager");
@@ -22,7 +22,7 @@ const requireAuth = async (req, res, next) => {
         }
         const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, email: true, username: true, isModerator: true, isAdmin: true }
+            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true }
         });
         if (!user) {
             return res.status(401).json({ error: 'User not found.' });
@@ -41,4 +41,11 @@ const requireAuth = async (req, res, next) => {
     }
 };
 exports.requireAuth = requireAuth;
+const requireAdmin = async (req, res, next) => {
+    if (!req.user?.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required.' });
+    }
+    next();
+};
+exports.requireAdmin = requireAdmin;
 //# sourceMappingURL=auth.js.map

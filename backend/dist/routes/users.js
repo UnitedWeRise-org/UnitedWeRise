@@ -88,6 +88,45 @@ router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, a
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Get public user profile (no authentication required)
+router.get('/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+                bio: true,
+                website: true,
+                location: true,
+                verified: true,
+                followersCount: true,
+                followingCount: true,
+                createdAt: true,
+                // Public political profile fields only
+                politicalProfileType: true,
+                verificationStatus: true,
+                office: true,
+                officialTitle: true,
+                politicalParty: true,
+                campaignWebsite: true,
+                // Hide private fields - no email, address, etc.
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ user });
+    }
+    catch (error) {
+        console.error('Get public user profile error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Follow a user
 router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {

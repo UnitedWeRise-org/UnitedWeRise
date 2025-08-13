@@ -350,20 +350,27 @@ class TrendingSystemIntegration {
         if (!contentContainer) return;
 
         try {
-            // Use existing trending load function if available
-            if (typeof window.loadTrendingPosts === 'function') {
-                // Wait for the function to populate data, then enhance display
-                await window.loadTrendingPosts();
-                setTimeout(() => {
-                    this.enhanceTrendingDisplay();
-                }, 500);
+            // Use new semantic topic discovery system
+            const response = await fetch('/api/topic-navigation/trending');
+            const data = await response.json();
+            
+            if (data.success && data.topics.length > 0) {
+                this.renderSemanticTopics(data.topics);
             } else {
-                // Fallback to demo data
-                this.loadDemoTrendingContent();
+                // Fallback to existing trending posts system
+                if (typeof window.loadTrendingPosts === 'function') {
+                    await window.loadTrendingPosts();
+                    setTimeout(() => {
+                        this.enhanceTrendingDisplay();
+                    }, 500);
+                } else {
+                    this.loadDemoTrendingContent();
+                }
             }
         } catch (error) {
             console.error('Failed to load trending content:', error);
-            this.showTrendingError('Failed to load trending content');
+            // Fallback to demo data on error
+            this.loadDemoTrendingContent();
         }
     }
 
@@ -377,6 +384,60 @@ class TrendingSystemIntegration {
         } else {
             this.loadDemoTrendingContent();
         }
+    }
+
+    renderSemanticTopics(topics) {
+        const contentContainer = document.querySelector('#trendingFeedContent');
+        if (!contentContainer) return;
+
+        let html = '<div class="semantic-topics-container">';
+        
+        topics.forEach((topic, index) => {
+            const isFeature = index === 0;
+            html += `
+                <div class="topic-card ${isFeature ? 'featured-topic' : ''}" data-topic-id="${topic.id}">
+                    <div class="topic-header">
+                        <div class="topic-icon">🏷️</div>
+                        <div class="topic-info">
+                            <h3 class="topic-title">${topic.title}</h3>
+                            <span class="topic-meta">${topic.postCount} posts • ${this.getTimeAgo(topic.discoveredAt)}</span>
+                        </div>
+                        ${isFeature ? '<div class="trending-badge">🔥 Trending</div>' : ''}
+                    </div>
+                    
+                    <div class="topic-summary">
+                        <div class="prevailing-position">
+                            <h4>📍 Prevailing Position</h4>
+                            <p>${topic.prevailingPosition}</p>
+                        </div>
+                        <div class="leading-critique">
+                            <h4>⚡ Leading Critique</h4>
+                            <p>${topic.leadingCritique}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="topic-engagement">
+                        <button class="topic-btn primary" onclick="trendingSystemIntegration.enterTopicMode('${topic.id}')">
+                            💬 Join Discussion (${topic.postCount} posts)
+                        </button>
+                        <button class="topic-btn secondary" onclick="trendingSystemIntegration.showTopicPreview('${topic.id}')">
+                            👀 Preview
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+            <div class="load-more-container">
+                <button class="load-more-btn" onclick="trendingSystemIntegration.discoverMoreTopics()">
+                    🔍 Discover More Topics
+                </button>
+            </div>
+        </div>`;
+        
+        contentContainer.innerHTML = html;
+        this.addSemanticTopicsStyles();
     }
 
     loadDemoTrendingContent() {
@@ -476,6 +537,52 @@ class TrendingSystemIntegration {
         const contentContainer = document.querySelector('#trendingFeedContent');
         if (!contentContainer) return;
 
+        // Use the standardized PostComponent for consistent rendering
+        if (window.postComponent) {
+            // Create wrapper for trending-specific styling
+            let html = '<div class="trending-posts-container">';
+            
+            posts.forEach((post, index) => {
+                const isFeature = index === 0;
+                // Add trending-specific properties
+                post.isTrending = isFeature;
+                
+                // Render using PostComponent with trending-specific options
+                html += `
+                    <div class="trending-post-wrapper ${isFeature ? 'featured' : ''}">
+                        ${window.postComponent.renderPost(post, {
+                            showActions: true,
+                            showComments: true,
+                            showAuthor: true,
+                            showTimestamp: true,
+                            compactView: false
+                        })}
+                        ${isFeature ? '<div class="trending-badge">🔥 Trending</div>' : ''}
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="load-more-container">
+                    <button class="load-more-btn" onclick="trendingSystemIntegration.loadMoreTrending()">
+                        Load More Trending Posts
+                    </button>
+                </div>
+            </div>`;
+            
+            contentContainer.innerHTML = html;
+        } else {
+            // Fallback to basic rendering if PostComponent not available
+            this.renderTrendingPostsFallback(posts);
+        }
+        
+        this.updateTrendingStats(posts.length);
+    }
+
+    renderTrendingPostsFallback(posts) {
+        const contentContainer = document.querySelector('#trendingFeedContent');
+        if (!contentContainer) return;
+
         let html = '<div class="trending-posts-container">';
         
         posts.forEach((post, index) => {
@@ -502,13 +609,6 @@ class TrendingSystemIntegration {
                         <button class="engagement-btn">🔄 ${Math.floor(Math.random() * 20)}</button>
                         <button class="engagement-btn">📤 Share</button>
                     </div>
-                    <div id="trending-comments-${post.id}" class="comments-section" style="display: none;">
-                        <textarea id="trending-comment-input-${post.id}" placeholder="Add a comment..."></textarea>
-                        <div class="comment-actions">
-                            <button onclick="addTrendingComment('${post.id}')">Comment</button>
-                            <button onclick="hideTrendingCommentBox('${post.id}')">Cancel</button>
-                        </div>
-                    </div>
                 </div>
             `;
         });
@@ -522,7 +622,6 @@ class TrendingSystemIntegration {
         </div>`;
         
         contentContainer.innerHTML = html;
-        this.updateTrendingStats(posts.length);
     }
 
     getTimeAgo(dateString) {
@@ -1512,6 +1611,414 @@ class TrendingSystemIntegration {
             const isExpanded = sidebar.classList.contains('expanded');
             trendingPanel.classList.toggle('sidebar-expanded', isExpanded);
         }
+    }
+
+    async enterTopicMode(topicId) {
+        try {
+            const response = await fetch(`/api/topic-navigation/enter/${topicId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                // Store that we're in topic mode
+                window.currentTopicId = topicId;
+                
+                // Update the main content area with topic-filtered posts
+                this.showTopicPosts(data.posts, data.topic);
+                this.showMessage(`Entered topic: ${data.topic.title}`);
+            } else {
+                this.showMessage('Failed to enter topic mode');
+            }
+        } catch (error) {
+            console.error('Failed to enter topic mode:', error);
+            this.showMessage('Error entering topic mode');
+        }
+    }
+
+    async exitTopicMode() {
+        try {
+            const response = await fetch('/api/topic-navigation/exit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                // Clear topic mode
+                delete window.currentTopicId;
+                
+                // Restore algorithm-based feed
+                this.showAlgorithmFeed(data.posts);
+                this.showMessage('Returned to main feed');
+            }
+        } catch (error) {
+            console.error('Failed to exit topic mode:', error);
+            this.showMessage('Error exiting topic mode');
+        }
+    }
+
+    showTopicPosts(posts, topic) {
+        // Replace main content with topic-filtered posts
+        const mainContent = document.querySelector('#mainContent') || 
+                           document.querySelector('.main');
+        
+        if (mainContent) {
+            // Store original content if not already in topic mode
+            if (!mainContent.dataset.originalContent) {
+                mainContent.dataset.originalContent = mainContent.innerHTML;
+            }
+            
+            mainContent.innerHTML = `
+                <div class="topic-mode-container">
+                    <div class="topic-mode-header">
+                        <div class="topic-breadcrumb">
+                            <button class="breadcrumb-btn" onclick="trendingSystemIntegration.exitTopicMode()">
+                                ← Back to Main Feed
+                            </button>
+                            <span class="breadcrumb-divider">/</span>
+                            <span class="current-topic">${topic.title}</span>
+                        </div>
+                        <div class="topic-summary-compact">
+                            <p><strong>Prevailing Position:</strong> ${topic.prevailingPosition}</p>
+                            <p><strong>Leading Critique:</strong> ${topic.leadingCritique}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="topic-posts-feed" id="topicPostsFeed">
+                        ${this.renderPostsList(posts)}
+                    </div>
+                </div>
+            `;
+            
+            this.addTopicModeStyles();
+        }
+    }
+
+    showAlgorithmFeed(posts) {
+        const mainContent = document.querySelector('#mainContent') || 
+                           document.querySelector('.main');
+        
+        if (mainContent && mainContent.dataset.originalContent) {
+            // Restore original content
+            mainContent.innerHTML = mainContent.dataset.originalContent;
+            delete mainContent.dataset.originalContent;
+        }
+    }
+
+    renderPostsList(posts) {
+        if (!posts || posts.length === 0) {
+            return '<div class="no-posts">No posts found for this topic.</div>';
+        }
+        
+        return posts.map(post => {
+            const timeAgo = this.getTimeAgo(post.createdAt);
+            return `
+                <div class="topic-post" data-post-id="${post.id}">
+                    <div class="post-header">
+                        <div class="user-avatar">${post.author.username.charAt(0).toUpperCase()}</div>
+                        <div class="user-info">
+                            <span class="username">@${post.author.username}</span>
+                            <span class="timestamp">${timeAgo}</span>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        <p>${post.content}</p>
+                    </div>
+                    <div class="post-engagement">
+                        <button class="engagement-btn">❤️ ${post.likesCount}</button>
+                        <button class="engagement-btn">💬 ${post.commentsCount}</button>
+                        <button class="engagement-btn">🔄 Share</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async showTopicPreview(topicId) {
+        try {
+            const response = await fetch(`/api/topic-navigation/${topicId}/posts?limit=3`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showTopicPreviewModal(data.posts, data.topic);
+            }
+        } catch (error) {
+            console.error('Failed to load topic preview:', error);
+        }
+    }
+
+    showTopicPreviewModal(posts, topic) {
+        const modal = document.createElement('div');
+        modal.className = 'topic-preview-modal modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>👀 Topic Preview: ${topic.title}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="topic-summary-preview">
+                        <div class="summary-item">
+                            <strong>📍 Prevailing Position:</strong>
+                            <p>${topic.prevailingPosition}</p>
+                        </div>
+                        <div class="summary-item">
+                            <strong>⚡ Leading Critique:</strong>
+                            <p>${topic.leadingCritique}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-posts">
+                        <h4>Recent Posts (${posts.length} of ${topic.postCount})</h4>
+                        ${this.renderPostsList(posts)}
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="modal-btn primary" onclick="trendingSystemIntegration.enterTopicMode('${topic.id}'); this.closest('.modal-overlay').remove();">
+                            💬 Join Discussion
+                        </button>
+                        <button class="modal-btn secondary" onclick="this.closest('.modal-overlay').remove()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    async discoverMoreTopics() {
+        this.showMessage('Discovering more topics...');
+        await this.loadTrendingContent();
+    }
+
+    addSemanticTopicsStyles() {
+        if (document.querySelector('#semantic-topics-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'semantic-topics-styles';
+        style.textContent = `
+            .semantic-topics-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            
+            .topic-card {
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 12px;
+                padding: 1.5rem;
+                transition: all 0.2s;
+            }
+            
+            .topic-card.featured-topic {
+                border-left: 4px solid #ff6b35;
+                background: linear-gradient(135deg, #fff5f3, #ffffff);
+            }
+            
+            .topic-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            }
+            
+            .topic-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .topic-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: #ff6b35;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.2rem;
+            }
+            
+            .topic-info {
+                flex: 1;
+            }
+            
+            .topic-title {
+                margin: 0 0 0.25rem 0;
+                color: #333;
+                font-size: 1.2rem;
+                font-weight: 600;
+            }
+            
+            .topic-meta {
+                color: #666;
+                font-size: 0.9rem;
+            }
+            
+            .topic-summary {
+                margin-bottom: 1.5rem;
+            }
+            
+            .prevailing-position, .leading-critique {
+                margin-bottom: 1rem;
+            }
+            
+            .topic-summary h4 {
+                margin: 0 0 0.5rem 0;
+                font-size: 0.95rem;
+                color: #666;
+            }
+            
+            .topic-summary p {
+                margin: 0;
+                line-height: 1.5;
+                color: #555;
+                background: #f8f9fa;
+                padding: 0.75rem;
+                border-radius: 6px;
+                border-left: 3px solid #dee2e6;
+            }
+            
+            .prevailing-position p {
+                border-left-color: #28a745;
+            }
+            
+            .leading-critique p {
+                border-left-color: #dc3545;
+            }
+            
+            .topic-engagement {
+                display: flex;
+                gap: 1rem;
+            }
+            
+            .topic-btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 0.9rem;
+            }
+            
+            .topic-btn.primary {
+                background: #ff6b35;
+                color: white;
+            }
+            
+            .topic-btn.primary:hover {
+                background: #e55a2b;
+                transform: translateY(-1px);
+            }
+            
+            .topic-btn.secondary {
+                background: transparent;
+                color: #666;
+                border: 1px solid #e9ecef;
+            }
+            
+            .topic-btn.secondary:hover {
+                border-color: #ff6b35;
+                color: #ff6b35;
+            }
+        `;
+        
+        document.head.appendChild(style);
+    }
+
+    addTopicModeStyles() {
+        if (document.querySelector('#topic-mode-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'topic-mode-styles';
+        style.textContent = `
+            .topic-mode-container {
+                padding: 1rem;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            .topic-mode-header {
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .topic-breadcrumb {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .breadcrumb-btn {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                cursor: pointer;
+                color: #666;
+                text-decoration: none;
+                transition: all 0.2s;
+            }
+            
+            .breadcrumb-btn:hover {
+                background: #e9ecef;
+                color: #ff6b35;
+            }
+            
+            .breadcrumb-divider {
+                color: #ccc;
+            }
+            
+            .current-topic {
+                font-weight: 600;
+                color: #333;
+            }
+            
+            .topic-summary-compact p {
+                margin: 0.5rem 0;
+                color: #555;
+                font-size: 0.9rem;
+            }
+            
+            .topic-posts-feed {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .topic-post {
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1rem;
+                transition: all 0.2s;
+            }
+            
+            .topic-post:hover {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .no-posts {
+                text-align: center;
+                color: #666;
+                padding: 2rem;
+                background: white;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+            }
+        `;
+        
+        document.head.appendChild(style);
     }
 
     showMessage(message) {

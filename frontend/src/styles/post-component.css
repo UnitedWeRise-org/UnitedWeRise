@@ -1,0 +1,440 @@
+/**
+ * Post Component Styles
+ * Standardized styling for all post displays across the application
+ */
+
+/* Post Container */
+.post-component {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.post-component:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Post Header */
+.post-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1rem 0.5rem 1rem;
+    gap: 0.75rem;
+}
+
+.post-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.post-author-info {
+    flex: 1;
+}
+
+.post-author-name {
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.verified-badge {
+    color: #1976d2;
+    font-size: 0.9rem;
+}
+
+.post-timestamp {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.125rem;
+}
+
+/* Post Content */
+.post-content {
+    padding: 0.5rem 1rem;
+    color: #333;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.post-content .mention {
+    color: #1976d2;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.post-content .mention:hover {
+    text-decoration: underline;
+}
+
+.post-content .hashtag {
+    color: #4b5c09;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.post-content .hashtag:hover {
+    text-decoration: underline;
+}
+
+.post-content a {
+    color: #1976d2;
+    text-decoration: none;
+}
+
+.post-content a:hover {
+    text-decoration: underline;
+}
+
+/* Post Image */
+.post-image {
+    padding: 0 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.post-image img {
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.post-image img:hover {
+    transform: scale(1.02);
+}
+
+/* Post Actions */
+.post-actions {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.post-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.post-action-btn:hover {
+    background: #f5f5f5;
+    transform: translateY(-2px);
+    color: #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.post-action-btn:active {
+    transform: translateY(0);
+    transition: all 0.1s ease;
+}
+
+.post-action-btn.liked {
+    color: #e91e63;
+}
+
+.post-action-btn .action-icon {
+    font-size: 1.1rem;
+}
+
+.post-action-btn .action-count {
+    font-weight: 500;
+}
+
+.post-action-btn.more-btn {
+    margin-left: auto;
+}
+
+/* Comments Section */
+.post-comments-section {
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    padding: 1rem;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.comment-input-wrapper {
+    margin-bottom: 1rem;
+}
+
+.comment-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: #4b5c09;
+    box-shadow: 0 0 0 2px rgba(75, 92, 9, 0.1);
+}
+
+.comment-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Comments List */
+.comments-list {
+    max-height: 400px;
+    overflow-y: auto;
+    transition: opacity 0.5s ease;
+}
+
+.comment {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.comment-time {
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.comment-content {
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.no-comments {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+/* Loading and Error States */
+.loading {
+    text-align: center;
+    padding: 1rem;
+    color: #666;
+}
+
+.error {
+    text-align: center;
+    padding: 1rem;
+    color: #e91e63;
+}
+
+.no-posts {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+}
+
+/* Toast Notifications */
+.toast-notification {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #333;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 10000;
+}
+
+.toast-notification.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.btn-primary {
+    background: #4b5c09;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #3a4807;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(75, 92, 9, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    transition: all 0.1s ease;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+    transition: all 0.1s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .post-component {
+        border-radius: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .post-actions {
+        padding: 0.5rem;
+    }
+    
+    .post-action-btn {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .post-action-btn .action-icon {
+        font-size: 1rem;
+    }
+}
+
+/* Compact View Mode */
+.post-component.compact {
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.post-component.compact .post-header {
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+}
+
+.post-component.compact .post-content {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.post-component.compact .post-actions {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Trending Post Wrappers */
+.trending-post-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.trending-post-wrapper.featured {
+    border-left: 4px solid #ff6b35;
+    background: linear-gradient(135deg, #fff5f3, #ffffff);
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+.trending-post-wrapper.featured .post-component {
+    margin-bottom: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.trending-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 1;
+}
+
+.trending-posts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.load-more-container {
+    text-align: center;
+    padding: 2rem;
+}
+
+.load-more-btn {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.load-more-btn:hover {
+    background: linear-gradient(135deg, #e55a2b, #d67e1a);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.load-more-btn:active {
+    transform: translateY(0);
+    transition: all 0.1s ease;
+}

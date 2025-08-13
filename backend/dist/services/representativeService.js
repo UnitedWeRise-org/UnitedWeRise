@@ -3,10 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RepresentativeService = void 0;
 const apiCache_1 = require("./apiCache");
 const client_1 = require("@prisma/client");
+const googleCivicService_1 = require("./googleCivicService");
 const prisma = new client_1.PrismaClient();
 // API Configuration
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
 const FEC_API_KEY = process.env.FEC_API_KEY;
+const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
 class RepresentativeService {
     /**
      * Get representatives by address using available APIs
@@ -23,23 +25,48 @@ class RepresentativeService {
                 return { ...cached, source: 'cache' };
             }
         }
-        // Try Geocodio first (most comprehensive)
+        // Fetch from both sources for comprehensive data
+        let googleResult = null;
+        let geocodioResult = null;
+        // Try Google Civic API (good for federal/state officials)
+        if (GOOGLE_API_KEY) {
+            try {
+                googleResult = await googleCivicService_1.GoogleCivicService.getRepresentativesByAddress(address);
+            }
+            catch (error) {
+                console.error('Google Civic API failed:', error);
+            }
+        }
+        // Try Geocodio (good for districts, school boards, additional data)
         if (GEOCODIO_API_KEY) {
             try {
-                const geocodioResult = await this.fetchFromGeocodio(address);
-                if (geocodioResult) {
-                    // Cache the response (30 days TTL)
-                    await apiCache_1.ApiCacheService.set('representatives', cacheKey, geocodioResult, 30 * 24 * 60);
-                    // Store in our database for enhanced lookup
-                    if (zipCode && state) {
-                        await this.storeRepresentativesInDb(geocodioResult.representatives, zipCode, state);
-                    }
-                    return { ...geocodioResult, source: 'geocodio' };
-                }
+                geocodioResult = await this.fetchFromGeocodio(address);
             }
             catch (error) {
                 console.error('Geocodio API failed:', error);
             }
+        }
+        // Merge results from both sources for comprehensive data
+        if (googleResult || geocodioResult) {
+            const mergedResult = this.mergeRepresentativeData(googleResult, geocodioResult);
+            // Cache the merged response (7 days TTL)
+            await apiCache_1.ApiCacheService.set('representatives', cacheKey, mergedResult, 7 * 24 * 60);
+            // Store in our database for enhanced lookup
+            if (zipCode && state) {
+                let allReps = [];
+                if (Array.isArray(mergedResult.representatives)) {
+                    allReps = mergedResult.representatives;
+                }
+                else {
+                    allReps = [
+                        ...(mergedResult.representatives.federal || []),
+                        ...(mergedResult.representatives.state || []),
+                        ...(mergedResult.representatives.local || [])
+                    ];
+                }
+                await this.storeRepresentativesInDb(allReps, zipCode, state);
+            }
+            return mergedResult;
         }
         // Fallback to FEC API for federal representatives only
         if (FEC_API_KEY && zipCode && state) {
@@ -186,6 +213,99 @@ class RepresentativeService {
         // School district info is available but not individual board members
         // This could be expanded with other data sources in the future
         return { representatives, location, source: 'geocodio' };
+    }
+    /**
+     * Merge representative data from multiple sources
+     */
+    static mergeRepresentativeData(googleData, geocodioData) {
+        const merged = {
+            representatives: {
+                federal: [],
+                state: [],
+                local: []
+            },
+            location: {
+                zipCode: undefined,
+                state: undefined,
+                city: undefined
+            },
+            source: 'merged'
+        };
+        // Start with Google data if available (usually more complete for federal/state)
+        if (googleData && googleData.representatives) {
+            merged.representatives = googleData.representatives;
+            merged.location = googleData.location || {};
+        }
+        // Enhance with Geocodio data
+        if (geocodioData) {
+            // Add location data if missing
+            if (!merged.location.zipCode && geocodioData.location?.zipCode) {
+                merged.location.zipCode = geocodioData.location.zipCode;
+            }
+            if (!merged.location.state && geocodioData.location?.state) {
+                merged.location.state = geocodioData.location.state;
+            }
+            // Add school district info (unique to Geocodio)
+            if (geocodioData.districts) {
+                merged.location.districts = geocodioData.districts;
+            }
+            // Merge representatives, avoiding duplicates
+            if (geocodioData.representatives) {
+                const reps = merged.representatives;
+                // Get all existing names for duplicate checking
+                const allExisting = [...reps.federal, ...reps.state, ...reps.local];
+                const existingNames = new Set(allExisting.map(r => r.name.toLowerCase()));
+                // Handle both array and grouped formats from geocodio
+                const geocodioReps = Array.isArray(geocodioData.representatives)
+                    ? geocodioData.representatives
+                    : [
+                        ...(geocodioData.representatives.federal || []),
+                        ...(geocodioData.representatives.state || []),
+                        ...(geocodioData.representatives.local || [])
+                    ];
+                geocodioReps.forEach((rep) => {
+                    // Add if not already present (by name)
+                    if (!existingNames.has(rep.name.toLowerCase())) {
+                        // Add to appropriate category based on level
+                        if (rep.level === 'federal') {
+                            reps.federal.push(rep);
+                        }
+                        else if (rep.level === 'state') {
+                            reps.state.push(rep);
+                        }
+                        else {
+                            reps.local.push(rep);
+                        }
+                    }
+                    else {
+                        // Enhance existing entry with additional data
+                        const existing = allExisting.find(r => r.name.toLowerCase() === rep.name.toLowerCase());
+                        if (existing) {
+                            // Add any missing fields from Geocodio
+                            if (!existing.bio && rep.bio)
+                                existing.bio = rep.bio;
+                            if (!existing.social && rep.social)
+                                existing.social = rep.social;
+                            if (!existing.references && rep.references)
+                                existing.references = rep.references;
+                            if (!existing.district && rep.district)
+                                existing.district = rep.district;
+                        }
+                    }
+                });
+            }
+        }
+        // Add source information
+        if (googleData && geocodioData) {
+            merged.source = 'google_civic+geocodio';
+        }
+        else if (googleData) {
+            merged.source = 'google_civic';
+        }
+        else if (geocodioData) {
+            merged.source = 'geocodio';
+        }
+        return merged;
     }
     /**
      * Transform FEC response to our format (simplified)

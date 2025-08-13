@@ -104,8 +104,8 @@ function updateMobileNavActive(activeView) {
     }
 }
 
-// Mobile view functions
-function showMobileFeed() {
+// Mobile view functions (expose globally for HTML onclick handlers)
+window.showMobileFeed = function showMobileFeed() {
     if (window.innerWidth > 767) return; // Only on mobile
     
     hideAllDesktopElements();
@@ -118,9 +118,9 @@ function showMobileFeed() {
     
     updateMobileNavActive('feed');
     currentMobileView = 'feed';
-}
+};
 
-function showMobileSearch() {
+window.showMobileSearch = function showMobileSearch() {
     if (window.innerWidth > 767) return; // Only on mobile
     
     hideAllDesktopElements();
@@ -138,9 +138,9 @@ function showMobileSearch() {
     
     updateMobileNavActive('search');
     currentMobileView = 'search';
-}
+};
 
-function showMobileMap() {
+window.showMobileMap = function showMobileMap() {
     if (window.innerWidth > 767) return; // Only on mobile
     
     hideAllDesktopElements();
@@ -161,9 +161,9 @@ function showMobileMap() {
     
     updateMobileNavActive('map');
     currentMobileView = 'map';
-}
+};
 
-function hideMobileMap() {
+window.hideMobileMap = function hideMobileMap() {
     const mapContainer = document.getElementById('mapContainer');
     if (mapContainer) {
         mapContainer.classList.remove('mobile-active');
@@ -171,9 +171,9 @@ function hideMobileMap() {
     
     // Return to feed view
     showMobileFeed();
-}
+};
 
-function showMobileProfile() {
+window.showMobileProfile = function showMobileProfile() {
     if (window.innerWidth > 767) return; // Only on mobile
     
     hideAllDesktopElements();
@@ -183,17 +183,17 @@ function showMobileProfile() {
     if (profilePanel) {
         profilePanel.style.display = 'block';
     } else {
-        // If profile panel doesn't exist, create or trigger profile view
-        if (window.myProfile && typeof window.myProfile.showMyProfile === 'function') {
-            window.myProfile.showMyProfile();
+        // If profile panel doesn't exist, use the desktop profile function
+        if (typeof showMyProfile === 'function') {
+            showMyProfile();
         }
     }
     
     updateMobileNavActive('profile');
     currentMobileView = 'profile';
-}
+};
 
-function showMobileMessages() {
+window.showMobileMessages = function showMobileMessages() {
     if (window.innerWidth > 767) return; // Only on mobile
     
     hideAllDesktopElements();
@@ -356,9 +356,13 @@ window.addEventListener('load', function() {
     // Check initial auth state
     const isLoggedIn = isUserLoggedIn();
     if (isLoggedIn) {
-        // Get user data from storage or API
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        updateAuthenticationUI(true, userData);
+        // Get user data from storage - fixed to use correct key 'currentUser'
+        const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        // Only update UI if we have valid user data with firstName
+        if (userData && userData.id && userData.firstName) {
+            updateAuthenticationUI(true, userData);
+        }
+        // Otherwise let the main auth flow handle it - don't interfere
     } else {
         updateAuthenticationUI(false);
     }

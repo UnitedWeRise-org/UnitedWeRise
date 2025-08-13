@@ -15,6 +15,22 @@ export declare class ElectionService {
      * Get elections by user location
      */
     static getElectionsByLocation(params: ElectionSearchParams): Promise<({
+        ballotMeasures: {
+            number: string | null;
+            type: import(".prisma/client").$Enums.BallotMeasureType;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            city: string | null;
+            state: string;
+            description: string;
+            title: string;
+            electionId: string;
+            county: string | null;
+            fullText: string | null;
+            fiscalImpact: string | null;
+            arguments: import("@prisma/client/runtime/library").JsonValue | null;
+        }[];
         offices: ({
             candidates: ({
                 user: {
@@ -75,22 +91,6 @@ export declare class ElectionService {
             salary: import("@prisma/client/runtime/library").Decimal | null;
             electionId: string;
         })[];
-        ballotMeasures: {
-            number: string | null;
-            type: import(".prisma/client").$Enums.BallotMeasureType;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            city: string | null;
-            state: string;
-            description: string;
-            county: string | null;
-            title: string;
-            electionId: string;
-            fullText: string | null;
-            fiscalImpact: string | null;
-            arguments: import("@prisma/client/runtime/library").JsonValue | null;
-        }[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
         level: import(".prisma/client").$Enums.ElectionLevel;
@@ -102,8 +102,8 @@ export declare class ElectionService {
         name: string;
         description: string | null;
         date: Date;
-        isActive: boolean;
         district: string | null;
+        isActive: boolean;
         registrationDeadline: Date | null;
         county: string | null;
         officialUrl: string | null;
@@ -112,6 +112,22 @@ export declare class ElectionService {
      * Get specific election with all details
      */
     static getElectionById(electionId: string): Promise<{
+        ballotMeasures: {
+            number: string | null;
+            type: import(".prisma/client").$Enums.BallotMeasureType;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            city: string | null;
+            state: string;
+            description: string;
+            title: string;
+            electionId: string;
+            county: string | null;
+            fullText: string | null;
+            fiscalImpact: string | null;
+            arguments: import("@prisma/client/runtime/library").JsonValue | null;
+        }[];
         offices: ({
             candidates: ({
                 endorsements: ({
@@ -189,22 +205,6 @@ export declare class ElectionService {
             salary: import("@prisma/client/runtime/library").Decimal | null;
             electionId: string;
         })[];
-        ballotMeasures: {
-            number: string | null;
-            type: import(".prisma/client").$Enums.BallotMeasureType;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            city: string | null;
-            state: string;
-            description: string;
-            county: string | null;
-            title: string;
-            electionId: string;
-            fullText: string | null;
-            fiscalImpact: string | null;
-            arguments: import("@prisma/client/runtime/library").JsonValue | null;
-        }[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
         level: import(".prisma/client").$Enums.ElectionLevel;
@@ -216,8 +216,8 @@ export declare class ElectionService {
         name: string;
         description: string | null;
         date: Date;
-        isActive: boolean;
         district: string | null;
+        isActive: boolean;
         registrationDeadline: Date | null;
         county: string | null;
         officialUrl: string | null;
@@ -238,8 +238,8 @@ export declare class ElectionService {
                 name: string;
                 description: string | null;
                 date: Date;
-                isActive: boolean;
                 district: string | null;
+                isActive: boolean;
                 registrationDeadline: Date | null;
                 county: string | null;
                 officialUrl: string | null;
@@ -344,8 +344,8 @@ export declare class ElectionService {
                 name: string;
                 description: string | null;
                 date: Date;
-                isActive: boolean;
                 district: string | null;
+                isActive: boolean;
                 registrationDeadline: Date | null;
                 county: string | null;
                 officialUrl: string | null;
@@ -412,8 +412,8 @@ export declare class ElectionService {
                 name: string;
                 description: string | null;
                 date: Date;
-                isActive: boolean;
                 district: string | null;
+                isActive: boolean;
                 registrationDeadline: Date | null;
                 county: string | null;
                 officialUrl: string | null;
@@ -498,8 +498,8 @@ export declare class ElectionService {
                     name: string;
                     description: string | null;
                     date: Date;
-                    isActive: boolean;
                     district: string | null;
+                    isActive: boolean;
                     registrationDeadline: Date | null;
                     county: string | null;
                     officialUrl: string | null;
@@ -575,8 +575,8 @@ export declare class ElectionService {
                 name: string;
                 description: string | null;
                 date: Date;
-                isActive: boolean;
                 district: string | null;
+                isActive: boolean;
                 registrationDeadline: Date | null;
                 county: string | null;
                 officialUrl: string | null;

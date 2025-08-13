@@ -42,17 +42,22 @@ export interface Representative {
     };
 }
 export interface RepresentativeResponse {
-    representatives: Representative[];
+    representatives: Representative[] | {
+        federal?: Representative[];
+        state?: Representative[];
+        local?: Representative[];
+    };
     location: {
-        zipCode: string;
-        state: string;
+        zipCode?: string;
+        state?: string;
         city?: string;
         coordinates?: {
             lat: number;
             lng: number;
         };
+        districts?: any;
     };
-    source: 'geocodio' | 'fec' | 'cache';
+    source: 'geocodio' | 'fec' | 'cache' | 'google_civic' | 'merged' | 'google_civic+geocodio';
 }
 export declare class RepresentativeService {
     /**
@@ -71,6 +76,10 @@ export declare class RepresentativeService {
      * Transform Geocodio response to our format
      */
     private static transformGeocodioResponse;
+    /**
+     * Merge representative data from multiple sources
+     */
+    private static mergeRepresentativeData;
     /**
      * Transform FEC response to our format (simplified)
      */

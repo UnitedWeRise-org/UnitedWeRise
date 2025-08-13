@@ -128,14 +128,25 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
                 ? `${user.streetAddress}, ${user.city}, ${user.state} ${user.zipCode}`
                 : `${user.zipCode}, ${user.state}`;
             const repResponse = await representativeService_1.RepresentativeService.getRepresentativesByAddress(fullAddress, user.zipCode, user.state, forceRefresh === 'true');
-            representatives = repResponse?.representatives || [];
+            const repsData = repResponse?.representatives || [];
+            // Handle both array and grouped formats
+            if (Array.isArray(repsData)) {
+                representatives = repsData;
+            }
+            else {
+                representatives = [
+                    ...(repsData.federal || []),
+                    ...(repsData.state || []),
+                    ...(repsData.local || [])
+                ];
+            }
             responseSource = repResponse?.source || 'none';
         }
         // Group representatives by government level
         const groupedRepresentatives = {
-            federal: representatives.filter(r => r.level === 'federal'),
-            state: representatives.filter(r => r.level === 'state'),
-            local: representatives.filter(r => r.level === 'local')
+            federal: representatives.filter((r) => r.level === 'federal'),
+            state: representatives.filter((r) => r.level === 'state'),
+            local: representatives.filter((r) => r.level === 'local')
         };
         res.json({
             representatives: groupedRepresentatives,
@@ -182,14 +193,25 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
                 ? `${user.streetAddress}, ${user.city}, ${user.state} ${user.zipCode}`
                 : `${user.zipCode}, ${user.state}`;
             const repResponse = await representativeService_1.RepresentativeService.getRepresentativesByAddress(fullAddress, user.zipCode, user.state, forceRefresh === 'true');
-            representatives = repResponse?.representatives || [];
+            const repsData = repResponse?.representatives || [];
+            // Handle both array and grouped formats
+            if (Array.isArray(repsData)) {
+                representatives = repsData;
+            }
+            else {
+                representatives = [
+                    ...(repsData.federal || []),
+                    ...(repsData.state || []),
+                    ...(repsData.local || [])
+                ];
+            }
             responseSource = repResponse?.source || 'none';
         }
         // Group representatives by government level
         const groupedRepresentatives = {
-            federal: representatives.filter(r => r.level === 'federal'),
-            state: representatives.filter(r => r.level === 'state'),
-            local: representatives.filter(r => r.level === 'local')
+            federal: representatives.filter((r) => r.level === 'federal'),
+            state: representatives.filter((r) => r.level === 'state'),
+            local: representatives.filter((r) => r.level === 'local')
         };
         res.json({
             representatives: groupedRepresentatives,
@@ -206,6 +228,57 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
     }
     catch (error) {
         console.error('Get representatives error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Get representatives by address (PUBLIC - no authentication required)
+router.get('/representatives/lookup', async (req, res) => {
+    try {
+        const { address, forceRefresh } = req.query;
+        if (!address) {
+            return res.status(400).json({
+                error: 'Address parameter is required'
+            });
+        }
+        // Call the representative service with the provided address
+        const repResponse = await representativeService_1.RepresentativeService.getRepresentativesByAddress(address, undefined, // zipCode - will be extracted from address
+        undefined, // state - will be extracted from address  
+        forceRefresh === 'true');
+        if (!repResponse) {
+            return res.status(404).json({
+                error: 'No representatives found for this address'
+            });
+        }
+        // Group representatives by government level
+        const repsData = repResponse.representatives || [];
+        let representatives = [];
+        // Handle both array and grouped formats
+        if (Array.isArray(repsData)) {
+            representatives = repsData;
+        }
+        else {
+            representatives = [
+                ...(repsData.federal || []),
+                ...(repsData.state || []),
+                ...(repsData.local || [])
+            ];
+        }
+        const groupedRepresentatives = {
+            federal: representatives.filter((r) => r.level === 'federal'),
+            state: representatives.filter((r) => r.level === 'state'),
+            local: representatives.filter((r) => r.level === 'local')
+        };
+        res.json({
+            representatives: groupedRepresentatives,
+            totalCount: representatives.length,
+            location: repResponse.location || {},
+            source: repResponse.source,
+            lastUpdated: new Date().toISOString(),
+            cached: forceRefresh !== 'true'
+        });
+    }
+    catch (error) {
+        console.error('Get representatives by address error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -261,7 +334,18 @@ router.get('/officials/:zipCode/:state', async (req, res) => {
         // Get fresh data if needed
         if (representatives.length === 0 || forceRefresh === 'true') {
             const repResponse = await representativeService_1.RepresentativeService.getRepresentativesByAddress(`${zipCode}, ${state}`, zipCode, state.toUpperCase(), forceRefresh === 'true');
-            representatives = repResponse?.representatives || [];
+            const repsData = repResponse?.representatives || [];
+            // Handle both array and grouped formats
+            if (Array.isArray(repsData)) {
+                representatives = repsData;
+            }
+            else {
+                representatives = [
+                    ...(repsData.federal || []),
+                    ...(repsData.state || []),
+                    ...(repsData.local || [])
+                ];
+            }
             responseSource = repResponse?.source || 'none';
         }
         res.json({

@@ -106,9 +106,30 @@ class QdrantService {
         }
     }
     /**
+     * Store embedding for a post
+     */
+    static async storeEmbedding(postId, embedding, metadata) {
+        const point = {
+            id: postId,
+            vector: embedding,
+            payload: {
+                content: metadata.content,
+                postId: postId,
+                authorId: metadata.authorId,
+                category: metadata.category,
+                createdAt: metadata.createdAt || new Date().toISOString(),
+                argumentStrength: metadata.argumentStrength,
+                evidenceLevel: metadata.evidenceLevel,
+                hostilityScore: metadata.hostilityScore
+            }
+        };
+        return this.upsertVector(point);
+    }
+    /**
      * Search for similar vectors
      */
-    static async searchSimilar(queryVector, limit = 10, minScore = 0.7, categoryFilter) {
+    static async searchSimilar(queryVector, options = {}) {
+        const { limit = 10, scoreThreshold = 0.7, categoryFilter } = options;
         try {
             const client = this.getClient();
             const filter = {};
@@ -126,7 +147,7 @@ class QdrantService {
             const searchResult = await client.search(this.COLLECTION_NAME, {
                 vector: queryVector,
                 limit,
-                score_threshold: minScore,
+                score_threshold: scoreThreshold,
                 with_payload: true,
                 filter: Object.keys(filter).length > 0 ? filter : undefined,
             });
