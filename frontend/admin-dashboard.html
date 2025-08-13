@@ -1361,6 +1361,11 @@
                         <li>Engagement pattern analysis</li>
                     </ul>
                     <p><em>AI analysis features are configured and operational. Dashboard endpoints pending implementation.</em></p>
+                    <div style="margin-top: 1rem; padding: 0.5rem; background: #f0f8ff; border-radius: 4px; border-left: 3px solid #4b5c09;">
+                        <strong>💻 Console Commands:</strong><br>
+                        • <code>adminConsole.getSuggestions()</code> - View all suggestions<br>
+                        • <code>adminConsole.help()</code> - Show all available commands
+                    </div>
                 </div>
             `;
         }
@@ -1385,6 +1390,131 @@
                 errorElement.style.display = 'none';
             }, 5000);
         }
+
+        // Console Helper Functions for Admin Dashboard
+        window.adminConsole = {
+            // Check AI suggestions data
+            getSuggestions: async function(category = 'all', status = 'all') {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const data = await response.json();
+                    console.table(data.suggestions);
+                    console.log('📊 Suggestions Stats:', data.stats);
+                    return data;
+                } catch (error) {
+                    console.error('Failed to fetch suggestions:', error);
+                    console.log('💡 Try: adminConsole.getSuggestions("features", "new")');
+                    return null;
+                }
+            },
+
+            // Check error data
+            getErrors: async function(severity = 'all', timeframe = '24h') {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const data = await response.json();
+                    console.table(data.errors);
+                    console.log('📊 Error Stats:', data.stats);
+                    return data;
+                } catch (error) {
+                    console.error('Failed to fetch errors:', error);
+                    console.log('🔧 Trying health endpoint fallback...');
+                    return await this.getHealth();
+                }
+            },
+
+            // Check system health
+            getHealth: async function() {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/health`);
+                    const data = await response.json();
+                    console.log('🏥 System Health:', data);
+                    console.log(`📊 Error Rate: ${data.requests.errorRate.toFixed(2)}%`);
+                    console.log(`📈 Total Requests: ${data.requests.total}`);
+                    console.log(`❌ Total Errors: ${data.requests.errors || 0}`);
+                    return data;
+                } catch (error) {
+                    console.error('Failed to fetch health data:', error);
+                    return null;
+                }
+            },
+
+            // Check security events
+            getSecurity: async function(minRiskScore = 0) {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/admin/security/events?limit=20&minRiskScore=${minRiskScore}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const data = await response.json();
+                    console.table(data.events);
+                    return data;
+                } catch (error) {
+                    console.error('Security endpoint not available:', error);
+                    console.log('🔒 Security monitoring is in development');
+                    return null;
+                }
+            },
+
+            // Test all endpoints
+            testAll: async function() {
+                console.log('🧪 Testing all admin endpoints...');
+                console.log('\n1. 🏥 Health Check:');
+                await this.getHealth();
+                
+                console.log('\n2. 🐛 Error Tracking:');
+                await this.getErrors();
+                
+                console.log('\n3. 🤖 AI Suggestions:');
+                await this.getSuggestions();
+                
+                console.log('\n4. 🔒 Security Events:');
+                await this.getSecurity();
+                
+                console.log('\n✅ Test complete! Use individual functions for detailed analysis.');
+            },
+
+            // Show help
+            help: function() {
+                console.log(`
+🎛️  ADMIN CONSOLE COMMANDS
+${'='.repeat(30)}
+
+📊 DATA ANALYSIS:
+• adminConsole.getSuggestions() - Get all AI suggestions
+• adminConsole.getSuggestions('features', 'new') - Filter by category & status
+• adminConsole.getErrors() - Get error data
+• adminConsole.getErrors('critical', '7d') - Filter errors
+• adminConsole.getHealth() - System health metrics
+• adminConsole.getSecurity() - Security events
+
+🧪 TESTING:
+• adminConsole.testAll() - Test all endpoints
+
+📋 FILTERS:
+Categories: 'ui_ux', 'features', 'performance', 'bugs', 'moderation'
+Statuses: 'new', 'reviewed', 'implemented', 'rejected'
+Severities: 'critical', 'error', 'warning'
+Timeframes: '1h', '24h', '7d'
+
+Example: adminConsole.getSuggestions('features', 'new')
+`);
+            }
+        };
+
+        // Auto-load console helpers when dashboard loads
+        window.addEventListener('load', function() {
+            if (window.location.pathname.includes('admin-dashboard')) {
+                setTimeout(() => {
+                    console.log('🎛️  Admin Console Ready!');
+                    console.log('Type: adminConsole.help() for available commands');
+                    console.log('Quick start: adminConsole.testAll()');
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
