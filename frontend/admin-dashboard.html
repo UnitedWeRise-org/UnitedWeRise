@@ -516,6 +516,15 @@
         let authToken = null;
         let autoRefreshInterval = null;
         
+        // Track endpoint availability to avoid spamming 404s
+        let endpointStatus = {
+            errors: null,
+            suggestions: null,
+            analysis: null,
+            security: null,
+            lastChecked: 0
+        };
+        
         // Use the global API config - but remove /api since we'll add endpoints
         const BACKEND_URL = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
 
@@ -634,8 +643,8 @@
             // Load initial data
             loadOverviewData();
             
-            // Set up auto-refresh every 30 seconds
-            autoRefreshInterval = setInterval(refreshAllData, 30000);
+            // Set up auto-refresh every 5 minutes (less aggressive to avoid 404 spam)
+            autoRefreshInterval = setInterval(refreshAllData, 300000);
         }
 
         // Logout
@@ -1100,15 +1109,35 @@
             const severity = document.getElementById('errorSeverityFilter')?.value || 'all';
             const timeframe = document.getElementById('errorTimeFilter')?.value || '24h';
             
+            // Check if we recently confirmed this endpoint doesn't exist
+            const now = Date.now();
+            if (endpointStatus.errors === false && now - endpointStatus.lastChecked < 300000) { // 5 minutes
+                console.log('⏭️ Skipping error endpoint check - confirmed unavailable, using health fallback');
+                const healthResponse = await fetch(`${BACKEND_URL}/health`);
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    displayErrorsFallback(health);
+                }
+                return;
+            }
+            
             try {
                 const response = await fetch(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 if (response.ok) {
+                    endpointStatus.errors = true;
+                    endpointStatus.lastChecked = now;
+                    console.log('✅ Error tracking endpoint is now available!');
                     const data = await response.json();
                     displayErrorsData(data);
                 } else {
+                    if (response.status === 404) {
+                        endpointStatus.errors = false;
+                        endpointStatus.lastChecked = now;
+                        console.log('📍 Error tracking endpoint not deployed yet - using health fallback');
+                    }
                     // Fallback to metrics service for error rate calculation
                     const metricsResponse = await fetch(`${BACKEND_URL}/health`);
                     if (metricsResponse.ok) {
