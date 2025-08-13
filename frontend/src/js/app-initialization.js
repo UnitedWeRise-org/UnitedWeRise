@@ -43,9 +43,11 @@ class AppInitializer {
             console.log('🔄 Fetching initialization data...');
             
             try {
+                console.log('🔄 About to call /batch/initialize with token:', window.authToken ? 'EXISTS' : 'MISSING');
                 const initData = await window.apiCall('/batch/initialize', {
                     cacheTimeout: 60000 // Cache for 1 minute
                 });
+                console.log('🔄 Received response from /batch/initialize:', initData);
 
                 if (initData.success) {
                     console.log('✅ Batch initialization successful');
