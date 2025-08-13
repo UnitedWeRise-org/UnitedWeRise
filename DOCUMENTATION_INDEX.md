@@ -38,10 +38,9 @@
 - **[MAP_MIGRATION_STATUS.md](./MAP_MIGRATION_STATUS.md)** - Migration from Leaflet to MapLibre
 
 ### **🔐 Security & Authentication**
-- **[OAUTH_GOOGLE_IMPLEMENTATION.md](./OAUTH_GOOGLE_IMPLEMENTATION.md)** - Google OAuth integration
 - **[SECURITY_DEPLOYMENT_CHECKLIST.md](./SECURITY_DEPLOYMENT_CHECKLIST.md)** - Production security requirements
 - **[EMAIL_SETUP_GUIDE.md](./EMAIL_SETUP_GUIDE.md)** - Email verification system
-- **[SMS_VALIDATION_FUTURE.md](./SMS_VALIDATION_FUTURE.md)** - Phone verification roadmap
+- **[GOOGLE_WORKSPACE_SMTP_FIX.md](./GOOGLE_WORKSPACE_SMTP_FIX.md)** - Gmail SMTP configuration guide
 
 ### **🌐 Domain & Deployment**
 - **[DOMAIN_SETUP_GUIDE.md](./DOMAIN_SETUP_GUIDE.md)** - Custom domain configuration
@@ -53,6 +52,11 @@
 - **[ONBOARDING_GUIDE.md](./ONBOARDING_GUIDE.md)** - Developer onboarding process
 - **[TEST_FILES_TRACKER.md](./TEST_FILES_TRACKER.md)** - Test file management
 - **[CLAUDE.md](./CLAUDE.md)** - AI assistant development notes
+
+### **🚀 Future Features & Roadmap**
+- **[CIVIC_ENGAGEMENT_GAMIFICATION.md](./CIVIC_ENGAGEMENT_GAMIFICATION.md)** - Comprehensive gamification system (login streaks, quests, rewards)
+- **[OAUTH_GOOGLE_IMPLEMENTATION.md](./OAUTH_GOOGLE_IMPLEMENTATION.md)** - Google OAuth integration plans
+- **[SMS_VALIDATION_FUTURE.md](./SMS_VALIDATION_FUTURE.md)** - Phone verification roadmap
 
 ### **📈 Session Documentation (Chronological)**
 - **[SESSION_HANDOFF.md](./SESSION_HANDOFF.md)** - Initial production deployment
@@ -141,4 +145,4 @@
 
 ---
 
-*Last Updated: 2025-08-13 | Maintained by: Development Team | Cross-references: All 35+ documentation files*
+*Last Updated: 2025-12-13 | Maintained by: Development Team | Cross-references: All 36+ documentation files*

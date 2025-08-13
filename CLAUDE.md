@@ -8,6 +8,33 @@
 - **Azure OpenAI**: https://unitedwerise-openai.openai.azure.com/
 - **Status**: ✅ All services operational
 
+### ⚠️ PENDING ISSUE: Login Persistence Across Page Refreshes
+
+**Problem**: Users are being logged out when refreshing the page, despite having valid authentication tokens stored in localStorage.
+
+**Investigation Status**: 
+- ✅ Removed premature `setUserLoggedOut()` call that was clearing tokens before initialization
+- ✅ Implemented enhanced fallback logic for when batch endpoint unavailable  
+- ✅ Fixed initialization system to use cached localStorage data
+- 🔄 **DEPLOYED**: Changes pushed to GitHub (commits e207b45, 247fdac) - deployment in progress
+- ⏳ **PENDING VERIFICATION**: Need to test if login persistence now works after deployment
+
+**Root Cause Found**: 
+1. App was calling `setUserLoggedOut()` immediately on page load, clearing window.authToken/currentUser
+2. Batch endpoint `/api/batch/initialize` returning 404 (new routes not yet deployed to backend)
+3. Fallback logic now enhanced to use localStorage data when batch endpoint unavailable
+
+**Next Steps for Tomorrow**:
+1. Test login persistence after current deployment completes
+2. Verify batch endpoint deployment status if still needed
+3. Check browser console for `📱 Batch endpoint unavailable, using cached user data` message
+4. Run localStorage diagnostic: `localStorage.getItem('authToken')` vs `window.authToken`
+
+**Files Modified**:
+- `frontend/index.html`: Removed premature `setUserLoggedOut()` call (line 749)
+- `frontend/src/js/app-initialization.js`: Enhanced fallback logic (lines 79-92)
+- `backend/src/routes/batch.ts`: Created batch initialization endpoint
+
 ### Azure AI Features
 - **Embedding Model**: text-embedding-ada-002 (1536 dimensions)
 - **Chat Model**: gpt-35-turbo (topic analysis & summaries)

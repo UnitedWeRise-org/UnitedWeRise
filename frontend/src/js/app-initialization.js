@@ -36,34 +36,58 @@ class AppInitializer {
             // Step 2: Set the global auth token
             window.authToken = storedToken;
 
-            // Step 3: Quick auth validation + full data fetch in one batch call
+            // Step 3: Try batch initialization first, fall back to individual calls
             console.log('🔄 Fetching initialization data...');
             
-            const initData = await window.apiCall('/batch/initialize', {
-                cacheTimeout: 60000 // Cache for 1 minute
-            });
+            try {
+                const initData = await window.apiCall('/batch/initialize', {
+                    cacheTimeout: 60000 // Cache for 1 minute
+                });
 
-            if (initData.success) {
-                console.log('✅ Initialization data received:', initData.data);
-                
-                // Store fresh user data
-                this.userData = initData.data.user;
-                localStorage.setItem('currentUser', JSON.stringify(this.userData));
-                window.currentUser = this.userData;
+                if (initData.success) {
+                    console.log('✅ Batch initialization successful');
+                    
+                    // Store fresh user data
+                    this.userData = initData.data.user;
+                    localStorage.setItem('currentUser', JSON.stringify(this.userData));
+                    window.currentUser = this.userData;
 
-                // Set logged in state with all data
-                this.setLoggedInState(initData.data);
+                    // Set logged in state with all data
+                    this.setLoggedInState(initData.data);
+                    
+                    this.isInitialized = true;
+                    return { 
+                        authenticated: true, 
+                        userData: this.userData,
+                        initData: initData.data
+                    };
+                }
+            } catch (batchError) {
+                console.log('📱 Batch endpoint unavailable, using individual API calls');
                 
-                this.isInitialized = true;
-                return { 
-                    authenticated: true, 
-                    userData: this.userData,
-                    initData: initData.data
-                };
-            } else {
-                console.warn('❌ Initialization failed, clearing auth');
-                this.clearAuthAndSetLoggedOut();
-                return { authenticated: false };
+                // Fallback to individual API calls
+                try {
+                    // Get user profile data
+                    const userProfile = await window.apiCall('/users/profile');
+                    
+                    if (userProfile) {
+                        this.userData = userProfile;
+                        localStorage.setItem('currentUser', JSON.stringify(this.userData));
+                        window.currentUser = this.userData;
+
+                        // Set logged in state
+                        this.setLoggedInState({ user: this.userData });
+                        
+                        this.isInitialized = true;
+                        return { 
+                            authenticated: true, 
+                            userData: this.userData,
+                            fallback: true
+                        };
+                    }
+                } catch (fallbackError) {
+                    console.log('🔄 Individual API calls failed, using cached data');
+                }
             }
 
         } catch (error) {

@@ -14,6 +14,7 @@ const auth_3 = require("../utils/auth");
 const emailService_1 = require("../services/emailService");
 const captchaService_1 = require("../services/captchaService");
 const metricsService_1 = require("../services/metricsService");
+const securityService_1 = require("../services/securityService");
 const crypto_1 = __importDefault(require("crypto"));
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
@@ -223,9 +224,11 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
     }
 });
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
+        const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+        const userAgent = req.get('User-Agent') || 'unknown';
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
@@ -234,14 +237,49 @@ router.post('/login', async (req, res) => {
             where: { email }
         });
         if (!user) {
+            // Log failed login attempt with unknown user
+            await securityService_1.SecurityService.logEvent({
+                eventType: securityService_1.SecurityService.EVENT_TYPES.LOGIN_FAILED,
+                ipAddress,
+                userAgent,
+                details: {
+                    email,
+                    reason: 'User not found',
+                    timestamp: new Date().toISOString()
+                },
+                riskScore: 30
+            });
             return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        // Check if account is locked
+        if (await securityService_1.SecurityService.isAccountLocked(user.id)) {
+            await securityService_1.SecurityService.logEvent({
+                userId: user.id,
+                eventType: securityService_1.SecurityService.EVENT_TYPES.LOGIN_FAILED,
+                ipAddress,
+                userAgent,
+                details: {
+                    reason: 'Account locked',
+                    timestamp: new Date().toISOString()
+                },
+                riskScore: 60
+            });
+            return res.status(423).json({
+                error: 'Account temporarily locked due to multiple failed login attempts. Please try again later.'
+            });
         }
         // Check password
         const isValidPassword = await (0, auth_1.comparePassword)(password, user.password);
         if (!isValidPassword) {
+            // Handle failed login
+            await securityService_1.SecurityService.handleFailedLogin(user.id, ipAddress, userAgent);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+        // Successful login - handle security logging
+        await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
         const token = (0, auth_1.generateToken)(user.id);
+        // Record metrics
+        metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
         res.json({
             message: 'Login successful',
             user: {
@@ -249,13 +287,27 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 username: user.username,
                 firstName: user.firstName,
-                lastName: user.lastName
+                lastName: user.lastName,
+                isAdmin: user.isAdmin,
+                isModerator: user.isModerator
             },
             token
         });
     }
     catch (error) {
         console.error('Login error:', error);
+        // Log system error
+        await securityService_1.SecurityService.logEvent({
+            eventType: 'SYSTEM_ERROR',
+            ipAddress: req.ip || 'unknown',
+            userAgent: req.get('User-Agent') || 'unknown',
+            details: {
+                error: error.message,
+                endpoint: '/api/auth/login',
+                timestamp: new Date().toISOString()
+            },
+            riskScore: 40
+        });
         res.status(500).json({ error: 'Internal server error' });
     }
 });
