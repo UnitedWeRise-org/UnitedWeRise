@@ -4,6 +4,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { moderationService } from '../services/moderationService';
 import { body, query, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
+import { SecurityService } from '../services/securityService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -660,6 +661,114 @@ router.get('/settings', requireAuth, requireAdmin, async (req: AuthRequest, res)
   } catch (error) {
     console.error('Get settings error:', error);
     res.status(500).json({ error: 'Failed to retrieve settings' });
+  }
+});
+
+// Security Events Endpoint
+router.get('/security/events', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const eventType = req.query.eventType as string;
+    const minRiskScore = parseInt(req.query.minRiskScore as string) || 0;
+    const days = parseInt(req.query.days as string) || 7;
+    
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const offset = (page - 1) * limit;
+
+    const events = await SecurityService.getSecurityEvents({
+      limit,
+      offset,
+      eventType,
+      minRiskScore,
+      startDate,
+      endDate: new Date()
+    });
+
+    res.json({
+      events,
+      pagination: {
+        page,
+        limit,
+        hasMore: events.length === limit
+      },
+      filters: {
+        eventType,
+        minRiskScore,
+        days
+      }
+    });
+  } catch (error) {
+    console.error('Security events error:', error);
+    res.status(500).json({ error: 'Failed to retrieve security events' });
+  }
+});
+
+// Security Statistics Endpoint
+router.get('/security/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const timeframe = (req.query.timeframe as '24h' | '7d' | '30d') || '24h';
+    const stats = await SecurityService.getSecurityStats(timeframe);
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Security stats error:', error);
+    res.status(500).json({ error: 'Failed to retrieve security statistics' });
+  }
+});
+
+// Enhanced Dashboard with Security Metrics
+router.get('/dashboard/enhanced', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const [
+      basicDashboard,
+      securityStats,
+      recentSecurityEvents
+    ] = await Promise.all([
+      // Get basic dashboard data
+      Promise.all([
+        prisma.user.count(),
+        prisma.user.count({
+          where: {
+            lastSeenAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+          }
+        }),
+        prisma.post.count(),
+        prisma.comment.count(),
+        prisma.report.count({ where: { status: 'PENDING' } })
+      ]).then(([totalUsers, activeUsers, totalPosts, totalComments, pendingReports]) => ({
+        totalUsers,
+        activeUsers,
+        totalPosts,
+        totalComments,
+        pendingReports
+      })),
+      
+      // Get security statistics
+      SecurityService.getSecurityStats('24h'),
+      
+      // Get recent high-risk security events
+      SecurityService.getSecurityEvents({
+        limit: 10,
+        minRiskScore: SecurityService.RISK_THRESHOLDS.HIGH,
+        startDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        endDate: new Date()
+      })
+    ]);
+
+    res.json({
+      overview: basicDashboard,
+      security: {
+        stats: securityStats,
+        recentHighRiskEvents: recentSecurityEvents
+      },
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Enhanced dashboard error:', error);
+    res.status(500).json({ error: 'Failed to load enhanced dashboard' });
   }
 });
 

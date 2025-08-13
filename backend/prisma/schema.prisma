@@ -88,6 +88,15 @@ model User {
   suspensions             UserSuspension[]          @relation("UserSuspensions")
   issuedWarnings          UserWarning[]             @relation("IssuedWarnings")
   receivedWarnings        UserWarning[]             @relation("ReceivedWarnings")
+  securityEvents          SecurityEvent[]
+  
+  // Security tracking fields
+  lastLoginAt             DateTime?
+  lastLoginIp             String?
+  loginAttempts           Int                       @default(0)
+  lockedUntil             DateTime?
+  passwordChangedAt       DateTime?                 @default(now())
+  suspiciousActivityCount Int                       @default(0)
 
   @@index([username])
   @@index([createdAt])
@@ -837,6 +846,25 @@ model CandidateRegistration {
   @@index([feeWaiverStatus])
   @@index([hasFinancialHardship])
   @@index([createdAt])
+}
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  userId      String?
+  eventType   String   // LOGIN_SUCCESS, LOGIN_FAILED, PASSWORD_RESET, etc.
+  ipAddress   String?
+  userAgent   String?
+  details     Json?
+  riskScore   Int      @default(0) // 0-100 risk assessment
+  createdAt   DateTime @default(now())
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([ipAddress])
+  @@index([riskScore])
 }
 
 enum NotificationType {

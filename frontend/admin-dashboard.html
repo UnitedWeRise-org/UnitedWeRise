@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UnitedWeRise - Admin Dashboard</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <style>
+        .admin-dashboard {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .admin-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 2px solid #4b5c09;
+            color: #4b5c09;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        
+        .nav-button:hover, .nav-button.active {
+            background: #4b5c09;
+            color: white;
+        }
+        
+        .dashboard-section {
+            display: none;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-section.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #4b5c09 0%, #6b8109 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .security-alerts {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #ffeaa7;
+        }
+        
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+        
+        .alert-high { background: #ffebee; border-color: #ffcdd2; }
+        .alert-medium { background: #fff3e0; border-color: #ffcc02; }
+        .alert-low { background: #e8f5e8; border-color: #c8e6c9; }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #4b5c09;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .success {
+            background: #e8f5e8;
+            color: #388e3c;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .login-required {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4b5c09;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background: #4b5c09;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #3a4507;
+        }
+        
+        .refresh-indicator {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-dashboard">
+        <!-- Login Form (shown when not authenticated) -->
+        <div id="loginSection" class="login-required">
+            <h1>🔐 Admin Dashboard Login</h1>
+            <p>Please log in with your admin credentials to access the dashboard.</p>
+            
+            <div class="login-form">
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Login to Dashboard</button>
+                </form>
+                <div id="loginError" class="error" style="display: none;"></div>
+            </div>
+            
+            <p style="margin-top: 2rem;">
+                <a href="index.html" style="color: #4b5c09;">← Back to Main Site</a>
+            </p>
+        </div>
+
+        <!-- Main Dashboard (shown when authenticated) -->
+        <div id="dashboardMain" style="display: none;">
+            <div class="dashboard-header">
+                <div>
+                    <h1>🛡️ UnitedWeRise Admin Dashboard</h1>
+                    <p id="welcomeMessage">Welcome back, Administrator</p>
+                </div>
+                <div>
+                    <button onclick="refreshAllData()" class="nav-button">
+                        <span id="refreshIcon">🔄</span> Refresh
+                    </button>
+                    <button onclick="logout()" class="nav-button">Logout</button>
+                    <a href="index.html" class="nav-button">← Main Site</a>
+                </div>
+            </div>
+
+            <div class="admin-nav">
+                <button class="nav-button active" onclick="showSection('overview')">📊 Overview</button>
+                <button class="nav-button" onclick="showSection('security')">🔒 Security</button>
+                <button class="nav-button" onclick="showSection('users')">👥 Users</button>
+                <button class="nav-button" onclick="showSection('content')">📝 Content</button>
+                <button class="nav-button" onclick="showSection('analytics')">📈 Analytics</button>
+                <button class="nav-button" onclick="showSection('system')">⚙️ System</button>
+            </div>
+
+            <!-- Overview Section -->
+            <div id="overview" class="dashboard-section active">
+                <h2>📊 Platform Overview</h2>
+                
+                <div class="stats-grid" id="overviewStats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalUsers">-</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="activeUsers">-</div>
+                        <div class="stat-label">Active Users (24h)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalPosts">-</div>
+                        <div class="stat-label">Total Posts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="pendingReports">-</div>
+                        <div class="stat-label">Pending Reports</div>
+                    </div>
+                </div>
+
+                <div id="systemHealth">
+                    <h3>🏥 System Health</h3>
+                    <div id="healthStatus" class="loading">Loading system health...</div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div id="security" class="dashboard-section">
+                <h2>🔒 Security Monitoring</h2>
+                
+                <div id="securityAlerts" class="security-alerts">
+                    <h3>🚨 Recent Security Events</h3>
+                    <div id="securityEventsList">
+                        <div class="loading">Loading security events...</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="securityStats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="failedLogins">-</div>
+                        <div class="stat-label">Failed Logins (24h)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="suspiciousActivity">-</div>
+                        <div class="stat-label">Suspicious Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="blockedIPs">-</div>
+                        <div class="stat-label">Blocked IPs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="securityScore">-</div>
+                        <div class="stat-label">Security Score</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3>📋 Recent Security Events</h3>
+                    <div id="securityEventsTable">
+                        <div class="loading">Loading security events table...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users" class="dashboard-section">
+                <h2>👥 User Management</h2>
+                
+                <div>
+                    <input type="text" id="userSearch" placeholder="Search users..." style="width: 300px; padding: 0.5rem; margin-bottom: 1rem;">
+                    <button onclick="searchUsers()" class="nav-button">Search</button>
+                </div>
+
+                <div id="usersTable">
+                    <div class="loading">Loading users...</div>
+                </div>
+            </div>
+
+            <!-- Content Section -->
+            <div id="content" class="dashboard-section">
+                <h2>📝 Content Moderation</h2>
+                
+                <div id="flaggedContent">
+                    <div class="loading">Loading flagged content...</div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analytics" class="dashboard-section">
+                <h2>📈 Platform Analytics</h2>
+                
+                <div>
+                    <label>Time Period: </label>
+                    <select id="analyticsDateRange" onchange="loadAnalytics()">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+
+                <div id="analyticsData">
+                    <div class="loading">Loading analytics...</div>
+                </div>
+            </div>
+
+            <!-- System Section -->
+            <div id="system" class="dashboard-section">
+                <h2>⚙️ System Information</h2>
+                
+                <div id="systemInfo">
+                    <div class="loading">Loading system information...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="src/js/backend-integration.js"></script>
+    <script>
+        // Global state
+        let currentUser = null;
+        let authToken = null;
+        let autoRefreshInterval = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            
+            // Set up login form
+            document.getElementById('adminLoginForm').addEventListener('submit', handleLogin);
+        });
+
+        // Check if user is already logged in
+        function checkAuthStatus() {
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('currentUser');
+            
+            if (token && user) {
+                try {
+                    authToken = token;
+                    currentUser = JSON.parse(user);
+                    
+                    // Check if user is admin
+                    if (currentUser.isAdmin) {
+                        showDashboard();
+                    } else {
+                        showError('Admin access required. Please log in with an admin account.');
+                        showLogin();
+                    }
+                } catch (error) {
+                    console.error('Auth check error:', error);
+                    showLogin();
+                }
+            } else {
+                showLogin();
+            }
+        }
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.user.isAdmin) {
+                        authToken = data.token;
+                        currentUser = data.user;
+                        
+                        localStorage.setItem('authToken', authToken);
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        showDashboard();
+                    } else {
+                        showError('Admin access required. This account does not have admin privileges.');
+                    }
+                } else {
+                    showError(data.error || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Login failed. Please check your connection and try again.');
+            }
+        }
+
+        // Show login form
+        function showLogin() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('dashboardMain').style.display = 'none';
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardMain').style.display = 'block';
+            
+            document.getElementById('welcomeMessage').textContent = 
+                `Welcome back, ${currentUser.firstName || currentUser.username}`;
+            
+            // Load initial data
+            loadOverviewData();
+            
+            // Set up auto-refresh every 30 seconds
+            autoRefreshInterval = setInterval(refreshAllData, 30000);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            currentUser = null;
+            authToken = null;
+            
+            showLogin();
+        }
+
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.dashboard-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav buttons
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load section-specific data
+            switch(sectionName) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
+                case 'security':
+                    loadSecurityData();
+                    break;
+                case 'users':
+                    loadUsersData();
+                    break;
+                case 'content':
+                    loadContentData();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+                case 'system':
+                    loadSystemData();
+                    break;
+            }
+        }
+
+        // Load overview data
+        async function loadOverviewData() {
+            try {
+                // Load dashboard stats
+                const [dashboardResponse, healthResponse] = await Promise.all([
+                    fetch(`${BACKEND_URL}/api/admin/dashboard`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    }),
+                    fetch(`${BACKEND_URL}/health`)
+                ]);
+
+                if (dashboardResponse.ok) {
+                    const data = await dashboardResponse.json();
+                    
+                    document.getElementById('totalUsers').textContent = data.overview.totalUsers;
+                    document.getElementById('activeUsers').textContent = data.overview.activeUsers;
+                    document.getElementById('totalPosts').textContent = data.overview.totalPosts;
+                    document.getElementById('pendingReports').textContent = data.overview.pendingReports;
+                }
+
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    displayHealthStatus(health);
+                }
+
+            } catch (error) {
+                console.error('Error loading overview:', error);
+                showError('Failed to load overview data');
+            }
+        }
+
+        // Load security data
+        async function loadSecurityData() {
+            try {
+                const [statsResponse, eventsResponse] = await Promise.all([
+                    fetch(`${BACKEND_URL}/api/admin/security/stats?timeframe=24h`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    }),
+                    fetch(`${BACKEND_URL}/api/admin/security/events?limit=10&minRiskScore=50`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    })
+                ]);
+
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('failedLogins').textContent = stats.failedLogins || '0';
+                    document.getElementById('suspiciousActivity').textContent = stats.highRiskEvents || '0';
+                    document.getElementById('blockedIPs').textContent = stats.lockedAccounts || '0';
+                    document.getElementById('securityScore').textContent = Math.max(100 - stats.avgRiskScore, 0);
+                }
+
+                if (eventsResponse.ok) {
+                    const eventsData = await eventsResponse.json();
+                    displaySecurityEvents(eventsData.events);
+                } else {
+                    document.getElementById('securityEventsList').innerHTML = 
+                        '<p>Unable to load security events. Check admin permissions.</p>';
+                }
+
+            } catch (error) {
+                console.error('Error loading security data:', error);
+                document.getElementById('securityEventsList').innerHTML = 
+                    '<div class="error">Failed to load security data</div>';
+            }
+        }
+
+        // Load users data
+        async function loadUsersData() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayUsersTable(data.users);
+                } else {
+                    throw new Error('Failed to load users');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersTable').innerHTML = 
+                    '<div class="error">Failed to load users data</div>';
+            }
+        }
+
+        // Load content data
+        async function loadContentData() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/admin/content/flagged`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayFlaggedContent(data.flags);
+                } else {
+                    throw new Error('Failed to load content data');
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+                document.getElementById('flaggedContent').innerHTML = 
+                    '<div class="error">Failed to load content data</div>';
+            }
+        }
+
+        // Load analytics
+        async function loadAnalytics() {
+            const days = document.getElementById('analyticsDateRange').value;
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/admin/analytics?days=${days}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayAnalytics(data);
+                } else {
+                    throw new Error('Failed to load analytics');
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                document.getElementById('analyticsData').innerHTML = 
+                    '<div class="error">Failed to load analytics data</div>';
+            }
+        }
+
+        // Load system data
+        async function loadSystemData() {
+            try {
+                const [healthResponse, metricsResponse] = await Promise.all([
+                    fetch(`${BACKEND_URL}/health`),
+                    fetch(`${BACKEND_URL}/metrics`)
+                ]);
+
+                let systemInfo = '<h3>System Health</h3>';
+                
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    systemInfo += `
+                        <p><strong>Status:</strong> ${health.status}</p>
+                        <p><strong>Uptime:</strong> ${Math.round(health.uptime / 3600)} hours</p>
+                        <p><strong>Database:</strong> ${health.database}</p>
+                        <p><strong>Memory Used:</strong> ${Math.round(health.memory.used / 1024 / 1024)} MB</p>
+                        <p><strong>Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</p>
+                    `;
+                }
+
+                document.getElementById('systemInfo').innerHTML = systemInfo;
+
+            } catch (error) {
+                console.error('Error loading system data:', error);
+                document.getElementById('systemInfo').innerHTML = 
+                    '<div class="error">Failed to load system data</div>';
+            }
+        }
+
+        // Display health status
+        function displayHealthStatus(health) {
+            const status = health.status === 'healthy' ? 
+                '<span style="color: green;">✅ Healthy</span>' : 
+                '<span style="color: red;">❌ Unhealthy</span>';
+                
+            document.getElementById('healthStatus').innerHTML = `
+                <p><strong>Status:</strong> ${status}</p>
+                <p><strong>Database:</strong> ${health.database}</p>
+                <p><strong>Uptime:</strong> ${Math.round(health.uptime / 3600)} hours</p>
+                <p><strong>Total Requests:</strong> ${health.requests.total}</p>
+                <p><strong>Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</p>
+            `;
+        }
+
+        // Display users table
+        function displayUsersTable(users) {
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Posts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            users.forEach(user => {
+                const role = user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
+                const status = user.isSuspended ? 'Suspended' : 'Active';
+                const date = new Date(user.createdAt).toLocaleDateString();
+                
+                html += `
+                    <tr>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${role}</td>
+                        <td>${status}</td>
+                        <td>${date}</td>
+                        <td>${user.stats.posts}</td>
+                        <td>
+                            <button onclick="viewUser('${user.id}')" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('usersTable').innerHTML = html;
+        }
+
+        // Display flagged content
+        function displayFlaggedContent(flags) {
+            if (flags.length === 0) {
+                document.getElementById('flaggedContent').innerHTML = 
+                    '<p>No flagged content at this time.</p>';
+                return;
+            }
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Flag Reason</th>
+                            <th>Confidence</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            flags.forEach(flag => {
+                const date = new Date(flag.createdAt).toLocaleDateString();
+                const confidence = Math.round(flag.confidence * 100);
+                
+                html += `
+                    <tr>
+                        <td>${flag.contentType}</td>
+                        <td>${flag.flagType}</td>
+                        <td>${confidence}%</td>
+                        <td>${date}</td>
+                        <td>
+                            <button onclick="resolveFlag('${flag.id}')" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Resolve</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('flaggedContent').innerHTML = html;
+        }
+
+        // Display analytics
+        function displayAnalytics(data) {
+            let html = '<h3>Activity Overview</h3>';
+            html += `<p>Report period: ${data.period}</p>`;
+            
+            if (data.reportBreakdown.length > 0) {
+                html += '<h4>Report Breakdown</h4><ul>';
+                data.reportBreakdown.forEach(item => {
+                    html += `<li>${item.reason}: ${item._count.reason} reports</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            document.getElementById('analyticsData').innerHTML = html;
+        }
+
+        // Utility functions
+        function refreshAllData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('refresh-indicator');
+            
+            // Get current active section
+            const activeSection = document.querySelector('.dashboard-section.active');
+            const sectionId = activeSection.id;
+            
+            // Reload data for current section
+            switch(sectionId) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
+                case 'security':
+                    loadSecurityData();
+                    break;
+                case 'users':
+                    loadUsersData();
+                    break;
+                case 'content':
+                    loadContentData();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+                case 'system':
+                    loadSystemData();
+                    break;
+            }
+            
+            // Remove refresh animation after 1 second
+            setTimeout(() => {
+                refreshIcon.classList.remove('refresh-indicator');
+            }, 1000);
+        }
+
+        function searchUsers() {
+            const searchTerm = document.getElementById('userSearch').value;
+            // Implement user search functionality
+            console.log('Searching for:', searchTerm);
+        }
+
+        function viewUser(userId) {
+            // Implement user detail view
+            console.log('Viewing user:', userId);
+        }
+
+        function resolveFlag(flagId) {
+            // Implement flag resolution
+            console.log('Resolving flag:', flagId);
+        }
+
+        // Display security events
+        function displaySecurityEvents(events) {
+            if (!events || events.length === 0) {
+                document.getElementById('securityEventsList').innerHTML = 
+                    '<p style="color: #28a745;">✅ No recent security alerts - all systems normal.</p>';
+                return;
+            }
+
+            let html = '';
+            events.forEach(event => {
+                const date = new Date(event.createdAt).toLocaleString();
+                const riskLevel = event.riskScore >= 75 ? 'high' : event.riskScore >= 50 ? 'medium' : 'low';
+                const userInfo = event.user ? `${event.user.username} (${event.user.email})` : 'Unknown User';
+                
+                html += `
+                    <div class="alert-item alert-${riskLevel}">
+                        <div>
+                            <strong>${event.eventType.replace(/_/g, ' ')}</strong><br>
+                            <small>${userInfo} - ${date}</small><br>
+                            <small>IP: ${event.ipAddress || 'Unknown'} | Risk: ${event.riskScore}/100</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="feedback-badge badge-${riskLevel}">${riskLevel.toUpperCase()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('securityEventsList').innerHTML = html;
+            
+            // Also update the security events table
+            html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Event Type</th>
+                            <th>User</th>
+                            <th>Risk Score</th>
+                            <th>IP Address</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            events.forEach(event => {
+                const date = new Date(event.createdAt).toLocaleString();
+                const username = event.user ? event.user.username : 'Unknown';
+                
+                html += `
+                    <tr>
+                        <td>${event.eventType.replace(/_/g, ' ')}</td>
+                        <td>${username}</td>
+                        <td>${event.riskScore}/100</td>
+                        <td>${event.ipAddress || 'Unknown'}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('securityEventsTable').innerHTML = html;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('loginError');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

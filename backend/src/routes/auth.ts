@@ -9,6 +9,7 @@ import { verifyToken } from '../utils/auth';
 import { emailService } from '../services/emailService';
 import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
+import { SecurityService } from '../services/securityService';
 import crypto from 'crypto';
 
 const router = express.Router();
@@ -238,9 +239,11 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
 });
 
 // Login
-router.post('/login', async (req: express.Request, res: express.Response) => {
+router.post('/login', authLimiter, async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -252,16 +255,57 @@ router.post('/login', async (req: express.Request, res: express.Response) => {
     });
 
     if (!user) {
+      // Log failed login attempt with unknown user
+      await SecurityService.logEvent({
+        eventType: SecurityService.EVENT_TYPES.LOGIN_FAILED,
+        ipAddress,
+        userAgent,
+        details: {
+          email,
+          reason: 'User not found',
+          timestamp: new Date().toISOString()
+        },
+        riskScore: 30
+      });
+
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Check if account is locked
+    if (await SecurityService.isAccountLocked(user.id)) {
+      await SecurityService.logEvent({
+        userId: user.id,
+        eventType: SecurityService.EVENT_TYPES.LOGIN_FAILED,
+        ipAddress,
+        userAgent,
+        details: {
+          reason: 'Account locked',
+          timestamp: new Date().toISOString()
+        },
+        riskScore: 60
+      });
+
+      return res.status(423).json({ 
+        error: 'Account temporarily locked due to multiple failed login attempts. Please try again later.' 
+      });
     }
 
     // Check password
     const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
+      // Handle failed login
+      await SecurityService.handleFailedLogin(user.id, ipAddress, userAgent);
+      
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Successful login - handle security logging
+    await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
+
     const token = generateToken(user.id);
+
+    // Record metrics
+    metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
 
     res.json({
       message: 'Login successful',
@@ -270,12 +314,28 @@ router.post('/login', async (req: express.Request, res: express.Response) => {
         email: user.email,
         username: user.username,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        isAdmin: user.isAdmin,
+        isModerator: user.isModerator
       },
       token
     });
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Log system error
+    await SecurityService.logEvent({
+      eventType: 'SYSTEM_ERROR',
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown',
+      details: {
+        error: error.message,
+        endpoint: '/api/auth/login',
+        timestamp: new Date().toISOString()
+      },
+      riskScore: 40
+    });
+
     res.status(500).json({ error: 'Internal server error' });
   }
 });
