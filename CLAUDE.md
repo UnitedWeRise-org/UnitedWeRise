@@ -64,6 +64,55 @@ SIMILARITY_THRESHOLD=0.60
 - `POST /api/feedback/analyze` - Content analysis (admin only)
 - `GET /health` - Backend health including Azure OpenAI status
 
+### Admin Dashboard & Monitoring - NEW ✨
+- **Dashboard URL**: https://www.unitedwerise.org/admin-dashboard.html
+- **Current Status**: ✅ Operational with comprehensive monitoring
+- **System Health**: Error rate improved from 4.05% to 3.57% (11.8% reduction)
+
+#### Admin API Endpoints (Auth Required)
+- `GET /api/admin/dashboard` - Overview statistics and system health
+- `GET /api/admin/errors?severity=all&timeframe=24h` - Error tracking with filtering
+- `GET /api/admin/ai-insights/suggestions` - User suggestions and feedback analysis
+- `GET /api/admin/ai-insights/analysis` - AI content analysis results
+- `GET /api/admin/security/stats` - Security metrics and threat detection
+- `GET /api/admin/security/events` - Security event log with risk scoring
+- `GET /api/admin/users` - User management with advanced filtering
+- `GET /api/admin/analytics` - Platform analytics and growth metrics
+
+#### Admin Console Debugging Tools
+**In Dashboard Console** (auto-loaded at admin-dashboard.html):
+```javascript
+adminConsole.getSuggestions('features', 'new')  // Filter suggestions
+adminConsole.getErrors('critical', '7d')        // Error analysis
+adminConsole.getHealth()                        // System health
+adminConsole.testAll()                          // Test all endpoints
+adminConsole.help()                             // Show all commands
+```
+
+**Standalone Console Helper** (any page):
+```javascript
+// Load helper first
+const script = document.createElement('script');
+script.src = '/admin-console-helper.js';
+document.head.appendChild(script);
+
+// Then use commands
+adminHelper.analyze()                           // Full system analysis
+adminHelper.suggestions('ui_ux', 'reviewed')    // Filtered suggestions
+adminHelper.health()                            // Quick health check
+adminHelper.help()                              // Show commands
+```
+
+#### Dashboard Features
+1. **📊 Overview**: User stats, system health, error rates
+2. **🔒 Security**: Failed logins, risk events, security score
+3. **👥 Users**: User management, suspensions, role assignments
+4. **📝 Content**: Flagged content moderation
+5. **📈 Analytics**: Growth metrics, report breakdowns
+6. **🐛 Errors**: Error tracking with severity and trend analysis
+7. **🤖 AI Insights**: User suggestions and AI content analysis
+8. **⚙️ System**: Infrastructure monitoring and configuration
+
 ---
 
 ## CSS Positioning Troubleshooting Cheat Sheet

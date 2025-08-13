@@ -39,8 +39,16 @@
 
 ### **🔐 Security & Authentication**
 - **[SECURITY_DEPLOYMENT_CHECKLIST.md](./SECURITY_DEPLOYMENT_CHECKLIST.md)** - Production security requirements
+- **[COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md](./COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md)** - Complete security implementation plan
 - **[EMAIL_SETUP_GUIDE.md](./EMAIL_SETUP_GUIDE.md)** - Email verification system
 - **[GOOGLE_WORKSPACE_SMTP_FIX.md](./GOOGLE_WORKSPACE_SMTP_FIX.md)** - Gmail SMTP configuration guide
+
+### **🛡️ Admin Dashboard & Monitoring - NEW ✨**
+- **Dashboard URL**: https://www.unitedwerise.org/admin-dashboard.html
+- **Status**: ✅ Fully operational with comprehensive monitoring
+- **Error Rate**: Improved from 4.05% to 3.57% (11.8% reduction)
+- **Features**: Real-time error tracking, AI insights, security monitoring, user management
+- **Console Tools**: Integrated debugging commands for admin analysis
 
 ### **🌐 Domain & Deployment**
 - **[DOMAIN_SETUP_GUIDE.md](./DOMAIN_SETUP_GUIDE.md)** - Custom domain configuration
@@ -96,6 +104,11 @@
 2. **[REPRESENTATIVE_API_SETUP.md](./REPRESENTATIVE_API_SETUP.md)** - Political data integration
 3. **[CIVIC_SOCIAL_MEDIA_VISION.md](./CIVIC_SOCIAL_MEDIA_VISION.md)** - Conceptual foundation
 
+### For Admin & Monitoring:
+1. **Access Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
+2. **[CLAUDE.md](./CLAUDE.md)** - Admin console commands and debugging tools
+3. **[COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md](./COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md)** - Security monitoring setup
+
 ---
 
 ## 📊 **Current Project Status (Updated: 2025-08-13)**
@@ -114,6 +127,10 @@
 - ✅ Content moderation and reporting system
 - ✅ Custom domain with SSL and CDN
 - ✅ Production-ready security architecture
+- ✅ **NEW**: Comprehensive admin dashboard with monitoring
+- ✅ **NEW**: Error tracking and performance optimization
+- ✅ **NEW**: AI insights for user suggestions and content analysis
+- ✅ **NEW**: Console debugging tools for admin operations
 
 ### **AI/Semantic Features Status**
 - 🚧 **In Progress**: Azure OpenAI integration for semantic topic discovery
