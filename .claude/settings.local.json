@@ -56,7 +56,13 @@
       "Bash(npm run:*)",
       "Bash(python:*)",
       "Bash(start http://localhost:8080)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(\"AZURE_OPENAI_ENDPOINT=https://unitedwerise-openai.openai.azure.com/\" )",
+      "Bash(\"AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-ada-002\" )",
+      "Bash(\"AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-35-turbo\" )",
+      "Bash(\"ENABLE_SEMANTIC_TOPICS=true\" )",
+      "Bash(\"SEMANTIC_PROVIDER=azure\" )",
+      "Bash(\"SIMILARITY_THRESHOLD=0.60\")"
     ],
     "deny": []
   }

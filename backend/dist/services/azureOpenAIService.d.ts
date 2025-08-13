@@ -3,8 +3,6 @@
  *
  * Provides embeddings and chat completions using Azure OpenAI
  * Replaces local Ollama/Qwen setup for production deployment
- *
- * Note: Temporarily using placeholder until Azure OpenAI service is configured
  */
 interface EmbeddingResult {
     embedding: number[];
@@ -22,8 +20,10 @@ interface TopicSummary {
     confidence: number;
 }
 export declare class AzureOpenAIService {
+    private client;
     private embeddingDeployment;
     private chatDeployment;
+    private isConfigured;
     constructor();
     /**
      * Generate embedding for text using Azure OpenAI
@@ -56,6 +56,10 @@ export declare class AzureOpenAIService {
         latency?: number;
         error?: string;
     }>;
+    private cleanText;
+    private buildTopicAnalysisPrompt;
+    private parseTopicSummaryText;
+    private extractFromLines;
 }
 export declare const azureOpenAI: AzureOpenAIService;
 export {};
