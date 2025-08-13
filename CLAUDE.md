@@ -1,5 +1,44 @@
 # Claude Code Development Reference
 
+## 🤖 Azure AI Integration - LIVE & OPERATIONAL
+
+### Production Deployment Status
+- **Backend**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Frontend**: https://www.unitedwerise.org (https://yellow-mud-043d1ca0f.2.azurestaticapps.net)
+- **Azure OpenAI**: https://unitedwerise-openai.openai.azure.com/
+- **Status**: ✅ All services operational
+
+### Azure AI Features
+- **Embedding Model**: text-embedding-ada-002 (1536 dimensions)
+- **Chat Model**: gpt-35-turbo (topic analysis & summaries)
+- **Vector Storage**: Float[] arrays in PostgreSQL (Azure PostgreSQL Flexible Server)
+- **Similarity Threshold**: 60% (captures opposing viewpoints for balanced discourse)
+- **Provider**: Azure OpenAI (production), Local transformers (fallback)
+
+### Key Environment Variables (Production)
+```
+AZURE_OPENAI_ENDPOINT=https://unitedwerise-openai.openai.azure.com/
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-ada-002
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-35-turbo
+ENABLE_SEMANTIC_TOPICS=true
+SEMANTIC_PROVIDER=azure
+SIMILARITY_THRESHOLD=0.60
+```
+
+### Semantic Features Live
+1. **Topic Discovery**: Real-time clustering of political discussions
+2. **Smart Feeds**: Vector similarity-based content recommendations  
+3. **Trending Analysis**: AI-generated summaries of political conversations
+4. **Opposing Viewpoints**: 60% threshold captures both sides of issues
+
+### API Endpoints for AI Features
+- `GET /api/topics/trending` - AI-analyzed trending political topics
+- `POST /api/topics/analyze/recent` - Trigger topic discovery (auth required)
+- `POST /api/feedback/analyze` - Content analysis (admin only)
+- `GET /health` - Backend health including Azure OpenAI status
+
+---
+
 ## CSS Positioning Troubleshooting Cheat Sheet
 
 ### Sticky/Fixed Element Positioning Issues

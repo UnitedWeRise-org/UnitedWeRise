@@ -19,7 +19,14 @@
 - **[GOOGLE_MAPS_INTEGRATION.md](./GOOGLE_MAPS_INTEGRATION.md)** - Geospatial features and civic API integration
 - **[REPRESENTATIVE_API_SETUP.md](./REPRESENTATIVE_API_SETUP.md)** - Political representative lookup system
 
-### **🧠 AI & Semantic Features**
+### **🧠 AI & Semantic Features** 
+#### 🚀 **AZURE AI INTEGRATION - LIVE & OPERATIONAL**
+- **Status**: ✅ **PRODUCTION READY** - Azure OpenAI fully deployed and operational
+- **Backend**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health
+- **Frontend**: https://www.unitedwerise.org
+- **Features**: Real-time topic discovery, semantic search, opposing viewpoint analysis
+
+#### Documentation:
 - **[SEMANTIC_TOPIC_SETUP.md](./SEMANTIC_TOPIC_SETUP.md)** - Local AI development setup
 - **[AZURE_DEPLOYMENT_STRATEGY.md](./AZURE_DEPLOYMENT_STRATEGY.md)** - Production AI services strategy
 - **[FEED_ALGORITHM_TUNING.md](./FEED_ALGORITHM_TUNING.md)** - Probability cloud algorithm details

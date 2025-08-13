@@ -62,7 +62,8 @@
       "Bash(\"AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-35-turbo\" )",
       "Bash(\"ENABLE_SEMANTIC_TOPICS=true\" )",
       "Bash(\"SEMANTIC_PROVIDER=azure\" )",
-      "Bash(\"SIMILARITY_THRESHOLD=0.60\")"
+      "Bash(\"SIMILARITY_THRESHOLD=0.60\")",
+      "Bash(echo:*)"
     ],
     "deny": []
   }
