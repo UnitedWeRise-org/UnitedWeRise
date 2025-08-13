@@ -96,10 +96,20 @@
                         return { authenticated: true, userData: initData.data.user };
                     }
                 } catch (error) {
-                    console.warn('⚠️ Batch initialization failed, falling back to old method:', error);
-                    // Fall back to old system
-                    if (window.originalVerifyAndSetUser) {
-                        window.originalVerifyAndSetUser();
+                    console.warn('⚠️ Batch initialization failed, trying individual auth check:', error);
+                    
+                    // Fall back to individual auth check
+                    try {
+                        const authData = await window.apiCall('/auth/me');
+                        if (authData.user) {
+                            console.log('✅ Fallback auth successful:', authData.user);
+                            localStorage.setItem('currentUser', JSON.stringify(authData.user));
+                            window.currentUser = authData.user;
+                            setUserLoggedIn(authData.user);
+                            return { authenticated: true, userData: authData.user };
+                        }
+                    } catch (authError) {
+                        console.warn('⚠️ Fallback auth also failed:', authError);
                     }
                 }
                 
@@ -1021,6 +1031,9 @@
             // Refresh user data if needed
             const refreshedUser = await refreshUserDataIfNeeded(user);
             currentUser = refreshedUser;
+            
+            // Store user data in localStorage for persistence
+            localStorage.setItem('currentUser', JSON.stringify(refreshedUser));
             
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('userSection').style.display = 'flex';
