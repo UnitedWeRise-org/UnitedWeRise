@@ -12,6 +12,8 @@
             padding: 2rem;
             background: #f8f9fa;
             min-height: 100vh;
+            overflow-y: auto;
+            max-height: 100vh;
         }
         
         .dashboard-header {
@@ -515,6 +517,7 @@
         let currentUser = null;
         let authToken = null;
         let autoRefreshInterval = null;
+        let sessionStartTime = Date.now();
         
         // Track endpoint availability to avoid spamming 404s
         let endpointStatus = {
@@ -1423,10 +1426,30 @@
             }, 5000);
         }
 
+        // Session security validation
+        function validateAdminSession() {
+            const sessionAge = Date.now() - sessionStartTime;
+            const maxSession = 4 * 60 * 60 * 1000; // 4 hours
+            
+            if (sessionAge > maxSession) {
+                console.log('🔐 Admin session expired for security. Please log in again.');
+                logout();
+                return false;
+            }
+            
+            if (!authToken) {
+                console.log('🔐 No admin authentication token found.');
+                return false;
+            }
+            
+            return true;
+        }
+
         // Console Helper Functions for Admin Dashboard
         window.adminConsole = {
             // Check AI suggestions data
             getSuggestions: async function(category = 'all', status = 'all') {
+                if (!validateAdminSession()) return null;
                 try {
                     const response = await fetch(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
@@ -1444,6 +1467,7 @@
 
             // Check error data
             getErrors: async function(severity = 'all', timeframe = '24h') {
+                if (!validateAdminSession()) return null;
                 try {
                     const response = await fetch(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
@@ -1477,6 +1501,7 @@
 
             // Check security events
             getSecurity: async function(minRiskScore = 0) {
+                if (!validateAdminSession()) return null;
                 try {
                     const response = await fetch(`${BACKEND_URL}/api/admin/security/events?limit=20&minRiskScore=${minRiskScore}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
