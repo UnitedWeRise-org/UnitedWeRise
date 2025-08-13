@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verificationLimiter = exports.messageLimiter = exports.postLimiter = exports.apiLimiter = exports.passwordResetLimiter = exports.authLimiter = void 0;
+exports.verificationLimiter = exports.messageLimiter = exports.postLimiter = exports.burstLimiter = exports.apiLimiter = exports.passwordResetLimiter = exports.authLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 // Custom key generator for Azure Container Apps - strips port numbers from IPs
 const azureKeyGenerator = (request) => {
@@ -37,16 +37,63 @@ exports.passwordResetLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     keyGenerator: azureKeyGenerator
 });
-// General API rate limiting
+// Intelligent rate limiting with burst tolerance
 exports.apiLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: (req) => {
+        // Higher limits for authenticated users
+        if (req.user) {
+            return 500; // 500 requests per 15 minutes for authenticated users
+        }
+        return 200; // 200 requests per 15 minutes for anonymous users
+    },
     message: {
         error: 'Too many requests, please try again later.'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: azureKeyGenerator
+    keyGenerator: (req) => {
+        // Use user ID for authenticated requests, IP for anonymous
+        if (req.user?.id) {
+            return `user_${req.user.id}`;
+        }
+        return azureKeyGenerator(req);
+    },
+    // Allow burst tolerance - skip counting successful requests briefly
+    skipSuccessfulRequests: false,
+    // Custom handler for when limit is exceeded
+    handler: (req, res) => {
+        const isAuthenticated = !!req.user;
+        const retryAfter = Math.ceil(req.rateLimit.resetTime / 1000);
+        console.warn(`Rate limit exceeded for ${isAuthenticated ? 'user' : 'IP'}: ${req.user?.id || req.ip}`);
+        res.status(429).json({
+            error: isAuthenticated
+                ? 'You are making requests too quickly. Please wait a moment before trying again.'
+                : 'Too many requests from this network. Please try again later.',
+            retryAfter: retryAfter
+        });
+    }
+});
+// Burst rate limiter for very rapid requests (separate from main limiter)
+exports.burstLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: (req) => {
+        if (req.user) {
+            return 60; // 60 requests per minute for authenticated users
+        }
+        return 30; // 30 requests per minute for anonymous users
+    },
+    message: {
+        error: 'Making requests too quickly, please slow down.'
+    },
+    standardHeaders: false, // Don't add extra headers
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        if (req.user?.id) {
+            return `burst_user_${req.user.id}`;
+        }
+        return `burst_${azureKeyGenerator(req)}`;
+    }
 });
 // Strict rate limiting for posting content
 exports.postLimiter = (0, express_rate_limit_1.default)({

@@ -745,9 +745,6 @@
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Initial state: ensure UI is in logged out state
-            setUserLoggedOut();
-            
             // Load GiveButter widget
             const givebutterScript = document.createElement("script");
             givebutterScript.src = "https://widgets.givebutter.com/latest.umd.cjs?acct=rfuBvOJ14QTerl5N&p=other";

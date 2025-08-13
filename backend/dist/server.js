@@ -29,6 +29,7 @@ const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
 const photos_1 = __importDefault(require("./routes/photos"));
 const googleCivic_1 = __importDefault(require("./routes/googleCivic"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
+const batch_1 = __importDefault(require("./routes/batch"));
 const websocket_1 = require("./websocket");
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -57,7 +58,9 @@ app.use((0, helmet_1.default)({
     },
     crossOriginEmbedderPolicy: false
 }));
-// General API rate limiting
+// Apply burst limiter first (shorter window, catches rapid requests)
+app.use(rateLimiting_1.burstLimiter);
+// Then apply general API rate limiting (longer window, more permissive)
 app.use(rateLimiting_1.apiLimiter);
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
@@ -111,6 +114,7 @@ app.use('/api/topic-navigation', topicNavigation_1.default);
 app.use('/api/photos', photos_1.default);
 app.use('/api/google-civic', googleCivic_1.default);
 app.use('/api/feedback', feedback_1.default);
+app.use('/api/batch', batch_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
 // API Documentation

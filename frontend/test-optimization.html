@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Optimization Scripts</title>
+</head>
+<body>
+    <h1>Testing Optimization Scripts</h1>
+    <div id="log"></div>
+
+    <script src="src/js/api-manager.js"></script>
+    <script src="src/js/app-initialization.js"></script>
+    <script>
+        function log(message) {
+            document.getElementById('log').innerHTML += message + '<br>';
+            console.log(message);
+        }
+
+        // Test if scripts loaded
+        setTimeout(() => {
+            log('=== TESTING OPTIMIZATION SCRIPTS ===');
+            log('API Manager available: ' + !!window.apiManager);
+            log('App Initializer available: ' + !!window.appInitializer);
+            log('apiCall function available: ' + !!window.apiCall);
+            log('initializeApp function available: ' + !!window.initializeApp);
+            
+            if (window.apiManager) {
+                log('API Manager stats: ' + JSON.stringify(window.apiManager.getStats()));
+            }
+            
+            if (window.apiManager && window.appInitializer) {
+                log('✅ All optimization scripts loaded successfully!');
+            } else {
+                log('❌ Optimization scripts failed to load');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
