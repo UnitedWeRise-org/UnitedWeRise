@@ -174,11 +174,19 @@
                     console.log('Email verification successful:', data);
                     showState('success');
                     
+                    // Store auth token if provided in verification response
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                        console.log('Auth token updated after email verification');
+                    }
+                    
                     // Notify parent window if opened in verification flow
                     if (window.opener) {
                         window.opener.postMessage({ 
                             type: 'EMAIL_VERIFIED',
-                            success: true 
+                            success: true,
+                            token: data.token,
+                            user: data.user
                         }, '*');
                     }
                     

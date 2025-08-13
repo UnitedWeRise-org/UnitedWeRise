@@ -20,6 +20,21 @@ class VerificationFlow {
         window.addEventListener('message', (event) => {
             if (event.data.type === 'EMAIL_VERIFIED' && event.data.success) {
                 console.log('Email verification detected, refreshing status...');
+                
+                // Update auth token if provided
+                if (event.data.token) {
+                    localStorage.setItem('authToken', event.data.token);
+                    window.authToken = event.data.token;
+                    console.log('Auth token updated from verification response');
+                }
+                
+                // Update user data if provided
+                if (event.data.user) {
+                    localStorage.setItem('currentUser', JSON.stringify(event.data.user));
+                    window.currentUser = event.data.user;
+                    console.log('User data updated from verification response');
+                }
+                
                 this.checkEmailVerification();
             }
         });

@@ -587,7 +587,7 @@ details {
 .arrow-icon {
     transition: all 0.3s ease;
     display: inline-block;
-    color: #2c2c2c; /* Dark gray for contrast against olive green and greige */
+    color: #F5DEB3; /* Manila/khaki color for better visibility without being jarring */
     font-weight: bold;
 }
 

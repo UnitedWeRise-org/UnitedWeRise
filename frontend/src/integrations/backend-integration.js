@@ -33,6 +33,13 @@ class BackendIntegration {
             const lastName = document.getElementById('registerLastName').value;
             const phoneNumber = document.getElementById('registerPhone')?.value; // If phone input exists
 
+            // Check terms agreement
+            const termsAgreement = document.getElementById('termsAgreement');
+            if (!termsAgreement || !termsAgreement.checked) {
+                showAuthMessage('You must agree to the Terms of Service and Privacy Policy to create an account', 'error');
+                return;
+            }
+
             // Add hCaptcha validation
             const hcaptchaToken = this.getHCaptchaToken();
             if (!hcaptchaToken) {
@@ -171,7 +178,7 @@ class BackendIntegration {
         
         // Set up verification completion callback
         window.onVerificationComplete = () => {
-            showMessage('Account verification completed!', 'success');
+            showAuthMessage('Account verification completed!', 'success');
             // Refresh user data or redirect to onboarding
         };
     }
