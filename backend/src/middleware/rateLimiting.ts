@@ -35,16 +35,66 @@ export const passwordResetLimiter = rateLimit({
   keyGenerator: azureKeyGenerator
 });
 
-// General API rate limiting
+// Intelligent rate limiting with burst tolerance
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: (req: any) => {
+    // Higher limits for authenticated users
+    if (req.user) {
+      return 500; // 500 requests per 15 minutes for authenticated users
+    }
+    return 200; // 200 requests per 15 minutes for anonymous users
+  },
   message: {
     error: 'Too many requests, please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: azureKeyGenerator
+  keyGenerator: (req: any) => {
+    // Use user ID for authenticated requests, IP for anonymous
+    if (req.user?.id) {
+      return `user_${req.user.id}`;
+    }
+    return azureKeyGenerator(req);
+  },
+  // Allow burst tolerance - skip counting successful requests briefly
+  skipSuccessfulRequests: false,
+  // Custom handler for when limit is exceeded
+  handler: (req: any, res: any) => {
+    const isAuthenticated = !!req.user;
+    const retryAfter = Math.ceil(req.rateLimit.resetTime / 1000);
+    
+    console.warn(`Rate limit exceeded for ${isAuthenticated ? 'user' : 'IP'}: ${req.user?.id || req.ip}`);
+    
+    res.status(429).json({
+      error: isAuthenticated 
+        ? 'You are making requests too quickly. Please wait a moment before trying again.'
+        : 'Too many requests from this network. Please try again later.',
+      retryAfter: retryAfter
+    });
+  }
+});
+
+// Burst rate limiter for very rapid requests (separate from main limiter)
+export const burstLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: (req: any) => {
+    if (req.user) {
+      return 60; // 60 requests per minute for authenticated users
+    }
+    return 30; // 30 requests per minute for anonymous users
+  },
+  message: {
+    error: 'Making requests too quickly, please slow down.'
+  },
+  standardHeaders: false, // Don't add extra headers
+  legacyHeaders: false,
+  keyGenerator: (req: any) => {
+    if (req.user?.id) {
+      return `burst_user_${req.user.id}`;
+    }
+    return `burst_${azureKeyGenerator(req)}`;
+  }
 });
 
 // Strict rate limiting for posting content

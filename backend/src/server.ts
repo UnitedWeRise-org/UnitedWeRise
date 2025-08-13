@@ -24,9 +24,10 @@ import topicNavigationRoutes from './routes/topicNavigation';
 import photoRoutes from './routes/photos';
 import googleCivicRoutes from './routes/googleCivic';
 import feedbackRoutes from './routes/feedback';
+import batchRoutes from './routes/batch';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
-import { apiLimiter } from './middleware/rateLimiting';
+import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
 import { metricsService } from './services/metricsService';
@@ -59,7 +60,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// General API rate limiting
+// Apply burst limiter first (shorter window, catches rapid requests)
+app.use(burstLimiter);
+
+// Then apply general API rate limiting (longer window, more permissive)
 app.use(apiLimiter);
 
 // CORS Configuration
@@ -118,6 +122,7 @@ app.use('/api/topic-navigation', topicNavigationRoutes);
 app.use('/api/photos', photoRoutes);
 app.use('/api/google-civic', googleCivicRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/batch', batchRoutes);
 
 // Serve uploaded photos statically
 app.use('/uploads', express.static('uploads'));

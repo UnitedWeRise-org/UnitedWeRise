@@ -29,6 +29,90 @@
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     
     <!-- Application JavaScript -->
+    <script src="src/js/api-manager.js"></script>
+    <script src="src/js/app-initialization.js"></script>
+    <script src="src/js/force-optimization.js"></script>
+    
+    <!-- Inline Optimization Override (Backup) -->
+    <script>
+    // Emergency inline optimization override
+    console.log('🚨 Inline optimization override loading...');
+    
+    // Check if main scripts loaded
+    setTimeout(() => {
+        if (!window.apiManager || !window.appInitializer) {
+            console.log('❌ Main optimization scripts failed to load, using emergency override');
+            
+            // Create minimal API manager
+            window.apiCall = async (endpoint, options = {}) => {
+                const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+                const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+                
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                if (window.authToken) {
+                    headers['Authorization'] = `Bearer ${window.authToken}`;
+                }
+                
+                console.log('🌐 Emergency API Request:', endpoint);
+                const response = await fetch(url, {
+                    method: options.method || 'GET',
+                    headers,
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                return await response.json();
+            };
+            
+            // Create minimal initialization function
+            window.initializeApp = async () => {
+                console.log('🚀 Emergency app initialization...');
+                
+                const storedToken = localStorage.getItem('authToken');
+                if (!storedToken) {
+                    console.log('📝 No auth token - user not logged in');
+                    setUserLoggedOut();
+                    return { authenticated: false };
+                }
+                
+                window.authToken = storedToken;
+                
+                try {
+                    // Try batch initialization first
+                    const initData = await window.apiCall('/batch/initialize');
+                    
+                    if (initData.success) {
+                        console.log('✅ Batch initialization successful:', initData.data);
+                        localStorage.setItem('currentUser', JSON.stringify(initData.data.user));
+                        window.currentUser = initData.data.user;
+                        setUserLoggedIn(initData.data.user);
+                        return { authenticated: true, userData: initData.data.user };
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Batch initialization failed, falling back to old method:', error);
+                    // Fall back to old system
+                    if (window.originalVerifyAndSetUser) {
+                        window.originalVerifyAndSetUser();
+                    }
+                }
+                
+                return { authenticated: false };
+            };
+            
+            console.log('✅ Emergency optimization override ready');
+        } else {
+            console.log('✅ Main optimization scripts loaded successfully');
+        }
+    }, 500);
+    </script>
+    
     <script src="src/components/AddressForm.js"></script>
     <script src="src/components/VerificationFlow.js"></script>
     <script src="src/components/ContentReporting.js"></script>
@@ -660,21 +744,15 @@
             givebutterScript.async = true;
             document.head.appendChild(givebutterScript);
 
-            // Check for stored auth
-            authToken = localStorage.getItem('authToken');
-            console.log('Stored auth token:', authToken ? 'Present' : 'None');
-            console.log('API Base URL:', API_BASE);
-            if (authToken) {
-                console.log('Attempting to verify user...');
-                verifyAndSetUser();
-            } else {
-                console.log('No auth token, ensuring logged out UI state');
-                // Explicitly ensure logged out state
-                setUserLoggedOut();
-            }
+            // Use new optimized initialization system
+            console.log('🚀 Starting optimized app initialization...');
+            initializeApp().then(result => {
+                console.log('✅ App initialization complete:', result);
+            }).catch(error => {
+                console.error('💥 App initialization failed:', error);
+            });
 
             // Map initialization is now handled by map-maplibre.js to avoid conflicts
-            // The script automatically initializes when loaded
             console.log('Map initialization delegated to map-maplibre.js script');
             
             // Setup collapse button handler (runs regardless of map system)
