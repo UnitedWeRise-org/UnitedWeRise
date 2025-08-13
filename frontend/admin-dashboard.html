@@ -464,17 +464,24 @@
                 });
 
                 const data = await response.json();
+                
+                // Debug logging
+                console.log('Login response:', data);
+                console.log('User isAdmin:', data.user?.isAdmin);
 
                 if (response.ok) {
-                    if (data.user.isAdmin) {
+                    // Check if user object exists and has admin privileges
+                    if (data.user && data.user.isAdmin === true) {
                         authToken = data.token;
                         currentUser = data.user;
                         
                         localStorage.setItem('authToken', authToken);
                         localStorage.setItem('currentUser', JSON.stringify(currentUser));
                         
+                        console.log('Admin verified, showing dashboard');
                         showDashboard();
                     } else {
+                        console.log('Not admin:', data.user);
                         showError('Admin access required. This account does not have admin privileges.');
                     }
                 } else {
@@ -494,8 +501,14 @@
 
         // Show dashboard
         function showDashboard() {
+            console.log('showDashboard called');
+            console.log('loginSection element:', document.getElementById('loginSection'));
+            console.log('dashboardMain element:', document.getElementById('dashboardMain'));
+            
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('dashboardMain').style.display = 'block';
+            
+            console.log('Dashboard elements toggled');
             
             document.getElementById('welcomeMessage').textContent = 
                 `Welcome back, ${currentUser.firstName || currentUser.username}`;
