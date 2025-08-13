@@ -212,9 +212,19 @@ class BackendIntegration {
             try {
                 const response = await originalFetch(...args);
                 
-                // Handle authentication errors globally
+                // Handle authentication errors globally, but not during app initialization
                 if (response.status === 401) {
-                    this.handleAuthError();
+                    // Don't interfere with app initialization flow - let it handle auth gracefully
+                    const isInitializationCall = args[0] && (
+                        args[0].includes('/batch/initialize') ||
+                        args[0].includes('/auth/me') ||
+                        args[0].includes('/users/profile')
+                    );
+                    
+                    if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
+                        this.handleAuthError();
+                    }
+                    // Otherwise let the initialization system handle it with fallbacks
                 }
                 
                 // Handle suspension errors
