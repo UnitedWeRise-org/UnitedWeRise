@@ -73,24 +73,27 @@ class AppInitializer {
             if (error.message?.includes('401') || error.message?.includes('Invalid token')) {
                 console.log('🔑 Auth error detected, clearing tokens');
                 this.clearAuthAndSetLoggedOut();
-            } else {
-                // For network errors, try to use cached data
-                const storedUser = localStorage.getItem('currentUser');
-                if (storedUser) {
-                    console.log('📱 Using cached user data due to network error');
-                    try {
-                        const userData = JSON.parse(storedUser);
-                        window.currentUser = userData;
-                        this.setLoggedInState({ user: userData });
-                        return { authenticated: true, userData: userData, cached: true };
-                    } catch (parseError) {
-                        console.error('Failed to parse cached user data:', parseError);
-                    }
+                return { authenticated: false, error: error.message };
+            } 
+            
+            // For 404 errors (batch endpoint unavailable) or network errors, try cached data
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser && window.authToken) {
+                console.log('📱 Batch endpoint unavailable, using cached user data');
+                try {
+                    const userData = JSON.parse(storedUser);
+                    window.currentUser = userData;
+                    this.setLoggedInState({ user: userData });
+                    this.isInitialized = true;
+                    return { authenticated: true, userData: userData, cached: true };
+                } catch (parseError) {
+                    console.error('Failed to parse cached user data:', parseError);
                 }
-                
-                this.setLoggedOutState();
             }
             
+            // No valid cached data available
+            console.log('🚫 No valid cached data, setting logged out state');
+            this.setLoggedOutState();
             return { authenticated: false, error: error.message };
         }
     }
