@@ -63,15 +63,19 @@ class AppInitializer {
                     };
                 }
             } catch (batchError) {
-                console.log('📱 Batch endpoint unavailable, using individual API calls');
+                console.log('📱 Batch endpoint returned error:', batchError.message || batchError);
                 
+                // Don't treat 401 from batch as fatal - it just means we need auth
                 // Fallback to individual API calls
+                console.log('🔄 Trying individual auth verification...');
+                
                 try {
-                    // Get user profile data
-                    const userProfile = await window.apiCall('/users/profile');
+                    // First try auth/me for authentication check
+                    const authData = await window.apiCall('/auth/me');
                     
-                    if (userProfile) {
-                        this.userData = userProfile;
+                    if (authData && authData.user) {
+                        console.log('✅ Auth/me fallback successful');
+                        this.userData = authData.user;
                         localStorage.setItem('currentUser', JSON.stringify(this.userData));
                         window.currentUser = this.userData;
 
@@ -84,26 +88,63 @@ class AppInitializer {
                             userData: this.userData,
                             fallback: true
                         };
+                    } else {
+                        console.log('❌ Auth/me returned no user data');
                     }
-                } catch (fallbackError) {
-                    console.log('🔄 Individual API calls failed, using cached data');
+                } catch (authError) {
+                    console.log('🔄 Auth/me failed:', authError.message || authError);
+                    
+                    try {
+                        // Get user profile data as final fallback
+                        const userProfile = await window.apiCall('/users/profile');
+                        
+                        if (userProfile) {
+                            console.log('✅ Users/profile fallback successful');
+                            this.userData = userProfile;
+                            localStorage.setItem('currentUser', JSON.stringify(this.userData));
+                            window.currentUser = this.userData;
+
+                            // Set logged in state
+                            this.setLoggedInState({ user: this.userData });
+                            
+                            this.isInitialized = true;
+                            return { 
+                                authenticated: true, 
+                                userData: this.userData,
+                                fallback: true
+                            };
+                        } else {
+                            console.log('❌ Users/profile returned no data');
+                        }
+                    } catch (profileError) {
+                        console.log('🔄 Users/profile failed:', profileError.message || profileError);
+                        console.log('💾 All API calls failed, checking for cached data...');
+                    }
+                }
+                
+                // If we get here, all API calls failed - try cached data
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    console.log('📱 Using cached user data as final fallback');
+                    try {
+                        const userData = JSON.parse(storedUser);
+                        window.currentUser = userData;
+                        this.setLoggedInState({ user: userData });
+                        this.isInitialized = true;
+                        return { authenticated: true, userData: userData, cached: true };
+                    } catch (parseError) {
+                        console.error('Failed to parse cached user data:', parseError);
+                    }
                 }
             }
 
         } catch (error) {
-            console.error('💥 Initialization error:', error);
+            console.error('💥 Outer initialization error:', error);
             
-            // If the error is auth-related, clear tokens
-            if (error.message?.includes('401') || error.message?.includes('Invalid token')) {
-                console.log('🔑 Auth error detected, clearing tokens');
-                this.clearAuthAndSetLoggedOut();
-                return { authenticated: false, error: error.message };
-            } 
-            
-            // For 404 errors (batch endpoint unavailable) or network errors, try cached data
+            // DON'T log out user for network/server errors - just use cached data
             const storedUser = localStorage.getItem('currentUser');
-            if (storedUser && window.authToken) {
-                console.log('📱 Batch endpoint unavailable, using cached user data');
+            if (storedUser) {
+                console.log('💾 Using cached user data due to server issues');
                 try {
                     const userData = JSON.parse(storedUser);
                     window.currentUser = userData;
@@ -115,9 +156,8 @@ class AppInitializer {
                 }
             }
             
-            // No valid cached data available
-            console.log('🚫 No valid cached data, setting logged out state');
-            this.setLoggedOutState();
+            // Only log out if we have no cached data AND confirmed token is invalid
+            console.log('🚫 No cached data available and server unreachable');
             return { authenticated: false, error: error.message };
         }
     }
