@@ -33,8 +33,11 @@ class AppInitializer {
                 return { authenticated: false };
             }
 
-            // Step 2: Set the global auth token
+            // Step 2: Set the global auth token (both window and global scope)
             window.authToken = storedToken;
+            if (typeof authToken !== 'undefined') {
+                authToken = storedToken;
+            }
 
             // Step 3: Try batch initialization first, fall back to individual calls
             console.log('🔄 Fetching initialization data...');
@@ -202,6 +205,9 @@ class AppInitializer {
     setLoggedOutState() {
         window.currentUser = null;
         window.authToken = null;
+        if (typeof authToken !== 'undefined') {
+            authToken = null;
+        }
         
         // Update UI elements
         document.getElementById('authSection').style.display = 'flex';
