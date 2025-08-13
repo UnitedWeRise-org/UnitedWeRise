@@ -403,12 +403,15 @@
         </div>
     </div>
 
-    <script src="src/js/backend-integration.js"></script>
+    <script src="src/config/api.js"></script>
     <script>
         // Global state
         let currentUser = null;
         let authToken = null;
         let autoRefreshInterval = null;
+        
+        // Use the global API config
+        const BACKEND_URL = window.API_CONFIG.BASE_URL;
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
