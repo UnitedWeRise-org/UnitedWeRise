@@ -410,8 +410,8 @@
         let authToken = null;
         let autoRefreshInterval = null;
         
-        // Use the global API config
-        const BACKEND_URL = window.API_CONFIG.BASE_URL;
+        // Use the global API config - but remove /api since we'll add endpoints
+        const BACKEND_URL = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
