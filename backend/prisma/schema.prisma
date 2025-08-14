@@ -56,6 +56,9 @@ model User {
   politicalExperience     String?
   notificationPreferences Json?
   displayName             String?
+  photoTaggingEnabled     Boolean                   @default(true)   // Allow others to tag me
+  requireTagApproval      Boolean                   @default(true)   // Tags need approval
+  allowTagsByFriendsOnly  Boolean                   @default(false)  // Only friends can tag
   followingCount          Int                       @default(0)
   followersCount          Int                       @default(0)
   deviceFingerprint       Json?
@@ -80,6 +83,9 @@ model User {
   sentNotifications       Notification[]            @relation("NotificationSender")
   flaggedPhotos           Photo[]                   @relation("FlaggedPhotos")
   photos                  Photo[]
+  photoTagsCreated        PhotoTag[]                @relation("PhotoTagsCreated")
+  photoTagsReceived       PhotoTag[]                @relation("PhotoTagsReceived")
+  photoPrivacyRequests    PhotoPrivacyRequest[]
   politicalInquiries      PoliticalInquiry[]        @relation("PoliticalInquiries")
   posts                   Post[]
   publicQAVotes           PublicQAVote[]            @relation("PublicQAVotes")
@@ -684,12 +690,50 @@ model Photo {
   flaggedByUser  User?        @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   post           Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tags           PhotoTag[]   // People tagged in this photo
+  privacyRequests PhotoPrivacyRequest[]
 
   @@index([userId])
   @@index([candidateId])
   @@index([photoType, purpose])
   @@index([isApproved, isActive])
   @@index([createdAt])
+}
+
+model PhotoTag {
+  id         String         @id @default(cuid())
+  photoId    String
+  taggedById String         // User who created the tag
+  taggedId   String         // User being tagged
+  x          Float          // X coordinate (percentage 0-100)
+  y          Float          // Y coordinate (percentage 0-100)
+  status     PhotoTagStatus @default(PENDING)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  photo      Photo          @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  taggedBy   User           @relation("PhotoTagsCreated", fields: [taggedById], references: [id])
+  tagged     User           @relation("PhotoTagsReceived", fields: [taggedId], references: [id])
+
+  @@unique([photoId, taggedId]) // One tag per person per photo
+  @@index([taggedId, status])
+  @@index([photoId])
+}
+
+model PhotoPrivacyRequest {
+  id        String                    @id @default(cuid())
+  photoId   String
+  userId    String                    // User making the request
+  type      PhotoPrivacyRequestType
+  reason    String?
+  status    PhotoPrivacyRequestStatus @default(PENDING)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+  photo     Photo                     @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId]) // One request per user per photo
+  @@index([userId, status])
+  @@index([status, createdAt])
 }
 
 model CandidateInbox {
@@ -1091,6 +1135,26 @@ enum PhotoPurpose {
   PERSONAL
   CAMPAIGN
   BOTH
+}
+
+enum PhotoTagStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  REMOVED
+}
+
+enum PhotoPrivacyRequestType {
+  REMOVE_TAG      // Remove tag but keep photo
+  REMOVE_PHOTO    // Request photo removal entirely
+  BLOCK_FUTURE    // Block future tags from this user
+}
+
+enum PhotoPrivacyRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  RESOLVED
 }
 
 enum StaffRole {

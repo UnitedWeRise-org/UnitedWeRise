@@ -408,7 +408,7 @@ class PostComponent {
                             <img src="${photo.url}" 
                                  alt="Post attachment" 
                                  loading="lazy"
-                                 onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}')"
+                                 onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
                                  style="max-width: 100%; height: auto; border-radius: 8px; cursor: pointer;">
                             ${isGif ? '<div class="media-type-badge gif-badge">GIF</div>' : ''}
                         </div>
@@ -419,22 +419,182 @@ class PostComponent {
     }
 
     /**
-     * Open media in full-screen viewer
+     * Open media in full-screen viewer with tagging capability
      */
-    openMediaViewer(url, mimeType) {
+    openMediaViewer(url, mimeType, photoId = null) {
         const overlay = document.createElement('div');
         overlay.className = 'media-viewer-overlay';
         overlay.innerHTML = `
-            <div class="media-viewer-content">
-                <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
-                <img src="${url}" alt="Full size image" style="max-width: 90vw; max-height: 90vh; object-fit: contain;">
+            <div class="media-viewer-content" ${photoId ? `data-photo-id="${photoId}"` : ''}>
+                <div class="media-viewer-header">
+                    <button class="media-viewer-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</button>
+                    ${photoId ? '<button class="media-viewer-tag-btn" onclick="postComponent.toggleTaggingMode(this)">🏷️ Tag People</button>' : ''}
+                </div>
+                <div class="media-viewer-image-container" style="position: relative;">
+                    <img src="${url}" alt="Full size image" 
+                         style="max-width: 90vw; max-height: 90vh; object-fit: contain;"
+                         ${photoId ? `onclick="postComponent.handleImageClick(event, '${photoId}')"` : ''}>
+                    ${photoId ? '<div class="photo-tags-overlay"></div>' : ''}
+                </div>
                 ${mimeType === 'image/gif' ? '<div class="media-viewer-badge">GIF</div>' : ''}
+                ${photoId ? '<div class="tag-user-search" style="display: none;"></div>' : ''}
             </div>
         `;
         overlay.onclick = (e) => {
             if (e.target === overlay) overlay.remove();
         };
         document.body.appendChild(overlay);
+
+        // Load existing tags if photoId provided
+        if (photoId) {
+            this.loadPhotoTags(photoId);
+        }
+    }
+
+    /**
+     * Toggle tagging mode on/off
+     */
+    toggleTaggingMode(button) {
+        const isTagging = button.classList.contains('active');
+        
+        if (isTagging) {
+            button.classList.remove('active');
+            button.textContent = '🏷️ Tag People';
+            this.hideUserSearch();
+        } else {
+            button.classList.add('active');
+            button.textContent = '✕ Stop Tagging';
+        }
+    }
+
+    /**
+     * Handle click on image for tagging
+     */
+    async handleImageClick(event, photoId) {
+        const tagBtn = event.target.closest('.media-viewer-content').querySelector('.media-viewer-tag-btn');
+        if (!tagBtn || !tagBtn.classList.contains('active')) return;
+
+        const rect = event.target.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+        this.showUserSearch(x, y, photoId, event.clientX, event.clientY);
+    }
+
+    /**
+     * Show user search for tagging
+     */
+    showUserSearch(x, y, photoId, screenX, screenY) {
+        const searchContainer = document.querySelector('.tag-user-search');
+        searchContainer.style.display = 'block';
+        searchContainer.style.left = `${screenX - 150}px`;
+        searchContainer.style.top = `${screenY + 10}px`;
+        
+        searchContainer.innerHTML = `
+            <div class="user-search-box">
+                <input type="text" placeholder="Search users..." class="user-search-input" 
+                       oninput="postComponent.searchUsers(this.value, ${x}, ${y}, '${photoId}')"
+                       onkeydown="if(event.key==='Escape') postComponent.hideUserSearch()">
+                <div class="user-search-results"></div>
+            </div>
+        `;
+
+        searchContainer.querySelector('.user-search-input').focus();
+    }
+
+    /**
+     * Hide user search
+     */
+    hideUserSearch() {
+        const searchContainer = document.querySelector('.tag-user-search');
+        if (searchContainer) {
+            searchContainer.style.display = 'none';
+        }
+    }
+
+    /**
+     * Search users for tagging
+     */
+    async searchUsers(query, x, y, photoId) {
+        if (query.length < 2) {
+            document.querySelector('.user-search-results').innerHTML = '';
+            return;
+        }
+
+        try {
+            const response = await window.apiCall(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
+            
+            if (response.ok) {
+                const users = response.data.users;
+                const resultsContainer = document.querySelector('.user-search-results');
+                
+                resultsContainer.innerHTML = users.map(user => `
+                    <div class="user-search-result" onclick="postComponent.tagUser('${user.id}', ${x}, ${y}, '${photoId}')">
+                        <div class="user-avatar">${user.avatar ? `<img src="${user.avatar}" alt="">` : user.firstName?.[0] || user.username[0]}</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
+                            <div class="user-username">@${user.username}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('User search error:', error);
+        }
+    }
+
+    /**
+     * Tag a user in the photo
+     */
+    async tagUser(userId, x, y, photoId) {
+        try {
+            const response = await window.apiCall('/photo-tags', {
+                method: 'POST',
+                body: JSON.stringify({
+                    photoId,
+                    taggedId: userId,
+                    x,
+                    y
+                })
+            });
+
+            if (response.ok) {
+                this.hideUserSearch();
+                this.loadPhotoTags(photoId); // Reload tags
+                this.showToast('User tagged successfully!');
+            } else {
+                const errorMsg = response.data?.message || 'Failed to tag user';
+                this.showToast(errorMsg);
+            }
+        } catch (error) {
+            console.error('Tagging error:', error);
+            this.showToast('Failed to tag user');
+        }
+    }
+
+    /**
+     * Load and display photo tags
+     */
+    async loadPhotoTags(photoId) {
+        try {
+            const response = await window.apiCall(`/photo-tags/photo/${photoId}`);
+            
+            if (response.ok) {
+                const tags = response.data.tags;
+                const overlay = document.querySelector('.photo-tags-overlay');
+                
+                overlay.innerHTML = tags.map(tag => `
+                    <div class="photo-tag" style="position: absolute; left: ${tag.x}%; top: ${tag.y}%; transform: translate(-50%, -50%);">
+                        <div class="tag-indicator"></div>
+                        <div class="tag-tooltip">
+                            ${tag.tagged.firstName ? `${tag.tagged.firstName} ${tag.tagged.lastName || ''}` : tag.tagged.username}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Load tags error:', error);
+        }
     }
 
     /**

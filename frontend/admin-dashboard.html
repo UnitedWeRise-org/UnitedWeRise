@@ -285,6 +285,7 @@
                 <button class="nav-button" onclick="showSection('analytics')">📈 Analytics</button>
                 <button class="nav-button" onclick="showSection('errors')">🐛 Errors</button>
                 <button class="nav-button" onclick="showSection('ai-insights')">🤖 AI Insights</button>
+                <button class="nav-button" onclick="showSection('deployment')">🚀 Deployment</button>
                 <button class="nav-button" onclick="showSection('system')">⚙️ System</button>
             </div>
 
@@ -500,6 +501,60 @@
                 </div>
             </div>
 
+            <!-- Deployment Status Section -->
+            <div id="deployment" class="dashboard-section">
+                <h2>🚀 Deployment Status & Git Workflow</h2>
+                
+                <div class="stats-grid" id="deploymentStats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="backendUptime">-</div>
+                        <div class="stat-label">Backend Uptime (hours)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="lastDeploy">-</div>
+                        <div class="stat-label">Last Deploy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="frontendVersion">-</div>
+                        <div class="stat-label">Frontend Version</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="schemaVersion">-</div>
+                        <div class="stat-label">Schema Version</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                    <div>
+                        <h3>🏭 Component Status</h3>
+                        <div id="componentStatus">
+                            <div class="loading">Checking component status...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>⚡ Deployment Actions</h3>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <button onclick="checkDeploymentStatus()" class="nav-button" style="margin: 0;">
+                                🔄 Check Status Now
+                            </button>
+                            <button onclick="showDeploymentHistory()" class="nav-button" style="margin: 0;">
+                                📜 Deployment History
+                            </button>
+                            <button onclick="showGitWorkflow()" class="nav-button" style="margin: 0;">
+                                🔀 Git Workflow Status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <h3>📝 Deployment Console Output</h3>
+                    <div id="deploymentConsole" style="background: #1a1a1a; color: #00ff00; padding: 1rem; border-radius: 6px; font-family: 'Courier New', monospace; height: 300px; overflow-y: auto; white-space: pre-line;">
+Loading deployment status...
+                    </div>
+                </div>
+            </div>
+
             <!-- System Section -->
             <div id="system" class="dashboard-section">
                 <h2>⚙️ System Information</h2>
@@ -512,6 +567,7 @@
     </div>
 
     <script src="src/config/api.js"></script>
+    <script src="src/js/deployment-status.js"></script>
     <script>
         // Global state
         let currentUser = null;
@@ -704,6 +760,9 @@
                 case 'ai-insights':
                     loadAIInsightsData();
                     break;
+                case 'deployment':
+                    loadDeploymentData();
+                    break;
                 case 'system':
                     loadSystemData();
                     break;
@@ -836,6 +895,203 @@
                 document.getElementById('analyticsData').innerHTML = 
                     '<div class="error">Failed to load analytics data</div>';
             }
+        }
+
+        // Load deployment data
+        async function loadDeploymentData() {
+            try {
+                // Clear the console first
+                const consoleDiv = document.getElementById('deploymentConsole');
+                consoleDiv.innerHTML = 'Checking deployment status...\n';
+                
+                // Use the deployment status checker that's now loaded
+                if (window.deploymentStatus) {
+                    // Get comprehensive status
+                    const status = window.deploymentStatus.getStatus();
+                    await window.deploymentStatus.check();
+                    
+                    // Update stats from deployment checker
+                    setTimeout(() => updateDeploymentUI(status), 2000);
+                } else {
+                    // Fallback to basic health check
+                    const healthResponse = await fetch(`${BACKEND_URL}/health`);
+                    if (healthResponse.ok) {
+                        const health = await healthResponse.json();
+                        updateBasicDeploymentInfo(health);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading deployment data:', error);
+                document.getElementById('deploymentConsole').innerHTML = 
+                    'Error loading deployment status: ' + error.message;
+            }
+        }
+
+        // Update deployment UI with comprehensive status
+        function updateDeploymentUI(status) {
+            // Update stats cards
+            if (status.backend && status.backend.uptime) {
+                const hours = Math.round(parseFloat(status.backend.uptime.split(' ')[0]) / 60 * 100) / 100;
+                document.getElementById('backendUptime').textContent = hours.toString();
+                
+                if (status.backend.lastRestart && status.backend.lastRestart !== 'Unknown') {
+                    const lastDeploy = new Date(status.backend.lastRestart).toLocaleDateString();
+                    document.getElementById('lastDeploy').textContent = lastDeploy;
+                }
+            }
+            
+            if (status.frontend && status.frontend.version) {
+                document.getElementById('frontendVersion').textContent = status.frontend.version;
+            }
+            
+            if (status.database && status.database.schemaVersion) {
+                document.getElementById('schemaVersion').textContent = status.database.schemaVersion;
+            }
+            
+            // Update component status
+            const componentDiv = document.getElementById('componentStatus');
+            let componentHtml = '';
+            
+            Object.entries(status).forEach(([component, data]) => {
+                const emoji = getComponentEmoji(data);
+                const statusText = getComponentStatus(data);
+                componentHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+                        <span><strong>${emoji} ${component.charAt(0).toUpperCase() + component.slice(1)}</strong></span>
+                        <span style="color: ${getStatusColor(data)}">${statusText}</span>
+                    </div>
+                `;
+            });
+            
+            componentDiv.innerHTML = componentHtml;
+            
+            // Update console with formatted output
+            updateDeploymentConsole(status);
+        }
+
+        function updateBasicDeploymentInfo(health) {
+            document.getElementById('backendUptime').textContent = Math.round(health.uptime / 3600).toString();
+            document.getElementById('lastDeploy').textContent = 'Unknown';
+            document.getElementById('frontendVersion').textContent = 'Unknown';
+            document.getElementById('schemaVersion').textContent = 'Unknown';
+            
+            document.getElementById('componentStatus').innerHTML = `
+                <div><strong>🏥 Backend:</strong> ${health.status}</div>
+                <div><strong>💾 Database:</strong> ${health.database}</div>
+                <div><strong>📊 Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</div>
+            `;
+            
+            document.getElementById('deploymentConsole').innerHTML = 
+                `Backend Health Check:\n${JSON.stringify(health, null, 2)}`;
+        }
+
+        function getComponentEmoji(data) {
+            if (data && data.available === false) return '❌';
+            if (data && data.status && data.status.includes('ERROR')) return '❌';
+            if (data && data.responseTime && parseInt(data.responseTime) > 5000) return '⚠️';
+            return '✅';
+        }
+
+        function getComponentStatus(data) {
+            if (data && data.available === false) return 'Unavailable';
+            if (data && data.status) return data.status;
+            if (data && data.uptime) return `Up ${data.uptime}`;
+            return 'Unknown';
+        }
+
+        function getStatusColor(data) {
+            if (data && data.available === false) return '#d32f2f';
+            if (data && data.status && data.status.includes('ERROR')) return '#d32f2f';
+            if (data && data.responseTime && parseInt(data.responseTime) > 5000) return '#ff9800';
+            return '#388e3c';
+        }
+
+        function updateDeploymentConsole(status) {
+            const consoleDiv = document.getElementById('deploymentConsole');
+            let output = '🚀 Deployment Status Report\n';
+            output += '================================\n\n';
+            
+            // Add timestamp
+            output += `📅 Last Updated: ${new Date().toLocaleString()}\n\n`;
+            
+            // Component details
+            Object.entries(status).forEach(([component, data]) => {
+                output += `${getComponentEmoji(data)} ${component.toUpperCase()}:\n`;
+                Object.entries(data).forEach(([key, value]) => {
+                    if (key !== 'component') {
+                        output += `   ${key}: ${value}\n`;
+                    }
+                });
+                output += '\n';
+            });
+            
+            output += '================================\n';
+            output += 'Use deploymentStatus.check() to refresh\n';
+            
+            consoleDiv.innerHTML = output;
+        }
+
+        // Deployment action functions
+        function checkDeploymentStatus() {
+            if (window.deploymentStatus) {
+                window.deploymentStatus.check();
+                document.getElementById('deploymentConsole').innerHTML = 'Running deployment check...\n';
+                setTimeout(() => {
+                    const status = window.deploymentStatus.getStatus();
+                    updateDeploymentUI(status);
+                }, 3000);
+            } else {
+                alert('Deployment status checker not available');
+            }
+        }
+
+        function showDeploymentHistory() {
+            const consoleDiv = document.getElementById('deploymentConsole');
+            consoleDiv.innerHTML = `📜 Deployment History
+================================
+
+Recent Commits (from Git):
+• ac59a17 - perf: Optimize feedback analysis to be non-blocking
+• e507649 - feat: Enable real user feedback in admin console  
+• f9c19f6 - chore: Force deployment refresh for reputation badge fix
+• e98e887 - fix: Resolve reputation badge MIME type issues
+
+Deployment Timeline:
+• Backend: Last restart based on uptime counter
+• Frontend: Build timestamps in deployment-status.js
+• Database: Schema migrations tracked in Prisma
+
+Use 'git log --oneline -10' for complete history
+`;
+        }
+
+        function showGitWorkflow() {
+            const consoleDiv = document.getElementById('deploymentConsole');
+            consoleDiv.innerHTML = `🔀 Git Workflow Status
+================================
+
+Current Branch: main
+Deploy Target: Azure Container Apps + Static Web Apps
+
+Workflow Triggers:
+✅ Push to main → Backend deploys to Container Apps
+✅ Push to main → Frontend deploys to Static Web Apps  
+✅ Schema changes → Require manual migration
+✅ Build timestamps → Auto-updated on deployment
+
+Recent Deployments:
+• Backend: Check uptime for last restart
+• Frontend: Check build-info.json for timestamps
+• Async: Some changes deploy in background
+
+To trigger deployment:
+1. git add . && git commit -m "changes"
+2. git push origin main  
+3. Wait 3-10 minutes for Azure deployment
+4. Check uptime reset to confirm deployment
+
+Current Status: Use deploymentStatus.check() for real-time status
+`;
         }
 
         // Load system data
@@ -1015,6 +1271,9 @@
                     break;
                 case 'ai-insights':
                     loadAIInsightsData();
+                    break;
+                case 'deployment':
+                    loadDeploymentData();
                     break;
                 case 'system':
                     loadSystemData();
