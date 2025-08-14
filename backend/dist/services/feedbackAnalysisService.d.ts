@@ -40,9 +40,21 @@ export declare class FeedbackAnalysisService {
      */
     private performVectorSimilarityAnalysis;
     /**
+     * Async post-creation feedback analysis
+     * Updates the post with feedback data after creation
+     */
+    analyzePostAsync(postId: string, content: string, userId?: string): Promise<void>;
+    /**
      * Analyze a post to determine if it contains feedback about the site
      */
     analyzePost(content: string, userId?: string): Promise<FeedbackAnalysis>;
+    /**
+     * Ultra-fast keyword check for async determination
+     * Public method for posts.ts to use synchronously
+     */
+    performQuickKeywordCheck(content: string): {
+        isPotentialFeedback: boolean;
+    };
     /**
      * Quick keyword-based analysis for initial screening
      */

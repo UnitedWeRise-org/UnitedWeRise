@@ -239,6 +239,52 @@ Respond with JSON only:
 
 
     /**
+     * Async post-creation feedback analysis
+     * Updates the post with feedback data after creation
+     */
+    async analyzePostAsync(postId: string, content: string, userId?: string): Promise<void> {
+        try {
+            const analysis = await this.analyzePost(content, userId);
+            
+            if (analysis.isFeedback && analysis.confidence > 0.6) {
+                // Update the post with feedback data
+                const { PrismaClient } = require('@prisma/client');
+                const prisma = new PrismaClient();
+                
+                await prisma.post.update({
+                    where: { id: postId },
+                    data: {
+                        containsFeedback: true,
+                        feedbackType: analysis.type,
+                        feedbackCategory: analysis.category,
+                        feedbackPriority: analysis.priority,
+                        feedbackConfidence: analysis.confidence,
+                        feedbackSummary: analysis.summary,
+                        feedbackStatus: 'new'
+                    }
+                });
+                
+                logger.info(`Post ${postId} updated with ${analysis.type} feedback (${Math.round(analysis.confidence * 100)}% confidence)`);
+                await prisma.$disconnect();
+            } else {
+                // Mark as analyzed but not feedback
+                const { PrismaClient } = require('@prisma/client');
+                const prisma = new PrismaClient();
+                
+                await prisma.post.update({
+                    where: { id: postId },
+                    data: { containsFeedback: false }
+                });
+                
+                await prisma.$disconnect();
+            }
+        } catch (error) {
+            logger.error(`Failed to analyze post ${postId} for feedback:`, error);
+            // Don't throw - this is async and shouldn't affect post creation
+        }
+    }
+
+    /**
      * Analyze a post to determine if it contains feedback about the site
      */
     async analyzePost(content: string, userId?: string): Promise<FeedbackAnalysis> {
@@ -272,6 +318,40 @@ Respond with JSON only:
                 keywords: fallbackAnalysis.keywords
             };
         }
+    }
+
+    /**
+     * Ultra-fast keyword check for async determination
+     * Public method for posts.ts to use synchronously
+     */
+    performQuickKeywordCheck(content: string): { isPotentialFeedback: boolean } {
+        const lowercaseContent = content.toLowerCase();
+        
+        // Quick check for strong feedback indicators
+        const strongIndicators = [
+            'should be able', 'shouldn\'t be able', 'should just', 
+            'bug', 'error', 'broken', 'not working',
+            'suggest', 'recommend', 'would be nice',
+            'infinite scroll', 'feed should', 'needs to'
+        ];
+        
+        // Platform context check
+        const platformContext = [
+            'this site', 'this website', 'this platform', 'this app',
+            'the feed', 'your feed', 'my feed', 'unitedwerise'
+        ];
+        
+        const hasIndicator = strongIndicators.some(indicator => 
+            lowercaseContent.includes(indicator)
+        );
+        
+        const hasPlatformContext = platformContext.some(context => 
+            lowercaseContent.includes(context)
+        );
+        
+        return { 
+            isPotentialFeedback: hasIndicator && (hasPlatformContext || lowercaseContent.length > 50)
+        };
     }
 
     /**

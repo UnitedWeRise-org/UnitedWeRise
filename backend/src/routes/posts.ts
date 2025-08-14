@@ -49,29 +49,14 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             console.warn('Failed to analyze post for reputation impact:', error);
         }
 
-        // Analyze for site feedback (suggestions, concerns, bug reports)
-        let feedbackData = {};
-        try {
-            const feedbackAnalysis = await feedbackAnalysisService.analyzePost(content.trim(), userId);
-            
-            if (feedbackAnalysis.isFeedback && feedbackAnalysis.confidence > 0.6) {
-                feedbackData = {
-                    containsFeedback: true,
-                    feedbackType: feedbackAnalysis.type,
-                    feedbackCategory: feedbackAnalysis.category,
-                    feedbackPriority: feedbackAnalysis.priority,
-                    feedbackConfidence: feedbackAnalysis.confidence,
-                    feedbackSummary: feedbackAnalysis.summary,
-                    feedbackStatus: 'new'
-                };
-                
-                console.log(`Detected ${feedbackAnalysis.type} feedback with ${Math.round(feedbackAnalysis.confidence * 100)}% confidence:`, 
-                           feedbackAnalysis.summary);
-            }
-        } catch (error) {
-            console.warn('Failed to analyze post for feedback:', error);
-            // Continue without feedback analysis rather than failing the post creation
-        }
+        // Quick synchronous feedback check (instant, non-blocking)
+        const quickCheck = feedbackAnalysisService.performQuickKeywordCheck(content.trim());
+        const feedbackData = quickCheck.isPotentialFeedback ? {
+            containsFeedback: null, // Will be determined asynchronously
+            feedbackStatus: 'pending_analysis'
+        } : {
+            containsFeedback: false // Definitely not feedback based on quick check
+        };
 
         // Get user's current reputation for post attribution
         const userReputation = await reputationService.getUserReputation(userId);
@@ -119,6 +104,18 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             } catch (error) {
                 console.warn('Failed to update reputation event with post ID:', error);
             }
+        }
+
+        // Async feedback analysis - runs in background without blocking response
+        if (quickCheck.isPotentialFeedback) {
+            // Fire and forget - don't await
+            feedbackAnalysisService.analyzePostAsync(post.id, content.trim(), userId)
+                .then(() => {
+                    console.log(`Async feedback analysis completed for post ${post.id}`);
+                })
+                .catch(error => {
+                    console.error(`Async feedback analysis failed for post ${post.id}:`, error);
+                });
         }
 
         res.status(201).json({
