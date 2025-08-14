@@ -22,21 +22,89 @@ let autocompleteInstances = {};
 function initGoogleMaps() {
     console.log('Google Maps API loaded successfully');
     
+    // Make initAutocomplete globally available
+    window.initAutocomplete = initAutocomplete;
+    
     // Registration form no longer includes address field
     
     // Initialize autocomplete for other forms as needed
     initAutocompleteForRepresentativeLookup();
 }
 
-// Generic autocomplete initialization
-function initAutocomplete(inputId, instanceName) {
+// Generic autocomplete initialization using new PlaceAutocompleteElement
+async function initAutocomplete(inputId, instanceName) {
     const input = document.getElementById(inputId);
     if (!input) {
         console.log(`Input field ${inputId} not found, will retry when needed`);
         return;
     }
 
-    // Create autocomplete instance
+    try {
+        // Import the places library if not already loaded
+        if (!google.maps.places.PlaceAutocompleteElement) {
+            await google.maps.importLibrary("places");
+        }
+
+        // Create new PlaceAutocompleteElement
+        const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+            types: ['address'],
+            componentRestrictions: { country: 'us' }
+        });
+
+        // Replace the original input with the new element
+        input.parentNode.replaceChild(placeAutocomplete, input);
+        placeAutocomplete.id = inputId; // Keep the same ID
+
+        // Store instance for later reference
+        autocompleteInstances[instanceName] = placeAutocomplete;
+
+        // Add listener for place selection using new event
+        placeAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+            try {
+                const place = event.placePrediction.toPlace();
+                await place.fetchFields({
+                    fields: ['displayName', 'formattedAddress', 'location', 'addressComponents']
+                });
+
+                // Convert to legacy format for compatibility
+                const legacyPlace = {
+                    formatted_address: place.formattedAddress,
+                    geometry: {
+                        location: place.location
+                    },
+                    address_components: place.addressComponents?.map(component => ({
+                        long_name: component.longText,
+                        short_name: component.shortText,
+                        types: component.types
+                    })) || []
+                };
+
+                // Process the selected address using existing function
+                processSelectedAddress(legacyPlace, inputId);
+            } catch (error) {
+                console.error('Error processing place selection:', error);
+            }
+        });
+
+        console.log(`Autocomplete initialized for ${inputId} using PlaceAutocompleteElement`);
+    } catch (error) {
+        console.error('Error initializing PlaceAutocompleteElement:', error);
+        // Fallback to legacy implementation if new one fails
+        initLegacyAutocomplete(inputId, instanceName);
+    }
+}
+
+// Legacy fallback function (for compatibility)
+function initLegacyAutocomplete(inputId, instanceName) {
+    const input = document.getElementById(inputId);
+    if (!input) {
+        console.log(`Input field ${inputId} not found for legacy fallback`);
+        return;
+    }
+
+    console.log(`Using legacy Autocomplete for ${inputId} as fallback`);
+    
+    // Create legacy autocomplete instance
     const autocomplete = new google.maps.places.Autocomplete(input, {
         types: ['address'],
         componentRestrictions: { country: 'us' },
@@ -59,15 +127,20 @@ function initAutocomplete(inputId, instanceName) {
         processSelectedAddress(place, inputId);
     });
 
-    console.log(`Autocomplete initialized for ${inputId}`);
+    console.log(`Legacy autocomplete initialized for ${inputId}`);
 }
 
 // Process selected address and extract components
 function processSelectedAddress(place, inputId) {
+    // Handle both new and legacy Place formats
+    const location = place.geometry?.location;
+    const lat = typeof location?.lat === 'function' ? location.lat() : location?.lat;
+    const lng = typeof location?.lng === 'function' ? location.lng() : location?.lng;
+    
     const addressData = {
         formatted_address: place.formatted_address,
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
+        lat: lat,
+        lng: lng,
         components: {}
     };
 
@@ -106,6 +179,26 @@ function processSelectedAddress(place, inputId) {
     const dataField = document.getElementById(inputId + 'Data');
     if (dataField) {
         dataField.value = JSON.stringify(addressData);
+    }
+
+    // Special handling for profile address form
+    if (inputId === 'editStreetAddress') {
+        // Auto-fill profile form fields
+        const cityField = document.getElementById('editCity');
+        const stateField = document.getElementById('editState');
+        const zipField = document.getElementById('editZipCode');
+        
+        if (addressData.components.city && cityField) {
+            cityField.value = addressData.components.city;
+        }
+        if (addressData.components.state && stateField) {
+            stateField.value = addressData.components.state;
+        }
+        if (addressData.components.zip && zipField) {
+            zipField.value = addressData.components.zip;
+        }
+        
+        console.log('✅ Profile form fields auto-filled from address selection');
     }
 
     // Store in window for easy access

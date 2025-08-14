@@ -798,35 +798,57 @@ class MyProfile {
         `;
         document.body.appendChild(modal);
         
-        // If Google Maps is available, initialize autocomplete
+        // If Google Maps is available, initialize autocomplete using new API
         if (window.google && window.google.maps) {
-            setTimeout(() => {
-                const input = document.getElementById('editStreetAddress');
-                const autocomplete = new google.maps.places.Autocomplete(input, {
-                    types: ['address'],
-                    componentRestrictions: { country: 'us' },
-                    fields: ['formatted_address', 'address_components']
-                });
-                
-                autocomplete.addListener('place_changed', () => {
-                    const place = autocomplete.getPlace();
-                    if (place.address_components) {
-                        place.address_components.forEach(component => {
-                            const types = component.types;
-                            if (types.includes('locality')) {
-                                document.getElementById('editCity').value = component.long_name;
-                            }
-                            if (types.includes('administrative_area_level_1')) {
-                                document.getElementById('editState').value = component.short_name;
-                            }
-                            if (types.includes('postal_code')) {
-                                document.getElementById('editZipCode').value = component.long_name;
-                            }
-                        });
+            setTimeout(async () => {
+                try {
+                    // Use the updated global autocomplete function
+                    if (window.initAutocomplete) {
+                        await window.initAutocomplete('editStreetAddress', 'profileAddress');
+                        console.log('✅ Profile address autocomplete initialized using new PlaceAutocompleteElement');
+                    } else {
+                        // Fallback to legacy if global function not available
+                        console.log('⚠️ Global initAutocomplete not found, using legacy implementation');
+                        this.initLegacyProfileAutocomplete();
                     }
-                });
+                } catch (error) {
+                    console.error('Error initializing profile autocomplete:', error);
+                    this.initLegacyProfileAutocomplete();
+                }
             }, 100);
         }
+    }
+    
+    // Legacy fallback method for MyProfile autocomplete
+    initLegacyProfileAutocomplete() {
+        const input = document.getElementById('editStreetAddress');
+        if (!input) return;
+        
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            types: ['address'],
+            componentRestrictions: { country: 'us' },
+            fields: ['formatted_address', 'address_components']
+        });
+        
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.address_components) {
+                place.address_components.forEach(component => {
+                    const types = component.types;
+                    if (types.includes('locality')) {
+                        document.getElementById('editCity').value = component.long_name;
+                    }
+                    if (types.includes('administrative_area_level_1')) {
+                        document.getElementById('editState').value = component.short_name;
+                    }
+                    if (types.includes('postal_code')) {
+                        document.getElementById('editZipCode').value = component.long_name;
+                    }
+                });
+            }
+        });
+        
+        console.log('✅ Legacy profile autocomplete initialized');
     }
     
     async saveAddress() {
