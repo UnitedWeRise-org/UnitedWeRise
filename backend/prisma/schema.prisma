@@ -71,6 +71,8 @@ model User {
   endorsements            Endorsement[]
   following               Follow[]                  @relation("Follower")
   followers               Follow[]                  @relation("Following")
+  sentFriendRequests      Friendship[]              @relation("FriendshipRequester")
+  receivedFriendRequests  Friendship[]              @relation("FriendshipRecipient")
   likes                   Like[]
   sentMessages            Message[]                 @relation("SentMessages")
   moderationLogs          ModerationLog[]           @relation("ModerationLogs")
@@ -121,6 +123,22 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model Friendship {
+  id          String            @id @default(cuid())
+  requesterId String
+  recipientId String
+  status      FriendshipStatus  @default(PENDING)
+  createdAt   DateTime          @default(now())
+  acceptedAt  DateTime?
+  requester   User              @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient   User              @relation("FriendshipRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@index([requesterId])
+  @@index([recipientId])
+  @@index([status])
 }
 
 model Post {
@@ -901,6 +919,15 @@ enum NotificationType {
   MENTION
   VERIFICATION_APPROVED
   VERIFICATION_DENIED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
 }
 
 enum PoliticalProfileType {

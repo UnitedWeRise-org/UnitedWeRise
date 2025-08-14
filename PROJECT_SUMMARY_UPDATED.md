@@ -55,6 +55,9 @@ TopicPost      // Many-to-many topic-post relationships
 Candidate      // Enhanced candidate profiles with positions
 Election       // Election data with office information
 CandidateMessage // Direct citizen-candidate communication
+Follow         // One-way following for content discovery
+Friendship     // Bidirectional friendship system with status workflow
+Notification   // Enhanced with friend request notifications
 Photo          // Profile/campaign photo management
 Onboarding     // Guided user onboarding system
 ```
@@ -132,6 +135,8 @@ frontend/
 - ✅ **My Profile System**: Comprehensive profile management with tabbed interface
 - ✅ **Enhanced Authentication**: Modal-based login/register with validation
 - ✅ **Candidate Discovery**: Advanced candidate search and comparison
+- ✅ **Follow/Friend System**: Complete relationship management with reusable UI components
+- ✅ **Real-time Updates**: Event-driven UI synchronization for relationship changes
 - ✅ **Interactive Elections**: Upcoming elections with candidate information
 - ✅ **Official Lookup**: Find representatives by location
 - ✅ **Real-time Messaging**: Direct communication with candidates
@@ -258,6 +263,7 @@ frontend/
 8. **Real-time Communication** - WebSocket-based messaging system
 9. **Advanced Candidate Tools** - Professional-grade campaign management
 10. **Tunable Algorithm System** - A/B testing and personalization capabilities for feed optimization
+11. **Complete Relationship System** - Reusable follow/friend functionality with production-safe database migration
 
 ## 🔮 Future Roadmap
 

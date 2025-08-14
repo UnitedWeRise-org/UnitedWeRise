@@ -65,7 +65,8 @@
       "Bash(\"SIMILARITY_THRESHOLD=0.60\")",
       "Bash(echo:*)",
       "Bash(gh run list:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

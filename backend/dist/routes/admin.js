@@ -773,67 +773,103 @@ router.get('/errors', auth_1.requireAuth, requireAdmin, async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve error data' });
     }
 });
-// AI Insights - User Suggestions Endpoint
+// AI Insights - User Suggestions Endpoint (Now with REAL feedback data!)
 router.get('/ai-insights/suggestions', auth_1.requireAuth, requireAdmin, async (req, res) => {
     try {
         const category = req.query.category || 'all';
         const status = req.query.status || 'all';
-        // For now, return mock data until we implement AI feedback analysis
-        const mockSuggestions = [
-            {
-                id: 'sugg_1',
-                category: 'ui_ux',
-                summary: 'Improve mobile navigation menu accessibility',
-                status: 'new',
-                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-                confidence: 85,
-                source: 'user_feedback'
-            },
-            {
-                id: 'sugg_2',
-                category: 'features',
-                summary: 'Add dark mode toggle to user preferences',
-                status: 'reviewed',
-                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-                confidence: 92,
-                source: 'ai_analysis'
-            },
-            {
-                id: 'sugg_3',
-                category: 'performance',
-                summary: 'Optimize image loading on timeline feed',
-                status: 'implemented',
-                createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-                confidence: 78,
-                source: 'user_feedback'
-            },
-            {
-                id: 'sugg_4',
-                category: 'moderation',
-                summary: 'Enhance political discourse moderation sensitivity',
-                status: 'new',
-                createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-                confidence: 89,
-                source: 'ai_analysis'
-            }
-        ];
-        // Filter suggestions
-        let filteredSuggestions = mockSuggestions;
-        if (category !== 'all') {
-            filteredSuggestions = filteredSuggestions.filter(s => s.category === category);
+        // Build query for real feedback from database
+        const where = {
+            containsFeedback: true
+        };
+        // Map UI categories to database categories
+        const categoryMap = {
+            'ui_ux': 'ui_ux',
+            'features': 'functionality',
+            'performance': 'performance',
+            'bugs': 'functionality',
+            'moderation': 'moderation'
+        };
+        if (category !== 'all' && categoryMap[category]) {
+            where.feedbackCategory = categoryMap[category];
         }
         if (status !== 'all') {
-            filteredSuggestions = filteredSuggestions.filter(s => s.status === status);
+            where.feedbackStatus = status === 'implemented' ? 'resolved' : status;
+        }
+        // Fetch real feedback posts from database
+        const feedbackPosts = await prisma.post.findMany({
+            where,
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true
+                    }
+                }
+            },
+            orderBy: [
+                { feedbackPriority: 'desc' },
+                { createdAt: 'desc' }
+            ],
+            take: 50 // Get more feedback
+        });
+        // Transform real posts to suggestions format
+        const suggestions = feedbackPosts.map(post => ({
+            id: post.id,
+            category: post.feedbackCategory === 'functionality' ? 'features' :
+                post.feedbackCategory || 'general',
+            summary: post.feedbackSummary ||
+                (post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content),
+            status: post.feedbackStatus === 'resolved' ? 'implemented' :
+                post.feedbackStatus || 'new',
+            createdAt: post.createdAt,
+            confidence: Math.round((post.feedbackConfidence || 0.5) * 100),
+            source: 'user_feedback',
+            author: post.author?.username || 'Anonymous',
+            fullContent: post.content,
+            type: post.feedbackType || 'suggestion'
+        }));
+        // Get real statistics from database
+        const [totalCount, implementedCount, newCount, highPriorityCount] = await Promise.all([
+            prisma.post.count({ where: { containsFeedback: true } }),
+            prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'resolved' } }),
+            prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'new' } }),
+            prisma.post.count({ where: { containsFeedback: true, feedbackPriority: 'high' } })
+        ]);
+        // Calculate average confidence from real data
+        const avgConfidence = await prisma.post.aggregate({
+            where: { containsFeedback: true },
+            _avg: { feedbackConfidence: true }
+        });
+        const accuracy = Math.round((avgConfidence._avg.feedbackConfidence || 0.75) * 100);
+        // If no real feedback exists yet, include helpful examples
+        if (suggestions.length === 0) {
+            suggestions.push({
+                id: 'example_1',
+                category: 'features',
+                summary: 'Example: "You shouldn\'t be able to scroll to the end of your Feed, it should populate infinitely"',
+                status: 'new',
+                createdAt: new Date(),
+                confidence: 85,
+                source: 'example',
+                author: 'System',
+                fullContent: 'This is an example of the type of feedback the system will detect automatically.',
+                type: 'suggestion'
+            });
         }
         res.json({
             stats: {
-                total: mockSuggestions.length,
-                implemented: mockSuggestions.filter(s => s.status === 'implemented').length,
-                moderationActions: 15, // Mock data
-                accuracy: 87 // Mock accuracy percentage
+                total: totalCount || suggestions.length,
+                implemented: implementedCount,
+                moderationActions: highPriorityCount, // High priority feedback
+                accuracy: accuracy
             },
-            suggestions: filteredSuggestions,
-            note: 'AI insights are simulated. Production implementation requires AI feedback analysis integration.'
+            suggestions: suggestions,
+            note: totalCount === 0 ?
+                'No feedback detected yet. The system analyzes all posts for suggestions, bug reports, and concerns.' :
+                `Showing ${suggestions.length} of ${totalCount} total feedback items from real users.`
         });
     }
     catch (error) {

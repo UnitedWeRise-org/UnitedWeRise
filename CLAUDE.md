@@ -8,9 +8,16 @@
 - **Azure OpenAI**: https://unitedwerise-openai.openai.azure.com/
 - **Status**: ✅ All services operational
 
-### ✅ DEPLOYED: Comprehensive Reputation System
+### 🏆 CURRENT STATUS: Comprehensive Reputation System
 
-**Status**: ✅ **LIVE & OPERATIONAL** - Complete reputation scoring system deployed
+**Backend Status**: ✅ **FULLY OPERATIONAL** - Complete reputation scoring system deployed
+**Frontend Status**: 🚧 **DEPLOYMENT IN PROGRESS** - Badge display system pushed to GitHub (Azure deployment pending)
+
+**Deployment Timeline**:
+- Pushed commits e98e887, f9c19f6 at ~14:26 UTC
+- Expected Azure deployment completion: 2-5 minutes from trigger
+- **Debug Status**: ⏳ Cannot debug MIME type errors until Azure deployment completes
+- Manual workaround available in `REPUTATION_QUICK_FIX.md`
 
 **System Overview**: 0-100 behavioral reputation scoring with AI analysis, democratic moderation, and appeals process
 
@@ -258,6 +265,68 @@ Add up all positioning values from viewport to target element:
   - `POST /api/topic-navigation/enter/:topicId` - Enter topic mode
   - `POST /api/topic-navigation/exit` - Return to main feed
   - `GET /api/topic-navigation/:topicId/posts` - Get topic posts
+
+### 🤝 Follow/Friend Relationship System ✨
+
+**Status**: ✅ **FULLY IMPLEMENTED** - Complete follow/friend system with reusable architecture
+
+**System Overview**: Dual relationship model with one-way following for content discovery and bidirectional friendships for private messaging and enhanced interactions.
+
+**Core Features**:
+1. **Follow System**: One-way algorithmic following for content curation in feeds
+2. **Friend System**: Bidirectional relationships with request/accept workflow for private messaging  
+3. **Reusable Architecture**: Service layer and UI components work across all contexts
+4. **Real-time Updates**: Event-driven UI synchronization across relationship contexts
+5. **Privacy Controls**: Friend-only messaging, content visibility based on relationships
+6. **Bulk Operations**: Efficient status checks for user lists and feeds
+
+**Database Schema**:
+- **`Follow` model**: Existing one-way follow relationships with follower/following counts
+- **`Friendship` model**: New bidirectional friendship system with status workflow (PENDING/ACCEPTED/REJECTED/BLOCKED)
+- **Enhanced notifications**: Added FRIEND_REQUEST and FRIEND_ACCEPTED notification types
+
+**Backend Services (`/api/relationships/`)**:
+- **`FollowService`**: Complete follow/unfollow with atomic transactions and notifications
+- **`FriendService`**: Friend request workflow (send/accept/reject/remove) with validation
+- **`RelationshipUtils`**: Combined utilities, suggestions, and bulk operations
+- **Bulk endpoints**: Efficient status checks for multiple users simultaneously
+
+**Frontend Components**:
+- **`relationship-utils.js`**: Core utilities for follow/friend actions across any UI context
+- **`user-relationship-display.js`**: Reusable component for relationship status and controls
+- **Event-driven architecture**: Real-time UI updates via custom events
+
+**API Endpoints**:
+- **Follow**: `POST/DELETE /api/relationships/follow/:userId`, `GET /api/relationships/follow-status/:userId`
+- **Friends**: `POST /api/relationships/friend-request/:userId`, `POST /api/relationships/friend-request/:userId/accept`
+- **Lists**: `GET /api/relationships/:userId/followers`, `GET /api/relationships/:userId/friends`
+- **Bulk**: `POST /api/relationships/bulk/follow-status`, `POST /api/relationships/bulk/friend-status`
+- **Combined**: `GET /api/relationships/status/:userId` - comprehensive relationship status
+- **Suggestions**: `GET /api/relationships/suggestions/follow` - mutual connection recommendations
+
+**Usage Examples**:
+```javascript
+// Quick follow toggle anywhere in the UI
+await FollowUtils.toggleFollow(userId, currentlyFollowing);
+
+// Create relationship buttons for any user context
+const container = document.getElementById('user-actions');
+addRelationshipDisplay(userId, container, { size: 'sm', inline: true });
+
+// Bulk status for user lists (efficient for feeds)
+const statusMap = await FollowService.getBulkFollowStatus(currentUserId, userIds);
+
+// Friend request workflow
+await FriendUtils.sendFriendRequest(userId);
+await FriendUtils.acceptFriendRequest(userId);
+```
+
+**Files Implemented**:
+- `backend/src/services/relationshipService.ts` (400+ lines) - Complete service layer
+- `backend/src/routes/relationships.ts` (300+ lines) - All API endpoints  
+- `frontend/src/js/relationship-utils.js` (400+ lines) - Core utilities
+- `frontend/src/components/user-relationship-display.js` (250+ lines) - Reusable UI component
+- `backend/migrations/friendship-system-migration.sql` - Production-safe database migration
 
 ### Authentication System Architecture
 

@@ -26,6 +26,7 @@ import googleCivicRoutes from './routes/googleCivic';
 import feedbackRoutes from './routes/feedback';
 import batchRoutes from './routes/batch';
 import reputationRoutes from './routes/reputation';
+import relationshipRoutes from './routes/relationships';
 import healthRoutes from './routes/health';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
@@ -126,6 +127,7 @@ app.use('/api/google-civic', googleCivicRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/batch', batchRoutes);
 app.use('/api/reputation', reputationRoutes);
+app.use('/api/relationships', relationshipRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically

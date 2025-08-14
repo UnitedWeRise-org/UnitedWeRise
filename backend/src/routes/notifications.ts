@@ -112,7 +112,7 @@ router.put('/read-all', requireAuth, async (req: AuthRequest, res) => {
 
 // Helper function to create notifications (we'll use this in other routes)
 export const createNotification = async (
-  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION',
+  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION' | 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED',
   senderId: string | null,
   receiverId: string,
   message: string,

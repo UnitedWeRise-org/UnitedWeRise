@@ -3,11 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const notifications_1 = require("./notifications");
 const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
+const relationshipService_1 = require("../services/relationshipService");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Get current user's full profile
@@ -127,96 +127,36 @@ router.get('/:userId', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Follow a user
+// Follow a user (using reusable service)
 router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
-        if (userId === currentUserId) {
-            return res.status(400).json({ error: 'Cannot follow yourself' });
+        const result = await relationshipService_1.FollowService.followUser(currentUserId, userId);
+        if (result.success) {
+            res.json({ message: result.message, data: result.data });
         }
-        // Check if user exists
-        const userToFollow = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-        if (!userToFollow) {
-            return res.status(404).json({ error: 'User not found' });
+        else {
+            res.status(400).json({ error: result.message });
         }
-        // Check if already following
-        const existingFollow = await prisma.follow.findUnique({
-            where: {
-                followerId_followingId: {
-                    followerId: currentUserId,
-                    followingId: userId
-                }
-            }
-        });
-        if (existingFollow) {
-            return res.status(400).json({ error: 'Already following this user' });
-        }
-        // Create follow relationship and update counts
-        await prisma.$transaction([
-            prisma.follow.create({
-                data: {
-                    followerId: currentUserId,
-                    followingId: userId
-                }
-            }),
-            prisma.user.update({
-                where: { id: currentUserId },
-                data: { followingCount: { increment: 1 } }
-            }),
-            prisma.user.update({
-                where: { id: userId },
-                data: { followersCount: { increment: 1 } }
-            })
-        ]);
-        res.json({ message: 'Successfully followed user' });
-        // Create follow notification
-        await (0, notifications_1.createNotification)('FOLLOW', currentUserId, userId, `${req.user.username} started following you`);
     }
     catch (error) {
         console.error('Follow user error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Unfollow a user
+// Unfollow a user (using reusable service)
 router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
-        // Check if following
-        const existingFollow = await prisma.follow.findUnique({
-            where: {
-                followerId_followingId: {
-                    followerId: currentUserId,
-                    followingId: userId
-                }
-            }
-        });
-        if (!existingFollow) {
-            return res.status(400).json({ error: 'Not following this user' });
+        const result = await relationshipService_1.FollowService.unfollowUser(currentUserId, userId);
+        if (result.success) {
+            res.json({ message: result.message, data: result.data });
         }
-        // Remove follow relationship and update counts
-        await prisma.$transaction([
-            prisma.follow.delete({
-                where: {
-                    followerId_followingId: {
-                        followerId: currentUserId,
-                        followingId: userId
-                    }
-                }
-            }),
-            prisma.user.update({
-                where: { id: currentUserId },
-                data: { followingCount: { decrement: 1 } }
-            }),
-            prisma.user.update({
-                where: { id: userId },
-                data: { followersCount: { decrement: 1 } }
-            })
-        ]);
-        res.json({ message: 'Successfully unfollowed user' });
+        else {
+            res.status(400).json({ error: result.message });
+        }
     }
     catch (error) {
         console.error('Unfollow user error:', error);
@@ -413,22 +353,13 @@ router.get('/:userId/following', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Check if current user is following another user
+// Check if current user is following another user (using reusable service)
 router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
-        const followRelation = await prisma.follow.findUnique({
-            where: {
-                followerId_followingId: {
-                    followerId: currentUserId,
-                    followingId: userId
-                }
-            }
-        });
-        res.json({
-            isFollowing: !!followRelation
-        });
+        const status = await relationshipService_1.FollowService.getFollowStatus(currentUserId, userId);
+        res.json(status);
     }
     catch (error) {
         console.error('Check follow status error:', error);

@@ -52,9 +52,19 @@
 
 ### **🏆 Community Reputation System - NEW ✨**
 - **[REPUTATION_SYSTEM_COMPLETE.md](./REPUTATION_SYSTEM_COMPLETE.md)** - Complete 0-100 reputation scoring system
-- **Status**: ✅ Fully implemented and production-ready
+- **Status**: 🚧 **DEPLOYED TO BACKEND** - Frontend badge display deployment in progress
 - **Features**: Content warnings, algorithmic visibility effects, AI-powered appeals
 - **Philosophy**: Transparent accountability without censorship
+- **Deployment**: Backend APIs live, frontend badges pushed to GitHub (Azure deployment pending)
+- **Debug Status**: ⏳ Pending Azure Static Web Apps deployment completion before debugging
+
+### **🤝 Follow/Friend Relationship System - NEW ✨**
+- **[RELATIONSHIP_SYSTEM_DEPLOYMENT.md](./RELATIONSHIP_SYSTEM_DEPLOYMENT.md)** - Complete follow/friend implementation guide
+- **Status**: ✅ **FULLY IMPLEMENTED** - Ready for production deployment
+- **Features**: Reusable follow/friend system with bidirectional friendships and private messaging
+- **Architecture**: Service layer and UI components work across all contexts
+- **Database**: Production-safe migration completed, compatible with reputation system
+- **Frontend**: Event-driven UI components with real-time updates
 
 ### **🌐 Domain & Deployment**
 - **[DOMAIN_SETUP_GUIDE.md](./DOMAIN_SETUP_GUIDE.md)** - Custom domain configuration
@@ -145,11 +155,15 @@
 - ✅ **DEPLOYED**: Error tracking and performance optimization
 - ✅ **DEPLOYED**: AI insights for user suggestions and content analysis
 - ✅ **DEPLOYED**: Console debugging tools for admin operations
-- ✅ **DEPLOYED**: Complete reputation system with Azure OpenAI integration
+- ✅ **DEPLOYED**: Complete reputation system with Azure OpenAI integration (backend)
+- 🚧 **DEPLOYING**: Reputation badge UI system (pushed to GitHub, Azure deployment pending)
 - ✅ **DEPLOYED**: Content moderation with behavioral scoring (not opinion-based)
 - ✅ **DEPLOYED**: Appeals system with AI + human review process
 - ✅ **DEPLOYED**: Real-time deployment status monitoring across all components
 - ✅ **DEPLOYED**: Health endpoints for frontend, backend, database, and services
+- ✅ **IMPLEMENTED**: Complete follow/friend relationship system (ready for deployment)
+- ✅ **IMPLEMENTED**: Reusable UI components for relationship management across all contexts
+- ✅ **IMPLEMENTED**: Production-safe database migration for friendship system
 
 ### **AI/Semantic Features Status**
 - ✅ **DEPLOYED**: Azure OpenAI integration for reputation system content analysis

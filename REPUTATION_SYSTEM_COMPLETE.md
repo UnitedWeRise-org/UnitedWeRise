@@ -10,6 +10,22 @@ A comprehensive 0-100 reputation scoring system that promotes civil discourse wi
 - Focus on behavior/civility, not content/opinions
 - Mild algorithmic adjustments (±10-20% visibility)
 
+## 🚀 Deployment Status
+
+**Backend**: ✅ **FULLY DEPLOYED** - All APIs operational
+- Database schema migrated and active
+- Azure OpenAI integration functional
+- Content analysis and scoring live
+- Appeals system operational
+
+**Frontend**: 🚧 **DEPLOYMENT IN PROGRESS**
+- Badge display system pushed to GitHub (commits e98e887, f9c19f6)
+- Azure Static Web Apps deployment triggered
+- Manual browser console workaround available (see REPUTATION_QUICK_FIX.md)
+- **Debug Status**: ⏳ Pending Azure deployment completion before debugging
+
+**Expected Completion**: 2-5 minutes from deployment trigger (14:26 UTC)
+
 ---
 
 ## 📊 System Architecture

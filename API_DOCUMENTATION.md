@@ -1313,6 +1313,89 @@ Content-Type: application/json
   - `409` - Already following user
   - `500` - Follow action failed
 
+### Relationship Endpoints (`/api/relationships`) 🆕
+Complete follow/friend relationship management system with reusable architecture.
+
+#### Follow System
+- **POST /api/relationships/follow/{userId}**
+  - `200` - User followed successfully
+  - `400` - Cannot follow yourself or already following
+  - `401` - Authentication required
+  - `404` - User not found
+  - `500` - Follow operation failed
+- **DELETE /api/relationships/follow/{userId}**
+  - `200` - User unfollowed successfully
+  - `400` - Not following this user
+  - `401` - Authentication required
+  - `500` - Unfollow operation failed
+- **GET /api/relationships/follow-status/{userId}**
+  - `200` - Follow status retrieved
+  - `401` - Authentication required
+  - `500` - Status check failed
+
+#### Friend System
+- **POST /api/relationships/friend-request/{userId}**
+  - `200` - Friend request sent successfully
+  - `400` - Cannot send request to yourself or already friends
+  - `401` - Authentication required
+  - `404` - User not found
+  - `500` - Friend request failed
+- **POST /api/relationships/friend-request/{userId}/accept**
+  - `200` - Friend request accepted
+  - `400` - No pending friend request
+  - `401` - Authentication required
+  - `500` - Accept operation failed
+- **POST /api/relationships/friend-request/{userId}/reject**
+  - `200` - Friend request rejected
+  - `400` - No pending friend request
+  - `401` - Authentication required
+  - `500` - Reject operation failed
+- **DELETE /api/relationships/friend/{userId}**
+  - `200` - Friend removed successfully
+  - `400` - Not friends with this user
+  - `401` - Authentication required
+  - `500` - Remove friend failed
+- **GET /api/relationships/friend-status/{userId}**
+  - `200` - Friend status retrieved
+  - `401` - Authentication required
+  - `500` - Status check failed
+
+#### Lists & Management
+- **GET /api/relationships/{userId}/followers**
+  - `200` - Followers list retrieved
+  - `500` - Failed to retrieve followers
+- **GET /api/relationships/{userId}/following**
+  - `200` - Following list retrieved
+  - `500` - Failed to retrieve following
+- **GET /api/relationships/{userId}/friends**
+  - `200` - Friends list retrieved
+  - `500` - Failed to retrieve friends
+- **GET /api/relationships/friend-requests/pending**
+  - `200` - Pending friend requests retrieved
+  - `401` - Authentication required
+  - `500` - Failed to retrieve requests
+
+#### Utility Endpoints
+- **GET /api/relationships/status/{userId}**
+  - `200` - Combined relationship status retrieved
+  - `401` - Authentication required
+  - `500` - Status check failed
+- **POST /api/relationships/bulk/follow-status**
+  - `200` - Bulk follow status retrieved (max 100 users)
+  - `400` - Invalid userIds array
+  - `401` - Authentication required
+  - `500` - Bulk operation failed
+- **POST /api/relationships/bulk/friend-status**
+  - `200` - Bulk friend status retrieved (max 100 users)
+  - `400` - Invalid userIds array
+  - `401` - Authentication required
+  - `500` - Bulk operation failed
+- **GET /api/relationships/suggestions/{type}**
+  - `200` - Relationship suggestions retrieved (type: follow|friend)
+  - `400` - Invalid suggestion type
+  - `401` - Authentication required
+  - `500` - Failed to get suggestions
+
 ### Post Endpoints (`/api/posts`)
 - **GET /api/posts**
   - `200` - Posts retrieved successfully

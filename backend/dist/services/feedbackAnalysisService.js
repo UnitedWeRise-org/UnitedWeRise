@@ -23,7 +23,9 @@ class FeedbackAnalysisService {
             suggestion: [
                 'suggest', 'recommend', 'should add', 'would be nice', 'feature request',
                 'could improve', 'better if', 'enhance', 'upgrade', 'add feature',
-                'would be great', 'maybe you could', 'it would help', 'consider adding'
+                'would be great', 'maybe you could', 'it would help', 'consider adding',
+                'should be able', 'shouldn\'t be able', 'should just', 'should have',
+                'needs to', 'would prefer', 'instead of', 'rather than'
             ],
             bug_report: [
                 'bug', 'error', 'broken', 'not working', 'glitch', 'issue', 'problem',
@@ -35,7 +37,9 @@ class FeedbackAnalysisService {
             ],
             ui_ux: [
                 'interface', 'design', 'layout', 'button', 'menu', 'navigation',
-                'hard to find', 'confusing layout', 'user experience', 'mobile'
+                'hard to find', 'confusing layout', 'user experience', 'mobile',
+                'scroll', 'feed', 'timeline', 'infinite', 'pagination', 'load more',
+                'end of', 'populate', 'refresh', 'update', 'social media'
             ],
             performance: [
                 'slow', 'fast', 'loading', 'lag', 'speed', 'performance',
@@ -70,7 +74,10 @@ class FeedbackAnalysisService {
                 "The navigation menu needs better design",
                 "The user interface could be more intuitive",
                 "Dark mode would improve the visual experience",
-                "The layout and buttons need repositioning"
+                "The layout and buttons need repositioning",
+                "The feed should have infinite scrolling like other social media",
+                "You shouldn't be able to reach the end of the feed",
+                "Posts should load automatically as you scroll down"
             ],
             performance: [
                 "The website loads too slowly",
