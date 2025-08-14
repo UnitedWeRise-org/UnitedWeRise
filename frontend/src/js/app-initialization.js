@@ -49,22 +49,22 @@ class AppInitializer {
                 });
                 console.log('🔄 Received response from /batch/initialize:', initData);
 
-                if (initData.success) {
+                if (initData.ok && initData.data && initData.data.success) {
                     console.log('✅ Batch initialization successful');
                     
                     // Store fresh user data
-                    this.userData = initData.data.user;
+                    this.userData = initData.data.data.user;
                     localStorage.setItem('currentUser', JSON.stringify(this.userData));
                     window.currentUser = this.userData;
 
                     // Set logged in state with all data
-                    this.setLoggedInState(initData.data);
+                    this.setLoggedInState(initData.data.data);
                     
                     this.isInitialized = true;
                     return { 
                         authenticated: true, 
                         userData: this.userData,
-                        initData: initData.data
+                        initData: initData.data.data
                     };
                 }
             } catch (batchError) {
