@@ -11,19 +11,19 @@
     // Component deployment tracking
     const DEPLOYMENT_CONFIG = {
         // Check intervals (in milliseconds)
-        CHECK_INTERVAL: 30000, // 30 seconds
+        CHECK_INTERVAL: 300000, // 5 minutes
         STARTUP_DELAY: 2000,    // 2 seconds after page load
         
-        // Component endpoints
+        // Component endpoints (using full backend URLs)
         ENDPOINTS: {
-            backend: '/health',
-            database: '/health/database',
-            batch: '/api/batch/health-check',
-            reputation: '/api/reputation/health'
+            backend: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health',
+            database: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health/database',
+            batch: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/batch/health-check',
+            reputation: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/reputation/health'
         },
         
         // Local component info
-        FRONTEND_BUILD_TIME: '2025-08-14T01:04:43.173Z', // Will be replaced during build
+        FRONTEND_BUILD_TIME: new Date().toISOString(), // Current deployment time
         SCHEMA_VERSION: 'v1.0.0-1755133483176' // Will be replaced during build
     };
     
@@ -96,7 +96,11 @@
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.backend, {
                     cache: 'no-cache',
-                    headers: { 'Cache-Control': 'no-cache' }
+                    headers: { 
+                        'Cache-Control': 'no-cache',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
                 });
                 
                 if (response.ok) {
@@ -123,7 +127,12 @@
         async checkDatabase() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.database, {
-                    cache: 'no-cache'
+                    cache: 'no-cache',
+                    headers: { 
+                        'Cache-Control': 'no-cache',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
                 });
                 
                 if (response.ok) {
@@ -150,7 +159,12 @@
         async checkBatchEndpoint() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.batch, {
-                    cache: 'no-cache'
+                    cache: 'no-cache',
+                    headers: { 
+                        'Cache-Control': 'no-cache',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
                 });
                 
                 const status = {
@@ -175,7 +189,12 @@
         async checkReputationSystem() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.reputation, {
-                    cache: 'no-cache'
+                    cache: 'no-cache',
+                    headers: { 
+                        'Cache-Control': 'no-cache',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
                 });
                 
                 const status = {
