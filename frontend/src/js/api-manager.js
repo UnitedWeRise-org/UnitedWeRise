@@ -243,9 +243,13 @@ class APIRequestManager {
 
     buildFetchOptions(options) {
         const headers = {
-            'Content-Type': 'application/json',
             ...options.headers
         };
+        
+        // Only set Content-Type for JSON requests (not multipart uploads)
+        if (!options.skipContentType && !(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
         
         // Add auth token if available
         if (window.authToken) {
@@ -255,7 +259,8 @@ class APIRequestManager {
         return {
             method: options.method || 'GET',
             headers,
-            body: options.body ? JSON.stringify(options.body) : undefined,
+            body: options.body instanceof FormData ? options.body : 
+                  (options.body ? JSON.stringify(options.body) : undefined),
             ...options
         };
     }

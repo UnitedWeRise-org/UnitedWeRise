@@ -166,6 +166,7 @@ model Post {
   reputationEvents   ReputationEvent[]
   comments           Comment[]
   likes              Like[]
+  photos             Photo[]
   author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   topics             TopicPost[]
 
@@ -673,12 +674,15 @@ model Photo {
   flagReason     String?
   moderatedAt    DateTime?
   candidateId    String?
+  gallery        String?      @default("My Photos")
+  postId         String?      // Link to post if this is POST_MEDIA
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   candidate      Candidate?   @relation(fields: [candidateId], references: [id])
   flaggedByUser  User?        @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post           Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([candidateId])
@@ -1079,6 +1083,7 @@ enum PhotoType {
   VERIFICATION
   EVENT
   GALLERY
+  POST_MEDIA
 }
 
 enum PhotoPurpose {

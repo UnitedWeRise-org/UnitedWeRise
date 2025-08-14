@@ -12,6 +12,8 @@ interface PhotoUploadOptions {
   photoType: PhotoType;
   purpose: PhotoPurpose;
   candidateId?: string;
+  gallery?: string;
+  postId?: string;
   maxWidth?: number;
   maxHeight?: number;
   quality?: number;
@@ -31,7 +33,8 @@ export class PhotoService {
   private static readonly UPLOAD_DIR = './uploads/photos';
   private static readonly THUMBNAIL_DIR = './uploads/thumbnails';
   private static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-  private static readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static readonly MAX_ACCOUNT_STORAGE = 100 * 1024 * 1024; // 100MB per account
+  private static readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   
   // Default sizing for different photo types
   private static readonly SIZE_PRESETS = {
@@ -40,7 +43,8 @@ export class PhotoService {
     CAMPAIGN: { width: 800, height: 1000, thumbnailWidth: 200, thumbnailHeight: 250 },
     VERIFICATION: { width: 1024, height: 1024, thumbnailWidth: 256, thumbnailHeight: 256 },
     EVENT: { width: 1200, height: 800, thumbnailWidth: 300, thumbnailHeight: 200 },
-    GALLERY: { width: 1024, height: 1024, thumbnailWidth: 256, thumbnailHeight: 256 }
+    GALLERY: { width: 1024, height: 1024, thumbnailWidth: 256, thumbnailHeight: 256 },
+    POST_MEDIA: { width: 800, height: 800, thumbnailWidth: 200, thumbnailHeight: 200 }
   };
 
   /**
@@ -91,12 +95,24 @@ export class PhotoService {
 
       // Validate user permissions
       await this.validateUserPermissions(options.userId, options.candidateId);
+      
+      // Check account storage limit
+      await this.validateStorageLimit(options.userId, file.size);
+
+      // Perform content moderation
+      const moderationResult = await this.performContentModeration(file, options.photoType);
+      if (!moderationResult.approved) {
+        throw new Error(moderationResult.reason || 'Content moderation failed');
+      }
 
       // Generate unique filenames
       const fileExtension = path.extname(file.originalname);
       const baseFilename = `${uuidv4()}-${options.photoType.toLowerCase()}`;
-      const filename = `${baseFilename}.webp`; // Convert everything to WebP for efficiency
-      const thumbnailFilename = `${baseFilename}-thumb.webp`;
+      const isGif = file.mimetype === 'image/gif';
+      
+      // Keep GIFs as GIFs, convert others to WebP for efficiency
+      const filename = isGif ? `${baseFilename}.gif` : `${baseFilename}.webp`;
+      const thumbnailFilename = `${baseFilename}-thumb.webp`; // Always WebP for thumbnails
 
       const filepath = path.join(this.UPLOAD_DIR, filename);
       const thumbnailPath = path.join(this.THUMBNAIL_DIR, thumbnailFilename);
@@ -106,27 +122,42 @@ export class PhotoService {
       const maxWidth = options.maxWidth || preset.width;
       const maxHeight = options.maxHeight || preset.height;
 
-      // Process main image
-      const processedImage = sharp(file.buffer)
-        .resize(maxWidth, maxHeight, { 
-          fit: 'inside', 
-          withoutEnlargement: true 
-        })
-        .webp({ quality: options.quality || 85 });
+      let imageBuffer: Buffer;
+      let metadata: sharp.Metadata;
 
-      const imageBuffer = await processedImage.toBuffer();
-      await processedImage.toFile(filepath);
+      if (isGif) {
+        // For GIFs, resize but keep format and animation
+        const processedGif = sharp(file.buffer, { animated: true })
+          .resize(maxWidth, maxHeight, { 
+            fit: 'inside', 
+            withoutEnlargement: true 
+          })
+          .gif();
+        
+        imageBuffer = await processedGif.toBuffer();
+        await processedGif.toFile(filepath);
+        metadata = await sharp(imageBuffer).metadata();
+      } else {
+        // For static images, convert to WebP
+        const processedImage = sharp(file.buffer)
+          .resize(maxWidth, maxHeight, { 
+            fit: 'inside', 
+            withoutEnlargement: true 
+          })
+          .webp({ quality: options.quality || 85 });
 
-      // Process thumbnail
-      const thumbnailBuffer = await sharp(file.buffer)
+        imageBuffer = await processedImage.toBuffer();
+        await processedImage.toFile(filepath);
+        metadata = await sharp(imageBuffer).metadata();
+      }
+
+      // Always create WebP thumbnail
+      await sharp(file.buffer)
         .resize(preset.thumbnailWidth, preset.thumbnailHeight, { 
           fit: 'cover' 
         })
         .webp({ quality: 75 })
         .toFile(thumbnailPath);
-
-      // Get image metadata
-      const metadata = await sharp(imageBuffer).metadata();
 
       // Save to database
       const photo = await prisma.photo.create({
@@ -138,11 +169,13 @@ export class PhotoService {
           thumbnailUrl: `/uploads/thumbnails/${thumbnailFilename}`,
           photoType: options.photoType,
           purpose: options.purpose,
+          gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
+          postId: options.postId,
           originalSize: file.size,
           compressedSize: imageBuffer.length,
           width: metadata.width || 0,
           height: metadata.height || 0,
-          mimeType: 'image/webp',
+          mimeType: isGif ? 'image/gif' : 'image/webp',
           isApproved: this.shouldAutoApprove(options.photoType, options.userId)
         }
       });
@@ -425,6 +458,26 @@ export class PhotoService {
 
   // Private helper methods
 
+  private static async validateStorageLimit(userId: string, fileSize: number): Promise<void> {
+    const userPhotos = await prisma.photo.findMany({
+      where: {
+        userId,
+        isActive: true
+      },
+      select: {
+        compressedSize: true
+      }
+    });
+
+    const currentUsage = userPhotos.reduce((total, photo) => total + photo.compressedSize, 0);
+    
+    if (currentUsage + fileSize > this.MAX_ACCOUNT_STORAGE) {
+      const usageMB = Math.round(currentUsage / 1024 / 1024);
+      const limitMB = Math.round(this.MAX_ACCOUNT_STORAGE / 1024 / 1024);
+      throw new Error(`Storage limit exceeded. Current usage: ${usageMB}MB, Limit: ${limitMB}MB. Please delete some photos to free up space.`);
+    }
+  }
+
   private static async validateUserPermissions(userId: string, candidateId?: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -457,8 +510,46 @@ export class PhotoService {
       return false; // Require moderation for campaign materials
     }
 
-    // Personal photos can be auto-approved for regular users
+    // Post media needs content screening
+    if (photoType === 'POST_MEDIA') {
+      return false; // Require moderation for public post content
+    }
+
+    // Personal gallery photos can be auto-approved for regular users
+    // (they're not public until used as profile pic or in posts)
     return true;
+  }
+
+  /**
+   * Basic content moderation checks (can be enhanced with AI services)
+   */
+  private static async performContentModeration(
+    file: Express.Multer.File,
+    photoType: PhotoType
+  ): Promise<{ approved: boolean; reason?: string }> {
+    // For now, implement basic file-based checks
+    // TODO: Integrate with Azure Content Moderator or similar service
+    
+    // Check file properties for obvious issues
+    if (file.size > this.MAX_FILE_SIZE) {
+      return { approved: false, reason: 'File too large' };
+    }
+
+    // GIF-specific checks (can be CPU intensive, so basic for now)
+    if (file.mimetype === 'image/gif') {
+      // Basic size check for GIFs (they can be very large)
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for GIFs
+        return { approved: false, reason: 'GIF file too large (max 5MB for GIFs)' };
+      }
+    }
+
+    // For public content (POST_MEDIA), require manual review
+    if (photoType === 'POST_MEDIA') {
+      return { approved: false, reason: 'Post media requires moderation review' };
+    }
+
+    // Auto-approve personal photos
+    return { approved: true };
   }
 
   private static async updateProfileAvatar(
@@ -495,6 +586,114 @@ export class PhotoService {
       console.error('Failed to update profile avatar:', error);
       // Non-critical error - don't fail the upload
     }
+  }
+
+  /**
+   * Get user's photo galleries (organized by gallery name)
+   */
+  static async getUserGalleries(userId: string): Promise<{
+    galleries: Array<{
+      name: string;
+      photos: Photo[];
+      totalSize: number;
+      photoCount: number;
+    }>;
+    totalStorageUsed: number;
+    storageLimit: number;
+  }> {
+    const userPhotos = await prisma.photo.findMany({
+      where: {
+        userId,
+        isActive: true,
+        isApproved: true,
+        photoType: { not: 'POST_MEDIA' } // Exclude post media from galleries
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: { id: true, username: true }
+        }
+      }
+    });
+
+    // Group photos by gallery
+    const galleryMap = new Map<string, Photo[]>();
+    let totalSize = 0;
+
+    userPhotos.forEach(photo => {
+      const galleryName = photo.gallery || 'My Photos';
+      if (!galleryMap.has(galleryName)) {
+        galleryMap.set(galleryName, []);
+      }
+      galleryMap.get(galleryName)!.push(photo);
+      totalSize += photo.compressedSize;
+    });
+
+    // Convert to array format
+    const galleries = Array.from(galleryMap.entries()).map(([name, photos]) => ({
+      name,
+      photos,
+      totalSize: photos.reduce((sum, p) => sum + p.compressedSize, 0),
+      photoCount: photos.length
+    }));
+
+    return {
+      galleries,
+      totalStorageUsed: totalSize,
+      storageLimit: this.MAX_ACCOUNT_STORAGE
+    };
+  }
+
+  /**
+   * Move photo to different gallery
+   */
+  static async movePhotoToGallery(
+    photoId: string,
+    userId: string,
+    newGallery: string
+  ): Promise<void> {
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId }
+    });
+
+    if (!photo || photo.userId !== userId) {
+      throw new Error('Photo not found or permission denied');
+    }
+
+    await prisma.photo.update({
+      where: { id: photoId },
+      data: { gallery: newGallery.trim() || 'My Photos' }
+    });
+
+    console.log(`📁 Photo moved to gallery: ${photoId} → ${newGallery}`);
+  }
+
+  /**
+   * Set user's profile picture
+   */
+  static async setAsProfilePicture(
+    photoId: string,
+    userId: string
+  ): Promise<void> {
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId }
+    });
+
+    if (!photo || photo.userId !== userId) {
+      throw new Error('Photo not found or permission denied');
+    }
+
+    if (photo.photoType !== 'GALLERY' && photo.photoType !== 'AVATAR') {
+      throw new Error('Only gallery photos can be set as profile pictures');
+    }
+
+    // Update user's avatar
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatar: photo.url }
+    });
+
+    console.log(`👤 Profile picture updated: ${userId} → ${photo.url}`);
   }
 
   /**

@@ -92,6 +92,9 @@ class MyProfile {
                     <button class="tab-button ${this.currentTab === 'posts' ? 'active' : ''}" onclick="window.myProfile.switchTab('posts')">
                         My Posts
                     </button>
+                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.myProfile.switchTab('photos')">
+                        Photos
+                    </button>
                     <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" onclick="window.myProfile.switchTab('demographics')">
                         Demographics
                     </button>
@@ -117,6 +120,8 @@ class MyProfile {
         switch (this.currentTab) {
             case 'posts':
                 return this.renderPostsTab();
+            case 'photos':
+                return this.renderPhotosTab();
             case 'demographics':
                 return this.renderDemographicsTab();
             case 'political':
@@ -439,6 +444,43 @@ class MyProfile {
         `;
     }
 
+    renderPhotosTab() {
+        return `
+            <div class="tab-pane">
+                <div class="photos-section">
+                    <div class="section-header">
+                        <h3>Photo Gallery</h3>
+                        <div class="photo-actions">
+                            <button onclick="window.myProfile.uploadPhotos()" class="btn">
+                                📷 Upload Photos
+                            </button>
+                            <button onclick="window.myProfile.createGallery()" class="btn-secondary">
+                                📁 New Gallery
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Storage Usage -->
+                    <div class="storage-info" id="storageInfo">
+                        <div class="storage-bar">
+                            <div class="storage-used" style="width: 0%"></div>
+                        </div>
+                        <span class="storage-text">Loading storage info...</span>
+                    </div>
+
+                    <!-- Photo Galleries -->
+                    <div class="photo-galleries" id="photoGalleries">
+                        <div class="loading-spinner">Loading photos...</div>
+                    </div>
+                </div>
+
+                <!-- Hidden upload input -->
+                <input type="file" id="bulkPhotoUpload" multiple accept="image/*,image/gif" 
+                       style="display: none;" onchange="window.myProfile.handleBulkUpload(this)">
+            </div>
+        `;
+    }
+
     renderError(container, message) {
         container.innerHTML = `
             <div class="error-state">
@@ -461,31 +503,52 @@ class MyProfile {
             btn.classList.remove('active');
         });
         document.querySelector(`[onclick="window.myProfile.switchTab('${tabName}')"]`).classList.add('active');
+
+        // Load data for specific tabs
+        if (tabName === 'photos') {
+            setTimeout(() => this.loadPhotoGalleries(), 100);
+        }
     }
 
     async uploadProfilePicture(input) {
         const file = input.files[0];
         if (!file) return;
 
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+        }
+
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Image must be smaller than 10MB');
+            return;
+        }
+
         const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('photoType', 'profile');
+        formData.append('photos', file); // Backend expects 'photos' array
+        formData.append('photoType', 'AVATAR'); // Must match PhotoType enum
+        formData.append('purpose', 'PERSONAL'); // Required field
 
         try {
             const response = await window.apiCall('/photos/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                skipContentType: true // Let browser set multipart boundary
             });
 
-            if (response.ok) {
-                // Reload profile to show new picture
+            if (response.ok && response.data.photos && response.data.photos.length > 0) {
+                // Profile picture uploaded successfully, reload profile
+                console.log('✅ Profile picture uploaded:', response.data.photos[0].url);
                 this.render('mainContent');
             } else {
-                alert('Failed to upload profile picture');
+                const errorMsg = response.data?.message || 'Failed to upload profile picture';
+                alert(errorMsg);
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Error uploading profile picture');
+            alert('Error uploading profile picture. Please try again.');
         }
     }
 
@@ -783,6 +846,206 @@ class MyProfile {
         if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
             alert('Account deactivation coming soon!');
         }
+    }
+
+    // Photo Gallery Methods
+    
+    async loadPhotoGalleries() {
+        if (this.currentTab !== 'photos') return;
+        
+        try {
+            const response = await window.apiCall('/photos/galleries');
+            
+            if (response.ok && response.data) {
+                this.updateStorageDisplay(response.data);
+                this.updateGalleriesDisplay(response.data.galleries);
+            } else {
+                document.getElementById('photoGalleries').innerHTML = 
+                    '<div class="error-message">Failed to load photo galleries</div>';
+            }
+        } catch (error) {
+            console.error('Error loading galleries:', error);
+            document.getElementById('photoGalleries').innerHTML = 
+                '<div class="error-message">Error loading photo galleries</div>';
+        }
+    }
+
+    updateStorageDisplay(data) {
+        const storageInfo = document.getElementById('storageInfo');
+        if (!storageInfo) return;
+
+        const usedMB = Math.round(data.totalStorageUsed / 1024 / 1024);
+        const limitMB = Math.round(data.storageLimit / 1024 / 1024);
+        const percentage = Math.round((data.totalStorageUsed / data.storageLimit) * 100);
+
+        storageInfo.innerHTML = `
+            <div class="storage-bar">
+                <div class="storage-used" style="width: ${percentage}%"></div>
+            </div>
+            <span class="storage-text">${usedMB}MB / ${limitMB}MB used (${percentage}%)</span>
+        `;
+    }
+
+    updateGalleriesDisplay(galleries) {
+        const container = document.getElementById('photoGalleries');
+        if (!container) return;
+
+        if (!galleries || galleries.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No Photos Yet</h3>
+                    <p>Start building your photo gallery by uploading your first photos!</p>
+                    <button onclick="window.myProfile.uploadPhotos()" class="btn">Upload Photos</button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = galleries.map(gallery => `
+            <div class="gallery-section">
+                <div class="gallery-header">
+                    <h4>${gallery.name}</h4>
+                    <span class="gallery-stats">${gallery.photoCount} photos • ${Math.round(gallery.totalSize / 1024 / 1024)}MB</span>
+                </div>
+                <div class="photo-grid">
+                    ${gallery.photos.map(photo => `
+                        <div class="photo-item" data-photo-id="${photo.id}">
+                            <img src="${photo.thumbnailUrl || photo.url}" alt="${photo.filename}">
+                            <div class="photo-overlay">
+                                <button onclick="window.myProfile.setAsProfilePicture('${photo.id}')" class="photo-action">
+                                    👤 Set as Profile
+                                </button>
+                                <button onclick="window.myProfile.movePhoto('${photo.id}')" class="photo-action">
+                                    📁 Move
+                                </button>
+                                <button onclick="window.myProfile.deletePhoto('${photo.id}')" class="photo-action delete">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    uploadPhotos() {
+        document.getElementById('bulkPhotoUpload').click();
+    }
+
+    async handleBulkUpload(input) {
+        const files = Array.from(input.files);
+        if (files.length === 0) return;
+
+        // Validate files
+        const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
+        if (invalidFiles.length > 0) {
+            alert(`Invalid files detected: ${invalidFiles.map(f => f.name).join(', ')}\nOnly image files are allowed.`);
+            return;
+        }
+
+        // Check individual file sizes
+        const oversizedFiles = files.filter(file => file.size > 10 * 1024 * 1024);
+        if (oversizedFiles.length > 0) {
+            alert(`Files too large: ${oversizedFiles.map(f => f.name).join(', ')}\nEach file must be under 10MB.`);
+            return;
+        }
+
+        const gallery = prompt('Enter gallery name (or leave empty for "My Photos"):') || 'My Photos';
+
+        const formData = new FormData();
+        files.forEach(file => formData.append('photos', file));
+        formData.append('photoType', 'GALLERY');
+        formData.append('purpose', 'PERSONAL');
+        formData.append('gallery', gallery);
+
+        try {
+            const response = await window.apiCall('/photos/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
+                this.loadPhotoGalleries(); // Reload galleries
+            } else {
+                const errorMsg = response.data?.message || 'Failed to upload photos';
+                alert(`Upload failed: ${errorMsg}`);
+            }
+        } catch (error) {
+            console.error('Bulk upload error:', error);
+            alert('Error uploading photos. Please try again.');
+        }
+        
+        // Clear input
+        input.value = '';
+    }
+
+    async setAsProfilePicture(photoId) {
+        try {
+            const response = await window.apiCall(`/photos/${photoId}/set-profile`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                alert('Profile picture updated successfully!');
+                this.render('mainContent'); // Reload entire profile to show new avatar
+            } else {
+                alert('Failed to set profile picture');
+            }
+        } catch (error) {
+            console.error('Error setting profile picture:', error);
+            alert('Error updating profile picture');
+        }
+    }
+
+    async movePhoto(photoId) {
+        const newGallery = prompt('Enter new gallery name:');
+        if (!newGallery) return;
+
+        try {
+            const response = await window.apiCall(`/photos/${photoId}/gallery`, {
+                method: 'PUT',
+                body: { gallery: newGallery }
+            });
+
+            if (response.ok) {
+                this.loadPhotoGalleries(); // Reload galleries
+            } else {
+                alert('Failed to move photo');
+            }
+        } catch (error) {
+            console.error('Error moving photo:', error);
+            alert('Error moving photo');
+        }
+    }
+
+    async deletePhoto(photoId) {
+        if (!confirm('Are you sure you want to delete this photo? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await window.apiCall(`/photos/${photoId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                this.loadPhotoGalleries(); // Reload galleries
+            } else {
+                alert('Failed to delete photo');
+            }
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            alert('Error deleting photo');
+        }
+    }
+
+    createGallery() {
+        const galleryName = prompt('Enter gallery name:');
+        if (!galleryName) return;
+
+        alert(`Gallery creation for "${galleryName}" - next upload will use this gallery name`);
     }
 
     addStyles() {
@@ -1140,6 +1403,176 @@ class MyProfile {
             @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
+            }
+
+            /* Photo Gallery Styles */
+            .photos-section {
+                max-width: 1000px;
+                margin: 0 auto;
+            }
+
+            .section-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2rem;
+                padding-bottom: 1rem;
+                border-bottom: 2px solid #eee;
+            }
+
+            .photo-actions {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .btn-secondary {
+                background: #f5f5f5;
+                color: #333;
+                border: 2px solid #ddd;
+                padding: 0.75rem 1.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 1rem;
+            }
+
+            .btn-secondary:hover {
+                background: #eee;
+                border-color: #ccc;
+            }
+
+            .storage-info {
+                background: #f8f9fa;
+                padding: 1rem;
+                border-radius: 8px;
+                margin-bottom: 2rem;
+            }
+
+            .storage-bar {
+                width: 100%;
+                height: 10px;
+                background: #e0e0e0;
+                border-radius: 5px;
+                overflow: hidden;
+                margin-bottom: 0.5rem;
+            }
+
+            .storage-used {
+                height: 100%;
+                background: linear-gradient(90deg, #4b5c09, #6b7d0a);
+                transition: width 0.3s ease;
+            }
+
+            .storage-text {
+                font-size: 0.9rem;
+                color: #555;
+            }
+
+            .gallery-section {
+                margin-bottom: 3rem;
+            }
+
+            .gallery-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .gallery-header h4 {
+                margin: 0;
+                color: #4b5c09;
+                font-size: 1.3rem;
+            }
+
+            .gallery-stats {
+                font-size: 0.9rem;
+                color: #666;
+            }
+
+            .photo-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+
+            .photo-item {
+                position: relative;
+                aspect-ratio: 1;
+                border-radius: 8px;
+                overflow: hidden;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+
+            .photo-item:hover {
+                transform: scale(1.02);
+            }
+
+            .photo-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .photo-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 0.5rem;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+
+            .photo-item:hover .photo-overlay {
+                opacity: 1;
+            }
+
+            .photo-action {
+                background: rgba(255,255,255,0.9);
+                border: none;
+                padding: 0.5rem 1rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                transition: background 0.2s;
+            }
+
+            .photo-action:hover {
+                background: white;
+            }
+
+            .photo-action.delete:hover {
+                background: #d32f2f;
+                color: white;
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 3rem;
+                color: #666;
+            }
+
+            .empty-state h3 {
+                color: #4b5c09;
+                margin-bottom: 1rem;
+            }
+
+            .error-message {
+                text-align: center;
+                padding: 2rem;
+                color: #d32f2f;
+                background: #ffeaea;
+                border-radius: 8px;
+                margin: 1rem 0;
             }
 
             /* Responsive design */

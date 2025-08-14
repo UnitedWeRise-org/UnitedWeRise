@@ -57,6 +57,8 @@ class PostComponent {
                     </div>
                 ` : ''}
                 
+                ${this.renderPostMedia(post.photos)}
+                
                 ${settings.showActions ? `
                     <div class="post-actions" data-post-id="${post.id}">
                         <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
@@ -389,6 +391,50 @@ class PostComponent {
         content = content.replace(/\n/g, '<br>');
         
         return content;
+    }
+
+    /**
+     * Render post media attachments (photos/GIFs)
+     */
+    renderPostMedia(photos) {
+        if (!photos || photos.length === 0) return '';
+
+        return `
+            <div class="post-media">
+                ${photos.map(photo => {
+                    const isGif = photo.mimeType === 'image/gif';
+                    return `
+                        <div class="post-media-item">
+                            <img src="${photo.url}" 
+                                 alt="Post attachment" 
+                                 loading="lazy"
+                                 onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}')"
+                                 style="max-width: 100%; height: auto; border-radius: 8px; cursor: pointer;">
+                            ${isGif ? '<div class="media-type-badge gif-badge">GIF</div>' : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    /**
+     * Open media in full-screen viewer
+     */
+    openMediaViewer(url, mimeType) {
+        const overlay = document.createElement('div');
+        overlay.className = 'media-viewer-overlay';
+        overlay.innerHTML = `
+            <div class="media-viewer-content">
+                <button class="media-viewer-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                <img src="${url}" alt="Full size image" style="max-width: 90vw; max-height: 90vh; object-fit: contain;">
+                ${mimeType === 'image/gif' ? '<div class="media-viewer-badge">GIF</div>' : ''}
+            </div>
+        `;
+        overlay.onclick = (e) => {
+            if (e.target === overlay) overlay.remove();
+        };
+        document.body.appendChild(overlay);
     }
 
     /**

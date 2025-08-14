@@ -3057,7 +3057,21 @@
                     </div>
                     <div class="post-composer" id="feedPostComposer">
                         <textarea id="feedPostContent" placeholder="What's on your mind?"></textarea>
+                        
+                        <!-- Media Preview Area -->
+                        <div id="mediaPreview" class="media-preview-area" style="display: none;">
+                            <div class="media-preview-content"></div>
+                            <button onclick="clearMediaAttachment()" class="remove-media-btn">✕ Remove</button>
+                        </div>
+                        
                         <div class="post-composer-actions">
+                            <div class="media-actions">
+                                <button type="button" onclick="attachMediaToPost()" class="media-btn">
+                                    📷 Photo/GIF
+                                </button>
+                                <input type="file" id="postMediaUpload" accept="image/*,image/gif" 
+                                       style="display: none;" onchange="handlePostMediaUpload(this)">
+                            </div>
                             <button onclick="createPostFromFeed()">Post</button>
                         </div>
                     </div>
@@ -3113,33 +3127,131 @@
         }
 
 
+        // Global variable to store selected media for post
+        let selectedPostMedia = null;
+
+        // Function to trigger media upload
+        function attachMediaToPost() {
+            document.getElementById('postMediaUpload').click();
+        }
+
+        // Function to handle media selection and preview
+        async function handlePostMediaUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPEG, PNG, WebP, or GIF)');
+                input.value = '';
+                return;
+            }
+
+            // Validate file size (10MB for images, 5MB for GIFs)
+            const maxSize = file.type === 'image/gif' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                const limitMB = file.type === 'image/gif' ? 5 : 10;
+                alert(`File too large. ${file.type === 'image/gif' ? 'GIFs' : 'Images'} must be smaller than ${limitMB}MB`);
+                input.value = '';
+                return;
+            }
+
+            // Store selected file
+            selectedPostMedia = file;
+
+            // Show preview
+            const previewArea = document.getElementById('mediaPreview');
+            const previewContent = previewArea.querySelector('.media-preview-content');
+            
+            // Create preview element
+            const fileURL = URL.createObjectURL(file);
+            const isGif = file.type === 'image/gif';
+            
+            previewContent.innerHTML = `
+                <div class="media-item">
+                    <img src="${fileURL}" alt="Preview" 
+                         style="max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: cover;">
+                    <div class="media-info">
+                        <p><strong>${file.name}</strong></p>
+                        <p>${isGif ? '🎞️ GIF' : '📷 Image'} • ${(file.size / 1024 / 1024).toFixed(1)}MB</p>
+                    </div>
+                </div>
+            `;
+            
+            previewArea.style.display = 'block';
+        }
+
+        // Function to clear media attachment
+        function clearMediaAttachment() {
+            selectedPostMedia = null;
+            document.getElementById('mediaPreview').style.display = 'none';
+            document.getElementById('postMediaUpload').value = '';
+        }
+
         // Function to create post from feed view
         async function createPostFromFeed() {
             const content = document.getElementById('feedPostContent').value.trim();
 
-            if (!content) {
-                alert('Please enter some content for your post');
+            if (!content && !selectedPostMedia) {
+                alert('Please enter some content or attach media for your post');
                 return;
             }
 
             try {
+                let mediaId = null;
+
+                // Upload media first if selected
+                if (selectedPostMedia) {
+                    const formData = new FormData();
+                    formData.append('photos', selectedPostMedia);
+                    formData.append('photoType', 'POST_MEDIA');
+                    formData.append('purpose', 'PERSONAL');
+
+                    console.log('🖼️ Uploading media for post...');
+                    const mediaResponse = await apiCall('/photos/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!mediaResponse.ok) {
+                        const errorData = mediaResponse.data || {};
+                        const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
+                        alert(`Media upload failed: ${errorMessage}`);
+                        return;
+                    }
+
+                    // Get the uploaded photo ID
+                    mediaId = mediaResponse.data.photos[0]?.id;
+                    console.log('✅ Media uploaded successfully:', mediaId);
+                }
+
+                // Create the post
+                const postData = { content };
+                if (mediaId) {
+                    postData.mediaId = mediaId;
+                }
+
                 const response = await apiCall('/posts', {
                     method: 'POST',
-                    body: JSON.stringify({ content })
+                    body: JSON.stringify(postData)
                 });
 
                 if (response.ok) {
-                    // Clear the textarea
+                    // Clear the form
                     document.getElementById('feedPostContent').value = '';
+                    clearMediaAttachment();
                     
                     // Refresh the feed to show the new post
                     showMyFeed();
+                    
+                    console.log('✅ Post created successfully');
                 } else {
                     alert('Failed to create post. Please try again.');
                 }
             } catch (error) {
                 console.error('Post creation error:', error);
-                alert('Error creating post');
+                alert('Error creating post. Please check your connection and try again.');
             }
         }
 
