@@ -1696,9 +1696,18 @@ function getDummyCivicContent() {
 }
 
 function initializeMapLibre() {
+    // Prevent double initialization
+    if (window.mapLibreInitialized) {
+        console.log('🗺️ MapLibre already initialized, skipping');
+        return;
+    }
+    
     // Only initialize if container exists
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) return;
+    
+    // Mark as initializing
+    window.mapLibreInitialized = true;
     
     // Set loading start time
     window.mapLoadStartTime = Date.now();
@@ -1812,6 +1821,9 @@ function initializeMapLibre() {
         });
     }
 }
+
+// Export immediately after function definition to avoid race conditions
+window.initializeMapLibre = initializeMapLibre;
 
 // Global functions for HTML button integration
 window.toggleMapView = function(level) {
@@ -2060,6 +2072,5 @@ window.goBackToFeed = function() {
     }
 };
 
-// Export for use in other modules
+// Export UWRMapLibre class for use in other modules
 window.UWRMapLibre = UWRMapLibre;
-window.initializeMapLibre = initializeMapLibre;
