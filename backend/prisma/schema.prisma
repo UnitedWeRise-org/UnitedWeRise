@@ -56,13 +56,21 @@ model User {
   politicalExperience     String?
   notificationPreferences Json?
   displayName             String?
-  photoTaggingEnabled     Boolean                   @default(true)   // Allow others to tag me
-  requireTagApproval      Boolean                   @default(true)   // Tags need approval
-  allowTagsByFriendsOnly  Boolean                   @default(false)  // Only friends can tag
   followingCount          Int                       @default(0)
   followersCount          Int                       @default(0)
   deviceFingerprint       Json?
+  lastLoginAt             DateTime?
+  lastLoginIp             String?
+  lockedUntil             DateTime?
+  loginAttempts           Int                       @default(0)
+  passwordChangedAt       DateTime?                 @default(now())
   riskScore               Int                       @default(0)
+  suspiciousActivityCount Int                       @default(0)
+  reputationScore         Int?                      @default(70)
+  reputationUpdatedAt     DateTime?
+  allowTagsByFriendsOnly  Boolean                   @default(false)
+  photoTaggingEnabled     Boolean                   @default(true)
+  requireTagApproval      Boolean                   @default(true)
   reviewedAppeals         Appeal[]                  @relation("ReviewedAppeals")
   appeals                 Appeal[]                  @relation("UserAppeals")
   candidateProfile        Candidate?
@@ -74,8 +82,8 @@ model User {
   endorsements            Endorsement[]
   following               Follow[]                  @relation("Follower")
   followers               Follow[]                  @relation("Following")
-  sentFriendRequests      Friendship[]              @relation("FriendshipRequester")
   receivedFriendRequests  Friendship[]              @relation("FriendshipRecipient")
+  sentFriendRequests      Friendship[]              @relation("FriendshipRequester")
   likes                   Like[]
   sentMessages            Message[]                 @relation("SentMessages")
   moderationLogs          ModerationLog[]           @relation("ModerationLogs")
@@ -83,33 +91,21 @@ model User {
   sentNotifications       Notification[]            @relation("NotificationSender")
   flaggedPhotos           Photo[]                   @relation("FlaggedPhotos")
   photos                  Photo[]
+  photoPrivacyRequests    PhotoPrivacyRequest[]
   photoTagsCreated        PhotoTag[]                @relation("PhotoTagsCreated")
   photoTagsReceived       PhotoTag[]                @relation("PhotoTagsReceived")
-  photoPrivacyRequests    PhotoPrivacyRequest[]
   politicalInquiries      PoliticalInquiry[]        @relation("PoliticalInquiries")
   posts                   Post[]
   publicQAVotes           PublicQAVote[]            @relation("PublicQAVotes")
   moderatedReports        Report[]                  @relation("ModeratedReports")
   reports                 Report[]                  @relation("UserReports")
+  reputationEvents        ReputationEvent[]
+  securityEvents          SecurityEvent[]
   topicComments           TopicComment[]
   moderatorSuspensions    UserSuspension[]          @relation("ModeratorSuspensions")
   suspensions             UserSuspension[]          @relation("UserSuspensions")
   issuedWarnings          UserWarning[]             @relation("IssuedWarnings")
   receivedWarnings        UserWarning[]             @relation("ReceivedWarnings")
-  securityEvents          SecurityEvent[]
-  
-  // Security tracking fields
-  lastLoginAt             DateTime?
-  lastLoginIp             String?
-  loginAttempts           Int                       @default(0)
-  lockedUntil             DateTime?
-  passwordChangedAt       DateTime?                 @default(now())
-  suspiciousActivityCount Int                       @default(0)
-  
-  // Reputation system fields
-  reputationScore         Int?                      @default(70)
-  reputationUpdatedAt     DateTime?
-  reputationEvents        ReputationEvent[]
 
   @@index([username])
   @@index([createdAt])
@@ -132,14 +128,14 @@ model Follow {
 }
 
 model Friendship {
-  id          String            @id @default(cuid())
+  id          String           @id @default(cuid())
   requesterId String
   recipientId String
-  status      FriendshipStatus  @default(PENDING)
-  createdAt   DateTime          @default(now())
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
   acceptedAt  DateTime?
-  requester   User              @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  recipient   User              @relation("FriendshipRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User             @relation("FriendshipRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, recipientId])
   @@index([requesterId])
@@ -148,32 +144,30 @@ model Friendship {
 }
 
 model Post {
-  id                 String      @id @default(cuid())
+  id                 String            @id @default(cuid())
   content            String
   imageUrl           String?
   authorId           String
-  embedding          Float[]     @default([])
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  isPolitical        Boolean     @default(false)
-  tags               String[]    @default([])
-  likesCount         Int         @default(0)
-  commentsCount      Int         @default(0)
-  // AI Feedback Detection Fields
-  containsFeedback   Boolean?    @default(false)
-  feedbackType       String?
+  embedding          Float[]           @default([])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  isPolitical        Boolean           @default(false)
+  tags               String[]          @default([])
+  likesCount         Int               @default(0)
+  commentsCount      Int               @default(0)
+  containsFeedback   Boolean?          @default(false)
   feedbackCategory   String?
-  feedbackPriority   String?
   feedbackConfidence Float?
+  feedbackPriority   String?
+  feedbackStatus     String?           @default("new")
   feedbackSummary    String?
-  feedbackStatus     String?     @default("new")
-  // Reputation system fields
-  authorReputation   Int?        // Cached reputation at post time
-  reputationEvents   ReputationEvent[]
+  feedbackType       String?
+  authorReputation   Int?
   comments           Comment[]
   likes              Like[]
   photos             Photo[]
-  author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reputationEvents   ReputationEvent[]
   topics             TopicPost[]
 
   @@index([authorId])
@@ -663,35 +657,35 @@ model ElectionCache {
 }
 
 model Photo {
-  id             String       @id @default(cuid())
-  userId         String
-  filename       String
-  url            String
-  thumbnailUrl   String?
-  photoType      PhotoType
-  purpose        PhotoPurpose @default(PERSONAL)
-  originalSize   Int
-  compressedSize Int
-  width          Int
-  height         Int
-  mimeType       String
-  isApproved     Boolean      @default(false)
-  flaggedBy      String?
-  flagReason     String?
-  moderatedAt    DateTime?
-  candidateId    String?
-  gallery        String?      @default("My Photos")
-  postId         String?      // Link to post if this is POST_MEDIA
-  caption        String?      // Optional caption (max 200 chars)
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  candidate      Candidate?   @relation(fields: [candidateId], references: [id])
-  flaggedByUser  User?        @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post           Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tags           PhotoTag[]   // People tagged in this photo
+  id              String                @id @default(cuid())
+  userId          String
+  filename        String
+  url             String
+  thumbnailUrl    String?
+  photoType       PhotoType
+  purpose         PhotoPurpose          @default(PERSONAL)
+  originalSize    Int
+  compressedSize  Int
+  width           Int
+  height          Int
+  mimeType        String
+  isApproved      Boolean               @default(false)
+  flaggedBy       String?
+  flagReason      String?
+  moderatedAt     DateTime?
+  candidateId     String?
+  isActive        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  caption         String?
+  gallery         String?               @default("My Photos")
+  postId          String?
+  candidate       Candidate?            @relation(fields: [candidateId], references: [id])
+  flaggedByUser   User?                 @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
+  post            Post?                 @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   privacyRequests PhotoPrivacyRequest[]
+  tags            PhotoTag[]
 
   @@index([userId])
   @@index([candidateId])
@@ -703,10 +697,10 @@ model Photo {
 model PhotoTag {
   id         String         @id @default(cuid())
   photoId    String
-  taggedById String         // User who created the tag
-  taggedId   String         // User being tagged
-  x          Float          // X coordinate (percentage 0-100)
-  y          Float          // Y coordinate (percentage 0-100)
+  taggedById String
+  taggedId   String
+  x          Float
+  y          Float
   status     PhotoTagStatus @default(PENDING)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -714,7 +708,7 @@ model PhotoTag {
   taggedBy   User           @relation("PhotoTagsCreated", fields: [taggedById], references: [id])
   tagged     User           @relation("PhotoTagsReceived", fields: [taggedId], references: [id])
 
-  @@unique([photoId, taggedId]) // One tag per person per photo
+  @@unique([photoId, taggedId])
   @@index([taggedId, status])
   @@index([photoId])
 }
@@ -722,7 +716,7 @@ model PhotoTag {
 model PhotoPrivacyRequest {
   id        String                    @id @default(cuid())
   photoId   String
-  userId    String                    // User making the request
+  userId    String
   type      PhotoPrivacyRequestType
   reason    String?
   status    PhotoPrivacyRequestStatus @default(PENDING)
@@ -731,7 +725,7 @@ model PhotoPrivacyRequest {
   photo     Photo                     @relation(fields: [photoId], references: [id], onDelete: Cascade)
   user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([photoId, userId]) // One request per user per photo
+  @@unique([photoId, userId])
   @@index([userId, status])
   @@index([status, createdAt])
 }
@@ -924,17 +918,16 @@ model CandidateRegistration {
 }
 
 model SecurityEvent {
-  id          String   @id @default(cuid())
-  userId      String?
-  eventType   String   // LOGIN_SUCCESS, LOGIN_FAILED, PASSWORD_RESET, etc.
-  ipAddress   String?
-  userAgent   String?
-  details     Json?
-  riskScore   Int      @default(0) // 0-100 risk assessment
-  createdAt   DateTime @default(now())
-  
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  id        String   @id @default(cuid())
+  userId    String?
+  eventType String
+  ipAddress String?
+  userAgent String?
+  details   Json?
+  riskScore Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@index([eventType])
   @@index([createdAt])
@@ -946,15 +939,14 @@ model ReputationEvent {
   id        String   @id @default(cuid())
   userId    String
   postId    String?
-  eventType String   // PENALTY_HATE_SPEECH, PENALTY_HARASSMENT, PENALTY_SPAM, etc.
-  impact    Float    // The reputation change (negative for penalties, positive for rewards)
-  reason    String?  // Human-readable explanation
-  details   Json?    // Additional context (AI analysis, admin notes, etc.)
+  eventType String
+  impact    Float
+  reason    String?
+  details   Json?
   createdAt DateTime @default(now())
-  
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
-  
+  post      Post?    @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([postId])
   @@index([eventType])
@@ -1149,9 +1141,9 @@ enum PhotoTagStatus {
 }
 
 enum PhotoPrivacyRequestType {
-  REMOVE_TAG      // Remove tag but keep photo
-  REMOVE_PHOTO    // Request photo removal entirely
-  BLOCK_FUTURE    // Block future tags from this user
+  REMOVE_TAG
+  REMOVE_PHOTO
+  BLOCK_FUTURE
 }
 
 enum PhotoPrivacyRequestStatus {
