@@ -93,8 +93,15 @@ app.use(cors({
   credentials: true
 }));
 
-// Basic middleware
-app.use(express.json({ limit: '10mb' }));
+// Basic middleware - Skip JSON parsing for multipart routes
+app.use((req, res, next) => {
+  // Skip JSON parsing for multipart upload routes
+  if (req.path.includes('/photos/upload') || req.path.includes('/bulk-upload')) {
+    next();
+  } else {
+    express.json({ limit: '10mb' })(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging (only in development)
