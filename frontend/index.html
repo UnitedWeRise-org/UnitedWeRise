@@ -1710,12 +1710,13 @@
 
             // Only set Content-Type to application/json if body is not FormData
             // FormData should set its own Content-Type with proper boundary
-            if (!(config.body instanceof FormData)) {
+            if (!options.skipContentType && !(config.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
             }
             
             // Remove custom options before fetch
             delete config.bypassCache;
+            delete config.skipContentType;
 
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
