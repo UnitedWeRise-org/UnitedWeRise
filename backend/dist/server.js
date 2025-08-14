@@ -27,6 +27,7 @@ const candidateMessages_1 = __importDefault(require("./routes/candidateMessages"
 const topics_1 = __importDefault(require("./routes/topics"));
 const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
 const photos_1 = __importDefault(require("./routes/photos"));
+const photoTags_1 = __importDefault(require("./routes/photoTags"));
 const googleCivic_1 = __importDefault(require("./routes/googleCivic"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
 const batch_1 = __importDefault(require("./routes/batch"));
@@ -67,10 +68,13 @@ app.use(rateLimiting_1.burstLimiter);
 app.use(rateLimiting_1.apiLimiter);
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
+        console.log('🔍 CORS - Request from origin:', origin);
         // In development, be more permissive
         if (process.env.NODE_ENV === 'development') {
+            console.log('✅ CORS - Development mode, allowing all origins');
             callback(null, true);
             return;
         }
@@ -79,16 +83,31 @@ app.use((0, cors_1.default)({
             allowedOrigins.includes(origin) ||
             origin.includes('azurestaticapps.net') ||
             origin.includes('unitedwerise.org')) {
+            console.log('✅ CORS - Origin allowed');
             callback(null, true);
         }
         else {
-            callback(new Error('Not allowed by CORS'));
+            console.log('❌ CORS - Origin blocked:', origin);
+            callback(null, false); // Don't throw error, just reject
         }
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-// Basic middleware
-app.use(express_1.default.json({ limit: '10mb' }));
+// Basic middleware - Apply JSON parsing only when content-type is application/json
+app.use((req, res, next) => {
+    // Check if this is actually a JSON request
+    const contentType = req.headers['content-type'] || '';
+    // Only parse as JSON if content-type indicates JSON
+    if (contentType.includes('application/json')) {
+        express_1.default.json({ limit: '10mb' })(req, res, next);
+    }
+    else {
+        // Skip JSON parsing for multipart and other content types
+        next();
+    }
+});
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Request logging (only in development)
 if (process.env.NODE_ENV === 'development') {
@@ -115,6 +134,7 @@ app.use('/api/candidate-messages', candidateMessages_1.default);
 app.use('/api/topics', topics_1.default);
 app.use('/api/topic-navigation', topicNavigation_1.default);
 app.use('/api/photos', photos_1.default);
+app.use('/api/photo-tags', photoTags_1.default);
 app.use('/api/google-civic', googleCivic_1.default);
 app.use('/api/feedback', feedback_1.default);
 app.use('/api/batch', batch_1.default);

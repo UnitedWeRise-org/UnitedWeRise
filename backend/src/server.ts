@@ -72,10 +72,14 @@ app.use(apiLimiter);
 
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
 app.use(cors({
   origin: (origin, callback) => {
+    console.log('🔍 CORS - Request from origin:', origin);
+    
     // In development, be more permissive
     if (process.env.NODE_ENV === 'development') {
+      console.log('✅ CORS - Development mode, allowing all origins');
       callback(null, true);
       return;
     }
@@ -85,21 +89,29 @@ app.use(cors({
         allowedOrigins.includes(origin) ||
         origin.includes('azurestaticapps.net') ||
         origin.includes('unitedwerise.org')) {
+      console.log('✅ CORS - Origin allowed');
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log('❌ CORS - Origin blocked:', origin);
+      callback(null, false); // Don't throw error, just reject
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Basic middleware - Skip JSON parsing for multipart routes
+// Basic middleware - Apply JSON parsing only when content-type is application/json
 app.use((req, res, next) => {
-  // Skip JSON parsing for multipart upload routes
-  if (req.path.includes('/photos/upload') || req.path.includes('/bulk-upload')) {
-    next();
-  } else {
+  // Check if this is actually a JSON request
+  const contentType = req.headers['content-type'] || '';
+  
+  // Only parse as JSON if content-type indicates JSON
+  if (contentType.includes('application/json')) {
     express.json({ limit: '10mb' })(req, res, next);
+  } else {
+    // Skip JSON parsing for multipart and other content types
+    next();
   }
 });
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

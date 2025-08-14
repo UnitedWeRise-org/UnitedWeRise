@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
+import { AzureBlobService } from './azureBlobService';
 
 const prisma = new PrismaClient();
 
@@ -49,15 +50,20 @@ export class PhotoService {
   };
 
   /**
-   * Initialize upload directories
+   * Initialize photo storage (Azure Blob Storage)
    */
   static async initializeDirectories(): Promise<void> {
     try {
+      // Initialize Azure Blob Storage
+      await AzureBlobService.initialize();
+      
+      // Still create local directories as fallback for development
       await fs.mkdir(this.UPLOAD_DIR, { recursive: true });
       await fs.mkdir(this.THUMBNAIL_DIR, { recursive: true });
-      console.log('✅ Photo directories initialized');
+      
+      console.log('✅ Photo storage initialized (Azure Blob + local fallback)');
     } catch (error) {
-      console.error('Failed to initialize photo directories:', error);
+      console.error('Failed to initialize photo storage:', error);
       throw error;
     }
   }
@@ -124,6 +130,7 @@ export class PhotoService {
       const maxHeight = options.maxHeight || preset.height;
 
       let imageBuffer: Buffer;
+      let thumbnailBuffer: Buffer;
       let metadata: sharp.Metadata;
 
       if (isGif) {
@@ -136,7 +143,6 @@ export class PhotoService {
           .gif();
         
         imageBuffer = await processedGif.toBuffer();
-        await processedGif.toFile(filepath);
         metadata = await sharp(imageBuffer).metadata();
       } else {
         // For static images, convert to WebP
@@ -148,17 +154,49 @@ export class PhotoService {
           .webp({ quality: options.quality || 85 });
 
         imageBuffer = await processedImage.toBuffer();
-        await processedImage.toFile(filepath);
         metadata = await sharp(imageBuffer).metadata();
       }
 
       // Always create WebP thumbnail
-      await sharp(file.buffer)
+      thumbnailBuffer = await sharp(file.buffer)
         .resize(preset.thumbnailWidth, preset.thumbnailHeight, { 
           fit: 'cover' 
         })
         .webp({ quality: 75 })
-        .toFile(thumbnailPath);
+        .toBuffer();
+
+      // Upload to Azure Blob Storage
+      let photoUrl: string;
+      let thumbnailUrl: string;
+
+      try {
+        // Upload main photo
+        photoUrl = await AzureBlobService.uploadFile(
+          imageBuffer,
+          filename,
+          isGif ? 'image/gif' : 'image/webp',
+          'photos'
+        );
+
+        // Upload thumbnail
+        thumbnailUrl = await AzureBlobService.uploadFile(
+          thumbnailBuffer,
+          thumbnailFilename,
+          'image/webp',
+          'thumbnails'
+        );
+
+        console.log(`✅ Photos uploaded to Azure Blob Storage: ${photoUrl}`);
+      } catch (blobError) {
+        console.error('Azure Blob Storage upload failed, using local fallback:', blobError);
+        
+        // Fallback to local storage
+        await fs.writeFile(filepath, imageBuffer);
+        await fs.writeFile(thumbnailPath, thumbnailBuffer);
+        
+        photoUrl = `/uploads/photos/${filename}`;
+        thumbnailUrl = `/uploads/thumbnails/${thumbnailFilename}`;
+      }
 
       // Save to database
       const photo = await prisma.photo.create({
@@ -166,8 +204,8 @@ export class PhotoService {
           userId: options.userId,
           candidateId: options.candidateId,
           filename: file.originalname,
-          url: `/uploads/photos/${filename}`,
-          thumbnailUrl: `/uploads/thumbnails/${thumbnailFilename}`,
+          url: photoUrl,
+          thumbnailUrl: thumbnailUrl,
           photoType: options.photoType,
           purpose: options.purpose,
           gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),

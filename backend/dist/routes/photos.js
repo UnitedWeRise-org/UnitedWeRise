@@ -98,11 +98,11 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.array('photos',
                 message: 'Please select at least one photo to upload'
             });
         }
-        const { photoType, purpose = 'PERSONAL', candidateId } = req.body;
+        const { photoType, purpose = 'PERSONAL', candidateId, gallery, postId, caption } = req.body;
         if (!photoType || !Object.values(client_1.PhotoType).includes(photoType)) {
             return res.status(400).json({
                 error: 'Invalid photo type',
-                message: 'Photo type must be one of: AVATAR, COVER, CAMPAIGN, VERIFICATION, EVENT, GALLERY'
+                message: 'Photo type must be one of: AVATAR, COVER, CAMPAIGN, VERIFICATION, EVENT, GALLERY, POST_MEDIA'
             });
         }
         if (!Object.values(client_1.PhotoPurpose).includes(purpose)) {
@@ -123,7 +123,10 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.array('photos',
             userId: user.id,
             photoType: photoType,
             purpose: purpose,
-            candidateId: candidateId || undefined
+            candidateId: candidateId || undefined,
+            gallery: gallery || undefined,
+            postId: postId || undefined,
+            caption: caption || undefined
         };
         const results = await photoService_1.PhotoService.uploadMultiplePhotos(files, uploadOptions);
         res.status(201).json({
@@ -137,13 +140,31 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.array('photos',
         if (error.message.includes('Invalid file type')) {
             return res.status(400).json({
                 error: 'Invalid file type',
-                message: 'Only JPEG, PNG, and WebP files are allowed'
+                message: 'Only JPEG, PNG, WebP, and GIF files are allowed'
             });
         }
         if (error.message.includes('File too large')) {
             return res.status(413).json({
                 error: 'File too large',
                 message: 'Photos must be smaller than 10MB'
+            });
+        }
+        if (error.message.includes('Storage limit exceeded')) {
+            return res.status(413).json({
+                error: 'Storage limit exceeded',
+                message: error.message
+            });
+        }
+        if (error.message.includes('GIF file too large')) {
+            return res.status(413).json({
+                error: 'GIF too large',
+                message: 'GIF files must be smaller than 5MB'
+            });
+        }
+        if (error.message.includes('Content moderation failed') || error.message.includes('requires moderation')) {
+            return res.status(400).json({
+                error: 'Content review required',
+                message: 'This content requires moderation review before approval'
             });
         }
         res.status(500).json({
@@ -475,6 +496,90 @@ router.post('/:photoId/approve', auth_1.requireAuth, async (req, res) => {
     catch (error) {
         console.error('Failed to approve photo:', error);
         res.status(500).json({ error: 'Failed to approve photo' });
+    }
+});
+/**
+ * @swagger
+ * /api/photos/galleries:
+ *   get:
+ *     tags: [Photos]
+ *     summary: Get user's photo galleries
+ *     description: Retrieve user's photos organized by gallery/folder
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Photo galleries retrieved successfully
+ */
+router.get('/galleries', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { user } = req;
+        const galleries = await photoService_1.PhotoService.getUserGalleries(user.id);
+        res.json(galleries);
+    }
+    catch (error) {
+        console.error('Failed to retrieve galleries:', error);
+        res.status(500).json({ error: 'Failed to retrieve photo galleries' });
+    }
+});
+/**
+ * @swagger
+ * /api/photos/{photoId}/gallery:
+ *   put:
+ *     tags: [Photos]
+ *     summary: Move photo to gallery
+ *     description: Move a photo to a different gallery/folder
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/:photoId/gallery', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { user } = req;
+        const { photoId } = req.params;
+        const { gallery } = req.body;
+        if (!gallery || gallery.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Gallery name required',
+                message: 'Please provide a gallery name'
+            });
+        }
+        await photoService_1.PhotoService.movePhotoToGallery(photoId, user.id, gallery);
+        res.json({ message: 'Photo moved to gallery successfully' });
+    }
+    catch (error) {
+        console.error('Failed to move photo:', error);
+        if (error.message.includes('not found') || error.message.includes('permission denied')) {
+            return res.status(404).json({ error: 'Photo not found or permission denied' });
+        }
+        res.status(500).json({ error: 'Failed to move photo to gallery' });
+    }
+});
+/**
+ * @swagger
+ * /api/photos/{photoId}/set-profile:
+ *   post:
+ *     tags: [Photos]
+ *     summary: Set as profile picture
+ *     description: Set a gallery photo as the user's profile picture
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/:photoId/set-profile', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { user } = req;
+        const { photoId } = req.params;
+        await photoService_1.PhotoService.setAsProfilePicture(photoId, user.id);
+        res.json({ message: 'Profile picture updated successfully' });
+    }
+    catch (error) {
+        console.error('Failed to set profile picture:', error);
+        if (error.message.includes('not found') || error.message.includes('permission denied')) {
+            return res.status(404).json({ error: 'Photo not found or permission denied' });
+        }
+        if (error.message.includes('Only gallery photos')) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Failed to set profile picture' });
     }
 });
 /**

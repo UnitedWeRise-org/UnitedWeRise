@@ -5,6 +5,9 @@ interface PhotoUploadOptions {
     photoType: PhotoType;
     purpose: PhotoPurpose;
     candidateId?: string;
+    gallery?: string;
+    postId?: string;
+    caption?: string;
     maxWidth?: number;
     maxHeight?: number;
     quality?: number;
@@ -22,10 +25,11 @@ export declare class PhotoService {
     private static readonly UPLOAD_DIR;
     private static readonly THUMBNAIL_DIR;
     private static readonly MAX_FILE_SIZE;
+    private static readonly MAX_ACCOUNT_STORAGE;
     private static readonly ALLOWED_TYPES;
     private static readonly SIZE_PRESETS;
     /**
-     * Initialize upload directories
+     * Initialize photo storage (Azure Blob Storage)
      */
     static initializeDirectories(): Promise<void>;
     /**
@@ -68,9 +72,35 @@ export declare class PhotoService {
      * Get photos pending moderation
      */
     static getPendingModeration(): Promise<Photo[]>;
+    private static validateStorageLimit;
     private static validateUserPermissions;
     private static shouldAutoApprove;
+    /**
+     * Basic content moderation checks (can be enhanced with AI services)
+     */
+    private static performContentModeration;
     private static updateProfileAvatar;
+    /**
+     * Get user's photo galleries (organized by gallery name)
+     */
+    static getUserGalleries(userId: string): Promise<{
+        galleries: Array<{
+            name: string;
+            photos: Photo[];
+            totalSize: number;
+            photoCount: number;
+        }>;
+        totalStorageUsed: number;
+        storageLimit: number;
+    }>;
+    /**
+     * Move photo to different gallery
+     */
+    static movePhotoToGallery(photoId: string, userId: string, newGallery: string): Promise<void>;
+    /**
+     * Set user's profile picture
+     */
+    static setAsProfilePicture(photoId: string, userId: string): Promise<void>;
     /**
      * Get photo storage statistics
      */

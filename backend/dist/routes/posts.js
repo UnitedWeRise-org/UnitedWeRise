@@ -18,10 +18,23 @@ const prisma = new client_1.PrismaClient();
 // Create a new post
 router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimiting_1.postLimiter, moderation_1.contentFilter, validation_1.validatePost, (0, moderation_1.moderateContent)('POST'), async (req, res) => {
     try {
-        const { content, imageUrl } = req.body;
+        const { content, imageUrl, mediaId } = req.body;
         const userId = req.user.id;
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
+        }
+        // Validate media attachment if provided
+        let mediaPhoto = null;
+        if (mediaId) {
+            mediaPhoto = await prisma.photo.findUnique({
+                where: { id: mediaId }
+            });
+            if (!mediaPhoto || mediaPhoto.userId !== userId || !mediaPhoto.isActive) {
+                return res.status(400).json({ error: 'Invalid media attachment' });
+            }
+            if (mediaPhoto.photoType !== 'POST_MEDIA') {
+                return res.status(400).json({ error: 'Only POST_MEDIA type photos can be attached to posts' });
+            }
         }
         if (content.length > 500) {
             return res.status(400).json({ error: 'Post content must be 500 characters or less' });
@@ -76,6 +89,20 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                         verified: true
                     }
                 },
+                photos: {
+                    where: {
+                        isActive: true,
+                        photoType: 'POST_MEDIA'
+                    },
+                    select: {
+                        id: true,
+                        url: true,
+                        thumbnailUrl: true,
+                        width: true,
+                        height: true,
+                        mimeType: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -84,6 +111,20 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 }
             }
         });
+        // Link media to post if provided
+        if (mediaId && mediaPhoto) {
+            try {
+                await prisma.photo.update({
+                    where: { id: mediaId },
+                    data: { postId: post.id }
+                });
+                console.log(`📷 Media linked to post: ${mediaId} → ${post.id}`);
+            }
+            catch (error) {
+                console.error('Failed to link media to post:', error);
+                // Non-critical error - don't fail the post creation
+            }
+        }
         // Update reputation event with actual post ID if penalties were applied
         if (reputationImpact.totalPenalty < 0) {
             try {
@@ -150,6 +191,20 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
                         verified: true
                     }
                 },
+                photos: {
+                    where: {
+                        isActive: true,
+                        photoType: 'POST_MEDIA'
+                    },
+                    select: {
+                        id: true,
+                        url: true,
+                        thumbnailUrl: true,
+                        width: true,
+                        height: true,
+                        mimeType: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -196,6 +251,20 @@ router.get('/:postId', async (req, res) => {
                         lastName: true,
                         avatar: true,
                         verified: true
+                    }
+                },
+                photos: {
+                    where: {
+                        isActive: true,
+                        photoType: 'POST_MEDIA'
+                    },
+                    select: {
+                        id: true,
+                        url: true,
+                        thumbnailUrl: true,
+                        width: true,
+                        height: true,
+                        mimeType: true
                     }
                 },
                 _count: {
@@ -433,6 +502,20 @@ router.get('/user/:userId', async (req, res) => {
                         lastName: true,
                         avatar: true,
                         verified: true
+                    }
+                },
+                photos: {
+                    where: {
+                        isActive: true,
+                        photoType: 'POST_MEDIA'
+                    },
+                    select: {
+                        id: true,
+                        url: true,
+                        thumbnailUrl: true,
+                        width: true,
+                        height: true,
+                        mimeType: true
                     }
                 },
                 _count: {
