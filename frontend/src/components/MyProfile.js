@@ -435,6 +435,45 @@ class MyProfile {
                         </label>
                     </div>
 
+                    <div class="settings-group">
+                        <h4>Photo Tagging Privacy</h4>
+                        <div class="photo-privacy-settings">
+                            <label class="setting-item">
+                                <input type="checkbox" 
+                                       id="photoTaggingEnabled"
+                                       ${this.userProfile.photoTaggingEnabled !== false ? 'checked' : ''} 
+                                       onchange="window.myProfile.updateTaggingPreference('photoTaggingEnabled', this.checked)">
+                                <span>Allow people to tag me in photos</span>
+                            </label>
+                            
+                            <div class="sub-settings ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}">
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="requireTagApproval"
+                                           ${this.userProfile.requireTagApproval ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateTaggingPreference('requireTagApproval', this.checked)"
+                                           ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
+                                    <span>Require my approval before tags appear</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="allowTagsByFriendsOnly"
+                                           ${this.userProfile.allowTagsByFriendsOnly ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateTaggingPreference('allowTagsByFriendsOnly', this.checked)"
+                                           ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
+                                    <span>Only allow friends to tag me</span>
+                                </label>
+                            </div>
+                            
+                            <div class="pending-tags-section" id="pendingTagsSection">
+                                <button onclick="window.myProfile.viewPendingTags()" class="btn-secondary">
+                                    View Pending Tags <span class="badge" id="pendingTagsCount"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="settings-group danger">
                         <h4>Danger Zone</h4>
                         <button onclick="window.myProfile.deactivateAccount()" class="btn-danger">Deactivate Account</button>
@@ -493,6 +532,11 @@ class MyProfile {
 
     switchTab(tabName) {
         this.currentTab = tabName;
+        
+        // Load pending tags count when switching to settings tab
+        if (tabName === 'settings') {
+            setTimeout(() => this.updatePendingTagsCount(), 100);
+        }
         const contentArea = document.querySelector('.tab-content');
         if (contentArea) {
             contentArea.innerHTML = this.renderTabContent();
@@ -1609,9 +1653,349 @@ class MyProfile {
                     padding: 0.75rem 1rem;
                 }
             }
+
+            /* Photo Tagging Privacy Settings */
+            .photo-privacy-settings {
+                margin-top: 1rem;
+            }
+
+            .sub-settings {
+                margin-left: 2rem;
+                padding-left: 1rem;
+                border-left: 2px solid #e0e0e0;
+                margin-top: 0.5rem;
+                transition: opacity 0.3s;
+            }
+
+            .sub-settings.disabled {
+                opacity: 0.5;
+                pointer-events: none;
+            }
+
+            .setting-item {
+                display: flex;
+                align-items: center;
+                margin: 0.75rem 0;
+                cursor: pointer;
+                transition: background 0.2s;
+                padding: 0.5rem;
+                border-radius: 4px;
+            }
+
+            .setting-item:hover {
+                background: #f5f5f5;
+            }
+
+            .setting-item input[type="checkbox"] {
+                margin-right: 0.75rem;
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+
+            .setting-item span {
+                font-size: 0.95rem;
+                color: #333;
+            }
+
+            .pending-tags-section {
+                margin-top: 1.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid #e0e0e0;
+            }
+
+            .badge {
+                background: #e67e22;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-size: 0.8rem;
+                margin-left: 0.5rem;
+                display: inline-block;
+                min-width: 20px;
+                text-align: center;
+            }
+
+            .badge:empty {
+                display: none;
+            }
+
+            /* Pending Tags Modal */
+            .pending-tags-modal {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                z-index: 10001;
+            }
+
+            .pending-tags-header {
+                padding: 1.5rem;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .pending-tags-body {
+                padding: 1rem;
+            }
+
+            .pending-tag-item {
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .pending-tag-photo {
+                width: 80px;
+                height: 80px;
+                border-radius: 4px;
+                object-fit: cover;
+            }
+
+            .pending-tag-info {
+                flex: 1;
+            }
+
+            .pending-tag-actions {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .approve-btn {
+                background: #27ae60;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .decline-btn {
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
         `;
         
         document.head.appendChild(styles);
+    }
+
+    /**
+     * Update photo tagging preferences
+     */
+    async updateTaggingPreference(preference, value) {
+        try {
+            // If disabling tagging entirely, also disable sub-settings
+            if (preference === 'photoTaggingEnabled' && !value) {
+                document.querySelectorAll('.sub-settings input').forEach(input => {
+                    input.disabled = true;
+                });
+                document.querySelector('.sub-settings').classList.add('disabled');
+            } else if (preference === 'photoTaggingEnabled' && value) {
+                document.querySelectorAll('.sub-settings input').forEach(input => {
+                    input.disabled = false;
+                });
+                document.querySelector('.sub-settings').classList.remove('disabled');
+            }
+
+            const response = await window.apiCall('/photo-tags/preferences', {
+                method: 'PUT',
+                body: JSON.stringify({ [preference]: value })
+            });
+
+            if (response.ok) {
+                // Update local profile
+                this.userProfile[preference] = value;
+                
+                // Show success feedback
+                const message = preference === 'photoTaggingEnabled' 
+                    ? (value ? 'Photo tagging enabled' : 'Photo tagging disabled')
+                    : 'Preference updated successfully';
+                
+                if (window.postComponent && window.postComponent.showToast) {
+                    window.postComponent.showToast(message);
+                } else {
+                    this.showToast(message);
+                }
+            } else {
+                throw new Error(response.error || 'Failed to update preference');
+            }
+        } catch (error) {
+            console.error('Error updating tagging preference:', error);
+            alert('Failed to update preference. Please try again.');
+            
+            // Revert checkbox state
+            document.getElementById(preference).checked = !value;
+        }
+    }
+
+    /**
+     * View and manage pending photo tags
+     */
+    async viewPendingTags() {
+        try {
+            const response = await window.apiCall('/photo-tags/pending');
+            
+            if (response.ok) {
+                const pendingTags = response.data.pendingTags || [];
+                this.showPendingTagsModal(pendingTags);
+            } else {
+                alert('Failed to load pending tags');
+            }
+        } catch (error) {
+            console.error('Error loading pending tags:', error);
+            alert('Error loading pending tags. Please try again.');
+        }
+    }
+
+    /**
+     * Show modal with pending tags
+     */
+    showPendingTagsModal(pendingTags) {
+        // Remove any existing modal
+        const existingModal = document.getElementById('pendingTagsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.id = 'pendingTagsModal';
+        modalOverlay.innerHTML = `
+            <div class="pending-tags-modal">
+                <div class="pending-tags-header">
+                    <h3>Pending Photo Tags (${pendingTags.length})</h3>
+                    <button onclick="document.getElementById('pendingTagsModal').remove()" class="close-btn">&times;</button>
+                </div>
+                <div class="pending-tags-body">
+                    ${pendingTags.length === 0 ? 
+                        '<p>No pending tags to review</p>' :
+                        pendingTags.map(tag => `
+                            <div class="pending-tag-item" data-tag-id="${tag.id}">
+                                <img src="${tag.photo.thumbnailUrl || tag.photo.url}" 
+                                     alt="Tagged photo" 
+                                     class="pending-tag-photo">
+                                <div class="pending-tag-info">
+                                    <strong>${tag.taggedBy.firstName || tag.taggedBy.username}</strong> tagged you
+                                    ${tag.photo.caption ? `<p>"${tag.photo.caption}"</p>` : ''}
+                                    <small>${this.getTimeAgo(new Date(tag.createdAt))}</small>
+                                </div>
+                                <div class="pending-tag-actions">
+                                    <button class="approve-btn" onclick="window.myProfile.respondToTag('${tag.id}', true)">
+                                        ✓ Approve
+                                    </button>
+                                    <button class="decline-btn" onclick="window.myProfile.respondToTag('${tag.id}', false)">
+                                        ✗ Decline
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        `;
+
+        // Add click handler to close modal when clicking overlay
+        modalOverlay.onclick = (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.remove();
+            }
+        };
+
+        document.body.appendChild(modalOverlay);
+    }
+
+    /**
+     * Respond to a pending tag
+     */
+    async respondToTag(tagId, approve) {
+        try {
+            const response = await window.apiCall(`/photo-tags/${tagId}/respond`, {
+                method: 'POST',
+                body: JSON.stringify({ approve })
+            });
+
+            if (response.ok) {
+                // Remove the tag item from modal
+                const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
+                if (tagItem) {
+                    tagItem.style.transition = 'opacity 0.3s, transform 0.3s';
+                    tagItem.style.opacity = '0';
+                    tagItem.style.transform = 'translateX(20px)';
+                    setTimeout(() => tagItem.remove(), 300);
+                }
+
+                // Update pending count
+                this.updatePendingTagsCount();
+
+                const message = approve ? 'Tag approved' : 'Tag declined';
+                if (window.postComponent && window.postComponent.showToast) {
+                    window.postComponent.showToast(message);
+                } else {
+                    this.showToast(message);
+                }
+            } else {
+                throw new Error(response.error || 'Failed to respond to tag');
+            }
+        } catch (error) {
+            console.error('Error responding to tag:', error);
+            alert('Failed to respond to tag. Please try again.');
+        }
+    }
+
+    /**
+     * Update pending tags count badge
+     */
+    async updatePendingTagsCount() {
+        try {
+            const response = await window.apiCall('/photo-tags/pending');
+            
+            if (response.ok) {
+                const count = response.data.count || 0;
+                const badge = document.getElementById('pendingTagsCount');
+                if (badge) {
+                    badge.textContent = count > 0 ? count : '';
+                }
+            }
+        } catch (error) {
+            console.error('Error updating pending tags count:', error);
+        }
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, duration = 3000) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 }
 
