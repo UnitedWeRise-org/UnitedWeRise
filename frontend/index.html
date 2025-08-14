@@ -1505,11 +1505,16 @@
             }
             
             // Initialize MapLibre through the class in map-maplibre.js
+            console.log('🔍 Checking for external initializeMapLibre function...');
+            console.log('🔍 typeof window.initializeMapLibre:', typeof window.initializeMapLibre);
+            console.log('🔍 window.initializeMapLibre === initializeMapLibre?', window.initializeMapLibre === initializeMapLibre);
+            console.log('🔍 window.initializeMapLibre !== initializeMapLibre?', window.initializeMapLibre !== initializeMapLibre);
+            
             if (typeof window.initializeMapLibre === 'function' && window.initializeMapLibre !== initializeMapLibre) {
-                console.log('Found external initializeMapLibre function, calling it...');
+                console.log('✅ Found external initializeMapLibre function, calling it...');
                 window.initializeMapLibre();
             } else {
-                console.error('External initializeMapLibre function not found - map-maplibre.js may not have loaded correctly');
+                console.error('❌ External initializeMapLibre function not found - map-maplibre.js may not have loaded correctly');
                 
                 // Fallback: Initialize directly if the function isn't available
                 if (typeof UWRMapLibre !== 'undefined') {
