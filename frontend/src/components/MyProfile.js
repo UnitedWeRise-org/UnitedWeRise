@@ -44,6 +44,39 @@ class MyProfile {
         }
     }
 
+    // Method to refresh profile with fresh data (bypassing cache)
+    async refreshProfile(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Show loading state
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+                <h2>Refreshing Your Profile...</h2>
+                <div class="loading-spinner"></div>
+            </div>
+        `;
+
+        try {
+            // Load user profile and posts with bypassed cache
+            const [profileResponse, postsResponse] = await Promise.all([
+                window.apiCall('/users/profile', { bypassCache: true }),
+                window.apiCall('/posts/me', { bypassCache: true })
+            ]);
+
+            if (profileResponse.ok) {
+                this.userProfile = profileResponse.data.user;
+                this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
+                this.renderProfile(container);
+            } else {
+                this.renderError(container, 'Unable to refresh your profile');
+            }
+        } catch (error) {
+            console.error('Error refreshing profile:', error);
+            this.renderError(container, 'Network error refreshing profile');
+        }
+    }
+
     renderProfile(container) {
         const user = this.userProfile;
         
@@ -586,13 +619,8 @@ class MyProfile {
                 // Profile picture uploaded successfully, reload profile with fresh data
                 console.log('✅ Profile picture uploaded:', response.data.photos[0].url);
                 
-                // Clear the API cache for profile data so we get fresh info
-                if (window.apiCache && window.apiCache.delete) {
-                    const cacheKey = `/users/profile${window.authToken ? `_${window.authToken.substring(0, 10)}` : ''}`;
-                    window.apiCache.delete(cacheKey);
-                }
-                
-                this.render('mainContent');
+                // Force fresh profile data by bypassing cache
+                this.refreshProfile('mainContent');
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
                 alert(errorMsg);
@@ -901,11 +929,11 @@ class MyProfile {
 
     // Photo Gallery Methods
     
-    async loadPhotoGalleries() {
+    async loadPhotoGalleries(bypassCache = false) {
         if (this.currentTab !== 'photos') return;
         
         try {
-            const response = await window.apiCall('/photos/galleries');
+            const response = await window.apiCall('/photos/galleries', { bypassCache });
             
             if (response.ok && response.data) {
                 this.updateStorageDisplay(response.data);
@@ -1025,13 +1053,8 @@ class MyProfile {
             if (response.ok) {
                 alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
                 
-                // Clear gallery cache to get fresh data
-                if (window.apiCache && window.apiCache.delete) {
-                    const cacheKey = `/photos/galleries${window.authToken ? `_${window.authToken.substring(0, 10)}` : ''}`;
-                    window.apiCache.delete(cacheKey);
-                }
-                
-                this.loadPhotoGalleries(); // Reload galleries
+                // Force fresh gallery data by bypassing cache
+                this.loadPhotoGalleries(true); // Reload galleries with fresh data
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload photos';
                 alert(`Upload failed: ${errorMsg}`);
