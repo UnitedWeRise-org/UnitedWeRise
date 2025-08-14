@@ -1703,11 +1703,16 @@
             
             const config = {
                 headers: {
-                    'Content-Type': 'application/json',
                     ...(authToken && { 'Authorization': `Bearer ${authToken}` })
                 },
                 ...options
             };
+
+            // Only set Content-Type to application/json if body is not FormData
+            // FormData should set its own Content-Type with proper boundary
+            if (!(config.body instanceof FormData)) {
+                config.headers['Content-Type'] = 'application/json';
+            }
             
             // Remove custom options before fetch
             delete config.bypassCache;
