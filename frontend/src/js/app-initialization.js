@@ -2,6 +2,18 @@
 // Reduces API calls on page load and implements smart caching
 
 class AppInitializer {
+    // Production logging helper - only shows important messages
+    static log(message, type = 'info') {
+        const isProduction = window.location.hostname !== 'localhost';
+        
+        if (type === 'error') {
+            console.error(message); // Always show errors
+        } else if (type === 'warn') {
+            console.warn(message); // Always show warnings
+        } else if (!isProduction) {
+            console.log(message); // Only show debug in development
+        }
+    }
     constructor() {
         this.initializationPromise = null;
         this.isInitialized = false;
@@ -20,7 +32,7 @@ class AppInitializer {
     }
 
     async performInitialization() {
-        console.log('🚀 Starting optimized app initialization...');
+        AppInitializer.log('🚀 Starting optimized app initialization...');
 
         try {
             // Step 1: Check if we have a stored auth token
@@ -28,7 +40,7 @@ class AppInitializer {
             const storedUser = localStorage.getItem('currentUser');
 
             if (!storedToken) {
-                console.log('📝 No auth token found - user not logged in');
+                AppInitializer.log('📝 No auth token found - user not logged in');
                 this.setLoggedOutState();
                 return { authenticated: false };
             }
@@ -40,17 +52,17 @@ class AppInitializer {
             }
 
             // Step 3: Try batch initialization first, fall back to individual calls
-            console.log('🔄 Fetching initialization data...');
+            AppInitializer.log('🔄 Fetching initialization data...');
             
             try {
-                console.log('🔄 About to call /batch/initialize with token:', window.authToken ? 'EXISTS' : 'MISSING');
+                AppInitializer.log('🔄 About to call /batch/initialize with token:', window.authToken ? 'EXISTS' : 'MISSING');
                 const initData = await window.apiCall('/batch/initialize', {
                     cacheTimeout: 60000 // Cache for 1 minute
                 });
-                console.log('🔄 Received response from /batch/initialize:', initData);
+                AppInitializer.log('🔄 Received response from /batch/initialize:', initData);
 
                 if (initData.ok && initData.data && initData.data.success) {
-                    console.log('✅ Batch initialization successful');
+                    AppInitializer.log('✅ Batch initialization successful');
                     
                     // Store fresh user data
                     this.userData = initData.data.data.user;
@@ -68,18 +80,18 @@ class AppInitializer {
                     };
                 }
             } catch (batchError) {
-                console.log('📱 Batch endpoint returned error:', batchError.message || batchError);
+                AppInitializer.log('📱 Batch endpoint returned error:', batchError.message || batchError, 'warn');
                 
                 // Don't treat 401 from batch as fatal - it just means we need auth
                 // Fallback to individual API calls
-                console.log('🔄 Trying individual auth verification...');
+                AppInitializer.log('🔄 Trying individual auth verification...');
                 
                 try {
                     // First try auth/me for authentication check
                     const authData = await window.apiCall('/auth/me');
                     
                     if (authData && authData.user) {
-                        console.log('✅ Auth/me fallback successful');
+                        AppInitializer.log('✅ Auth/me fallback successful');
                         this.userData = authData.user;
                         localStorage.setItem('currentUser', JSON.stringify(this.userData));
                         window.currentUser = this.userData;
@@ -94,17 +106,17 @@ class AppInitializer {
                             fallback: true
                         };
                     } else {
-                        console.log('❌ Auth/me returned no user data');
+                        AppInitializer.log('❌ Auth/me returned no user data', 'warn');
                     }
                 } catch (authError) {
-                    console.log('🔄 Auth/me failed:', authError.message || authError);
+                    AppInitializer.log('🔄 Auth/me failed:', authError.message || authError, 'warn');
                     
                     try {
                         // Get user profile data as final fallback
                         const userProfile = await window.apiCall('/users/profile');
                         
                         if (userProfile) {
-                            console.log('✅ Users/profile fallback successful');
+                            AppInitializer.log('✅ Users/profile fallback successful');
                             this.userData = userProfile;
                             localStorage.setItem('currentUser', JSON.stringify(this.userData));
                             window.currentUser = this.userData;
@@ -119,18 +131,18 @@ class AppInitializer {
                                 fallback: true
                             };
                         } else {
-                            console.log('❌ Users/profile returned no data');
+                            AppInitializer.log('❌ Users/profile returned no data', 'warn');
                         }
                     } catch (profileError) {
-                        console.log('🔄 Users/profile failed:', profileError.message || profileError);
-                        console.log('💾 All API calls failed, checking for cached data...');
+                        AppInitializer.log('🔄 Users/profile failed:', profileError.message || profileError, 'warn');
+                        AppInitializer.log('💾 All API calls failed, checking for cached data...', 'warn');
                     }
                 }
                 
                 // If we get here, all API calls failed - try cached data
                 const storedUser = localStorage.getItem('currentUser');
                 if (storedUser) {
-                    console.log('📱 Using cached user data as final fallback');
+                    AppInitializer.log('📱 Using cached user data as final fallback', 'warn');
                     try {
                         const userData = JSON.parse(storedUser);
                         window.currentUser = userData;
@@ -149,7 +161,7 @@ class AppInitializer {
             // DON'T log out user for network/server errors - just use cached data
             const storedUser = localStorage.getItem('currentUser');
             if (storedUser) {
-                console.log('💾 Using cached user data due to server issues');
+                AppInitializer.log('💾 Using cached user data due to server issues', 'warn');
                 try {
                     const userData = JSON.parse(storedUser);
                     window.currentUser = userData;
@@ -162,7 +174,7 @@ class AppInitializer {
             }
             
             // Only log out if we have no cached data AND confirmed token is invalid
-            console.log('🚫 No cached data available and server unreachable');
+            AppInitializer.log('🚫 No cached data available and server unreachable', 'error');
             return { authenticated: false, error: error.message };
         }
     }
@@ -200,7 +212,7 @@ class AppInitializer {
             this.updateNotificationCount(initData.unreadNotifications);
         }
 
-        console.log('✅ Logged in state set for:', displayName);
+        AppInitializer.log('✅ Logged in state set for:', displayName);
     }
 
     // Set the UI to logged out state
@@ -228,7 +240,7 @@ class AppInitializer {
             if (element) element.style.display = 'none';
         });
 
-        console.log('📤 Logged out state set');
+        AppInitializer.log('📤 Logged out state set');
     }
 
     // Clear auth tokens and set logged out state
@@ -326,4 +338,4 @@ window.refreshUserData = async () => {
     return window.appInitializer.refreshUserData();
 };
 
-console.log('🎯 App Initializer ready');
+AppInitializer.log('🎯 App Initializer ready');
