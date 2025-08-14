@@ -97,6 +97,11 @@ model User {
   lockedUntil             DateTime?
   passwordChangedAt       DateTime?                 @default(now())
   suspiciousActivityCount Int                       @default(0)
+  
+  // Reputation system fields
+  reputationScore         Int?                      @default(70)
+  reputationUpdatedAt     DateTime?
+  reputationEvents        ReputationEvent[]
 
   @@index([username])
   @@index([createdAt])
@@ -138,6 +143,9 @@ model Post {
   feedbackConfidence Float?
   feedbackSummary    String?
   feedbackStatus     String?     @default("new")
+  // Reputation system fields
+  authorReputation   Int?        // Cached reputation at post time
+  reputationEvents   ReputationEvent[]
   comments           Comment[]
   likes              Like[]
   author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -865,6 +873,25 @@ model SecurityEvent {
   @@index([createdAt])
   @@index([ipAddress])
   @@index([riskScore])
+}
+
+model ReputationEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String?
+  eventType String   // PENALTY_HATE_SPEECH, PENALTY_HARASSMENT, PENALTY_SPAM, etc.
+  impact    Float    // The reputation change (negative for penalties, positive for rewards)
+  reason    String?  // Human-readable explanation
+  details   Json?    // Additional context (AI analysis, admin notes, etc.)
+  createdAt DateTime @default(now())
+  
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([postId])
+  @@index([eventType])
+  @@index([createdAt])
 }
 
 enum NotificationType {

@@ -25,6 +25,8 @@ import photoRoutes from './routes/photos';
 import googleCivicRoutes from './routes/googleCivic';
 import feedbackRoutes from './routes/feedback';
 import batchRoutes from './routes/batch';
+import reputationRoutes from './routes/reputation';
+import healthRoutes from './routes/health';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -123,6 +125,8 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/google-civic', googleCivicRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/batch', batchRoutes);
+app.use('/api/reputation', reputationRoutes);
+app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically
 app.use('/uploads', express.static('uploads'));

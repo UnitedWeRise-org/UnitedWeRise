@@ -59,6 +59,7 @@ export declare class TopicService {
                 feedbackConfidence: number | null;
                 feedbackSummary: string | null;
                 feedbackStatus: string | null;
+                authorReputation: number | null;
             };
         } & {
             id: string;
@@ -155,6 +156,7 @@ export declare class TopicService {
                 feedbackConfidence: number | null;
                 feedbackSummary: string | null;
                 feedbackStatus: string | null;
+                authorReputation: number | null;
             };
         } & {
             id: string;

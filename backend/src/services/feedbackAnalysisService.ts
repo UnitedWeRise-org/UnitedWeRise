@@ -1,16 +1,13 @@
 /**
  * Feedback Analysis Service
  * 
- * Uses existing Qwen3 and Sentence Transformers infrastructure to detect
- * and categorize user feedback about the UnitedWeRise platform itself.
+ * Uses Azure OpenAI to detect and categorize user feedback about 
+ * the UnitedWeRise platform itself.
  * 
- * Integrates with existing AI pipeline for efficient processing.
+ * Migrated from Qwen/Qdrant to Azure OpenAI for production deployment.
  */
 
-import { QwenService } from './qwenService';
-import { EmbeddingService } from './embeddingService';
-import { QdrantService } from './qdrantService';
-import SemanticSearchService from './semanticSearchService';
+import { azureOpenAI, AzureOpenAIService } from './azureOpenAIService';
 import logger from '../utils/logger';
 
 export interface FeedbackAnalysis {
@@ -92,7 +89,7 @@ export class FeedbackAnalysisService {
     };
 
     /**
-     * Initialize embeddings for reference phrases
+     * Initialize embeddings for reference phrases using Azure OpenAI
      */
     private async initializeEmbeddings() {
         if (this.isEmbeddingsInitialized) return;
@@ -100,75 +97,40 @@ export class FeedbackAnalysisService {
         try {
             for (const [category, phrases] of Object.entries(this.feedbackReferencePhrases)) {
                 for (const phrase of phrases) {
-                    const analysis = await EmbeddingService.analyzeText(phrase);
-                    this.feedbackEmbeddings.set(`${category}:${phrase}`, analysis.embedding);
+                    const embeddingResult = await azureOpenAI.generateEmbedding(phrase);
+                    this.feedbackEmbeddings.set(`${category}:${phrase}`, embeddingResult.embedding);
                 }
             }
             this.isEmbeddingsInitialized = true;
-            logger.info('Feedback reference embeddings initialized');
+            logger.info('Feedback reference embeddings initialized with Azure OpenAI');
         } catch (error) {
             logger.warn('Failed to initialize feedback embeddings:', error);
         }
     }
 
     /**
-     * Calculate cosine similarity between two vectors
+     * Calculate cosine similarity between two vectors (delegated to Azure OpenAI service)
      */
     private cosineSimilarity(vectorA: number[], vectorB: number[]): number {
-        if (vectorA.length !== vectorB.length) return 0;
-        
-        let dotProduct = 0;
-        let normA = 0;
-        let normB = 0;
-        
-        for (let i = 0; i < vectorA.length; i++) {
-            dotProduct += vectorA[i] * vectorB[i];
-            normA += vectorA[i] * vectorA[i];
-            normB += vectorB[i] * vectorB[i];
-        }
-        
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        return AzureOpenAIService.calculateSimilarity(vectorA, vectorB);
     }
 
     /**
-     * Universal semantic search approach - your brilliant idea!
-     * Query Qdrant for content similar to "website feedback and suggestions"
-     * Then use Qwen3 to determine relevance and classification
+     * Azure OpenAI-powered feedback analysis
+     * Direct analysis without requiring pre-existing similar posts
      */
-    private async performSemanticFeedbackSearch(content: string): Promise<Partial<FeedbackAnalysis>> {
+    private async performAzureOpenAIFeedbackAnalysis(content: string): Promise<Partial<FeedbackAnalysis>> {
         try {
-            // Get embedding for the input content
-            const contentAnalysis = await EmbeddingService.analyzeText(content);
-            const contentEmbedding = contentAnalysis.embedding;
-            
-            // Search for ANY semantically similar posts (no pre-filtering)
-            // This catches feedback that may have been missed initially
-            const similarPosts = await QdrantService.searchSimilar(contentEmbedding, {
-                limit: 10, // Get more results for Qwen3 to analyze
-                scoreThreshold: 0.7 // Only get reasonably similar posts
-            });
-            
-            if (similarPosts.length === 0) {
-                return { isFeedback: false, confidence: 0 };
-            }
-            
-            // Use Qwen3 to analyze which similar posts are actually feedback-related
-            const feedbackContext = similarPosts.map((post, idx) => 
-                `${idx + 1}. "${post.payload.content}" (similarity: ${Math.round(post.score * 100)}%)`
-            ).join('\n');
-            
-            const analysisPrompt = `Analyze this post for website/platform feedback by comparing it to similar posts:
+            const analysisPrompt = `Analyze this post to determine if it contains feedback about the UnitedWeRise website/platform itself.
 
-TARGET POST: "${content}"
+POST: "${content}"
 
-SIMILAR POSTS FROM DATABASE:
-${feedbackContext}
-
-TASK: Determine if the target post contains feedback about the UnitedWeRise website/platform itself.
+TASK: Determine if this post is feedback about the website/platform (not general political discussion).
 
 Consider:
-- Is it about the site's functionality, design, performance, or features?
+- Is it about site functionality, design, performance, or features?
 - Does it suggest improvements, report bugs, or express concerns about the platform?
+- Is it about user experience, navigation, or interface issues?
 - Or is it general political discussion unrelated to the website?
 
 Respond with JSON only:
@@ -178,15 +140,34 @@ Respond with JSON only:
     "type": "suggestion|bug_report|concern|feature_request|null",
     "category": "ui_ux|performance|functionality|accessibility|moderation|general|null",
     "reasoning": "brief explanation of decision",
-    "similarityInsight": "what the similar posts reveal about this content"
+    "priority": "low|medium|high|critical",
+    "actionable": boolean
 }`;
 
-            const response = await QwenService.generateResponse(analysisPrompt, 300);
+            const response = await azureOpenAI['client']?.chat.completions.create({
+                model: azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a feedback analysis system for the UnitedWeRise platform. Focus on identifying genuine platform feedback vs general political discussion."
+                    },
+                    {
+                        role: "user", 
+                        content: analysisPrompt
+                    }
+                ],
+                max_tokens: 300,
+                temperature: 0.2
+            });
+            
+            if (!response?.choices[0]?.message?.content) {
+                throw new Error('No response from Azure OpenAI');
+            }
             
             // Parse AI response
-            const analysisMatch = response.match(/\{[\s\S]*\}/);
+            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
-                throw new Error('No JSON found in Qwen3 response');
+                throw new Error('No JSON found in Azure OpenAI response');
             }
 
             const analysis = JSON.parse(analysisMatch[0]);
@@ -196,74 +177,34 @@ Respond with JSON only:
                 confidence: analysis.confidence,
                 type: analysis.type,
                 category: analysis.category,
-                summary: `Semantic search + AI analysis: ${analysis.reasoning} | ${analysis.similarityInsight}`
+                priority: analysis.priority,
+                actionable: analysis.actionable,
+                summary: `Azure OpenAI analysis: ${analysis.reasoning}`
             };
             
         } catch (error) {
-            logger.warn('Semantic feedback search failed:', error);
+            logger.warn('Azure OpenAI feedback analysis failed:', error);
             return { isFeedback: false, confidence: 0 };
         }
     }
 
     /**
-     * Legacy: Qdrant search against pre-flagged feedback only
+     * Vector similarity analysis using Azure OpenAI embeddings
+     * Compare against reference feedback phrases
      */
-    private async performQdrantSimilarityAnalysis(content: string): Promise<Partial<FeedbackAnalysis>> {
-        try {
-            // Get embedding for the input content
-            const contentAnalysis = await EmbeddingService.analyzeText(content);
-            const contentEmbedding = contentAnalysis.embedding;
-            
-            // Search for similar posts in Qdrant that are marked as feedback
-            const similarPosts = await QdrantService.searchSimilar(contentEmbedding, {
-                limit: 5,
-                scoreThreshold: 0.7
-                // Note: We'll filter for feedback in the client results since the simple categoryFilter doesn't support complex filters
-            });
-            
-            if (similarPosts.length === 0) {
-                return { isFeedback: false, confidence: 0 };
-            }
-            
-            // Calculate weighted confidence based on similarity scores
-            const maxScore = similarPosts[0].score;
-            
-            // Extract feedback type from most similar post
-            const bestMatch = similarPosts[0];
-            const feedbackType = (bestMatch.payload as any).feedbackType;
-            const feedbackCategory = (bestMatch.payload as any).feedbackCategory;
-            
-            return {
-                isFeedback: maxScore > 0.8, // High similarity threshold for Qdrant
-                confidence: maxScore,
-                type: feedbackType as any,
-                category: feedbackCategory as any,
-                summary: `Legacy similarity: ${Math.round(maxScore * 100)}% match to existing feedback (${similarPosts.length} similar posts found)`
-            };
-            
-        } catch (error) {
-            logger.warn('Qdrant similarity analysis failed:', error);
-            return { isFeedback: false, confidence: 0 };
-        }
-    }
-
-    /**
-     * Perform vector similarity analysis (legacy in-memory approach)
-     */
-    private async performVectorAnalysis(content: string): Promise<Partial<FeedbackAnalysis>> {
+    private async performVectorSimilarityAnalysis(content: string): Promise<Partial<FeedbackAnalysis>> {
         try {
             await this.initializeEmbeddings();
             
-            // Get embedding for the input content
-            const contentAnalysis = await EmbeddingService.analyzeText(content);
-            const contentEmbedding = contentAnalysis.embedding;
+            // Get embedding for the input content using Azure OpenAI
+            const contentEmbedding = await azureOpenAI.generateEmbedding(content);
             
             let maxSimilarity = 0;
             let bestMatch = { category: '', type: '', phrase: '' };
             
             // Compare against all reference embeddings
             for (const [key, referenceEmbedding] of this.feedbackEmbeddings.entries()) {
-                const similarity = this.cosineSimilarity(contentEmbedding, referenceEmbedding);
+                const similarity = this.cosineSimilarity(contentEmbedding.embedding, referenceEmbedding);
                 
                 if (similarity > maxSimilarity) {
                     maxSimilarity = similarity;
@@ -273,21 +214,22 @@ Respond with JSON only:
             }
             
             // Determine if it's feedback based on similarity threshold
-            const isFeedback = maxSimilarity > 0.7; // Threshold for vector similarity
+            const isFeedback = maxSimilarity > 0.7;
             
             return {
                 isFeedback,
                 confidence: maxSimilarity,
                 type: ['ui_ux', 'performance'].includes(bestMatch.category) ? 'suggestion' : bestMatch.type as any,
                 category: bestMatch.category as any,
-                summary: `Vector similarity match: "${bestMatch.phrase}" (${Math.round(maxSimilarity * 100)}%)`
+                summary: `Vector similarity: "${bestMatch.phrase}" (${Math.round(maxSimilarity * 100)}%)`
             };
             
         } catch (error) {
-            logger.warn('Vector analysis failed, falling back to keywords:', error);
+            logger.warn('Vector similarity analysis failed:', error);
             return { isFeedback: false, confidence: 0 };
         }
     }
+
 
     /**
      * Analyze a post to determine if it contains feedback about the site
@@ -297,41 +239,18 @@ Respond with JSON only:
             // 1. Quick keyword screening first (fastest)
             const keywordAnalysis = this.performKeywordAnalysis(content);
             
-            // 2. Universal semantic search approach (your brilliant idea!)
-            const semanticResult = await SemanticSearchService.searchFeedback(content);
-            const semanticAnalysis: Partial<FeedbackAnalysis> = {
-                isFeedback: semanticResult.isRelevant,
-                confidence: semanticResult.confidence,
-                type: semanticResult.classification as any,
-                category: semanticResult.category as any,
-                summary: semanticResult.summary
-            };
+            // 2. Azure OpenAI analysis (primary method)
+            const azureAnalysis = await this.performAzureOpenAIFeedbackAnalysis(content);
             
-            // 3. Fallback approaches if semantic search fails
-            let fallbackAnalysis: Partial<FeedbackAnalysis> = { isFeedback: false, confidence: 0 };
-            if (semanticAnalysis.confidence === 0) {
-                // Try legacy Qdrant filtered search
-                const qdrantAnalysis = await this.performQdrantSimilarityAnalysis(content);
-                if (qdrantAnalysis.confidence === 0) {
-                    // Final fallback to in-memory vectors
-                    fallbackAnalysis = await this.performVectorAnalysis(content);
-                } else {
-                    fallbackAnalysis = qdrantAnalysis;
-                }
+            // 3. Vector similarity fallback if Azure analysis fails
+            let vectorAnalysis: Partial<FeedbackAnalysis> = { isFeedback: false, confidence: 0 };
+            if (azureAnalysis.confidence === 0) {
+                vectorAnalysis = await this.performVectorSimilarityAnalysis(content);
             }
             
-            // 4. Use additional AI analysis only if needed for edge cases
-            let aiAnalysis: Partial<FeedbackAnalysis> = {};
-            if (keywordAnalysis.confidence > 0.3 && 
-                semanticAnalysis.confidence === 0 && 
-                fallbackAnalysis.confidence === 0) {
-                // Only run expensive AI analysis if other methods disagree or are uncertain
-                aiAnalysis = await this.performAIAnalysis(content);
-            }
-            
-            // Combine analyses (prioritize semantic search results)
-            const primaryAnalysis = semanticAnalysis.confidence > 0 ? semanticAnalysis : fallbackAnalysis;
-            return this.combineMultipleAnalyses(keywordAnalysis, primaryAnalysis, aiAnalysis);
+            // Combine analyses (prioritize Azure OpenAI results)
+            const primaryAnalysis = azureAnalysis.confidence > 0 ? azureAnalysis : vectorAnalysis;
+            return this.combineMultipleAnalyses(keywordAnalysis, primaryAnalysis, {});
             
         } catch (error) {
             logger.error('Error in feedback analysis:', error);
@@ -407,55 +326,6 @@ Respond with JSON only:
         } as FeedbackAnalysis;
     }
 
-    /**
-     * Use Qwen3 for sophisticated feedback analysis
-     */
-    private async performAIAnalysis(content: string): Promise<Partial<FeedbackAnalysis>> {
-        const prompt = `Analyze this user post to determine if it contains feedback, suggestions, concerns, or bug reports about the UnitedWeRise website/platform itself.
-
-Post content: "${content}"
-
-Consider:
-- Is this specifically about the website/platform functionality, not general political discussion?
-- What type of feedback is it?
-- How actionable is it?
-- What priority should it have?
-
-Respond with JSON only:
-{
-    "isFeedback": boolean,
-    "type": "suggestion|bug_report|concern|feature_request|null",
-    "category": "ui_ux|performance|functionality|accessibility|moderation|content|general|null", 
-    "priority": "low|medium|high|critical|null",
-    "summary": "brief actionable summary or null",
-    "confidence": 0.0-1.0,
-    "actionable": boolean
-}`;
-
-        try {
-            const response = await QwenService.generateResponse(prompt);
-            
-            // Parse JSON response
-            const analysisMatch = response.match(/\{[\s\S]*\}/);
-            if (!analysisMatch) {
-                throw new Error('No JSON found in Qwen3 response');
-            }
-
-            const analysis = JSON.parse(analysisMatch[0]);
-            
-            // Validate response structure
-            if (typeof analysis.isFeedback !== 'boolean' || 
-                typeof analysis.confidence !== 'number') {
-                throw new Error('Invalid analysis structure from Qwen3');
-            }
-
-            return analysis;
-            
-        } catch (error) {
-            logger.warn('Failed to get AI analysis, using fallback:', error);
-            throw error;
-        }
-    }
 
     /**
      * Combine keyword, vector, and AI analysis results  

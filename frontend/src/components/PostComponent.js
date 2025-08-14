@@ -31,7 +31,7 @@ class PostComponent {
         const authorInitial = authorName[0].toUpperCase();
         
         return `
-            <div class="post-component" data-post-id="${post.id}">
+            <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
                         <div class="post-avatar">${authorInitial}</div>

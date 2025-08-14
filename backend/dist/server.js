@@ -30,6 +30,8 @@ const photos_1 = __importDefault(require("./routes/photos"));
 const googleCivic_1 = __importDefault(require("./routes/googleCivic"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
 const batch_1 = __importDefault(require("./routes/batch"));
+const reputation_1 = __importDefault(require("./routes/reputation"));
+const health_1 = __importDefault(require("./routes/health"));
 const websocket_1 = require("./websocket");
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -115,6 +117,8 @@ app.use('/api/photos', photos_1.default);
 app.use('/api/google-civic', googleCivic_1.default);
 app.use('/api/feedback', feedback_1.default);
 app.use('/api/batch', batch_1.default);
+app.use('/api/reputation', reputation_1.default);
+app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
 // API Documentation

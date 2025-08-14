@@ -1,8 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.moderationService = void 0;
 const client_1 = require("@prisma/client");
 const emailService_1 = require("./emailService");
+const azureOpenAIService_1 = require("./azureOpenAIService");
+const logger_1 = __importDefault(require("../utils/logger"));
 class ModerationService {
     constructor() {
         this.prisma = new client_1.PrismaClient();
@@ -41,7 +46,7 @@ class ModerationService {
             });
         }
         // Hate speech detection
-        const hateSpeechScore = this.detectHateSpeech(content);
+        const hateSpeechScore = await this.detectHateSpeech(content);
         if (hateSpeechScore > 0.7) {
             flags.push({
                 contentType,
@@ -100,54 +105,179 @@ class ModerationService {
             spamScore += 0.3;
         return Math.min(spamScore, 1.0);
     }
-    // Placeholder for AI-powered toxicity detection
+    // Azure OpenAI-powered toxicity detection
     async detectToxicity(content) {
-        // In production, integrate with services like:
-        // - Google Perspective API
-        // - OpenAI Moderation API
-        // - Azure Content Moderator
-        // Simple heuristic for demo
-        const toxicWords = [
-            'hate', 'kill', 'die', 'stupid', 'idiot', 'moron', 'retard',
-            'nazi', 'terrorist', 'scum', 'trash', 'worthless'
-        ];
-        const lowerContent = content.toLowerCase();
-        const toxicMatches = toxicWords.filter(word => lowerContent.includes(word)).length;
-        return Math.min(toxicMatches / 5, 1.0); // Normalize to 0-1
-    }
-    // Hate speech detection
-    detectHateSpeech(content) {
-        const hateSpeechTerms = [
-            // This would be a comprehensive list in production
-            'racial slurs', 'ethnic slurs', 'religious slurs',
-            'homophobic terms', 'transphobic terms', 'ableist terms'
-            // Note: Not including actual terms for safety
-        ];
-        const lowerContent = content.toLowerCase();
-        // Pattern detection for hate speech
-        let score = 0;
-        // Check for targeted harassment patterns
-        if (lowerContent.includes('you people') || lowerContent.includes('your kind')) {
-            score += 0.3;
+        try {
+            const moderationPrompt = `Analyze this content for toxicity, harassment, or harmful language. Focus on:
+- Personal attacks or threats
+- Hate speech targeting individuals or groups
+- Severely inappropriate language
+- Content that could cause harm
+
+Content: "${content.slice(0, 1000)}"
+
+Respond with JSON only:
+{
+  "toxicityScore": 0.0-1.0,
+  "reasoning": "brief explanation",
+  "categories": ["category1", "category2"]
+}`;
+            const response = await azureOpenAIService_1.azureOpenAI['client']?.chat.completions.create({
+                model: azureOpenAIService_1.azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a content moderation assistant. Analyze content objectively and provide toxicity scores. Be conservative - only flag genuinely harmful content, not political opinions."
+                    },
+                    {
+                        role: "user",
+                        content: moderationPrompt
+                    }
+                ],
+                max_tokens: 200,
+                temperature: 0.1
+            });
+            if (!response?.choices[0]?.message?.content) {
+                throw new Error('No response from Azure OpenAI');
+            }
+            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+            if (!analysisMatch) {
+                throw new Error('No JSON found in response');
+            }
+            const analysis = JSON.parse(analysisMatch[0]);
+            logger_1.default.debug('Toxicity analysis completed', {
+                score: analysis.toxicityScore,
+                categories: analysis.categories
+            });
+            return Math.min(Math.max(analysis.toxicityScore || 0, 0), 1.0);
         }
-        // Check for dehumanizing language
-        if (lowerContent.includes('animals') || lowerContent.includes('vermin')) {
-            score += 0.4;
+        catch (error) {
+            logger_1.default.warn('Azure OpenAI toxicity detection failed, using fallback:', error);
+            // Fallback to simple keyword matching
+            const toxicWords = [
+                'hate', 'kill', 'die', 'stupid', 'idiot', 'moron', 'retard',
+                'nazi', 'terrorist', 'scum', 'trash', 'worthless'
+            ];
+            const lowerContent = content.toLowerCase();
+            const toxicMatches = toxicWords.filter(word => lowerContent.includes(word)).length;
+            return Math.min(toxicMatches / 5, 1.0);
         }
-        return Math.min(score, 1.0);
     }
-    // Duplicate content detection
+    // Azure OpenAI-powered hate speech detection
+    async detectHateSpeech(content) {
+        try {
+            const hateSpeechPrompt = `Analyze this content for hate speech targeting individuals or groups based on:
+- Race, ethnicity, or nationality
+- Religion or beliefs
+- Gender identity or sexual orientation
+- Disability or other protected characteristics
+
+Content: "${content.slice(0, 1000)}"
+
+Respond with JSON only:
+{
+  "hateSpeechScore": 0.0-1.0,
+  "reasoning": "brief explanation",
+  "targetedGroups": ["group1", "group2"]
+}`;
+            const response = await azureOpenAIService_1.azureOpenAI['client']?.chat.completions.create({
+                model: azureOpenAIService_1.azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a hate speech detection system. Focus on content that targets or dehumanizes specific groups. Political criticism or disagreement is not hate speech unless it targets identity groups."
+                    },
+                    {
+                        role: "user",
+                        content: hateSpeechPrompt
+                    }
+                ],
+                max_tokens: 200,
+                temperature: 0.1
+            });
+            if (!response?.choices[0]?.message?.content) {
+                throw new Error('No response from Azure OpenAI');
+            }
+            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+            if (!analysisMatch) {
+                throw new Error('No JSON found in response');
+            }
+            const analysis = JSON.parse(analysisMatch[0]);
+            logger_1.default.debug('Hate speech analysis completed', {
+                score: analysis.hateSpeechScore,
+                targetedGroups: analysis.targetedGroups
+            });
+            return Math.min(Math.max(analysis.hateSpeechScore || 0, 0), 1.0);
+        }
+        catch (error) {
+            logger_1.default.warn('Azure OpenAI hate speech detection failed, using fallback:', error);
+            // Fallback to pattern detection
+            const lowerContent = content.toLowerCase();
+            let score = 0;
+            // Check for targeted harassment patterns
+            if (lowerContent.includes('you people') || lowerContent.includes('your kind')) {
+                score += 0.3;
+            }
+            // Check for dehumanizing language
+            if (lowerContent.includes('animals') || lowerContent.includes('vermin')) {
+                score += 0.4;
+            }
+            return Math.min(score, 1.0);
+        }
+    }
+    // Semantic duplicate content detection using Azure OpenAI embeddings
     async detectDuplicateContent(content, contentType) {
-        const recentContent = await this.prisma.post.findMany({
-            where: {
-                content,
-                createdAt: {
-                    gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+        try {
+            // Generate embedding for the new content
+            const contentEmbedding = await azureOpenAIService_1.azureOpenAI.generateEmbedding(content);
+            // Get recent posts with embeddings from the database
+            const recentPosts = await this.prisma.post.findMany({
+                where: {
+                    createdAt: {
+                        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+                    },
+                    embedding: {
+                        isEmpty: false
+                    }
+                },
+                select: {
+                    id: true,
+                    content: true,
+                    embedding: true
+                },
+                take: 100 // Limit for performance
+            });
+            // Check for high similarity (potential duplicates)
+            for (const post of recentPosts) {
+                if (post.embedding && Array.isArray(post.embedding)) {
+                    const similarity = azureOpenAIService_1.AzureOpenAIService.calculateSimilarity(contentEmbedding.embedding, post.embedding);
+                    // High similarity threshold for duplicate detection
+                    if (similarity > 0.95) {
+                        logger_1.default.info('Potential duplicate content detected', {
+                            similarity,
+                            originalPostId: post.id,
+                            originalContent: post.content.slice(0, 100)
+                        });
+                        return true;
+                    }
                 }
-            },
-            take: 1
-        });
-        return recentContent.length > 0;
+            }
+            return false;
+        }
+        catch (error) {
+            logger_1.default.warn('Semantic duplicate detection failed, using exact match fallback:', error);
+            // Fallback to exact content matching
+            const recentContent = await this.prisma.post.findMany({
+                where: {
+                    content,
+                    createdAt: {
+                        gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+                    }
+                },
+                take: 1
+            });
+            return recentContent.length > 0;
+        }
     }
     // Get spam indicators for reporting
     getSpamIndicators(content) {

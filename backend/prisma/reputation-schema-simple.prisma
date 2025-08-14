@@ -1,0 +1,53 @@
+// Simple Reputation System Schema
+// Add these fields to your existing models
+
+// Update User model - add these fields
+model User {
+  // ... existing fields ...
+  
+  // Reputation score (0-100, starts at 70)
+  reputationScore     Int?      @default(70)
+  reputationUpdatedAt DateTime?
+  
+  // Reputation events for this user
+  reputationEvents    ReputationEvent[]
+  
+  // ... rest of existing fields ...
+}
+
+// Update Post model - add this field
+model Post {
+  // ... existing fields ...
+  
+  // Reputation events related to this post
+  reputationEvents    ReputationEvent[]
+  
+  // ... rest of existing fields ...
+}
+
+// New table for reputation events (transparent logging)
+model ReputationEvent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  type         String   // 'penalty' or 'reward'
+  reason       String   // 'hate_speech', 'quality_post', etc.
+  points       Float    // Points added/removed
+  
+  postId       String?  // Related post if applicable
+  post         Post?    @relation(fields: [postId], references: [id])
+  
+  validated    Boolean  @default(false) // Was this validated by AI/human?
+  
+  scoreBefore  Int      // Score before this event
+  scoreAfter   Int      // Score after this event
+  
+  metadata     Json?    // Additional context (AI analysis, etc.)
+  createdAt    DateTime @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([reason])
+  @@index([postId])
+}

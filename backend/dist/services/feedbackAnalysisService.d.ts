@@ -1,10 +1,10 @@
 /**
  * Feedback Analysis Service
  *
- * Uses existing Qwen3 and Sentence Transformers infrastructure to detect
- * and categorize user feedback about the UnitedWeRise platform itself.
+ * Uses Azure OpenAI to detect and categorize user feedback about
+ * the UnitedWeRise platform itself.
  *
- * Integrates with existing AI pipeline for efficient processing.
+ * Migrated from Qwen/Qdrant to Azure OpenAI for production deployment.
  */
 export interface FeedbackAnalysis {
     isFeedback: boolean;
@@ -22,27 +22,23 @@ export declare class FeedbackAnalysisService {
     private feedbackKeywords;
     private feedbackReferencePhrases;
     /**
-     * Initialize embeddings for reference phrases
+     * Initialize embeddings for reference phrases using Azure OpenAI
      */
     private initializeEmbeddings;
     /**
-     * Calculate cosine similarity between two vectors
+     * Calculate cosine similarity between two vectors (delegated to Azure OpenAI service)
      */
     private cosineSimilarity;
     /**
-     * Universal semantic search approach - your brilliant idea!
-     * Query Qdrant for content similar to "website feedback and suggestions"
-     * Then use Qwen3 to determine relevance and classification
+     * Azure OpenAI-powered feedback analysis
+     * Direct analysis without requiring pre-existing similar posts
      */
-    private performSemanticFeedbackSearch;
+    private performAzureOpenAIFeedbackAnalysis;
     /**
-     * Legacy: Qdrant search against pre-flagged feedback only
+     * Vector similarity analysis using Azure OpenAI embeddings
+     * Compare against reference feedback phrases
      */
-    private performQdrantSimilarityAnalysis;
-    /**
-     * Perform vector similarity analysis (legacy in-memory approach)
-     */
-    private performVectorAnalysis;
+    private performVectorSimilarityAnalysis;
     /**
      * Analyze a post to determine if it contains feedback about the site
      */
@@ -51,10 +47,6 @@ export declare class FeedbackAnalysisService {
      * Quick keyword-based analysis for initial screening
      */
     private performKeywordAnalysis;
-    /**
-     * Use Qwen3 for sophisticated feedback analysis
-     */
-    private performAIAnalysis;
     /**
      * Combine keyword, vector, and AI analysis results
      */

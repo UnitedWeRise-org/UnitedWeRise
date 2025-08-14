@@ -86,10 +86,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         })[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
@@ -200,10 +200,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         })[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
@@ -253,10 +253,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         };
         endorsements: ({
             user: {
@@ -359,10 +359,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         };
         user: {
             id: string;
@@ -427,10 +427,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         };
         user: {
             id: string;
@@ -513,10 +513,10 @@ export declare class ElectionService {
                 description: string | null;
                 district: string | null;
                 title: string;
+                electionId: string;
                 jurisdiction: string | null;
                 termLength: number | null;
                 salary: import("@prisma/client/runtime/library").Decimal | null;
-                electionId: string;
             };
         } & {
             userId: string | null;
@@ -590,10 +590,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
+            electionId: string;
             jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
-            electionId: string;
         };
         endorsements: ({
             user: {

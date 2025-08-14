@@ -5,9 +5,9 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validatePost, validateComment } from '../middleware/validation';
 import { postLimiter } from '../middleware/rateLimiting';
 import { checkUserSuspension, moderateContent, contentFilter, addContentWarnings } from '../middleware/moderation';
-import { EmbeddingService } from '../services/embeddingService';
-import { QdrantService } from '../services/qdrantService';
+import { azureOpenAI } from '../services/azureOpenAIService';
 import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
+import { reputationService } from '../services/reputationService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -26,14 +26,27 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             return res.status(400).json({ error: 'Post content must be 500 characters or less' });
         }
 
-        // Generate embedding for AI topic clustering
+        // Generate embedding for AI topic clustering using Azure OpenAI
         let embedding: number[] = [];
         try {
-            const analysis = await EmbeddingService.analyzeText(content.trim());
-            embedding = analysis.embedding;
+            const embeddingResult = await azureOpenAI.generateEmbedding(content.trim());
+            embedding = embeddingResult.embedding;
         } catch (error) {
             console.warn('Failed to generate embedding for post:', error);
             // Continue without embedding rather than failing the post creation
+        }
+
+        // Reputation-based content analysis
+        let reputationImpact = { penalties: [], totalPenalty: 0 };
+        try {
+            // This will analyze content and apply penalties automatically
+            reputationImpact = await reputationService.analyzeAndApplyPenalties(
+                content.trim(),
+                userId,
+                'temp-post-id' // Will update with actual post ID after creation
+            );
+        } catch (error) {
+            console.warn('Failed to analyze post for reputation impact:', error);
         }
 
         // Analyze for site feedback (suggestions, concerns, bug reports)
@@ -60,12 +73,16 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             // Continue without feedback analysis rather than failing the post creation
         }
 
+        // Get user's current reputation for post attribution
+        const userReputation = await reputationService.getUserReputation(userId);
+
         const post = await prisma.post.create({
             data: {
                 content: content.trim(),
                 imageUrl,
                 authorId: userId,
                 embedding,
+                authorReputation: userReputation.current,
                 ...feedbackData
             },
             include: {
@@ -88,25 +105,20 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             }
         });
 
-        // Store in Qdrant for vector similarity search (async, don't block response)
-        if (embedding.length > 0) {
-            QdrantService.storeEmbedding(post.id, embedding, {
-                content: post.content,
-                postId: post.id,
-                authorId: post.authorId,
-                createdAt: post.createdAt.toISOString(),
-                // Include feedback metadata for filtering
-                ...((feedbackData as any).containsFeedback && {
-                    containsFeedback: true,
-                    feedbackType: (feedbackData as any).feedbackType,
-                    feedbackCategory: (feedbackData as any).feedbackCategory,
-                    feedbackPriority: (feedbackData as any).feedbackPriority,
-                    feedbackConfidence: (feedbackData as any).feedbackConfidence
-                })
-            }).catch(error => {
-                console.warn('Failed to store post in Qdrant:', error);
-                // Don't fail the request if Qdrant storage fails
-            });
+        // Update reputation event with actual post ID if penalties were applied
+        if (reputationImpact.totalPenalty < 0) {
+            try {
+                await prisma.reputationEvent.updateMany({
+                    where: {
+                        userId: userId,
+                        postId: 'temp-post-id',
+                        createdAt: { gte: new Date(Date.now() - 5000) } // Last 5 seconds
+                    },
+                    data: { postId: post.id }
+                });
+            } catch (error) {
+                console.warn('Failed to update reputation event with post ID:', error);
+            }
         }
 
         res.status(201).json({
@@ -115,7 +127,11 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 ...post,
                 likesCount: post._count.likes,
                 commentsCount: post._count.comments,
-                _count: undefined
+                _count: undefined,
+                reputationImpact: reputationImpact.penalties.length > 0 ? {
+                    penalties: reputationImpact.penalties,
+                    totalPenalty: reputationImpact.totalPenalty
+                } : undefined
             }
         });
     } catch (error) {
@@ -292,6 +308,24 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
                     `${req.user!.username} liked your post`,
                     postId
                 );
+            }
+
+            // Check if this qualifies as a quality post for reputation reward
+            const totalLikes = await prisma.like.count({
+                where: { postId }
+            });
+
+            // Award reputation for quality posts (5+ likes)
+            if (totalLikes >= 5) {
+                try {
+                    await reputationService.awardReputation(
+                        post.authorId,
+                        'quality_post',
+                        postId
+                    );
+                } catch (error) {
+                    console.warn('Failed to award reputation for quality post:', error);
+                }
             }
 
             res.json({ message: 'Post liked successfully', liked: true });

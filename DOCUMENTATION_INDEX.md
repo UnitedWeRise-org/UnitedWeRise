@@ -50,10 +50,17 @@
 - **Features**: Real-time error tracking, AI insights, security monitoring, user management
 - **Console Tools**: Integrated debugging commands for admin analysis
 
+### **🏆 Community Reputation System - NEW ✨**
+- **[REPUTATION_SYSTEM_COMPLETE.md](./REPUTATION_SYSTEM_COMPLETE.md)** - Complete 0-100 reputation scoring system
+- **Status**: ✅ Fully implemented and production-ready
+- **Features**: Content warnings, algorithmic visibility effects, AI-powered appeals
+- **Philosophy**: Transparent accountability without censorship
+
 ### **🌐 Domain & Deployment**
 - **[DOMAIN_SETUP_GUIDE.md](./DOMAIN_SETUP_GUIDE.md)** - Custom domain configuration
 - **[MONITORING_SETUP.md](./MONITORING_SETUP.md)** - Production monitoring and alerts
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment procedures
+- **[DEPLOYMENT_STATUS_DEMO.md](./DEPLOYMENT_STATUS_DEMO.md)** - Real-time deployment tracking system
 
 ### **⚙️ Development & Standards**
 - **[DEVELOPMENT_PRACTICES.md](./DEVELOPMENT_PRACTICES.md)** - Code standards and workflow
@@ -62,7 +69,7 @@
 - **[CLAUDE.md](./CLAUDE.md)** - AI assistant development notes
 
 ### **🚀 Future Features & Roadmap**
-- **[CIVIC_ENGAGEMENT_GAMIFICATION.md](./CIVIC_ENGAGEMENT_GAMIFICATION.md)** - Comprehensive gamification system (login streaks, quests, rewards)
+- **[CIVIC_ENGAGEMENT_GAMIFICATION.md](./CIVIC_ENGAGEMENT_GAMIFICATION.md)** - Comprehensive gamification system concept
 - **[OAUTH_GOOGLE_IMPLEMENTATION.md](./OAUTH_GOOGLE_IMPLEMENTATION.md)** - Google OAuth integration plans
 - **[SMS_VALIDATION_FUTURE.md](./SMS_VALIDATION_FUTURE.md)** - Phone verification roadmap
 
@@ -92,7 +99,8 @@
 ### For Deployment Issues:
 1. **[AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md)** - Infrastructure overview
 2. **[PRODUCTION_DEPLOYMENT_GUIDE.md](./PRODUCTION_DEPLOYMENT_GUIDE.md)** - Deployment procedures
-3. **[SECURITY_DEPLOYMENT_CHECKLIST.md](./SECURITY_DEPLOYMENT_CHECKLIST.md)** - Security requirements
+3. **[DEPLOYMENT_STATUS_DEMO.md](./DEPLOYMENT_STATUS_DEMO.md)** - Real-time deployment tracking
+4. **[SECURITY_DEPLOYMENT_CHECKLIST.md](./SECURITY_DEPLOYMENT_CHECKLIST.md)** - Security requirements
 
 ### For AI/Semantic Features:
 1. **[AZURE_VECTOR_INTEGRATION.md](./AZURE_VECTOR_INTEGRATION.md)** - Production AI strategy
@@ -108,6 +116,12 @@
 1. **Access Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 2. **[CLAUDE.md](./CLAUDE.md)** - Admin console commands and debugging tools
 3. **[COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md](./COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md)** - Security monitoring setup
+4. **[REPUTATION_SYSTEM_COMPLETE.md](./REPUTATION_SYSTEM_COMPLETE.md)** - Community moderation system
+
+### For Content Moderation & Community Management:
+1. **[REPUTATION_SYSTEM_COMPLETE.md](./REPUTATION_SYSTEM_COMPLETE.md)** - Complete reputation system implementation
+2. **[CLAUDE.md](./CLAUDE.md)** - Content moderation commands and tools
+3. **[COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md](./COMPREHENSIVE_SECURITY_PLAN_2025-08-13.md)** - Security policies
 
 ---
 
@@ -127,13 +141,21 @@
 - ✅ Content moderation and reporting system
 - ✅ Custom domain with SSL and CDN
 - ✅ Production-ready security architecture
-- ✅ **NEW**: Comprehensive admin dashboard with monitoring
-- ✅ **NEW**: Error tracking and performance optimization
-- ✅ **NEW**: AI insights for user suggestions and content analysis
-- ✅ **NEW**: Console debugging tools for admin operations
+- ✅ **DEPLOYED**: Comprehensive admin dashboard with monitoring
+- ✅ **DEPLOYED**: Error tracking and performance optimization
+- ✅ **DEPLOYED**: AI insights for user suggestions and content analysis
+- ✅ **DEPLOYED**: Console debugging tools for admin operations
+- ✅ **DEPLOYED**: Complete reputation system with Azure OpenAI integration
+- ✅ **DEPLOYED**: Content moderation with behavioral scoring (not opinion-based)
+- ✅ **DEPLOYED**: Appeals system with AI + human review process
+- ✅ **DEPLOYED**: Real-time deployment status monitoring across all components
+- ✅ **DEPLOYED**: Health endpoints for frontend, backend, database, and services
 
 ### **AI/Semantic Features Status**
-- 🚧 **In Progress**: Azure OpenAI integration for semantic topic discovery
+- ✅ **DEPLOYED**: Azure OpenAI integration for reputation system content analysis
+- ✅ **DEPLOYED**: AI-powered content moderation (hate speech, harassment, spam detection)
+- ✅ **DEPLOYED**: AI-powered appeals review system with admin escalation
+- 🚧 **Next Phase**: Azure OpenAI integration for semantic topic discovery and feed enhancement
 - ✅ Local development environment with Ollama + Qdrant + Sentence Transformers
 - ✅ Vector-based content similarity and clustering algorithms
 - ✅ AI-powered topic analysis and summarization framework
@@ -162,4 +184,4 @@
 
 ---
 
-*Last Updated: 2025-12-13 | Maintained by: Development Team | Cross-references: All 36+ documentation files*
+*Last Updated: 2025-01-15 | Maintained by: Development Team | Cross-references: All 37+ documentation files*

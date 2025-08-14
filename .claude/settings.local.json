@@ -63,7 +63,9 @@
       "Bash(\"ENABLE_SEMANTIC_TOPICS=true\" )",
       "Bash(\"SEMANTIC_PROVIDER=azure\" )",
       "Bash(\"SIMILARITY_THRESHOLD=0.60\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(gh run list:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

@@ -1,8 +1,20 @@
-import { pipeline, env } from '@xenova/transformers';
+// Dynamic import to handle ESM compatibility
+let transformersModule: any = null;
 
-// Configure to run locally without external downloads during runtime
-env.allowLocalModels = false;
-env.allowRemoteModels = true;
+async function getTransformersModule() {
+  if (!transformersModule) {
+    try {
+      transformersModule = await import('@xenova/transformers');
+      // Configure to run locally without external downloads during runtime
+      transformersModule.env.allowLocalModels = false;
+      transformersModule.env.allowRemoteModels = true;
+    } catch (error) {
+      console.warn('Failed to load transformers module:', error);
+      transformersModule = null;
+    }
+  }
+  return transformersModule;
+}
 
 interface EmbeddingResult {
   embedding: number[];
@@ -27,8 +39,14 @@ export class SentenceTransformersService {
   private static async getEmbeddingPipeline() {
     if (!this.embeddingPipeline) {
       try {
-        this.embeddingPipeline = await pipeline('feature-extraction', this.MODEL_NAME);
-        console.log('✓ Local embedding pipeline initialized');
+        const transformers = await getTransformersModule();
+        if (transformers?.pipeline) {
+          this.embeddingPipeline = await transformers.pipeline('feature-extraction', this.MODEL_NAME);
+          console.log('✓ Local embedding pipeline initialized');
+        } else {
+          console.warn('Transformers module not available');
+          this.embeddingPipeline = null;
+        }
       } catch (error) {
         console.warn('Failed to initialize local pipeline, will use fallback:', error);
         this.embeddingPipeline = null;

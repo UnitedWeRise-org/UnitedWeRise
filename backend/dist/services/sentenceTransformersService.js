@@ -1,10 +1,56 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SentenceTransformersService = void 0;
-const transformers_1 = require("@xenova/transformers");
-// Configure to run locally without external downloads during runtime
-transformers_1.env.allowLocalModels = false;
-transformers_1.env.allowRemoteModels = true;
+// Dynamic import to handle ESM compatibility
+let transformersModule = null;
+async function getTransformersModule() {
+    if (!transformersModule) {
+        try {
+            transformersModule = await Promise.resolve().then(() => __importStar(require('@xenova/transformers')));
+            // Configure to run locally without external downloads during runtime
+            transformersModule.env.allowLocalModels = false;
+            transformersModule.env.allowRemoteModels = true;
+        }
+        catch (error) {
+            console.warn('Failed to load transformers module:', error);
+            transformersModule = null;
+        }
+    }
+    return transformersModule;
+}
 class SentenceTransformersService {
     /**
      * Initialize local embedding pipeline
@@ -12,8 +58,15 @@ class SentenceTransformersService {
     static async getEmbeddingPipeline() {
         if (!this.embeddingPipeline) {
             try {
-                this.embeddingPipeline = await (0, transformers_1.pipeline)('feature-extraction', this.MODEL_NAME);
-                console.log('✓ Local embedding pipeline initialized');
+                const transformers = await getTransformersModule();
+                if (transformers?.pipeline) {
+                    this.embeddingPipeline = await transformers.pipeline('feature-extraction', this.MODEL_NAME);
+                    console.log('✓ Local embedding pipeline initialized');
+                }
+                else {
+                    console.warn('Transformers module not available');
+                    this.embeddingPipeline = null;
+                }
             }
             catch (error) {
                 console.warn('Failed to initialize local pipeline, will use fallback:', error);

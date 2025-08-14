@@ -9,6 +9,7 @@ interface FeedWeights {
     similarity: number;
     social: number;
     trending: number;
+    reputation: number;
 }
 export declare class ProbabilityFeedService {
     private static defaultWeights;
@@ -28,6 +29,7 @@ export declare class ProbabilityFeedService {
             similarity: number;
             social: number;
             trending: number;
+            reputation: number;
         };
         stats: {
             candidateCount: number;
@@ -35,6 +37,8 @@ export declare class ProbabilityFeedService {
             avgSimilarityScore: number;
             avgSocialScore: number;
             avgTrendingScore: number;
+            avgReputationScore: number;
+            avgVisibilityMultiplier: number;
         };
     }>;
     /**

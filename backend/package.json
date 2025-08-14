@@ -7,7 +7,9 @@
     "start": "npx prisma migrate deploy && node dist/server.js",
     "migrate": "npx prisma migrate deploy",
     "generate-test-users": "ts-node src/scripts/generate-test-users.ts",
-    "check-database": "ts-node src/scripts/check-database.ts"
+    "check-database": "ts-node src/scripts/check-database.ts",
+    "update-deployment": "node scripts/update-deployment.js",
+    "deploy": "npm run update-deployment && npm run build"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -55,5 +57,9 @@
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
     "zod": "^3.23.8"
+  },
+  "deploymentInfo": {
+    "lastDeployment": "2025-08-14T01:09:10.850Z",
+    "deploymentCount": 2
   }
 }

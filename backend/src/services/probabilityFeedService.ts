@@ -6,7 +6,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { EmbeddingService } from './embeddingService';
+import { azureOpenAI } from './azureOpenAIService';
+import { reputationService } from './reputationService';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,7 @@ interface FeedWeights {
     similarity: number;  // 0-1, weight for content similarity to user interests  
     social: number;      // 0-1, weight for posts from followed users
     trending: number;    // 0-1, weight for trending/popular content
+    reputation: number;  // 0-1, weight for author reputation
 }
 
 interface PostScore {
@@ -23,6 +25,8 @@ interface PostScore {
     similarityScore: number;
     socialScore: number;
     trendingScore: number;
+    reputationScore: number;
+    visibilityMultiplier: number;
     finalScore: number;
 }
 
@@ -30,10 +34,11 @@ export class ProbabilityFeedService {
     
     // Default weights - can be overridden per user or via A/B testing
     private static defaultWeights: FeedWeights = {
-        recency: 0.35,    // Prefer newer content
+        recency: 0.30,    // Prefer newer content
         similarity: 0.25, // Match user interests
         social: 0.25,     // Posts from connections
-        trending: 0.15    // Popular content
+        trending: 0.10,   // Popular content
+        reputation: 0.10  // Author reputation
     };
 
     /**
@@ -74,7 +79,9 @@ export class ProbabilityFeedService {
                     avgRecencyScore: this.avgScore(scoredPosts, 'recencyScore'),
                     avgSimilarityScore: this.avgScore(scoredPosts, 'similarityScore'),
                     avgSocialScore: this.avgScore(scoredPosts, 'socialScore'),
-                    avgTrendingScore: this.avgScore(scoredPosts, 'trendingScore')
+                    avgTrendingScore: this.avgScore(scoredPosts, 'trendingScore'),
+                    avgReputationScore: this.avgScore(scoredPosts, 'reputationScore'),
+                    avgVisibilityMultiplier: this.avgScore(scoredPosts, 'visibilityMultiplier')
                 }
             };
         } catch (error) {
@@ -195,12 +202,39 @@ export class ProbabilityFeedService {
             }
         }
 
+        // 5. Reputation Score (author's reputation affects content quality)
+        let reputationScore = 0.7; // Default neutral score (70/100)
+        let visibilityMultiplier = 1.0; // Default normal visibility
+        
+        try {
+            // Use cached reputation from post if available, otherwise fetch
+            const authorReputation = post.authorReputation || 70;
+            reputationScore = authorReputation / 100; // Normalize to 0-1
+            
+            // Apply visibility multiplier based on reputation tiers
+            if (authorReputation >= 95) {
+                visibilityMultiplier = 1.1; // +10% boost
+            } else if (authorReputation >= 50) {
+                visibilityMultiplier = 1.0; // Normal visibility
+            } else if (authorReputation >= 30) {
+                visibilityMultiplier = 0.9; // -10% suppression
+            } else {
+                visibilityMultiplier = 0.8; // -20% suppression
+            }
+        } catch (error) {
+            console.warn('Reputation calculation error:', error);
+        }
+
         // Calculate final weighted score
-        const finalScore = 
+        const baseScore = 
             (recencyScore * weights.recency) +
             (similarityScore * weights.similarity) +
             (socialScore * weights.social) +
-            (trendingScore * weights.trending);
+            (trendingScore * weights.trending) +
+            (reputationScore * weights.reputation);
+            
+        // Apply reputation-based visibility multiplier
+        const finalScore = baseScore * visibilityMultiplier;
 
         return {
             postId: post.id,
@@ -208,6 +242,8 @@ export class ProbabilityFeedService {
             similarityScore,
             socialScore,
             trendingScore,
+            reputationScore,
+            visibilityMultiplier,
             finalScore,
             post
         };

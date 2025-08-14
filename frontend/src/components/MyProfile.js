@@ -66,7 +66,7 @@ class MyProfile {
                     </div>
                     
                     <div class="profile-info">
-                        <h1>@${user.username}</h1>
+                        <h1 class="profile-name">@${user.username}</h1>
                         <p class="full-name">${user.firstName || ''} ${user.lastName || ''}</p>
                         ${user.bio ? `<p class="bio">"${user.bio}"</p>` : '<p class="bio-placeholder">Add a bio to tell others about yourself</p>'}
                         
