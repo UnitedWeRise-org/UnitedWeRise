@@ -583,8 +583,15 @@ class MyProfile {
             });
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
-                // Profile picture uploaded successfully, reload profile
+                // Profile picture uploaded successfully, reload profile with fresh data
                 console.log('✅ Profile picture uploaded:', response.data.photos[0].url);
+                
+                // Clear the API cache for profile data so we get fresh info
+                if (window.apiCache && window.apiCache.delete) {
+                    const cacheKey = `/users/profile${window.authToken ? `_${window.authToken.substring(0, 10)}` : ''}`;
+                    window.apiCache.delete(cacheKey);
+                }
+                
                 this.render('mainContent');
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
@@ -1011,11 +1018,19 @@ class MyProfile {
         try {
             const response = await window.apiCall('/photos/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                skipContentType: true // Let browser set multipart boundary
             });
 
             if (response.ok) {
                 alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
+                
+                // Clear gallery cache to get fresh data
+                if (window.apiCache && window.apiCache.delete) {
+                    const cacheKey = `/photos/galleries${window.authToken ? `_${window.authToken.substring(0, 10)}` : ''}`;
+                    window.apiCache.delete(cacheKey);
+                }
+                
                 this.loadPhotoGalleries(); // Reload galleries
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload photos';
