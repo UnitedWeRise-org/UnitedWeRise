@@ -1132,10 +1132,10 @@ Current Status: Use deploymentStatus.check() for real-time status
                 
             document.getElementById('healthStatus').innerHTML = `
                 <p><strong>Status:</strong> ${status}</p>
-                <p><strong>Database:</strong> ${health.database}</p>
-                <p><strong>Uptime:</strong> ${Math.round(health.uptime / 3600)} hours</p>
-                <p><strong>Total Requests:</strong> ${health.requests.total}</p>
-                <p><strong>Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</p>
+                <p><strong>Database:</strong> ${health.database || 'Unknown'}</p>
+                <p><strong>Uptime:</strong> ${health.uptime ? Math.round(health.uptime / 3600) : 0} hours</p>
+                <p><strong>Total Requests:</strong> ${health.requests?.total || 0}</p>
+                <p><strong>Error Rate:</strong> ${health.requests?.errorRate?.toFixed(2) || 0}%</p>
             `;
         }
 

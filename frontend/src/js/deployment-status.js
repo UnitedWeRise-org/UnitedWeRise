@@ -97,7 +97,6 @@
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.backend, {
                     cache: 'no-cache',
                     headers: { 
-                        'Cache-Control': 'no-cache',
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
@@ -129,7 +128,6 @@
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.database, {
                     cache: 'no-cache',
                     headers: { 
-                        'Cache-Control': 'no-cache',
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
@@ -161,7 +159,6 @@
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.batch, {
                     cache: 'no-cache',
                     headers: { 
-                        'Cache-Control': 'no-cache',
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
@@ -191,7 +188,6 @@
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.reputation, {
                     cache: 'no-cache',
                     headers: { 
-                        'Cache-Control': 'no-cache',
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
