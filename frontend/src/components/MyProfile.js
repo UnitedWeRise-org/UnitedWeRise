@@ -957,7 +957,10 @@ class MyProfile {
         try {
             const response = await window.apiCall('/photos/galleries', { bypassCache });
             
+            console.log('📡 Raw galleries API response:', response);
+            
             if (response.ok && response.data) {
+                console.log('📡 Galleries API data:', response.data);
                 this.updateStorageDisplay(response.data);
                 this.updateGalleriesDisplay(response.data.galleries);
             } else {
@@ -990,6 +993,13 @@ class MyProfile {
     updateGalleriesDisplay(galleries) {
         const container = document.getElementById('photoGalleries');
         if (!container) return;
+
+        // Debug logging to see what gallery data we're getting
+        console.log('🖼️ Gallery data received:', galleries);
+        if (galleries && galleries.length > 0) {
+            console.log('🖼️ First gallery photos:', galleries[0].photos);
+            console.log('🖼️ Sample photo URLs:', galleries[0].photos?.[0]?.url, galleries[0].photos?.[0]?.thumbnailUrl);
+        }
 
         if (!galleries || galleries.length === 0) {
             container.innerHTML = `
