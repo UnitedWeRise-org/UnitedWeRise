@@ -791,3 +791,113 @@ details {
     padding: 3rem;
     color: #666;
 }
+
+/* ========================================
+   REPUTATION BADGE STYLES
+======================================== */
+
+/* Base reputation badge styling */
+.reputation-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 12px;
+    margin-left: 4px;
+    line-height: 1.2;
+    vertical-align: middle;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+    cursor: help;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Green badge for trusted users (95-100) */
+.reputation-badge-green {
+    background-color: #22c55e;
+    color: white;
+    border: 1px solid #16a34a;
+}
+
+.reputation-badge-green:hover {
+    background-color: #16a34a;
+}
+
+/* Yellow badge for mixed reputation users (30-49) */
+.reputation-badge-yellow {
+    background-color: #eab308;
+    color: white;
+    border: 1px solid #ca8a04;
+}
+
+.reputation-badge-yellow:hover {
+    background-color: #ca8a04;
+}
+
+/* Brown badge for low trust users (0-29) */
+.reputation-badge-brown {
+    background-color: #a16207;
+    color: white;
+    border: 1px solid #92400e;
+}
+
+.reputation-badge-brown:hover {
+    background-color: #92400e;
+}
+
+/* Badge positioning in different contexts */
+.post-author .reputation-badge,
+.post-header .reputation-badge {
+    margin-left: 6px;
+    font-size: 10px;
+    padding: 1px 5px;
+}
+
+.profile-header .reputation-badge,
+.user-profile .reputation-badge {
+    margin-left: 8px;
+    font-size: 12px;
+    padding: 3px 8px;
+}
+
+.comment-author .reputation-badge {
+    margin-left: 4px;
+    font-size: 9px;
+    padding: 1px 4px;
+}
+
+.user-list-item .reputation-badge,
+.search-result .reputation-badge {
+    margin-left: 6px;
+    font-size: 10px;
+    padding: 2px 5px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .reputation-badge {
+        font-size: 10px;
+        padding: 1px 4px;
+        margin-left: 3px;
+    }
+    
+    .profile-header .reputation-badge,
+    .user-profile .reputation-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+        margin-left: 6px;
+    }
+}
+
+.reputation-badge:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+}
+
+@media print {
+    .reputation-badge {
+        display: none;
+    }
+}

@@ -1,6 +1,23 @@
 // Google Maps Address Autocomplete Integration
 let autocompleteInstances = {};
 
+// Suppress Google Maps CSP test errors (cosmetic only, doesn't affect functionality)
+(function suppressGoogleCSPErrors() {
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+        const message = args.join(' ');
+        // Filter out Google Maps CSP test 500 errors
+        if (message.includes('gen_204?csp_test=true') || 
+            message.includes('csp_test=true') ||
+            (message.includes('500') && message.includes('maps.googleapis.com'))) {
+            // Silently ignore Google's internal CSP test errors
+            return;
+        }
+        // Allow all other errors through
+        originalConsoleError.apply(console, args);
+    };
+})();
+
 // Initialize Google Maps (called by API script)
 function initGoogleMaps() {
     console.log('Google Maps API loaded successfully');

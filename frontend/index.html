@@ -24,7 +24,6 @@
     <link rel="stylesheet" href="src/styles/officials-system.css">
     <link rel="stylesheet" href="src/styles/trending-system.css">
     <link rel="stylesheet" href="src/styles/post-component.css">
-    <link rel="stylesheet" href="src/styles/reputation-badges.css">
     <link rel="stylesheet" href="src/styles/responsive.css">
     
     <!-- External JavaScript -->
@@ -99,8 +98,71 @@
     <script src="src/js/mobile-navigation.js"></script>
     <script src="src/js/map-maplibre.js"></script>
     <script src="src/js/google-address-autocomplete.js"></script>
-    <script src="src/js/reputation-badges.js"></script>
-    <script src="src/js/reputation-integration.js"></script>
+    <!-- Inline Reputation System (Critical Path) -->
+    <script>
+        // Essential reputation badge functions
+        function getReputationBadge(score) {
+            if (score >= 95) {
+                return { color: 'green', text: 'Trusted', class: 'reputation-badge-green', show: true };
+            } else if (score >= 50) {
+                return { color: null, text: null, class: null, show: false };
+            } else if (score >= 30) {
+                return { color: 'yellow', text: 'Mixed', class: 'reputation-badge-yellow', show: true };
+            } else {
+                return { color: 'brown', text: 'Low Trust', class: 'reputation-badge-brown', show: true };
+            }
+        }
+        
+        function createReputationBadgeElement(score, options = {}) {
+            const badge = getReputationBadge(score);
+            if (!badge.show) return null;
+            
+            const element = document.createElement('span');
+            element.className = `reputation-badge ${badge.class}`;
+            element.textContent = badge.text;
+            element.title = `Reputation: ${score}/100`;
+            return element;
+        }
+        
+        // Basic integration with posts
+        function addReputationBadgeToPost(postElement, reputation) {
+            if (!postElement || reputation === undefined) return;
+            
+            const authorElement = postElement.querySelector('.post-author-name, .post-author, .comment-author');
+            if (authorElement && !authorElement.querySelector('.reputation-badge')) {
+                const badgeElement = createReputationBadgeElement(reputation);
+                if (badgeElement) {
+                    authorElement.appendChild(badgeElement);
+                }
+            }
+        }
+        
+        // Global reputation functions
+        window.ReputationBadges = {
+            getReputationBadge,
+            createReputationBadgeElement,
+            addReputationBadgeToPost: addReputationBadgeToPost,
+            updateAllPostBadges: function() {
+                document.querySelectorAll('[data-author-reputation]').forEach(post => {
+                    const reputation = parseInt(post.getAttribute('data-author-reputation'));
+                    if (reputation) {
+                        addReputationBadgeToPost(post, reputation);
+                    }
+                });
+            },
+            updateProfileBadge: function(reputation) {
+                const profileElement = document.querySelector('.my-profile .profile-header, .user-profile .profile-header');
+                if (profileElement && !profileElement.querySelector('.reputation-badge')) {
+                    const badgeElement = createReputationBadgeElement(reputation);
+                    if (badgeElement) {
+                        profileElement.appendChild(badgeElement);
+                    }
+                }
+            }
+        };
+        
+        console.log('🏆 Reputation badge system loaded (inline)');
+    </script>
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
     <!-- Google Maps API for Address Autocomplete -->
