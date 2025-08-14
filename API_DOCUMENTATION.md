@@ -620,6 +620,10 @@ Content-Type: application/json
 
 The AI-powered topic analysis system that clusters related posts into trending discussions with neutral argument summaries.
 
+### Topic Navigation (`/api/topic-navigation`) **✨ NEW**
+
+Enhanced topic-centric system for My Feed integration with AI-powered topic discovery and geographic intelligence. This replaces traditional post-based trending with AI-synthesized topics.
+
 #### Get Trending Topics
 ```http
 GET /api/topics/trending?limit=10&category=healthcare&timeframe=24
@@ -747,6 +751,159 @@ Content-Type: application/json
   "postsAnalyzed": 147
 }
 ```
+
+---
+
+## **✨ Enhanced Topic Navigation (`/api/topic-navigation`)**
+
+### Overview
+Revolutionary AI-powered topic discovery system that replaces traditional post-based trending with intelligent topic synthesis. Features My Feed integration, geographic intelligence, and seamless topic filtering.
+
+### Get AI-Powered Trending Topics
+```http
+GET /api/topic-navigation/trending?limit=15&timeframe=24&minPosts=5&maxTopics=20
+```
+
+**Query Parameters:**
+- `limit` (optional): Maximum topics to return (1-50, default: 15)
+- `timeframe` (optional): Hours to look back for trending analysis (default: 24)
+- `minPosts` (optional): Minimum posts required per topic (default: 5)
+- `maxTopics` (optional): Maximum topics to analyze (default: 15)
+
+**Response:**
+```json
+{
+  "success": true,
+  "topics": [
+    {
+      "id": "healthcare-reform-lmnop789",
+      "title": "Healthcare Reform Discussions",
+      "summary": "A discussion involving 25 posts with active engagement on healthcare policy reforms",
+      "prevailingPosition": "Support for universal healthcare coverage with phased implementation",
+      "leadingCritique": "Concerns about funding mechanisms and transition costs",
+      "participantCount": 18,
+      "postCount": 25,
+      "engagementScore": 85.5,
+      "keyWords": ["healthcare", "reform", "coverage", "costs"],
+      "category": "politics",
+      "createdAt": "2025-08-14T10:30:00.000Z",
+      "lastActivity": "2025-08-14T16:45:00.000Z"
+    }
+  ],
+  "metadata": {
+    "timeframe": "24 hours",
+    "discoveredAt": "2025-08-14T17:00:00.000Z",
+    "totalTopics": 12
+  }
+}
+```
+
+### Enter Topic Mode (Filter My Feed)
+```http
+POST /api/topic-navigation/enter/{topicId}
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "limit": 30
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Entered topic: Healthcare Reform Discussions",
+  "topic": {
+    "id": "healthcare-reform-lmnop789",
+    "title": "Healthcare Reform Discussions",
+    "summary": "A discussion involving 25 posts with active engagement",
+    "prevailingPosition": "Support for universal healthcare coverage",
+    "leadingCritique": "Concerns about funding mechanisms",
+    "participantCount": 18,
+    "postCount": 25,
+    "category": "politics",
+    "keyWords": ["healthcare", "reform", "coverage"]
+  },
+  "posts": [
+    {
+      "id": "post123",
+      "content": "Healthcare reform is essential for covering all Americans...",
+      "author": {
+        "id": "user456",
+        "username": "healthadvocate",
+        "firstName": "Jane",
+        "lastName": "Smith"
+      },
+      "createdAt": "2025-08-14T15:30:00.000Z",
+      "likesCount": 15,
+      "commentsCount": 8
+    }
+  ],
+  "navigationMode": "topic-filtered"
+}
+```
+
+### Exit Topic Mode (Return to Algorithm Feed)
+```http
+POST /api/topic-navigation/exit
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Exited topic mode, returned to algorithm feed",
+  "posts": [
+    // Algorithm-based feed posts
+  ],
+  "navigationMode": "algorithm-based"
+}
+```
+
+### Get Topic Posts (Pagination)
+```http
+GET /api/topic-navigation/{topicId}/posts?offset=0&limit=20
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "posts": [
+    // Topic-related posts with full metadata
+  ],
+  "pagination": {
+    "offset": 0,
+    "limit": 20,
+    "hasMore": true
+  }
+}
+```
+
+### Get Current Navigation State
+```http
+GET /api/topic-navigation/current
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "navigationMode": "topic-filtered",
+  "activeTopic": {
+    "id": "healthcare-reform-lmnop789",
+    "title": "Healthcare Reform Discussions",
+    "summary": "A discussion involving 25 posts with active engagement",
+    "participantCount": 18,
+    "postCount": 25
+  }
+}
+```
+
+---
 
 ### Verification (`/api/verification`)
 

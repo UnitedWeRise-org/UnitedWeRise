@@ -1497,7 +1497,8 @@
                 subdomains: 'abcd',
             }).addTo(map);
 
-            const topics = [
+            // Dynamic topics array - will be updated with AI-generated content
+            let topics = [
                 { coords: [40.7128, -74.0060], text: '📢 Rent control in NYC gaining momentum!' },
                 { coords: [34.0522, -118.2437], text: '🚗 EV subsidies debated in California legislature.' },
                 { coords: [41.8781, -87.6298], text: '⚖️ Chicago voters discuss criminal justice reform.' },
@@ -1509,6 +1510,46 @@
                 { coords: [32.7767, -96.7970], text: '💼 Dallas campaign finance reform gaining traction.' },
                 { coords: [42.3601, -71.0589], text: '📚 Boston pushes universal childcare ballot measure.' }
             ];
+            
+            // Enhanced popup creation with topic mode integration
+            function createTopicPopup(topicData, map) {
+                const popupOptions = {
+                    closeButton: false,
+                    autoClose: false,
+                    closeOnClick: false,
+                    autoPan: false
+                };
+                
+                let popupContent = topicData.text;
+                
+                // Add click functionality for AI topics
+                if (topicData.topicId) {
+                    popupContent += `<br><div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: rgba(255,107,53,0.9); color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; text-align: center;" onclick="enterTopicMode('${topicData.topicId}')">💬 Join Discussion</div>`;
+                }
+                
+                const popup = L.popup(popupOptions)
+                    .setLatLng(topicData.coords)
+                    .setContent(popupContent)
+                    .openOn(map);
+                    
+                return popup;
+            }
+            
+            // Function to update Leaflet map topics dynamically
+            function updateLeafletMapTopics(newTopics) {
+                if (newTopics && newTopics.length > 0) {
+                    topics = newTopics.map(bubble => ({
+                        coords: bubble.coords,
+                        text: bubble.text,
+                        topicId: bubble.topicId || null,
+                        priority: bubble.priority || 'normal'
+                    }));
+                    console.log('Updated Leaflet map topics with', topics.length, 'AI-generated topics');
+                }
+            }
+            
+            // Make update function globally accessible
+            window.updateMapTopics = updateLeafletMapTopics;
 
             let usedTopics = new Map();
 
@@ -1525,15 +1566,7 @@
                 const selected = shuffled.slice(0, count);
 
                 selected.forEach(topic => {
-                    const popup = L.popup({
-                        closeButton: false,
-                        autoClose: false,
-                        closeOnClick: false,
-                        autoPan: false
-                    })
-                        .setLatLng(topic.coords)
-                        .setContent(topic.text)
-                        .openOn(map);
+                    const popup = createTopicPopup(topic, map);
 
                     usedTopics.set(topic.text, now);
                     setTimeout(() => map.closePopup(popup), 30000);
@@ -1804,19 +1837,93 @@
             mainContent.innerHTML = html;
         }
 
-        // Load trending posts for the trending panel
+        // Load trending topics for the trending panel (AI-powered)
         async function loadTrendingPosts() {
             try {
-                const response = await apiCall('/feed/trending');
+                // Try AI topic discovery first, fallback to posts if needed
+                let response;
+                try {
+                    response = await apiCall('/topic-navigation/trending?limit=20');
+                    if (response.ok && response.data.topics && response.data.topics.length > 0) {
+                        updateTrendingTopicsPanel(response.data.topics);
+                        return;
+                    }
+                } catch (topicError) {
+                    console.log('AI topics unavailable for sidebar, falling back to posts:', topicError.message);
+                }
+                
+                // Fallback to post-based trending for sidebar
+                response = await apiCall('/feed/trending');
                 
                 if (response.ok) {
                     updateTrendingPanel(response.data.posts);
                 } else {
-                    console.error('Failed to load trending posts:', response.data?.error);
+                    console.error('Failed to load trending content:', response.data?.error);
                 }
             } catch (error) {
-                console.error('Failed to load trending posts:', error);
+                console.error('Failed to load trending content:', error);
             }
+        }
+        
+        // Enhanced function to render AI topics in the sidebar trending panel
+        function updateTrendingTopicsPanel(topics) {
+            const content = document.getElementById('trendingContent');
+            
+            if (!content) return;
+            
+            if (topics.length === 0) {
+                content.innerHTML = '<p>No trending topics available.</p>';
+                return;
+            }
+            
+            let html = '<div class="trending-topics-list">';
+            
+            topics.forEach((topic, index) => {
+                const isFeature = index === 0;
+                const timeAgo = getTimeAgo(new Date(topic.createdAt || Date.now()));
+                
+                html += `
+                    <div class="trending-topic-card" style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onclick="enterTopicMode('${topic.id}')" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none'; this.style.transform='none'">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <span style="font-size: 1.2rem;">${isFeature ? '🔥' : '🏷️'}</span>
+                            <div style="font-weight: bold; font-size: 1rem; flex: 1; color: #333;">${topic.title}</div>
+                            ${isFeature ? '<span style="background: #ff6b35; color: white; padding: 0.2rem 0.4rem; border-radius: 6px; font-size: 0.7rem; font-weight: 500;">TRENDING</span>' : ''}
+                        </div>
+                        
+                        <div style="font-size: 0.9rem; color: #555; margin-bottom: 0.75rem; line-height: 1.4;">
+                            ${(topic.summary || 'Discussion topic').substring(0, 150)}${topic.summary && topic.summary.length > 150 ? '...' : ''}
+                        </div>
+                        
+                        ${topic.prevailingPosition ? `
+                            <div style="background: #f8f9fa; border-left: 3px solid #28a745; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;">
+                                <div style="font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 0.25rem;">📍 PREVAILING POSITION</div>
+                                <div style="font-size: 0.85rem; color: #555;">${topic.prevailingPosition.substring(0, 120)}${topic.prevailingPosition.length > 120 ? '...' : ''}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${topic.leadingCritique ? `
+                            <div style="background: #f8f9fa; border-left: 3px solid #dc3545; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;">
+                                <div style="font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 0.25rem;">⚡ LEADING CRITIQUE</div>
+                                <div style="font-size: 0.85rem; color: #555;">${topic.leadingCritique.substring(0, 120)}${topic.leadingCritique.length > 120 ? '...' : ''}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #666; padding-top: 0.5rem; border-top: 1px solid #f0f0f0;">
+                            <span>💬 ${topic.postCount} posts • 👥 ${topic.participantCount} people</span>
+                            <span>${timeAgo}</span>
+                        </div>
+                        
+                        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                            <button onclick="event.stopPropagation(); enterTopicMode('${topic.id}')" style="background: #ff6b35; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='#ff6b35'">
+                                💬 Enter Discussion
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
         }
 
         // Auto-refresh trending posts
@@ -1842,7 +1949,7 @@
             }
         }
 
-        // Load trending updates for the mini panel under map
+        // Load trending topics for the mini panel under map (AI-powered)
         async function loadTrendingUpdates() {
             try {
                 // Check if backend is reachable first
@@ -1852,7 +1959,24 @@
                     return;
                 }
 
-                const response = await apiCall('/feed/trending?limit=20');
+                // Try AI topic discovery first, fallback to posts if needed
+                let response;
+                try {
+                    response = await apiCall('/topic-navigation/trending?limit=15');
+                    if (response.ok && response.data.topics && response.data.topics.length > 0) {
+                        updateTrendingTopicsPanel(response.data.topics);
+                        
+                        // Show the panel when there's content
+                        const panel = document.getElementById('trendingUpdates');
+                        panel.classList.add('show');
+                        return;
+                    }
+                } catch (topicError) {
+                    console.log('AI topics unavailable, falling back to posts:', topicError.message);
+                }
+                
+                // Fallback to post-based trending
+                response = await apiCall('/feed/trending?limit=20');
                 
                 if (response.ok) {
                     updateTrendingUpdatesPanel(response.data.posts);
@@ -1863,7 +1987,7 @@
                         panel.classList.add('show');
                     }
                 } else {
-                    console.log('No trending posts available yet');
+                    console.log('No trending content available yet');
                 }
             } catch (error) {
                 console.log('Trending updates not available:', error.message);
@@ -1872,10 +1996,57 @@
         }
 
         let allTrendingPosts = [];
+        let allTrendingTopics = [];
         let trendingExpanded = false;
+        let displayMode = 'topics'; // 'topics' or 'posts'
+        let currentTopicMode = null; // Track if user is in topic-filtered mode
+
+        // Enhanced function to handle both AI topics and post fallback
+        function updateTrendingTopicsPanel(topics) {
+            allTrendingTopics = topics;
+            displayMode = 'topics';
+            const body = document.getElementById('trendingUpdatesBody');
+            
+            if (topics.length === 0) {
+                body.innerHTML = '<div style="text-align: center; padding: 1rem; color: #666; font-size: 0.8rem;">No trending topics</div>';
+                return;
+            }
+
+            const displayTopics = trendingExpanded ? topics : topics.slice(0, 5);
+            let html = '';
+            
+            displayTopics.forEach((topic, index) => {
+                const isFeature = index === 0;
+                const timeAgo = getTimeAgo(new Date(topic.createdAt || Date.now()));
+                const summary = topic.summary || 'Discussion topic';
+                
+                html += `
+                    <div class="trending-item topic-item" onclick="enterTopicMode('${topic.id}')" style="cursor: pointer;">
+                        <div class="topic-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 4px;">
+                            <span style="font-size: 1.1rem;">${isFeature ? '🔥' : '🏷️'}</span>
+                            <div style="font-weight: bold; font-size: 0.85rem; flex: 1;">${topic.title}</div>
+                            ${isFeature ? '<span style="background: #ff6b35; color: white; padding: 0.2rem 0.4rem; border-radius: 8px; font-size: 0.7rem;">HOT</span>' : ''}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #555; margin-bottom: 6px; line-height: 1.3;">${summary.substring(0, 120)}${summary.length > 120 ? '...' : ''}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #666;">
+                            <span>💬 ${topic.postCount} posts • 👥 ${topic.participantCount} people</span>
+                            <span>${timeAgo}</span>
+                        </div>
+                        ${topic.prevailingPosition ? `
+                            <div style="margin-top: 6px; padding: 0.4rem; background: #f8f9fa; border-radius: 4px; font-size: 0.75rem; border-left: 2px solid #28a745;">
+                                <strong>📍 Main view:</strong> ${topic.prevailingPosition.substring(0, 80)}${topic.prevailingPosition.length > 80 ? '...' : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+        }
 
         function updateTrendingUpdatesPanel(posts) {
             allTrendingPosts = posts;
+            displayMode = 'posts';
             const body = document.getElementById('trendingUpdatesBody');
             
             if (posts.length === 0) {
@@ -1940,6 +2111,531 @@
                 panel.classList.add('show');
             }
         }
+        
+        // NEW: Topic Mode Functions for My Feed Integration
+        async function enterTopicMode(topicId) {
+            try {
+                console.log(`Entering topic mode: ${topicId}`);
+                
+                // Store previous feed state if not already in topic mode
+                if (!currentTopicMode) {
+                    // Cache current My Feed state
+                    const currentFeed = document.getElementById('feedContent');
+                    if (currentFeed) {
+                        window.cachedFeedState = currentFeed.innerHTML;
+                    }
+                }
+                
+                const response = await apiCall(`/topic-navigation/enter/${topicId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 30 })
+                });
+                
+                if (response.ok && response.data.success) {
+                    currentTopicMode = {
+                        topicId: topicId,
+                        topic: response.data.topic,
+                        posts: response.data.posts
+                    };
+                    
+                    // Update My Feed with topic-filtered content
+                    updateMyFeedWithTopic(response.data.topic, response.data.posts);
+                    
+                    // Update trending panel to show exit option
+                    updateTrendingWithTopicMode();
+                    
+                    console.log(`✅ Entered topic: ${response.data.topic.title}`);
+                } else {
+                    console.error('Failed to enter topic mode:', response.data?.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Error entering topic mode:', error);
+            }
+        }
+        
+        async function exitTopicMode() {
+            try {
+                console.log('Exiting topic mode...');
+                
+                const response = await apiCall('/topic-navigation/exit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok && response.data.success) {
+                    currentTopicMode = null;
+                    
+                    // Restore cached feed or load fresh algorithm feed
+                    if (window.cachedFeedState) {
+                        const feedContent = document.getElementById('feedContent');
+                        if (feedContent) {
+                            feedContent.innerHTML = window.cachedFeedState;
+                        }
+                        delete window.cachedFeedState;
+                    } else {
+                        // Load fresh algorithm feed
+                        if (typeof loadMyFeed === 'function') {
+                            loadMyFeed();
+                        }
+                    }
+                    
+                    // Reset trending panel to normal state
+                    loadTrendingUpdates();
+                    
+                    console.log('✅ Returned to main algorithm feed');
+                } else {
+                    console.error('Failed to exit topic mode:', response.data?.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Error exiting topic mode:', error);
+                // Force reset on error
+                currentTopicMode = null;
+                if (typeof loadMyFeed === 'function') {
+                    loadMyFeed();
+                }
+                loadTrendingUpdates();
+            }
+        }
+        
+        function updateMyFeedWithTopic(topic, posts) {
+            const feedContent = document.getElementById('feedContent');
+            if (!feedContent) return;
+            
+            let html = `
+                <div class="topic-mode-indicator">
+                    <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.2rem;">🏷️</span>
+                                <h3 style="margin: 0; font-size: 1.1rem;">${topic.title}</h3>
+                            </div>
+                            <button onclick="exitTopicMode()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">← Exit Topic</button>
+                        </div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">${topic.summary}</div>
+                        ${topic.prevailingPosition ? `
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.15); border-radius: 4px; border-left: 3px solid rgba(255,255,255,0.5);">
+                                <strong>📍 Main Position:</strong> ${topic.prevailingPosition}
+                            </div>
+                        ` : ''}
+                        ${topic.leadingCritique ? `
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.15); border-radius: 4px; border-left: 3px solid rgba(255,255,255,0.5);">
+                                <strong>⚡ Leading Critique:</strong> ${topic.leadingCritique}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="topic-posts-feed">
+            `;
+            
+            if (posts && posts.length > 0) {
+                posts.forEach(post => {
+                    const timeAgo = getTimeAgo(new Date(post.createdAt));
+                    html += `
+                        <div class="post-item" style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #ff6b35; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+                                    ${post.author.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.9rem;">@${post.author.username}</div>
+                                    <div style="color: #666; font-size: 0.8rem;">${timeAgo}</div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 0.75rem; line-height: 1.4;">${post.content}</div>
+                            <div style="display: flex; gap: 1rem; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; font-size: 0.85rem; color: #666;">
+                                <span style="cursor: pointer;" onclick="likePost('${post.id}')">❤️ ${post.likesCount || 0}</span>
+                                <span style="cursor: pointer;">💬 ${post.commentsCount || 0}</span>
+                                <span style="cursor: pointer;">🔄 Share</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<div style="text-align: center; color: #666; padding: 2rem;">No posts found for this topic.</div>';
+            }
+            
+            html += '</div>';
+            feedContent.innerHTML = html;
+        }
+        
+        function updateTrendingWithTopicMode() {
+            const body = document.getElementById('trendingUpdatesBody');
+            if (!body || !currentTopicMode) return;
+            
+            const topic = currentTopicMode.topic;
+            
+            body.innerHTML = `
+                <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-weight: bold; font-size: 0.85rem;">🏷️ TOPIC MODE</span>
+                        <button onclick="exitTopicMode()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Exit</button>
+                    </div>
+                    <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">${topic.title}</div>
+                    <div style="font-size: 0.8rem; opacity: 0.9;">${topic.postCount} posts • ${topic.participantCount} participants</div>
+                </div>
+                <div style="text-align: center; padding: 0.5rem; color: #666; font-size: 0.8rem;">
+                    My Feed is now filtered by this topic.<br>
+                    <a href="#" onclick="loadTrendingUpdates(); return false;" style="color: #ff6b35; text-decoration: none;">View other trending topics</a>
+                </div>
+            `;
+        }
+        
+        // NEW: Map Integration Functions - Sync AI Topics with Map Bubbles
+        let mapTopicCache = [];
+        let lastMapTopicUpdate = 0;
+        const MAP_TOPIC_CACHE_DURATION = 120000; // 2 minutes
+        
+        // Convert AI topics to map bubble format with geographic distribution
+        function convertTopicsToMapBubbles(aiTopics) {
+            if (!aiTopics || aiTopics.length === 0) return [];
+            
+            // Predefined coordinates for major US cities - AI topics get distributed across these
+            const cityCoords = [
+                { coords: [40.7128, -74.0060], city: 'NYC' },
+                { coords: [34.0522, -118.2437], city: 'Los Angeles' },
+                { coords: [41.8781, -87.6298], city: 'Chicago' },
+                { coords: [29.7604, -95.3698], city: 'Houston' },
+                { coords: [47.6062, -122.3321], city: 'Seattle' },
+                { coords: [39.7392, -104.9903], city: 'Denver' },
+                { coords: [33.4484, -112.0740], city: 'Phoenix' },
+                { coords: [25.7617, -80.1918], city: 'Miami' },
+                { coords: [32.7767, -96.7970], city: 'Dallas' },
+                { coords: [42.3601, -71.0589], city: 'Boston' },
+                { coords: [38.9072, -77.0369], city: 'Washington DC' },
+                { coords: [37.7749, -122.4194], city: 'San Francisco' },
+                { coords: [39.9526, -75.1652], city: 'Philadelphia' },
+                { coords: [30.2672, -97.7431], city: 'Austin' },
+                { coords: [39.7391, -104.9903], city: 'Colorado Springs' }
+            ];
+            
+            const mapBubbles = [];
+            let coordIndex = 0;
+            
+            aiTopics.forEach((topic, index) => {
+                const coord = cityCoords[coordIndex % cityCoords.length];
+                coordIndex++;
+                
+                // Create bubble text from topic data
+                let bubbleText = `🏷️ ${topic.title}`;
+                
+                // Add brief description if available
+                if (topic.summary && topic.summary.length > 0) {
+                    const shortSummary = topic.summary.length > 80 
+                        ? topic.summary.substring(0, 80) + '...' 
+                        : topic.summary;
+                    bubbleText += ` - ${shortSummary}`;
+                }
+                
+                // Add engagement indicator for top topics
+                if (index < 3) {
+                    bubbleText += ` (${topic.postCount} posts active)`;
+                }
+                
+                mapBubbles.push({
+                    coords: coord.coords,
+                    text: bubbleText,
+                    city: coord.city,
+                    topicId: topic.id,
+                    priority: index < 3 ? 'high' : 'normal', // Top 3 get higher priority
+                    aiTopic: true // Flag to distinguish from static topics
+                });
+            });
+            
+            return mapBubbles;
+        }
+        
+        // Enhanced function to update map with AI topics
+        async function updateMapWithTrendingTopics() {
+            try {
+                // Check if we need to refresh the topic cache
+                const now = Date.now();
+                if (mapTopicCache.length > 0 && (now - lastMapTopicUpdate) < MAP_TOPIC_CACHE_DURATION) {
+                    console.log('Using cached map topics');
+                    return mapTopicCache;
+                }
+                
+                // Fetch latest AI topics
+                const response = await apiCall('/topic-navigation/trending?limit=12');
+                if (response.ok && response.data.topics && response.data.topics.length > 0) {
+                    const aiTopics = response.data.topics;
+                    const mapBubbles = convertTopicsToMapBubbles(aiTopics);
+                    
+                    // Update cache
+                    mapTopicCache = mapBubbles;
+                    lastMapTopicUpdate = now;
+                    
+                    // Update the map if available
+                    if (window.updateMapTopics && typeof window.updateMapTopics === 'function') {
+                        console.log('Updating map with AI-generated topics...');
+                        window.updateMapTopics(mapBubbles);
+                    } else if (window.map && window.map.updateTopics) {
+                        console.log('Updating map topics via map.updateTopics...');
+                        window.map.updateTopics(mapBubbles);
+                    } else {
+                        console.log('Map topic update method not available, topics cached for next map init');
+                    }
+                    
+                    return mapBubbles;
+                } else {
+                    console.log('AI topics unavailable for map, using fallback');
+                    return getFallbackMapTopics();
+                }
+            } catch (error) {
+                console.error('Failed to update map with trending topics:', error);
+                return getFallbackMapTopics();
+            }
+        }
+        
+        // Fallback to static topics if AI topics are unavailable
+        function getFallbackMapTopics() {
+            return [
+                { coords: [40.7128, -74.0060], text: '🏛️ NYC discussing local election reforms', city: 'NYC', priority: 'normal' },
+                { coords: [34.0522, -118.2437], text: '🚗 California EV subsidy debates heating up', city: 'Los Angeles', priority: 'normal' },
+                { coords: [41.8781, -87.6298], text: '⚖️ Chicago criminal justice reform discussions', city: 'Chicago', priority: 'normal' },
+                { coords: [29.7604, -95.3698], text: '🗳️ Texas open primary initiatives gaining support', city: 'Houston', priority: 'normal' },
+                { coords: [47.6062, -122.3321], text: '🌳 Seattle green zoning community organizing', city: 'Seattle', priority: 'normal' },
+                { coords: [39.7392, -104.9903], text: '🏡 Denver housing-first policy debates', city: 'Denver', priority: 'normal' }
+            ];
+        }
+        
+        // Integration with trending system - call this when topics are loaded
+        function syncMapWithTrendingTopics() {
+            updateMapWithTrendingTopics();
+        }
+        
+        // Enhanced loadTrendingUpdates to sync with map
+        const originalLoadTrendingUpdates = loadTrendingUpdates;
+        loadTrendingUpdates = async function() {
+            await originalLoadTrendingUpdates();
+            
+            // After loading trending topics, sync with map
+            setTimeout(() => {
+                syncMapWithTrendingTopics();
+            }, 500); // Small delay to ensure trending updates are complete
+        };
+        
+        // NEW: Geographic Layering System with Balanced Timing
+        let geographicTopicTimer = null;
+        let lastGeographicTopicTime = 0;
+        const GEOGRAPHIC_TOPIC_INTERVAL = 50000; // 50 seconds (45-60 range)
+        
+        // Enhanced geographic distribution based on zoom level and user location
+        function getGeographicLayeredTopics(aiTopics, zoomLevel = 'national') {
+            if (!aiTopics || aiTopics.length === 0) return [];
+            
+            const userState = currentUser?.state || null;
+            const userCity = currentUser?.city || null;
+            
+            const layeredTopics = [];
+            let topicIndex = 0;
+            
+            // Determine topic distribution based on zoom level
+            switch (zoomLevel) {
+                case 'national':
+                    // National view: Primarily national topics, with periodic state/local injection
+                    const nationalTopics = aiTopics.filter((_, index) => index < 10); // Top 10 as national
+                    
+                    // Every 45-60 seconds, inject state/local topics
+                    const now = Date.now();
+                    const shouldInjectLocal = (now - lastGeographicTopicTime) > GEOGRAPHIC_TOPIC_INTERVAL;
+                    
+                    if (shouldInjectLocal && aiTopics.length > 10) {
+                        // Inject 2-3 topics as "state/local" with user's geographic context
+                        const localTopics = aiTopics.slice(10, 13).map((topic, index) => ({
+                            ...topic,
+                            geographicContext: userState ? `${userState} Local` : 'Regional',
+                            localPriority: true
+                        }));
+                        
+                        layeredTopics.push(...localTopics);
+                        lastGeographicTopicTime = now;
+                        console.log('Injected local topics for national view');
+                    }
+                    
+                    layeredTopics.push(...nationalTopics.map(topic => ({
+                        ...topic,
+                        geographicContext: 'National'
+                    })));
+                    break;
+                    
+                case 'state':
+                    // State view: Mix of state-specific and national topics
+                    layeredTopics.push(...aiTopics.map(topic => ({
+                        ...topic,
+                        geographicContext: userState || 'State'
+                    })));
+                    break;
+                    
+                case 'local':
+                    // Local view: Focus on local and regional topics
+                    layeredTopics.push(...aiTopics.map(topic => ({
+                        ...topic,
+                        geographicContext: userCity ? `${userCity}, ${userState}` : 'Local'
+                    })));
+                    break;
+            }
+            
+            return layeredTopics;
+        }
+        
+        // Enhanced convertTopicsToMapBubbles with geographic layering
+        const originalConvertTopicsToMapBubbles = convertTopicsToMapBubbles;
+        convertTopicsToMapBubbles = function(aiTopics, zoomLevel = null) {
+            const effectiveZoomLevel = zoomLevel || currentZoomLevel || 'national';
+            const layeredTopics = getGeographicLayeredTopics(aiTopics, effectiveZoomLevel);
+            
+            if (!layeredTopics || layeredTopics.length === 0) return [];
+            
+            // Get appropriate coordinates based on zoom level
+            const coordSets = getCoordinatesByZoomLevel(effectiveZoomLevel);
+            const mapBubbles = [];
+            let coordIndex = 0;
+            
+            layeredTopics.forEach((topic, index) => {
+                const coord = coordSets[coordIndex % coordSets.length];
+                coordIndex++;
+                
+                // Enhanced bubble text with geographic context
+                let bubbleText = `${topic.localPriority ? '📍' : '🏷️'} ${topic.title}`;
+                
+                // Add geographic context indicator
+                if (topic.geographicContext && topic.geographicContext !== 'National') {
+                    bubbleText += ` [${topic.geographicContext}]`;
+                }
+                
+                // Add brief description if available
+                if (topic.summary && topic.summary.length > 0) {
+                    const shortSummary = topic.summary.length > 60 
+                        ? topic.summary.substring(0, 60) + '...' 
+                        : topic.summary;
+                    bubbleText += ` - ${shortSummary}`;
+                }
+                
+                // Add engagement indicator for top topics or local priority
+                if (index < 3 || topic.localPriority) {
+                    bubbleText += ` (${topic.postCount} posts${topic.localPriority ? ', local interest' : ''})`;
+                }
+                
+                mapBubbles.push({
+                    coords: coord.coords,
+                    text: bubbleText,
+                    city: coord.city,
+                    topicId: topic.id,
+                    priority: topic.localPriority ? 'local' : (index < 3 ? 'high' : 'normal'),
+                    geographicContext: topic.geographicContext,
+                    aiTopic: true
+                });
+            });
+            
+            return mapBubbles;
+        };
+        
+        // Get appropriate coordinate sets based on zoom level
+        function getCoordinatesByZoomLevel(zoomLevel) {
+            const nationalCoords = [
+                { coords: [40.7128, -74.0060], city: 'NYC' },
+                { coords: [34.0522, -118.2437], city: 'Los Angeles' },
+                { coords: [41.8781, -87.6298], city: 'Chicago' },
+                { coords: [29.7604, -95.3698], city: 'Houston' },
+                { coords: [47.6062, -122.3321], city: 'Seattle' },
+                { coords: [39.7392, -104.9903], city: 'Denver' },
+                { coords: [33.4484, -112.0740], city: 'Phoenix' },
+                { coords: [25.7617, -80.1918], city: 'Miami' },
+                { coords: [32.7767, -96.7970], city: 'Dallas' },
+                { coords: [42.3601, -71.0589], city: 'Boston' },
+                { coords: [38.9072, -77.0369], city: 'Washington DC' },
+                { coords: [37.7749, -122.4194], city: 'San Francisco' }
+            ];
+            
+            const stateCoords = getUserStateCoordinates();
+            const localCoords = getUserLocalCoordinates();
+            
+            switch (zoomLevel) {
+                case 'state':
+                    return stateCoords.length > 0 ? stateCoords : nationalCoords.slice(0, 8);
+                case 'local':
+                    return localCoords.length > 0 ? localCoords : nationalCoords.slice(0, 6);
+                case 'national':
+                default:
+                    return nationalCoords;
+            }
+        }
+        
+        // Get coordinates relevant to user's state
+        function getUserStateCoordinates() {
+            if (!currentUser?.state) return [];
+            
+            // Major cities by state (sample)
+            const stateCityMap = {
+                'CA': [
+                    { coords: [34.0522, -118.2437], city: 'Los Angeles' },
+                    { coords: [37.7749, -122.4194], city: 'San Francisco' },
+                    { coords: [32.7157, -117.1611], city: 'San Diego' }
+                ],
+                'TX': [
+                    { coords: [29.7604, -95.3698], city: 'Houston' },
+                    { coords: [32.7767, -96.7970], city: 'Dallas' },
+                    { coords: [30.2672, -97.7431], city: 'Austin' }
+                ],
+                'NY': [
+                    { coords: [40.7128, -74.0060], city: 'NYC' },
+                    { coords: [42.3584, -75.3890], city: 'Albany' },
+                    { coords: [43.0481, -76.1474], city: 'Syracuse' }
+                ],
+                'FL': [
+                    { coords: [25.7617, -80.1918], city: 'Miami' },
+                    { coords: [28.5383, -81.3792], city: 'Orlando' },
+                    { coords: [30.4383, -84.2807], city: 'Tallahassee' }
+                ]
+            };
+            
+            return stateCityMap[currentUser.state] || [];
+        }
+        
+        // Get coordinates relevant to user's local area
+        function getUserLocalCoordinates() {
+            if (!currentUser?.city || !currentUser?.state) return [];
+            
+            // For local view, create coordinates around user's area
+            // This would ideally use real local coordinates
+            const userLat = parseFloat(currentUser.latitude) || 39.8283;
+            const userLng = parseFloat(currentUser.longitude) || -98.5795;
+            
+            // Generate nearby coordinates (simplified approach)
+            const localCoords = [];
+            for (let i = 0; i < 6; i++) {
+                const offsetLat = (Math.random() - 0.5) * 0.5; // ~25 mile radius
+                const offsetLng = (Math.random() - 0.5) * 0.5;
+                
+                localCoords.push({
+                    coords: [userLat + offsetLat, userLng + offsetLng],
+                    city: `${currentUser.city} Area ${i + 1}`
+                });
+            }
+            
+            return localCoords;
+        }
+        
+        // Start geographic topic balancing timer
+        function startGeographicTopicBalancing() {
+            if (geographicTopicTimer) {
+                clearInterval(geographicTopicTimer);
+            }
+            
+            geographicTopicTimer = setInterval(() => {
+                // Only inject local topics when viewing national level
+                if (currentZoomLevel === 'national') {
+                    console.log('Geographic topic balancing - refreshing for local injection');
+                    syncMapWithTrendingTopics();
+                }
+            }, GEOGRAPHIC_TOPIC_INTERVAL);
+        }
+        
+        // Initialize geographic balancing on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            startGeographicTopicBalancing();
+        });
 
         function openFullTrending() {
             // This function kept for compatibility but now just expands in place

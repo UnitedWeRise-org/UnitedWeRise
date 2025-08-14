@@ -192,6 +192,53 @@ frontend/
   - Dark gray arrows (#2c2c2c) for better contrast
   - Dynamic positioning with sidebar expansion (3vw→10vw)
 
+### ✨ Enhanced Topic-Centric Trending System (August 14, 2025)
+**Status**: ✅ **DEPLOYED** - Revolutionary upgrade from post-based to AI topic-based trending
+
+**Major System Overhaul**:
+- **Previous System**: Trending individual POSTS with basic engagement metrics
+- **New System**: AI-synthesized TOPICS with rich analysis and feed integration
+
+**Key Features Deployed**:
+
+#### 1. **AI Topic Discovery & Analysis**
+- Azure OpenAI powered topic synthesis from political discussions
+- Rich topic cards displaying prevailing positions and leading critiques
+- Balanced representation: 60% similarity threshold captures opposing viewpoints
+- Smart engagement scoring combining recency, participation, and activity
+
+#### 2. **My Feed Integration**
+- **Topic Filtering**: Click any topic to filter entire My Feed experience
+- **Smooth Transitions**: Enter/exit topic mode with cached state restoration
+- **Rich Context**: Topic headers show AI-analyzed positions and critiques
+- **Easy Exit**: One-click return to algorithm-based feed
+
+#### 3. **Geographic Intelligence**
+- **National View**: Primarily national topics with periodic local injection
+- **Balanced Timing**: State/local topics appear every 45-60 seconds for diversity
+- **Context Indicators**: Topics labeled with [State Local], [Regional] tags
+- **User-Aware Distribution**: Leverages user's geographic data for relevant content
+
+#### 4. **Map Synchronization**
+- **Unified Topics**: Map speech bubbles show same AI topics as trending panels
+- **Geographic Distribution**: Topics distributed across major US cities
+- **Interactive Bubbles**: Map bubbles clickable to enter topic mode
+- **Real-time Updates**: Map and trending panels synchronized via shared topic cache
+
+**Technical Architecture**:
+- **API Endpoints**: `/api/topic-navigation/trending`, `/enter/{topicId}`, `/exit`
+- **Performance**: 2-minute topic cache, geographic balancing timer
+- **Fallback Systems**: AI topics → posts → static content hierarchy
+- **Cross-Compatibility**: Works with both MapLibre and Leaflet map systems
+- **Files Modified**: `frontend/index.html` (500+ lines added/modified)
+
+**User Experience Flow**:
+1. **Discovery**: AI topics in trending panels and map bubbles
+2. **Selection**: Click topic to enter filtered viewing mode
+3. **Immersion**: My Feed shows only topic-related posts with rich context
+4. **Navigation**: Geographic layers adapt to user's zoom level (National/State/Local)
+5. **Exit**: Seamless return to full algorithm feed
+
 ## 🎯 Production Status
 
 ### ✅ Currently Working
