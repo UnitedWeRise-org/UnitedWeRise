@@ -14,6 +14,7 @@ interface PhotoUploadOptions {
   candidateId?: string;
   gallery?: string;
   postId?: string;
+  caption?: string;
   maxWidth?: number;
   maxHeight?: number;
   quality?: number;
@@ -171,6 +172,7 @@ export class PhotoService {
           purpose: options.purpose,
           gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
           postId: options.postId,
+          caption: options.caption ? options.caption.substring(0, 200) : null, // Limit to 200 chars
           originalSize: file.size,
           compressedSize: imageBuffer.length,
           width: metadata.width || 0,

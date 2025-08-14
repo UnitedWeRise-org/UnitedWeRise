@@ -303,3 +303,34 @@
     font-size: 0.8rem;
     font-weight: bold;
 }
+
+/* ========================================
+   PHOTO CAPTIONS IN GALLERY
+======================================== */
+
+.photo-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+    padding: 1rem 0.5rem 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    max-height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+}
+
+.photo-item {
+    position: relative;
+}
+
+.photo-item:hover .photo-caption {
+    max-height: none;
+    overflow: visible;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10;
+}

@@ -99,7 +99,7 @@ router.post('/upload', uploadLimiter, requireAuth, upload.array('photos', 5), as
       });
     }
 
-    const { photoType, purpose = 'PERSONAL', candidateId, gallery, postId } = req.body;
+    const { photoType, purpose = 'PERSONAL', candidateId, gallery, postId, caption } = req.body;
 
     if (!photoType || !Object.values(PhotoType).includes(photoType)) {
       return res.status(400).json({
@@ -131,7 +131,8 @@ router.post('/upload', uploadLimiter, requireAuth, upload.array('photos', 5), as
       purpose: purpose as PhotoPurpose,
       candidateId: candidateId || undefined,
       gallery: gallery || undefined,
-      postId: postId || undefined
+      postId: postId || undefined,
+      caption: caption || undefined
     };
 
     const results = await PhotoService.uploadMultiplePhotos(files, uploadOptions);

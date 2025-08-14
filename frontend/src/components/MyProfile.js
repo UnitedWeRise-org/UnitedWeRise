@@ -910,7 +910,8 @@ class MyProfile {
                 <div class="photo-grid">
                     ${gallery.photos.map(photo => `
                         <div class="photo-item" data-photo-id="${photo.id}">
-                            <img src="${photo.thumbnailUrl || photo.url}" alt="${photo.filename}">
+                            <img src="${photo.thumbnailUrl || photo.url}" alt="${photo.caption || photo.filename}">
+                            ${photo.caption ? `<div class="photo-caption">${photo.caption}</div>` : ''}
                             <div class="photo-overlay">
                                 <button onclick="window.myProfile.setAsProfilePicture('${photo.id}')" class="photo-action">
                                     👤 Set as Profile
@@ -952,12 +953,16 @@ class MyProfile {
         }
 
         const gallery = prompt('Enter gallery name (or leave empty for "My Photos"):') || 'My Photos';
+        const caption = prompt('Add a caption (optional, max 200 characters):') || '';
 
         const formData = new FormData();
         files.forEach(file => formData.append('photos', file));
         formData.append('photoType', 'GALLERY');
         formData.append('purpose', 'PERSONAL');
         formData.append('gallery', gallery);
+        if (caption.trim()) {
+            formData.append('caption', caption.substring(0, 200));
+        }
 
         try {
             const response = await window.apiCall('/photos/upload', {

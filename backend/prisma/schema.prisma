@@ -676,6 +676,7 @@ model Photo {
   candidateId    String?
   gallery        String?      @default("My Photos")
   postId         String?      // Link to post if this is POST_MEDIA
+  caption        String?      // Optional caption (max 200 chars)
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
