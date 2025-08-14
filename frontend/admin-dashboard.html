@@ -906,12 +906,14 @@ Loading deployment status...
                 
                 // Use the deployment status checker that's now loaded
                 if (window.deploymentStatus) {
-                    // Get comprehensive status
-                    const status = window.deploymentStatus.getStatus();
+                    // First run the check to populate fresh data
                     await window.deploymentStatus.check();
                     
-                    // Update stats from deployment checker
-                    setTimeout(() => updateDeploymentUI(status), 2000);
+                    // Get updated status after check completes
+                    setTimeout(() => {
+                        const status = window.deploymentStatus.getStatus();
+                        updateDeploymentUI(status);
+                    }, 3000);
                 } else {
                     // Fallback to basic health check
                     const healthResponse = await fetch(`${BACKEND_URL}/health`);
@@ -989,6 +991,7 @@ Loading deployment status...
             if (data && data.available === false) return '❌';
             if (data && data.status && data.status.includes('ERROR')) return '❌';
             if (data && data.responseTime && parseInt(data.responseTime) > 5000) return '⚠️';
+            if (data && (data.buildTime || data.lastLoaded)) return '✅'; // Frontend is working
             return '✅';
         }
 
@@ -996,6 +999,8 @@ Loading deployment status...
             if (data && data.available === false) return 'Unavailable';
             if (data && data.status) return data.status;
             if (data && data.uptime) return `Up ${data.uptime}`;
+            if (data && data.buildTime) return 'Deployed'; // Frontend has buildTime
+            if (data && data.lastLoaded) return 'Active'; // Frontend is loaded
             return 'Unknown';
         }
 
