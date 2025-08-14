@@ -40,13 +40,22 @@ async function initAutocomplete(inputId, instanceName) {
     }
 
     try {
-        // Import the places library if not already loaded
-        if (!google.maps.places.PlaceAutocompleteElement) {
-            await google.maps.importLibrary("places");
+        // Import the places library and ensure PlaceAutocompleteElement is available
+        let PlaceAutocompleteElement;
+        try {
+            if (!google.maps.places.PlaceAutocompleteElement) {
+                const placesLibrary = await google.maps.importLibrary("places");
+                PlaceAutocompleteElement = placesLibrary.PlaceAutocompleteElement;
+            } else {
+                PlaceAutocompleteElement = google.maps.places.PlaceAutocompleteElement;
+            }
+        } catch (importError) {
+            console.log('📱 Places library import failed, using legacy fallback:', importError.message);
+            throw new Error('Places library not available');
         }
 
         // Create new PlaceAutocompleteElement
-        const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+        const placeAutocomplete = new PlaceAutocompleteElement({
             types: ['address'],
             componentRestrictions: { country: 'us' }
         });
@@ -88,7 +97,7 @@ async function initAutocomplete(inputId, instanceName) {
 
         console.log(`Autocomplete initialized for ${inputId} using PlaceAutocompleteElement`);
     } catch (error) {
-        console.error('Error initializing PlaceAutocompleteElement:', error);
+        console.log('📱 PlaceAutocompleteElement not available, using legacy Autocomplete:', error.message);
         // Fallback to legacy implementation if new one fails
         initLegacyAutocomplete(inputId, instanceName);
     }
