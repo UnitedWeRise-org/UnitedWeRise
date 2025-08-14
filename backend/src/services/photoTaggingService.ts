@@ -113,7 +113,7 @@ export class PhotoTaggingService {
     if (taggedUser.requireTagApproval) {
       await prisma.notification.create({
         data: {
-          type: 'FRIEND_REQUEST', // We'll need to add PHOTO_TAG_REQUEST
+          type: 'PHOTO_TAG_REQUEST',
           senderId: taggedById,
           receiverId: taggedId,
           message: `${taggedUser.firstName || taggedUser.username} wants to tag you in a photo`,
@@ -183,7 +183,7 @@ export class PhotoTaggingService {
     // Notify the tagger of the response
     await prisma.notification.create({
       data: {
-        type: 'FRIEND_ACCEPTED', // We'll need PHOTO_TAG_RESPONSE
+        type: approve ? 'PHOTO_TAG_APPROVED' : 'PHOTO_TAG_DECLINED',
         senderId: userId,
         receiverId: tag.taggedById,
         message: approve 
@@ -342,7 +342,7 @@ export class PhotoTaggingService {
     // Notify photo owner
     await prisma.notification.create({
       data: {
-        type: 'FRIEND_REQUEST', // We'll need PRIVACY_REQUEST
+        type: 'PRIVACY_REQUEST',
         senderId: userId,
         receiverId: photo.userId,
         message: `${request.user.firstName || request.user.username} has requested ${type.toLowerCase().replace('_', ' ')} for your photo`,
