@@ -1406,7 +1406,7 @@
         function initializeMap() {
             if (USE_MAPLIBRE) {
                 // Use new MapLibre implementation
-                initializeMapLibre();
+                initializeMapLibreLocal();
                 return;
             }
             
@@ -1485,8 +1485,8 @@
         }
 
         // MapLibre initialization function
-        function initializeMapLibre() {
-            console.log('initializeMapLibre() called');
+        function initializeMapLibreLocal() {
+            console.log('initializeMapLibreLocal() called');
             
             // Set loading start time for minimum loading duration
             window.mapLoadStartTime = Date.now();
@@ -1507,10 +1507,10 @@
             // Initialize MapLibre through the class in map-maplibre.js
             console.log('🔍 Checking for external initializeMapLibre function...');
             console.log('🔍 typeof window.initializeMapLibre:', typeof window.initializeMapLibre);
-            console.log('🔍 window.initializeMapLibre === initializeMapLibre?', window.initializeMapLibre === initializeMapLibre);
-            console.log('🔍 window.initializeMapLibre !== initializeMapLibre?', window.initializeMapLibre !== initializeMapLibre);
+            console.log('🔍 window.initializeMapLibre === initializeMapLibreLocal?', window.initializeMapLibre === initializeMapLibreLocal);
+            console.log('🔍 window.initializeMapLibre !== initializeMapLibreLocal?', window.initializeMapLibre !== initializeMapLibreLocal);
             
-            if (typeof window.initializeMapLibre === 'function' && window.initializeMapLibre !== initializeMapLibre) {
+            if (typeof window.initializeMapLibre === 'function' && window.initializeMapLibre !== initializeMapLibreLocal) {
                 console.log('✅ Found external initializeMapLibre function, calling it...');
                 window.initializeMapLibre();
             } else {
