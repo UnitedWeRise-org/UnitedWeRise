@@ -71,50 +71,8 @@
                 return await response.json();
             };
             
-            // Create minimal initialization function
-            window.initializeApp = async () => {
-                console.log('🚀 Emergency app initialization...');
-                
-                const storedToken = localStorage.getItem('authToken');
-                if (!storedToken) {
-                    console.log('📝 No auth token - user not logged in');
-                    setUserLoggedOut();
-                    return { authenticated: false };
-                }
-                
-                window.authToken = storedToken;
-                
-                try {
-                    // Try batch initialization first
-                    const initData = await window.apiCall('/batch/initialize');
-                    
-                    if (initData.success) {
-                        console.log('✅ Batch initialization successful:', initData.data);
-                        localStorage.setItem('currentUser', JSON.stringify(initData.data.user));
-                        window.currentUser = initData.data.user;
-                        setUserLoggedIn(initData.data.user);
-                        return { authenticated: true, userData: initData.data.user };
-                    }
-                } catch (error) {
-                    console.warn('⚠️ Batch initialization failed, trying individual auth check:', error);
-                    
-                    // Fall back to individual auth check
-                    try {
-                        const authData = await window.apiCall('/auth/me');
-                        if (authData.user) {
-                            console.log('✅ Fallback auth successful:', authData.user);
-                            localStorage.setItem('currentUser', JSON.stringify(authData.user));
-                            window.currentUser = authData.user;
-                            setUserLoggedIn(authData.user);
-                            return { authenticated: true, userData: authData.user };
-                        }
-                    } catch (authError) {
-                        console.warn('⚠️ Fallback auth also failed:', authError);
-                    }
-                }
-                
-                return { authenticated: false };
-            };
+            // initializeApp will be provided by app-initialization.js
+            console.log('🔧 Deferring to app-initialization.js for auth logic');
             
             console.log('✅ Emergency optimization override ready');
         } else {
@@ -1544,11 +1502,11 @@
             }
             
             // Initialize MapLibre through the class in map-maplibre.js
-            if (typeof initMapLibre === 'function') {
-                console.log('Found initMapLibre function, calling it...');
-                initMapLibre();
+            if (typeof initializeMapLibre === 'function') {
+                console.log('Found initializeMapLibre function, calling it...');
+                initializeMapLibre();
             } else {
-                console.error('initMapLibre function not found - map-maplibre.js may not have loaded correctly');
+                console.error('initializeMapLibre function not found - map-maplibre.js may not have loaded correctly');
                 
                 // Fallback: Initialize directly if the function isn't available
                 if (typeof UWRMapLibre !== 'undefined') {
