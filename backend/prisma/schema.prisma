@@ -106,6 +106,18 @@ model User {
   suspensions             UserSuspension[]          @relation("UserSuspensions")
   issuedWarnings          UserWarning[]             @relation("IssuedWarnings")
   receivedWarnings        UserWarning[]             @relation("ReceivedWarnings")
+  
+  // Electoral District Crowdsourcing Relations
+  districtSubmissions     ElectoralDistrict[]       @relation("DistrictSubmissions")
+  districtVerifications   ElectoralDistrict[]       @relation("DistrictVerifications")
+  officeSubmissions       DistrictOffice[]          @relation("OfficeSubmissions")
+  officeVerifications     DistrictOffice[]          @relation("OfficeVerifications")
+  officialSubmissions     CrowdsourcedOfficial[]    @relation("OfficialSubmissions")
+  officialVerifications   CrowdsourcedOfficial[]    @relation("OfficialVerifications")
+  addressMappingVerifications AddressDistrictMapping[] @relation("AddressMappingVerifications")
+  conflictReports         DistrictConflict[]        @relation("ConflictReports")
+  conflictResolutions     DistrictConflict[]        @relation("ConflictResolutions")
+  crowdsourceVotes        CrowdsourceVote[]         @relation("CrowdsourceVotes")
 
   @@index([username])
   @@index([createdAt])
@@ -746,6 +758,496 @@ model CandidateInbox {
   @@index([candidateId])
 }
 
+// Electoral District Crowdsourcing System
+model ElectoralDistrict {
+  id           String               @id @default(cuid())
+  name         String               // e.g., "Nevada 4th Congressional District"
+  type         DistrictType
+  level        DistrictLevel
+  identifier   String               // e.g., "NV-04", "CLARK-SCHOOL-A"
+  state        String               @db.Char(2)
+  county       String?
+  municipality String?
+  coordinates  Json?                // GeoJSON polygon for district boundaries
+  population   Int?
+  isActive     Boolean              @default(true)
+  
+  // Crowdsourcing metadata
+  verificationLevel VerificationLevel @default(UNVERIFIED)
+  submittedBy       String?
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  conflictCount     Int              @default(0)
+  
+  // References
+  externalId       String?          // OCD-ID, FIPS code, etc.
+  dataSource       String?          // "US_CENSUS", "GEOCODIO", "CROWDSOURCED"
+  parentDistrict   String?          // Reference to parent district
+  
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  submitter        User?            @relation("DistrictSubmissions", fields: [submittedBy], references: [id])
+  verifier         User?            @relation("DistrictVerifications", fields: [verifiedBy], references: [id])
+  parent           ElectoralDistrict? @relation("DistrictHierarchy", fields: [parentDistrict], references: [id])
+  children         ElectoralDistrict[] @relation("DistrictHierarchy")
+  offices          DistrictOffice[]
+  addressMappings  AddressDistrictMapping[]
+  conflicts        DistrictConflict[]
+  
+  @@unique([identifier, state, type])
+  @@index([state, type, level])
+  @@index([verificationLevel])
+  @@index([isActive, type])
+}
+
+model DistrictOffice {
+  id                String               @id @default(cuid())
+  title             String               // e.g., "U.S. Representative", "School Board Member"
+  level             OfficeLevel
+  termLength        Int?                 // Years
+  electionCycle     String?              // "EVEN", "ODD", "SPECIAL"
+  nextElection      DateTime?
+  salary            Decimal?
+  hasTermLimits     Boolean              @default(false)
+  maxTerms          Int?
+  
+  // Current office holder info
+  currentOfficeholder String?
+  holderStartDate     DateTime?
+  holderEndDate       DateTime?
+  holderParty         String?
+  holderContactInfo   Json?              // Phone, email, address
+  holderPhotoUrl      String?
+  
+  // Crowdsourcing fields
+  verificationLevel   VerificationLevel  @default(UNVERIFIED)
+  submittedBy         String?
+  verifiedBy          String?
+  verifiedAt          DateTime?
+  dataSource          String?            // "OFFICIAL_WEBSITE", "NEWSPAPER", "CROWDSOURCED"
+  sourceUrl           String?
+  lastVerified        DateTime?
+  
+  districtId          String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  // Relations
+  district            ElectoralDistrict  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  submitter           User?              @relation("OfficeSubmissions", fields: [submittedBy], references: [id])
+  verifier            User?              @relation("OfficeVerifications", fields: [verifiedBy], references: [id])
+  crowdsourcedData    CrowdsourcedOfficial[]
+  
+  @@index([districtId])
+  @@index([level, nextElection])
+  @@index([verificationLevel])
+}
+
+model CrowdsourcedOfficial {
+  id               String               @id @default(cuid())
+  name             String
+  party            String?
+  contactInfo      Json?                // Phone, email, office address
+  photoUrl         String?
+  website          String?
+  socialMedia      Json?                // Twitter, Facebook, etc.
+  biography        String?
+  keyAccomplishments String?
+  
+  // Verification and source tracking
+  verificationLevel VerificationLevel   @default(UNVERIFIED)
+  submittedBy       String
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  sourceType        String              // "OFFICIAL_WEBSITE", "NEWS_ARTICLE", "PERSONAL_KNOWLEDGE"
+  sourceUrl         String?
+  sourceNotes       String?
+  
+  // Voting and consensus
+  upvotes           Int                 @default(0)
+  downvotes         Int                 @default(0)
+  reportCount       Int                 @default(0)
+  
+  officeId          String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relations
+  office            DistrictOffice      @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  submitter         User                @relation("OfficialSubmissions", fields: [submittedBy], references: [id])
+  verifier          User?               @relation("OfficialVerifications", fields: [verifiedBy], references: [id])
+  votes             CrowdsourceVote[]
+  
+  @@index([officeId])
+  @@index([verificationLevel])
+  @@index([submittedBy])
+}
+
+model AddressDistrictMapping {
+  id               String             @id @default(cuid())
+  address          String
+  lat              Float
+  lng              Float
+  h3Index          String?            // H3 geospatial index for fast lookup
+  zipCode          String
+  state            String             @db.Char(2)
+  
+  // Mapping confidence and source
+  confidence       Float              @default(0.0) // 0.0 to 1.0
+  source           String             // "CENSUS", "GEOCODIO", "CROWDSOURCED"
+  verifiedBy       String?
+  verifiedAt       DateTime?
+  
+  districtId       String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  
+  // Relations
+  district         ElectoralDistrict  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  verifier         User?              @relation("AddressMappingVerifications", fields: [verifiedBy], references: [id])
+  
+  @@index([h3Index])
+  @@index([zipCode, state])
+  @@index([lat, lng])
+  @@index([districtId])
+}
+
+model DistrictConflict {
+  id               String             @id @default(cuid())
+  type             ConflictType       // "BOUNDARY_DISPUTE", "OFFICE_HOLDER_DISPUTE", "ELECTION_DATE_DISPUTE"
+  description      String
+  evidence         Json?              // Supporting documents, URLs, etc.
+  
+  // Resolution tracking
+  status           ConflictStatus     @default(OPEN)
+  priority         ConflictPriority   @default(MEDIUM)
+  resolvedBy       String?
+  resolvedAt       DateTime?
+  resolution       String?
+  
+  reportedBy       String
+  districtId       String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  
+  // Relations
+  district         ElectoralDistrict  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  reporter         User               @relation("ConflictReports", fields: [reportedBy], references: [id])
+  resolver         User?              @relation("ConflictResolutions", fields: [resolvedBy], references: [id])
+  
+  @@index([districtId, status])
+  @@index([type, priority])
+  @@index([reportedBy])
+}
+
+model CrowdsourceVote {
+  id               String             @id @default(cuid())
+  userId           String
+  officialId       String
+  voteType         VoteType           // "UPVOTE", "DOWNVOTE", "REPORT"
+  reason           String?            // Why they voted/reported
+  
+  createdAt        DateTime           @default(now())
+  
+  // Relations
+  user             User               @relation("CrowdsourceVotes", fields: [userId], references: [id], onDelete: Cascade)
+  official         CrowdsourcedOfficial @relation(fields: [officialId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, officialId])
+  @@index([officialId, voteType])
+  @@index([userId])
+}
+
+// Legislative Voting Records & News System
+model Legislature {
+  id          String            @id @default(cuid())
+  name        String            // e.g., "118th Congress", "Nevada 33rd Session"
+  level       LegislatureLevel
+  state       String?           @db.Char(2) // Null for federal
+  chamber     Chamber?          // Null for unicameral
+  session     String            // e.g., "118th", "2025"
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean           @default(true)
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  bills       Bill[]
+  votes       Vote[]
+  memberships LegislativeMembership[]
+  
+  @@unique([level, state, session])
+  @@index([isActive, level])
+}
+
+model LegislativeMembership {
+  id           String      @id @default(cuid())
+  legislatorId String      // Links to our elected officials
+  legislatureId String
+  district     String?     // District number/name
+  party        String?
+  leadership   String?     // Speaker, Majority Leader, etc.
+  startDate    DateTime
+  endDate      DateTime?
+  isActive     Boolean     @default(true)
+  
+  // External IDs for API synchronization
+  bioguideId   String?     // Congress.gov bioguide ID
+  openStatesId String?     // Open States person ID
+  thomasId     String?     // Legacy Thomas ID
+  opensecrets  String?     // OpenSecrets ID
+  votesmartId  String?     // Vote Smart ID
+  govtrackId   String?     // GovTrack ID
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  legislature  Legislature @relation(fields: [legislatureId], references: [id], onDelete: Cascade)
+  votes        LegislatorVote[]
+  sponsorships BillSponsorship[]
+  votingSummary VotingRecordSummary?
+  
+  @@unique([bioguideId, legislatureId])
+  @@unique([openStatesId, legislatureId])
+  @@index([legislatorId, isActive])
+  @@index([legislatureId, district])
+  @@index([bioguideId])
+}
+
+model Bill {
+  id                String       @id @default(cuid())
+  externalId        String       // e.g., "hr1234-118", from API
+  number            String       // e.g., "H.R. 1234", "S. 567"
+  title             String
+  summary           String?      @db.Text
+  fullText          String?      @db.Text
+  status            BillStatus   @default(INTRODUCED)
+  
+  // Metadata
+  introducedDate    DateTime
+  lastActionDate    DateTime?
+  chamber           Chamber
+  level             LegislatureLevel
+  state             String?      @db.Char(2) // Null for federal
+  
+  // Topic classification
+  subjects          String[]     @default([])
+  policyAreas       String[]     @default([])
+  embedding         Float[]      @default([]) // For similarity search
+  
+  // External API metadata
+  dataSource        String       // "congress_gov", "open_states", "legiscan"
+  apiUrl            String?
+  lastSynced        DateTime     @default(now())
+  
+  legislatureId     String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relations
+  legislature       Legislature  @relation(fields: [legislatureId], references: [id], onDelete: Cascade)
+  votes             Vote[]
+  sponsors          BillSponsorship[]
+  newsArticles      NewsArticle[]
+  
+  @@unique([externalId, level])
+  @@index([number, level, state])
+  @@index([status, lastActionDate])
+  @@index([subjects])
+  @@index([legislatureId])
+}
+
+model BillSponsorship {
+  id           String       @id @default(cuid())
+  billId       String
+  membershipId String
+  isPrimary    Boolean      @default(false) // Primary sponsor vs co-sponsor
+  dateSigned   DateTime
+  
+  createdAt    DateTime     @default(now())
+  
+  // Relations
+  bill         Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
+  membership   LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  
+  @@unique([billId, membershipId])
+  @@index([membershipId, isPrimary])
+}
+
+model Vote {
+  id              String       @id @default(cuid())
+  externalId      String       // Vote ID from external API
+  number          String       // Roll call number
+  question        String       // What was being voted on
+  description     String?      @db.Text
+  date            DateTime
+  chamber         Chamber
+  
+  // Vote tallies
+  yesCount        Int          @default(0)
+  noCount         Int          @default(0)
+  presentCount    Int          @default(0)
+  notVotingCount  Int          @default(0)
+  abstainCount    Int          @default(0)
+  
+  // Results
+  passed          Boolean
+  requiredMajority String?     // "Simple", "2/3", "3/5", etc.
+  
+  // Associated legislation
+  billId          String?
+  legislatureId   String
+  
+  // External API metadata
+  dataSource      String       // "congress_gov", "open_states", "legiscan"
+  apiUrl          String?
+  lastSynced      DateTime     @default(now())
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  bill            Bill?        @relation(fields: [billId], references: [id], onDelete: Cascade)
+  legislature     Legislature  @relation(fields: [legislatureId], references: [id], onDelete: Cascade)
+  legislatorVotes LegislatorVote[]
+  
+  @@unique([externalId, chamber])
+  @@index([date, chamber])
+  @@index([billId])
+  @@index([legislatureId])
+}
+
+model LegislatorVote {
+  id           String             @id @default(cuid())
+  voteId       String
+  membershipId String
+  position     VotePosition
+  
+  createdAt    DateTime           @default(now())
+  
+  // Relations
+  vote         Vote               @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  membership   LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  
+  @@unique([voteId, membershipId])
+  @@index([membershipId, position])
+  @@index([voteId])
+}
+
+model NewsArticle {
+  id             String           @id @default(cuid())
+  title          String
+  aiSummary      String?          @db.Text // 200-400 char AI-generated summary
+  url            String           @unique
+  publishedAt    DateTime
+  
+  // Source information
+  sourceName     String
+  sourceType     NewsSourceType
+  author         String?
+  
+  // Enhanced classification for historical tracking
+  sentiment      ArticleSentiment @default(NEUTRAL)
+  sentimentScore Float            @default(0.0) // -1.0 to 1.0 for nuanced sentiment
+  keywords       String[]         @default([])
+  politicalTopics String[]        @default([]) // Issues mentioned (healthcare, immigration, etc.)
+  embedding      Float[]          @default([]) // Vector for similarity search
+  
+  // Historical accountability features
+  relevanceScore     Float        @default(0.0) // 0.0 to 1.0
+  positionKeywords   String[]     @default([]) // Policy positions extracted
+  contradictionFlags String[]     @default([]) // Potential inconsistencies with past statements
+  
+  // External API metadata
+  externalId     String?          // NewsAPI ID
+  dataSource     String           // "newsapi", "thenewsapi", etc.
+  lastSynced     DateTime         @default(now())
+  
+  // Cache metadata - articles cached indefinitely for historical reference
+  cacheExpiry    DateTime?        // NULL = permanent cache
+  isHistorical   Boolean          @default(true) // Mark as permanent historical record
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  // Relations
+  mentions       OfficialMention[]
+  bills          Bill[]           // Many-to-many for bill coverage
+  
+  @@index([publishedAt, relevanceScore])
+  @@index([sentiment, publishedAt])
+  @@index([sourceName, publishedAt])
+  @@index([isHistorical, publishedAt]) // For historical queries
+  @@index([politicalTopics, publishedAt]) // For topic-based searches
+}
+
+model OfficialMention {
+  id               String      @id @default(cuid())
+  articleId        String
+  officialName     String      // Name as mentioned in article
+  officialId       String?     // Link to our official records
+  districtId       String?     // Link to electoral district
+  
+  // Context of mention
+  mentionContext   String?     @db.Text // Surrounding text
+  sentimentScore   Float?      // -1.0 to 1.0
+  prominenceScore  Float       @default(0.0) // How prominently featured
+  
+  // Position in article
+  firstMention     Int?        // Character position of first mention
+  mentionCount     Int         @default(1) // How many times mentioned
+  
+  createdAt        DateTime    @default(now())
+  
+  // Relations
+  article          NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  @@index([officialId, articleId])
+  @@index([districtId])
+  @@index([officialName])
+}
+
+model VotingRecordSummary {
+  id               String    @id @default(cuid())
+  membershipId     String    @unique
+  
+  // Vote statistics
+  totalVotes       Int       @default(0)
+  yesVotes         Int       @default(0)
+  noVotes          Int       @default(0)
+  presentVotes     Int       @default(0)
+  notVotingCount   Int       @default(0)
+  abstainVotes     Int       @default(0)
+  
+  // Participation metrics
+  participationRate Float    @default(0.0) // Percentage of votes cast
+  partyUnityScore   Float?   // How often votes with party
+  bipartisanScore   Float?   // Cross-party cooperation measure
+  
+  // Topic-based voting patterns (JSON object)
+  topicVoting       Json?    // {"healthcare": {"yes": 5, "no": 2}, ...}
+  
+  // Date range for this summary
+  periodStart       DateTime
+  periodEnd         DateTime
+  lastCalculated    DateTime @default(now())
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  membership        LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  
+  @@index([membershipId])
+  @@index([participationRate])
+  @@index([lastCalculated])
+}
+
 model CandidateStaff {
   id                String             @id @default(cuid())
   inboxId           String
@@ -1222,6 +1724,7 @@ enum ResponseType {
 enum VoteType {
   UPVOTE
   DOWNVOTE
+  REPORT
 }
 
 enum CandidateRegistrationStatus {
@@ -1231,4 +1734,118 @@ enum CandidateRegistrationStatus {
   APPROVED
   REJECTED
   REFUNDED
+}
+
+// Electoral District Crowdsourcing Enums
+enum DistrictType {
+  CONGRESSIONAL
+  STATE_SENATE
+  STATE_HOUSE
+  COUNTY
+  MUNICIPAL
+  SCHOOL
+  WATER
+  FIRE
+  LIBRARY
+  HOSPITAL
+  TRANSIT
+  CONSERVATION
+  JUDICIAL
+  TOWNSHIP
+  PRECINCT
+  OTHER_SPECIAL
+}
+
+enum DistrictLevel {
+  FEDERAL
+  STATE
+  COUNTY
+  MUNICIPAL
+  SPECIAL
+  LOCAL
+}
+
+enum VerificationLevel {
+  UNVERIFIED
+  COMMUNITY_VERIFIED  // Multiple user confirmations
+  MODERATOR_VERIFIED  // Staff verified
+  OFFICIAL_VERIFIED   // Government source verified
+  DISPUTED           // Conflicting information reported
+}
+
+enum ConflictType {
+  BOUNDARY_DISPUTE
+  OFFICE_HOLDER_DISPUTE
+  ELECTION_DATE_DISPUTE
+  CONTACT_INFO_DISPUTE
+  TERM_LENGTH_DISPUTE
+  DUPLICATE_ENTRY
+  OUTDATED_INFO
+}
+
+enum ConflictStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ConflictPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Legislative Voting Records & News Enums
+enum LegislatureLevel {
+  FEDERAL
+  STATE
+  LOCAL
+}
+
+enum Chamber {
+  HOUSE
+  SENATE
+  UNICAMERAL  // For Nebraska and some local bodies
+}
+
+enum VotePosition {
+  YEA
+  NAY
+  PRESENT
+  NOT_VOTING
+  ABSTAIN
+}
+
+enum BillStatus {
+  INTRODUCED
+  COMMITTEE
+  FLOOR_VOTE
+  PASSED_CHAMBER
+  SENT_TO_OTHER_CHAMBER
+  PASSED_BOTH
+  SENT_TO_EXECUTIVE
+  SIGNED
+  VETOED
+  BECAME_LAW
+  DIED
+}
+
+enum NewsSourceType {
+  NEWSPAPER
+  MAGAZINE
+  BLOG
+  PRESS_RELEASE
+  GOVERNMENT
+  SOCIAL_MEDIA
+  WIRE_SERVICE
+  BROADCAST
+}
+
+enum ArticleSentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+  MIXED
 }

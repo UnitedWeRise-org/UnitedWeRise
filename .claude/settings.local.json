@@ -67,7 +67,10 @@
       "Bash(gh run list:*)",
       "Bash(awk:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:developers.google.com)"
+      "WebFetch(domain:developers.google.com)",
+      "Bash(gh api:*)",
+      "WebSearch",
+      "Bash(npx ts-node:*)"
     ],
     "deny": []
   }

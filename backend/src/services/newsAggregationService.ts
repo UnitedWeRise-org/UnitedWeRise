@@ -1,0 +1,798 @@
+import { PrismaClient } from '@prisma/client';
+import { ApiCacheService } from './apiCache';
+
+const prisma = new PrismaClient();
+
+// API Configuration
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
+const THE_NEWS_API_KEY = process.env.THE_NEWS_API_KEY;
+
+export interface NewsArticleData {
+  title: string;
+  aiSummary?: string; // 200-400 char AI-generated summary
+  url: string;
+  publishedAt: string;
+  sourceName: string;
+  sourceType: 'NEWSPAPER' | 'MAGAZINE' | 'BLOG' | 'PRESS_RELEASE' | 'GOVERNMENT' | 'SOCIAL_MEDIA' | 'WIRE_SERVICE' | 'BROADCAST';
+  author?: string;
+  sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED';
+  sentimentScore?: number; // -1.0 to 1.0
+  keywords: string[];
+  politicalTopics?: string[];
+  positionKeywords?: string[];
+  embedding?: number[];
+}
+
+export interface OfficialNews {
+  officialName: string;
+  officialId?: string;
+  articles: NewsArticleData[];
+  totalCount: number;
+  averageSentiment: number;
+  topKeywords: string[];
+}
+
+export class NewsAggregationService {
+  /**
+   * Search for news articles about a specific politician
+   * Implements historical accountability tracking with permanent caching
+   */
+  static async searchPoliticianNews(
+    officialName: string,
+    officialId?: string,
+    limit: number = 20,
+    daysBack: number = 30
+  ): Promise<OfficialNews> {
+    // First check historical database cache (permanent storage)
+    const historicalArticles = await this.getHistoricalArticles(officialName, limit, daysBack);
+    
+    // If we have recent articles in historical cache, use them
+    if (historicalArticles.length >= limit / 2) {
+      console.log(`📚 Using ${historicalArticles.length} historical articles for ${officialName}`);
+      return this.formatOfficialNews(officialName, officialId, historicalArticles);
+    }
+    
+    // Check short-term API cache (15 minutes for fresh data)
+    const cacheKey = `fresh_news_${officialName.replace(/\s+/g, '_')}_${limit}_${daysBack}`;
+    const cached = await ApiCacheService.get('politician_news', cacheKey);
+    if (cached) {
+      console.log(`⚡ Using cached API results for ${officialName}`);
+      return cached as OfficialNews;
+    }
+
+    const articles: NewsArticleData[] = [];
+    
+    // Search NewsAPI.org
+    if (NEWS_API_KEY) {
+      const newsApiArticles = await this.searchNewsAPI(officialName, daysBack, limit);
+      articles.push(...newsApiArticles);
+    }
+
+    // Search The News API
+    if (THE_NEWS_API_KEY) {
+      const theNewsApiArticles = await this.searchTheNewsAPI(officialName, daysBack, limit);
+      articles.push(...theNewsApiArticles);
+    }
+
+    // Remove duplicates based on URL
+    const uniqueArticles = articles.filter((article, index, self) => 
+      index === self.findIndex(a => a.url === article.url)
+    );
+
+    // Sort by relevance and date
+    uniqueArticles.sort((a, b) => {
+      const scoreA = this.calculateRelevanceScore(a, officialName);
+      const scoreB = this.calculateRelevanceScore(b, officialName);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
+
+    // Take top results
+    const topArticles = uniqueArticles.slice(0, limit);
+
+    // Store articles in database
+    for (const article of topArticles) {
+      await this.storeArticle(article, officialName, officialId);
+    }
+
+    // Calculate metrics
+    const averageSentiment = this.calculateAverageSentiment(topArticles);
+    const topKeywords = this.extractTopKeywords(topArticles);
+
+    const result: OfficialNews = {
+      officialName,
+      officialId,
+      articles: topArticles,
+      totalCount: topArticles.length,
+      averageSentiment,
+      topKeywords
+    };
+
+    // Cache API results for short term (15 minutes - just to reduce immediate API calls)
+    await ApiCacheService.set('politician_news', cacheKey, result, 15);
+    
+    return result;
+  }
+
+  /**
+   * Get articles from permanent historical cache
+   */
+  private static async getHistoricalArticles(officialName: string, limit: number, daysBack: number): Promise<any[]> {
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - daysBack);
+    
+    return await prisma.newsArticle.findMany({
+      where: {
+        mentions: {
+          some: {
+            officialName: {
+              contains: officialName,
+              mode: 'insensitive'
+            }
+          }
+        },
+        publishedAt: {
+          gte: fromDate
+        },
+        isHistorical: true // Only get articles marked for historical tracking
+      },
+      include: {
+        mentions: true
+      },
+      orderBy: [
+        { relevanceScore: 'desc' },
+        { publishedAt: 'desc' }
+      ],
+      take: limit
+    });
+  }
+
+  /**
+   * Format articles for OfficialNews response
+   */
+  private static formatOfficialNews(officialName: string, officialId: string | undefined, articles: any[]): OfficialNews {
+    const formattedArticles: NewsArticleData[] = articles.map(article => ({
+      title: article.title,
+      aiSummary: article.aiSummary,
+      url: article.url,
+      publishedAt: article.publishedAt.toISOString(),
+      sourceName: article.sourceName,
+      sourceType: article.sourceType,
+      author: article.author,
+      sentiment: article.sentiment,
+      sentimentScore: article.sentimentScore,
+      keywords: article.keywords,
+      politicalTopics: article.politicalTopics,
+      positionKeywords: article.positionKeywords,
+      embedding: article.embedding
+    }));
+
+    const averageSentiment = formattedArticles.length > 0 
+      ? formattedArticles.reduce((sum, article) => sum + (article.sentimentScore || 0), 0) / formattedArticles.length
+      : 0;
+
+    const topKeywords = this.extractTopKeywords(formattedArticles);
+
+    return {
+      officialName,
+      officialId,
+      articles: formattedArticles,
+      totalCount: formattedArticles.length,
+      averageSentiment,
+      topKeywords
+    };
+  }
+
+  /**
+   * Get trending political news stories
+   */
+  static async getTrendingPoliticalNews(limit: number = 50): Promise<NewsArticleData[]> {
+    const cacheKey = `trending_political_news_${limit}`;
+    
+    // Check cache first
+    const cached = await ApiCacheService.get('trending_news', cacheKey);
+    if (cached) {
+      return cached as NewsArticleData[];
+    }
+
+    const articles: NewsArticleData[] = [];
+    
+    // Get political news from NewsAPI
+    if (NEWS_API_KEY) {
+      const newsApiArticles = await this.searchNewsAPI('politics election congress senate house', 1, limit);
+      articles.push(...newsApiArticles);
+    }
+
+    // Get political news from The News API
+    if (THE_NEWS_API_KEY) {
+      const theNewsApiArticles = await this.searchTheNewsAPI('politics election congress', 1, limit);
+      articles.push(...theNewsApiArticles);
+    }
+
+    // Remove duplicates and sort by engagement potential
+    const uniqueArticles = articles.filter((article, index, self) => 
+      index === self.findIndex(a => a.url === article.url)
+    );
+
+    uniqueArticles.sort((a, b) => {
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
+
+    const topArticles = uniqueArticles.slice(0, limit);
+
+    // Store in database
+    for (const article of topArticles) {
+      await this.storeArticle(article);
+    }
+
+    // Cache for 30 minutes
+    await ApiCacheService.set('trending_news', cacheKey, topArticles, 30);
+    
+    return topArticles;
+  }
+
+  /**
+   * Get news coverage for multiple officials
+   */
+  static async getMultipleOfficialsNews(
+    officials: Array<{ name: string; id?: string }>,
+    daysBack: number = 7
+  ): Promise<Map<string, OfficialNews>> {
+    const results = new Map<string, OfficialNews>();
+    
+    // Process officials in parallel (with rate limiting)
+    const chunks = this.chunkArray(officials, 5); // Process 5 at a time
+    
+    for (const chunk of chunks) {
+      const promises = chunk.map(official => 
+        this.searchPoliticianNews(official.name, official.id, 10, daysBack)
+      );
+      
+      const chunkResults = await Promise.all(promises);
+      
+      chunk.forEach((official, index) => {
+        results.set(official.name, chunkResults[index]);
+      });
+      
+      // Wait 1 second between chunks to respect rate limits
+      if (chunks.indexOf(chunk) < chunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * Generate AI summary for historical accountability tracking
+   */
+  static async generateAISummary(title: string, description?: string, content?: string): Promise<string> {
+    try {
+      // Use Azure OpenAI if available, fallback to local summarization
+      const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+      const AZURE_OPENAI_CHAT_DEPLOYMENT = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT;
+      
+      if (AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_CHAT_DEPLOYMENT) {
+        return await this.generateAzureAISummary(title, description, content);
+      }
+      
+      // Fallback to extractive summary
+      return this.generateExtractiveSummary(title, description, content);
+    } catch (error) {
+      console.error('AI summary generation failed:', error);
+      // Fallback to truncated description
+      return this.generateExtractiveSummary(title, description, content);
+    }
+  }
+
+  private static async generateAzureAISummary(title: string, description?: string, content?: string): Promise<string> {
+    const textToSummarize = [title, description, content?.substring(0, 1000)].filter(Boolean).join(' ');
+    
+    const prompt = `Summarize this news article about a political figure in 200-400 characters. Focus on:
+1. Key political positions or actions
+2. Policy implications
+3. Quotes or statements that could be referenced later for accountability
+
+Article: "${textToSummarize}"
+
+Summary:`;
+
+    // Call Azure OpenAI API (simplified - you'd implement the actual API call)
+    // For now, return extractive summary
+    return this.generateExtractiveSummary(title, description, content);
+  }
+
+  private static generateExtractiveSummary(title: string, description?: string, content?: string): string {
+    // Create a meaningful summary from available text
+    let summary = title;
+    
+    if (description) {
+      // Extract key sentences from description
+      const sentences = description.split(/[.!?]+/).filter(s => s.trim().length > 10);
+      if (sentences.length > 0) {
+        summary += ': ' + sentences[0].trim();
+      }
+    }
+    
+    // Ensure summary is within 200-400 character range
+    if (summary.length > 400) {
+      summary = summary.substring(0, 397) + '...';
+    } else if (summary.length < 200 && description) {
+      // Try to add more context
+      const remainingSpace = 397 - summary.length;
+      const additionalText = description.substring(summary.length - title.length - 2, summary.length - title.length - 2 + remainingSpace);
+      if (additionalText.trim()) {
+        summary += ' ' + additionalText.trim();
+        if (summary.length > 397) {
+          summary = summary.substring(0, 397) + '...';
+        }
+      }
+    }
+    
+    return summary;
+  }
+
+  /**
+   * Extract political topics and position keywords for accountability tracking
+   */
+  static extractPoliticalContent(text: string): { politicalTopics: string[], positionKeywords: string[] } {
+    const textLower = text.toLowerCase();
+    
+    // Political topics
+    const topicKeywords = {
+      'healthcare': ['healthcare', 'health care', 'medicare', 'medicaid', 'obamacare', 'aca', 'insurance'],
+      'immigration': ['immigration', 'border', 'deportation', 'asylum', 'refugee', 'visa', 'citizenship'],
+      'economy': ['economy', 'economic', 'jobs', 'employment', 'wages', 'inflation', 'recession'],
+      'climate': ['climate', 'environment', 'renewable', 'fossil fuel', 'carbon', 'emissions', 'green new deal'],
+      'education': ['education', 'school', 'university', 'student loans', 'teachers', 'curriculum'],
+      'defense': ['defense', 'military', 'pentagon', 'veterans', 'war', 'nato', 'foreign policy'],
+      'taxes': ['tax', 'taxation', 'irs', 'revenue', 'fiscal', 'budget', 'deficit'],
+      'justice': ['justice', 'court', 'legal', 'constitution', 'rights', 'law enforcement', 'police']
+    };
+    
+    const detectedTopics: string[] = [];
+    for (const [topic, keywords] of Object.entries(topicKeywords)) {
+      if (keywords.some(keyword => textLower.includes(keyword))) {
+        detectedTopics.push(topic);
+      }
+    }
+    
+    // Position keywords (words that indicate stances)
+    const positionIndicators = [
+      'supports', 'opposes', 'votes for', 'votes against', 'endorses', 'rejects',
+      'advocates', 'condemns', 'proposes', 'introduces', 'co-sponsors',
+      'backs', 'defends', 'attacks', 'criticizes', 'praises'
+    ];
+    
+    const positionKeywords = positionIndicators.filter(indicator => 
+      textLower.includes(indicator)
+    );
+    
+    return { politicalTopics: detectedTopics, positionKeywords };
+  }
+
+  /**
+   * Analyze sentiment with both categorical and numerical scores
+   */
+  static async analyzeSentiment(text: string): Promise<'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED'> {
+    const sentimentData = this.calculateSentimentScore(text);
+    return sentimentData.category;
+  }
+
+  /**
+   * Calculate numerical sentiment score (-1.0 to 1.0) for fine-grained analysis
+   */
+  static calculateSentimentScore(text: string): { score: number, category: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED' } {
+    const positiveWords = ['praise', 'success', 'achievement', 'victory', 'approve', 'support', 'endorse', 'commend', 'excellent', 'outstanding', 'effective', 'beneficial', 'progress'];
+    const negativeWords = ['criticize', 'scandal', 'controversy', 'failure', 'oppose', 'condemn', 'investigate', 'allegations', 'crisis', 'resign', 'corrupt', 'ineffective', 'harmful'];
+    
+    const textLower = text.toLowerCase();
+    const words = textLower.split(/\s+/);
+    
+    let positiveScore = 0;
+    let negativeScore = 0;
+    
+    positiveWords.forEach(word => {
+      const matches = (textLower.match(new RegExp(word, 'g')) || []).length;
+      positiveScore += matches;
+    });
+    
+    negativeWords.forEach(word => {
+      const matches = (textLower.match(new RegExp(word, 'g')) || []).length;
+      negativeScore += matches;
+    });
+    
+    // Calculate normalized score (-1.0 to 1.0)
+    const totalSentimentWords = positiveScore + negativeScore;
+    const totalWords = words.length;
+    
+    let score = 0;
+    if (totalSentimentWords > 0) {
+      score = (positiveScore - negativeScore) / Math.max(totalSentimentWords, totalWords / 10);
+      score = Math.max(-1.0, Math.min(1.0, score)); // Clamp to -1.0 to 1.0
+    }
+    
+    // Determine category
+    let category: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED';
+    if (score > 0.3) category = 'POSITIVE';
+    else if (score < -0.3) category = 'NEGATIVE';
+    else if (positiveScore > 0 && negativeScore > 0) category = 'MIXED';
+    else category = 'NEUTRAL';
+    
+    return { score, category };
+  }
+
+  /**
+   * Get news articles from database with filtering
+   */
+  static async getStoredArticles(
+    officialId?: string,
+    sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED',
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<{ articles: any[]; total: number }> {
+    const where: any = {};
+    
+    if (officialId) {
+      where.mentions = {
+        some: {
+          officialId: officialId
+        }
+      };
+    }
+    
+    if (sentiment) {
+      where.sentiment = sentiment;
+    }
+
+    const [articles, total] = await Promise.all([
+      prisma.newsArticle.findMany({
+        where,
+        include: {
+          mentions: {
+            include: {
+              article: false
+            }
+          }
+        },
+        orderBy: [
+          { relevanceScore: 'desc' },
+          { publishedAt: 'desc' }
+        ],
+        skip: offset,
+        take: limit
+      }),
+      
+      prisma.newsArticle.count({ where })
+    ]);
+
+    return { articles, total };
+  }
+
+  // Private helper methods
+  private static async searchNewsAPI(query: string, daysBack: number, limit: number): Promise<NewsArticleData[]> {
+    if (!NEWS_API_KEY) {
+      return [];
+    }
+
+    try {
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - daysBack);
+      
+      const url = new URL('https://newsapi.org/v2/everything');
+      url.searchParams.set('q', query);
+      url.searchParams.set('from', fromDate.toISOString().split('T')[0]);
+      url.searchParams.set('sortBy', 'relevancy');
+      url.searchParams.set('pageSize', Math.min(limit, 100).toString());
+      url.searchParams.set('language', 'en');
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'X-API-Key': NEWS_API_KEY
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`NewsAPI error: ${response.status}`);
+        return [];
+      }
+
+      const data = await response.json();
+      
+      return (data.articles || []).map((article: any) => ({
+        title: article.title,
+        description: article.description, // Used for AI summary generation, not stored
+        url: article.url,
+        publishedAt: article.publishedAt,
+        sourceName: article.source.name,
+        sourceType: this.inferSourceType(article.source.name),
+        author: article.author,
+        keywords: this.extractKeywords(article.title + ' ' + (article.description || ''))
+      }));
+    } catch (error) {
+      console.error('NewsAPI search failed:', error);
+      return [];
+    }
+  }
+
+  private static async searchTheNewsAPI(query: string, daysBack: number, limit: number): Promise<NewsArticleData[]> {
+    if (!THE_NEWS_API_KEY) {
+      return [];
+    }
+
+    try {
+      const url = new URL('https://api.thenewsapi.com/v1/news/all');
+      url.searchParams.set('api_token', THE_NEWS_API_KEY);
+      url.searchParams.set('search', query);
+      url.searchParams.set('language', 'en');
+      url.searchParams.set('limit', Math.min(limit, 100).toString());
+
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.error(`The News API error: ${response.status}`);
+        return [];
+      }
+
+      const data = await response.json();
+      
+      return (data.data || []).map((article: any) => ({
+        title: article.title,
+        description: article.description, // Used for AI summary generation, not stored
+        url: article.url,
+        publishedAt: article.published_at,
+        sourceName: article.source,
+        sourceType: this.inferSourceType(article.source),
+        author: article.author,
+        keywords: this.extractKeywords(article.title + ' ' + (article.description || ''))
+      }));
+    } catch (error) {
+      console.error('The News API search failed:', error);
+      return [];
+    }
+  }
+
+  private static async storeArticle(
+    article: NewsArticleData, 
+    officialName?: string, 
+    officialId?: string
+  ): Promise<void> {
+    try {
+      // Check if article already exists (permanent cache - never expires)
+      const existing = await prisma.newsArticle.findUnique({
+        where: { url: article.url }
+      });
+
+      if (existing) {
+        console.log(`📰 Article already cached: ${article.title}`);
+        return; // Article already in permanent historical cache
+      }
+
+      // Generate AI summary (200-400 chars for historical accountability)
+      const aiSummary = await this.generateAISummary(
+        article.title, 
+        article.description, 
+        article.content
+      );
+
+      // Calculate sentiment with numerical score
+      const sentimentData = this.calculateSentimentScore(
+        article.title + ' ' + (article.aiSummary || article.description || '')
+      );
+
+      // Extract political content for accountability tracking
+      const politicalContent = this.extractPoliticalContent(
+        article.title + ' ' + (article.aiSummary || article.description || '')
+      );
+
+      // Calculate relevance score
+      const relevanceScore = officialName ? 
+        this.calculateRelevanceScore(article, officialName) : 0.5;
+
+      // Store optimized article data (permanent historical cache)
+      const storedArticle = await prisma.newsArticle.create({
+        data: {
+          title: article.title,
+          aiSummary, // AI-generated summary instead of full content
+          url: article.url,
+          publishedAt: new Date(article.publishedAt),
+          sourceName: article.sourceName,
+          sourceType: article.sourceType,
+          author: article.author,
+          
+          // Enhanced sentiment analysis
+          sentiment: sentimentData.category,
+          sentimentScore: sentimentData.score,
+          
+          // Historical accountability features
+          keywords: article.keywords,
+          politicalTopics: politicalContent.politicalTopics,
+          positionKeywords: politicalContent.positionKeywords,
+          
+          // Scoring and metadata
+          relevanceScore,
+          dataSource: 'newsapi',
+          
+          // Permanent caching (no expiry for historical accountability)
+          cacheExpiry: null, // NULL = permanent cache
+          isHistorical: true,
+          
+          // Vector embedding (placeholder - would use actual embedding service)
+          embedding: article.embedding || []
+        }
+      });
+
+      console.log(`✅ Cached article for historical tracking: ${article.title.substring(0, 50)}...`);
+
+      // Create official mention if applicable
+      if (officialName && storedArticle) {
+        const mentionContext = this.extractMentionContext(
+          article.title + ' ' + (article.description || ''), 
+          officialName
+        );
+
+        await prisma.officialMention.create({
+          data: {
+            articleId: storedArticle.id,
+            officialName,
+            officialId,
+            mentionContext,
+            sentimentScore: this.sentimentToScore(sentiment),
+            prominenceScore: this.calculateProminenceScore(article.title, article.description, officialName),
+            firstMention: this.findFirstMention(article.title + ' ' + (article.description || ''), officialName),
+            mentionCount: this.countMentions(article.title + ' ' + (article.description || ''), officialName)
+          }
+        });
+      }
+    } catch (error) {
+      // Likely a duplicate URL - that's OK
+      if (!error.message?.includes('Unique constraint')) {
+        console.error('Failed to store article:', error);
+      }
+    }
+  }
+
+  private static calculateRelevanceScore(article: NewsArticleData, officialName: string): number {
+    let score = 0.5; // Base score
+    
+    const title = article.title.toLowerCase();
+    const description = (article.description || '').toLowerCase();
+    const name = officialName.toLowerCase();
+    
+    // Higher score if mentioned in title
+    if (title.includes(name)) {
+      score += 0.3;
+    }
+    
+    // Higher score if mentioned in description
+    if (description.includes(name)) {
+      score += 0.2;
+    }
+    
+    // Political keywords boost
+    const politicalKeywords = ['congress', 'senate', 'house', 'representative', 'senator', 'vote', 'bill', 'legislation'];
+    const keywordMatches = politicalKeywords.filter(keyword => 
+      title.includes(keyword) || description.includes(keyword)
+    ).length;
+    
+    score += keywordMatches * 0.05;
+    
+    return Math.min(score, 1.0);
+  }
+
+  private static calculateAverageSentiment(articles: NewsArticleData[]): number {
+    if (articles.length === 0) return 0;
+    
+    const sentimentValues = articles.map(article => {
+      switch (article.sentiment) {
+        case 'POSITIVE': return 1;
+        case 'NEGATIVE': return -1;
+        case 'MIXED': return 0;
+        case 'NEUTRAL':
+        default: return 0;
+      }
+    });
+    
+    return sentimentValues.reduce((sum, val) => sum + val, 0) / sentimentValues.length;
+  }
+
+  private static extractTopKeywords(articles: NewsArticleData[]): string[] {
+    const keywordCounts = new Map<string, number>();
+    
+    articles.forEach(article => {
+      article.keywords.forEach(keyword => {
+        keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+      });
+    });
+    
+    return Array.from(keywordCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([keyword]) => keyword);
+  }
+
+  private static extractKeywords(text: string): string[] {
+    // Simple keyword extraction - in production, use proper NLP
+    const words = text.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3);
+    
+    const politicalTerms = ['congress', 'senate', 'house', 'representative', 'senator', 'vote', 'bill', 'legislation', 'committee', 'republican', 'democrat', 'election', 'campaign'];
+    
+    return words.filter(word => politicalTerms.includes(word));
+  }
+
+  private static inferSourceType(sourceName: string): 'NEWSPAPER' | 'MAGAZINE' | 'BLOG' | 'PRESS_RELEASE' | 'GOVERNMENT' | 'SOCIAL_MEDIA' | 'WIRE_SERVICE' | 'BROADCAST' {
+    const name = sourceName.toLowerCase();
+    
+    if (name.includes('times') || name.includes('post') || name.includes('herald') || name.includes('tribune')) {
+      return 'NEWSPAPER';
+    }
+    if (name.includes('reuters') || name.includes('associated press') || name.includes('bloomberg')) {
+      return 'WIRE_SERVICE';
+    }
+    if (name.includes('cnn') || name.includes('fox') || name.includes('msnbc') || name.includes('nbc') || name.includes('cbs')) {
+      return 'BROADCAST';
+    }
+    if (name.includes('gov') || name.includes('house.gov') || name.includes('senate.gov')) {
+      return 'GOVERNMENT';
+    }
+    if (name.includes('blog') || name.includes('medium') || name.includes('substack')) {
+      return 'BLOG';
+    }
+    
+    return 'NEWSPAPER'; // Default
+  }
+
+  private static extractMentionContext(text: string, officialName: string): string {
+    const index = text.toLowerCase().indexOf(officialName.toLowerCase());
+    if (index === -1) return '';
+    
+    const start = Math.max(0, index - 100);
+    const end = Math.min(text.length, index + officialName.length + 100);
+    
+    return text.substring(start, end);
+  }
+
+  private static sentimentToScore(sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED'): number {
+    switch (sentiment) {
+      case 'POSITIVE': return 1.0;
+      case 'NEGATIVE': return -1.0;
+      case 'MIXED': return 0.0;
+      case 'NEUTRAL':
+      default: return 0.0;
+    }
+  }
+
+  private static calculateProminenceScore(title: string, description: string | undefined, officialName: string): number {
+    let score = 0;
+    
+    if (title.toLowerCase().includes(officialName.toLowerCase())) {
+      score += 0.7;
+    }
+    
+    if (description && description.toLowerCase().includes(officialName.toLowerCase())) {
+      score += 0.3;
+    }
+    
+    return score;
+  }
+
+  private static findFirstMention(text: string, officialName: string): number {
+    return text.toLowerCase().indexOf(officialName.toLowerCase());
+  }
+
+  private static countMentions(text: string, officialName: string): number {
+    const matches = text.toLowerCase().match(new RegExp(officialName.toLowerCase(), 'g'));
+    return matches ? matches.length : 0;
+  }
+
+  private static chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+}

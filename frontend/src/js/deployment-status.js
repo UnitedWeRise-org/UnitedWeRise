@@ -95,7 +95,6 @@
         async checkBackend() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.backend, {
-                    cache: 'no-cache',
                     headers: { 
                         'Accept': 'application/json'
                     },
@@ -126,7 +125,6 @@
         async checkDatabase() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.database, {
-                    cache: 'no-cache',
                     headers: { 
                         'Accept': 'application/json'
                     },
@@ -157,7 +155,6 @@
         async checkBatchEndpoint() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.batch, {
-                    cache: 'no-cache',
                     headers: { 
                         'Accept': 'application/json'
                     },
@@ -186,7 +183,6 @@
         async checkReputationSystem() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.reputation, {
-                    cache: 'no-cache',
                     headers: { 
                         'Accept': 'application/json'
                     },
