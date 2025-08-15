@@ -630,7 +630,7 @@ Response:
 Get single post with details
 - **Response**: Post with author, likes, comments
 
-#### GET /api/feed/posts
+#### GET /api/feed/
 Get personalized feed (follows + algorithm)
 ```javascript
 Query params:
