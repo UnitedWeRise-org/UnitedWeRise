@@ -9,6 +9,8 @@ const THE_NEWS_API_KEY = process.env.THE_NEWS_API_KEY;
 
 export interface NewsArticleData {
   title: string;
+  description?: string; // Used for AI summary generation, not stored in DB
+  content?: string; // Used for AI summary generation, not stored in DB
   aiSummary?: string; // 200-400 char AI-generated summary
   url: string;
   publishedAt: string;
@@ -498,8 +500,9 @@ Summary:`;
       }
 
       const data = await response.json();
+      const newsApiData = data as { articles?: any[] };
       
-      return (data.articles || []).map((article: any) => ({
+      return (newsApiData.articles || []).map((article: any) => ({
         title: article.title,
         description: article.description, // Used for AI summary generation, not stored
         url: article.url,
@@ -535,8 +538,9 @@ Summary:`;
       }
 
       const data = await response.json();
+      const theNewsApiData = data as { data?: any[] };
       
-      return (data.data || []).map((article: any) => ({
+      return (theNewsApiData.data || []).map((article: any) => ({
         title: article.title,
         description: article.description, // Used for AI summary generation, not stored
         url: article.url,
@@ -637,7 +641,7 @@ Summary:`;
             officialName,
             officialId,
             mentionContext,
-            sentimentScore: this.sentimentToScore(sentiment),
+            sentimentScore: this.sentimentToScore(sentimentData.category),
             prominenceScore: this.calculateProminenceScore(article.title, article.description, officialName),
             firstMention: this.findFirstMention(article.title + ' ' + (article.description || ''), officialName),
             mentionCount: this.countMentions(article.title + ' ' + (article.description || ''), officialName)

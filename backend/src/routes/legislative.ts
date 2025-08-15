@@ -177,13 +177,6 @@ router.post('/voting-statistics', async (req, res) => {
       },
       include: {
         votingSummary: true
-      },
-      select: {
-        bioguideId: true,
-        legislatorId: true,
-        party: true,
-        district: true,
-        votingSummary: true
       }
     });
     

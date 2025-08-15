@@ -102,14 +102,15 @@ export class LegislativeDataService {
       });
 
       // Process legislators
-      for (const member of data.members || []) {
+      const apiData = data as { members?: any[] };
+      for (const member of apiData.members || []) {
         await this.processFederalLegislator(member, legislature.id);
       }
 
       // Cache the result for 24 hours
       await ApiCacheService.set('legislative_data', cacheKey, { synced: true }, 24 * 60);
       
-      console.log(`Synced ${data.members?.length || 0} federal legislators`);
+      console.log(`Synced ${apiData.members?.length || 0} federal legislators`);
     } catch (error) {
       console.error('Failed to sync federal legislators:', error);
     }
@@ -176,14 +177,15 @@ export class LegislativeDataService {
       });
 
       // Process legislators
-      for (const person of data.results || []) {
+      const stateData = data as { results?: any[] };
+      for (const person of stateData.results || []) {
         await this.processStateLegislator(person, legislature.id, state);
       }
 
       // Cache the result for 24 hours
       await ApiCacheService.set('legislative_data', cacheKey, { synced: true }, 24 * 60);
       
-      console.log(`Synced ${data.results?.length || 0} ${state} legislators`);
+      console.log(`Synced ${stateData.results?.length || 0} ${state} legislators`);
     } catch (error) {
       console.error(`Failed to sync ${state} legislators:`, error);
     }
@@ -219,9 +221,10 @@ export class LegislativeDataService {
       }
 
       const data = await votesResponse.json();
+      const votesData = data as { votes?: any[] };
       const votingRecords: VotingRecord[] = [];
 
-      for (const vote of data.votes || []) {
+      for (const vote of votesData.votes || []) {
         votingRecords.push({
           voteId: vote.rollCall?.number || vote.url.split('/').pop(),
           billNumber: vote.bill?.number,
@@ -271,11 +274,12 @@ export class LegislativeDataService {
 
       const data = await votesResponse.json();
 
-      for (const vote of data.votes || []) {
+      const syncVotesData = data as { votes?: any[] };
+      for (const vote of syncVotesData.votes || []) {
         await this.processVote(vote);
       }
 
-      console.log(`Synced ${data.votes?.length || 0} voting records`);
+      console.log(`Synced ${syncVotesData.votes?.length || 0} voting records`);
     } catch (error) {
       console.error('Failed to sync voting records:', error);
     }
@@ -316,11 +320,12 @@ export class LegislativeDataService {
         return;
       }
 
-      for (const bill of data.bills || []) {
+      const billsData = data as { bills?: any[] };
+      for (const bill of billsData.bills || []) {
         await this.processBill(bill, legislature.id);
       }
 
-      console.log(`Synced ${data.bills?.length || 0} bills`);
+      console.log(`Synced ${billsData.bills?.length || 0} bills`);
     } catch (error) {
       console.error('Failed to sync bills:', error);
     }

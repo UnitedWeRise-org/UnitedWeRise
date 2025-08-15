@@ -1,13 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { ApiCacheService } from './apiCache';
 import { GoogleCivicService } from './googleCivicService';
-import { addressToH3, h3ToGeo } from '../utils/geospatial';
+import { addressToH3, geocodeAddress } from '../utils/geospatial';
 
 const prisma = new PrismaClient();
 
 export interface AddressComponents {
-  streetAddress?: string;
-  city?: string;
+  streetAddress: string;
+  city: string;
   state: string;
   zipCode: string;
   lat?: number;
@@ -177,7 +177,7 @@ export class DistrictIdentificationService {
     // Try Google Civic API first
     if (process.env.GOOGLE_API_KEY) {
       try {
-        const civicData = await GoogleCivicService.getDistrictsByAddress(fullAddress);
+        const civicData = await GoogleCivicService.getRepresentativesByAddress(fullAddress);
         if (civicData) {
           return this.transformGoogleCivicResponse(civicData, address);
         }
