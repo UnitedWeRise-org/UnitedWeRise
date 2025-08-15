@@ -367,19 +367,7 @@
         </div>
     </div>
 
-    <div id="panel-myfeed" class="info-panel hidden" data-offset="1">
-        <div class="panel-header">
-            <span>My Feed</span>
-            <button onclick="closePanel('myfeed')">X</button>
-        </div>
-        <div class="panel-body" style="padding: 0; overflow: hidden;">
-            <div id="myFeedContent" style="height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none;">
-                <div style="text-align: center; padding: 2rem; color: #666;">
-                    <p>Loading your personalized feed...</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- DEPRECATED: panel-myfeed removed - My Feed now populates in main content area per CLAUDE.md documentation -->
 
     <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
         <div class="panel-header">
@@ -3181,106 +3169,9 @@
 
         // DEPRECATED - Panel scroll handler removed
 
-        // Load more posts for infinite scroll
-        async function loadMorePosts() {
-            if (isLoadingMorePosts || !hasMorePosts) return;
-            
-            isLoadingMorePosts = true;
-            const container = document.getElementById('panelFeedPosts') || document.getElementById('myFeedPosts');
-            
-            // Add loading indicator
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'feed-loading';
-            loadingDiv.innerHTML = 'Loading more posts...';
-            container.appendChild(loadingDiv);
+        // DEPRECATED - loadMorePosts() removed (panel-based implementation)
 
-            try {
-                const nextPage = currentFeedPage + 1;
-                const response = await apiCall(`/api/feed/posts?page=${nextPage}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const posts = response.posts || [];
-                
-                // Remove loading indicator
-                container.removeChild(loadingDiv);
-
-                if (posts.length === 0) {
-                    hasMorePosts = false;
-                    const endDiv = document.createElement('div');
-                    endDiv.className = 'feed-end-indicator';
-                    endDiv.innerHTML = "You're all caught up! 🎉";
-                    container.appendChild(endDiv);
-                    return;
-                }
-
-                // Add new posts
-                posts.forEach(post => {
-                    const postElement = createPostElement(post);
-                    container.appendChild(postElement);
-                });
-
-                currentFeedPage = nextPage;
-                if (posts.length < 10) {
-                    hasMorePosts = false;
-                }
-
-            } catch (error) {
-                console.error('Error loading more posts:', error);
-                container.removeChild(loadingDiv);
-                
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'feed-loading';
-                errorDiv.innerHTML = `
-                    <span>Failed to load more posts.</span>
-                    <button onclick="loadMorePosts()" style="margin-left: 1rem; background: #4b5c09; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer;">Retry</button>
-                `;
-                container.appendChild(errorDiv);
-            }
-
-            isLoadingMorePosts = false;
-        }
-
-        // Create post from panel composer
-        async function createPostFromPanel() {
-            const textarea = document.getElementById('panelFeedPostContent');
-            const content = textarea.value.trim();
-            
-            if (!content) {
-                alert('Please enter some content for your post.');
-                return;
-            }
-
-            try {
-                const response = await apiCall('/api/posts', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({
-                        content: content,
-                        isPolitical: false // Can be enhanced later with detection
-                    })
-                });
-
-                if (response.success) {
-                    textarea.value = '';
-                    // Refresh the feed
-                    await loadFeedPosts('panelFeedPosts');
-                    showToast('Post created successfully!', 'success');
-                } else {
-                    throw new Error(response.error || 'Failed to create post');
-                }
-
-            } catch (error) {
-                console.error('Error creating post:', error);
-                showToast('Failed to create post. Please try again.', 'error');
-            }
-        }
+        // DEPRECATED - createPostFromPanel() removed (panel-based implementation)
 
         // New function to show My Feed - personalized feed based on who user follows
         async function showMyFeed() {
@@ -5494,15 +5385,15 @@
                 }
             });
 
-            // Apply to My Feed panel
-            const myFeedPanel = document.getElementById('panel-myfeed');
-            if (myFeedPanel) {
+            // Apply to My Feed main content area (corrected per documentation)
+            const myFeedContent = document.getElementById('myFeedPosts');
+            if (myFeedContent) {
                 if (backgroundImageUrl) {
-                    myFeedPanel.style.backgroundImage = `url(${backgroundImageUrl})`;
-                    myFeedPanel.classList.add('has-background');
+                    myFeedContent.style.backgroundImage = `url(${backgroundImageUrl})`;
+                    myFeedContent.classList.add('has-background');
                 } else {
-                    myFeedPanel.style.backgroundImage = '';
-                    myFeedPanel.classList.remove('has-background');
+                    myFeedContent.style.backgroundImage = '';
+                    myFeedContent.classList.remove('has-background');
                 }
             }
         }
