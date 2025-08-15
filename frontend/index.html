@@ -3705,13 +3705,7 @@
                 console.log('Political profile update response:', politicalResponse.status);
 
                 if (profileResponse.ok && politicalResponse.ok) {
-                    // Update current user object
-                    const updatedProfile = await apiCall('/users/profile');
-                    if (updatedProfile.ok) {
-                        const data = await updatedProfile.json();
-                        currentUser = data.user;
-                    }
-                    
+                    // Refresh profile display (loadUserProfile will fetch latest data)
                     loadUserProfile(); // Switch back to view mode
                     
                     // Show different messages based on political type change
