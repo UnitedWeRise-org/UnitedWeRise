@@ -3105,11 +3105,11 @@
                                 <div>
                                     <label for="feedMediaUpload" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem;">
                                         📷 Add Media
-                                        <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;" onchange="handleFeedMediaUpload(this)">
+                                        <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;" onchange="handlePostMediaUpload(this)">
                                     </label>
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
-                                <button onclick="createFeedPost()" class="btn">Post</button>
+                                <button onclick="createPostFromFeed()" class="btn">Post</button>
                             </div>
                         </div>
                     </div>
@@ -3171,12 +3171,8 @@
                 return;
             }
             
-            let html = '';
-            posts.forEach(post => {
-                html += createPostHTML(post);
-            });
-            
-            container.innerHTML = html;
+            // Use the existing displayPosts function
+            displayPosts(posts, 'myFeedPosts', false);
         }
 
         // Load content into the My Feed panel
