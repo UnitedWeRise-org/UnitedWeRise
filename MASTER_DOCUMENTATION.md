@@ -2428,6 +2428,22 @@ const [profile, posts, notifications] = await Promise.all([
 
 ## 🐛 KNOWN ISSUES & BUGS {#known-issues-bugs}
 
+### 🚨 RECENTLY FIXED - August 15, 2025
+
+#### My Feed API Endpoint Mismatch (FIXED)
+**Issue**: My Feed was not loading any posts due to incorrect API endpoint
+- **Problem**: Frontend called `/api/feed/posts` but backend route was `/api/feed/`
+- **Root Cause**: Code audit modified API calls without verifying endpoint accuracy
+- **Fix**: Updated `loadMyFeedPosts()` to call correct endpoint `/api/feed/`
+- **Files Modified**: `frontend/index.html` line 3130
+- **Status**: ✅ Fixed in staging, ready for production deployment
+
+#### Code Audit Impact Assessment
+**Summary**: August 15 code audit introduced several API path mismatches
+- **Staging Environment**: Created to safely test and fix issues before production
+- **Testing Process**: All functionality verified on staging before merging to main
+- **Documentation**: All fixes documented to prevent future regressions
+
 ### Critical Issues
 
 #### 1. Login Persistence Bug (TOP PRIORITY)
