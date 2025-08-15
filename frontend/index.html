@@ -1106,6 +1106,9 @@
             // Load user-specific content
             loadUserContent();
             loadUserPosts();
+            
+            // Show My Feed by default in main content area
+            showMyFeedInMain();
         }
         
         function setUserLoggedOut() {
@@ -3029,10 +3032,9 @@
             document.getElementById('messagesContainer').style.display = 'none';
             closeAllPanels();
             
-            // Show My Feed panel as default, or map if user is not logged in
+            // Show My Feed in main content area as default, or map if user is not logged in
             if (authToken) {
-                document.getElementById('panel-myfeed').classList.remove('hidden');
-                loadMyFeedPanel();
+                showMyFeedInMain();
             } else {
                 // For logged-out users, show the map or welcome screen
                 if (window.map && typeof window.map.showMap === 'function') {
@@ -3051,7 +3053,7 @@
             }
         }
 
-        // Toggle function for My Feed panel (moves with sidebar like other panels)
+        // Toggle function for My Feed - shows/hides feed window in main content area
         function toggleMyFeed() {
             if (!authToken) {
                 document.getElementById('mainContent').innerHTML = `
@@ -3063,21 +3065,118 @@
                 return;
             }
 
-            const panel = document.getElementById('panel-myfeed');
-            const isCurrentlyShown = !panel.classList.contains('hidden');
+            const mainContent = document.getElementById('mainContent');
+            const isFeedCurrentlyShown = mainContent.querySelector('.my-feed') !== null;
             
-            if (isCurrentlyShown) {
-                // Panel is currently shown, hide it and show default view
-                closePanel('myfeed');
+            if (isFeedCurrentlyShown) {
+                // Feed is currently shown, hide it and show default view
                 showDefaultView();
             } else {
-                // Panel is not shown, show it
-                closeAllPanels();
-                document.getElementById('profilePanel').style.display = 'none';
-                document.getElementById('messagesContainer').style.display = 'none';
-                document.getElementById('panel-myfeed').classList.remove('hidden');
-                loadMyFeedPanel();
+                // Feed is not shown, show it
+                showMyFeedInMain();
             }
+        }
+
+        // Function to show My Feed in main content area (like Profile)
+        async function showMyFeedInMain() {
+            if (!authToken) {
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <h2>Please log in to view your feed</h2>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Hide other content
+            closeAllPanels();
+            document.getElementById('profilePanel').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'none';
+            
+            // Show My Feed in main content area
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = `
+                <div class="my-feed">
+                    <div class="sticky-composer-wrapper">
+                        <div class="quick-post-composer">
+                            <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                            <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <label for="feedMediaUpload" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem;">
+                                        📷 Add Media
+                                        <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;" onchange="handleFeedMediaUpload(this)">
+                                    </label>
+                                    <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
+                                </div>
+                                <button onclick="createFeedPost()" class="btn">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="myFeedPosts" style="margin-top: 1rem;">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <p>Loading your personalized feed...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Load the posts
+            await loadMyFeedPosts();
+            
+            // Apply background if user has one
+            if (currentUser && currentUser.backgroundImage) {
+                applyUserBackground(currentUser.backgroundImage);
+            }
+        }
+
+        // Load posts for My Feed in main area
+        async function loadMyFeedPosts() {
+            try {
+                const response = await apiCall('/feed/posts', {
+                    method: 'GET'
+                });
+                
+                if (response.ok && response.data.posts) {
+                    displayMyFeedPosts(response.data.posts);
+                } else {
+                    document.getElementById('myFeedPosts').innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <p>No posts in your feed yet. Follow some users to see their posts here!</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Feed loading error:', error);
+                document.getElementById('myFeedPosts').innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <p>Unable to load your feed. Please try again.</p>
+                        <button onclick="loadMyFeedPosts()" class="btn">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Display posts in My Feed
+        function displayMyFeedPosts(posts) {
+            const container = document.getElementById('myFeedPosts');
+            
+            if (!posts || posts.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>No posts in your feed yet. Follow some users to see their posts here!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            posts.forEach(post => {
+                html += createPostHTML(post);
+            });
+            
+            container.innerHTML = html;
         }
 
         // Load content into the My Feed panel
@@ -3123,7 +3222,7 @@
         // Load feed posts into specified container
         async function loadFeedPosts(containerId, page = 1) {
             try {
-                const response = await apiCall('/api/feed/posts', {
+                const response = await apiCall('/feed/posts', {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -3294,96 +3393,8 @@
 
         // New function to show My Feed - personalized feed based on who user follows
         async function showMyFeed() {
-            if (!authToken) {
-                document.getElementById('mainContent').innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <h2>Please log in to view your feed</h2>
-                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                    </div>
-                `;
-                return;
-            }
-
-            // Hide side panels
-            document.getElementById('profilePanel').style.display = 'none';
-            document.getElementById('messagesContainer').style.display = 'none';
-
-            const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = `
-                <div class="posts-container">
-                    <div class="feed-header">
-                        <h2>📰 My Feed</h2>
-                        <p>Posts from people you follow and recommendations</p>
-                    </div>
-                    <div class="post-composer" id="feedPostComposer">
-                        <textarea id="feedPostContent" placeholder="What's on your mind?"></textarea>
-                        
-                        <!-- Media Preview Area -->
-                        <div id="mediaPreview" class="media-preview-area" style="display: none;">
-                            <div class="media-preview-content"></div>
-                            <button onclick="clearMediaAttachment()" class="remove-media-btn">✕ Remove</button>
-                        </div>
-                        
-                        <div class="post-composer-actions">
-                            <div class="media-actions">
-                                <button type="button" onclick="attachMediaToPost()" class="media-btn">
-                                    📷 Photo/GIF
-                                </button>
-                                <input type="file" id="postMediaUpload" accept="image/*,image/gif" 
-                                       style="display: none;" onchange="handlePostMediaUpload(this)">
-                            </div>
-                            <button onclick="createPostFromFeed()">Post</button>
-                        </div>
-                    </div>
-                    <div class="posts-feed" id="myFeedPosts">
-                        <div style="text-align: center; padding: 2rem;">
-                            <div class="loading-spinner"></div>
-                            <p>Loading your personalized feed...</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Load personalized feed using probability cloud algorithm
-            try {
-                const response = await apiCall('/feed');
-                const feedContainer = document.getElementById('myFeedPosts');
-                
-                if (response.ok && response.data.posts) {
-                    if (response.data.posts.length === 0) {
-                        feedContainer.innerHTML = `
-                            <div style="background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
-                                <p style="margin: 0;">👋 Welcome! Start following people and creating posts to build your personalized feed.</p>
-                            </div>
-                        `;
-                    } else {
-                        // Show algorithm info if available (for debugging/tuning)
-                        if (response.data.algorithm && response.data.weights) {
-                            console.log('Feed Algorithm:', response.data.algorithm, 'Weights:', response.data.weights);
-                            if (response.data.stats) {
-                                console.log('Feed Stats:', response.data.stats);
-                            }
-                        }
-                        
-                        displayPosts(response.data.posts, 'myFeedPosts', false);
-                    }
-                } else {
-                    feedContainer.innerHTML = `
-                        <div style="text-align: center; padding: 2rem;">
-                            <p>Unable to load your personalized feed. Please try again.</p>
-                            <button onclick="showMyFeed()" class="btn">Retry</button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Feed loading error:', error);
-                document.getElementById('myFeedPosts').innerHTML = `
-                    <div style="text-align: center; padding: 2rem;">
-                        <p>Error loading feed</p>
-                        <button onclick="showMyFeed()" class="btn">Retry</button>
-                    </div>
-                `;
-            }
+            // Use the correct main content area implementation
+            showMyFeedInMain();
         }
 
 
