@@ -1367,6 +1367,40 @@ jobs:
 - SSL: Automatic via Azure
 - CDN: Global edge locations
 
+#### Staging Environment Setup
+
+**Overview**: Complete staging environment for safe testing of changes before production deployment.
+
+**Infrastructure Created**: August 15, 2025
+- **Staging Backend**: `unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io` ✅
+- **Staging Frontend**: Auto-deployed from `development` branch
+- **Staging Database**: Shares production database (careful with migrations)
+- **Cost**: ~$15-20/month additional
+
+**Branch Strategy**:
+```
+production-backup-2025-08-15  ← Backup/restore point
+main                         ← Production (auto-deploy)  
+development                  ← Staging (safe testing)
+```
+
+**Environment Auto-Detection**: 
+Frontend automatically routes to correct backend based on hostname:
+- **Staging/Dev URLs** → `unitedwerise-backend-staging.*`
+- **Localhost** → `unitedwerise-backend-staging.*` (for testing)
+- **Production** → `unitedwerise-backend.*` (default)
+
+**Deployment Workflow**:
+1. Make changes in `development` branch
+2. Test on staging environment automatically created
+3. Verify functionality works correctly
+4. Merge to `main` only when confirmed working
+5. Production deploys automatically from `main`
+
+**Configuration Files**:
+- `frontend/src/config/api.js` - Environment-based backend URL detection
+- Automatic backend selection based on `window.location.hostname`
+
 #### Database Management
 
 **Connection String Format**:
