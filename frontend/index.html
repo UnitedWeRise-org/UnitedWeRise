@@ -3175,116 +3175,11 @@
             displayPosts(posts, 'myFeedPosts', false);
         }
 
-        // Load content into the My Feed panel
-        async function loadMyFeedPanel() {
-            const feedContent = document.getElementById('myFeedContent');
-            
-            try {
-                feedContent.innerHTML = `
-                    <div class="post-composer" style="margin: 1rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">
-                        <textarea id="panelFeedPostContent" placeholder="What's on your mind?" style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; resize: vertical; min-height: 80px;"></textarea>
-                        <div style="margin-top: 0.5rem; text-align: right;">
-                            <button onclick="createPostFromPanel()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Post</button>
-                        </div>
-                    </div>
-                    <div id="panelFeedPosts">
-                        <div class="feed-loading">Loading your personalized feed...</div>
-                    </div>
-                `;
+        // DEPRECATED - Panel-based My Feed implementation removed
 
-                // Load feed posts
-                await loadFeedPosts('panelFeedPosts');
-                
-                // Add infinite scroll
-                const feedContainer = document.getElementById('myFeedContent');
-                feedContainer.addEventListener('scroll', handleFeedScroll);
-                
-            } catch (error) {
-                console.error('Error loading My Feed panel:', error);
-                feedContent.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #666;">
-                        <p>Unable to load feed. Please try again.</p>
-                        <button onclick="loadMyFeedPanel()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Retry</button>
-                    </div>
-                `;
-            }
-        }
+        // DEPRECATED - Panel-based feed functions removed
 
-        // Variables for infinite scroll
-        let currentFeedPage = 1;
-        let isLoadingMorePosts = false;
-        let hasMorePosts = true;
-
-        // Load feed posts into specified container
-        async function loadFeedPosts(containerId, page = 1) {
-            try {
-                const response = await apiCall('/feed/posts', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const posts = response.posts || [];
-                const container = document.getElementById(containerId);
-                
-                if (page === 1) {
-                    // First load - replace content
-                    container.innerHTML = '';
-                    currentFeedPage = 1;
-                    hasMorePosts = true;
-                }
-
-                if (posts.length === 0) {
-                    if (page === 1) {
-                        container.innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: #666;">
-                                <p>No posts in your feed yet.</p>
-                                <p>Follow some users to see their posts here!</p>
-                            </div>
-                        `;
-                    }
-                    hasMorePosts = false;
-                    return;
-                }
-
-                // Render posts
-                posts.forEach(post => {
-                    const postElement = createPostElement(post);
-                    container.appendChild(postElement);
-                });
-
-                // Update pagination
-                currentFeedPage = page;
-                if (posts.length < 10) { // Assuming 10 posts per page
-                    hasMorePosts = false;
-                }
-
-            } catch (error) {
-                console.error('Error loading feed posts:', error);
-                const container = document.getElementById(containerId);
-                if (page === 1) {
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: #666;">
-                            <p>Unable to load feed posts.</p>
-                            <button onclick="loadFeedPosts('${containerId}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Retry</button>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        // Handle infinite scroll
-        function handleFeedScroll(event) {
-            if (isLoadingMorePosts || !hasMorePosts) return;
-
-            const element = event.target;
-            const threshold = 100; // Load more when 100px from bottom
-            
-            if (element.scrollTop + element.clientHeight >= element.scrollHeight - threshold) {
-                loadMorePosts();
-            }
-        }
+        // DEPRECATED - Panel scroll handler removed
 
         // Load more posts for infinite scroll
         async function loadMorePosts() {
