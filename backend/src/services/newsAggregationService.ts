@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { ApiCacheService } from './apiCache';
+import { NewsApiRateLimiter } from './newsApiRateLimiter';
 
 const prisma = new PrismaClient();
 
@@ -70,10 +71,13 @@ export class NewsAggregationService {
       articles.push(...newsApiArticles);
     }
 
-    // Search The News API
-    if (THE_NEWS_API_KEY) {
+    // Search The News API (with rate limiting - 100/day)
+    if (THE_NEWS_API_KEY && await NewsApiRateLimiter.canMakeRequest()) {
       const theNewsApiArticles = await this.searchTheNewsAPI(officialName, daysBack, limit);
       articles.push(...theNewsApiArticles);
+    } else if (THE_NEWS_API_KEY) {
+      const status = await NewsApiRateLimiter.getStatus();
+      console.log(`⚠️ The News API daily limit reached: ${status.current}/${status.limit}, resets at ${status.resetTime}`);
     }
 
     // Remove duplicates based on URL
@@ -205,8 +209,8 @@ export class NewsAggregationService {
       articles.push(...newsApiArticles);
     }
 
-    // Get political news from The News API
-    if (THE_NEWS_API_KEY) {
+    // Get political news from The News API (with rate limiting - 100/day)
+    if (THE_NEWS_API_KEY && await NewsApiRateLimiter.canMakeRequest()) {
       const theNewsApiArticles = await this.searchTheNewsAPI('politics election congress', 1, limit);
       articles.push(...theNewsApiArticles);
     }
@@ -524,6 +528,9 @@ Summary:`;
     }
 
     try {
+      // Increment rate limiter counter before making request
+      await NewsApiRateLimiter.incrementCounter();
+      
       const url = new URL('https://api.thenewsapi.com/v1/news/all');
       url.searchParams.set('api_token', THE_NEWS_API_KEY);
       url.searchParams.set('search', query);

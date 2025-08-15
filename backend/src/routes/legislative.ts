@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { LegislativeDataService } from '../services/legislativeDataService';
 import { NewsAggregationService } from '../services/newsAggregationService';
+import { NewsApiRateLimiter } from '../services/newsApiRateLimiter';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -267,6 +268,32 @@ router.get('/health', async (req, res) => {
     res.status(500).json({ 
       status: 'unhealthy',
       error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// News API rate limiting status endpoint
+router.get('/news-api-status', async (req, res) => {
+  try {
+    const status = await NewsApiRateLimiter.getStatus();
+    
+    res.json({
+      newsapi: {
+        hasKey: !!process.env.NEWS_API_KEY,
+        unlimited: true, // NewsAPI.org has higher limits
+        note: "NewsAPI.org Developer plan: 1000 requests/day"
+      },
+      thenewsapi: {
+        hasKey: !!process.env.THE_NEWS_API_KEY,
+        ...status
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('News API status check failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to get news API status',
       timestamp: new Date().toISOString()
     });
   }
