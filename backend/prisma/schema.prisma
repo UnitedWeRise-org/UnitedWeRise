@@ -71,6 +71,7 @@ model User {
   allowTagsByFriendsOnly  Boolean                   @default(false)
   photoTaggingEnabled     Boolean                   @default(true)
   requireTagApproval      Boolean                   @default(true)
+  backgroundImage         String?
   reviewedAppeals         Appeal[]                  @relation("ReviewedAppeals")
   appeals                 Appeal[]                  @relation("UserAppeals")
   candidateProfile        Candidate?
