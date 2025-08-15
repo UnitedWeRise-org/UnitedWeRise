@@ -3031,7 +3031,7 @@
             
             // Show My Feed panel as default, or map if user is not logged in
             if (authToken) {
-                showPanel('myfeed');
+                document.getElementById('panel-myfeed').classList.remove('hidden');
                 loadMyFeedPanel();
             } else {
                 // For logged-out users, show the map or welcome screen
@@ -3075,7 +3075,7 @@
                 closeAllPanels();
                 document.getElementById('profilePanel').style.display = 'none';
                 document.getElementById('messagesContainer').style.display = 'none';
-                showPanel('myfeed');
+                document.getElementById('panel-myfeed').classList.remove('hidden');
                 loadMyFeedPanel();
             }
         }
