@@ -6,7 +6,10 @@ function getBackendURL() {
     const hostname = window.location.hostname;
     
     // Staging environment detection
-    if (hostname.includes('staging') || hostname.includes('development') || hostname.includes('dev')) {
+    if (hostname.includes('staging') || 
+        hostname.includes('development') || 
+        hostname.includes('dev') ||
+        hostname.includes('delightful-smoke-097b2fa0f')) {
         return 'https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
     }
     
