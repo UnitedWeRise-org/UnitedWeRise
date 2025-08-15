@@ -24,9 +24,9 @@ export declare class ElectionService {
             city: string | null;
             state: string;
             description: string;
+            county: string | null;
             title: string;
             electionId: string;
-            county: string | null;
             fullText: string | null;
             fiscalImpact: string | null;
             arguments: import("@prisma/client/runtime/library").JsonValue | null;
@@ -45,6 +45,7 @@ export declare class ElectionService {
                     createdAt: Date;
                     updatedAt: Date;
                     candidateId: string;
+                    sourceUrl: string | null;
                     lastUpdated: Date;
                     totalRaised: import("@prisma/client/runtime/library").Decimal;
                     totalSpent: import("@prisma/client/runtime/library").Decimal;
@@ -55,7 +56,6 @@ export declare class ElectionService {
                     selfFunding: import("@prisma/client/runtime/library").Decimal;
                     publicFunding: import("@prisma/client/runtime/library").Decimal;
                     reportingPeriod: string | null;
-                    sourceUrl: string | null;
                 };
             } & {
                 userId: string | null;
@@ -67,6 +67,7 @@ export declare class ElectionService {
                 name: string;
                 withdrawnAt: Date | null;
                 party: string | null;
+                officeId: string;
                 isIncumbent: boolean;
                 campaignEmail: string | null;
                 campaignPhone: string | null;
@@ -75,7 +76,6 @@ export declare class ElectionService {
                 isVerified: boolean;
                 isWithdrawn: boolean;
                 withdrawnReason: string | null;
-                officeId: string;
             })[];
         } & {
             level: import(".prisma/client").$Enums.OfficeLevel;
@@ -86,10 +86,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         })[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
@@ -104,8 +104,8 @@ export declare class ElectionService {
         date: Date;
         district: string | null;
         isActive: boolean;
-        registrationDeadline: Date | null;
         county: string | null;
+        registrationDeadline: Date | null;
         officialUrl: string | null;
     })[]>;
     /**
@@ -121,9 +121,9 @@ export declare class ElectionService {
             city: string | null;
             state: string;
             description: string;
+            county: string | null;
             title: string;
             electionId: string;
-            county: string | null;
             fullText: string | null;
             fiscalImpact: string | null;
             arguments: import("@prisma/client/runtime/library").JsonValue | null;
@@ -159,6 +159,7 @@ export declare class ElectionService {
                     createdAt: Date;
                     updatedAt: Date;
                     candidateId: string;
+                    sourceUrl: string | null;
                     lastUpdated: Date;
                     totalRaised: import("@prisma/client/runtime/library").Decimal;
                     totalSpent: import("@prisma/client/runtime/library").Decimal;
@@ -169,7 +170,6 @@ export declare class ElectionService {
                     selfFunding: import("@prisma/client/runtime/library").Decimal;
                     publicFunding: import("@prisma/client/runtime/library").Decimal;
                     reportingPeriod: string | null;
-                    sourceUrl: string | null;
                 };
             } & {
                 userId: string | null;
@@ -181,6 +181,7 @@ export declare class ElectionService {
                 name: string;
                 withdrawnAt: Date | null;
                 party: string | null;
+                officeId: string;
                 isIncumbent: boolean;
                 campaignEmail: string | null;
                 campaignPhone: string | null;
@@ -189,7 +190,6 @@ export declare class ElectionService {
                 isVerified: boolean;
                 isWithdrawn: boolean;
                 withdrawnReason: string | null;
-                officeId: string;
             })[];
         } & {
             level: import(".prisma/client").$Enums.OfficeLevel;
@@ -200,10 +200,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         })[];
     } & {
         type: import(".prisma/client").$Enums.ElectionType;
@@ -218,8 +218,8 @@ export declare class ElectionService {
         date: Date;
         district: string | null;
         isActive: boolean;
-        registrationDeadline: Date | null;
         county: string | null;
+        registrationDeadline: Date | null;
         officialUrl: string | null;
     }>;
     /**
@@ -240,8 +240,8 @@ export declare class ElectionService {
                 date: Date;
                 district: string | null;
                 isActive: boolean;
-                registrationDeadline: Date | null;
                 county: string | null;
+                registrationDeadline: Date | null;
                 officialUrl: string | null;
             };
         } & {
@@ -253,10 +253,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         };
         endorsements: ({
             user: {
@@ -287,6 +287,7 @@ export declare class ElectionService {
             createdAt: Date;
             updatedAt: Date;
             candidateId: string;
+            sourceUrl: string | null;
             lastUpdated: Date;
             totalRaised: import("@prisma/client/runtime/library").Decimal;
             totalSpent: import("@prisma/client/runtime/library").Decimal;
@@ -297,7 +298,6 @@ export declare class ElectionService {
             selfFunding: import("@prisma/client/runtime/library").Decimal;
             publicFunding: import("@prisma/client/runtime/library").Decimal;
             reportingPeriod: string | null;
-            sourceUrl: string | null;
         };
     } & {
         userId: string | null;
@@ -309,6 +309,7 @@ export declare class ElectionService {
         name: string;
         withdrawnAt: Date | null;
         party: string | null;
+        officeId: string;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -317,7 +318,6 @@ export declare class ElectionService {
         isVerified: boolean;
         isWithdrawn: boolean;
         withdrawnReason: string | null;
-        officeId: string;
     })[]>;
     /**
      * Create or update candidate profile for a platform user
@@ -346,8 +346,8 @@ export declare class ElectionService {
                 date: Date;
                 district: string | null;
                 isActive: boolean;
-                registrationDeadline: Date | null;
                 county: string | null;
+                registrationDeadline: Date | null;
                 officialUrl: string | null;
             };
         } & {
@@ -359,10 +359,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         };
         user: {
             id: string;
@@ -380,6 +380,7 @@ export declare class ElectionService {
         name: string;
         withdrawnAt: Date | null;
         party: string | null;
+        officeId: string;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -388,7 +389,6 @@ export declare class ElectionService {
         isVerified: boolean;
         isWithdrawn: boolean;
         withdrawnReason: string | null;
-        officeId: string;
     }>;
     /**
      * Update candidate platform and information
@@ -414,8 +414,8 @@ export declare class ElectionService {
                 date: Date;
                 district: string | null;
                 isActive: boolean;
-                registrationDeadline: Date | null;
                 county: string | null;
+                registrationDeadline: Date | null;
                 officialUrl: string | null;
             };
         } & {
@@ -427,10 +427,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         };
         user: {
             id: string;
@@ -448,6 +448,7 @@ export declare class ElectionService {
         name: string;
         withdrawnAt: Date | null;
         party: string | null;
+        officeId: string;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -456,7 +457,6 @@ export declare class ElectionService {
         isVerified: boolean;
         isWithdrawn: boolean;
         withdrawnReason: string | null;
-        officeId: string;
     }>;
     /**
      * Withdraw candidacy
@@ -471,6 +471,7 @@ export declare class ElectionService {
         name: string;
         withdrawnAt: Date | null;
         party: string | null;
+        officeId: string;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -479,7 +480,6 @@ export declare class ElectionService {
         isVerified: boolean;
         isWithdrawn: boolean;
         withdrawnReason: string | null;
-        officeId: string;
     }>;
     /**
      * Endorse a candidate
@@ -500,8 +500,8 @@ export declare class ElectionService {
                     date: Date;
                     district: string | null;
                     isActive: boolean;
-                    registrationDeadline: Date | null;
                     county: string | null;
+                    registrationDeadline: Date | null;
                     officialUrl: string | null;
                 };
             } & {
@@ -513,10 +513,10 @@ export declare class ElectionService {
                 description: string | null;
                 district: string | null;
                 title: string;
-                electionId: string;
-                jurisdiction: string | null;
                 termLength: number | null;
                 salary: import("@prisma/client/runtime/library").Decimal | null;
+                electionId: string;
+                jurisdiction: string | null;
             };
         } & {
             userId: string | null;
@@ -528,6 +528,7 @@ export declare class ElectionService {
             name: string;
             withdrawnAt: Date | null;
             party: string | null;
+            officeId: string;
             isIncumbent: boolean;
             campaignEmail: string | null;
             campaignPhone: string | null;
@@ -536,7 +537,6 @@ export declare class ElectionService {
             isVerified: boolean;
             isWithdrawn: boolean;
             withdrawnReason: string | null;
-            officeId: string;
         };
     } & {
         userId: string;
@@ -577,8 +577,8 @@ export declare class ElectionService {
                 date: Date;
                 district: string | null;
                 isActive: boolean;
-                registrationDeadline: Date | null;
                 county: string | null;
+                registrationDeadline: Date | null;
                 officialUrl: string | null;
             };
         } & {
@@ -590,10 +590,10 @@ export declare class ElectionService {
             description: string | null;
             district: string | null;
             title: string;
-            electionId: string;
-            jurisdiction: string | null;
             termLength: number | null;
             salary: import("@prisma/client/runtime/library").Decimal | null;
+            electionId: string;
+            jurisdiction: string | null;
         };
         endorsements: ({
             user: {
@@ -624,6 +624,7 @@ export declare class ElectionService {
             createdAt: Date;
             updatedAt: Date;
             candidateId: string;
+            sourceUrl: string | null;
             lastUpdated: Date;
             totalRaised: import("@prisma/client/runtime/library").Decimal;
             totalSpent: import("@prisma/client/runtime/library").Decimal;
@@ -634,7 +635,6 @@ export declare class ElectionService {
             selfFunding: import("@prisma/client/runtime/library").Decimal;
             publicFunding: import("@prisma/client/runtime/library").Decimal;
             reportingPeriod: string | null;
-            sourceUrl: string | null;
         };
     } & {
         userId: string | null;
@@ -646,6 +646,7 @@ export declare class ElectionService {
         name: string;
         withdrawnAt: Date | null;
         party: string | null;
+        officeId: string;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -654,7 +655,6 @@ export declare class ElectionService {
         isVerified: boolean;
         isWithdrawn: boolean;
         withdrawnReason: string | null;
-        officeId: string;
     })[]>;
 }
 export {};

@@ -53,12 +53,12 @@ export declare class TopicService {
                 likesCount: number;
                 commentsCount: number;
                 containsFeedback: boolean | null;
-                feedbackType: string | null;
                 feedbackCategory: string | null;
-                feedbackPriority: string | null;
                 feedbackConfidence: number | null;
-                feedbackSummary: string | null;
+                feedbackPriority: string | null;
                 feedbackStatus: string | null;
+                feedbackSummary: string | null;
+                feedbackType: string | null;
                 authorReputation: number | null;
             };
         } & {
@@ -150,12 +150,12 @@ export declare class TopicService {
                 likesCount: number;
                 commentsCount: number;
                 containsFeedback: boolean | null;
-                feedbackType: string | null;
                 feedbackCategory: string | null;
-                feedbackPriority: string | null;
                 feedbackConfidence: number | null;
-                feedbackSummary: string | null;
+                feedbackPriority: string | null;
                 feedbackStatus: string | null;
+                feedbackSummary: string | null;
+                feedbackType: string | null;
                 authorReputation: number | null;
             };
         } & {
