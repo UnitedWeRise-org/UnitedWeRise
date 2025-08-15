@@ -1250,20 +1250,8 @@ details {
    MY FEED STYLES
 ======================================== */
 
-/* Hide scrollbar for My Feed while maintaining scroll functionality */
-#myFeedContent {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Internet Explorer 10+ */
-}
-
-#myFeedContent::-webkit-scrollbar {
-    display: none; /* Safari and Chrome */
-}
-
-/* Smooth scrolling for My Feed */
-#myFeedContent {
-    scroll-behavior: smooth;
-}
+/* DEPRECATED: myFeedContent CSS removed - element no longer exists
+   My Feed now uses myFeedPosts in main content area */
 
 /* My Feed infinite scroll loading indicator */
 .feed-loading {
@@ -1286,8 +1274,8 @@ details {
    BACKGROUND IMAGE STYLES
 ======================================== */
 
-/* Background image support for My Feed panel */
-#panel-myfeed {
+/* Background image support for My Feed main content area */
+#myFeedPosts {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1298,8 +1286,8 @@ details {
 /* Frosted glass effect for posts when background is present */
 .my-profile.has-background .post-card,
 .my-profile.has-background .quick-post-composer,
-#panel-myfeed.has-background .post-card,
-#panel-myfeed.has-background .quick-post-composer {
+#myFeedPosts.has-background .post-card,
+#myFeedPosts.has-background .quick-post-composer {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -1310,8 +1298,8 @@ details {
 /* Ensure good contrast for text in frosted glass posts */
 .my-profile.has-background .post-card,
 .my-profile.has-background .quick-post-composer,
-#panel-myfeed.has-background .post-card,
-#panel-myfeed.has-background .quick-post-composer {
+#myFeedPosts.has-background .post-card,
+#myFeedPosts.has-background .quick-post-composer {
     color: #2c3e50;
 }
 
