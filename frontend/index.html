@@ -3113,6 +3113,9 @@
             // Load the posts
             await loadMyFeedPosts();
             
+            // Setup infinite scroll for My Feed
+            setupMyFeedInfiniteScroll();
+            
             // Apply background if user has one
             if (currentUser && currentUser.backgroundImage) {
                 applyUserBackground(currentUser.backgroundImage);
@@ -3169,9 +3172,83 @@
 
         // DEPRECATED - Panel scroll handler removed
 
-        // DEPRECATED - loadMorePosts() removed (panel-based implementation)
+        // Variables for infinite scroll functionality
+        let isLoadingMorePosts = false;
+        let hasMorePosts = true;
+        let currentFeedPage = 1;
 
-        // DEPRECATED - createPostFromPanel() removed (panel-based implementation)
+        // Load more posts for infinite scroll (corrected implementation for main content area)
+        async function loadMoreMyFeedPosts() {
+            if (isLoadingMorePosts || !hasMorePosts) return;
+            
+            isLoadingMorePosts = true;
+            const container = document.getElementById('myFeedPosts');
+            
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'feed-loading';
+            loadingDiv.innerHTML = 'Loading more posts...';
+            container.appendChild(loadingDiv);
+
+            try {
+                const nextPage = currentFeedPage + 1;
+                const response = await apiCall(`/feed/posts?page=${nextPage}`, {
+                    method: 'GET'
+                });
+
+                const posts = response.data?.posts || [];
+                
+                // Remove loading indicator
+                container.removeChild(loadingDiv);
+
+                if (posts.length === 0) {
+                    hasMorePosts = false;
+                    const endDiv = document.createElement('div');
+                    endDiv.className = 'feed-end-indicator';
+                    endDiv.innerHTML = "You're all caught up! 🎉";
+                    container.appendChild(endDiv);
+                    return;
+                }
+
+                // Add new posts using the existing displayPosts function
+                posts.forEach(post => {
+                    const postElement = createPostElement(post);
+                    container.appendChild(postElement);
+                });
+
+                currentFeedPage = nextPage;
+                if (posts.length < 10) {
+                    hasMorePosts = false;
+                }
+
+            } catch (error) {
+                console.error('Error loading more posts:', error);
+                container.removeChild(loadingDiv);
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'feed-loading';
+                errorDiv.innerHTML = `
+                    <span>Failed to load more posts.</span>
+                    <button onclick="loadMoreMyFeedPosts()" style="margin-left: 1rem; background: #4b5c09; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer;">Retry</button>
+                `;
+                container.appendChild(errorDiv);
+            }
+
+            isLoadingMorePosts = false;
+        }
+
+        // Scroll event listener for infinite scroll on My Feed
+        function setupMyFeedInfiniteScroll() {
+            const myFeedContainer = document.getElementById('myFeedPosts');
+            if (myFeedContainer) {
+                myFeedContainer.addEventListener('scroll', () => {
+                    const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
+                    if (scrollTop + clientHeight >= scrollHeight - 100) {
+                        loadMoreMyFeedPosts();
+                    }
+                });
+            }
+        }
 
         // New function to show My Feed - personalized feed based on who user follows
         async function showMyFeed() {
