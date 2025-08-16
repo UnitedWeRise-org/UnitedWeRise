@@ -1229,18 +1229,368 @@ Current Status: Use deploymentStatus.check() for real-time status
             document.getElementById('flaggedContent').innerHTML = html;
         }
 
-        // Display analytics
-        function displayAnalytics(data) {
-            let html = '<h3>Activity Overview</h3>';
-            html += `<p>Report period: ${data.period}</p>`;
-            
-            if (data.reportBreakdown.length > 0) {
-                html += '<h4>Report Breakdown</h4><ul>';
-                data.reportBreakdown.forEach(item => {
-                    html += `<li>${item.reason}: ${item._count.reason} reports</li>`;
-                });
-                html += '</ul>';
+        // Display comprehensive analytics
+        function displayAnalytics(response) {
+            if (!response.success || !response.data) {
+                document.getElementById('analyticsData').innerHTML = 
+                    '<div class="error">Failed to load analytics data</div>';
+                return;
             }
+
+            const data = response.data;
+            const summary = data.summary;
+            
+            let html = `
+                <div class="analytics-overview">
+                    <div class="period-header">
+                        <h3>📊 Analytics Overview</h3>
+                        <p><strong>Report Period:</strong> ${data.period} | <strong>Generated:</strong> ${new Date(data.generatedAt).toLocaleString()}</p>
+                    </div>
+
+                    <!-- Key Metrics Grid -->
+                    <div class="analytics-grid">
+                        <!-- User Growth Metrics -->
+                        <div class="analytics-section">
+                            <h4>👥 User Growth & Demographics</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.totalUsers.toLocaleString()}</div>
+                                    <div class="metric-label">Total Users</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.newUsers.toLocaleString()}</div>
+                                    <div class="metric-label">New Users</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.activeUsers24h.toLocaleString()}</div>
+                                    <div class="metric-label">Active (24h)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.activeUsers7d.toLocaleString()}</div>
+                                    <div class="metric-label">Active (7d)</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.verifiedUsers.toLocaleString()}</div>
+                                    <div class="metric-label">Verified Users</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.usersWithLocation.toLocaleString()}</div>
+                                    <div class="metric-label">Users w/ Location</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Engagement Metrics -->
+                        <div class="analytics-section">
+                            <h4>📱 Content & Engagement</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.engagement.postsCreated.toLocaleString()}</div>
+                                    <div class="metric-label">Posts Created</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.engagement.commentsCreated.toLocaleString()}</div>
+                                    <div class="metric-label">Comments</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.engagement.likesGiven.toLocaleString()}</div>
+                                    <div class="metric-label">Likes Given</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.engagement.engagementRate}%</div>
+                                    <div class="metric-label">Engagement Rate</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.engagement.avgLikesPerPost.toFixed(1)}</div>
+                                    <div class="metric-label">Avg Likes/Post</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.content.politicalContentRate}%</div>
+                                    <div class="metric-label">Political Content</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Civic Engagement Metrics -->
+                        <div class="analytics-section">
+                            <h4>🏛️ Civic Engagement</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.petitionsCreated.toLocaleString()}</div>
+                                    <div class="metric-label">Petitions Created</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.petitionSignatures.toLocaleString()}</div>
+                                    <div class="metric-label">Petition Signatures</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.eventsCreated.toLocaleString()}</div>
+                                    <div class="metric-label">Events Created</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.eventRSVPs.toLocaleString()}</div>
+                                    <div class="metric-label">Event RSVPs</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.upcomingElections.toLocaleString()}</div>
+                                    <div class="metric-label">Upcoming Elections</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.civicEngagement.civicParticipationRate}%</div>
+                                    <div class="metric-label">Civic Participation</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Health -->
+                        <div class="analytics-section">
+                            <h4>⚡ System Health</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.systemHealth.avgReputation.toFixed(0)}</div>
+                                    <div class="metric-label">Avg Reputation</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.systemHealth.reputationEvents.toLocaleString()}</div>
+                                    <div class="metric-label">Reputation Events</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.systemHealth.lowReputationUsers.toLocaleString()}</div>
+                                    <div class="metric-label">Low Rep Users</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.content.reportsFiled.toLocaleString()}</div>
+                                    <div class="metric-label">Reports Filed</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.content.photosUploaded.toLocaleString()}</div>
+                                    <div class="metric-label">Photos Uploaded</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${summary.userGrowth.suspendedUsers.toLocaleString()}</div>
+                                    <div class="metric-label">Suspended Users</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Geographic Distribution -->
+                    ${data.geographicDistribution && data.geographicDistribution.length > 0 ? `
+                        <div class="analytics-section">
+                            <h4>🗺️ Geographic Distribution (New Users)</h4>
+                            <div class="geographic-chart">
+                                ${data.geographicDistribution.map(item => `
+                                    <div class="geo-item">
+                                        <span class="geo-state">${item.state}</span>
+                                        <span class="geo-bar" style="width: ${(item._count.state / data.geographicDistribution[0]._count.state) * 100}%"></span>
+                                        <span class="geo-count">${item._count.state}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Reputation Events Breakdown -->
+                    ${data.reputationEventBreakdown && data.reputationEventBreakdown.length > 0 ? `
+                        <div class="analytics-section">
+                            <h4>🏆 Reputation System Activity</h4>
+                            <div class="breakdown-list">
+                                ${data.reputationEventBreakdown.map(item => `
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">${item.eventType}</span>
+                                        <span class="breakdown-count">${item._count.eventType} events</span>
+                                        <span class="breakdown-impact">${item._sum.scoreChange > 0 ? '+' : ''}${item._sum.scoreChange} total impact</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Report Breakdown -->
+                    ${data.reportBreakdown && data.reportBreakdown.length > 0 ? `
+                        <div class="analytics-section">
+                            <h4>🚨 Report Activity</h4>
+                            <div class="breakdown-list">
+                                ${data.reportBreakdown.map(item => `
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">${item.reason}</span>
+                                        <span class="breakdown-count">${item._count.reason} reports</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Daily Activity Chart -->
+                    ${data.dailyActivity && data.dailyActivity.length > 0 ? `
+                        <div class="analytics-section">
+                            <h4>📈 Daily Activity Trends</h4>
+                            <div class="activity-chart">
+                                <p><em>Daily activity visualization would go here (charts require additional libraries)</em></p>
+                                <div class="activity-summary">
+                                    <strong>Activity Types:</strong> Users registered, Posts created, Reports filed
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <style>
+                .analytics-overview {
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+
+                .analytics-grid {
+                    display: grid;
+                    gap: 2rem;
+                    margin: 2rem 0;
+                }
+
+                .analytics-section {
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    padding: 1.5rem;
+                    border-left: 4px solid #4b5c09;
+                }
+
+                .analytics-section h4 {
+                    margin: 0 0 1rem 0;
+                    color: #4b5c09;
+                    font-size: 1.1rem;
+                }
+
+                .metric-cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 1rem;
+                }
+
+                .metric-card {
+                    background: white;
+                    padding: 1rem;
+                    border-radius: 6px;
+                    text-align: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    transition: transform 0.2s;
+                }
+
+                .metric-card:hover {
+                    transform: translateY(-2px);
+                }
+
+                .metric-number {
+                    font-size: 1.8rem;
+                    font-weight: bold;
+                    color: #4b5c09;
+                    margin-bottom: 0.5rem;
+                }
+
+                .metric-label {
+                    font-size: 0.85rem;
+                    color: #666;
+                    font-weight: 500;
+                }
+
+                .geographic-chart {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .geo-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 0.5rem;
+                    background: white;
+                    border-radius: 4px;
+                }
+
+                .geo-state {
+                    min-width: 60px;
+                    font-weight: bold;
+                    color: #4b5c09;
+                }
+
+                .geo-bar {
+                    height: 20px;
+                    background: linear-gradient(90deg, #4b5c09, #6b8109);
+                    border-radius: 10px;
+                    min-width: 10px;
+                }
+
+                .geo-count {
+                    min-width: 40px;
+                    text-align: right;
+                    font-weight: bold;
+                }
+
+                .breakdown-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .breakdown-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.75rem;
+                    background: white;
+                    border-radius: 4px;
+                    border-left: 3px solid #4b5c09;
+                }
+
+                .breakdown-label {
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .breakdown-count {
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+
+                .breakdown-impact {
+                    color: #4b5c09;
+                    font-weight: bold;
+                    font-size: 0.9rem;
+                }
+
+                .period-header {
+                    text-align: center;
+                    margin-bottom: 2rem;
+                    padding: 1rem;
+                    background: linear-gradient(135deg, #4b5c09 0%, #6b8109 100%);
+                    color: white;
+                    border-radius: 8px;
+                }
+
+                .period-header h3 {
+                    margin: 0 0 0.5rem 0;
+                    font-size: 1.5rem;
+                }
+
+                .period-header p {
+                    margin: 0;
+                    opacity: 0.9;
+                }
+
+                .activity-chart {
+                    background: white;
+                    padding: 2rem;
+                    border-radius: 6px;
+                    text-align: center;
+                }
+
+                .activity-summary {
+                    margin-top: 1rem;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+                </style>
+            `;
             
             document.getElementById('analyticsData').innerHTML = html;
         }

@@ -548,46 +548,140 @@ router.post('/content/flags/:flagId/resolve', requireAuth, requireAdmin, async (
   }
 });
 
-// System Analytics
+// System Analytics - Enhanced with comprehensive metrics
 router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    // Daily activity metrics
-    const dailyStats = await prisma.$queryRaw`
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as count,
-        'users' as type
-      FROM "User"
-      WHERE created_at >= ${startDate}
-      GROUP BY DATE(created_at)
-      
-      UNION ALL
-      
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as count,
-        'posts' as type
-      FROM "Post"
-      WHERE created_at >= ${startDate}
-      GROUP BY DATE(created_at)
-      
-      UNION ALL
-      
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as count,
-        'reports' as type
+    // Run all analytics queries in parallel for better performance
+    const [
+      dailyStats,
+      userGrowthStats,
+      engagementStats,
+      civicEngagementStats,
+      contentStats,
+      systemHealthStats,
+      geographicStats,
+      retentionStats,
+      reputationStats,
+      searchStats
+    ] = await Promise.all([
+      // Daily activity metrics
+      prisma.$queryRaw`
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count,
+          'users' as type
+        FROM "User"
+        WHERE created_at >= ${startDate}
+        GROUP BY DATE(created_at)
+        
+        UNION ALL
+        
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count,
+          'posts' as type
+        FROM "Post"
+        WHERE created_at >= ${startDate}
+        GROUP BY DATE(created_at)
+        
+        UNION ALL
+        
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count,
+          'reports' as type
       FROM "Report"
       WHERE created_at >= ${startDate}
       GROUP BY DATE(created_at)
       
       ORDER BY date DESC
-    `;
+    `,
 
-    // Report breakdown by reason
+    // User Growth & Demographics
+    prisma.$queryRaw`
+      SELECT 
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN created_at >= ${startDate} THEN 1 END) as new_users,
+        COUNT(CASE WHEN last_seen_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as active_24h,
+        COUNT(CASE WHEN last_seen_at >= NOW() - INTERVAL '7 days' THEN 1 END) as active_7d,
+        COUNT(CASE WHEN last_seen_at >= NOW() - INTERVAL '30 days' THEN 1 END) as active_30d,
+        COUNT(CASE WHEN is_suspended = true THEN 1 END) as suspended_users,
+        COUNT(CASE WHEN verified = true THEN 1 END) as verified_users,
+        COUNT(CASE WHEN state IS NOT NULL THEN 1 END) as users_with_location
+      FROM "User"
+    `,
+
+    // Engagement Statistics
+    prisma.$queryRaw`
+      SELECT 
+        (SELECT COUNT(*) FROM "Post" WHERE created_at >= ${startDate}) as posts_created,
+        (SELECT COUNT(*) FROM "Comment" WHERE created_at >= ${startDate}) as comments_created,
+        (SELECT COUNT(*) FROM "Like" WHERE created_at >= ${startDate}) as likes_given,
+        (SELECT AVG(likes_count) FROM "Post" WHERE created_at >= ${startDate}) as avg_likes_per_post,
+        (SELECT AVG(comments_count) FROM "Post" WHERE created_at >= ${startDate}) as avg_comments_per_post,
+        (SELECT COUNT(*) FROM "Message" WHERE created_at >= ${startDate}) as messages_sent
+    `,
+
+    // Civic Engagement Analytics
+    prisma.$queryRaw`
+      SELECT 
+        (SELECT COUNT(*) FROM "Petition" WHERE created_at >= ${startDate}) as petitions_created,
+        (SELECT COUNT(*) FROM "PetitionSignature" WHERE created_at >= ${startDate}) as petition_signatures,
+        (SELECT COUNT(*) FROM "CivicEvent" WHERE created_at >= ${startDate}) as events_created,
+        (SELECT COUNT(*) FROM "EventRSVP" WHERE created_at >= ${startDate}) as event_rsvps,
+        (SELECT COUNT(*) FROM "Election" WHERE date >= NOW()) as upcoming_elections
+    `,
+
+    // Content Analytics
+    prisma.$queryRaw`
+      SELECT 
+        (SELECT COUNT(*) FROM "Post" WHERE is_political = true AND created_at >= ${startDate}) as political_posts,
+        (SELECT COUNT(*) FROM "Post" WHERE contains_feedback = true AND created_at >= ${startDate}) as posts_with_feedback,
+        (SELECT COUNT(*) FROM "Photo" WHERE created_at >= ${startDate}) as photos_uploaded,
+        (SELECT COUNT(*) FROM "Report" WHERE created_at >= ${startDate}) as reports_filed
+    `,
+
+    // System Health Metrics
+    prisma.$queryRaw`
+      SELECT 
+        (SELECT COUNT(*) FROM "ReputationEvent" WHERE created_at >= ${startDate}) as reputation_events,
+        (SELECT AVG(reputation_score) FROM "User" WHERE reputation_score IS NOT NULL) as avg_reputation,
+        (SELECT COUNT(*) FROM "User" WHERE reputation_score < 30) as low_reputation_users
+    `,
+
+    // Geographic Distribution  
+    prisma.user.groupBy({
+      by: ['state'],
+      where: {
+        state: { not: null },
+        createdAt: { gte: startDate }
+      },
+      _count: { state: true },
+      orderBy: { _count: { state: 'desc' } },
+      take: 10
+    }),
+
+    // Reputation System Analytics
+    prisma.reputationEvent.groupBy({
+      by: ['eventType'], 
+      where: { createdAt: { gte: startDate } },
+      _count: { eventType: true },
+      _sum: { scoreChange: true },
+      orderBy: { _count: { eventType: 'desc' } }
+    })
+  ]);
+
+  // Extract data from parallel queries
+  const userGrowth = userGrowthStats[0] as any;
+  const engagement = engagementStats[0] as any;
+  const civic = civicEngagementStats[0] as any;
+  const content = contentStats[0] as any;
+  const health = systemHealthStats[0] as any;
+
+  // Report breakdown by reason
     const reportReasons = await prisma.report.groupBy({
       by: ['reason'],
       where: {
@@ -617,12 +711,73 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
       }
     });
 
+    // Calculate key metrics
+    const metrics = {
+      // User Metrics
+      userGrowth: {
+        totalUsers: parseInt(userGrowth.total_users) || 0,
+        newUsers: parseInt(userGrowth.new_users) || 0,
+        activeUsers24h: parseInt(userGrowth.active_24h) || 0,
+        activeUsers7d: parseInt(userGrowth.active_7d) || 0,
+        activeUsers30d: parseInt(userGrowth.active_30d) || 0,
+        suspendedUsers: parseInt(userGrowth.suspended_users) || 0,
+        verifiedUsers: parseInt(userGrowth.verified_users) || 0,
+        usersWithLocation: parseInt(userGrowth.users_with_location) || 0
+      },
+
+      // Engagement Metrics
+      engagement: {
+        postsCreated: parseInt(engagement.posts_created) || 0,
+        commentsCreated: parseInt(engagement.comments_created) || 0,
+        likesGiven: parseInt(engagement.likes_given) || 0,
+        messagesSent: parseInt(engagement.messages_sent) || 0,
+        avgLikesPerPost: parseFloat(engagement.avg_likes_per_post) || 0,
+        avgCommentsPerPost: parseFloat(engagement.avg_comments_per_post) || 0,
+        engagementRate: userGrowth.active_24h > 0 ? 
+          (((parseInt(engagement.posts_created) + parseInt(engagement.comments_created)) / parseInt(userGrowth.active_24h)) * 100).toFixed(1) : '0'
+      },
+
+      // Civic Engagement Metrics
+      civicEngagement: {
+        petitionsCreated: parseInt(civic.petitions_created) || 0,
+        petitionSignatures: parseInt(civic.petition_signatures) || 0,
+        eventsCreated: parseInt(civic.events_created) || 0,
+        eventRSVPs: parseInt(civic.event_rsvps) || 0,
+        upcomingElections: parseInt(civic.upcoming_elections) || 0,
+        civicParticipationRate: userGrowth.active_30d > 0 ? 
+          (((parseInt(civic.petitions_created) + parseInt(civic.events_created)) / parseInt(userGrowth.active_30d)) * 100).toFixed(1) : '0'
+      },
+
+      // Content Metrics
+      content: {
+        politicalPosts: parseInt(content.political_posts) || 0,
+        postsWithFeedback: parseInt(content.posts_with_feedback) || 0,
+        photosUploaded: parseInt(content.photos_uploaded) || 0,
+        reportsFiled: parseInt(content.reports_filed) || 0,
+        politicalContentRate: engagement.posts_created > 0 ? 
+          ((parseInt(content.political_posts) / parseInt(engagement.posts_created)) * 100).toFixed(1) : '0'
+      },
+
+      // System Health Metrics
+      systemHealth: {
+        reputationEvents: parseInt(health.reputation_events) || 0,
+        avgReputation: parseFloat(health.avg_reputation) || 70,
+        lowReputationUsers: parseInt(health.low_reputation_users) || 0
+      }
+    };
+
     res.json({
-      period: `${days} days`,
-      dailyActivity: dailyStats,
-      reportBreakdown: reportReasons,
-      flagDistribution: flagDistribution,
-      generatedAt: new Date().toISOString()
+      success: true,
+      data: {
+        period: `${days} days`,
+        summary: metrics,
+        dailyActivity: dailyStats,
+        geographicDistribution: geographicStats,
+        reputationEventBreakdown: reputationStats,
+        reportBreakdown: reportReasons,
+        flagDistribution: flagDistribution,
+        generatedAt: new Date().toISOString()
+      }
     });
   } catch (error) {
     console.error('Analytics error:', error);

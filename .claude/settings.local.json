@@ -73,7 +73,8 @@
       "Bash(npx ts-node:*)",
       "Bash(psql:*)",
       "Bash(APP_NAME=\"unitedwerise-backend\")",
-      "Bash(RESOURCE_GROUP=\"unitedwerise-rg\")"
+      "Bash(RESOURCE_GROUP=\"unitedwerise-rg\")",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }

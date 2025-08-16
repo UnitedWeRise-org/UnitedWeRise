@@ -109,7 +109,7 @@ class ElectionsSystemIntegration {
                                 🔄 Refresh Elections
                             </button>
                             <button class="header-btn secondary" onclick="electionsSystemIntegration.showVotingInfo()">
-                                🗳️ Voting Info
+                                🗳️ Voter Guide
                             </button>
                             <button class="header-btn secondary" onclick="electionsSystemIntegration.restoreMainContent()">
                                 ← Back to Map
@@ -204,7 +204,7 @@ class ElectionsSystemIntegration {
     }
 
     async loadElections() {
-        console.log('🔄 Loading enhanced elections...');
+        console.log('🔄 Loading enhanced elections from backend API...');
         
         // Show loading indicator
         const loadingIndicator = document.querySelector('#electionsLoading');
@@ -214,7 +214,30 @@ class ElectionsSystemIntegration {
         if (placeholder) placeholder.style.display = 'none';
         
         try {
-            // Get the original upcoming panel data and enhance it
+            // Get user's location for personalized results
+            const userState = this.getUserState() || 'CA'; // Default to CA if no location
+            
+            // Fetch real election data from backend
+            const response = await fetch(`/api/elections/calendar?state=${userState}&limit=50`);
+            
+            if (!response.ok) {
+                throw new Error(`Elections API returned ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to fetch elections');
+            }
+            
+            // Display the real election data
+            this.displayElectionsData(data.data.elections);
+            
+        } catch (error) {
+            console.error('Failed to load elections:', error);
+            
+            // Fallback to mock data if API fails
+            console.log('🔄 Falling back to mock data...');
             const originalPanel = document.querySelector('#panel-upcoming');
             
             if (originalPanel) {
@@ -224,13 +247,309 @@ class ElectionsSystemIntegration {
             } else {
                 this.showElectionsError('Election data not available.');
             }
-        } catch (error) {
-            console.error('Failed to load elections:', error);
-            this.showElectionsError('Failed to load elections data. Please try again.');
         } finally {
             // Hide loading indicator
             if (loadingIndicator) loadingIndicator.style.display = 'none';
         }
+    }
+
+    getUserState() {
+        // Try to get user's state from their profile or localStorage
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        
+        if (currentUser.state) {
+            return currentUser.state;
+        }
+        
+        // Try to get from user's location data
+        const userLocation = localStorage.getItem('userLocation');
+        if (userLocation) {
+            try {
+                const location = JSON.parse(userLocation);
+                return location.state;
+            } catch (e) {
+                console.log('Could not parse user location');
+            }
+        }
+        
+        return null; // Will default to CA in loadElections
+    }
+
+    displayElectionsData(elections) {
+        const container = document.querySelector('#enhancedElectionsContainer');
+        
+        if (!container) {
+            console.error('Elections container not found');
+            return;
+        }
+        
+        if (!elections || elections.length === 0) {
+            container.innerHTML = `
+                <div class="elections-error">
+                    <div class="error-icon">📅</div>
+                    <h3>No Upcoming Elections</h3>
+                    <p>There are no elections scheduled in your area at this time.</p>
+                    <div class="error-actions">
+                        <button class="error-btn" onclick="electionsSystemIntegration.loadElections()">
+                            Check Again
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Group elections by level
+        const electionsByLevel = {
+            FEDERAL: elections.filter(e => e.level === 'FEDERAL'),
+            STATE: elections.filter(e => e.level === 'STATE'),
+            LOCAL: elections.filter(e => e.level === 'LOCAL')
+        };
+
+        let enhancedHTML = '<div class="elections-enhanced">';
+        
+        // Display each level that has elections
+        Object.entries(electionsByLevel).forEach(([level, levelElections]) => {
+            if (levelElections.length > 0) {
+                const levelIcon = this.getIconForLevel(level);
+                const levelName = level.charAt(0) + level.slice(1).toLowerCase();
+                
+                enhancedHTML += `
+                    <div class="level-group">
+                        <div class="level-header">
+                            <div class="level-info">
+                                <div class="level-icon">${levelIcon}</div>
+                                <div>
+                                    <h3>${levelName} Elections</h3>
+                                    <span class="level-timeframe">Upcoming contests</span>
+                                </div>
+                            </div>
+                            <span class="contest-count">${levelElections.length} elections</span>
+                        </div>
+                        <div class="contests-grid">
+                `;
+                
+                levelElections.forEach(election => {
+                    const electionDate = new Date(election.date);
+                    const statusClass = this.getStatusClassFromDate(electionDate);
+                    const statusText = this.getStatusTextFromDate(electionDate);
+                    
+                    enhancedHTML += `
+                        <div class="contest-card election-card" data-election-id="${election.id}">
+                            <div class="contest-header">
+                                <div class="contest-icon">${this.getElectionIcon(election.type)}</div>
+                                <div class="contest-details">
+                                    <div class="contest-name">${election.name}</div>
+                                    <div class="contest-type">${election.type} Election</div>
+                                    <div class="contest-location">${election.city || election.county || election.state}</div>
+                                </div>
+                                <div class="contest-status ${statusClass}">${statusText}</div>
+                            </div>
+                            <div class="contest-info">
+                                <div class="contest-date">
+                                    <strong>Election Date:</strong> ${electionDate.toLocaleDateString('en-US', { 
+                                        weekday: 'long', 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    })}
+                                </div>
+                                ${election.registrationDeadline ? `
+                                    <div class="registration-deadline">
+                                        <strong>Registration Deadline:</strong> ${new Date(election.registrationDeadline).toLocaleDateString()}
+                                    </div>
+                                ` : ''}
+                                ${election.description ? `
+                                    <div class="election-description">${election.description}</div>
+                                ` : ''}
+                            </div>
+                            <div class="contest-actions">
+                                <button class="action-btn primary" onclick="electionsSystemIntegration.viewElectionDetails('${election.id}')">
+                                    View Details
+                                </button>
+                                ${election.offices.length > 0 ? `
+                                    <button class="action-btn secondary" onclick="electionsSystemIntegration.viewCandidates('${election.id}')">
+                                        See Candidates (${election.offices.reduce((total, office) => total + office.candidates.length, 0)})
+                                    </button>
+                                ` : ''}
+                                ${election.ballotMeasures.length > 0 ? `
+                                    <button class="action-btn secondary" onclick="electionsSystemIntegration.viewBallotMeasures('${election.id}')">
+                                        Ballot Measures (${election.ballotMeasures.length})
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                enhancedHTML += `
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        enhancedHTML += '</div>';
+        
+        // Add summary stats
+        const totalElections = elections.length;
+        const totalCandidates = elections.reduce((total, election) => 
+            total + election.offices.reduce((officeTotal, office) => officeTotal + office.candidates.length, 0), 0
+        );
+        const totalBallotMeasures = elections.reduce((total, election) => total + election.ballotMeasures.length, 0);
+        
+        const summaryHTML = `
+            <div class="elections-summary">
+                <h2>Elections Summary</h2>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">${totalElections}</div>
+                        <div class="stat-label">Upcoming Elections</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${totalCandidates}</div>
+                        <div class="stat-label">Candidates</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${totalBallotMeasures}</div>
+                        <div class="stat-label">Ballot Measures</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = summaryHTML + enhancedHTML;
+        console.log(`✅ Displayed ${totalElections} real elections from backend API`);
+    }
+
+    getElectionIcon(electionType) {
+        switch (electionType) {
+            case 'PRIMARY': return '🗳️';
+            case 'GENERAL': return '📊';
+            case 'SPECIAL': return '⚡';
+            case 'MUNICIPAL': return '🏛️';
+            default: return '📅';
+        }
+    }
+
+    getStatusClassFromDate(electionDate) {
+        const now = new Date();
+        const timeDiff = electionDate - now;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff <= 30) return 'upcoming';
+        if (daysDiff <= 90) return 'active';
+        return 'future';
+    }
+
+    getStatusTextFromDate(electionDate) {
+        const now = new Date();
+        const timeDiff = electionDate - now;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff <= 7) return `${daysDiff} days`;
+        if (daysDiff <= 30) return `${Math.ceil(daysDiff / 7)} weeks`;
+        if (daysDiff <= 90) return `${Math.ceil(daysDiff / 30)} months`;
+        return 'Future';
+    }
+
+    // Election detail methods
+    async viewElectionDetails(electionId) {
+        console.log(`📊 Viewing details for election: ${electionId}`);
+        
+        try {
+            const response = await fetch(`/api/elections/${electionId}`);
+            if (response.ok) {
+                const data = await response.json();
+                this.showElectionModal(data);
+            } else {
+                console.error('Failed to fetch election details');
+            }
+        } catch (error) {
+            console.error('Error fetching election details:', error);
+        }
+    }
+
+    async viewCandidates(electionId) {
+        console.log(`👥 Viewing candidates for election: ${electionId}`);
+        
+        try {
+            const response = await fetch(`/api/elections/${electionId}/candidates`);
+            if (response.ok) {
+                const data = await response.json();
+                this.showCandidatesModal(data);
+            } else {
+                console.error('Failed to fetch candidates');
+            }
+        } catch (error) {
+            console.error('Error fetching candidates:', error);
+        }
+    }
+
+    async viewBallotMeasures(electionId) {
+        console.log(`📋 Viewing ballot measures for election: ${electionId}`);
+        
+        // For now, show a simple alert - could be expanded to a modal
+        alert('Ballot measures details coming soon!');
+    }
+
+    showElectionModal(electionData) {
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.className = 'elections-modal';
+        modal.innerHTML = `
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>${electionData.name}</h3>
+                    <button class="modal-close" onclick="this.closest('.elections-modal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="election-details">
+                        <p><strong>Date:</strong> ${new Date(electionData.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}</p>
+                        <p><strong>Type:</strong> ${electionData.type}</p>
+                        <p><strong>Level:</strong> ${electionData.level}</p>
+                        ${electionData.description ? `<p><strong>Description:</strong> ${electionData.description}</p>` : ''}
+                        ${electionData.officialUrl ? `<p><strong>Official Info:</strong> <a href="${electionData.officialUrl}" target="_blank">Visit Official Website</a></p>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    showCandidatesModal(candidatesData) {
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.className = 'elections-modal';
+        modal.innerHTML = `
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>Candidates - ${candidatesData.election.name}</h3>
+                    <button class="modal-close" onclick="this.closest('.elections-modal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="candidates-list">
+                        ${candidatesData.candidates.map(candidate => `
+                            <div class="candidate-card">
+                                <div class="candidate-header">
+                                    <h4>${candidate.name}</h4>
+                                    ${candidate.party ? `<span class="party-badge">${candidate.party}</span>` : ''}
+                                    ${candidate.isIncumbent ? '<span class="incumbent-badge">Incumbent</span>' : ''}
+                                </div>
+                                ${candidate.platformSummary ? `<p class="platform">${candidate.platformSummary}</p>` : ''}
+                                ${candidate.campaignWebsite ? `<a href="${candidate.campaignWebsite}" target="_blank" class="campaign-link">Campaign Website</a>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
 
     enhanceElectionsDisplay(originalPanel) {
@@ -1018,9 +1337,171 @@ class ElectionsSystemIntegration {
         this.showMessage(`Voting information for ${contestName} would be shown here.`);
     }
 
-    showVotingInfo() {
-        // Show modal with voting information
-        this.showVotingInfoModal();
+    async showVotingInfo() {
+        console.log('🗳️ Loading voter guide from backend API...');
+        
+        try {
+            const userState = this.getUserState() || 'CA';
+            const response = await fetch(`/api/elections/voter-guide?state=${userState}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.showVoterGuideModal(data.data);
+                } else {
+                    throw new Error(data.error || 'Failed to fetch voter guide');
+                }
+            } else {
+                throw new Error(`Voter guide API returned ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Failed to load voter guide:', error);
+            // Fallback to static voting info
+            this.showVotingInfoModal();
+        }
+    }
+
+    showVoterGuideModal(voterGuideData) {
+        const modal = document.createElement('div');
+        modal.className = 'elections-modal modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>🗳️ Comprehensive Voter Guide</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="voter-guide">
+                        <!-- Elections Section -->
+                        <div class="guide-section">
+                            <h4>📅 Upcoming Elections</h4>
+                            ${voterGuideData.elections.length > 0 ? `
+                                <div class="elections-list">
+                                    ${voterGuideData.elections.slice(0, 5).map(election => `
+                                        <div class="election-item">
+                                            <div class="election-header">
+                                                <strong>${election.name}</strong>
+                                                <span class="election-date">${new Date(election.date).toLocaleDateString()}</span>
+                                            </div>
+                                            ${election.registrationDeadline ? `
+                                                <div class="registration-info">
+                                                    Registration deadline: ${new Date(election.registrationDeadline).toLocaleDateString()}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<p>No upcoming elections found for your area.</p>'}
+                        </div>
+
+                        <!-- Registration Section -->
+                        <div class="guide-section">
+                            <h4>📋 Voter Registration</h4>
+                            <div class="registration-info">
+                                <p><strong>Registration URL:</strong> <a href="${voterGuideData.registrationInfo.registrationUrl}" target="_blank">Register to Vote</a></p>
+                                ${voterGuideData.registrationInfo.deadlines.length > 0 ? `
+                                    <div class="deadlines">
+                                        <h5>Important Deadlines:</h5>
+                                        ${voterGuideData.registrationInfo.deadlines.map(deadline => `
+                                            <div class="deadline-item">
+                                                <strong>${deadline.type}:</strong> ${new Date(deadline.date).toLocaleDateString()} - ${deadline.description}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Voting Options Section -->
+                        <div class="guide-section">
+                            <h4>🗳️ How to Vote</h4>
+                            <div class="voting-options">
+                                ${voterGuideData.votingOptions.inPerson.available ? `
+                                    <div class="voting-option">
+                                        <h5>🏛️ In-Person Voting</h5>
+                                        <p><strong>Hours:</strong> ${voterGuideData.votingOptions.inPerson.hours}</p>
+                                        <div class="locations">
+                                            <strong>Locations:</strong>
+                                            <ul>
+                                                ${voterGuideData.votingOptions.inPerson.locations.map(location => `<li>${location}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${voterGuideData.votingOptions.earlyVoting.available ? `
+                                    <div class="voting-option">
+                                        <h5>⏰ Early Voting</h5>
+                                        <p><strong>Period:</strong> ${voterGuideData.votingOptions.earlyVoting.period}</p>
+                                        <div class="locations">
+                                            <strong>Locations:</strong>
+                                            <ul>
+                                                ${voterGuideData.votingOptions.earlyVoting.locations.map(location => `<li>${location}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${voterGuideData.votingOptions.absentee.available ? `
+                                    <div class="voting-option">
+                                        <h5>📬 Absentee/Mail-In Voting</h5>
+                                        <div class="requirements">
+                                            <strong>Requirements:</strong>
+                                            <ul>
+                                                ${voterGuideData.votingOptions.absentee.requirements.map(req => `<li>${req}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                        ${voterGuideData.votingOptions.absentee.deadlines.length > 0 ? `
+                                            <div class="deadlines">
+                                                <strong>Deadlines:</strong>
+                                                ${voterGuideData.votingOptions.absentee.deadlines.map(deadline => `
+                                                    <div>${deadline.type}: ${new Date(deadline.date).toLocaleDateString()}</div>
+                                                `).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="guide-section">
+                            <h4>🎯 Quick Actions</h4>
+                            <div class="quick-actions">
+                                <button class="action-btn primary" onclick="electionsSystemIntegration.refreshElections()">
+                                    🔄 Refresh Elections
+                                </button>
+                                <button class="action-btn secondary" onclick="window.open('${voterGuideData.registrationInfo.registrationUrl}', '_blank')">
+                                    📝 Register to Vote
+                                </button>
+                                <button class="action-btn secondary" onclick="electionsSystemIntegration.searchCandidates()">
+                                    👥 Search Candidates
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    refreshElections() {
+        // Close any open modals
+        const modals = document.querySelectorAll('.elections-modal');
+        modals.forEach(modal => modal.remove());
+        
+        // Reload elections data
+        this.loadElections();
+    }
+
+    searchCandidates() {
+        // Close modal and show candidate search
+        const modals = document.querySelectorAll('.elections-modal');
+        modals.forEach(modal => modal.remove());
+        
+        // For now, just show an alert - could be expanded to a search interface
+        alert('Candidate search feature coming soon! Use the "See Candidates" buttons on individual elections for now.');
     }
 
     showVotingInfoModal() {

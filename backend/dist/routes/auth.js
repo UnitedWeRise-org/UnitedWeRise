@@ -268,6 +268,26 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 error: 'Account temporarily locked due to multiple failed login attempts. Please try again later.'
             });
         }
+        // Check if user has a password (OAuth-only users don't have passwords)
+        if (!user.password) {
+            // User only has OAuth providers linked, no password set
+            await securityService_1.SecurityService.logEvent({
+                userId: user.id,
+                eventType: securityService_1.SecurityService.EVENT_TYPES.LOGIN_FAILED,
+                ipAddress,
+                userAgent,
+                details: {
+                    email,
+                    reason: 'OAuth-only account, password not set',
+                    timestamp: new Date().toISOString()
+                },
+                riskScore: 20
+            });
+            return res.status(401).json({
+                error: 'This account was created with social login. Please sign in with Google, Microsoft, or Apple.',
+                oauthOnly: true
+            });
+        }
         // Check password
         const isValidPassword = await (0, auth_1.comparePassword)(password, user.password);
         if (!isValidPassword) {

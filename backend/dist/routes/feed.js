@@ -13,14 +13,19 @@ const prisma = new client_1.PrismaClient();
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { limit = 50 } = req.query;
+        const { limit = 50, offset = 0 } = req.query;
         // Parse custom weights if provided (for A/B testing or user preferences)
         const customWeights = req.query.weights ? JSON.parse(req.query.weights) : undefined;
         const limitNum = parseInt(limit.toString());
-        // Generate feed using probability-based algorithm
-        const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, limitNum, customWeights);
-        // Add user's like status to each post
-        const postIds = feedResult.posts.map(p => p.id);
+        const offsetNum = parseInt(offset.toString());
+        // Generate larger feed and slice for pagination
+        // We need to fetch more than just limit+offset to ensure randomization
+        const fetchLimit = limitNum + offsetNum + 50; // Get extra posts for proper randomization
+        const feedResult = await probabilityFeedService_1.ProbabilityFeedService.generateFeed(userId, fetchLimit, customWeights);
+        // Apply offset and limit to the generated feed
+        const paginatedPosts = feedResult.posts.slice(offsetNum, offsetNum + limitNum);
+        // Add user's like status to each post (use paginated posts)
+        const postIds = paginatedPosts.map(p => p.id);
         const userLikes = await prisma.like.findMany({
             where: {
                 userId,
@@ -29,7 +34,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             select: { postId: true }
         });
         const likedPostIds = new Set(userLikes.map(like => like.postId));
-        const postsWithLikeStatus = feedResult.posts.map(post => ({
+        const postsWithLikeStatus = paginatedPosts.map(post => ({
             ...post,
             likesCount: post._count.likes,
             commentsCount: post._count.comments,
@@ -43,7 +48,9 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             stats: feedResult.stats,
             pagination: {
                 limit: limitNum,
-                count: postsWithLikeStatus.length
+                offset: offsetNum,
+                count: postsWithLikeStatus.length,
+                hasMore: postsWithLikeStatus.length === limitNum // If we got full limit, likely more available
             }
         });
     }

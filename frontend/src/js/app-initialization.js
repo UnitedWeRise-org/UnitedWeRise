@@ -199,7 +199,7 @@ class AppInitializer {
         }
         
         // Show user-specific sidebar options
-        const sidebarElements = ['messagesThumb', 'profileThumb', 'feedThumb', 'logoutThumb'];
+        const sidebarElements = ['messagesThumb', 'organizingThumb', 'profileThumb', 'feedThumb', 'logoutThumb'];
         sidebarElements.forEach(id => {
             const element = document.getElementById(id);
             if (element) element.style.display = 'block';
@@ -261,7 +261,7 @@ class AppInitializer {
         }
         
         // Hide user-specific sidebar options
-        const sidebarElements = ['messagesThumb', 'profileThumb', 'feedThumb', 'logoutThumb'];
+        const sidebarElements = ['messagesThumb', 'organizingThumb', 'profileThumb', 'feedThumb', 'logoutThumb'];
         sidebarElements.forEach(id => {
             const element = document.getElementById(id);
             if (element) element.style.display = 'none';

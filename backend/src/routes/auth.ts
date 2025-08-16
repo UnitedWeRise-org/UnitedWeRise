@@ -290,6 +290,28 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       });
     }
 
+    // Check if user has a password (OAuth-only users don't have passwords)
+    if (!user.password) {
+      // User only has OAuth providers linked, no password set
+      await SecurityService.logEvent({
+        userId: user.id,
+        eventType: SecurityService.EVENT_TYPES.LOGIN_FAILED,
+        ipAddress,
+        userAgent,
+        details: {
+          email,
+          reason: 'OAuth-only account, password not set',
+          timestamp: new Date().toISOString()
+        },
+        riskScore: 20
+      });
+
+      return res.status(401).json({ 
+        error: 'This account was created with social login. Please sign in with Google, Microsoft, or Apple.',
+        oauthOnly: true
+      });
+    }
+
     // Check password
     const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {

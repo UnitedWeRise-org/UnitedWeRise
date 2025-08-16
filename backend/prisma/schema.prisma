@@ -11,7 +11,7 @@ model User {
   id                      String                    @id @default(cuid())
   email                   String                    @unique
   username                String                    @unique
-  password                String
+  password                String?
   firstName               String?
   lastName                String?
   avatar                  String?
@@ -72,6 +72,10 @@ model User {
   photoTaggingEnabled     Boolean                   @default(true)
   requireTagApproval      Boolean                   @default(true)
   backgroundImage         String?
+  
+  // OAuth Provider Information
+  oauthProviders          UserOAuthProvider[]
+  
   reviewedAppeals         Appeal[]                  @relation("ReviewedAppeals")
   appeals                 Appeal[]                  @relation("UserAppeals")
   candidateProfile        Candidate?
@@ -119,6 +123,12 @@ model User {
   conflictReports         DistrictConflict[]        @relation("ConflictReports")
   conflictResolutions     DistrictConflict[]        @relation("ConflictResolutions")
   crowdsourceVotes        CrowdsourceVote[]         @relation("CrowdsourceVotes")
+  
+  // Civic Organizing Relations
+  petitionsCreated        Petition[]                @relation("PetitionCreator")
+  petitionSignatures      PetitionSignature[]       @relation("PetitionSignatures")
+  eventsCreated           CivicEvent[]              @relation("EventCreator")
+  eventRSVPs              EventRSVP[]               @relation("EventRSVPs")
 
   @@index([username])
   @@index([createdAt])
@@ -1849,4 +1859,226 @@ enum ArticleSentiment {
   NEGATIVE
   NEUTRAL
   MIXED
+}
+
+// Civic Organizing System Models
+model Petition {
+  id                String         @id @default(cuid())
+  title             String
+  description       String         @db.Text
+  petitionType      PetitionType   @default(PETITION)
+  category          IssueCategory
+  geographicScope   GeographicScope
+  targetOfficials   String[]       @default([])
+  signatureGoal     Int
+  currentSignatures Int            @default(0)
+  status            PetitionStatus @default(ACTIVE)
+  
+  // Location data
+  location          Json?          // {address, city, state, coordinates}
+  
+  // Creator and timestamps
+  createdBy         String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  expiresAt         DateTime?
+  
+  // Relations
+  creator           User           @relation("PetitionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  signatures        PetitionSignature[]
+  
+  @@index([category, geographicScope])
+  @@index([status, createdAt])
+  @@index([createdBy])
+}
+
+model PetitionSignature {
+  id            String         @id @default(cuid())
+  petitionId    String
+  userId        String
+  signedAt      DateTime       @default(now())
+  isVerified    Boolean        @default(false)
+  ipAddress     String?
+  
+  // Relations
+  petition      Petition       @relation(fields: [petitionId], references: [id], onDelete: Cascade)
+  user          User           @relation("PetitionSignatures", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([petitionId, userId])
+  @@index([petitionId])
+  @@index([userId])
+}
+
+model CivicEvent {
+  id              String         @id @default(cuid())
+  title           String
+  description     String         @db.Text
+  eventType       EventType
+  category        EventCategory
+  
+  // Scheduling
+  scheduledDate   DateTime
+  endDate         DateTime?
+  timeZone        String?        @default("America/New_York")
+  
+  // Location
+  location        Json           // {address, city, state, coordinates, venue}
+  capacity        Int?
+  isVirtual       Boolean        @default(false)
+  virtualLink     String?
+  
+  // Organizer info
+  organizerInfo   Json           // {name, contact, organization, website}
+  requirements    String?        // Registration needed, age restrictions, etc.
+  
+  // Status and visibility
+  status          EventStatus    @default(SCHEDULED)
+  isPublic        Boolean        @default(true)
+  rsvpRequired    Boolean        @default(false)
+  currentRSVPs    Int            @default(0)
+  
+  // Creator and timestamps
+  createdBy       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relations
+  creator         User           @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  rsvps           EventRSVP[]
+  
+  @@index([eventType, category])
+  @@index([scheduledDate, status])
+  @@index([createdBy])
+  @@index([location])
+}
+
+model EventRSVP {
+  id            String         @id @default(cuid())
+  eventId       String
+  userId        String
+  rsvpStatus    RSVPStatus     @default(ATTENDING)
+  rsvpedAt      DateTime       @default(now())
+  
+  // Relations
+  event         CivicEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User           @relation("EventRSVPs", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// Civic Organizing Enums
+enum PetitionType {
+  PETITION
+  REFERENDUM
+}
+
+enum IssueCategory {
+  HEALTHCARE
+  EDUCATION
+  ENVIRONMENT
+  ECONOMY
+  INFRASTRUCTURE
+  PUBLIC_SAFETY
+  HOUSING
+  TRANSPORTATION
+  TECHNOLOGY
+  CIVIL_RIGHTS
+  IMMIGRATION
+  ENERGY
+  AGRICULTURE
+  VETERANS
+  SENIORS
+  YOUTH
+  LABOR
+  GOVERNMENT_REFORM
+  OTHER
+}
+
+enum GeographicScope {
+  LOCAL
+  COUNTY
+  STATE
+  NATIONAL
+  REGIONAL
+}
+
+enum PetitionStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CLOSED
+  UNDER_REVIEW
+}
+
+enum EventType {
+  TOWN_HALL
+  CANDIDATE_FORUM
+  DEBATE
+  RALLY
+  PROTEST
+  MARCH
+  VOTER_REGISTRATION
+  ISSUE_FORUM
+  COMMUNITY_MEETING
+  WORKSHOP
+  EDUCATIONAL_SEMINAR
+  FUNDRAISER
+  VOLUNTEER_DRIVE
+  PETITION_DRIVE
+  PHONE_BANK
+  CANVASSING
+  OTHER
+}
+
+enum EventCategory {
+  ELECTORAL
+  CIVIC_ENGAGEMENT
+  ORGANIZING_ACTIVITIES
+  EDUCATIONAL
+  ADVOCACY
+  FUNDRAISING
+}
+
+enum EventStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+enum RSVPStatus {
+  ATTENDING
+  MAYBE
+  NOT_ATTENDING
+}
+
+enum OAuthProvider {
+  GOOGLE
+  MICROSOFT
+  APPLE
+}
+
+model UserOAuthProvider {
+  id           String        @id @default(cuid())
+  userId       String
+  provider     OAuthProvider
+  providerId   String        // Unique ID from the OAuth provider
+  email        String?       // Email from the OAuth provider
+  name         String?       // Full name from the OAuth provider
+  picture      String?       // Profile picture URL from the OAuth provider
+  accessToken  String?       // OAuth access token (encrypted)
+  refreshToken String?       // OAuth refresh token (encrypted)
+  expiresAt    DateTime?     // Token expiration
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerId])
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider, providerId])
 }
