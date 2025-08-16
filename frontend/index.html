@@ -223,6 +223,38 @@
                         <input type="password" id="loginPassword" required>
                     </div>
                     <button class="btn" onclick="handleLogin()">Login</button>
+                    
+                    <div class="oauth-divider">
+                        <span>Or continue with</span>
+                    </div>
+                    
+                    <div class="oauth-buttons">
+                        <button class="oauth-btn google-btn" onclick="handleGoogleLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google
+                        </button>
+                        <button class="oauth-btn microsoft-btn" onclick="handleMicrosoftLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#F25022" d="M1 1h10v10H1z"/>
+                                <path fill="#00A4EF" d="M13 1h10v10H13z"/>
+                                <path fill="#7FBA00" d="M1 13h10v10H1z"/>
+                                <path fill="#FFB900" d="M13 13h10v10H13z"/>
+                            </svg>
+                            Microsoft
+                        </button>
+                        <button class="oauth-btn apple-btn" onclick="handleAppleLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                            </svg>
+                            Apple
+                        </button>
+                    </div>
+                    
                     <div class="auth-switch">
                         <a onclick="switchToRegister()">Don't have an account? Sign up</a>
                     </div>
@@ -273,6 +305,38 @@
                         <div class="h-captcha" data-sitekey="9c5af3a8-5066-446c-970e-1c18d9fe8d9e" data-callback="onHCaptchaCallback" id="hcaptcha-register"></div>
                     </div>
                     <button class="btn" onclick="handleRegister()">Sign Up</button>
+                    
+                    <div class="oauth-divider">
+                        <span>Or continue with</span>
+                    </div>
+                    
+                    <div class="oauth-buttons">
+                        <button class="oauth-btn google-btn" onclick="handleGoogleLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google
+                        </button>
+                        <button class="oauth-btn microsoft-btn" onclick="handleMicrosoftLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#F25022" d="M1 1h10v10H1z"/>
+                                <path fill="#00A4EF" d="M13 1h10v10H13z"/>
+                                <path fill="#7FBA00" d="M1 13h10v10H1z"/>
+                                <path fill="#FFB900" d="M13 13h10v10H13z"/>
+                            </svg>
+                            Microsoft
+                        </button>
+                        <button class="oauth-btn apple-btn" onclick="handleAppleLogin()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                            </svg>
+                            Apple
+                        </button>
+                    </div>
+                    
                     <div class="auth-switch">
                         <a onclick="switchToLogin()">Already have an account? Login</a>
                     </div>
@@ -307,6 +371,7 @@
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
+                <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
                 <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
@@ -334,9 +399,76 @@
             <h3 style="margin: 0; color: #4b5c09;">Search Results</h3>
             <button onclick="closeSearch()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
         </div>
+        
+        <!-- Enhanced Search Filters -->
+        <div class="search-filters" style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="all" checked onchange="updateSearchResults()">
+                    All
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="users" onchange="updateSearchResults()">
+                    👤 Users
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="posts" onchange="updateSearchResults()">
+                    📝 Posts
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="officials" onchange="updateSearchResults()">
+                    🏛️ Officials
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="topics" onchange="updateSearchResults()">
+                    🏷️ Topics
+                </label>
+            </div>
+            
+            <!-- Advanced Filters -->
+            <div id="advancedFilters" style="margin-top: 1rem; display: none;">
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <!-- Location Filter -->
+                    <select id="locationFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Locations</option>
+                        <option value="local">My District</option>
+                        <option value="state">My State</option>
+                        <option value="national">National</option>
+                    </select>
+                    
+                    <!-- Time Filter -->
+                    <select id="timeFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Time</option>
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    
+                    <!-- Topic Filter -->
+                    <select id="topicFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Topics</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="economy">Economy</option>
+                        <option value="education">Education</option>
+                        <option value="environment">Environment</option>
+                        <option value="immigration">Immigration</option>
+                        <option value="civil-rights">Civil Rights</option>
+                        <option value="foreign-policy">Foreign Policy</option>
+                        <option value="gun-policy">Gun Policy</option>
+                        <option value="local-issues">Local Issues</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="toggleAdvancedFilters()" style="background: none; border: none; color: #4b5c09; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem;">
+                <span id="advancedFiltersToggle">▼ Advanced Filters</span>
+            </button>
+        </div>
+        
         <div class="search-results" id="globalSearchResults">
             <div style="text-align: center; color: #666; padding: 2rem;">
-                Start typing to search for users
+                Start typing to search across users, posts, officials, and topics
             </div>
         </div>
     </div>
@@ -1091,6 +1223,7 @@
             
             // Show user-specific sidebar options
             document.getElementById('messagesThumb').style.display = 'block';
+            document.getElementById('organizingThumb').style.display = 'block';
             document.getElementById('profileThumb').style.display = 'block';
             document.getElementById('feedThumb').style.display = 'block';
             // Note: postComposer is now part of feed view, not a standalone element
@@ -1193,6 +1326,229 @@
         function showAuthMessage(message, type) {
             const messageEl = document.getElementById('authMessage');
             messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
+
+        // OAuth Authentication Functions
+        async function handleGoogleLogin() {
+            try {
+                // Initialize Google Sign-In if not already done
+                if (!window.google?.accounts?.id) {
+                    await loadGoogleSignIn();
+                }
+
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // Fallback to popup if prompt doesn't show
+                        google.accounts.id.renderButton(
+                            document.createElement('div'),
+                            {
+                                type: 'popup',
+                                size: 'large',
+                                callback: handleGoogleCredentialResponse
+                            }
+                        );
+                    }
+                });
+            } catch (error) {
+                console.error('Google login error:', error);
+                showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
+            }
+        }
+
+        async function handleGoogleCredentialResponse(response) {
+            try {
+                const result = await fetch('/api/oauth/google', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        idToken: response.credential
+                    })
+                });
+
+                const data = await result.json();
+
+                if (result.ok) {
+                    // Store auth data
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    window.authToken = data.token;
+                    authToken = data.token;
+
+                    // Close auth modal and set logged in state
+                    closeAuthModal();
+                    setLoggedInState(data.user);
+
+                    // Show welcome message for new users
+                    if (data.isNewUser) {
+                        showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
+                    } else {
+                        showAuthMessage('Successfully signed in with Google!', 'success');
+                    }
+                } else {
+                    showAuthMessage(data.error || 'Google sign-in failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Google login error:', error);
+                showAuthMessage('Google sign-in failed. Please try again.', 'error');
+            }
+        }
+
+        async function handleMicrosoftLogin() {
+            try {
+                // For Microsoft, we'll use MSAL.js (Microsoft Authentication Library)
+                if (!window.msal) {
+                    await loadMicrosoftAuth();
+                }
+
+                const loginRequest = {
+                    scopes: ['User.Read']
+                };
+
+                const response = await window.msalInstance.loginPopup(loginRequest);
+                
+                const result = await fetch('/api/oauth/microsoft', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accessToken: response.accessToken
+                    })
+                });
+
+                const data = await result.json();
+
+                if (result.ok) {
+                    // Store auth data
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    window.authToken = data.token;
+                    authToken = data.token;
+
+                    // Close auth modal and set logged in state
+                    closeAuthModal();
+                    setLoggedInState(data.user);
+
+                    // Show welcome message
+                    if (data.isNewUser) {
+                        showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
+                    } else {
+                        showAuthMessage('Successfully signed in with Microsoft!', 'success');
+                    }
+                } else {
+                    showAuthMessage(data.error || 'Microsoft sign-in failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Microsoft login error:', error);
+                showAuthMessage('Microsoft sign-in failed. Please try again.', 'error');
+            }
+        }
+
+        async function handleAppleLogin() {
+            try {
+                // For Apple Sign In, we'll use Apple's JS SDK
+                if (!window.AppleID) {
+                    await loadAppleSignIn();
+                }
+
+                const response = await AppleID.auth.signIn();
+                
+                const result = await fetch('/api/oauth/apple', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        identityToken: response.authorization.id_token,
+                        user: response.user // Only provided on first sign in
+                    })
+                });
+
+                const data = await result.json();
+
+                if (result.ok) {
+                    // Store auth data
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    window.authToken = data.token;
+                    authToken = data.token;
+
+                    // Close auth modal and set logged in state
+                    closeAuthModal();
+                    setLoggedInState(data.user);
+
+                    // Show welcome message
+                    if (data.isNewUser) {
+                        showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
+                    } else {
+                        showAuthMessage('Successfully signed in with Apple!', 'success');
+                    }
+                } else {
+                    showAuthMessage(data.error || 'Apple sign-in failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Apple login error:', error);
+                showAuthMessage('Apple sign-in failed. Please try again.', 'error');
+            }
+        }
+
+        // OAuth SDK Loading Functions
+        async function loadGoogleSignIn() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.onload = () => {
+                    google.accounts.id.initialize({
+                        client_id: 'YOUR_GOOGLE_CLIENT_ID', // This would be set from environment
+                        callback: handleGoogleCredentialResponse,
+                        auto_select: false,
+                        cancel_on_tap_outside: false
+                    });
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function loadMicrosoftAuth() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js';
+                script.onload = () => {
+                    const msalConfig = {
+                        auth: {
+                            clientId: 'YOUR_MICROSOFT_CLIENT_ID', // This would be set from environment
+                            authority: 'https://login.microsoftonline.com/common'
+                        }
+                    };
+                    window.msalInstance = new msal.PublicClientApplication(msalConfig);
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function loadAppleSignIn() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+                script.onload = () => {
+                    AppleID.auth.init({
+                        clientId: 'YOUR_APPLE_CLIENT_ID', // This would be set from environment
+                        scope: 'name email',
+                        redirectURI: window.location.origin + '/apple-callback',
+                        state: 'signin',
+                        usePopup: true
+                    });
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
         }
 
         async function loadUserContent() {
@@ -1973,10 +2329,13 @@
                     return;
                 }
 
-                // Try AI topic discovery first, fallback to posts if needed
+                // Get user's current geographic scope
+                const scope = getCurrentGeographicScope(); // 'national', 'state', or 'local'
+
+                // Try AI topic aggregation with dual-vector clustering
                 let response;
                 try {
-                    response = await apiCall('/topic-navigation/trending?limit=15');
+                    response = await apiCall(`/trending/topics?scope=${scope}&limit=7`);
                     if (response.ok && response.data.topics && response.data.topics.length > 0) {
                         updateTrendingTopicsPanel(response.data.topics);
                         
@@ -1989,7 +2348,7 @@
                     console.log('AI topics unavailable, falling back to posts:', topicError.message);
                 }
                 
-                // Fallback to post-based trending
+                // Fallback to post-based trending if AI aggregation fails
                 response = await apiCall('/feed/trending?limit=20');
                 
                 if (response.ok) {
@@ -2015,7 +2374,148 @@
         let displayMode = 'topics'; // 'topics' or 'posts'
         let currentTopicMode = null; // Track if user is in topic-filtered mode
 
-        // Enhanced function to handle both AI topics and post fallback
+        // Helper function to get current geographic scope
+        function getCurrentGeographicScope() {
+            // Check if user has a preferred scope setting or use national as default
+            return localStorage.getItem('geographicScope') || 'national';
+        }
+
+        // Topic mode functions
+        async function enterTopicMode(topicId) {
+            try {
+                const topic = allTrendingTopics.find(t => t.id === topicId);
+                if (!topic) {
+                    console.error('Topic not found:', topicId);
+                    return;
+                }
+
+                // Fetch posts for this topic
+                const response = await apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
+                
+                if (response.ok) {
+                    currentTopicMode = {
+                        topicId,
+                        topic: response.data.topic,
+                        posts: response.data.posts
+                    };
+
+                    // Update My Feed to show topic-filtered posts
+                    displayTopicFilteredFeed(response.data.topic, response.data.posts);
+                    
+                    // Update trending panel to show topic mode indicator
+                    updateTrendingWithTopicMode();
+                    
+                    // Show topic mode header in My Feed
+                    showTopicModeHeader(response.data.topic);
+
+                } else {
+                    console.error('Failed to fetch topic posts');
+                }
+            } catch (error) {
+                console.error('Error entering topic mode:', error);
+            }
+        }
+
+        function exitTopicMode() {
+            currentTopicMode = null;
+            
+            // Clear topic mode header
+            const header = document.getElementById('topicModeHeader');
+            if (header) {
+                header.remove();
+            }
+            
+            // Reload normal My Feed
+            loadMyFeed();
+            
+            // Refresh trending panel
+            loadTrendingUpdates();
+        }
+
+        function showTopicModeHeader(topic) {
+            // Remove any existing topic header
+            const existingHeader = document.getElementById('topicModeHeader');
+            if (existingHeader) {
+                existingHeader.remove();
+            }
+
+            // Create new topic mode header
+            const feedContainer = document.getElementById('myFeedPosts') || document.getElementById('mainContent');
+            if (feedContainer) {
+                const header = document.createElement('div');
+                header.id = 'topicModeHeader';
+                header.innerHTML = `
+                    <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.2rem;">📍</span>
+                                <h3 style="margin: 0; font-size: 1.1rem;">Viewing: ${topic.title}</h3>
+                            </div>
+                            <button onclick="exitTopicMode()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">✕ Exit Topic Mode</button>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                            <div style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.15); border-radius: 4px;">
+                                <strong>For (${topic.supportPercentage}%):</strong> ${topic.supportSummary}
+                            </div>
+                            <div style="flex: 1; padding: 0.5rem; background: rgba(255,255,255,0.15); border-radius: 4px;">
+                                <strong>Against (${topic.opposePercentage}%):</strong> ${topic.opposeSummary}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feedContainer.insertBefore(header, feedContainer.firstChild);
+            }
+        }
+
+        function displayTopicFilteredFeed(topic, posts) {
+            const feedContainer = document.getElementById('myFeedPosts') || document.getElementById('mainContent');
+            if (!feedContainer) return;
+
+            // Clear existing posts (except the topic header)
+            const existingPosts = feedContainer.querySelectorAll('.post-container, .feed-post');
+            existingPosts.forEach(post => post.remove());
+
+            if (posts && posts.length > 0) {
+                posts.forEach(post => {
+                    const postElement = createPostElement(post);
+                    
+                    // Add stance indicator
+                    if (post.stance) {
+                        const stanceIndicator = document.createElement('div');
+                        stanceIndicator.style.cssText = `
+                            position: absolute; 
+                            top: 10px; 
+                            right: 10px; 
+                            padding: 0.2rem 0.5rem; 
+                            border-radius: 4px; 
+                            font-size: 0.7rem; 
+                            font-weight: bold;
+                            ${post.stance === 'support' ? 'background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid #28a745;' : 
+                              post.stance === 'oppose' ? 'background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545;' : 
+                              'background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid #6c757d;'}
+                        `;
+                        stanceIndicator.textContent = post.stance === 'support' ? 'Supporting' : 
+                                                    post.stance === 'oppose' ? 'Opposing' : 'Neutral';
+                        
+                        postElement.style.position = 'relative';
+                        postElement.appendChild(stanceIndicator);
+                    }
+                    
+                    feedContainer.appendChild(postElement);
+                });
+            } else {
+                const noPostsMessage = document.createElement('div');
+                noPostsMessage.style.cssText = 'text-align: center; color: #666; padding: 2rem; background: white; border-radius: 8px; margin: 1rem 0;';
+                noPostsMessage.innerHTML = `
+                    <h3>No posts found for this topic</h3>
+                    <p>Be the first to share your thoughts on "${topic.title}"!</p>
+                    <button onclick="exitTopicMode()" style="background: #ff6b35; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">View All Posts</button>
+                `;
+                feedContainer.appendChild(noPostsMessage);
+            }
+        }
+
+        // Enhanced function to display AI-aggregated topics with dual-vector stance info
         function updateTrendingTopicsPanel(topics) {
             allTrendingTopics = topics;
             displayMode = 'topics';
@@ -2031,31 +2531,73 @@
             
             displayTopics.forEach((topic, index) => {
                 const isFeature = index === 0;
-                const timeAgo = getTimeAgo(new Date(topic.createdAt || Date.now()));
-                const summary = topic.summary || 'Discussion topic';
+                
+                // Create percentage bar visualization
+                const supportPct = topic.support?.percentage || 50;
+                const opposePct = topic.oppose?.percentage || 50;
                 
                 html += `
-                    <div class="trending-item topic-item" onclick="enterTopicMode('${topic.id}')" style="cursor: pointer;">
-                        <div class="topic-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 4px;">
-                            <span style="font-size: 1.1rem;">${isFeature ? '🔥' : '🏷️'}</span>
-                            <div style="font-weight: bold; font-size: 0.85rem; flex: 1;">${topic.title}</div>
-                            ${isFeature ? '<span style="background: #ff6b35; color: white; padding: 0.2rem 0.4rem; border-radius: 8px; font-size: 0.7rem;">HOT</span>' : ''}
+                    <div class="trending-item topic-item" onclick="enterTopicMode('${topic.id}')" style="cursor: pointer; padding: 0.8rem; border-bottom: 1px solid #eee; transition: background 0.2s;">
+                        <div class="topic-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 6px;">
+                            <span style="font-size: 1.1rem;">${isFeature ? '🔥' : '💭'}</span>
+                            <div style="font-weight: bold; font-size: 0.9rem; flex: 1; color: #333;">${topic.title}</div>
+                            ${isFeature ? '<span style="background: #ff6b35; color: white; padding: 0.15rem 0.35rem; border-radius: 6px; font-size: 0.65rem; font-weight: bold;">HOT</span>' : ''}
                         </div>
-                        <div style="font-size: 0.8rem; color: #555; margin-bottom: 6px; line-height: 1.3;">${summary.substring(0, 120)}${summary.length > 120 ? '...' : ''}</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #666;">
-                            <span>💬 ${topic.postCount} posts • 👥 ${topic.participantCount} people</span>
-                            <span>${timeAgo}</span>
+                        
+                        <!-- Sentiment Bar -->
+                        <div style="margin: 8px 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <div style="flex: 1; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; position: relative;">
+                                    <div style="position: absolute; left: 0; top: 0; height: 100%; background: #28a745; width: ${supportPct}%; transition: width 0.3s;"></div>
+                                </div>
+                                <span style="font-size: 0.75rem; color: #666; min-width: 60px;">${supportPct}% | ${opposePct}%</span>
+                            </div>
                         </div>
-                        ${topic.prevailingPosition ? `
-                            <div style="margin-top: 6px; padding: 0.4rem; background: #f8f9fa; border-radius: 4px; font-size: 0.75rem; border-left: 2px solid #28a745;">
-                                <strong>📍 Main view:</strong> ${topic.prevailingPosition.substring(0, 80)}${topic.prevailingPosition.length > 80 ? '...' : ''}
+                        
+                        <!-- Stance Summaries -->
+                        ${topic.support?.summary ? `
+                            <div style="margin: 6px 0; padding: 6px 8px; background: rgba(40, 167, 69, 0.08); border-radius: 4px; border-left: 2px solid #28a745;">
+                                <div style="font-size: 0.75rem; color: #155724;">
+                                    <strong>For:</strong> ${topic.support.summary.substring(0, 80)}${topic.support.summary.length > 80 ? '...' : ''}
+                                </div>
                             </div>
                         ` : ''}
+                        
+                        ${topic.oppose?.summary ? `
+                            <div style="margin: 6px 0; padding: 6px 8px; background: rgba(220, 53, 69, 0.08); border-radius: 4px; border-left: 2px solid #dc3545;">
+                                <div style="font-size: 0.75rem; color: #721c24;">
+                                    <strong>Against:</strong> ${topic.oppose.summary.substring(0, 80)}${topic.oppose.summary.length > 80 ? '...' : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Metadata -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                            <span style="font-size: 0.7rem; color: #888;">
+                                💬 ${topic.totalPosts || (topic.support?.postCount + topic.oppose?.postCount) || 0} posts
+                                ${topic.geographicScope ? ` • 📍 ${topic.geographicScope}` : ''}
+                            </span>
+                            ${topic.state || topic.city ? `
+                                <span style="font-size: 0.65rem; color: #666; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">
+                                    ${topic.city || topic.state}
+                                </span>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             });
 
             body.innerHTML = html;
+            
+            // Add hover effect
+            body.querySelectorAll('.topic-item').forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.background = '#f8f9fa';
+                });
+                item.addEventListener('mouseleave', function() {
+                    this.style.background = '';
+                });
+            });
         }
 
         function updateTrendingUpdatesPanel(posts) {
@@ -2295,10 +2837,47 @@
             `;
         }
         
-        // NEW: Map Integration Functions - Sync AI Topics with Map Bubbles
+        // Map Integration Functions - Sync AI Topics with Map Bubbles
         let mapTopicCache = [];
         let lastMapTopicUpdate = 0;
-        const MAP_TOPIC_CACHE_DURATION = 120000; // 2 minutes
+        const MAP_TOPIC_CACHE_DURATION = 45000; // 45 seconds (3 topics x 15 seconds each)
+        
+        // Fetch and cycle AI topics for map display
+        async function updateMapTopics() {
+            try {
+                const now = Date.now();
+                
+                // Check if we need to refresh the cache
+                if (now - lastMapTopicUpdate > MAP_TOPIC_CACHE_DURATION || mapTopicCache.length === 0) {
+                    const response = await apiCall('/trending/map-topics?count=9'); // Get 9 topics for rotation
+                    
+                    if (response.ok && response.data.topics) {
+                        mapTopicCache = response.data.topics;
+                        lastMapTopicUpdate = now;
+                        console.log('Updated map topic cache with', mapTopicCache.length, 'topics');
+                    }
+                }
+                
+                // Get current set of 3 topics to display (rotating every 15 seconds)
+                return getCurrentMapTopics();
+                
+            } catch (error) {
+                console.error('Error updating map topics:', error);
+                return [];
+            }
+        }
+        
+        // Get the current 3 topics to display on map (cycles every 15 seconds)
+        function getCurrentMapTopics() {
+            if (mapTopicCache.length === 0) return [];
+            
+            // Calculate which slice of 3 topics to show based on time
+            const cycleIndex = Math.floor(Date.now() / 15000) % Math.max(1, Math.ceil(mapTopicCache.length / 3));
+            const startIndex = cycleIndex * 3;
+            const endIndex = Math.min(startIndex + 3, mapTopicCache.length);
+            
+            return mapTopicCache.slice(startIndex, endIndex);
+        }
         
         // Convert AI topics to map bubble format with geographic distribution
         function convertTopicsToMapBubbles(aiTopics) {
@@ -2306,16 +2885,16 @@
             
             // Predefined coordinates for major US cities - AI topics get distributed across these
             const cityCoords = [
-                { coords: [40.7128, -74.0060], city: 'NYC' },
-                { coords: [34.0522, -118.2437], city: 'Los Angeles' },
-                { coords: [41.8781, -87.6298], city: 'Chicago' },
-                { coords: [29.7604, -95.3698], city: 'Houston' },
-                { coords: [47.6062, -122.3321], city: 'Seattle' },
-                { coords: [39.7392, -104.9903], city: 'Denver' },
-                { coords: [33.4484, -112.0740], city: 'Phoenix' },
-                { coords: [25.7617, -80.1918], city: 'Miami' },
-                { coords: [32.7767, -96.7970], city: 'Dallas' },
-                { coords: [42.3601, -71.0589], city: 'Boston' },
+                { coords: [40.7128, -74.0060], city: 'NYC', weight: 1.0 },
+                { coords: [34.0522, -118.2437], city: 'Los Angeles', weight: 0.9 },
+                { coords: [41.8781, -87.6298], city: 'Chicago', weight: 0.8 },
+                { coords: [29.7604, -95.3698], city: 'Houston', weight: 0.7 },
+                { coords: [47.6062, -122.3321], city: 'Seattle', weight: 0.6 },
+                { coords: [39.7392, -104.9903], city: 'Denver', weight: 0.5 },
+                { coords: [33.4484, -112.0740], city: 'Phoenix', weight: 0.5 },
+                { coords: [25.7617, -80.1918], city: 'Miami', weight: 0.4 },
+                { coords: [32.7767, -96.7970], city: 'Dallas', weight: 0.4 },
+                { coords: [42.3601, -71.0589], city: 'Boston', weight: 0.4 },
                 { coords: [38.9072, -77.0369], city: 'Washington DC' },
                 { coords: [37.7749, -122.4194], city: 'San Francisco' },
                 { coords: [39.9526, -75.1652], city: 'Philadelphia' },
@@ -2330,20 +2909,19 @@
                 const coord = cityCoords[coordIndex % cityCoords.length];
                 coordIndex++;
                 
-                // Create bubble text from topic data
-                let bubbleText = `🏷️ ${topic.title}`;
+                // Create bubble text from new topic data structure
+                let bubbleText = `💭 ${topic.title}`;
                 
-                // Add brief description if available
-                if (topic.summary && topic.summary.length > 0) {
-                    const shortSummary = topic.summary.length > 80 
-                        ? topic.summary.substring(0, 80) + '...' 
-                        : topic.summary;
-                    bubbleText += ` - ${shortSummary}`;
+                // Add stance percentages
+                if (topic.supportPercentage && topic.opposePercentage) {
+                    bubbleText += ` (${topic.supportPercentage}% vs ${topic.opposePercentage}%)`;
                 }
                 
-                // Add engagement indicator for top topics
-                if (index < 3) {
-                    bubbleText += ` (${topic.postCount} posts active)`;
+                // Add geographic scope indicator
+                if (topic.geographicScope) {
+                    const scopeIcon = topic.geographicScope === 'local' ? '🏘️' : 
+                                    topic.geographicScope === 'state' ? '🏛️' : '🌎';
+                    bubbleText += ` ${scopeIcon}`;
                 }
                 
                 mapBubbles.push({
@@ -2352,7 +2930,10 @@
                     city: coord.city,
                     topicId: topic.id,
                     priority: index < 3 ? 'high' : 'normal', // Top 3 get higher priority
-                    aiTopic: true // Flag to distinguish from static topics
+                    aiTopic: true, // Flag to distinguish from static topics
+                    supportPercentage: topic.supportPercentage,
+                    opposePercentage: topic.opposePercentage,
+                    geographicScope: topic.geographicScope
                 });
             });
             
@@ -2369,8 +2950,8 @@
                     return mapTopicCache;
                 }
                 
-                // Fetch latest AI topics
-                const response = await apiCall('/topic-navigation/trending?limit=12');
+                // Fetch latest AI topics using new aggregation API
+                const response = await apiCall('/trending/map-topics?count=12');
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     const aiTopics = response.data.topics;
                     const mapBubbles = convertTopicsToMapBubbles(aiTopics);
@@ -2760,7 +3341,7 @@
             }
         }
 
-        function displayConversations(conversations) {
+        async function displayConversations(conversations) {
             const body = document.getElementById('messagesBody');
             
             if (!authToken) {
@@ -2777,8 +3358,11 @@
             
             let html = `
                 <div style="padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
-                    <button onclick="showNewConversationForm()" style="width: 100%; padding: 0.5vh; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                    <button onclick="showNewConversationForm()" style="width: 100%; padding: 0.5vh; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-bottom: 0.5vh;">
                         + New Conversation
+                    </button>
+                    <button onclick="showFriendsList()" style="width: 100%; padding: 0.5vh; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        👥 Message Friends
                     </button>
                 </div>
             `;
@@ -2787,7 +3371,7 @@
                 html += `
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <p>No conversations yet</p>
-                        <p style="font-size: 0.9rem;">Start your first conversation!</p>
+                        <p style="font-size: 0.9rem;">Start your first conversation with a friend!</p>
                     </div>
                 `;
             } else {
@@ -4213,9 +4797,12 @@
                     // Append to existing content
                     feed.insertAdjacentHTML('beforeend', html);
                 }
+                
+                // Add friend status indicators after posts are rendered
+                setTimeout(() => addFriendStatusToExistingPosts(containerId, posts), 500);
             } else {
-                // Fallback to original rendering if PostComponent not available
-                displayPostsFallback(posts, containerId, appendMode);
+                // Enhanced fallback with friend status indicators
+                displayPostsWithFriendStatus(posts, containerId, appendMode);
             }
         }
 
@@ -4621,26 +5208,72 @@
             });
         }
 
-        // Global search functionality
+        /**
+         * ENHANCED SEARCH SYSTEM
+         * Comprehensive search across users, posts, officials, topics with advanced filtering
+         */
+
+        // Global search state
+        let currentSearchQuery = '';
+        let currentSearchResults = {
+            users: [],
+            posts: [],
+            officials: [],
+            topics: []
+        };
+
+        // Enhanced search functionality
         function openSearch() {
             document.getElementById('searchContainer').style.display = 'flex';
             closeAllPanels(); // Close other panels
             document.getElementById('searchInput').focus();
+            
+            // Initialize search if there's already a query
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput.value.length >= 2) {
+                performGlobalSearch(searchInput.value);
+            }
         }
 
         function closeSearch() {
             document.getElementById('searchContainer').style.display = 'none';
             document.getElementById('searchInput').value = '';
+            currentSearchQuery = '';
+            currentSearchResults = { users: [], posts: [], officials: [], topics: [] };
+            
+            // Reset filters
+            document.querySelector('input[name="searchType"][value="all"]').checked = true;
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('timeFilter').value = '';
+            document.getElementById('topicFilter').value = '';
+            document.getElementById('advancedFilters').style.display = 'none';
+            document.getElementById('advancedFiltersToggle').textContent = '▼ Advanced Filters';
+            
             document.getElementById('globalSearchResults').innerHTML = `
                 <div style="text-align: center; color: #666; padding: 2rem;">
-                    Start typing to search for users
+                    Start typing to search across users, posts, officials, and topics
                 </div>
             `;
+        }
+
+        // Toggle advanced filters
+        function toggleAdvancedFilters() {
+            const filtersDiv = document.getElementById('advancedFilters');
+            const toggleSpan = document.getElementById('advancedFiltersToggle');
+            
+            if (filtersDiv.style.display === 'none') {
+                filtersDiv.style.display = 'block';
+                toggleSpan.textContent = '▲ Advanced Filters';
+            } else {
+                filtersDiv.style.display = 'none';
+                toggleSpan.textContent = '▼ Advanced Filters';
+            }
         }
 
         let globalSearchTimeout;
         async function performGlobalSearch(query) {
             clearTimeout(globalSearchTimeout);
+            currentSearchQuery = query;
             
             if (!query || query.length < 2) {
                 document.getElementById('globalSearchResults').innerHTML = `
@@ -4651,94 +5284,521 @@
                 return;
             }
 
+            // Show loading state
+            document.getElementById('globalSearchResults').innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    <div style="margin-bottom: 1rem;">🔍 Searching...</div>
+                    <div style="font-size: 0.9rem;">Looking across users, posts, officials, and topics</div>
+                </div>
+            `;
+
             globalSearchTimeout = setTimeout(async () => {
-                await executeGlobalSearch(query);
+                await executeEnhancedSearch(query);
             }, 300);
         }
 
-        async function executeGlobalSearch(query) {
+        // Update search results when filters change
+        async function updateSearchResults() {
+            if (currentSearchQuery && currentSearchQuery.length >= 2) {
+                await executeEnhancedSearch(currentSearchQuery);
+            }
+        }
+
+        // Enhanced search execution with multiple content types
+        async function executeEnhancedSearch(query) {
             if (!authToken) {
                 document.getElementById('globalSearchResults').innerHTML = `
                     <div style="text-align: center; color: #666; padding: 2rem;">
-                        Please log in to search for users
+                        Please log in to search
                     </div>
                 `;
                 return;
             }
 
             try {
-                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}&limit=20`);
+                // Get current filters
+                const searchType = document.querySelector('input[name="searchType"]:checked').value;
+                const locationFilter = document.getElementById('locationFilter').value;
+                const timeFilter = document.getElementById('timeFilter').value;
+                const topicFilter = document.getElementById('topicFilter').value;
                 
-                if (response.ok) {
-                    displayGlobalSearchResults(response.data.users);
+                // Build search parameters
+                const searchParams = new URLSearchParams({
+                    q: query,
+                    limit: '20'
+                });
+                
+                if (locationFilter) searchParams.append('location', locationFilter);
+                if (timeFilter) searchParams.append('time', timeFilter);
+                if (topicFilter) searchParams.append('topic', topicFilter);
+
+                // Execute searches based on type
+                let searchPromises = [];
+                
+                if (searchType === 'all') {
+                    // Search all types in parallel
+                    searchPromises = [
+                        apiCall(`/search/users?${searchParams.toString()}`).catch(() => ({ok: false, data: {users: []}})),
+                        apiCall(`/search/posts?${searchParams.toString()}`).catch(() => ({ok: false, data: {posts: []}})),
+                        apiCall(`/search/officials?${searchParams.toString()}`).catch(() => ({ok: false, data: {officials: []}})),
+                        apiCall(`/search/topics?${searchParams.toString()}`).catch(() => ({ok: false, data: {topics: []}}))
+                    ];
                 } else {
-                    document.getElementById('globalSearchResults').innerHTML = `
-                        <div style="text-align: center; color: #d32f2f; padding: 2rem;">
-                            Error searching users
-                        </div>
-                    `;
+                    // Search specific type
+                    const endpoint = `/search/${searchType}?${searchParams.toString()}`;
+                    searchPromises = [apiCall(endpoint)];
                 }
+
+                const results = await Promise.all(searchPromises);
+                
+                // Process results
+                if (searchType === 'all') {
+                    currentSearchResults = {
+                        users: results[0].ok ? results[0].data.users || [] : [],
+                        posts: results[1].ok ? results[1].data.posts || [] : [],
+                        officials: results[2].ok ? results[2].data.officials || [] : [],
+                        topics: results[3].ok ? results[3].data.topics || [] : []
+                    };
+                    displayAllSearchResults();
+                } else {
+                    // Single type search
+                    const resultData = results[0].ok ? results[0].data : {};
+                    currentSearchResults = {
+                        users: searchType === 'users' ? (resultData.users || []) : [],
+                        posts: searchType === 'posts' ? (resultData.posts || []) : [],
+                        officials: searchType === 'officials' ? (resultData.officials || []) : [],
+                        topics: searchType === 'topics' ? (resultData.topics || []) : []
+                    };
+                    displayFilteredSearchResults(searchType);
+                }
+
             } catch (error) {
-                console.error('Global search error:', error);
+                console.error('Enhanced search error:', error);
                 document.getElementById('globalSearchResults').innerHTML = `
                     <div style="text-align: center; color: #d32f2f; padding: 2rem;">
-                        Network error occurred
+                        Search error occurred. Please try again.
                     </div>
                 `;
             }
         }
 
-        async function displayGlobalSearchResults(users) {
+        /**
+         * ENHANCED SEARCH RESULT DISPLAY FUNCTIONS
+         * Support for users, posts, officials, topics with rich formatting
+         */
+
+        // Display all search results with category sections
+        function displayAllSearchResults() {
             const resultsContainer = document.getElementById('globalSearchResults');
+            const { users, posts, officials, topics } = currentSearchResults;
             
-            if (users.length === 0) {
+            const totalResults = users.length + posts.length + officials.length + topics.length;
+            
+            if (totalResults === 0) {
                 resultsContainer.innerHTML = `
                     <div style="text-align: center; color: #666; padding: 2rem;">
-                        No users found
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+                        <h3>No Results Found</h3>
+                        <p>Try different keywords or adjust your filters</p>
                     </div>
                 `;
                 return;
             }
 
-            let html = '';
-            users.forEach(user => {
-                html += `
-                    <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer;" onclick="openUserFeed('${user.id}', '${user.username}')">
-                        <div class="user-avatar" style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                            ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: bold; font-size: 1rem;">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
-                            <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
-                            <div style="color: #666; font-size: 0.8rem;">${user.followersCount} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
-                            ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
-                            ${user.id !== currentUser?.id ? `
-                                <button onclick="toggleFollow('${user.id}', this)" 
-                                    data-user-id="${user.id}"
-                                    data-following="${user.isFollowing || false}"
-                                    style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
-                                    ${user.isFollowing ? 'Following' : 'Follow'}
-                                </button>
-                                <button onclick="addFriend('${user.id}')" 
-                                    style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
-                                    Add Friend
-                                </button>
-                                <button onclick="startConversationWithUser('${user.id}', '${user.username}')" 
-                                    style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                    Message
-                                </button>
-                            ` : '<span style="color: #666; font-size: 0.8rem;">You</span>'}
-                        </div>
-                    </div>
-                `;
-            });
+            let html = `
+                <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9; font-weight: bold; color: #4b5c09;">
+                    Found ${totalResults} results for "${currentSearchQuery}"
+                </div>
+            `;
+
+            // Display each category with results
+            if (users.length > 0) {
+                html += renderSearchSection('👤 Users', users, renderUserResult);
+            }
+            if (officials.length > 0) {
+                html += renderSearchSection('🏛️ Officials', officials, renderOfficialResult);
+            }
+            if (posts.length > 0) {
+                html += renderSearchSection('📝 Posts', posts, renderPostResult);
+            }
+            if (topics.length > 0) {
+                html += renderSearchSection('🏷️ Topics', topics, renderTopicResult);
+            }
 
             resultsContainer.innerHTML = html;
         }
 
-        // Open user feed in main area
+        // Display filtered results for a specific type
+        function displayFilteredSearchResults(type) {
+            const resultsContainer = document.getElementById('globalSearchResults');
+            const results = currentSearchResults[type];
+            
+            if (results.length === 0) {
+                const typeLabels = {
+                    users: '👤 Users',
+                    posts: '📝 Posts', 
+                    officials: '🏛️ Officials',
+                    topics: '🏷️ Topics'
+                };
+                
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+                        <h3>No ${typeLabels[type]} Found</h3>
+                        <p>Try different keywords or remove filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const renderFunctions = {
+                users: renderUserResult,
+                posts: renderPostResult,
+                officials: renderOfficialResult,
+                topics: renderTopicResult
+            };
+
+            let html = results.map(result => renderFunctions[type](result)).join('');
+            resultsContainer.innerHTML = html;
+        }
+
+        // Helper function to render search sections
+        function renderSearchSection(title, results, renderFunction) {
+            return `
+                <div style="background: #f5f5f5; padding: 0.5rem 1rem; font-weight: bold; color: #4b5c09; border-bottom: 1px solid #ddd;">
+                    ${title} (${results.length})
+                </div>
+                ${results.slice(0, 5).map(result => renderFunction(result)).join('')}
+                ${results.length > 5 ? `
+                    <div style="padding: 0.5rem 1rem; text-align: center; color: #666; font-size: 0.9rem; border-bottom: 1px solid #eee;">
+                        +${results.length - 5} more results...
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        // Render individual result types
+        function renderUserResult(user) {
+            return `
+                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${user.id}', '${user.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                    <div class="user-avatar" style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 1rem;">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
+                        <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
+                        <div style="color: #666; font-size: 0.8rem;">${user.followersCount || 0} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+                        ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
+                        ${user.id !== currentUser?.id ? `
+                            <button onclick="window.FollowUtils.toggleFollow('${user.id}', ${user.isFollowing || false})" 
+                                style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
+                                ${user.isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button onclick="window.FriendUtils.sendFriendRequest('${user.id}')" 
+                                style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
+                                Add Friend
+                            </button>
+                            <button onclick="startConversationWithUser('${user.id}', '${user.username}')" 
+                                style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                Message
+                            </button>
+                        ` : '<span style="color: #666; font-size: 0.8rem;">You</span>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPostResult(post) {
+            const timeAgo = getTimeAgo(new Date(post.createdAt));
+            return `
+                <div class="search-result-item" style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="showPostInFeed('${post.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                    <div style="display: flex; align-items: start; gap: 0.75rem;">
+                        <div class="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+                            ${(post.author?.firstName?.[0] || post.author?.username?.[0] || 'U').toUpperCase()}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                ${post.author?.firstName ? `${post.author.firstName} ${post.author.lastName || ''}` : post.author?.username || 'Unknown User'}
+                                <span style="color: #666; font-weight: normal;">@${post.author?.username || 'unknown'} • ${timeAgo}</span>
+                            </div>
+                            <div style="color: #333; line-height: 1.4; margin-bottom: 0.5rem;">
+                                ${post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content}
+                            </div>
+                            <div style="color: #666; font-size: 0.8rem; display: flex; gap: 1rem;">
+                                <span>❤️ ${post.likesCount || 0}</span>
+                                <span>💬 ${post.commentsCount || 0}</span>
+                                ${post.topics ? `<span>🏷️ ${post.topics.slice(0, 2).join(', ')}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOfficialResult(official) {
+            return `
+                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="showOfficialDetails('${official.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                    <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        🏛️
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 1rem;">${official.name}</div>
+                        <div style="color: #666; font-size: 0.9rem;">${official.office || official.title}</div>
+                        <div style="color: #666; font-size: 0.8rem;">
+                            ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
+                            ${official.chamber ? ` • ${official.chamber}` : ''}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+                        <button onclick="viewOfficialProfile('${official.id}')" 
+                            style="padding: 0.25rem 0.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            View Profile
+                        </button>
+                        ${official.contactInfo ? `
+                            <button onclick="contactOfficial('${official.id}')" 
+                                style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                Contact
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTopicResult(topic) {
+            return `
+                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="enterTopicMode('${topic.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                    <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #ff9800; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        🏷️
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 1rem;">${topic.name}</div>
+                        <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                            ${topic.description || 'Political discussion topic'}
+                        </div>
+                        <div style="color: #666; font-size: 0.8rem; display: flex; gap: 1rem;">
+                            <span>📝 ${topic.postCount || 0} posts</span>
+                            <span>👥 ${topic.participantCount || 0} participants</span>
+                            ${topic.trending ? '<span style="color: #ff9800;">🔥 Trending</span>' : ''}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+                        <button onclick="enterTopicMode('${topic.id}')" 
+                            style="padding: 0.25rem 0.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            View Topic
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * SEARCH RESULT ACTION FUNCTIONS
+         * Handle clicks on different types of search results
+         */
+
+        // Open user profile (enhanced version)
+        async function openUserProfile(userId, username) {
+            try {
+                closeSearch();
+                
+                // Show loading state
+                const mainContent = document.getElementById('mainContent');
+                mainContent.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Loading @${username}'s Profile</h2>
+                        <p>Loading profile and posts...</p>
+                    </div>
+                `;
+
+                // Load user's profile using the MyProfile component
+                if (window.MyProfile) {
+                    await window.MyProfile.showUserProfile(userId);
+                } else {
+                    // Fallback to basic profile view
+                    await openUserFeed(userId, username);
+                }
+                
+            } catch (error) {
+                console.error('Failed to open user profile:', error);
+                showToast('Failed to load user profile');
+            }
+        }
+
+        // Show specific post in feed
+        async function showPostInFeed(postId) {
+            try {
+                closeSearch();
+                
+                // Load single post and display in My Feed
+                const response = await apiCall(`/posts/${postId}`);
+                if (response.ok && response.data) {
+                    // Show the post in main content
+                    showMyFeedInMain();
+                    
+                    // Highlight the specific post
+                    setTimeout(() => {
+                        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                        if (postElement) {
+                            postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            postElement.style.border = '2px solid #4b5c09';
+                            postElement.style.borderRadius = '8px';
+                            setTimeout(() => {
+                                postElement.style.border = '';
+                                postElement.style.borderRadius = '';
+                            }, 3000);
+                        }
+                    }, 1000);
+                    
+                    showToast('Post found in feed');
+                } else {
+                    showToast('Post not found or not accessible');
+                }
+                
+            } catch (error) {
+                console.error('Failed to show post:', error);
+                showToast('Failed to load post');
+            }
+        }
+
+        // Show official details
+        async function showOfficialDetails(officialId) {
+            try {
+                closeSearch();
+                
+                // Load official information in main content
+                const mainContent = document.getElementById('mainContent');
+                mainContent.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Loading Official Information</h2>
+                        <p>Loading details...</p>
+                    </div>
+                `;
+
+                const response = await apiCall(`/legislative/officials/${officialId}`);
+                if (response.ok && response.data) {
+                    const official = response.data;
+                    displayOfficialProfile(official);
+                } else {
+                    mainContent.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #d32f2f;">
+                            <h2>Official Not Found</h2>
+                            <p>Could not load official information</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Failed to load official:', error);
+                showToast('Failed to load official information');
+            }
+        }
+
+        // Display official profile in main content
+        function displayOfficialProfile(official) {
+            const mainContent = document.getElementById('mainContent');
+            
+            mainContent.innerHTML = `
+                <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+                    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-right: 1.5rem;">
+                                🏛️
+                            </div>
+                            <div>
+                                <h1 style="margin: 0; font-size: 2rem; color: #333;">${official.name}</h1>
+                                <h2 style="margin: 0.5rem 0; font-size: 1.3rem; color: #666; font-weight: normal;">${official.office || official.title}</h2>
+                                <div style="color: #666; font-size: 1rem;">
+                                    ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
+                                    ${official.chamber ? ` • ${official.chamber}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                            <div>
+                                <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Contact Information</h3>
+                                ${official.phone ? `<p><strong>Phone:</strong> ${official.phone}</p>` : ''}
+                                ${official.email ? `<p><strong>Email:</strong> ${official.email}</p>` : ''}
+                                ${official.website ? `<p><strong>Website:</strong> <a href="${official.website}" target="_blank">${official.website}</a></p>` : ''}
+                                ${official.address ? `<p><strong>Address:</strong> ${official.address}</p>` : ''}
+                            </div>
+                            <div>
+                                <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Political Information</h3>
+                                ${official.nextElection ? `<p><strong>Next Election:</strong> ${official.nextElection}</p>` : ''}
+                                ${official.termStart ? `<p><strong>Term Start:</strong> ${official.termStart}</p>` : ''}
+                                ${official.termEnd ? `<p><strong>Term End:</strong> ${official.termEnd}</p>` : ''}
+                                ${official.committees ? `<p><strong>Committees:</strong> ${official.committees.join(', ')}</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            ${official.contactInfo ? `
+                                <button onclick="contactOfficial('${official.id}')" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                                    Contact ${official.name}
+                                </button>
+                            ` : ''}
+                            <button onclick="viewVotingRecords('${official.bioguideId || official.id}')" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                                View Voting Records
+                            </button>
+                            <button onclick="viewOfficialNews('${official.name}')" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                                Recent News
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Enter topic mode (integrate with existing topic navigation)
+        async function enterTopicMode(topicId) {
+            try {
+                closeSearch();
+                
+                // Use existing topic navigation system if available
+                if (window.TopicNavigation && typeof window.TopicNavigation.enterTopic === 'function') {
+                    await window.TopicNavigation.enterTopic(topicId);
+                    showToast('Viewing topic discussions');
+                } else {
+                    // Fallback to basic topic view
+                    showMyFeedInMain();
+                    showToast('Topic mode activated - showing related posts');
+                }
+                
+            } catch (error) {
+                console.error('Failed to enter topic mode:', error);
+                showToast('Failed to load topic');
+            }
+        }
+
+        // Placeholder functions for official actions
+        function contactOfficial(officialId) {
+            showToast('Contact feature coming soon!');
+        }
+
+        function viewOfficialProfile(officialId) {
+            showOfficialDetails(officialId);
+        }
+
+        function viewVotingRecords(bioguideId) {
+            if (window.LegislativeIntegration) {
+                window.LegislativeIntegration.showVotingRecords(bioguideId);
+            } else {
+                showToast('Voting records feature coming soon!');
+            }
+        }
+
+        function viewOfficialNews(officialName) {
+            if (window.LegislativeIntegration) {
+                window.LegislativeIntegration.showOfficialNews(officialName);
+            } else {
+                showToast('Official news feature coming soon!');
+            }
+        }
+
+        // Legacy function for compatibility
         async function openUserFeed(userId, username) {
             try {
                 closeSearch();
@@ -5701,6 +6761,13 @@
         // Call this when user data is loaded
         window.addEventListener('userDataLoaded', initializeUserBackground);
 
+        // ============================================================================
+        // NOTIFICATION SYSTEM - Handles friend requests, likes, comments, etc.
+        // ============================================================================
+        
+        let notificationsCache = [];
+        let notificationDropdownOpen = false;
+
         // Simple toast notification function
         function showToast(message) {
             const toast = document.createElement('div');
@@ -5711,6 +6778,1767 @@
             setTimeout(() => {
                 toast.remove();
             }, 3000);
+        }
+
+        // Toggle notifications dropdown
+        async function toggleNotifications() {
+            if (!authToken) {
+                alert('Please log in to view notifications');
+                return;
+            }
+
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            
+            if (!notificationDropdown) {
+                // Create notification dropdown if it doesn't exist
+                createNotificationDropdown();
+            }
+            
+            if (notificationDropdownOpen) {
+                closeNotifications();
+            } else {
+                await openNotifications();
+            }
+        }
+
+        // Create notification dropdown HTML
+        function createNotificationDropdown() {
+            const notificationSection = document.getElementById('notificationSection');
+            const dropdown = document.createElement('div');
+            dropdown.id = 'notificationDropdown';
+            dropdown.className = 'notification-dropdown';
+            dropdown.style.cssText = `
+                position: absolute;
+                top: 100%;
+                right: 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                width: 350px;
+                max-height: 400px;
+                overflow-y: auto;
+                z-index: 1000;
+                display: none;
+            `;
+            
+            notificationSection.style.position = 'relative';
+            notificationSection.appendChild(dropdown);
+        }
+
+        // Open notifications dropdown
+        async function openNotifications() {
+            notificationDropdownOpen = true;
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.style.display = 'block';
+            dropdown.innerHTML = '<div style="padding: 1rem; text-align: center;">Loading notifications...</div>';
+            
+            try {
+                await fetchNotifications();
+                displayNotifications();
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+                dropdown.innerHTML = '<div style="padding: 1rem; text-align: center; color: #d32f2f;">Failed to load notifications</div>';
+            }
+        }
+
+        // Close notifications dropdown
+        function closeNotifications() {
+            notificationDropdownOpen = false;
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        // Fetch notifications from API
+        async function fetchNotifications() {
+            const response = await apiCall('/notifications', {
+                method: 'GET'
+            });
+            
+            if (response.ok) {
+                notificationsCache = response.data.notifications || [];
+                updateNotificationBadge();
+                return notificationsCache;
+            } else {
+                throw new Error('Failed to fetch notifications');
+            }
+        }
+
+        // Display notifications in dropdown
+        function displayNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            
+            if (notificationsCache.length === 0) {
+                dropdown.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #666;">
+                        <span style="font-size: 2rem;">🔔</span>
+                        <p>No notifications yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f8f9fa;">
+                    <h6 style="margin: 0; font-weight: bold;">Notifications</h6>
+                </div>
+                <div class="notifications-list">
+            `;
+
+            notificationsCache.forEach(notification => {
+                const timeAgo = getTimeAgo(new Date(notification.createdAt));
+                const isUnread = !notification.read;
+                
+                html += `
+                    <div class="notification-item ${isUnread ? 'unread' : ''}" data-notification-id="${notification.id}" 
+                         onclick="handleNotificationClick('${notification.id}', '${notification.type}')"
+                         style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; ${isUnread ? 'background: #f0f7ff;' : ''} hover:background: #f5f5f5;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="font-size: 1.5rem;">${getNotificationIcon(notification.type)}</div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: ${isUnread ? 'bold' : 'normal'}; margin-bottom: 0.25rem;">
+                                    ${getNotificationTitle(notification)}
+                                </div>
+                                <div style="font-size: 0.85rem; color: #666; overflow: hidden; text-overflow: ellipsis;">
+                                    ${notification.message || ''}
+                                </div>
+                                <div style="font-size: 0.8rem; color: #999; margin-top: 0.25rem;">
+                                    ${timeAgo}
+                                </div>
+                            </div>
+                            ${isUnread ? '<div style="width: 8px; height: 8px; background: #1976d2; border-radius: 50%; flex-shrink: 0;"></div>' : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            dropdown.innerHTML = html;
+        }
+
+        // Get notification icon based on type
+        function getNotificationIcon(type) {
+            const icons = {
+                'friend_request': '👥',
+                'friend_accepted': '✅',
+                'post_like': '❤️',
+                'post_comment': '💬',
+                'mention': '🏷️',
+                'follow': '👤',
+                'system': '⚙️'
+            };
+            return icons[type] || '🔔';
+        }
+
+        // Get notification title based on type and content
+        function getNotificationTitle(notification) {
+            const data = notification.data || {};
+            
+            switch (notification.type) {
+                case 'friend_request':
+                    return `Friend request from ${data.senderName || 'someone'}`;
+                case 'friend_accepted':
+                    return `${data.accepterName || 'Someone'} accepted your friend request`;
+                case 'post_like':
+                    return `${data.likerName || 'Someone'} liked your post`;
+                case 'post_comment':
+                    return `${data.commenterName || 'Someone'} commented on your post`;
+                case 'follow':
+                    return `${data.followerName || 'Someone'} started following you`;
+                case 'mention':
+                    return `${data.mentionerName || 'Someone'} mentioned you`;
+                default:
+                    return notification.title || 'New notification';
+            }
+        }
+
+        // Handle notification click
+        async function handleNotificationClick(notificationId, type) {
+            // Mark as read
+            try {
+                await apiCall(`/notifications/${notificationId}/read`, {
+                    method: 'PUT'
+                });
+                
+                // Update UI
+                const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (notificationItem) {
+                    notificationItem.classList.remove('unread');
+                    notificationItem.style.background = '';
+                    notificationItem.style.fontWeight = 'normal';
+                }
+                
+                // Update badge
+                updateNotificationBadge();
+                
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+
+            // Handle different notification types
+            switch (type) {
+                case 'friend_request':
+                    // Open friend requests view
+                    showFriendRequestsPanel();
+                    break;
+                case 'friend_accepted':
+                    // Could open their profile or friends list
+                    break;
+                case 'post_like':
+                case 'post_comment':
+                    // Could open the specific post
+                    break;
+                // Add more cases as needed
+            }
+            
+            closeNotifications();
+        }
+
+        // Update notification badge count
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+            
+            const unreadCount = notificationsCache.filter(n => !n.read).length;
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Initialize notifications when user logs in
+        function initializeNotifications() {
+            if (authToken) {
+                fetchNotifications().catch(console.error);
+                
+                // Poll for new notifications every 30 seconds
+                setInterval(() => {
+                    if (authToken) {
+                        fetchNotifications().catch(console.error);
+                    }
+                }, 30000);
+            }
+        }
+
+        // Close notifications when clicking outside
+        document.addEventListener('click', (event) => {
+            if (notificationDropdownOpen) {
+                const notificationSection = document.getElementById('notificationSection');
+                if (notificationSection && !notificationSection.contains(event.target)) {
+                    closeNotifications();
+                }
+            }
+        });
+
+        // ============================================================================
+        // FRIEND REQUESTS PANEL - Shows pending friend requests for easy management
+        // ============================================================================
+
+        // Show friend requests panel
+        async function showFriendRequestsPanel() {
+            try {
+                const response = await apiCall('/relationships/friend-requests/pending', {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    const requests = response.data.requests || [];
+                    displayFriendRequestsPanel(requests);
+                } else {
+                    showToast('Failed to load friend requests');
+                }
+            } catch (error) {
+                console.error('Error loading friend requests:', error);
+                showToast('Error loading friend requests');
+            }
+        }
+
+        // Display friend requests panel
+        function displayFriendRequestsPanel(requests) {
+            const mainContent = document.getElementById('mainContent');
+            
+            let html = `
+                <div class="friend-requests-panel" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+                        <h2 style="margin: 0; flex: 1;">Friend Requests</h2>
+                        <button onclick="showDefaultView()" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                            Back to Feed
+                        </button>
+                    </div>
+            `;
+
+            if (requests.length === 0) {
+                html += `
+                    <div style="text-align: center; padding: 3rem; color: #666;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                        <h3>No Friend Requests</h3>
+                        <p>You don't have any pending friend requests at the moment.</p>
+                    </div>
+                `;
+            } else {
+                html += '<div class="friend-requests-list">';
+                
+                requests.forEach(request => {
+                    const user = request.user1Id === currentUser?.id ? request.user2 : request.user1;
+                    html += `
+                        <div class="friend-request-item" style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+                            <div class="user-avatar" style="width: 60px; height: 60px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold;">
+                                ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0;">
+                                    ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
+                                </h4>
+                                <p style="margin: 0; color: #666; font-size: 0.9rem;">@${user.username}</p>
+                                <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.85rem;">
+                                    Sent ${getTimeAgo(new Date(request.createdAt))}
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="handleFriendRequestAction('${user.id}', 'accept')" 
+                                        style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                                    Accept
+                                </button>
+                                <button onclick="handleFriendRequestAction('${user.id}', 'reject')" 
+                                        style="background: #d32f2f; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                                    Decline
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+
+            html += '</div>';
+            mainContent.innerHTML = html;
+        }
+
+        // Handle friend request actions (accept/reject)
+        async function handleFriendRequestAction(userId, action) {
+            try {
+                let result;
+                if (action === 'accept') {
+                    result = await window.FriendUtils.acceptFriendRequest(userId);
+                } else if (action === 'reject') {
+                    result = await window.FriendUtils.rejectFriendRequest(userId);
+                }
+
+                if (result && result.success) {
+                    // Refresh the friend requests panel
+                    showFriendRequestsPanel();
+                    
+                    // Also refresh notifications to clear the friend request notification
+                    if (window.initializeNotifications) {
+                        initializeNotifications();
+                    }
+                }
+            } catch (error) {
+                console.error(`Error ${action}ing friend request:`, error);
+                showToast(`Failed to ${action} friend request`);
+            }
+        }
+
+        /**
+         * FRIEND STATUS INDICATORS SYSTEM
+         * Displays friend status throughout the site: posts, profiles, user lists
+         */
+
+        // Create friend status indicator badge
+        function createFriendStatusBadge(userId, status, size = 'small') {
+            if (!userId || userId === window.currentUser?.id) return '';
+            
+            const badgeStyles = {
+                small: 'font-size: 0.7rem; padding: 0.15rem 0.4rem; margin-left: 0.25rem;',
+                medium: 'font-size: 0.8rem; padding: 0.25rem 0.5rem; margin-left: 0.5rem;',
+                large: 'font-size: 0.9rem; padding: 0.35rem 0.6rem; margin-left: 0.5rem;'
+            };
+
+            const statusConfig = {
+                friends: {
+                    icon: '👥',
+                    text: 'Friend',
+                    color: '#4b5c09',
+                    bgColor: '#f0f8e0'
+                },
+                request_sent: {
+                    icon: '⏳',
+                    text: 'Request Sent',
+                    color: '#666',
+                    bgColor: '#f5f5f5'
+                },
+                request_received: {
+                    icon: '📩',
+                    text: 'Pending Request',
+                    color: '#ff9800',
+                    bgColor: '#fff3e0'
+                },
+                following: {
+                    icon: '👁️',
+                    text: 'Following',
+                    color: '#1976d2',
+                    bgColor: '#e3f2fd'
+                }
+            };
+
+            const config = statusConfig[status];
+            if (!config) return '';
+
+            return `
+                <span class="friend-status-badge friend-status-${status}" 
+                      style="display: inline-block; background: ${config.bgColor}; color: ${config.color}; 
+                             border-radius: 12px; ${badgeStyles[size]} font-weight: 500; border: 1px solid ${config.color}20;">
+                    ${config.icon} ${config.text}
+                </span>
+            `;
+        }
+
+        // Add friend status indicators to post headers
+        async function addFriendStatusToPost(postElement, authorId) {
+            if (!authorId || authorId === window.currentUser?.id) return;
+
+            try {
+                // Get combined relationship status
+                const status = await window.RelationshipUtils.getCombinedStatus(authorId);
+                
+                // Find the post header where we'll add the status
+                const postHeader = postElement.querySelector('.post-header small');
+                if (!postHeader) return;
+
+                // Determine which status to show (priority: friend > follow > none)
+                let displayStatus = null;
+                if (status.friend.isFriend) {
+                    displayStatus = 'friends';
+                } else if (status.friend.friendshipStatus === 'request_sent') {
+                    displayStatus = 'request_sent';
+                } else if (status.friend.friendshipStatus === 'request_received') {
+                    displayStatus = 'request_received';
+                } else if (status.follow.isFollowing) {
+                    displayStatus = 'following';
+                }
+
+                if (displayStatus) {
+                    const badge = createFriendStatusBadge(authorId, displayStatus, 'small');
+                    postHeader.insertAdjacentHTML('beforeend', badge);
+                }
+
+            } catch (error) {
+                console.warn('Failed to add friend status to post:', error);
+            }
+        }
+
+        // Enhanced post display with friend status indicators
+        async function displayPostsWithFriendStatus(posts, containerId = 'postsFeed', appendMode = false) {
+            // First display posts normally
+            displayPostsFallback(posts, containerId, appendMode);
+            
+            // Then add friend status indicators
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const postElements = container.querySelectorAll('.post-item');
+            
+            // Process posts in batches to avoid overwhelming the API
+            const batchSize = 10;
+            for (let i = 0; i < posts.length; i += batchSize) {
+                const batch = posts.slice(i, i + batchSize);
+                const promises = batch.map((post, index) => {
+                    const postElement = postElements[i + index];
+                    if (postElement && post.author) {
+                        return addFriendStatusToPost(postElement, post.author.id);
+                    }
+                });
+                
+                await Promise.all(promises);
+                
+                // Small delay between batches to prevent API rate limiting
+                if (i + batchSize < posts.length) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+        }
+
+        // Create comprehensive user relationship display component
+        async function createUserRelationshipDisplay(userId, size = 'medium', inline = false) {
+            if (!userId || userId === window.currentUser?.id) return '';
+
+            try {
+                const status = await window.RelationshipUtils.getCombinedStatus(userId);
+                
+                const containerStyle = inline 
+                    ? 'display: inline-flex; align-items: center; gap: 0.5rem;'
+                    : 'display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;';
+
+                let html = `<div class="user-relationship-display" style="${containerStyle}">`;
+
+                // Friend status and button
+                if (status.friend.isFriend) {
+                    html += createFriendStatusBadge(userId, 'friends', size);
+                    html += `<button onclick="window.FriendUtils.removeFriend('${userId}')" 
+                                    class="btn btn-outline-danger btn-sm" style="margin-left: 0.5rem;">
+                                Remove Friend
+                             </button>`;
+                } else if (status.friend.friendshipStatus === 'request_sent') {
+                    html += createFriendStatusBadge(userId, 'request_sent', size);
+                } else if (status.friend.friendshipStatus === 'request_received') {
+                    html += createFriendStatusBadge(userId, 'request_received', size);
+                    html += `<button onclick="window.FriendUtils.acceptFriendRequest('${userId}')" 
+                                    class="btn btn-success btn-sm" style="margin-left: 0.5rem;">
+                                Accept
+                             </button>
+                             <button onclick="window.FriendUtils.rejectFriendRequest('${userId}')" 
+                                    class="btn btn-outline-secondary btn-sm">
+                                Decline
+                             </button>`;
+                } else {
+                    // No friend relationship - show add friend button
+                    html += `<button onclick="window.FriendUtils.sendFriendRequest('${userId}')" 
+                                    class="btn btn-outline-primary btn-sm">
+                                Add Friend
+                             </button>`;
+                }
+
+                // Follow status (if not friends)
+                if (!status.friend.isFriend) {
+                    if (status.follow.isFollowing) {
+                        html += createFriendStatusBadge(userId, 'following', size);
+                        html += `<button onclick="window.FollowUtils.unfollowUser('${userId}')" 
+                                        class="btn btn-outline-secondary btn-sm" style="margin-left: 0.25rem;">
+                                    Unfollow
+                                 </button>`;
+                    } else {
+                        html += `<button onclick="window.FollowUtils.followUser('${userId}')" 
+                                        class="btn btn-primary btn-sm" style="margin-left: 0.25rem;">
+                                    Follow
+                                 </button>`;
+                    }
+                }
+
+                // Message button for friends
+                if (status.friend.isFriend) {
+                    html += `<button onclick="openMessageWith('${userId}')" 
+                                    class="btn btn-outline-primary btn-sm" style="margin-left: 0.25rem;">
+                                💬 Message
+                             </button>`;
+                }
+
+                html += '</div>';
+                return html;
+
+            } catch (error) {
+                console.warn('Failed to create user relationship display:', error);
+                return '';
+            }
+        }
+
+        // Add relationship display to user profiles
+        async function addRelationshipDisplayToProfile(profileContainer, userId) {
+            if (!profileContainer || !userId || userId === window.currentUser?.id) return;
+
+            const relationshipHtml = await createUserRelationshipDisplay(userId, 'large', false);
+            if (relationshipHtml) {
+                profileContainer.insertAdjacentHTML('beforeend', relationshipHtml);
+            }
+        }
+
+        // Add friend status to existing posts (for PostComponent rendered posts)
+        async function addFriendStatusToExistingPosts(containerId, posts) {
+            const container = document.getElementById(containerId);
+            if (!container || !posts) return;
+
+            const postElements = container.querySelectorAll('.post-item, [data-post-id]');
+            
+            // Process posts in batches to avoid overwhelming the API
+            const batchSize = 10;
+            for (let i = 0; i < Math.min(posts.length, postElements.length); i += batchSize) {
+                const batch = posts.slice(i, i + batchSize);
+                const promises = batch.map((post, index) => {
+                    const postElement = postElements[i + index];
+                    if (postElement && post.author && post.author.id !== window.currentUser?.id) {
+                        return addFriendStatusToPost(postElement, post.author.id);
+                    }
+                });
+                
+                await Promise.all(promises.filter(Boolean));
+                
+                // Small delay between batches to prevent API rate limiting
+                if (i + batchSize < posts.length) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+        }
+
+        // Enhanced messaging system functions for friends
+        async function showFriendsList() {
+            const body = document.getElementById('messagesBody');
+            
+            body.innerHTML = `
+                <div style="display: flex; align-items: center; padding: 1vh; border-bottom: 1px solid #eee; background: #f9f9f9; min-height: 2vh;">
+                    <button onclick="backToConversations()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 0.5rem;">←</button>
+                    <span style="font-weight: bold;">👥 Message Friends</span>
+                </div>
+                
+                <div id="friendsListContainer" style="padding: 1rem;">
+                    <div style="text-align: center; color: #666;">
+                        <div style="margin: 2rem 0;">Loading friends...</div>
+                    </div>
+                </div>
+            `;
+            
+            try {
+                // Get friends list using the relationship API
+                const response = await window.apiCall(`/relationships/${window.currentUser.id}/friends`);
+                
+                if (response.ok && response.data) {
+                    displayFriendsForMessaging(response.data.friends || []);
+                } else {
+                    document.getElementById('friendsListContainer').innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 2rem;">
+                            <p>Failed to load friends list</p>
+                            <button onclick="showFriendsList()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Retry
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load friends for messaging:', error);
+                document.getElementById('friendsListContainer').innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <p>Error loading friends</p>
+                        <button onclick="showFriendsList()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayFriendsForMessaging(friends) {
+            const container = document.getElementById('friendsListContainer');
+            
+            if (friends.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                        <h3>No Friends Yet</h3>
+                        <p>Add friends to start messaging them!</p>
+                        <button onclick="document.getElementById('searchInput').focus(); backToConversations();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                            Find Friends
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="friends-list">';
+            
+            friends.forEach(friend => {
+                const user = friend.user1Id === window.currentUser?.id ? friend.user2 : friend.user1;
+                html += `
+                    <div class="friend-item" onclick="openMessageWith('${user.id}')" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='white'">
+                        <div class="user-avatar" style="width: 50px; height: 50px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin-right: 1rem;">
+                            ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">
+                                ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
+                            </div>
+                            <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
+                        </div>
+                        <div style="color: #4b5c09; font-size: 1.2rem;">💬</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function backToConversations() {
+            loadConversations();
+        }
+
+        /**
+         * FRIEND ACTIVITY & ONLINE STATUS SYSTEM
+         * Shows when friends were last active and online indicators
+         */
+
+        // Create online status indicator
+        function createOnlineStatusIndicator(lastActiveAt, size = 'small') {
+            if (!lastActiveAt) return '';
+            
+            const now = new Date();
+            const lastActive = new Date(lastActiveAt);
+            const minutesAgo = Math.floor((now - lastActive) / (1000 * 60));
+            
+            let status, color, text;
+            
+            if (minutesAgo < 5) {
+                status = 'online';
+                color = '#4caf50';
+                text = 'Online';
+            } else if (minutesAgo < 30) {
+                status = 'recent';
+                color = '#ff9800';
+                text = `${minutesAgo}m ago`;
+            } else if (minutesAgo < 1440) { // Less than 24 hours
+                const hoursAgo = Math.floor(minutesAgo / 60);
+                status = 'away';
+                color = '#666';
+                text = `${hoursAgo}h ago`;
+            } else {
+                const daysAgo = Math.floor(minutesAgo / 1440);
+                status = 'offline';
+                color = '#ccc';
+                text = `${daysAgo}d ago`;
+            }
+            
+            const dotSize = size === 'small' ? '8px' : size === 'medium' ? '10px' : '12px';
+            const fontSize = size === 'small' ? '0.7rem' : size === 'medium' ? '0.8rem' : '0.9rem';
+            
+            return `
+                <span class="online-status online-status-${status}" style="display: inline-flex; align-items: center; font-size: ${fontSize}; color: ${color};">
+                    <span style="width: ${dotSize}; height: ${dotSize}; background: ${color}; border-radius: 50%; margin-right: 0.25rem; display: inline-block;"></span>
+                    ${text}
+                </span>
+            `;
+        }
+
+        // Enhanced friends list with activity status
+        function displayFriendsForMessaging(friends) {
+            const container = document.getElementById('friendsListContainer');
+            
+            if (friends.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                        <h3>No Friends Yet</h3>
+                        <p>Add friends to start messaging them!</p>
+                        <button onclick="document.getElementById('searchInput').focus(); backToConversations();" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                            Find Friends
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort friends by activity (most recent first)
+            const sortedFriends = friends.sort((a, b) => {
+                const userA = a.user1Id === window.currentUser?.id ? a.user2 : a.user1;
+                const userB = b.user1Id === window.currentUser?.id ? b.user2 : b.user1;
+                
+                const lastActiveA = userA.lastActiveAt ? new Date(userA.lastActiveAt) : new Date(0);
+                const lastActiveB = userB.lastActiveAt ? new Date(userB.lastActiveAt) : new Date(0);
+                
+                return lastActiveB - lastActiveA;
+            });
+            
+            let html = '<div class="friends-list">';
+            
+            sortedFriends.forEach(friend => {
+                const user = friend.user1Id === window.currentUser?.id ? friend.user2 : friend.user1;
+                const onlineStatus = createOnlineStatusIndicator(user.lastActiveAt, 'small');
+                
+                html += `
+                    <div class="friend-item" onclick="openMessageWith('${user.id}')" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='white'">
+                        <div class="user-avatar" style="width: 50px; height: 50px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin-right: 1rem; position: relative;">
+                            ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                            ${user.lastActiveAt && (new Date() - new Date(user.lastActiveAt)) < 300000 ? 
+                                '<div style="position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; background: #4caf50; border-radius: 50%; border: 2px solid white;"></div>' : 
+                                ''}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">
+                                ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
+                            </div>
+                            <div style="color: #666; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>@${user.username}</span>
+                                ${onlineStatus}
+                            </div>
+                        </div>
+                        <div style="color: #4b5c09; font-size: 1.2rem;">💬</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Enhanced friend status badges with activity indicators
+        function createFriendStatusBadgeWithActivity(userId, status, lastActiveAt, size = 'small') {
+            const baseBadge = createFriendStatusBadge(userId, status, size);
+            if (!baseBadge || !lastActiveAt) return baseBadge;
+            
+            const onlineStatus = createOnlineStatusIndicator(lastActiveAt, 'small');
+            return baseBadge + ' ' + onlineStatus;
+        }
+
+        // Enhanced user relationship display with activity status
+        async function createUserRelationshipDisplayWithActivity(userId, size = 'medium', inline = false) {
+            if (!userId || userId === window.currentUser?.id) return '';
+
+            try {
+                const [status, userProfile] = await Promise.all([
+                    window.RelationshipUtils.getCombinedStatus(userId),
+                    window.apiCall(`/users/profile/${userId}`)
+                ]);
+                
+                const containerStyle = inline 
+                    ? 'display: inline-flex; align-items: center; gap: 0.5rem;'
+                    : 'display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;';
+
+                let html = `<div class="user-relationship-display" style="${containerStyle}">`;
+
+                // Friend status and button
+                if (status.friend.isFriend) {
+                    html += createFriendStatusBadgeWithActivity(userId, 'friends', userProfile?.lastActiveAt, size);
+                    html += `<button onclick="window.FriendUtils.removeFriend('${userId}')" 
+                                    class="btn btn-outline-danger btn-sm" style="margin-left: 0.5rem;">
+                                Remove Friend
+                             </button>`;
+                } else if (status.friend.friendshipStatus === 'request_sent') {
+                    html += createFriendStatusBadge(userId, 'request_sent', size);
+                } else if (status.friend.friendshipStatus === 'request_received') {
+                    html += createFriendStatusBadge(userId, 'request_received', size);
+                    html += `<button onclick="window.FriendUtils.acceptFriendRequest('${userId}')" 
+                                    class="btn btn-success btn-sm" style="margin-left: 0.5rem;">
+                                Accept
+                             </button>
+                             <button onclick="window.FriendUtils.rejectFriendRequest('${userId}')" 
+                                    class="btn btn-outline-secondary btn-sm">
+                                Decline
+                             </button>`;
+                } else {
+                    // No friend relationship - show add friend button
+                    html += `<button onclick="window.FriendUtils.sendFriendRequest('${userId}')" 
+                                    class="btn btn-outline-primary btn-sm">
+                                Add Friend
+                             </button>`;
+                }
+
+                // Follow status (if not friends)
+                if (!status.friend.isFriend) {
+                    if (status.follow.isFollowing) {
+                        html += createFriendStatusBadge(userId, 'following', size);
+                        html += `<button onclick="window.FollowUtils.unfollowUser('${userId}')" 
+                                        class="btn btn-outline-secondary btn-sm" style="margin-left: 0.25rem;">
+                                    Unfollow
+                                 </button>`;
+                    } else {
+                        html += `<button onclick="window.FollowUtils.followUser('${userId}')" 
+                                        class="btn btn-primary btn-sm" style="margin-left: 0.25rem;">
+                                    Follow
+                                 </button>`;
+                    }
+                }
+
+                // Message button for friends with activity status
+                if (status.friend.isFriend) {
+                    const onlineIndicator = userProfile?.lastActiveAt && (new Date() - new Date(userProfile.lastActiveAt)) < 300000 
+                        ? ' 🟢' : '';
+                    html += `<button onclick="openMessageWith('${userId}')" 
+                                    class="btn btn-outline-primary btn-sm" style="margin-left: 0.25rem;">
+                                💬 Message${onlineIndicator}
+                             </button>`;
+                }
+
+                html += '</div>';
+                return html;
+
+            } catch (error) {
+                console.warn('Failed to create user relationship display with activity:', error);
+                return createUserRelationshipDisplay(userId, size, inline);
+            }
+        }
+
+        // Update user activity (call this when user is active)
+        async function updateUserActivity() {
+            if (!window.authToken || !window.currentUser) return;
+            
+            try {
+                await window.apiCall('/users/activity', {
+                    method: 'POST',
+                    body: JSON.stringify({ timestamp: new Date().toISOString() })
+                });
+            } catch (error) {
+                // Silently fail - activity tracking is not critical
+                console.debug('Failed to update user activity:', error);
+            }
+        }
+
+        // Auto-update activity every 2 minutes when user is active
+        let activityTimer = null;
+        
+        function startActivityTracking() {
+            if (activityTimer) clearInterval(activityTimer);
+            
+            // Update immediately
+            updateUserActivity();
+            
+            // Then update every 2 minutes
+            activityTimer = setInterval(updateUserActivity, 120000);
+            
+            // Track user interactions
+            ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+                document.addEventListener(event, () => {
+                    // Throttle to once per minute max
+                    if (!window.lastActivityUpdate || (Date.now() - window.lastActivityUpdate) > 60000) {
+                        window.lastActivityUpdate = Date.now();
+                        updateUserActivity();
+                    }
+                }, { passive: true });
+            });
+        }
+
+        // Integrated messaging system for friends
+        async function openMessageWith(userId) {
+            try {
+                console.log('Opening message with friend:', userId);
+                
+                // Get user info first to have their username
+                const userResponse = await window.apiCall(`/users/profile/${userId}`);
+                if (!userResponse || !userResponse.username) {
+                    showToast('Failed to load user information');
+                    return;
+                }
+                
+                const username = userResponse.username;
+                
+                // Check if they're actually friends first
+                const friendStatus = await window.FriendUtils.getFriendStatus(userId);
+                if (!friendStatus.isFriend) {
+                    showToast('You can only message friends. Send a friend request first!');
+                    return;
+                }
+                
+                // Open the messages container if not already open
+                const messagesContainer = document.getElementById('messagesContainer');
+                if (messagesContainer.style.display === 'none' || !messagesContainer.style.display) {
+                    messagesContainer.style.display = 'block';
+                }
+                
+                // Start conversation with the friend
+                await startConversationWithUser(userId, username);
+                
+                console.log(`✅ Opened conversation with friend: ${username}`);
+                
+            } catch (error) {
+                console.error('Failed to open message with friend:', error);
+                showToast('Failed to open conversation');
+            }
+        }
+
+        // Start activity tracking when user logs in
+        window.addEventListener('load', () => {
+            if (window.currentUser || window.authToken) {
+                setTimeout(startActivityTracking, 2000);
+            }
+        });
+
+        /**
+         * CIVIC ORGANIZING SYSTEM
+         * Petition creation, event organization, and civic engagement tools
+         */
+
+        // Core organizing functions
+        function openCivicOrganizing() {
+            if (!authToken) {
+                showToast('Please log in to access organizing tools');
+                return;
+            }
+            
+            document.getElementById('civicOrganizingContainer').style.display = 'flex';
+            closeAllPanels(); // Close other panels
+            showDefaultOrganizingView();
+        }
+
+        function closeCivicOrganizing() {
+            document.getElementById('civicOrganizingContainer').style.display = 'none';
+            showDefaultView();
+        }
+
+        function showDefaultOrganizingView() {
+            const content = document.getElementById('organizingContent');
+            content.innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏛️</div>
+                    <h3>Welcome to Civic Organizing</h3>
+                    <p>Create petitions, organize events, and mobilize your community for positive change.</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                        <button onclick="showPetitionCreator()" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                            Start a Petition
+                        </button>
+                        <button onclick="showEventCreator()" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                            Organize an Event
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Petition Creation System
+        function showPetitionCreator() {
+            const content = document.getElementById('organizingContent');
+            content.innerHTML = `
+                <div class="civic-form">
+                    <h2 style="text-align: center; color: #4b5c09; margin-bottom: 2rem;">📝 Create a Petition</h2>
+                    
+                    <form id="petitionForm" onsubmit="submitPetition(event)">
+                        <div class="form-group">
+                            <label for="petitionType">Petition Type</label>
+                            <select id="petitionType" required>
+                                <option value="">Select petition type</option>
+                                <option value="petition">Petition (Request Action)</option>
+                                <option value="referendum">Referendum (Propose Policy)</option>
+                            </select>
+                            <div class="help-text">Petitions request action, referendums propose specific policy changes</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="petitionTitle">Title</label>
+                            <input type="text" id="petitionTitle" required maxlength="100" 
+                                   placeholder="Clear, compelling title for your petition">
+                            <div class="help-text">Keep it clear and action-oriented (max 100 characters)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="petitionDescription">Description</label>
+                            <textarea id="petitionDescription" required maxlength="2000" 
+                                      placeholder="Explain the issue, why it matters, and what action you're requesting..."></textarea>
+                            <div class="help-text">Provide context and compelling reasons (max 2000 characters)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="petitionTarget">Target Officials/Organization</label>
+                            <input type="text" id="petitionTarget" required 
+                                   placeholder="e.g., Mayor Johnson, City Council, Department of Education">
+                            <div class="help-text">Who has the power to act on this petition?</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="petitionCategory">Issue Category</label>
+                            <select id="petitionCategory" required>
+                                <option value="">Select category</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="education">Education</option>
+                                <option value="environment">Environment</option>
+                                <option value="transportation">Transportation</option>
+                                <option value="housing">Housing</option>
+                                <option value="public-safety">Public Safety</option>
+                                <option value="economic-development">Economic Development</option>
+                                <option value="civil-rights">Civil Rights</option>
+                                <option value="government-reform">Government Reform</option>
+                                <option value="local-issues">Local Issues</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="petitionScope">Geographic Scope</label>
+                            <select id="petitionScope" required>
+                                <option value="">Select scope</option>
+                                <option value="neighborhood">Neighborhood</option>
+                                <option value="city">City</option>
+                                <option value="county">County</option>
+                                <option value="state">State</option>
+                                <option value="federal">Federal</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="signatureGoal">Signature Goal</label>
+                            <select id="signatureGoal" required>
+                                <option value="">Select goal</option>
+                                <option value="100">100 signatures</option>
+                                <option value="500">500 signatures</option>
+                                <option value="1000">1,000 signatures</option>
+                                <option value="5000">5,000 signatures</option>
+                                <option value="10000">10,000 signatures</option>
+                                <option value="custom">Custom amount</option>
+                            </select>
+                            <input type="number" id="customGoal" style="display: none; margin-top: 0.5rem;" 
+                                   placeholder="Enter custom goal" min="1" max="1000000">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" onclick="showDefaultOrganizingView()" 
+                                    style="padding: 0.75rem 1.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Create Petition
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            // Add custom goal toggle
+            document.getElementById('signatureGoal').addEventListener('change', function() {
+                const customInput = document.getElementById('customGoal');
+                if (this.value === 'custom') {
+                    customInput.style.display = 'block';
+                    customInput.required = true;
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.required = false;
+                }
+            });
+        }
+
+        // Event Creation System
+        function showEventCreator() {
+            const content = document.getElementById('organizingContent');
+            content.innerHTML = `
+                <div class="civic-form">
+                    <h2 style="text-align: center; color: #1976d2; margin-bottom: 2rem;">📅 Organize an Event</h2>
+                    
+                    <form id="eventForm" onsubmit="submitEvent(event)">
+                        <div class="form-group">
+                            <label for="eventType">Event Type</label>
+                            <select id="eventType" required>
+                                <option value="">Select event type</option>
+                                <optgroup label="Electoral Events">
+                                    <option value="voter-registration">Voter Registration Drive</option>
+                                    <option value="candidate-forum">Candidate Forum</option>
+                                    <option value="election-watch">Election Watch Party</option>
+                                    <option value="poll-worker-training">Poll Worker Training</option>
+                                </optgroup>
+                                <optgroup label="Civic Engagement">
+                                    <option value="town-hall">Town Hall</option>
+                                    <option value="city-council">City Council Meeting</option>
+                                    <option value="public-hearing">Public Hearing</option>
+                                    <option value="community-forum">Community Forum</option>
+                                </optgroup>
+                                <optgroup label="Organizing Activities">
+                                    <option value="petition-drive">Petition Signature Drive</option>
+                                    <option value="volunteer-recruitment">Volunteer Recruitment</option>
+                                    <option value="issue-education">Issue Education Session</option>
+                                    <option value="community-service">Community Service</option>
+                                </optgroup>
+                                <optgroup label="Educational Events">
+                                    <option value="civics-workshop">Civics Workshop</option>
+                                    <option value="candidate-meetgreet">Candidate Meet & Greet</option>
+                                    <option value="ballot-education">Ballot Measure Education</option>
+                                    <option value="other">Other</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventTitle">Event Title</label>
+                            <input type="text" id="eventTitle" required maxlength="100" 
+                                   placeholder="Clear, descriptive title for your event">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventDescription">Description</label>
+                            <textarea id="eventDescription" required maxlength="1500" 
+                                      placeholder="Describe the event, agenda, speakers, and what attendees can expect..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventDate">Date</label>
+                            <input type="date" id="eventDate" required min="${new Date().toISOString().split('T')[0]}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventTime">Time</label>
+                            <input type="time" id="eventTime" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventDuration">Duration (hours)</label>
+                            <select id="eventDuration" required>
+                                <option value="">Select duration</option>
+                                <option value="0.5">30 minutes</option>
+                                <option value="1">1 hour</option>
+                                <option value="1.5">1.5 hours</option>
+                                <option value="2">2 hours</option>
+                                <option value="3">3 hours</option>
+                                <option value="4">4 hours</option>
+                                <option value="8">All day</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventLocation">Location</label>
+                            <input type="text" id="eventLocation" required 
+                                   placeholder="Address, venue name, or 'Online/Virtual'">
+                            <div class="help-text">Include full address for in-person events</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventCapacity">Expected Attendance</label>
+                            <select id="eventCapacity" required>
+                                <option value="">Select expected size</option>
+                                <option value="10">Small (5-15 people)</option>
+                                <option value="25">Medium (15-50 people)</option>
+                                <option value="75">Large (50-100 people)</option>
+                                <option value="200">Very Large (100+ people)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventCategory">Issue Focus</label>
+                            <select id="eventCategory" required>
+                                <option value="">Select primary focus</option>
+                                <option value="general-civic">General Civic Engagement</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="education">Education</option>
+                                <option value="environment">Environment</option>
+                                <option value="transportation">Transportation</option>
+                                <option value="housing">Housing</option>
+                                <option value="public-safety">Public Safety</option>
+                                <option value="economic-development">Economic Development</option>
+                                <option value="civil-rights">Civil Rights</option>
+                                <option value="election-process">Election Process</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" onclick="showDefaultOrganizingView()" 
+                                    style="padding: 0.75rem 1.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Create Event
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        // Petition and Event Submission Functions
+        async function submitPetition(event) {
+            event.preventDefault();
+            
+            // Map frontend values to backend enum values
+            const categoryMap = {
+                'healthcare': 'HEALTHCARE',
+                'education': 'EDUCATION',
+                'environment': 'ENVIRONMENT',
+                'transportation': 'TRANSPORTATION',
+                'housing': 'HOUSING',
+                'public-safety': 'PUBLIC_SAFETY',
+                'economic-development': 'ECONOMY',
+                'civil-rights': 'CIVIL_RIGHTS',
+                'government-reform': 'GOVERNMENT_REFORM',
+                'local-issues': 'OTHER',
+                'other': 'OTHER'
+            };
+
+            const scopeMap = {
+                'neighborhood': 'LOCAL',
+                'city': 'LOCAL',
+                'county': 'COUNTY',
+                'state': 'STATE',
+                'federal': 'NATIONAL'
+            };
+
+            const targetOfficials = document.getElementById('petitionTarget').value
+                .split(',')
+                .map(official => official.trim())
+                .filter(official => official.length > 0);
+
+            const signatureGoal = document.getElementById('signatureGoal').value === 'custom' 
+                ? parseInt(document.getElementById('customGoal').value)
+                : parseInt(document.getElementById('signatureGoal').value);
+
+            const formData = {
+                title: document.getElementById('petitionTitle').value,
+                description: document.getElementById('petitionDescription').value,
+                petitionType: document.getElementById('petitionType').value.toUpperCase(),
+                category: categoryMap[document.getElementById('petitionCategory').value],
+                geographicScope: scopeMap[document.getElementById('petitionScope').value],
+                targetOfficials: targetOfficials,
+                signatureGoal: signatureGoal
+            };
+
+            try {
+                const response = await apiCall('/civic/petitions', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok && response.data.success) {
+                    showToast('Petition created successfully!');
+                    showMyOrganizing(); // Show user's organizing activities
+                } else {
+                    const errorMsg = response.data?.error || 'Failed to create petition. Please try again.';
+                    showToast(errorMsg);
+                }
+            } catch (error) {
+                console.error('Error creating petition:', error);
+                showToast('Network error. Please check your connection.');
+            }
+        }
+
+        async function submitEvent(event) {
+            event.preventDefault();
+            
+            // Map frontend values to backend enum values
+            const eventTypeMap = {
+                'voter-registration': 'VOTER_REGISTRATION',
+                'candidate-forum': 'CANDIDATE_FORUM',
+                'election-watch': 'COMMUNITY_MEETING',
+                'poll-worker-training': 'WORKSHOP',
+                'town-hall': 'TOWN_HALL',
+                'city-council': 'COMMUNITY_MEETING',
+                'public-hearing': 'COMMUNITY_MEETING',
+                'community-forum': 'ISSUE_FORUM',
+                'petition-drive': 'PETITION_DRIVE',
+                'volunteer-recruitment': 'VOLUNTEER_DRIVE',
+                'issue-education': 'EDUCATIONAL_SEMINAR',
+                'community-service': 'OTHER',
+                'civics-workshop': 'WORKSHOP',
+                'candidate-meetgreet': 'COMMUNITY_MEETING',
+                'ballot-education': 'EDUCATIONAL_SEMINAR',
+                'other': 'OTHER'
+            };
+
+            const categoryMap = {
+                'general-civic': 'CIVIC_ENGAGEMENT',
+                'healthcare': 'ADVOCACY',
+                'education': 'ADVOCACY',
+                'environment': 'ADVOCACY',
+                'transportation': 'ADVOCACY',
+                'housing': 'ADVOCACY',
+                'public-safety': 'ADVOCACY',
+                'economic-development': 'ADVOCACY',
+                'civil-rights': 'ADVOCACY',
+                'election-process': 'ELECTORAL'
+            };
+
+            // Combine date and time
+            const dateStr = document.getElementById('eventDate').value;
+            const timeStr = document.getElementById('eventTime').value;
+            const scheduledDate = new Date(`${dateStr}T${timeStr}`);
+
+            // Calculate end date based on duration
+            const duration = parseFloat(document.getElementById('eventDuration').value);
+            const endDate = new Date(scheduledDate.getTime() + duration * 60 * 60 * 1000);
+
+            const capacity = parseInt(document.getElementById('eventCapacity').value);
+
+            const formData = {
+                title: document.getElementById('eventTitle').value,
+                description: document.getElementById('eventDescription').value,
+                eventType: eventTypeMap[document.getElementById('eventType').value],
+                category: categoryMap[document.getElementById('eventCategory').value] || 'CIVIC_ENGAGEMENT',
+                scheduledDate: scheduledDate.toISOString(),
+                endDate: endDate.toISOString(),
+                location: {
+                    address: document.getElementById('eventLocation').value,
+                    city: currentUser?.city || 'Unknown',
+                    state: currentUser?.state || 'Unknown'
+                },
+                capacity: capacity > 0 ? capacity : null,
+                organizerInfo: {
+                    name: currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : currentUser?.username || 'Anonymous',
+                    contact: currentUser?.email || 'Contact via platform',
+                    organization: 'United We Rise Community'
+                },
+                rsvpRequired: false
+            };
+
+            try {
+                const response = await apiCall('/civic/events', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok && response.data.success) {
+                    showToast('Event created successfully!');
+                    showMyOrganizing(); // Show user's organizing activities
+                } else {
+                    const errorMsg = response.data?.error || 'Failed to create event. Please try again.';
+                    showToast(errorMsg);
+                }
+            } catch (error) {
+                console.error('Error creating event:', error);
+                showToast('Network error. Please check your connection.');
+            }
+        }
+
+        // Civic Browser with Smart Filtering
+        function showCivicBrowser() {
+            const content = document.getElementById('organizingContent');
+            content.innerHTML = `
+                <div style="max-width: 1000px; margin: 0 auto;">
+                    <h2 style="text-align: center; color: #ff9800; margin-bottom: 2rem;">🔍 Find Civic Events & Petitions</h2>
+                    
+                    <!-- Smart Filters -->
+                    <div class="event-filters">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">📍 Location</label>
+                                <select id="locationFilter" onchange="updateCivicResults()">
+                                    <option value="nearby">Near Me (25 miles)</option>
+                                    <option value="city">My City</option>
+                                    <option value="county">My County</option>
+                                    <option value="state">My State</option>
+                                    <option value="national">National</option>
+                                    <option value="custom">Custom Location</option>
+                                </select>
+                            </div>
+                            
+                            <div id="customLocationDiv" style="display: none;">
+                                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">Enter Location</label>
+                                <input type="text" id="customLocation" placeholder="City, State or ZIP">
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">📅 When</label>
+                                <select id="timeFilter" onchange="updateCivicResults()">
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="this-week">This Week</option>
+                                    <option value="this-month">This Month</option>
+                                    <option value="active">Active Petitions</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">🎯 Type</label>
+                                <select id="typeFilter" onchange="updateCivicResults()">
+                                    <option value="all">All Types</option>
+                                    <option value="events">Events Only</option>
+                                    <option value="petitions">Petitions Only</option>
+                                    <option value="voter-registration">Voter Registration</option>
+                                    <option value="town-halls">Town Halls</option>
+                                    <option value="forums">Forums & Meetings</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 0.25rem;">📋 Issue</label>
+                                <select id="issueFilter" onchange="updateCivicResults()">
+                                    <option value="">All Issues</option>
+                                    <option value="healthcare">Healthcare</option>
+                                    <option value="education">Education</option>
+                                    <option value="environment">Environment</option>
+                                    <option value="transportation">Transportation</option>
+                                    <option value="housing">Housing</option>
+                                    <option value="public-safety">Public Safety</option>
+                                    <option value="economic-development">Economic Development</option>
+                                    <option value="civil-rights">Civil Rights</option>
+                                    <option value="election-process">Elections</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Area -->
+                    <div id="civicResults">
+                        <div style="text-align: center; color: #666; padding: 2rem;">
+                            <div style="margin-bottom: 1rem;">🔍 Loading civic activities in your area...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add custom location toggle
+            document.getElementById('locationFilter').addEventListener('change', function() {
+                const customDiv = document.getElementById('customLocationDiv');
+                if (this.value === 'custom') {
+                    customDiv.style.display = 'block';
+                } else {
+                    customDiv.style.display = 'none';
+                }
+                updateCivicResults();
+            });
+
+            // Load initial results
+            updateCivicResults();
+        }
+
+        // Update civic results based on filters
+        async function updateCivicResults() {
+            const resultsDiv = document.getElementById('civicResults');
+            if (!resultsDiv) return;
+
+            resultsDiv.innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    <div style="margin-bottom: 1rem;">🔍 Searching...</div>
+                </div>
+            `;
+
+            try {
+                // Get filter values
+                const filters = {
+                    location: document.getElementById('locationFilter')?.value || 'nearby',
+                    time: document.getElementById('timeFilter')?.value || 'upcoming',
+                    type: document.getElementById('typeFilter')?.value || 'all',
+                    issue: document.getElementById('issueFilter')?.value || ''
+                };
+
+                // Build API query
+                const params = new URLSearchParams(filters);
+                const response = await apiCall(`/civic/browse?${params.toString()}`);
+
+                if (response.ok && response.data) {
+                    displayCivicResults(response.data);
+                } else {
+                    // Show mock data for now since backend isn't implemented yet
+                    displayMockCivicResults(filters);
+                }
+            } catch (error) {
+                console.error('Error loading civic results:', error);
+                displayMockCivicResults();
+            }
+        }
+
+        // Display mock civic results (until backend is implemented)
+        function displayMockCivicResults(filters = {}) {
+            const resultsDiv = document.getElementById('civicResults');
+            if (!resultsDiv) return;
+
+            const mockEvents = [
+                {
+                    type: 'event',
+                    eventType: 'town-hall',
+                    title: 'Community Town Hall: Healthcare Access',
+                    description: 'Join us for a community discussion about improving healthcare access in our district.',
+                    date: '2025-08-20',
+                    time: '19:00',
+                    location: 'City Hall, 123 Main St',
+                    organizer: 'Citizens for Healthcare',
+                    attendees: 34,
+                    category: 'healthcare'
+                },
+                {
+                    type: 'petition',
+                    title: 'Improve Public Transportation Funding',
+                    description: 'We petition the city council to increase funding for public transportation to reduce traffic and pollution.',
+                    signatures: 847,
+                    goal: 1000,
+                    target: 'City Council',
+                    organizer: 'Green Transit Alliance',
+                    category: 'transportation',
+                    daysLeft: 12
+                },
+                {
+                    type: 'event',
+                    eventType: 'voter-registration',
+                    title: 'Voter Registration Drive',
+                    description: 'Help register new voters for the upcoming election. All volunteers welcome!',
+                    date: '2025-08-18',
+                    time: '10:00',
+                    location: 'Community Center, 456 Oak Ave',
+                    organizer: 'Democracy First',
+                    attendees: 12,
+                    category: 'election-process'
+                }
+            ];
+
+            let html = '';
+            
+            mockEvents.forEach(item => {
+                if (item.type === 'event') {
+                    html += `
+                        <div class="event-item">
+                            <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span style="background: #1976d2; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                            📅 ${item.eventType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </span>
+                                        <span style="color: #666; font-size: 0.9rem;">${item.category}</span>
+                                    </div>
+                                    <h3 style="margin: 0 0 0.5rem 0; color: #333;">${item.title}</h3>
+                                    <p style="margin: 0 0 1rem 0; color: #666; line-height: 1.4;">${item.description}</p>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 6px;">
+                                <div>
+                                    <strong>📅 Date:</strong><br>
+                                    ${new Date(item.date).toLocaleDateString()}
+                                </div>
+                                <div>
+                                    <strong>⏰ Time:</strong><br>
+                                    ${item.time}
+                                </div>
+                                <div>
+                                    <strong>📍 Location:</strong><br>
+                                    ${item.location}
+                                </div>
+                                <div>
+                                    <strong>👥 Attending:</strong><br>
+                                    ${item.attendees} people
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #666; font-size: 0.9rem;">
+                                    Organized by ${item.organizer}
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button onclick="rsvpToEvent('${item.title}')" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        RSVP
+                                    </button>
+                                    <button onclick="shareEvent('${item.title}')" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        Share
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (item.type === 'petition') {
+                    const progress = (item.signatures / item.goal) * 100;
+                    html += `
+                        <div class="petition-item">
+                            <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                            📝 Petition
+                                        </span>
+                                        <span style="color: #666; font-size: 0.9rem;">${item.category}</span>
+                                    </div>
+                                    <h3 style="margin: 0 0 0.5rem 0; color: #333;">${item.title}</h3>
+                                    <p style="margin: 0 0 1rem 0; color: #666; line-height: 1.4;">${item.description}</p>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: bold;">${item.signatures.toLocaleString()} signatures</span>
+                                    <span style="color: #666;">Goal: ${item.goal.toLocaleString()}</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <div style="text-align: center; color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                                    ${item.daysLeft} days left • ${(100 - progress).toFixed(0)}% to goal
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #666; font-size: 0.9rem;">
+                                    Target: ${item.target} • By ${item.organizer}
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button onclick="signPetition('${item.title}')" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        Sign Petition
+                                    </button>
+                                    <button onclick="sharePetition('${item.title}')" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        Share
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (html === '') {
+                html = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+                        <h3>No Results Found</h3>
+                        <p>Try adjusting your filters or create your own event/petition!</p>
+                        <div style="margin-top: 2rem;">
+                            <button onclick="showPetitionCreator()" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 1rem;">
+                                Start a Petition
+                            </button>
+                            <button onclick="showEventCreator()" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Organize an Event
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Show user's organizing activities
+        function showMyOrganizing() {
+            const content = document.getElementById('organizingContent');
+            content.innerHTML = `
+                <div style="max-width: 1000px; margin: 0 auto;">
+                    <h2 style="text-align: center; color: #666; margin-bottom: 2rem;">📊 My Organizing Activities</h2>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                        <!-- My Petitions -->
+                        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+                            <h3 style="color: #4b5c09; margin-bottom: 1rem;">📝 My Petitions</h3>
+                            <div style="text-align: center; color: #666; padding: 2rem;">
+                                <div style="font-size: 2rem; margin-bottom: 1rem;">📝</div>
+                                <p>You haven't created any petitions yet.</p>
+                                <button onclick="showPetitionCreator()" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                                    Create Your First Petition
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- My Events -->
+                        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+                            <h3 style="color: #1976d2; margin-bottom: 1rem;">📅 My Events</h3>
+                            <div style="text-align: center; color: #666; padding: 2rem;">
+                                <div style="font-size: 2rem; margin-bottom: 1rem;">📅</div>
+                                <p>You haven't organized any events yet.</p>
+                                <button onclick="showEventCreator()" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                                    Organize Your First Event
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- My Participation -->
+                        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem;">
+                            <h3 style="color: #ff9800; margin-bottom: 1rem;">🤝 My Participation</h3>
+                            <div style="text-align: center; color: #666; padding: 2rem;">
+                                <div style="font-size: 2rem; margin-bottom: 1rem;">🤝</div>
+                                <p>Events you've RSVP'd to and petitions you've signed will appear here.</p>
+                                <button onclick="showCivicBrowser()" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 1rem;">
+                                    Find Events & Petitions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action functions (placeholders for now)
+        function rsvpToEvent(eventTitle) {
+            showToast(`RSVP'd to: ${eventTitle}`);
+        }
+
+        function shareEvent(eventTitle) {
+            if (navigator.share) {
+                navigator.share({
+                    title: eventTitle,
+                    text: `Join me at: ${eventTitle}`,
+                    url: window.location.href
+                });
+            } else {
+                showToast('Event sharing feature coming soon!');
+            }
+        }
+
+        function signPetition(petitionTitle) {
+            showToast(`Signed petition: ${petitionTitle}`);
+        }
+
+        function sharePetition(petitionTitle) {
+            if (navigator.share) {
+                navigator.share({
+                    title: petitionTitle,
+                    text: `Please sign this petition: ${petitionTitle}`,
+                    url: window.location.href
+                });
+            } else {
+                showToast('Petition sharing feature coming soon!');
+            }
         }
 
     </script>
@@ -5740,6 +8568,48 @@
 
     <!-- Mobile Map Close Button -->
     <button class="mobile-map-close" onclick="hideMobileMap()">✕ Close Map</button>
+
+    <!-- Civic Organizing System -->
+    <div class="civic-organizing-container" id="civicOrganizingContainer" style="display: none;">
+        <div class="organizing-header">
+            <h3 style="margin: 0; color: #4b5c09;">📋 Civic Organizing</h3>
+            <button onclick="closeCivicOrganizing()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        
+        <!-- Organizing Navigation -->
+        <div class="organizing-nav" style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <button onclick="showPetitionCreator()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    📝 Create Petition
+                </button>
+                <button onclick="showEventCreator()" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    📅 Organize Event
+                </button>
+                <button onclick="showCivicBrowser()" style="padding: 0.5rem 1rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    🔍 Find Events
+                </button>
+                <button onclick="showMyOrganizing()" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    📊 My Activities
+                </button>
+            </div>
+        </div>
+        
+        <div class="organizing-content" id="organizingContent">
+            <div style="text-align: center; color: #666; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🏛️</div>
+                <h3>Welcome to Civic Organizing</h3>
+                <p>Create petitions, organize events, and mobilize your community for positive change.</p>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                    <button onclick="showPetitionCreator()" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                        Start a Petition
+                    </button>
+                    <button onclick="showEventCreator()" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                        Organize an Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>

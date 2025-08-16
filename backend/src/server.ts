@@ -31,6 +31,9 @@ import relationshipRoutes from './routes/relationships';
 import healthRoutes from './routes/health';
 import crowdsourcingRoutes from './routes/crowdsourcing';
 import legislativeRoutes from './routes/legislative';
+import civicRoutes from './routes/civic';
+import oauthRoutes from './routes/oauth';
+import trendingTopicsRoutes from './routes/trendingTopics';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -153,6 +156,9 @@ app.use('/api/reputation', reputationRoutes);
 app.use('/api/relationships', relationshipRoutes);
 app.use('/api/crowdsourcing', crowdsourcingRoutes);
 app.use('/api/legislative', legislativeRoutes);
+app.use('/api/civic', civicRoutes);
+app.use('/api/oauth', oauthRoutes);
+app.use('/api/trending', trendingTopicsRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically
