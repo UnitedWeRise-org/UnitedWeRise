@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 15, 2025  
-**Version**: 3.0 (Post-Audit Consolidation)  
+**Last Updated**: August 16, 2025  
+**Version**: 3.1 (My Feed Infinite Scroll Fix)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -103,8 +103,8 @@ Discovery → Awareness → Connection → Action → Content → Community
 | Admin Dashboard | ✅ LIVE | /admin-dashboard.html |
 
 ### Recent Deployments (August 2025)
-- ✅ **Comprehensive Code Audit**: Removed 200+ lines of deprecated code
-- ✅ **Infinite Scroll Fix**: Restored after audit incident
+- ✅ **My Feed Infinite Scroll Fix (Aug 16)**: Proper post appending with 15-post batches
+- ✅ **Comprehensive Code Audit (Aug 15)**: Removed 200+ lines of deprecated code
 - ✅ **Photo Tagging System**: Privacy-controlled photo tagging
 - ✅ **Relationship System**: Friends/followers with notifications
 - ✅ **AI Topic Discovery**: Semantic clustering of political discussions
@@ -1016,6 +1016,65 @@ showDefaultView()     // Return to default content
 - **Responsive**: Collapses on mobile, expandable on desktop
 - **Icons**: Consistent size (1.1rem) with labels (0.8rem)
 - **State**: Preserves expansion state in localStorage
+
+### ✅ FIXED: My Feed Infinite Scroll System (August 16, 2025) {#my-feed-infinite-scroll}
+
+**Status**: ✅ **FULLY OPERATIONAL** - Complete infinite scroll with proper pagination
+
+**Problem Solved**: My Feed was replacing posts instead of appending them during infinite scroll, causing users to see random posts instead of continuous batches.
+
+**Solution Implemented**:
+1. **Added `appendMode` parameter** to `displayMyFeedPosts(posts, appendMode = false)`
+2. **Fixed `displayPosts()` function** to use `insertAdjacentHTML('beforeend', html)` in append mode
+3. **Updated fallback functions** to append instead of replace when `appendMode = true`
+4. **Rate limiting fixed** - Changed scroll trigger from 400px to 50px from bottom
+
+**Technical Implementation**:
+- **Initial Load**: `showMyFeedInMain()` displays first 15 posts (replace mode)
+- **Infinite Scroll**: `loadMoreMyFeedPosts()` appends 15 posts when scrolling to bottom
+- **Offset Tracking**: `currentFeedOffset` tracks total posts loaded (15 → 30 → 45...)
+- **API Integration**: `/feed/?limit=15&offset=${currentFeedOffset}` with proper pagination
+
+**User Experience Flow**:
+```
+Initial Login → My Feed loads 15 posts
+Scroll to bottom → Appends 15 more (total: 30)
+Scroll to bottom → Appends 15 more (total: 45)
+Continue... → 60, 75, 90... posts accumulate
+```
+
+**Key Functions Modified**:
+- `frontend/index.html:3231` - `displayMyFeedPosts(posts, appendMode = false)`
+- `frontend/index.html:4131` - `displayPosts(posts, containerId, appendMode = false)`
+- `frontend/index.html:3301` - `loadMoreMyFeedPosts()` with proper offset tracking
+- `frontend/index.html:3378` - `setupMyFeedInfiniteScroll()` with 50px trigger distance
+
+**Performance Optimizations**:
+- ✅ No scrollbar visible but scroll functionality preserved (CSS: `scrollbar-width: none`)
+- ✅ No rate limiting (429 errors) - proper loading state protection
+- ✅ No multiple simultaneous requests - guard clauses prevent race conditions
+- ✅ Efficient DOM manipulation - `insertAdjacentHTML` instead of `innerHTML` rebuilds
+
+**Backend Pagination Support**:
+```javascript
+// Feed endpoint with offset/limit support
+GET /api/feed/?limit=15&offset=30
+
+// Response includes pagination metadata
+{
+  posts: [...],
+  pagination: {
+    limit: 15,
+    offset: 30,
+    count: 15,
+    hasMore: true
+  }
+}
+```
+
+**Commits**: `8b71ddb` (append mode), `12d6ddf` (rate limiting fix)
+
+**Related Systems**: {#api-endpoints}, {#probability-feed-service}
 
 ### Component Library
 
