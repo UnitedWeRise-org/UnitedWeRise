@@ -3199,6 +3199,9 @@
                 
                 if (posts && Array.isArray(posts) && posts.length > 0) {
                     console.log(`✅ Found ${posts.length} posts for My Feed`);
+                    // Reset offset for initial load
+                    currentFeedOffset = posts.length;
+                    hasMorePosts = true; // Reset for new feed
                     displayMyFeedPosts(posts);
                 } else {
                     console.log('📝 No posts found in My Feed');
@@ -3289,7 +3292,7 @@
         // Variables for infinite scroll functionality
         let isLoadingMorePosts = false;
         let hasMorePosts = true;
-        let currentFeedPage = 1;
+        let currentFeedOffset = 0; // Track total posts loaded
 
         // Load more posts for infinite scroll (corrected implementation for main content area)
         async function loadMoreMyFeedPosts() {
@@ -3305,10 +3308,9 @@
             container.appendChild(loadingDiv);
 
             try {
-                const nextPage = currentFeedPage + 1;
-                // Use the correct /feed/ endpoint (no /posts, no pagination)
-                console.log('🔄 Loading more My Feed posts...');
-                const response = await apiCall('/feed/?limit=15', {
+                // Use offset-based pagination
+                console.log(`🔄 Loading more My Feed posts... (offset: ${currentFeedOffset})`);
+                const response = await apiCall(`/feed/?limit=15&offset=${currentFeedOffset}`, {
                     method: 'GET'
                 });
 
@@ -3337,12 +3339,16 @@
                     return;
                 }
 
-                // Since /feed/ doesn't support pagination, refresh the entire feed
-                console.log(`✅ Refreshing feed with ${posts.length} posts`);
-                displayMyFeedPosts(posts);
+                // Append new posts to existing feed (pagination now supported)
+                console.log(`✅ Appending ${posts.length} more posts (total offset: ${currentFeedOffset})`);
+                displayMyFeedPosts(posts, true); // true = append mode
+                currentFeedOffset += posts.length; // Increment offset by number of posts loaded
                 
-                // Disable further loading since we're refreshing, not paginating
-                hasMorePosts = false;
+                // Check if backend indicates more posts available
+                if (response.pagination && response.pagination.hasMore === false) {
+                    hasMorePosts = false;
+                    console.log('📝 Backend indicates no more posts available');
+                }
 
             } catch (error) {
                 console.error('❌ Error loading more posts:', error);
@@ -3369,13 +3375,21 @@
         function setupMyFeedInfiniteScroll() {
             const myFeedContainer = document.getElementById('myFeedPosts');
             if (myFeedContainer) {
+                console.log('✅ Setting up infinite scroll for My Feed');
                 myFeedContainer.addEventListener('scroll', () => {
                     const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
+                    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+                    
+                    console.log(`📏 Scroll metrics: scrollTop=${scrollTop}, scrollHeight=${scrollHeight}, clientHeight=${clientHeight}, distanceFromBottom=${distanceFromBottom}`);
+                    
                     // Load more when 3-4 posts (approximately 400px) are still off-screen
-                    if (scrollTop + clientHeight >= scrollHeight - 400) {
+                    if (distanceFromBottom <= 400) {
+                        console.log('🔄 Infinite scroll triggered - loading more posts');
                         loadMoreMyFeedPosts();
                     }
                 });
+            } else {
+                console.warn('⚠️ myFeedPosts container not found for infinite scroll setup');
             }
         }
 

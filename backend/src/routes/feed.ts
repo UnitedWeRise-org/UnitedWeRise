@@ -10,22 +10,28 @@ const prisma = new PrismaClient();
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { limit = 50 } = req.query;
+    const { limit = 50, offset = 0 } = req.query;
     
     // Parse custom weights if provided (for A/B testing or user preferences)
     const customWeights = req.query.weights ? JSON.parse(req.query.weights as string) : undefined;
 
     const limitNum = parseInt(limit.toString());
+    const offsetNum = parseInt(offset.toString());
 
-    // Generate feed using probability-based algorithm
+    // Generate larger feed and slice for pagination
+    // We need to fetch more than just limit+offset to ensure randomization
+    const fetchLimit = limitNum + offsetNum + 50; // Get extra posts for proper randomization
     const feedResult = await ProbabilityFeedService.generateFeed(
       userId, 
-      limitNum,
+      fetchLimit,
       customWeights
     );
 
-    // Add user's like status to each post
-    const postIds = feedResult.posts.map(p => p.id);
+    // Apply offset and limit to the generated feed
+    const paginatedPosts = feedResult.posts.slice(offsetNum, offsetNum + limitNum);
+
+    // Add user's like status to each post (use paginated posts)
+    const postIds = paginatedPosts.map(p => p.id);
     const userLikes = await prisma.like.findMany({
       where: { 
         userId,
@@ -36,7 +42,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
     const likedPostIds = new Set(userLikes.map(like => like.postId));
 
-    const postsWithLikeStatus = feedResult.posts.map(post => ({
+    const postsWithLikeStatus = paginatedPosts.map(post => ({
       ...post,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
@@ -51,7 +57,9 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       stats: feedResult.stats,
       pagination: {
         limit: limitNum,
-        count: postsWithLikeStatus.length
+        offset: offsetNum,
+        count: postsWithLikeStatus.length,
+        hasMore: postsWithLikeStatus.length === limitNum // If we got full limit, likely more available
       }
     });
   } catch (error) {
