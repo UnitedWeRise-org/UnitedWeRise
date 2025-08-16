@@ -321,8 +321,8 @@ export class TopicAggregationService {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const stance = data.choices[0].message.content.toLowerCase().trim();
+        const data = await response.json() as any;
+        const stance = data.choices?.[0]?.message?.content?.toLowerCase().trim();
         
         if (['support', 'oppose', 'neutral'].includes(stance)) {
           return stance as 'support' | 'oppose' | 'neutral';
@@ -372,8 +372,8 @@ export class TopicAggregationService {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const data = await response.json() as any;
+        const content = data.choices?.[0]?.message?.content;
         
         // Parse the response
         const lines = content.split('\n');
