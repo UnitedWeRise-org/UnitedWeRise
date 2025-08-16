@@ -361,7 +361,7 @@ export class OAuthService {
     const key = process.env.OAUTH_ENCRYPTION_KEY || crypto.randomBytes(32);
     const iv = crypto.randomBytes(16);
     
-    const cipher = crypto.createCipher(algorithm, key);
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(token, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
@@ -378,7 +378,7 @@ export class OAuthService {
     const [ivHex, encrypted] = encryptedToken.split(':');
     const iv = Buffer.from(ivHex, 'hex');
     
-    const decipher = crypto.createDecipher(algorithm, key);
+    const decipher = crypto.createDecipheriv(algorithm, key, iv);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     

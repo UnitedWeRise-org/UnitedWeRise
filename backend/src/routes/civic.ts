@@ -8,7 +8,7 @@
 import express from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import civicOrganizingService from '../services/civicOrganizingService.js';
-import { authenticateUser } from '../middleware/auth.js';
+import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -36,7 +36,7 @@ const civicBrowseLimit = rateLimit({
 
 // Create petition
 router.post('/petitions', 
-  authenticateUser,
+  requireAuth,
   civicActionLimit,
   [
     body('title').isLength({ min: 10, max: 200 }).withMessage('Title must be 10-200 characters'),
@@ -175,7 +175,7 @@ router.get('/petitions/:id',
 
 // Sign petition
 router.post('/petitions/:id/sign',
-  authenticateUser,
+  requireAuth,
   civicActionLimit,
   [
     param('id').isString().withMessage('Invalid petition ID')
@@ -214,7 +214,7 @@ router.post('/petitions/:id/sign',
 
 // Create event
 router.post('/events',
-  authenticateUser,
+  requireAuth,
   civicActionLimit,
   [
     body('title').isLength({ min: 10, max: 200 }).withMessage('Title must be 10-200 characters'),
@@ -374,7 +374,7 @@ router.get('/events/:id',
 
 // RSVP to event
 router.post('/events/:id/rsvp',
-  authenticateUser,
+  requireAuth,
   civicActionLimit,
   [
     param('id').isString().withMessage('Invalid event ID'),
@@ -459,7 +459,7 @@ router.get('/search',
 
 // Get user's created petitions
 router.get('/user/petitions',
-  authenticateUser,
+  requireAuth,
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
@@ -481,7 +481,7 @@ router.get('/user/petitions',
 
 // Get user's created events
 router.get('/user/events',
-  authenticateUser,
+  requireAuth,
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
@@ -503,7 +503,7 @@ router.get('/user/events',
 
 // Get user's signed petitions
 router.get('/user/signatures',
-  authenticateUser,
+  requireAuth,
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
@@ -525,7 +525,7 @@ router.get('/user/signatures',
 
 // Get user's RSVP'd events
 router.get('/user/rsvps',
-  authenticateUser,
+  requireAuth,
   async (req, res) => {
     try {
       const userId = (req as any).user.id;

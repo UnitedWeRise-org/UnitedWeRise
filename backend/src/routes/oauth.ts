@@ -417,7 +417,7 @@ async function verifyGoogleToken(idToken: string): Promise<OAuthProfile | null> 
       return null;
     }
 
-    const payload = await response.json();
+    const payload = await response.json() as any;
 
     // Verify the token is for our app
     if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
@@ -455,7 +455,7 @@ async function verifyMicrosoftToken(accessToken: string): Promise<OAuthProfile |
       return null;
     }
 
-    const profile = await response.json();
+    const profile = await response.json() as any;
 
     return {
       id: profile.id,
