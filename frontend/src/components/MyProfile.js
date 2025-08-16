@@ -631,44 +631,61 @@ class MyProfile {
         }
     }
 
-    // Method to submit a quick post from the profile
+    // Method to submit a quick post from the profile - NOW USES REUSABLE FUNCTION
     async submitQuickPost() {
-        const textarea = document.getElementById('quickPostContent');
-        if (!textarea || !textarea.value.trim()) {
-            alert('Please enter some content for your post');
-            return;
-        }
-
-        const content = textarea.value.trim();
-        
-        try {
-            const response = await window.apiCall('/posts', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    content: content
-                })
-            });
-
-            if (response.ok) {
-                // Clear the textarea
-                textarea.value = '';
-                // Add the new post to the userPosts array
-                const newPost = response.data.post;
-                this.userPosts.unshift(newPost);
-                
-                // Smooth insertion without full re-render
-                this.insertNewPostSmoothly(newPost);
-            } else {
-                console.error('Post creation failed:', response);
-                const errorMsg = response.error || response.message || 'Failed to create post';
-                alert(`Failed to create post: ${errorMsg}. Please try again.`);
+        // Use the reusable posting function from index.html
+        if (window.createPostFromTextarea) {
+            const success = await window.createPostFromTextarea('quickPostContent', (newPost) => {
+                // Success callback - add the new post to our list
+                if (newPost) {
+                    this.userPosts.unshift(newPost);
+                    // Smooth insertion without full re-render
+                    this.insertNewPostSmoothly(newPost);
+                }
+            }, { refreshFeed: false, clearMedia: true });
+            
+            if (!success) {
+                console.log('Post creation was not successful');
             }
-        } catch (error) {
-            console.error('Post creation error:', error);
-            if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                alert('Network error: Cannot connect to server. Please check if the backend server is running on localhost:3001');
-            } else {
-                alert(`Error creating post: ${error.message}`);
+        } else {
+            // Fallback to old method if reusable function not available
+            const textarea = document.getElementById('quickPostContent');
+            if (!textarea || !textarea.value.trim()) {
+                alert('Please enter some content for your post');
+                return;
+            }
+
+            const content = textarea.value.trim();
+            
+            try {
+                const response = await window.apiCall('/posts', {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        content: content
+                    })
+                });
+
+                if (response.ok) {
+                    // Clear the textarea
+                    textarea.value = '';
+                    // Add the new post to the userPosts array
+                    const newPost = response.data.post;
+                    this.userPosts.unshift(newPost);
+                    
+                    // Smooth insertion without full re-render
+                    this.insertNewPostSmoothly(newPost);
+                } else {
+                    console.error('Post creation failed:', response);
+                    const errorMsg = response.error || response.message || 'Failed to create post';
+                    alert(`Failed to create post: ${errorMsg}. Please try again.`);
+                }
+            } catch (error) {
+                console.error('Post creation error:', error);
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    alert('Network error: Cannot connect to server. Please check if the backend server is running on localhost:3001');
+                } else {
+                    alert(`Error creating post: ${error.message}`);
+                }
             }
         }
     }

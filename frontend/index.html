@@ -3474,13 +3474,28 @@
             document.getElementById('postMediaUpload').value = '';
         }
 
-        // Function to create post from feed view
-        async function createPostFromFeed() {
-            const content = document.getElementById('feedPostContent').value.trim();
+        // ============================================================================
+        // REUSABLE POSTING BOX FUNCTION - Use this for any posting box on the site
+        // ============================================================================
+        /**
+         * Creates a post from any posting box on the site
+         * @param {string} textareaId - The ID of the textarea containing the post content
+         * @param {Function} onSuccess - Optional callback function to run after successful post creation
+         * @param {Object} options - Optional configuration (e.g., { refreshFeed: true, clearMedia: true })
+         */
+        async function createPostFromTextarea(textareaId, onSuccess = null, options = {}) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) {
+                console.error(`Textarea with ID '${textareaId}' not found`);
+                return false;
+            }
 
+            const content = textarea.value.trim();
+            
+            // Check if we have content or media
             if (!content && !selectedPostMedia) {
                 alert('Please enter some content or attach media for your post');
-                return;
+                return false;
             }
 
             try {
@@ -3503,7 +3518,7 @@
                         const errorData = mediaResponse.data || {};
                         const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
                         alert(`Media upload failed: ${errorMessage}`);
-                        return;
+                        return false;
                     }
 
                     // Get the uploaded photo ID
@@ -3523,21 +3538,46 @@
                 });
 
                 if (response.ok) {
-                    // Clear the form
-                    document.getElementById('feedPostContent').value = '';
-                    clearMediaAttachment();
+                    // Clear the textarea
+                    textarea.value = '';
                     
-                    // Refresh the feed to show the new post
-                    showMyFeed();
+                    // Clear media if option is set (default true)
+                    if (options.clearMedia !== false && selectedPostMedia) {
+                        clearMediaAttachment();
+                    }
                     
                     console.log('✅ Post created successfully');
+                    
+                    // Call the success callback if provided
+                    if (onSuccess && typeof onSuccess === 'function') {
+                        onSuccess(response.data.post);
+                    }
+                    
+                    // Refresh feed if option is set
+                    if (options.refreshFeed) {
+                        if (typeof showMyFeed === 'function') {
+                            showMyFeed();
+                        } else if (typeof loadMyFeedPosts === 'function') {
+                            loadMyFeedPosts();
+                        }
+                    }
+                    
+                    return true;
                 } else {
-                    alert('Failed to create post. Please try again.');
+                    const errorMsg = response.data?.error || 'Failed to create post. Please try again.';
+                    alert(errorMsg);
+                    return false;
                 }
             } catch (error) {
                 console.error('Post creation error:', error);
                 alert('Error creating post. Please check your connection and try again.');
+                return false;
             }
+        }
+
+        // Wrapper function for My Feed posting box (uses the reusable function)
+        async function createPostFromFeed() {
+            return createPostFromTextarea('feedPostContent', null, { refreshFeed: true, clearMedia: true });
         }
 
         async function loadUserProfile() {

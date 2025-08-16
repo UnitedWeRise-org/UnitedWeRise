@@ -144,6 +144,49 @@ authToken          // Global variable should match
 - API caching: Use `bypassCache: true` for fresh data
 - Sticky positioning: Account for parent container positioning and padding
 
+### ✅ REUSABLE POSTING BOX FUNCTION (August 16, 2025)
+
+**Status**: ✅ **IMPLEMENTED** - Standardized posting function for use across entire site
+
+**Function**: `createPostFromTextarea(textareaId, onSuccess, options)`
+
+**Purpose**: Single reusable function for creating posts from any textarea on the site, eliminating code duplication
+
+**Parameters**:
+- `textareaId` (string): ID of the textarea containing post content
+- `onSuccess` (function): Optional callback after successful post creation
+- `options` (object): Configuration options
+  - `refreshFeed`: Whether to refresh the feed after posting (default: false)
+  - `clearMedia`: Whether to clear media attachments after posting (default: true)
+
+**Usage Examples**:
+```javascript
+// My Feed posting box
+createPostFromTextarea('feedPostContent', null, { refreshFeed: true });
+
+// Profile posting box with callback
+createPostFromTextarea('quickPostContent', (newPost) => {
+    this.userPosts.unshift(newPost);
+    this.insertNewPostSmoothly(newPost);
+});
+
+// Simple usage anywhere
+createPostFromTextarea('anyTextareaId');
+```
+
+**Locations Used**:
+- `frontend/index.html:3486` - Main reusable function definition
+- `frontend/index.html:3579` - My Feed wrapper (`createPostFromFeed`)
+- `frontend/src/components/MyProfile.js:637` - Profile posts tab
+
+**Features**:
+- ✅ Media upload support with POST_MEDIA type
+- ✅ Error handling with user-friendly messages
+- ✅ Success callbacks for custom post-creation behavior
+- ✅ Optional feed refresh after posting
+- ✅ Automatic textarea clearing
+- ✅ Returns boolean for success/failure
+
 ### ✅ FIXED: My Feed Infinite Scroll System (August 16, 2025)
 
 **Status**: ✅ **FULLY OPERATIONAL** - Complete infinite scroll with proper pagination
