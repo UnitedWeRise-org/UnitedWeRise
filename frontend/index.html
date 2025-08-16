@@ -3228,7 +3228,7 @@
         }
 
         // Display posts in My Feed
-        function displayMyFeedPosts(posts) {
+        function displayMyFeedPosts(posts, appendMode = false) {
             const container = document.getElementById('myFeedPosts');
             
             if (!container) {
@@ -3237,33 +3237,35 @@
             }
             
             if (!posts || posts.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #666;">
-                        <p>No posts in your feed yet. Follow some users to see their posts here!</p>
-                    </div>
-                `;
+                if (!appendMode) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <p>No posts in your feed yet. Follow some users to see their posts here!</p>
+                        </div>
+                    `;
+                }
                 return;
             }
             
-            console.log(`🎯 Displaying ${posts.length} posts in My Feed`);
+            console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
             
             // Use the existing displayPosts function with fallback
             try {
                 if (typeof displayPosts === 'function') {
-                    displayPosts(posts, 'myFeedPosts', false);
+                    displayPosts(posts, 'myFeedPosts', appendMode);
                 } else {
                     console.warn('⚠️ displayPosts function not available, using fallback');
-                    displayMyFeedPostsFallback(posts, container);
+                    displayMyFeedPostsFallback(posts, container, appendMode);
                 }
             } catch (error) {
                 console.error('❌ Error displaying posts:', error);
-                displayMyFeedPostsFallback(posts, container);
+                displayMyFeedPostsFallback(posts, container, appendMode);
             }
         }
         
         // Fallback display function for My Feed
-        function displayMyFeedPostsFallback(posts, container) {
-            console.log('🔧 Using fallback display for My Feed');
+        function displayMyFeedPostsFallback(posts, container, appendMode = false) {
+            console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
             
             let html = '';
             posts.forEach(post => {
@@ -3283,7 +3285,11 @@
                 `;
             });
             
-            container.innerHTML = html;
+            if (appendMode) {
+                container.insertAdjacentHTML('beforeend', html);
+            } else {
+                container.innerHTML = html;
+            }
         }
 
         // DEPRECATED - Panel-based My Feed implementation removed
@@ -4122,7 +4128,7 @@
             }
         }
 
-        function displayPosts(posts, containerId = 'postsFeed', showHeader = true) {
+        function displayPosts(posts, containerId = 'postsFeed', appendMode = false) {
             const feed = document.getElementById(containerId);
             if (!feed) {
                 console.warn('Feed container not found:', containerId);
@@ -4130,19 +4136,25 @@
             }
             
             if (posts.length === 0) {
-                feed.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #666;">
-                        <h2>Your Posts</h2>
-                        <p>You haven't posted anything yet. Share your thoughts above!</p>
-                    </div>
-                `;
+                if (!appendMode) {
+                    feed.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <h2>Your Posts</h2>
+                            <p>You haven't posted anything yet. Share your thoughts above!</p>
+                        </div>
+                    `;
+                }
                 return;
             }
 
             // Use the standardized PostComponent if available
             if (window.postComponent) {
-                let html = showHeader ? '<h2>Your Posts</h2>' : '';
-                html += '<div class="posts-list">';
+                let html = '';
+                
+                // Only add header in replace mode, not append mode
+                if (!appendMode) {
+                    html += '<div class="posts-list">';
+                }
                 
                 posts.forEach(post => {
                     html += window.postComponent.renderPost(post, {
@@ -4154,19 +4166,24 @@
                     });
                 });
                 
-                html += '</div>';
-                feed.innerHTML = html;
+                if (!appendMode) {
+                    html += '</div>';
+                    feed.innerHTML = html;
+                } else {
+                    // Append to existing content
+                    feed.insertAdjacentHTML('beforeend', html);
+                }
             } else {
                 // Fallback to original rendering if PostComponent not available
-                displayPostsFallback(posts, containerId, showHeader);
+                displayPostsFallback(posts, containerId, appendMode);
             }
         }
 
-        function displayPostsFallback(posts, containerId, showHeader = true) {
+        function displayPostsFallback(posts, containerId, appendMode = false) {
             const feed = document.getElementById(containerId);
             if (!feed) return;
 
-            let html = showHeader ? '<h2>Your Posts</h2>' : '';
+            let html = '';
             posts.forEach(post => {
                 const timeAgo = getTimeAgo(new Date(post.createdAt));
                 
@@ -4202,7 +4219,11 @@
                 `;
             });
 
-            feed.innerHTML = html;
+            if (appendMode) {
+                feed.insertAdjacentHTML('beforeend', html);
+            } else {
+                feed.innerHTML = html;
+            }
         }
 
         async function likePost(postId, event) {
