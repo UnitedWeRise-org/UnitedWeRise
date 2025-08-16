@@ -181,7 +181,9 @@ class AppInitializer {
 
     // Set the UI to logged in state with batch data
     setLoggedInState(initData) {
+        console.log('🚨 SETLOGGEDINSTATE CALLED - DEBUG CHECK');
         const user = initData.user;
+        console.log('🔍 User data:', user);
         AppInitializer.log('🔍 setLoggedInState called with user:', user?.firstName || user?.username || 'Unknown');
         
         // Update UI elements
