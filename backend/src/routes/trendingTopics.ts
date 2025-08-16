@@ -1,5 +1,5 @@
 import express from 'express';
-import { TopicAggregationService } from '../services/topicAggregationService';
+// import { TopicAggregationService } from '../services/topicAggregationService';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 
@@ -20,6 +20,7 @@ router.get('/test', (req, res) => {
 /**
  * Get trending topics with dual-vector stance analysis
  */
+/*
 router.get('/topics', async (req: AuthRequest, res) => {
   try {
     const { scope = 'national', limit = 7 } = req.query;
@@ -277,5 +278,6 @@ router.post('/refresh', requireAuth, async (req: AuthRequest, res) => {
     });
   }
 });
+*/
 
 export default router;
