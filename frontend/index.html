@@ -3377,13 +3377,16 @@
             if (myFeedContainer) {
                 console.log('✅ Setting up infinite scroll for My Feed');
                 myFeedContainer.addEventListener('scroll', () => {
+                    // Skip if already loading
+                    if (isLoadingMorePosts || !hasMorePosts) {
+                        return;
+                    }
+                    
                     const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
                     const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
                     
-                    console.log(`📏 Scroll metrics: scrollTop=${scrollTop}, scrollHeight=${scrollHeight}, clientHeight=${clientHeight}, distanceFromBottom=${distanceFromBottom}`);
-                    
-                    // Load more when 3-4 posts (approximately 400px) are still off-screen
-                    if (distanceFromBottom <= 400) {
+                    // Only trigger at the very bottom to prevent multiple requests
+                    if (distanceFromBottom <= 50) {
                         console.log('🔄 Infinite scroll triggered - loading more posts');
                         loadMoreMyFeedPosts();
                     }
