@@ -3150,6 +3150,9 @@
                 applyUserBackground(currentUser.backgroundImage);
             }
         }
+        
+        // Make function globally available
+        window.showMyFeedInMain = showMyFeedInMain;
 
         // Load posts for My Feed in main area
         async function loadMyFeedPosts() {

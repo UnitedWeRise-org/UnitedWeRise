@@ -182,6 +182,7 @@ class AppInitializer {
     // Set the UI to logged in state with batch data
     setLoggedInState(initData) {
         const user = initData.user;
+        AppInitializer.log('🔍 setLoggedInState called with user:', user?.firstName || user?.username || 'Unknown');
         
         // Update UI elements
         document.getElementById('authSection').style.display = 'none';
@@ -214,6 +215,7 @@ class AppInitializer {
 
         // Initialize My Feed automatically on login (matching main setUserLoggedIn behavior)
         AppInitializer.log('🎯 Auto-initializing My Feed for logged in user...');
+        console.log('🔍 DEBUG: About to check showMyFeedInMain function availability');
         setTimeout(() => {
             if (typeof window.showMyFeedInMain === 'function') {
                 window.showMyFeedInMain();
