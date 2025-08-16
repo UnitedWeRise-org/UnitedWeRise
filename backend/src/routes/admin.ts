@@ -563,9 +563,7 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
       contentStats,
       systemHealthStats,
       geographicStats,
-      retentionStats,
-      reputationStats,
-      searchStats
+      reputationStats
     ] = await Promise.all([
       // Daily activity metrics
       prisma.$queryRaw`
@@ -665,12 +663,9 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
     }),
 
     // Reputation System Analytics
-    prisma.reputationEvent.groupBy({
-      by: ['eventType'], 
+    prisma.reputationEvent.findMany({
       where: { createdAt: { gte: startDate } },
-      _count: { eventType: true },
-      _sum: { scoreChange: true },
-      orderBy: { _count: { eventType: 'desc' } }
+      select: { eventType: true, impact: true }
     })
   ]);
 
@@ -680,6 +675,22 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
   const civic = civicEngagementStats[0] as any;
   const content = contentStats[0] as any;
   const health = systemHealthStats[0] as any;
+
+  // Process reputation stats from array into grouped format
+  const processedReputationStats = (reputationStats || []).reduce((acc: any, event: any) => {
+    const existing = acc.find((item: any) => item.eventType === event.eventType);
+    if (existing) {
+      existing._count.eventType += 1;
+      existing._sum.impact += event.impact || 0;
+    } else {
+      acc.push({
+        eventType: event.eventType,
+        _count: { eventType: 1 },
+        _sum: { impact: event.impact || 0 }
+      });
+    }
+    return acc;
+  }, []);
 
   // Report breakdown by reason
     const reportReasons = await prisma.report.groupBy({
@@ -773,7 +784,7 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
         summary: metrics,
         dailyActivity: dailyStats,
         geographicDistribution: geographicStats,
-        reputationEventBreakdown: reputationStats,
+        reputationEventBreakdown: processedReputationStats,
         reportBreakdown: reportReasons,
         flagDistribution: flagDistribution,
         generatedAt: new Date().toISOString()

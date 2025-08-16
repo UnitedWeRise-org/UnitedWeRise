@@ -92,8 +92,8 @@ export interface CandidateProfile {
   keyIssues: string[];
   isVerified: boolean;
   endorsements?: Array<{
-    organization: string;
-    type: string;
+    reason: string;
+    isPublic: boolean;
     date: string;
   }>;
   financialData?: {
@@ -217,8 +217,8 @@ export class ElectionsService {
         keyIssues: candidate.keyIssues,
         isVerified: candidate.isVerified,
         endorsements: candidate.endorsements.map(endorsement => ({
-          organization: endorsement.organization,
-          type: endorsement.type,
+          reason: endorsement.reason || 'Public endorsement',
+          isPublic: endorsement.isPublic,
           date: endorsement.createdAt.toISOString(),
         })),
         financialData: candidate.financialData ? {
@@ -331,8 +331,8 @@ export class ElectionsService {
         keyIssues: candidate.keyIssues,
         isVerified: candidate.isVerified,
         endorsements: candidate.endorsements.map(endorsement => ({
-          organization: endorsement.organization,
-          type: endorsement.type,
+          reason: endorsement.reason || 'Public endorsement',
+          isPublic: endorsement.isPublic,
           date: endorsement.createdAt.toISOString(),
         })),
         financialData: candidate.financialData ? {
