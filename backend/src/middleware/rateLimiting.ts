@@ -80,9 +80,9 @@ export const burstLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: (req: any) => {
     if (req.user) {
-      return 60; // 60 requests per minute for authenticated users
+      return 120; // 120 requests per minute for authenticated users
     }
-    return 30; // 30 requests per minute for anonymous users
+    return 80; // 80 requests per minute for anonymous users (increased for frontend initialization)
   },
   message: {
     error: 'Making requests too quickly, please slow down.'
@@ -94,6 +94,14 @@ export const burstLimiter = rateLimit({
       return `burst_user_${req.user.id}`;
     }
     return `burst_${azureKeyGenerator(req)}`;
+  },
+  // Skip rate limiting for health check endpoints
+  skip: (req: any) => {
+    const path = req.path || req.url;
+    return path === '/health' || 
+           path === '/health/database' || 
+           path === '/health/deployment' ||
+           path.startsWith('/api/health');
   }
 });
 
