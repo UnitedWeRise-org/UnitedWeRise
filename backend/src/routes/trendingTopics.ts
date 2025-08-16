@@ -7,6 +7,17 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 /**
+ * Simple test endpoint to verify route mounting
+ */
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Trending topics route is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * Get trending topics with dual-vector stance analysis
  */
 router.get('/topics', async (req: AuthRequest, res) => {
