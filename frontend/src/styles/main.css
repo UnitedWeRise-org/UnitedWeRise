@@ -1288,26 +1288,17 @@ details {
     background-repeat: no-repeat;
     max-height: calc(100vh - 250px); /* Allow room for header and composer */
     overflow-y: auto;
-    padding-right: 0.5rem; /* Account for scrollbar */
 }
 
-/* Custom scrollbar for My Feed */
+/* Hide scrollbar for My Feed but keep functionality */
 #myFeedPosts::-webkit-scrollbar {
-    width: 8px;
+    width: 0px;
+    background: transparent;
 }
 
-#myFeedPosts::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-#myFeedPosts::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-#myFeedPosts::-webkit-scrollbar-thumb:hover {
-    background: #555;
+#myFeedPosts {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
 }
 
 /* Make posts narrower in My Feed */

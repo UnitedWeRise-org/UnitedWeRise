@@ -3178,7 +3178,7 @@
             
             try {
                 console.log('🌐 Making API call to /feed/');
-                const response = await apiCall('/feed/', {
+                const response = await apiCall('/feed/?limit=15', {
                     method: 'GET'
                 });
                 
@@ -3308,7 +3308,7 @@
                 const nextPage = currentFeedPage + 1;
                 // Use the correct /feed/ endpoint (no /posts, no pagination)
                 console.log('🔄 Loading more My Feed posts...');
-                const response = await apiCall('/feed/?limit=100', {
+                const response = await apiCall('/feed/?limit=15', {
                     method: 'GET'
                 });
 
@@ -3371,7 +3371,8 @@
             if (myFeedContainer) {
                 myFeedContainer.addEventListener('scroll', () => {
                     const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
-                    if (scrollTop + clientHeight >= scrollHeight - 100) {
+                    // Load more when 3-4 posts (approximately 400px) are still off-screen
+                    if (scrollTop + clientHeight >= scrollHeight - 400) {
                         loadMoreMyFeedPosts();
                     }
                 });
