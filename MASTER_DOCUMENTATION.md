@@ -631,18 +631,78 @@ Get single post with details
 - **Response**: Post with author, likes, comments
 
 #### GET /api/feed/
-Get personalized feed (follows + algorithm)
+Get personalized feed using probability-based algorithm
 ```javascript
 Query params:
-  page?: number
-  limit?: number
+  limit?: number (default: 50, max: 500)
+  weights?: string (JSON of custom algorithm weights)
   
 Response:
 {
-  posts: Post[],
-  hasMore: boolean
+  posts: Post[], // Selected posts with author, likes, comments
+  algorithm: string, // "probability-cloud" or "fallback-empty"
+  weights: FeedWeights, // Algorithm weights used
+  stats: {
+    candidateCount: number,
+    avgRecencyScore: number,
+    avgSimilarityScore: number, 
+    avgSocialScore: number,
+    avgTrendingScore: number,
+    avgReputationScore: number
+  }
 }
 ```
+
+**Feed Algorithm Details:**
+- **Data Source**: All posts from last 30 days (excluding user's own posts)
+- **Candidate Pool**: Up to 500 most recent posts 
+- **Algorithm**: Probability cloud sampling with 5 scoring dimensions:
+  - **Recency** (30%): Exponential decay, 24-hour half-life
+  - **Similarity** (25%): Content similarity to user's interaction history
+  - **Social** (25%): Posts from followed users (1.0 score vs 0.1 for others)
+  - **Trending** (10%): Engagement velocity (likes + comments)
+  - **Reputation** (10%): Author reputation score
+- **Selection**: Probabilistic sampling based on weighted scores
+- **Personalization**: Uses user's liked posts, follows, and content embeddings
+
+---
+
+## 🔮 PROPOSED FEED ALGORITHM REDESIGN
+
+**Status**: Planning Phase - Awaiting Implementation  
+**Date**: August 15, 2025
+
+### Candidate Generation (N = 3,200 posts)
+- **N1**: 200 posts from social interactions (follows + their engagements)
+- **N2**: 1,000 random posts from last 48 hours
+- **N3**: 1,000 random posts from 48-168 hours ago  
+- **N4**: 500 local posts within last 7 days
+- **N5**: 500 state posts within last 7 days
+
+### Proposed Scoring Dimensions
+- **Recency**: 20% weight, 48-hour half-life
+- **Social**: 20% weight
+- **Vector Similarity Tiers**:
+  - 90%+ similarity: 10% weight
+  - 50-90% similarity: 10% weight  
+  - 0-50% similarity: 10% weight
+- **Trending Topic Similarity**:
+  - 90%+ trending match: 10% weight
+  - 0-90% trending match: 10% weight
+- **Reputation**: Applied as probability modifier (±10-20%), not scoring dimension
+
+### Key Design Decisions
+- **Linear model first** (insufficient data for neural network)
+- **User vector**: TBD (average of posts + engagement history)
+- **Geographic prioritization**: Local > State > National
+- **Engagement velocity**: Based on likes/comments per hour
+- **Future evolution**: Neural network when sufficient training data available
+
+### Outstanding Questions
+1. User vector calculation methodology
+2. Geographic relevance scoring formula
+3. Feature normalization approach
+4. Engagement velocity calculation details
 
 #### GET /api/feed/trending
 Get trending posts

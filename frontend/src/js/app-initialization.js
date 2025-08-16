@@ -212,6 +212,29 @@ class AppInitializer {
             this.updateNotificationCount(initData.unreadNotifications);
         }
 
+        // Initialize My Feed automatically on login (matching main setUserLoggedIn behavior)
+        AppInitializer.log('🎯 Auto-initializing My Feed for logged in user...');
+        setTimeout(() => {
+            if (typeof window.showMyFeedInMain === 'function') {
+                window.showMyFeedInMain();
+                AppInitializer.log('✅ My Feed auto-initialized');
+            } else if (typeof showMyFeedInMain === 'function') {
+                showMyFeedInMain();
+                AppInitializer.log('✅ My Feed auto-initialized');
+            } else {
+                AppInitializer.log('⚠️ showMyFeedInMain function not available during initialization, trying again in 500ms...');
+                // Try again with longer delay for DOM/scripts to load
+                setTimeout(() => {
+                    if (typeof showMyFeedInMain === 'function') {
+                        showMyFeedInMain();
+                        AppInitializer.log('✅ My Feed auto-initialized (delayed)');
+                    } else {
+                        AppInitializer.log('❌ showMyFeedInMain function still not available');
+                    }
+                }, 500);
+            }
+        }, 200); // Increased delay to ensure DOM and scripts are ready
+
         AppInitializer.log('✅ Logged in state set for:', displayName);
     }
 

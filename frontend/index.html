@@ -301,7 +301,7 @@
     <div class="container">
         <div class="sidebar" id="sidebar">
             <div class="thumbs">
-                <div class="thumb" onclick="toggleMyFeed()" title="My Feed" id="feedThumb" style="display: none;">📰 <span class="label">My Feed</span></div>
+                <div class="thumb" onclick="toggleMyFeed()" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
                 <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
                 <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
@@ -3069,7 +3069,12 @@
 
         // Function to show My Feed in main content area (like Profile)
         async function showMyFeedInMain() {
-            if (!authToken) {
+            console.log('🎯 Showing My Feed in main content area');
+            
+            // Sync all auth token variables
+            const token = window.authToken || authToken || localStorage.getItem('authToken');
+            if (!token) {
+                console.log('❌ No auth token found, showing login prompt');
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Please log in to view your feed</h2>
@@ -3078,6 +3083,10 @@
                 `;
                 return;
             }
+            
+            // Ensure all auth variables are synced
+            window.authToken = authToken = token;
+            console.log('✅ Auth token synced for My Feed');
 
             // Hide other content
             closeAllPanels();
@@ -3104,7 +3113,7 @@
                         </div>
                     </div>
                     
-                    <div id="myFeedPosts" style="margin-top: 1rem;">
+                    <div id="myFeedPosts" style="margin-top: 1rem; min-height: 400px; height: calc(100vh - 300px); overflow-y: auto;">
                         <div style="text-align: center; padding: 2rem; color: #666;">
                             <p>Loading your personalized feed...</p>
                         </div>
@@ -3112,11 +3121,29 @@
                 </div>
             `;
             
-            // Load the posts
-            await loadMyFeedPosts();
+            // Load the posts with error handling
+            try {
+                await loadMyFeedPosts();
+            } catch (error) {
+                console.error('❌ Error loading My Feed posts:', error);
+                document.getElementById('myFeedPosts').innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <p>Error loading feed. Please refresh the page.</p>
+                        <button onclick="showMyFeedInMain()" class="btn">Retry</button>
+                    </div>
+                `;
+            }
             
-            // Setup infinite scroll for My Feed
-            setupMyFeedInfiniteScroll();
+            // Setup infinite scroll for My Feed (with safety check)
+            try {
+                if (typeof setupMyFeedInfiniteScroll === 'function') {
+                    setupMyFeedInfiniteScroll();
+                } else {
+                    console.warn('⚠️ setupMyFeedInfiniteScroll function not available');
+                }
+            } catch (error) {
+                console.error('❌ Error setting up infinite scroll:', error);
+            }
             
             // Apply background if user has one
             if (currentUser && currentUser.backgroundImage) {
@@ -3126,25 +3153,65 @@
 
         // Load posts for My Feed in main area
         async function loadMyFeedPosts() {
+            console.log('🔄 Loading My Feed posts...');
+            
+            // Ensure auth token is available
+            if (!window.authToken && !localStorage.getItem('authToken')) {
+                console.error('❌ No auth token available for My Feed');
+                document.getElementById('myFeedPosts').innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <p>Please log in to view your feed.</p>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sync auth token if needed
+            if (!window.authToken && localStorage.getItem('authToken')) {
+                window.authToken = localStorage.getItem('authToken');
+                console.log('🔧 Synced auth token from localStorage');
+            }
+            
             try {
+                console.log('🌐 Making API call to /feed/');
                 const response = await apiCall('/feed/', {
                     method: 'GET'
                 });
                 
-                if (response.ok && response.data.posts) {
-                    displayMyFeedPosts(response.data.posts);
+                console.log('📦 My Feed API Response:', response);
+                
+                // Handle different response formats
+                let posts = null;
+                if (response && response.posts) {
+                    // Direct posts array
+                    posts = response.posts;
+                } else if (response && response.data && response.data.posts) {
+                    // Wrapped in data object
+                    posts = response.data.posts;
+                } else if (response && response.ok && response.data && response.data.posts) {
+                    // Double wrapped
+                    posts = response.data.posts;
+                }
+                
+                if (posts && Array.isArray(posts) && posts.length > 0) {
+                    console.log(`✅ Found ${posts.length} posts for My Feed`);
+                    displayMyFeedPosts(posts);
                 } else {
+                    console.log('📝 No posts found in My Feed');
                     document.getElementById('myFeedPosts').innerHTML = `
                         <div style="text-align: center; padding: 2rem; color: #666;">
                             <p>No posts in your feed yet. Follow some users to see their posts here!</p>
+                            <p><small>Start by exploring trending topics or searching for users to follow.</small></p>
                         </div>
                     `;
                 }
             } catch (error) {
-                console.error('Feed loading error:', error);
+                console.error('❌ Feed loading error:', error);
                 document.getElementById('myFeedPosts').innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
                         <p>Unable to load your feed. Please try again.</p>
+                        <p><small>Error: ${error.message}</small></p>
                         <button onclick="loadMyFeedPosts()" class="btn">Retry</button>
                     </div>
                 `;
@@ -3155,6 +3222,11 @@
         function displayMyFeedPosts(posts) {
             const container = document.getElementById('myFeedPosts');
             
+            if (!container) {
+                console.error('❌ My Feed container not found');
+                return;
+            }
+            
             if (!posts || posts.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #666;">
@@ -3164,8 +3236,45 @@
                 return;
             }
             
-            // Use the existing displayPosts function
-            displayPosts(posts, 'myFeedPosts', false);
+            console.log(`🎯 Displaying ${posts.length} posts in My Feed`);
+            
+            // Use the existing displayPosts function with fallback
+            try {
+                if (typeof displayPosts === 'function') {
+                    displayPosts(posts, 'myFeedPosts', false);
+                } else {
+                    console.warn('⚠️ displayPosts function not available, using fallback');
+                    displayMyFeedPostsFallback(posts, container);
+                }
+            } catch (error) {
+                console.error('❌ Error displaying posts:', error);
+                displayMyFeedPostsFallback(posts, container);
+            }
+        }
+        
+        // Fallback display function for My Feed
+        function displayMyFeedPostsFallback(posts, container) {
+            console.log('🔧 Using fallback display for My Feed');
+            
+            let html = '';
+            posts.forEach(post => {
+                html += `
+                    <div class="post-item" style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                            <strong>${post.author?.firstName || post.author?.username || 'Anonymous'}</strong>
+                            <span style="color: #666; margin-left: 0.5rem; font-size: 0.9rem;">
+                                ${post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 1rem;">${post.content || ''}</div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            👍 ${post.likesCount || 0} likes • 💬 ${post.commentsCount || 0} comments
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
         // DEPRECATED - Panel-based My Feed implementation removed
@@ -3194,44 +3303,58 @@
 
             try {
                 const nextPage = currentFeedPage + 1;
-                const response = await apiCall(`/feed/posts?page=${nextPage}`, {
+                // Use the correct /feed/ endpoint (no /posts, no pagination)
+                console.log('🔄 Loading more My Feed posts...');
+                const response = await apiCall('/feed/?limit=100', {
                     method: 'GET'
                 });
 
-                const posts = response.data?.posts || [];
+                console.log('📦 Load more response:', response);
+                
+                // Handle different response formats (same as main load)
+                let posts = null;
+                if (response && response.posts) {
+                    posts = response.posts;
+                } else if (response && response.data && response.data.posts) {
+                    posts = response.data.posts;
+                } else if (response && response.ok && response.data && response.data.posts) {
+                    posts = response.data.posts;
+                }
                 
                 // Remove loading indicator
                 container.removeChild(loadingDiv);
 
-                if (posts.length === 0) {
+                if (!posts || posts.length === 0) {
                     hasMorePosts = false;
                     const endDiv = document.createElement('div');
                     endDiv.className = 'feed-end-indicator';
+                    endDiv.style.cssText = 'text-align: center; padding: 1rem; color: #666; font-style: italic;';
                     endDiv.innerHTML = "You're all caught up! 🎉";
                     container.appendChild(endDiv);
                     return;
                 }
 
-                // Add new posts using the existing displayPosts function
-                posts.forEach(post => {
-                    const postElement = createPostElement(post);
-                    container.appendChild(postElement);
-                });
-
-                currentFeedPage = nextPage;
-                if (posts.length < 10) {
-                    hasMorePosts = false;
-                }
+                // Since /feed/ doesn't support pagination, refresh the entire feed
+                console.log(`✅ Refreshing feed with ${posts.length} posts`);
+                displayMyFeedPosts(posts);
+                
+                // Disable further loading since we're refreshing, not paginating
+                hasMorePosts = false;
 
             } catch (error) {
-                console.error('Error loading more posts:', error);
-                container.removeChild(loadingDiv);
+                console.error('❌ Error loading more posts:', error);
+                
+                // Remove loading indicator
+                if (container.contains(loadingDiv)) {
+                    container.removeChild(loadingDiv);
+                }
                 
                 const errorDiv = document.createElement('div');
-                errorDiv.className = 'feed-loading';
+                errorDiv.className = 'feed-error';
+                errorDiv.style.cssText = 'text-align: center; padding: 1rem;';
                 errorDiv.innerHTML = `
-                    <span>Failed to load more posts.</span>
-                    <button onclick="loadMoreMyFeedPosts()" style="margin-left: 1rem; background: #4b5c09; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer;">Retry</button>
+                    <p style="color: #666; margin-bottom: 0.5rem;">Failed to refresh feed.</p>
+                    <button onclick="loadMoreMyFeedPosts()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Retry</button>
                 `;
                 container.appendChild(errorDiv);
             }
