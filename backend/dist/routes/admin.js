@@ -505,7 +505,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
         const days = parseInt(req.query.days) || 30;
         const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
         // Run all analytics queries in parallel for better performance
-        const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, retentionStats, reputationStats, searchStats] = await Promise.all([
+        const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, reputationStats] = await Promise.all([
             // Daily activity metrics
             prisma.$queryRaw `
         SELECT 
@@ -597,12 +597,9 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
                 take: 10
             }),
             // Reputation System Analytics
-            prisma.reputationEvent.groupBy({
-                by: ['eventType'],
+            prisma.reputationEvent.findMany({
                 where: { createdAt: { gte: startDate } },
-                _count: { eventType: true },
-                _sum: { scoreChange: true },
-                orderBy: { _count: { eventType: 'desc' } }
+                select: { eventType: true, impact: true }
             })
         ]);
         // Extract data from parallel queries
@@ -611,6 +608,22 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
         const civic = civicEngagementStats[0];
         const content = contentStats[0];
         const health = systemHealthStats[0];
+        // Process reputation stats from array into grouped format
+        const processedReputationStats = (reputationStats || []).reduce((acc, event) => {
+            const existing = acc.find((item) => item.eventType === event.eventType);
+            if (existing) {
+                existing._count.eventType += 1;
+                existing._sum.impact += event.impact || 0;
+            }
+            else {
+                acc.push({
+                    eventType: event.eventType,
+                    _count: { eventType: 1 },
+                    _sum: { impact: event.impact || 0 }
+                });
+            }
+            return acc;
+        }, []);
         // Report breakdown by reason
         const reportReasons = await prisma.report.groupBy({
             by: ['reason'],
@@ -696,7 +709,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
                 summary: metrics,
                 dailyActivity: dailyStats,
                 geographicDistribution: geographicStats,
-                reputationEventBreakdown: reputationStats,
+                reputationEventBreakdown: processedReputationStats,
                 reportBreakdown: reportReasons,
                 flagDistribution: flagDistribution,
                 generatedAt: new Date().toISOString()

@@ -311,7 +311,7 @@ class OAuthService {
         const algorithm = 'aes-256-cbc';
         const key = process.env.OAUTH_ENCRYPTION_KEY || crypto_1.default.randomBytes(32);
         const iv = crypto_1.default.randomBytes(16);
-        const cipher = crypto_1.default.createCipher(algorithm, key);
+        const cipher = crypto_1.default.createCipheriv(algorithm, key, iv);
         let encrypted = cipher.update(token, 'utf8', 'hex');
         encrypted += cipher.final('hex');
         return `${iv.toString('hex')}:${encrypted}`;
@@ -324,7 +324,7 @@ class OAuthService {
         const key = process.env.OAUTH_ENCRYPTION_KEY || crypto_1.default.randomBytes(32);
         const [ivHex, encrypted] = encryptedToken.split(':');
         const iv = Buffer.from(ivHex, 'hex');
-        const decipher = crypto_1.default.createDecipher(algorithm, key);
+        const decipher = crypto_1.default.createDecipheriv(algorithm, key, iv);
         let decrypted = decipher.update(encrypted, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
         return decrypted;

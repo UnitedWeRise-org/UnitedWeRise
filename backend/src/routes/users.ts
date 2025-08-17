@@ -490,8 +490,8 @@ router.get('/friend-status/:userId', requireAuth, async (req: AuthRequest, res) 
         const response = await prisma.friendship.findFirst({
             where: {
                 OR: [
-                    { requesterId: req.user!.id, addresseeId: req.params.userId },
-                    { requesterId: req.params.userId, addresseeId: req.user!.id }
+                    { requesterId: req.user!.id, recipientId: req.params.userId },
+                    { requesterId: req.params.userId, recipientId: req.user!.id }
                 ]
             }
         });

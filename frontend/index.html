@@ -371,7 +371,7 @@
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
-                <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
+                <div class="thumb" onclick="toggleCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
                 <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
@@ -7749,15 +7749,29 @@
          */
 
         // Core organizing functions
-        function openCivicOrganizing() {
+        function toggleCivicOrganizing() {
             if (!authToken) {
                 showToast('Please log in to access organizing tools');
                 return;
             }
             
-            document.getElementById('civicOrganizingContainer').style.display = 'flex';
-            closeAllPanels(); // Close other panels
-            showDefaultOrganizingView();
+            const container = document.getElementById('civicOrganizingContainer');
+            const isCurrentlyVisible = container.style.display === 'flex';
+            
+            if (isCurrentlyVisible) {
+                // Close civic organizing and return to default view
+                closeCivicOrganizing();
+            } else {
+                // Open civic organizing
+                container.style.display = 'flex';
+                closeAllPanels(); // Close other panels
+                showDefaultOrganizingView();
+            }
+        }
+        
+        function openCivicOrganizing() {
+            // Keep for backward compatibility
+            toggleCivicOrganizing();
         }
 
         function closeCivicOrganizing() {

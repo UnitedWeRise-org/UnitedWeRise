@@ -43,9 +43,9 @@ exports.apiLimiter = (0, express_rate_limit_1.default)({
     max: (req) => {
         // Higher limits for authenticated users
         if (req.user) {
-            return 500; // 500 requests per 15 minutes for authenticated users
+            return 1000; // 1000 requests per 15 minutes for authenticated users
         }
-        return 200; // 200 requests per 15 minutes for anonymous users
+        return 500; // 500 requests per 15 minutes for anonymous users
     },
     message: {
         error: 'Too many requests, please try again later.'
@@ -79,9 +79,9 @@ exports.burstLimiter = (0, express_rate_limit_1.default)({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: (req) => {
         if (req.user) {
-            return 60; // 60 requests per minute for authenticated users
+            return 200; // 200 requests per minute for authenticated users
         }
-        return 30; // 30 requests per minute for anonymous users
+        return 150; // 150 requests per minute for anonymous users (increased for frontend initialization)
     },
     message: {
         error: 'Making requests too quickly, please slow down.'
@@ -93,6 +93,14 @@ exports.burstLimiter = (0, express_rate_limit_1.default)({
             return `burst_user_${req.user.id}`;
         }
         return `burst_${azureKeyGenerator(req)}`;
+    },
+    // Skip rate limiting for health check endpoints
+    skip: (req) => {
+        const path = req.path || req.url;
+        return path === '/health' ||
+            path === '/health/database' ||
+            path === '/health/deployment' ||
+            path.startsWith('/api/health');
     }
 });
 // Strict rate limiting for posting content
