@@ -49,7 +49,22 @@ const app = express();
 app.set('trust proxy', 1);
 
 const httpServer = http.createServer(app);
-const prisma = new PrismaClient();
+
+// Configure Prisma Client with connection pooling for shared database
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  },
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
+});
+
+// Configure connection pool limits to handle shared database between production and staging
+process.env.DATABASE_URL = process.env.DATABASE_URL?.includes('connection_limit=') 
+  ? process.env.DATABASE_URL 
+  : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=20`;
+
 const PORT = process.env.PORT || 3001;
 
 // Initialize WebSocket server
@@ -253,10 +268,35 @@ app.use(errorHandler);
 // Initialize photo service directories
 PhotoService.initializeDirectories().catch(console.error);
 
+// Graceful shutdown handler for proper database connection cleanup
+const gracefulShutdown = async () => {
+  console.log('Received shutdown signal, closing server gracefully...');
+  
+  // Close HTTP server
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+  });
+  
+  // Close database connections
+  try {
+    await prisma.$disconnect();
+    console.log('Database connections closed');
+  } catch (error) {
+    console.error('Error closing database connections:', error);
+  }
+  
+  process.exit(0);
+};
+
+// Listen for shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 // Use httpServer instead of app for WebSocket support
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server active`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Photo uploads: enabled with automatic resizing`);
+  console.log(`Database connection pool: 10 connections max, 20s timeout`);
 });

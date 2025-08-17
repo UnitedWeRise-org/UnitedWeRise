@@ -39,6 +39,10 @@ export const passwordResetLimiter = rateLimit({
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: (req: any) => {
+    // Admin users get unlimited requests
+    if (req.user?.isAdmin) {
+      return 10000; // Effectively unlimited for admins
+    }
     // Higher limits for authenticated users
     if (req.user) {
       return 500; // 500 requests per 15 minutes for authenticated users
@@ -79,6 +83,10 @@ export const apiLimiter = rateLimit({
 export const burstLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: (req: any) => {
+    // Admin users get unlimited burst requests
+    if (req.user?.isAdmin) {
+      return 5000; // Effectively unlimited burst for admins
+    }
     if (req.user) {
       return 120; // 120 requests per minute for authenticated users
     }
@@ -95,8 +103,13 @@ export const burstLimiter = rateLimit({
     }
     return `burst_${azureKeyGenerator(req)}`;
   },
-  // Skip rate limiting for health check endpoints
+  // Skip rate limiting for health check endpoints and admins
   skip: (req: any) => {
+    // Skip for admins
+    if (req.user?.isAdmin) {
+      return true;
+    }
+    // Skip for health check endpoints
     const path = req.path || req.url;
     return path === '/health' || 
            path === '/health/database' || 
