@@ -921,6 +921,9 @@
             console.log('🚀 Starting optimized app initialization...');
             initializeApp().then(result => {
                 console.log('✅ App initialization complete:', result);
+                
+                // Setup civic organizing sidebar monitoring
+                setupCivicOrganizingSidebarMonitoring();
             }).catch(error => {
                 console.error('💥 App initialization failed:', error);
             });
@@ -7755,7 +7758,28 @@
                 return;
             }
             
-            document.getElementById('civicOrganizingContainer').style.display = 'flex';
+            // Hide other main view systems when opening
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
+            }
+            
+            // Hide other detail panels
+            document.querySelectorAll('.detail-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            
+            // Hide existing info panels
+            document.querySelectorAll('.info-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            
+            const container = document.getElementById('civicOrganizingContainer');
+            container.style.display = 'flex';
+            
+            // Update sidebar state awareness
+            updateCivicOrganizingForSidebarState();
+            
             closeAllPanels(); // Close other panels
             showDefaultOrganizingView();
         }
@@ -7763,6 +7787,35 @@
         function closeCivicOrganizing() {
             document.getElementById('civicOrganizingContainer').style.display = 'none';
             showDefaultView();
+        }
+        
+        function updateCivicOrganizingForSidebarState() {
+            const sidebar = document.querySelector('#sidebar');
+            const civicContainer = document.querySelector('.civic-organizing-container');
+            
+            if (sidebar && civicContainer) {
+                const isExpanded = sidebar.classList.contains('expanded');
+                civicContainer.classList.toggle('sidebar-expanded', isExpanded);
+            }
+        }
+        
+        // Setup sidebar monitoring for civic organizing
+        function setupCivicOrganizingSidebarMonitoring() {
+            const sidebar = document.querySelector('#sidebar');
+            if (sidebar) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            updateCivicOrganizingForSidebarState();
+                        }
+                    });
+                });
+                
+                observer.observe(sidebar, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
         }
 
         function showDefaultOrganizingView() {

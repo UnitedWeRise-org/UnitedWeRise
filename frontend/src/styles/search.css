@@ -90,17 +90,24 @@
 
 .civic-organizing-container {
     position: fixed;
-    top: 6.5vh;
-    left: 3vw;
-    width: calc(94vw - 160px);
-    height: calc(88vh);
+    top: 6vh;
+    left: 3.5vw;
+    right: 26%;
+    height: calc(100vh - 6vh);
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 150;
+    z-index: 15;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    transition: left 0.3s ease;
+    box-sizing: border-box;
+}
+
+.civic-organizing-container.sidebar-expanded {
+    left: 10.5vw;
 }
 
 .organizing-header {

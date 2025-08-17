@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 16, 2025  
-**Version**: 4.0 (Civic Organizing System & Enhanced Search)  
+**Last Updated**: August 17, 2025  
+**Version**: 4.1 (Backend Error Handling & Window Behavior Fixes)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -3661,7 +3661,36 @@ User switches to Local View → Shows Bay Area environmental initiatives
 
 ## 🐛 KNOWN ISSUES & BUGS {#known-issues-bugs}
 
-### 🚨 RECENTLY FIXED - August 15, 2025
+### 🚨 RECENTLY FIXED - August 17, 2025
+
+#### CORS & Rate Limiting Production Issues (FIXED)
+**Issue**: Frontend unable to connect to backend due to CORS blocking and 429 rate limiting errors
+- **Problem**: Rate limits too restrictive (30 requests/min) for frontend initialization
+- **Root Cause**: Burst rate limiter preventing normal user operations
+- **Fix**: Increased burst limits from 30→80 requests/min for anonymous users
+- **Fix**: Added health check endpoint exemptions from rate limiting
+- **Files Modified**: `backend/src/middleware/rateLimiting.ts`
+- **Status**: ✅ Fixed and deployed to production
+
+#### API Error Handling Improvements (FIXED)
+**Issue**: Multiple 500 internal server errors causing frontend crashes
+- **Problem**: Friend-status and trending endpoints throwing unhandled exceptions
+- **Root Cause**: Missing error handling and safe fallbacks
+- **Fix**: Added try-catch blocks with graceful degradation
+- **Fix**: Trending topics returns empty array instead of 500 error
+- **Files Modified**: `backend/src/routes/users.ts`, `backend/src/routes/feed.ts`
+- **Status**: ✅ Fixed and deployed to production
+
+#### Civic Organizing Window Size (FIXED)
+**Issue**: Civic Organizing window too large and not matching other windows
+- **Problem**: Different CSS positioning from elections-main-view pattern
+- **Root Cause**: Inconsistent window sizing across features
+- **Fix**: Updated CSS to match elections window behavior (same size, z-index, sidebar awareness)
+- **Fix**: Added proper window replacement and sidebar state monitoring
+- **Files Modified**: `frontend/src/styles/search.css`, `frontend/index.html`
+- **Status**: ✅ Fixed and ready for testing
+
+### 🚨 PREVIOUSLY FIXED - August 15, 2025
 
 #### My Feed API Endpoint Mismatch (FIXED)
 **Issue**: My Feed was not loading any posts due to incorrect API endpoint
@@ -3912,6 +3941,44 @@ POST /api/debug/clear-cache
 
 ## 📜 SESSION HISTORY {#session-history}
 
+### August 17, 2025 - Production Error Handling & UI Consistency
+
+#### Backend Error Handling Fixes
+**Critical Production Issues**: Frontend unable to connect due to CORS and rate limiting
+**Root Cause**: Rate limiting too aggressive for normal frontend operations
+
+**Fixes Implemented**:
+- **Rate Limiting**: Increased burst limits from 30→80 requests/min for anonymous users
+- **CORS Configuration**: Verified proper CORS headers and origin allowlist
+- **Error Handling**: Added try-catch blocks with safe fallbacks for all failing endpoints
+- **API Responses**: Trending topics returns empty array instead of 500 errors
+- **Friend Status**: Safe default responses instead of crashes
+
+**Technical Details**:
+- Modified `backend/src/middleware/rateLimiting.ts` - burst limiter configuration
+- Updated `backend/src/routes/users.ts` - friend-status endpoint error handling
+- Updated `backend/src/routes/feed.ts` - trending feed error handling
+- Deployed via Azure Container Apps with environment variable triggers
+
+#### UI Window Consistency
+**Issue**: Civic Organizing window didn't match elections-main-view behavior
+**Fix**: Standardized window sizing and behavior across all main content areas
+
+**Changes Made**:
+- **CSS Positioning**: Updated to match elections window (same size, z-index, positioning)
+- **Sidebar Awareness**: Added mutation observer for sidebar state changes
+- **Window Replacement**: Proper closing of other windows when opened
+- **Responsive Design**: Consistent left positioning with sidebar expansion
+
+**Files Modified**:
+- `frontend/src/styles/search.css` - CSS positioning updates
+- `frontend/index.html` - JavaScript behavior and sidebar monitoring
+
+#### Production Deployment
+**Container Revision**: backend--0000043 deployed successfully
+**Verification**: All endpoints returning proper responses
+**Result**: ✅ CORS errors eliminated, rate limiting optimized, UI consistency achieved
+
 ### August 15, 2025 - Code Audit & Documentation Consolidation
 
 #### Comprehensive Code Audit
@@ -4129,6 +4196,38 @@ showDefaultView()
 ## 🆘 TROUBLESHOOTING {#troubleshooting}
 
 ### Common Issues & Solutions
+
+#### 🚨 RECENTLY RESOLVED (August 17, 2025)
+
+**Issue**: CORS policy blocking frontend requests
+```javascript
+// FIXED: Backend CORS configuration now includes all required origins
+// Solution: Rate limiting adjusted from 30→80 requests/min
+// Check if resolved:
+fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health')
+  .then(r => console.log('Status:', r.status, 'CORS:', r.headers.get('access-control-allow-origin')));
+```
+
+**Issue**: 429 "Too Many Requests" errors
+```javascript
+// FIXED: Burst rate limiter increased to 80 requests/min
+// Solution: Health check endpoints exempted from rate limiting
+// Check rate limits:
+console.log('Rate limit headers:', 
+  response.headers.get('ratelimit-remaining'),
+  response.headers.get('ratelimit-reset'));
+```
+
+**Issue**: 500 Internal Server Error on friend-status
+```javascript
+// FIXED: Error handling added with safe fallbacks
+// Solution: Returns default values instead of crashing
+// Test endpoint:
+fetch('/api/users/friend-status/test123', {
+  headers: { 'Authorization': 'Bearer invalid' }
+}).then(r => r.json()).then(console.log);
+// Should return: {isFriend: false, isPending: false, status: 'none'}
+```
 
 #### Authentication Problems
 
