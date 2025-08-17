@@ -3593,6 +3593,23 @@
                 return;
             }
 
+            // Hide Civic Organizing container if open
+            const civicOrganizing = document.querySelector('.civic-organizing-container');
+            if (civicOrganizing) {
+                civicOrganizing.style.display = 'none';
+            }
+            
+            // Hide other main view systems
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
+            }
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
+
             const mainContent = document.getElementById('mainContent');
             const isProfileCurrentlyShown = mainContent.querySelector('.my-profile') !== null;
             
@@ -3660,6 +3677,23 @@
         // Function to show My Feed in main content area (like Profile)
         async function showMyFeedInMain() {
             console.log('🎯 Showing My Feed in main content area');
+            
+            // Hide Civic Organizing container if open
+            const civicOrganizing = document.querySelector('.civic-organizing-container');
+            if (civicOrganizing) {
+                civicOrganizing.style.display = 'none';
+            }
+            
+            // Hide other main view systems
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
+            }
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
             
             // Sync all auth token variables
             const token = window.authToken || authToken || localStorage.getItem('authToken');
@@ -7762,6 +7796,16 @@
             const electionsView = document.querySelector('.elections-main-view');
             if (electionsView) {
                 electionsView.style.display = 'none';
+            }
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
             }
             
             // Hide other detail panels

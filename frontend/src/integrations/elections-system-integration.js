@@ -77,6 +77,12 @@ class ElectionsSystemIntegration {
             panel.classList.add('hidden');
         });
 
+        // Hide Civic Organizing container if open
+        const civicOrganizing = document.querySelector('.civic-organizing-container');
+        if (civicOrganizing) {
+            civicOrganizing.style.display = 'none';
+        }
+
         // Get main content area
         const mainContent = document.querySelector('#mainContent') || 
                            document.querySelector('.main') ||
