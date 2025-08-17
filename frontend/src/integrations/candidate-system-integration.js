@@ -251,6 +251,27 @@ class CandidateSystemIntegration {
             panel.classList.add('hidden');
         });
 
+        // Hide existing info panels
+        document.querySelectorAll('.info-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        // Hide other main view systems when opening Candidates
+        const electionsView = document.querySelector('.elections-main-view');
+        if (electionsView) {
+            electionsView.style.display = 'none';
+        }
+        
+        const officialsView = document.querySelector('.officials-main-view');
+        if (officialsView) {
+            officialsView.style.display = 'none';
+        }
+        
+        const civicOrganizing = document.querySelector('.civic-organizing-container');
+        if (civicOrganizing) {
+            civicOrganizing.style.display = 'none';
+        }
+
         // Get main content area
         const mainContent = document.querySelector('#mainContent') || 
                            document.querySelector('.main') ||

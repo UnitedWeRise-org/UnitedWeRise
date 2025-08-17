@@ -77,10 +77,20 @@ class OfficialsSystemIntegration {
             panel.classList.add('hidden');
         });
 
-        // Hide Civic Organizing container if open
+        // Hide other main view systems when opening Officials
         const civicOrganizing = document.querySelector('.civic-organizing-container');
         if (civicOrganizing) {
             civicOrganizing.style.display = 'none';
+        }
+        
+        const candidatesView = document.querySelector('.candidates-main-view');
+        if (candidatesView) {
+            candidatesView.style.display = 'none';
+        }
+        
+        const electionsView = document.querySelector('.elections-main-view');
+        if (electionsView) {
+            electionsView.style.display = 'none';
         }
 
         // Get main content area

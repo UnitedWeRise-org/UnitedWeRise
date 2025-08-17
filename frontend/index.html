@@ -3609,6 +3609,11 @@
             if (officialsView) {
                 officialsView.style.display = 'none';
             }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
+            }
 
             const mainContent = document.getElementById('mainContent');
             const isProfileCurrentlyShown = mainContent.querySelector('.my-profile') !== null;
@@ -3693,6 +3698,11 @@
             const officialsView = document.querySelector('.officials-main-view');
             if (officialsView) {
                 officialsView.style.display = 'none';
+            }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
             }
             
             // Sync all auth token variables
