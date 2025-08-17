@@ -7391,22 +7391,28 @@
 
             const postElements = container.querySelectorAll('.post-item, [data-post-id]');
             
-            // Process posts in batches to avoid overwhelming the API
-            const batchSize = 10;
+            // Process posts in smaller batches to avoid rate limiting
+            const batchSize = 3; // Reduced from 10 to 3
+            const uniqueAuthors = new Map(); // Track unique authors to avoid duplicate requests
+            
             for (let i = 0; i < Math.min(posts.length, postElements.length); i += batchSize) {
                 const batch = posts.slice(i, i + batchSize);
                 const promises = batch.map((post, index) => {
                     const postElement = postElements[i + index];
                     if (postElement && post.author && post.author.id !== window.currentUser?.id) {
-                        return addFriendStatusToPost(postElement, post.author.id);
+                        // Only make request if we haven't already processed this author
+                        if (!uniqueAuthors.has(post.author.id)) {
+                            uniqueAuthors.set(post.author.id, true);
+                            return addFriendStatusToPost(postElement, post.author.id);
+                        }
                     }
                 });
                 
                 await Promise.all(promises.filter(Boolean));
                 
-                // Small delay between batches to prevent API rate limiting
+                // Longer delay between batches to prevent rate limiting
                 if (i + batchSize < posts.length) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 100ms to 1000ms
                 }
             }
         }
