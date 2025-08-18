@@ -110,7 +110,7 @@ router.post('/complete-step', auth_1.requireAuth, async (req, res) => {
         const profile = await onboardingService_1.onboardingService.completeStep(userId, stepId, stepData);
         await onboardingService_1.onboardingService.trackOnboardingEvent(userId, 'step_completed', stepId, stepData);
         // If location step completed, fetch representatives
-        if (stepId === 'location' && stepData?.zipCode) {
+        if (stepId === 'location' && (stepData === null || stepData === void 0 ? void 0 : stepData.zipCode)) {
             try {
                 // await googleCivicService.updateUserRepresentatives(userId, stepData.zipCode);
                 console.log('Representative fetching would happen here for:', stepData.zipCode);
@@ -285,9 +285,10 @@ router.post('/welcome', auth_1.requireAuth, async (req, res) => {
  *         description: Onboarding analytics retrieved successfully
  */
 router.get('/analytics', auth_1.requireAuth, async (req, res) => {
+    var _a;
     try {
         // Check if user is admin
-        if (!req.user?.isAdmin) {
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.isAdmin)) {
             return res.status(403).json({ error: 'Admin access required' });
         }
         const analytics = await onboardingService_1.onboardingService.getOnboardingAnalytics();
@@ -329,4 +330,3 @@ router.get('/search-preview', async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=onboarding.js.map

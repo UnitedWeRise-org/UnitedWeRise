@@ -39,6 +39,7 @@ const legislative_1 = __importDefault(require("./routes/legislative"));
 const civic_1 = __importDefault(require("./routes/civic"));
 const oauth_1 = __importDefault(require("./routes/oauth"));
 const trendingTopics_1 = __importDefault(require("./routes/trendingTopics"));
+const payments_1 = __importDefault(require("./routes/payments"));
 const websocket_1 = require("./websocket");
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -50,7 +51,19 @@ const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
 app.set('trust proxy', 1);
 const httpServer = http_1.default.createServer(app);
-const prisma = new client_1.PrismaClient();
+// Configure Prisma Client with connection pooling for shared database
+const prisma = new client_1.PrismaClient({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
+    },
+    log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
+});
+// Configure connection pool limits to handle shared database between production and staging
+process.env.DATABASE_URL = process.env.DATABASE_URL?.includes('connection_limit=')
+    ? process.env.DATABASE_URL
+    : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=20`;
 const PORT = process.env.PORT || 3001;
 // Initialize WebSocket server
 const io = (0, websocket_1.initializeWebSocket)(httpServer);
@@ -150,6 +163,7 @@ app.use('/api/legislative', legislative_1.default);
 app.use('/api/civic', civic_1.default);
 app.use('/api/oauth', oauth_1.default);
 app.use('/api/trending', trendingTopics_1.default);
+app.use('/api/payments', payments_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
@@ -235,11 +249,32 @@ app.use(errorHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
 // Initialize photo service directories
 photoService_1.PhotoService.initializeDirectories().catch(console.error);
+// Graceful shutdown handler for proper database connection cleanup
+const gracefulShutdown = async () => {
+    console.log('Received shutdown signal, closing server gracefully...');
+    // Close HTTP server
+    httpServer.close(() => {
+        console.log('HTTP server closed');
+    });
+    // Close database connections
+    try {
+        await prisma.$disconnect();
+        console.log('Database connections closed');
+    }
+    catch (error) {
+        console.error('Error closing database connections:', error);
+    }
+    process.exit(0);
+};
+// Listen for shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 // Use httpServer instead of app for WebSocket support
 httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`WebSocket server active`);
     console.log(`Health check: http://localhost:${PORT}/health`);
     console.log(`Photo uploads: enabled with automatic resizing`);
+    console.log(`Database connection pool: 10 connections max, 20s timeout`);
 });
 //# sourceMappingURL=server.js.map

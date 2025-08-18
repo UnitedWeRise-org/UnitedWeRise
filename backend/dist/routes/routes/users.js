@@ -227,11 +227,8 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
             ]
         });
         // Transform to include isFollowing flag
-        const usersWithFollowStatus = users.map(user => ({
-            ...user,
-            isFollowing: user.followers.length > 0,
-            followers: undefined // Remove the followers array from response
-        }));
+        const usersWithFollowStatus = users.map(user => (Object.assign(Object.assign({}, user), { isFollowing: user.followers.length > 0, followers: undefined // Remove the followers array from response
+         })));
         res.json({
             users: usersWithFollowStatus,
             pagination: {
@@ -440,29 +437,18 @@ router.delete('/background-image', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to remove background image' });
     }
 });
-// Friend status endpoint for backward compatibility
+// Friend status endpoint for backward compatibility (stub)
 router.get('/friend-status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
-        const { userId } = req.params;
-        const currentUserId = req.user.id;
-        // Use FollowService for follow status (no friendship table yet)
-        const followStatus = await relationshipService_1.FollowService.getFollowStatus(currentUserId, userId);
         res.json({
-            isFriend: false, // No friendship system yet
+            isFriend: false,
             isPending: false,
-            status: 'none',
-            isFollowing: followStatus.isFollowing
+            status: 'none'
         });
     }
     catch (error) {
         console.error('Friend status error:', error);
-        // Return safe default instead of 500 error
-        res.json({
-            isFriend: false,
-            isPending: false,
-            status: 'none',
-            isFollowing: false
-        });
+        res.status(500).json({ error: 'Failed to get friend status' });
     }
 });
 // User activity tracking endpoint (stub)
@@ -476,4 +462,3 @@ router.post('/activity', auth_1.requireAuth, async (req, res) => {
     }
 });
 exports.default = router;
-//# sourceMappingURL=users.js.map

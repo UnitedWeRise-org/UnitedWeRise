@@ -125,7 +125,19 @@ router.get('/trending', async (req, res) => {
     }
     catch (error) {
         console.error('Get trending posts error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        // Return safe fallback instead of 500 error
+        const { limit = 20, offset = 0 } = req.query;
+        const limitNum = Math.max(1, parseInt(limit.toString()) || 20);
+        const offsetNum = Math.max(0, parseInt(offset.toString()) || 0);
+        res.json({
+            posts: [],
+            pagination: {
+                limit: limitNum,
+                offset: offsetNum,
+                count: 0
+            },
+            error: 'Trending posts temporarily unavailable'
+        });
     }
 });
 exports.default = router;

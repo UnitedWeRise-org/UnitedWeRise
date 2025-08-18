@@ -74,7 +74,9 @@
       "Bash(psql:*)",
       "Bash(APP_NAME=\"unitedwerise-backend\")",
       "Bash(RESOURCE_GROUP=\"unitedwerise-rg\")",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:delightful-smoke-097b2fa0f.1.azurestaticapps.net)"
     ],
     "deny": []
   }
