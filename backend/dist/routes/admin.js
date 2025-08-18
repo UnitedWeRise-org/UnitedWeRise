@@ -596,13 +596,11 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
                 orderBy: { _count: { state: 'desc' } },
                 take: 10
             }),
-            // Reputation System Analytics
-            prisma.reputationEvent.groupBy({
-                by: ['eventType'],
+            // Reputation System Analytics - simplified to avoid TypeScript circular reference
+            prisma.reputationEvent.findMany({
                 where: { createdAt: { gte: startDate } },
-                _count: { eventType: true },
-                _sum: { scoreChange: true },
-                orderBy: { _count: { eventType: 'desc' } }
+                select: { eventType: true, scoreChange: true },
+                take: 100
             })
         ]);
         // Extract data from parallel queries

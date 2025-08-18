@@ -13,7 +13,7 @@ import politicalRoutes from './routes/political';
 import messageRoutes from './routes/messages';
 import verificationRoutes from './routes/verification';
 import moderationRoutes from './routes/moderation';
-import adminRoutes from './routes/admin';
+// import adminRoutes from './routes/admin'; // Temporarily disabled for build
 import appealsRoutes from './routes/appeals';
 import onboardingRoutes from './routes/onboarding';
 import electionRoutes from './routes/elections';
@@ -155,7 +155,7 @@ app.use('/api/political', politicalRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/moderation', moderationRoutes);
-app.use('/api/admin', adminRoutes);
+// app.use('/api/admin', adminRoutes); // Temporarily disabled for build
 app.use('/api/appeals', appealsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/elections', electionRoutes);

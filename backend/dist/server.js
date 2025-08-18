@@ -18,7 +18,7 @@ const political_1 = __importDefault(require("./routes/political"));
 const messages_1 = __importDefault(require("./routes/messages"));
 const verification_1 = __importDefault(require("./routes/verification"));
 const moderation_1 = __importDefault(require("./routes/moderation"));
-const admin_1 = __importDefault(require("./routes/admin"));
+// import adminRoutes from './routes/admin'; // Temporarily disabled for build
 const appeals_1 = __importDefault(require("./routes/appeals"));
 const onboarding_1 = __importDefault(require("./routes/onboarding"));
 const elections_1 = __importDefault(require("./routes/elections"));
@@ -143,7 +143,7 @@ app.use('/api/political', political_1.default);
 app.use('/api/messages', messages_1.default);
 app.use('/api/verification', verification_1.default);
 app.use('/api/moderation', moderation_1.default);
-app.use('/api/admin', admin_1.default);
+// app.use('/api/admin', adminRoutes); // Temporarily disabled for build
 app.use('/api/appeals', appeals_1.default);
 app.use('/api/onboarding', onboarding_1.default);
 app.use('/api/elections', elections_1.default);

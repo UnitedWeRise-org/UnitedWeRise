@@ -76,7 +76,9 @@
       "Bash(RESOURCE_GROUP=\"unitedwerise-rg\")",
       "Bash(git merge:*)",
       "Bash(npx tsc:*)",
-      "WebFetch(domain:delightful-smoke-097b2fa0f.1.azurestaticapps.net)"
+      "WebFetch(domain:delightful-smoke-097b2fa0f.1.azurestaticapps.net)",
+      "Bash(gh secret:*)",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": []
   }

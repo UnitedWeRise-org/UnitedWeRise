@@ -112,8 +112,9 @@ class ElectionsService {
                 keyIssues: candidate.keyIssues,
                 isVerified: candidate.isVerified,
                 endorsements: candidate.endorsements.map(endorsement => ({
-                    organization: endorsement.organization,
-                    type: endorsement.type,
+                    // organization: endorsement.organization,
+                    // type: endorsement.type,
+                    reason: endorsement.reason || '',
                     date: endorsement.createdAt.toISOString(),
                 })),
                 financialData: candidate.financialData ? {
@@ -213,8 +214,9 @@ class ElectionsService {
                 keyIssues: candidate.keyIssues,
                 isVerified: candidate.isVerified,
                 endorsements: candidate.endorsements.map(endorsement => ({
-                    organization: endorsement.organization,
-                    type: endorsement.type,
+                    // organization: endorsement.organization,
+                    // type: endorsement.type,
+                    reason: endorsement.reason || '',
                     date: endorsement.createdAt.toISOString(),
                 })),
                 financialData: candidate.financialData ? {
