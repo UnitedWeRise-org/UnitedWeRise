@@ -30,9 +30,12 @@ jobs:
           cd backend
           
           # Generate unique tag with timestamp and commit
-          TAG="dev-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
+          COMMIT_SHORT=$(echo $GITHUB_SHA | cut -c1-7)
+          TAG="dev-$(date +%Y%m%d-%H%M%S)-${COMMIT_SHORT}"
           
           echo "🔨 Building Docker image with tag: $TAG"
+          echo "📋 Current directory: $(pwd)"
+          echo "📁 Contents: $(ls -la)"
           
           # Build the Docker image locally first to verify
           docker build -t "unitedwerise-backend:$TAG" .
@@ -43,9 +46,13 @@ jobs:
       - name: Verify Stripe Integration
         run: |
           echo "🔍 Verifying Stripe integration in built image..."
+          echo "🏷️ Using tag: $TAG"
           
           # Check if Stripe files exist in the built image
+          echo "📁 Checking dist/services directory..."
           docker run --rm "unitedwerise-backend:$TAG" ls -la dist/services/ | grep -i stripe || echo "⚠️ Stripe service not found"
+          
+          echo "📁 Checking dist/routes directory..."
           docker run --rm "unitedwerise-backend:$TAG" ls -la dist/routes/ | grep -i payment || echo "⚠️ Payment routes not found"
           
           echo "📋 Checking package.json for Stripe dependency..."
