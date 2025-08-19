@@ -55,13 +55,20 @@ class AppInitializer {
             AppInitializer.log('🔄 Fetching initialization data...');
             
             try {
-                AppInitializer.log('🔄 About to call /batch/initialize with token:', window.authToken ? 'EXISTS' : 'MISSING');
+                AppInitializer.log('🔄 About to call /batch/initialize with token:', window.authToken ? `EXISTS (${window.authToken.slice(0,10)}...)` : 'MISSING');
                 const initData = await window.apiCall('/batch/initialize', {
-                    cacheTimeout: 60000 // Cache for 1 minute
+                    cacheTimeout: 60000, // Cache for 1 minute
+                    retries: 1 // Only retry once to avoid cascading failures
                 });
-                AppInitializer.log('🔄 Received response from /batch/initialize:', initData);
+                AppInitializer.log('🔄 Received response from /batch/initialize:', {
+                    ok: initData?.ok,
+                    status: initData?.status,
+                    hasData: !!initData?.data,
+                    hasUser: !!initData?.data?.data?.user,
+                    error: initData?.error || 'none'
+                });
 
-                if (initData.ok && initData.data && initData.data.success) {
+                if (initData && initData.ok && initData.data && initData.data.success) {
                     AppInitializer.log('✅ Batch initialization successful');
                     
                     // Store fresh user data
@@ -78,13 +85,41 @@ class AppInitializer {
                         userData: this.userData,
                         initData: initData.data.data
                     };
+                } else {
+                    // Log why batch failed
+                    AppInitializer.log('❌ Batch response structure issue:', {
+                        hasInitData: !!initData,
+                        hasOk: !!initData?.ok,
+                        hasData: !!initData?.data,
+                        hasSuccess: !!initData?.data?.success,
+                        status: initData?.status,
+                        errorMessage: initData?.data?.error
+                    }, 'warn');
+                    
+                    // If we got a response but it's not successful, throw an error to trigger fallback
+                    if (initData && !initData.ok) {
+                        const error = new Error(initData.data?.error || `HTTP ${initData.status}`);
+                        error.status = initData.status;
+                        throw error;
+                    }
                 }
             } catch (batchError) {
-                AppInitializer.log('📱 Batch endpoint returned error:', batchError.message || batchError, 'warn');
+                AppInitializer.log('📱 Batch endpoint error details:', {
+                    message: batchError.message,
+                    status: batchError.status,
+                    code: batchError.code,
+                    type: typeof batchError
+                }, 'warn');
                 
-                // Don't treat 401 from batch as fatal - it just means we need auth
-                // Fallback to individual API calls
-                AppInitializer.log('🔄 Trying individual auth verification...');
+                // If it's a 401, clear invalid token and set logged out state
+                if (batchError.message?.includes('401') || batchError.status === 401) {
+                    AppInitializer.log('🔒 Authentication failed, clearing invalid token');
+                    this.clearAuthAndSetLoggedOut();
+                    return { authenticated: false, reason: 'invalid_token' };
+                }
+                
+                // For other errors (network, 500, etc), try limited fallback
+                AppInitializer.log('🔄 Trying minimal auth verification fallback...');
                 
                 try {
                     // First try auth/me for authentication check
