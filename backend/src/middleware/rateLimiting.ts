@@ -47,7 +47,7 @@ export const apiLimiter = rateLimit({
     if (req.user) {
       return 500; // 500 requests per 15 minutes for authenticated users
     }
-    return 200; // 200 requests per 15 minutes for anonymous users
+    return 1000; // 1000 requests per 15 minutes for anonymous users (increased for site functionality)
   },
   message: {
     error: 'Too many requests, please try again later.'
@@ -90,7 +90,7 @@ export const burstLimiter = rateLimit({
     if (req.user) {
       return 120; // 120 requests per minute for authenticated users
     }
-    return 80; // 80 requests per minute for anonymous users (increased for development testing)
+    return 200; // 200 requests per minute for anonymous users (increased for site functionality)
   },
   message: {
     error: 'Making requests too quickly, please slow down.'
