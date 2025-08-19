@@ -9,7 +9,6 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 // Initialize Stripe with nonprofit account
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2024-12-18.acacia',
     typescript: true,
 });
 class StripeService {
