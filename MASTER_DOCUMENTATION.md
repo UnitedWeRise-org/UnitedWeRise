@@ -3971,9 +3971,9 @@ All payment endpoints documented in [Payment Endpoints](#payment-endpoints) sect
 #### Environment Variables
 ```bash
 # Stripe API Keys (Test Mode)
-STRIPE_SECRET_KEY=sk_test_51Rv6pdI45l290VNE...
-STRIPE_PUBLISHABLE_KEY=pk_test_51Rv6pdI45l290VNE...
-STRIPE_WEBHOOK_SECRET=whsec_vWYaXFkxBBjEux1g...
+STRIPE_SECRET_KEY=sk_test_[YOUR_TEST_SECRET_KEY]
+STRIPE_PUBLISHABLE_KEY=pk_test_[YOUR_TEST_PUBLISHABLE_KEY]
+STRIPE_WEBHOOK_SECRET=whsec_[YOUR_WEBHOOK_SECRET]
 
 # Redirect URLs
 SUCCESS_URL=https://www.unitedwerise.org/donation-success.html
