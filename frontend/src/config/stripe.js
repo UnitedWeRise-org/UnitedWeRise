@@ -4,7 +4,7 @@
 const STRIPE_CONFIG = {
     // Development/Staging
     development: {
-        publishableKey: 'pk_test_51Rv6pdI45l290VNE3IrROlFx1JCh1znoFWqq34KuetkH9pMbx8RlTVnaC6GEYpedlGlJlVFAK3twKALiOqsDsR9T00XoQnM76E',
+        publishableKey: 'pk_test_[YOUR_TEST_PUBLISHABLE_KEY]',
         backendUrl: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api'
     },
     

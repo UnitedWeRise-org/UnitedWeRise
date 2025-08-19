@@ -85,8 +85,8 @@ export interface CandidateProfile {
     keyIssues: string[];
     isVerified: boolean;
     endorsements?: Array<{
-        organization: string;
-        type: string;
+        reason: string;
+        isPublic: boolean;
         date: string;
     }>;
     financialData?: {

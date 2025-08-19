@@ -139,6 +139,35 @@ authToken          // Global variable should match
 - Check imports: `QwenService` not `qwenService`, `EmbeddingService` not `embeddingService`
 - Database migrations: Use `npx prisma db execute --file path --schema prisma/schema.prisma`
 
+### 🚨 CRITICAL: Route Loading Debugging (August 16, 2025)
+
+**Problem**: All API routes returning 404 "Route not found" despite successful route mounting in server.ts
+**Root Cause**: TypeScript compilation errors preventing Express.js from loading route modules
+
+**DEBUGGING PROCESS** (Future Reference):
+1. **ALWAYS verify TypeScript compilation** when debugging route loading issues
+   - Command: `cd backend && npm run build` - must complete without errors
+   - Symptom: All API routes return 404 even for basic endpoints like `/health`
+   - Example Error: `Object literal may only specify known properties, and 'addresseeId' does not exist in type 'FriendshipWhereInput'`
+
+2. **Check database schema field names** when working with Prisma models
+   - Use: `grep -A 15 "model ModelName" backend/prisma/schema.prisma`
+   - Fix: Update field references to match actual schema (e.g., `recipientId` not `addresseeId`)
+
+3. **Deploy with forced revision** if Docker build encounters encoding errors
+   - Azure CLI Unicode issues: Use environment variable update to force new revision
+   - Command: `az containerapp update --name app-name --resource-group rg-name --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)"`
+
+4. **Verify deployment success** by checking backend uptime
+   - Health check: `curl https://backend-url/health | grep uptime`
+   - New deployment: Uptime should be <60 seconds
+   - Stale deployment: Uptime in minutes/hours indicates old revision
+
+**RESOLVED**: Fixed `users.ts` TypeScript error, deployed successfully, stub endpoints working
+- Trending topics: ✅ Returns expected empty array response
+- Map topics: ✅ Returns expected empty array response  
+- Backend uptime: <30 seconds confirming fresh deployment
+
 ### Frontend Development Patterns  
 - Component state: Check `localStorage` vs `window` properties for auth state
 - API caching: Use `bypassCache: true` for fresh data
