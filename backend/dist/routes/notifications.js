@@ -85,6 +85,46 @@ router.put('/:notificationId/read', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// 🎯 OPTIMIZED: Mark multiple notifications as read in batch (replaces N individual calls)
+router.put('/mark-read-batch', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { notificationIds } = req.body;
+        if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
+            return res.status(400).json({ error: 'notificationIds array is required' });
+        }
+        // Verify all notifications belong to the current user
+        const userNotifications = await prisma.notification.findMany({
+            where: {
+                id: { in: notificationIds },
+                receiverId: userId
+            },
+            select: { id: true }
+        });
+        const validIds = userNotifications.map(n => n.id);
+        if (validIds.length === 0) {
+            return res.status(404).json({ error: 'No valid notifications found' });
+        }
+        // Batch update all valid notifications
+        const updateResult = await prisma.notification.updateMany({
+            where: {
+                id: { in: validIds },
+                receiverId: userId
+            },
+            data: { read: true }
+        });
+        res.json({
+            message: `${updateResult.count} notifications marked as read`,
+            updatedCount: updateResult.count,
+            requestedCount: notificationIds.length,
+            optimized: true // Flag to indicate this is the batched endpoint
+        });
+    }
+    catch (error) {
+        console.error('Batch mark notifications read error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Mark all notifications as read
 router.put('/read-all', auth_1.requireAuth, async (req, res) => {
     try {
