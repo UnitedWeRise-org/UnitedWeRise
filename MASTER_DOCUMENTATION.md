@@ -2827,10 +2827,26 @@ async function createPost(content) {
 }
 ```
 
-#### 2. API Call Optimization
-**Issue**: Redundant profile fetch after update
-**Fix**: Removed duplicate `/api/users/profile` call
+#### 2. API Call Optimization Policy 🎯
+**FUNDAMENTAL PRINCIPLE**: Always minimize API calls through batching, caching, and smart endpoint design.
 
+**Core Rules**:
+1. **Batch Related Data**: Single endpoint for related data (profile + posts + relationships)
+2. **Cache Aggressively**: Store relationships, user data, and frequently accessed content
+3. **Optimize Common Paths**: Page load, profile view, and search are critical flows
+4. **Eliminate Redundant Calls**: Never fetch the same data twice in one user action
+
+**Recently Implemented** (August 2025):
+- ✅ **Relationship Caching**: `/api/batch/initialize` now caches all friends/followers/following
+- ✅ **Single Page Load**: Reduced from 20+ API calls to 1-2 calls on login
+- ✅ **Feed Optimization**: 15 posts per call with proper pagination
+
+**Current Inefficiencies Identified**:
+- ❌ **Profile Views**: 5-6 separate calls per profile visit
+- ❌ **Search**: 4 parallel calls for unified search
+- ❌ **Notifications**: Individual mark-as-read calls
+
+**Legacy Example - What Not To Do**:
 ```javascript
 // Before
 await updateProfile(data);
@@ -2841,6 +2857,8 @@ loadUserProfile(); // Also fetches profile
 await updateProfile(data);
 loadUserProfile(); // Single fetch
 ```
+
+**Target: 70-80% reduction in API calls through batching endpoints**
 
 #### 3. Infinite Scroll Implementation
 **Critical**: Was broken during audit, now restored

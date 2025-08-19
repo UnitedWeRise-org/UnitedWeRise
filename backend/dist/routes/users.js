@@ -246,6 +246,160 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// 🎯 OPTIMIZED: Get complete user profile (batches 5-6 API calls into 1)
+// Replaces: /users/:id + /posts/user/:id + /users/:id/followers + /users/:id/following + /users/follow-status/:id
+router.get('/:userId/complete', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+        const limitNum = parseInt(limit.toString());
+        const offsetNum = parseInt(offset.toString());
+        // Get authenticated user ID if available
+        const currentUserId = req.user?.id;
+        // Parallel fetch all profile-related data
+        const [user, posts, followersCount, followingCount, relationshipStatus] = await Promise.all([
+            // User profile data
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    bio: true,
+                    website: true,
+                    location: true,
+                    verified: true,
+                    followersCount: true,
+                    followingCount: true,
+                    createdAt: true,
+                    backgroundImage: true,
+                    // Public political profile fields
+                    politicalProfileType: true,
+                    verificationStatus: true,
+                    office: true,
+                    officialTitle: true,
+                    politicalParty: true,
+                    campaignWebsite: true,
+                    _count: {
+                        select: {
+                            posts: true,
+                            followers: true,
+                            following: true
+                        }
+                    }
+                }
+            }),
+            // User's posts
+            prisma.post.findMany({
+                where: { authorId: userId },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true,
+                            politicalProfileType: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                            likes: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limitNum,
+                skip: offsetNum
+            }),
+            // Followers count (actual count for accuracy)
+            prisma.follow.count({
+                where: { followingId: userId }
+            }),
+            // Following count (actual count for accuracy) 
+            prisma.follow.count({
+                where: { followerId: userId }
+            }),
+            // Relationship status with current user (if authenticated)
+            currentUserId ? Promise.all([
+                // Check if current user follows this user
+                prisma.follow.findFirst({
+                    where: {
+                        followerId: currentUserId,
+                        followingId: userId
+                    }
+                }),
+                // Check if this user follows current user
+                prisma.follow.findFirst({
+                    where: {
+                        followerId: userId,
+                        followingId: currentUserId
+                    }
+                }),
+                // Check friendship status
+                prisma.friendship.findFirst({
+                    where: {
+                        OR: [
+                            { requesterId: currentUserId, recipientId: userId },
+                            { requesterId: userId, recipientId: currentUserId }
+                        ]
+                    }
+                })
+            ]) : [null, null, null]
+        ]);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        // Process relationship status
+        const [isFollowing, isFollower, friendship] = relationshipStatus;
+        let friendshipStatus = 'none';
+        if (friendship) {
+            if (friendship.status === 'ACCEPTED') {
+                friendshipStatus = 'friends';
+            }
+            else if (friendship.status === 'PENDING') {
+                friendshipStatus = friendship.requesterId === currentUserId ? 'request_sent' : 'request_received';
+            }
+        }
+        // Return complete profile data
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    ...user,
+                    followersCount: followersCount,
+                    followingCount: followingCount,
+                    postsCount: user._count.posts
+                },
+                posts: {
+                    items: posts,
+                    pagination: {
+                        limit: limitNum,
+                        offset: offsetNum,
+                        count: posts.length,
+                        hasMore: posts.length === limitNum
+                    }
+                },
+                relationship: currentUserId ? {
+                    isFollowing: !!isFollowing,
+                    isFollower: !!isFollower,
+                    friendshipStatus,
+                    canMessage: true // Could add logic for message permissions
+                } : null,
+                optimized: true // Flag to indicate this is the batched endpoint
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get complete user profile error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Get public profile by username
 router.get('/:username', async (req, res) => {
     try {
