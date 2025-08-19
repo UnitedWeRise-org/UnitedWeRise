@@ -5068,39 +5068,35 @@
 
         // Duplicate removed - using the one defined earlier
 
-        // Check follow status and render appropriate button
-        async function renderFollowButton(userId, containerElement) {
+        // 🎯 OPTIMIZED: Check follow status from cached data (NO API CALLS!)
+        function renderFollowButton(userId, containerElement) {
             if (!currentUser || userId === currentUser.id) return '';
             
             try {
-                const response = await apiCall(`/users/follow-status/${userId}`);
+                // Get follow status from CACHED data - instant, no API call!
+                const status = getCachedRelationshipStatus(userId);
+                const isFollowing = status.isFollowing;
                 
-                if (response.ok) {
-                    const isFollowing = response.data.isFollowing;
-                    
-                    const buttonHtml = `
-                        <button onclick="toggleFollow('${userId}', this)" 
-                            data-user-id="${userId}"
-                            data-following="${isFollowing}"
-                            style="padding: 0.25rem 0.5rem; background: ${isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                            ${isFollowing ? 'Following' : 'Follow'}
-                        </button>
-                    `;
-                    
-                    return buttonHtml;
-                } else {
-                    return `
-                        <button onclick="toggleFollow('${userId}', this)" 
-                            data-user-id="${userId}"
-                            data-following="false"
-                            style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                            Follow
-                        </button>
-                    `;
-                }
+                const buttonHtml = `
+                    <button onclick="toggleFollow('${userId}', this)" 
+                        data-user-id="${userId}"
+                        data-following="${isFollowing}"
+                        style="padding: 0.25rem 0.5rem; background: ${isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        ${isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                `;
+                
+                return buttonHtml;
             } catch (error) {
-                console.error('Failed to check follow status:', error);
-                return '';
+                console.error('Error loading cached follow status:', error);
+                return `
+                    <button onclick="toggleFollow('${userId}', this)" 
+                        data-user-id="${userId}"
+                        data-following="false"
+                        style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Follow
+                    </button>
+                `;
             }
         }
 
@@ -5378,40 +5374,48 @@
                 let searchPromises = [];
                 
                 if (searchType === 'all') {
-                    // Search all types in parallel
+                    // 🎯 OPTIMIZED: Use unified search endpoint (1 call instead of 4)
                     searchPromises = [
-                        apiCall(`/search/users?${searchParams.toString()}`).catch(() => ({ok: false, data: {users: []}})),
-                        apiCall(`/search/posts?${searchParams.toString()}`).catch(() => ({ok: false, data: {posts: []}})),
-                        apiCall(`/search/officials?${searchParams.toString()}`).catch(() => ({ok: false, data: {officials: []}})),
-                        apiCall(`/search/topics?${searchParams.toString()}`).catch(() => ({ok: false, data: {topics: []}}))
+                        apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
                     ];
                 } else {
-                    // Search specific type
-                    const endpoint = `/search/${searchType}?${searchParams.toString()}`;
+                    // Search specific type - use unified endpoint with single type
+                    const endpoint = `/search/unified?${searchParams.toString()}&types=${searchType}`;
                     searchPromises = [apiCall(endpoint)];
                 }
 
                 const results = await Promise.all(searchPromises);
                 
-                // Process results
-                if (searchType === 'all') {
+                // 🎯 OPTIMIZED: Process unified search results (single response contains all data)
+                const result = results[0];
+                if (result.ok && result.data && result.data.data) {
+                    const searchData = result.data.data;
                     currentSearchResults = {
-                        users: results[0].ok ? results[0].data.users || [] : [],
-                        posts: results[1].ok ? results[1].data.posts || [] : [],
-                        officials: results[2].ok ? results[2].data.officials || [] : [],
-                        topics: results[3].ok ? results[3].data.topics || [] : []
+                        users: searchData.users || [],
+                        posts: searchData.posts || [],
+                        officials: searchData.officials || [],
+                        topics: searchData.topics || []
                     };
-                    displayAllSearchResults();
+                    
+                    if (searchType === 'all') {
+                        displayAllSearchResults();
+                    } else {
+                        displayFilteredSearchResults(searchType);
+                    }
                 } else {
-                    // Single type search
-                    const resultData = results[0].ok ? results[0].data : {};
+                    // Fallback to empty results
                     currentSearchResults = {
-                        users: searchType === 'users' ? (resultData.users || []) : [],
-                        posts: searchType === 'posts' ? (resultData.posts || []) : [],
-                        officials: searchType === 'officials' ? (resultData.officials || []) : [],
-                        topics: searchType === 'topics' ? (resultData.topics || []) : []
+                        users: [],
+                        posts: [],
+                        officials: [],
+                        topics: []
                     };
-                    displayFilteredSearchResults(searchType);
+                    
+                    if (searchType === 'all') {
+                        displayAllSearchResults();
+                    } else {
+                        displayFilteredSearchResults(searchType);
+                    }
                 }
 
             } catch (error) {
@@ -6922,9 +6926,19 @@
                 return;
             }
 
+            // 🎯 OPTIMIZED: Add batch mark-all-read functionality
+            const unreadNotifications = notificationsCache.filter(n => !n.read);
+            const hasUnread = unreadNotifications.length > 0;
+            
             let html = `
-                <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f8f9fa;">
+                <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f8f9fa; display: flex; justify-content: space-between; align-items: center;">
                     <h6 style="margin: 0; font-weight: bold;">Notifications</h6>
+                    ${hasUnread ? `
+                        <button onclick="markAllNotificationsRead()" 
+                                style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            Mark All Read (${unreadNotifications.length})
+                        </button>
+                    ` : ''}
                 </div>
                 <div class="notifications-list">
             `;
@@ -6996,6 +7010,43 @@
             }
         }
 
+        // 🎯 OPTIMIZED: Batch mark all notifications as read (1 API call instead of N calls)
+        async function markAllNotificationsRead() {
+            try {
+                const unreadNotifications = notificationsCache.filter(n => !n.read);
+                if (unreadNotifications.length === 0) return;
+                
+                const notificationIds = unreadNotifications.map(n => n.id);
+                
+                // Use batch endpoint instead of individual calls
+                const response = await apiCall('/notifications/mark-read-batch', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notificationIds })
+                });
+                
+                if (response.ok) {
+                    // Update local cache
+                    notificationsCache = notificationsCache.map(n => 
+                        notificationIds.includes(n.id) ? { ...n, read: true } : n
+                    );
+                    
+                    // Update UI
+                    displayNotifications();
+                    updateNotificationBadge();
+                    
+                    showToast(`${response.data.updatedCount} notifications marked as read`);
+                } else {
+                    showToast('Failed to mark notifications as read', 'error');
+                }
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+                showToast('Error marking notifications as read', 'error');
+            }
+        }
+
         // Handle notification click
         async function handleNotificationClick(notificationId, type) {
             // Mark as read
@@ -7011,6 +7062,11 @@
                     notificationItem.style.background = '';
                     notificationItem.style.fontWeight = 'normal';
                 }
+                
+                // Update local cache
+                notificationsCache = notificationsCache.map(n => 
+                    n.id === notificationId ? { ...n, read: true } : n
+                );
                 
                 // Update badge
                 updateNotificationBadge();
