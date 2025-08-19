@@ -46,9 +46,8 @@ const prisma = new client_1.PrismaClient();
  */
 router.get('/steps', auth_1.requireAuth, async (req, res) => {
     try {
-        const userId = req.user.id;
-        const steps = await onboardingService_1.onboardingService.getOnboardingSteps(userId);
-        await onboardingService_1.onboardingService.trackOnboardingEvent(userId, 'steps_viewed');
+        // Temporary stub - return empty steps array
+        const steps = [];
         res.json({ steps });
     }
     catch (error) {

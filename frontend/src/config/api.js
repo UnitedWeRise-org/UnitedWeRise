@@ -5,7 +5,7 @@
 function getBackendURL() {
     const hostname = window.location.hostname;
     
-    // Staging environment detection - TEMPORARILY use production backend
+    // Staging environment detection - temporarily use production backend due to staging DB issues
     if (hostname.includes('staging') || 
         hostname.includes('development') || 
         hostname.includes('dev') ||

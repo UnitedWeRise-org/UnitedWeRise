@@ -129,6 +129,10 @@ model User {
   petitionSignatures      PetitionSignature[]       @relation("PetitionSignatures")
   eventsCreated           CivicEvent[]              @relation("EventCreator")
   eventRSVPs              EventRSVP[]               @relation("EventRSVPs")
+  
+  // Payment relations
+  payments                Payment[]
+  stripeCustomer          StripeCustomer?
 
   @@index([username])
   @@index([createdAt])
@@ -1419,6 +1423,7 @@ model CandidateRegistration {
   createdAt                 DateTime                    @default(now())
   updatedAt                 DateTime                    @updatedAt
   user                      User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment                   Payment?
 
   @@index([userId])
   @@index([registrationId])
@@ -2081,4 +2086,200 @@ model UserOAuthProvider {
   @@unique([userId, provider])
   @@index([userId])
   @@index([provider, providerId])
+}
+
+// ============================================
+// PAYMENT MODELS - Stripe Integration
+// ============================================
+
+model Payment {
+  id                  String           @id @default(cuid())
+  userId              String
+  amount              Int              // Amount in cents
+  currency            String           @default("USD")
+  type                PaymentType      // DONATION or FEE
+  status              PaymentStatus    @default(PENDING)
+  stripePaymentIntentId String?        @unique
+  stripeChargeId      String?          @unique
+  stripeCustomerId    String?
+  paymentMethodType   String?          // card, bank_transfer, etc.
+  
+  // Tax classification
+  taxDeductible       Boolean          @default(false)
+  taxYear             Int?
+  
+  // Additional metadata
+  description         String?
+  metadata            Json?            // Flexible field for extra data
+  failureReason       String?
+  
+  // For fees (candidate registration, etc.)
+  feeType             FeeType?
+  candidateRegistrationId String?      @unique
+  
+  // For donations
+  donationType        DonationType?
+  campaignId          String?          // If donation is for specific campaign
+  isRecurring         Boolean          @default(false)
+  recurringInterval   RecurringInterval?
+  
+  // Receipt information
+  receiptUrl          String?
+  receiptNumber       String?          @unique
+  receiptSent         Boolean          @default(false)
+  receiptSentAt       DateTime?
+  
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  processedAt         DateTime?
+  refundedAt          DateTime?
+  
+  user                User             @relation(fields: [userId], references: [id])
+  candidateRegistration CandidateRegistration? @relation(fields: [candidateRegistrationId], references: [id])
+  refunds             Refund[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([stripeCustomerId])
+  @@index([createdAt])
+}
+
+model StripeCustomer {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  stripeCustomerId    String           @unique
+  email               String
+  
+  // Customer details
+  name                String?
+  phone               String?
+  address             Json?            // Stripe address format
+  
+  // Tax information
+  taxId               String?          // EIN for organizations
+  taxExempt           Boolean          @default(false)
+  
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  
+  user                User             @relation(fields: [userId], references: [id])
+  
+  @@index([stripeCustomerId])
+}
+
+model DonationCampaign {
+  id                  String           @id @default(cuid())
+  name                String
+  description         String?
+  goal                Int?             // Goal amount in cents
+  raised              Int              @default(0) // Amount raised in cents
+  
+  startDate           DateTime
+  endDate             DateTime?
+  
+  isActive            Boolean          @default(true)
+  featured            Boolean          @default(false)
+  
+  // Tax deductibility for this campaign
+  taxDeductible       Boolean          @default(true)
+  
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  
+  @@index([isActive])
+  @@index([featured])
+}
+
+model Refund {
+  id                  String           @id @default(cuid())
+  paymentId           String
+  amount              Int              // Amount in cents
+  reason              RefundReason
+  status              RefundStatus     @default(PENDING)
+  stripeRefundId      String?          @unique
+  
+  notes               String?
+  processedBy         String?          // Admin user ID who processed
+  
+  createdAt           DateTime         @default(now())
+  processedAt         DateTime?
+  
+  payment             Payment          @relation(fields: [paymentId], references: [id])
+  
+  @@index([paymentId])
+  @@index([status])
+}
+
+model PaymentWebhook {
+  id                  String           @id @default(cuid())
+  stripeEventId       String           @unique
+  eventType           String
+  processed           Boolean          @default(false)
+  payload             Json
+  error               String?
+  
+  createdAt           DateTime         @default(now())
+  processedAt         DateTime?
+  
+  @@index([stripeEventId])
+  @@index([processed])
+}
+
+// Enums for Payment System
+enum PaymentType {
+  DONATION              // Tax-deductible donations
+  FEE                   // Non-deductible fees
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIAL_REFUNDED
+}
+
+enum FeeType {
+  CANDIDATE_REGISTRATION
+  VERIFICATION_FEE
+  PREMIUM_FEATURES
+  EVENT_HOSTING
+  ADVERTISING
+  OTHER
+}
+
+enum DonationType {
+  ONE_TIME
+  RECURRING
+  CAMPAIGN_SPECIFIC
+  GENERAL_SUPPORT
+  MEMORIAL
+  HONOR
+}
+
+enum RecurringInterval {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum RefundReason {
+  DUPLICATE
+  FRAUDULENT
+  REQUESTED_BY_CUSTOMER
+  CAMPAIGN_CANCELLED
+  ERROR
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
 }

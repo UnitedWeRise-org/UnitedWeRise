@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donation Cancelled - United We Rise</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .cancel-container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .cancel-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.5s ease-out 0.2s both;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        .info-icon {
+            font-size: 40px;
+            color: #667eea;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 32px;
+        }
+        
+        .message {
+            color: #666;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        @media (max-width: 600px) {
+            .cancel-container {
+                padding: 30px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .message {
+                font-size: 16px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="cancel-container">
+        <div class="cancel-icon">
+            <span class="info-icon">ℹ️</span>
+        </div>
+        
+        <h1>Donation Cancelled</h1>
+        
+        <p class="message">
+            Your donation was not completed. No charges were made to your account.
+        </p>
+        
+        <div class="info-box">
+            <p>
+                If you experienced any issues or have questions about donating, 
+                please don't hesitate to contact us. We appreciate your interest 
+                in supporting United We Rise.
+            </p>
+        </div>
+        
+        <div class="actions">
+            <a href="/" class="btn btn-primary">Return Home</a>
+            <button onclick="retryDonation()" class="btn btn-secondary">Try Again</button>
+        </div>
+    </div>
+    
+    <script>
+        function retryDonation() {
+            // Return to home and open donation modal
+            localStorage.setItem('openDonationModal', 'true');
+            window.location.href = '/';
+        }
+        
+        // Parse URL parameters if needed
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('payment_id');
+        
+        if (paymentId) {
+            console.log('Cancelled payment ID:', paymentId);
+        }
+    </script>
+</body>
+</html>

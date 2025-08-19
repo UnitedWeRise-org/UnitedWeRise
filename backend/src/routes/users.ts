@@ -471,39 +471,40 @@ router.delete('/background-image', requireAuth, async (req: AuthRequest, res) =>
     }
 });
 
-// User activity tracking endpoint
+// Friend status endpoint for backward compatibility
+router.get('/friend-status/:userId', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+        
+        // Use FollowService for follow status (no friendship table yet)
+        const followStatus = await FollowService.getFollowStatus(currentUserId, userId);
+        
+        res.json({
+            isFriend: false, // No friendship system yet
+            isPending: false,
+            status: 'none',
+            isFollowing: followStatus.isFollowing
+        });
+    } catch (error) {
+        console.error('Friend status error:', error);
+        // Return safe default instead of 500 error
+        res.json({
+            isFriend: false,
+            isPending: false,
+            status: 'none',
+            isFollowing: false
+        });
+    }
+});
+
+// User activity tracking endpoint (stub)
 router.post('/activity', requireAuth, async (req: AuthRequest, res) => {
     try {
-        // Simple activity tracking - just acknowledge the request
-        // Full implementation can be added later if needed
         res.json({ success: true, message: 'Activity recorded' });
     } catch (error) {
         console.error('Activity tracking error:', error);
         res.status(500).json({ error: 'Failed to track activity' });
-    }
-});
-
-// Redirect friend-status to relationships route for backward compatibility
-router.get('/friend-status/:userId', requireAuth, async (req: AuthRequest, res) => {
-    try {
-        // Forward to the correct endpoint
-        const response = await prisma.friendship.findFirst({
-            where: {
-                OR: [
-                    { requesterId: req.user!.id, recipientId: req.params.userId },
-                    { requesterId: req.params.userId, recipientId: req.user!.id }
-                ]
-            }
-        });
-        
-        res.json({
-            isFriend: response?.status === 'ACCEPTED',
-            isPending: response?.status === 'PENDING',
-            status: response?.status || 'none'
-        });
-    } catch (error) {
-        console.error('Friend status error:', error);
-        res.status(500).json({ error: 'Failed to get friend status' });
     }
 });
 

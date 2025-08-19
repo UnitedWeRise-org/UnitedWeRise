@@ -98,9 +98,9 @@
     <script src="src/integrations/trending-system-integration.js"></script>
     <script src="src/js/mobile-navigation.js"></script>
     <script src="src/js/map-maplibre.js"></script>
-    <script src="src/js/google-address-autocomplete.js"></script>
     <script src="src/js/relationship-utils.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
+    <script src="src/js/donation-system.js"></script>
     <!-- Inline Reputation System (Critical Path) -->
     <script>
         // Essential reputation badge functions
@@ -371,7 +371,8 @@
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
-                <div class="thumb" onclick="toggleCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
+                <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
+                <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
                 <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
@@ -921,6 +922,9 @@
             console.log('🚀 Starting optimized app initialization...');
             initializeApp().then(result => {
                 console.log('✅ App initialization complete:', result);
+                
+                // Setup civic organizing sidebar monitoring
+                setupCivicOrganizingSidebarMonitoring();
             }).catch(error => {
                 console.error('💥 App initialization failed:', error);
             });
@@ -3590,6 +3594,28 @@
                 return;
             }
 
+            // Hide Civic Organizing container if open
+            const civicOrganizing = document.querySelector('.civic-organizing-container');
+            if (civicOrganizing) {
+                civicOrganizing.style.display = 'none';
+            }
+            
+            // Hide other main view systems
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
+            }
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
+            }
+
             const mainContent = document.getElementById('mainContent');
             const isProfileCurrentlyShown = mainContent.querySelector('.my-profile') !== null;
             
@@ -3657,6 +3683,28 @@
         // Function to show My Feed in main content area (like Profile)
         async function showMyFeedInMain() {
             console.log('🎯 Showing My Feed in main content area');
+            
+            // Hide Civic Organizing container if open
+            const civicOrganizing = document.querySelector('.civic-organizing-container');
+            if (civicOrganizing) {
+                civicOrganizing.style.display = 'none';
+            }
+            
+            // Hide other main view systems
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
+            }
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
+            }
             
             // Sync all auth token variables
             const token = window.authToken || authToken || localStorage.getItem('authToken');
@@ -7354,22 +7402,28 @@
 
             const postElements = container.querySelectorAll('.post-item, [data-post-id]');
             
-            // Process posts in batches to avoid overwhelming the API
-            const batchSize = 10;
+            // Process posts in smaller batches to avoid rate limiting
+            const batchSize = 3; // Reduced from 10 to 3
+            const uniqueAuthors = new Map(); // Track unique authors to avoid duplicate requests
+            
             for (let i = 0; i < Math.min(posts.length, postElements.length); i += batchSize) {
                 const batch = posts.slice(i, i + batchSize);
                 const promises = batch.map((post, index) => {
                     const postElement = postElements[i + index];
                     if (postElement && post.author && post.author.id !== window.currentUser?.id) {
-                        return addFriendStatusToPost(postElement, post.author.id);
+                        // Only make request if we haven't already processed this author
+                        if (!uniqueAuthors.has(post.author.id)) {
+                            uniqueAuthors.set(post.author.id, true);
+                            return addFriendStatusToPost(postElement, post.author.id);
+                        }
                     }
                 });
                 
                 await Promise.all(promises.filter(Boolean));
                 
-                // Small delay between batches to prevent API rate limiting
+                // Longer delay between batches to prevent rate limiting
                 if (i + batchSize < posts.length) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 100ms to 1000ms
                 }
             }
         }
@@ -7749,34 +7803,80 @@
          */
 
         // Core organizing functions
-        function toggleCivicOrganizing() {
+        function openCivicOrganizing() {
             if (!authToken) {
                 showToast('Please log in to access organizing tools');
                 return;
             }
             
-            const container = document.getElementById('civicOrganizingContainer');
-            const isCurrentlyVisible = container.style.display === 'flex';
-            
-            if (isCurrentlyVisible) {
-                // Close civic organizing and return to default view
-                closeCivicOrganizing();
-            } else {
-                // Open civic organizing
-                container.style.display = 'flex';
-                closeAllPanels(); // Close other panels
-                showDefaultOrganizingView();
+            // Hide other main view systems when opening
+            const electionsView = document.querySelector('.elections-main-view');
+            if (electionsView) {
+                electionsView.style.display = 'none';
             }
-        }
-        
-        function openCivicOrganizing() {
-            // Keep for backward compatibility
-            toggleCivicOrganizing();
+            
+            const officialsView = document.querySelector('.officials-main-view');
+            if (officialsView) {
+                officialsView.style.display = 'none';
+            }
+            
+            const candidatesView = document.querySelector('.candidates-main-view');
+            if (candidatesView) {
+                candidatesView.style.display = 'none';
+            }
+            
+            // Hide other detail panels
+            document.querySelectorAll('.detail-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            
+            // Hide existing info panels
+            document.querySelectorAll('.info-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            
+            const container = document.getElementById('civicOrganizingContainer');
+            container.style.display = 'flex';
+            
+            // Update sidebar state awareness
+            updateCivicOrganizingForSidebarState();
+            
+            closeAllPanels(); // Close other panels
+            showDefaultOrganizingView();
         }
 
         function closeCivicOrganizing() {
             document.getElementById('civicOrganizingContainer').style.display = 'none';
             showDefaultView();
+        }
+        
+        function updateCivicOrganizingForSidebarState() {
+            const sidebar = document.querySelector('#sidebar');
+            const civicContainer = document.querySelector('.civic-organizing-container');
+            
+            if (sidebar && civicContainer) {
+                const isExpanded = sidebar.classList.contains('expanded');
+                civicContainer.classList.toggle('sidebar-expanded', isExpanded);
+            }
+        }
+        
+        // Setup sidebar monitoring for civic organizing
+        function setupCivicOrganizingSidebarMonitoring() {
+            const sidebar = document.querySelector('#sidebar');
+            if (sidebar) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            updateCivicOrganizingForSidebarState();
+                        }
+                    });
+                });
+                
+                observer.observe(sidebar, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
         }
 
         function showDefaultOrganizingView() {

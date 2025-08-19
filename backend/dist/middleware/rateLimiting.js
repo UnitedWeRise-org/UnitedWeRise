@@ -41,11 +41,15 @@ exports.passwordResetLimiter = (0, express_rate_limit_1.default)({
 exports.apiLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: (req) => {
+        // Admin users get unlimited requests
+        if (req.user?.isAdmin) {
+            return 10000; // Effectively unlimited for admins
+        }
         // Higher limits for authenticated users
         if (req.user) {
-            return 1000; // 1000 requests per 15 minutes for authenticated users
+            return 500; // 500 requests per 15 minutes for authenticated users
         }
-        return 500; // 500 requests per 15 minutes for anonymous users
+        return 200; // 200 requests per 15 minutes for anonymous users
     },
     message: {
         error: 'Too many requests, please try again later.'
@@ -78,10 +82,14 @@ exports.apiLimiter = (0, express_rate_limit_1.default)({
 exports.burstLimiter = (0, express_rate_limit_1.default)({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: (req) => {
-        if (req.user) {
-            return 200; // 200 requests per minute for authenticated users
+        // Admin users get unlimited burst requests
+        if (req.user?.isAdmin) {
+            return 5000; // Effectively unlimited burst for admins
         }
-        return 150; // 150 requests per minute for anonymous users (increased for frontend initialization)
+        if (req.user) {
+            return 120; // 120 requests per minute for authenticated users
+        }
+        return 80; // 80 requests per minute for anonymous users (increased for development testing)
     },
     message: {
         error: 'Making requests too quickly, please slow down.'
@@ -94,8 +102,13 @@ exports.burstLimiter = (0, express_rate_limit_1.default)({
         }
         return `burst_${azureKeyGenerator(req)}`;
     },
-    // Skip rate limiting for health check endpoints
+    // Skip rate limiting for health check endpoints and admins
     skip: (req) => {
+        // Skip for admins
+        if (req.user?.isAdmin) {
+            return true;
+        }
+        // Skip for health check endpoints
         const path = req.path || req.url;
         return path === '/health' ||
             path === '/health/database' ||
