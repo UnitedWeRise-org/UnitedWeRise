@@ -912,12 +912,6 @@
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Load GiveButter widget
-            const givebutterScript = document.createElement("script");
-            givebutterScript.src = "https://widgets.givebutter.com/latest.umd.cjs?acct=rfuBvOJ14QTerl5N&p=other";
-            givebutterScript.async = true;
-            document.head.appendChild(givebutterScript);
-
             // Use new optimized initialization system
             console.log('🚀 Starting optimized app initialization...');
             initializeApp().then(result => {

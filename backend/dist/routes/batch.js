@@ -10,7 +10,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         // Parallel fetch all initialization data
-        const [user, notifications, recentPosts] = await Promise.all([
+        const [user, notifications, recentPosts, trendingTopics, trendingPosts] = await Promise.all([
             // User data (already have basic info from auth, but get fresh data)
             prisma.user.findUnique({
                 where: { id: userId },
@@ -78,6 +78,69 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 10
+            }),
+            // Trending topics (consolidate multiple trending endpoints)
+            prisma.post.findMany({
+                where: {
+                    createdAt: {
+                        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
+                    }
+                },
+                select: {
+                    id: true,
+                    content: true,
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    },
+                    createdAt: true,
+                    topics: true
+                },
+                orderBy: [
+                    { likes: { _count: 'desc' } },
+                    { comments: { _count: 'desc' } }
+                ],
+                take: 20
+            }),
+            // Trending posts (popular posts for feed)
+            prisma.post.findMany({
+                where: {
+                    createdAt: {
+                        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+                    }
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            politicalProfileType: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                            likes: true
+                        }
+                    }
+                },
+                orderBy: [
+                    { likes: { _count: 'desc' } },
+                    { comments: { _count: 'desc' } }
+                ],
+                take: 12
             })
         ]);
         // Return all data in a single response
@@ -87,6 +150,8 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                 user: user,
                 unreadNotifications: notifications,
                 recentPosts: recentPosts,
+                trendingTopics: trendingTopics,
+                trendingPosts: trendingPosts,
                 initializationTime: new Date().toISOString()
             }
         });

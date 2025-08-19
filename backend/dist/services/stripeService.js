@@ -106,8 +106,8 @@ class StripeService {
                             quantity: 1
                         }],
                     mode: 'subscription',
-                    success_url: `${process.env.FRONTEND_URL}/donation/success?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${process.env.FRONTEND_URL}/donation/cancelled`,
+                    success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
                     metadata: {
                         paymentId: payment.id,
                         userId: params.userId,
@@ -145,8 +145,8 @@ class StripeService {
                             quantity: 1
                         }],
                     mode: 'payment',
-                    success_url: `${process.env.FRONTEND_URL}/donation/success?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${process.env.FRONTEND_URL}/donation/cancelled`,
+                    success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
                     metadata: {
                         paymentId: payment.id,
                         userId: params.userId,
@@ -217,8 +217,8 @@ class StripeService {
                         quantity: 1
                     }],
                 mode: 'payment',
-                success_url: `${process.env.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.FRONTEND_URL}/payment/cancelled`,
+                success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
                 metadata: {
                     paymentId: payment.id,
                     userId: params.userId,
