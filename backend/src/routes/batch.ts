@@ -11,7 +11,7 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
     
     // Parallel fetch all initialization data
-    const [user, notifications, recentPosts, trendingTopics, trendingPosts] = await Promise.all([
+    const [user, notifications, recentPosts, trendingTopics, trendingPosts, relationships] = await Promise.all([
       // User data (already have basic info from auth, but get fresh data)
       prisma.user.findUnique({
         where: { id: userId },
@@ -146,8 +146,82 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
           { comments: { _count: 'desc' } }
         ],
         take: 12
-      })
+      }),
+
+      // Get all relationships in parallel (no blocking system implemented yet)
+      Promise.all([
+        // Friends (both directions)
+        prisma.friendship.findMany({
+          where: {
+            OR: [
+              { requesterId: userId },
+              { recipientId: userId }
+            ]
+          },
+          select: {
+            requesterId: true,
+            recipientId: true,
+            status: true
+          }
+        }),
+        // Following/Followers
+        prisma.follow.findMany({
+          where: {
+            OR: [
+              { followerId: userId },
+              { followingId: userId }
+            ]
+          },
+          select: {
+            followerId: true,
+            followingId: true
+          }
+        })
+      ])
     ]);
+
+    // Process relationships into efficient lookup structures
+    const friendsList = new Set<string>();
+    const friendRequests = {
+      sent: new Set<string>(),
+      received: new Set<string>()
+    };
+    const followingList = new Set<string>();
+    const followersList = new Set<string>();
+
+    // Process relationships
+    if (relationships) {
+      const [friendships, follows] = relationships;
+      
+      // Process friendships
+      friendships.forEach(f => {
+        if (f.status === 'ACCEPTED') {
+          // Add both directions for accepted friendships
+          if (f.requesterId === userId) {
+            friendsList.add(f.recipientId);
+          } else {
+            friendsList.add(f.requesterId);
+          }
+        } else if (f.status === 'PENDING') {
+          // Track pending requests
+          if (f.requesterId === userId) {
+            friendRequests.sent.add(f.recipientId);
+          } else {
+            friendRequests.received.add(f.requesterId);
+          }
+        }
+      });
+
+      // Process follows
+      follows.forEach(f => {
+        if (f.followerId === userId) {
+          followingList.add(f.followingId);
+        }
+        if (f.followingId === userId) {
+          followersList.add(f.followerId);
+        }
+      });
+    }
 
     // Return all data in a single response
     res.json({
@@ -158,6 +232,16 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
         recentPosts: recentPosts,
         trendingTopics: trendingTopics,
         trendingPosts: trendingPosts,
+        relationships: {
+          friends: Array.from(friendsList),
+          friendRequests: {
+            sent: Array.from(friendRequests.sent),
+            received: Array.from(friendRequests.received)
+          },
+          following: Array.from(followingList),
+          followers: Array.from(followersList)
+          // TODO: Add blocked users when blocking system is implemented
+        },
         initializationTime: new Date().toISOString()
       }
     });

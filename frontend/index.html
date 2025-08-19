@@ -7241,13 +7241,35 @@
             `;
         }
 
-        // Add friend status indicators to post headers
-        async function addFriendStatusToPost(postElement, authorId) {
+        // OPTIMIZED: Check friend status from cached data (NO API CALLS!)
+        function getCachedRelationshipStatus(userId) {
+            if (!window.userRelationships) {
+                // Try to load from localStorage if not in memory
+                const cached = localStorage.getItem('userRelationships');
+                if (cached) {
+                    window.userRelationships = JSON.parse(cached);
+                } else {
+                    return { isFriend: false, isFollowing: false, isFollower: false };
+                }
+            }
+
+            return {
+                isFriend: window.userRelationships.friends?.includes(userId) || false,
+                requestSent: window.userRelationships.friendRequests?.sent?.includes(userId) || false,
+                requestReceived: window.userRelationships.friendRequests?.received?.includes(userId) || false,
+                isFollowing: window.userRelationships.following?.includes(userId) || false,
+                isFollower: window.userRelationships.followers?.includes(userId) || false
+                // TODO: Add isBlocked when blocking system is implemented
+            };
+        }
+
+        // Add friend status indicators to post headers (NO API CALLS!)
+        function addFriendStatusToPost(postElement, authorId) {
             if (!authorId || authorId === window.currentUser?.id) return;
 
             try {
-                // Get combined relationship status
-                const status = await window.RelationshipUtils.getCombinedStatus(authorId);
+                // Get status from CACHED data - instant, no API call!
+                const status = getCachedRelationshipStatus(authorId);
                 
                 // Find the post header where we'll add the status
                 const postHeader = postElement.querySelector('.post-header small');
@@ -7255,13 +7277,13 @@
 
                 // Determine which status to show (priority: friend > follow > none)
                 let displayStatus = null;
-                if (status.friend.isFriend) {
+                if (status.isFriend) {
                     displayStatus = 'friends';
-                } else if (status.friend.friendshipStatus === 'request_sent') {
+                } else if (status.requestSent) {
                     displayStatus = 'request_sent';
-                } else if (status.friend.friendshipStatus === 'request_received') {
+                } else if (status.requestReceived) {
                     displayStatus = 'request_received';
-                } else if (status.follow.isFollowing) {
+                } else if (status.isFollowing) {
                     displayStatus = 'following';
                 }
 
@@ -7269,14 +7291,14 @@
                     const badge = createFriendStatusBadge(authorId, displayStatus, 'small');
                     postHeader.insertAdjacentHTML('beforeend', badge);
                 }
-
             } catch (error) {
+                // Should never happen now since we're using cached data
                 console.warn('Failed to add friend status to post:', error);
             }
         }
 
-        // Enhanced post display with friend status indicators
-        async function displayPostsWithFriendStatus(posts, containerId = 'postsFeed', appendMode = false) {
+        // Enhanced post display with friend status indicators (NO API CALLS!)
+        function displayPostsWithFriendStatus(posts, containerId = 'postsFeed', appendMode = false) {
             // First display posts normally
             displayPostsFallback(posts, containerId, appendMode);
             
@@ -7286,7 +7308,7 @@
 
             const postElements = container.querySelectorAll('.post-item');
             
-            // Process posts in batches to avoid overwhelming the API
+            // Process all posts instantly - no API calls needed!
             const batchSize = 10;
             for (let i = 0; i < posts.length; i += batchSize) {
                 const batch = posts.slice(i, i + batchSize);
@@ -7389,37 +7411,21 @@
             }
         }
 
-        // Add friend status to existing posts (for PostComponent rendered posts)
-        async function addFriendStatusToExistingPosts(containerId, posts) {
+        // Add friend status to existing posts (NO API CALLS - uses cached data!)
+        function addFriendStatusToExistingPosts(containerId, posts) {
             const container = document.getElementById(containerId);
             if (!container || !posts) return;
 
             const postElements = container.querySelectorAll('.post-item, [data-post-id]');
             
-            // Process posts in smaller batches to avoid rate limiting
-            const batchSize = 3; // Reduced from 10 to 3
-            const uniqueAuthors = new Map(); // Track unique authors to avoid duplicate requests
-            
-            for (let i = 0; i < Math.min(posts.length, postElements.length); i += batchSize) {
-                const batch = posts.slice(i, i + batchSize);
-                const promises = batch.map((post, index) => {
-                    const postElement = postElements[i + index];
-                    if (postElement && post.author && post.author.id !== window.currentUser?.id) {
-                        // Only make request if we haven't already processed this author
-                        if (!uniqueAuthors.has(post.author.id)) {
-                            uniqueAuthors.set(post.author.id, true);
-                            return addFriendStatusToPost(postElement, post.author.id);
-                        }
-                    }
-                });
-                
-                await Promise.all(promises.filter(Boolean));
-                
-                // Longer delay between batches to prevent rate limiting
-                if (i + batchSize < posts.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 100ms to 1000ms
+            // Process all posts instantly - no API calls or batching needed!
+            posts.forEach((post, index) => {
+                const postElement = postElements[index];
+                if (postElement && post.author && post.author.id !== window.currentUser?.id) {
+                    // Instantly add status from cached data
+                    addFriendStatusToPost(postElement, post.author.id);
                 }
-            }
+            });
         }
 
         // Enhanced messaging system functions for friends

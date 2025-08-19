@@ -76,6 +76,17 @@ class AppInitializer {
                     localStorage.setItem('currentUser', JSON.stringify(this.userData));
                     window.currentUser = this.userData;
 
+                    // CACHE RELATIONSHIPS FOR ENTIRE SESSION - NO MORE INDIVIDUAL API CALLS!
+                    if (initData.data.data.relationships) {
+                        window.userRelationships = initData.data.data.relationships;
+                        localStorage.setItem('userRelationships', JSON.stringify(window.userRelationships));
+                        AppInitializer.log('✅ Cached user relationships:', {
+                            friends: window.userRelationships.friends?.length || 0,
+                            following: window.userRelationships.following?.length || 0,
+                            followers: window.userRelationships.followers?.length || 0
+                        });
+                    }
+
                     // Set logged in state with all data
                     this.setLoggedInState(initData.data.data);
                     
