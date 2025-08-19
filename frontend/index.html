@@ -2665,6 +2665,7 @@
                 panel.classList.add('show');
             }
         }
+        window.toggleTrendingPanel = toggleTrendingPanel; // Make globally accessible
         
         // NEW: Topic Mode Functions for My Feed Integration
         async function enterTopicMode(topicId) {
@@ -3649,6 +3650,7 @@
                 }
             }
         }
+        window.toggleMyProfile = toggleMyProfile; // Make globally accessible
 
         // Toggle function for My Feed - shows/hides feed window in main content area
         function toggleMyFeed() {
@@ -3779,6 +3781,7 @@
                 applyUserBackground(currentUser.backgroundImage);
             }
         }
+        window.toggleMyFeed = toggleMyFeed; // Make globally accessible
         
         // Make function globally available
         window.showMyFeedInMain = showMyFeedInMain;
@@ -7900,6 +7903,7 @@
             closeAllPanels(); // Close other panels
             showDefaultOrganizingView();
         }
+        window.openCivicOrganizing = openCivicOrganizing; // Make globally accessible
 
         function closeCivicOrganizing() {
             document.getElementById('civicOrganizingContainer').style.display = 'none';
