@@ -910,6 +910,11 @@
             } else {
                 console.warn('Map jurisdiction change not available - map may not be initialized yet');
             }
+            
+            // Refresh map topics for new scope
+            if (typeof updateMapTopics === 'function') {
+                updateMapTopics().catch(console.error);
+            }
         }
 
         // Check for existing auth on page load
@@ -2415,6 +2420,10 @@
                 console.error('Error entering topic mode:', error);
             }
         }
+        
+        // Make globally accessible for map bubbles
+        window.enterTopicMode = enterTopicMode;
+        window.exitTopicMode = exitTopicMode;
 
         function exitTopicMode() {
             currentTopicMode = null;
@@ -2841,6 +2850,7 @@
         // Map Integration Functions - Sync AI Topics with Map Bubbles
         let mapTopicCache = [];
         let lastMapTopicUpdate = 0;
+        let lastMapTopicScope = 'national';
         const MAP_TOPIC_CACHE_DURATION = 45000; // 45 seconds (3 topics x 15 seconds each)
         
         // Fetch and cycle AI topics for map display
@@ -2848,14 +2858,16 @@
             try {
                 const now = Date.now();
                 
-                // Check if we need to refresh the cache
-                if (now - lastMapTopicUpdate > MAP_TOPIC_CACHE_DURATION || mapTopicCache.length === 0) {
-                    const response = await apiCall('/trending/map-topics?count=9'); // Get 9 topics for rotation
+                // Check if we need to refresh the cache or if scope changed
+                const currentScope = currentZoomLevel || 'national';
+                if (now - lastMapTopicUpdate > MAP_TOPIC_CACHE_DURATION || mapTopicCache.length === 0 || lastMapTopicScope !== currentScope) {
+                    const response = await apiCall(`/trending/map-topics?count=9&scope=${currentScope}`); // Get 9 topics for current scope
                     
                     if (response.ok && response.data.topics) {
                         mapTopicCache = response.data.topics;
                         lastMapTopicUpdate = now;
-                        console.log('Updated map topic cache with', mapTopicCache.length, 'topics');
+                        lastMapTopicScope = currentScope;
+                        console.log(`Updated map topic cache with ${mapTopicCache.length} topics for ${currentScope} scope`);
                     }
                 }
                 
@@ -7359,7 +7371,7 @@
         }
 
         // Enhanced post display with friend status indicators (NO API CALLS!)
-        function displayPostsWithFriendStatus(posts, containerId = 'postsFeed', appendMode = false) {
+        async function displayPostsWithFriendStatus(posts, containerId = 'postsFeed', appendMode = false) {
             // First display posts normally
             displayPostsFallback(posts, containerId, appendMode);
             

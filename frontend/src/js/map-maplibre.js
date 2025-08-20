@@ -1149,10 +1149,18 @@ class UWRMapLibre {
         }
 
         // Simplified chat bubble with only text content
+        const isAITopic = comment.topicId && comment.aiTopic;
+        const clickHandler = isAITopic ? 
+            `window.enterTopicMode && window.enterTopicMode('${comment.topicId}')` : 
+            `window.navigateToComment && window.navigateToComment('${comment.id}')`;
+        const clickTitle = isAITopic ? 
+            "Click to view posts about this topic" : 
+            "Click to view full conversation";
+            
         const popupHtml = `
-            <div class="trending-bubble" onclick="window.navigateToComment && window.navigateToComment('${comment.id}')" 
-                 title="Click to view full conversation" 
-                 data-comment-id="${comment.id}">
+            <div class="trending-bubble" onclick="${clickHandler}" 
+                 title="${clickTitle}" 
+                 data-comment-id="${comment.id}" ${isAITopic ? `data-topic-id="${comment.topicId}"` : ''}>
                 <div class="bubble-content">
                     ${displayText}
                 </div>
