@@ -164,8 +164,9 @@
         font-size: 1rem;
     }
     
-    .logo img {
-        max-height: 35px;
+    .logo-circle {
+        height: 45px;
+        width: 45px;
     }
     
     .desktop-nav {
