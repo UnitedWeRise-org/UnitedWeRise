@@ -588,6 +588,15 @@ details {
     font-weight: bold;
     color: white;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo img {
+    max-height: 40px;
+    width: auto;
+    display: block;
 }
 
 .desktop-nav {

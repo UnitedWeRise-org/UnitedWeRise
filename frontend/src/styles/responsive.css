@@ -164,6 +164,10 @@
         font-size: 1rem;
     }
     
+    .logo img {
+        max-height: 35px;
+    }
+    
     .desktop-nav {
         gap: 0.5rem;
     }
