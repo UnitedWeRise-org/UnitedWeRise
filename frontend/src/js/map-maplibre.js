@@ -1130,8 +1130,71 @@ class UWRMapLibre {
 
     getSecureLocalCoordinates(districtInfo) {
         // Secure local coordinates - randomized within district to prevent doxxing
-        // For now, use state-level randomization with higher zoom
-        return this.getRandomStateCoordinates(districtInfo.state);
+        // For specific known locations, use approximate coordinates
+        if (districtInfo && districtInfo.city) {
+            const cityCoords = {
+                'Troy': [-73.6918, 42.7284], // Troy, NY
+                'Albany': [-73.7562, 42.6526], // Albany, NY  
+                'Schenectady': [-73.9395, 42.8142], // Schenectady, NY
+                'Buffalo': [-78.8784, 42.8864], // Buffalo, NY
+                'Rochester': [-77.6088, 43.1566], // Rochester, NY
+                'Syracuse': [-76.1474, 43.0481], // Syracuse, NY
+                // Add more cities as needed
+            };
+            
+            const coords = cityCoords[districtInfo.city];
+            if (coords) {
+                // Add small random offset for privacy (±0.01 degrees ≈ ±1km)
+                return [
+                    coords[0] + (Math.random() - 0.5) * 0.02,
+                    coords[1] + (Math.random() - 0.5) * 0.02
+                ];
+            }
+        }
+        
+        // Fallback: use state-level randomization with higher zoom
+        return this.getRandomStateCoordinates(districtInfo?.state || 'NY');
+    }
+
+    getUserState() {
+        // Get user's state from localStorage or currentUser profile
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser.address) {
+            // Extract state from address - assuming format includes state abbreviation
+            const addressParts = currentUser.address.split(',').map(part => part.trim());
+            // Look for NY, CA, TX etc. in address
+            for (const part of addressParts) {
+                if (/^[A-Z]{2}$/.test(part)) {
+                    return part;
+                }
+            }
+            // Fallback: if address contains "Troy", assume NY
+            if (currentUser.address.toLowerCase().includes('troy')) {
+                return 'NY';
+            }
+        }
+        // Default fallback for demo purposes
+        return 'NY';
+    }
+
+    getUserDistrict() {
+        // Get user's district info from localStorage or currentUser profile
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser.address) {
+            const address = currentUser.address.toLowerCase();
+            // Extract city from address
+            if (address.includes('troy')) {
+                return { city: 'Troy', state: 'NY' };
+            } else if (address.includes('albany')) {
+                return { city: 'Albany', state: 'NY' };
+            } else if (address.includes('schenectady')) {
+                return { city: 'Schenectady', state: 'NY' };
+            }
+            // Add more city detection as needed
+        }
+        
+        // Default fallback for demo purposes - user is in Troy, NY
+        return { city: 'Troy', state: 'NY' };
     }
 
     displayTrendingPopup(comment) {
@@ -1149,9 +1212,12 @@ class UWRMapLibre {
         }
 
         // Simplified chat bubble with only text content
-        const isAITopic = comment.topicId && comment.aiTopic;
+        // For mock data: topics have 'topic' property, regular comments don't
+        // For real API data: check for topicId and aiTopic properties
+        const isAITopic = comment.topic || (comment.topicId && comment.aiTopic);
+        const topicIdentifier = comment.topic || comment.topicId || comment.id;
         const clickHandler = isAITopic ? 
-            `window.enterTopicMode && window.enterTopicMode('${comment.topicId}')` : 
+            `window.enterTopicMode && window.enterTopicMode('${topicIdentifier}')` : 
             `window.navigateToComment && window.navigateToComment('${comment.id}')`;
         const clickTitle = isAITopic ? 
             "Click to view posts about this topic" : 
@@ -1160,7 +1226,7 @@ class UWRMapLibre {
         const popupHtml = `
             <div class="trending-bubble" onclick="${clickHandler}" 
                  title="${clickTitle}" 
-                 data-comment-id="${comment.id}" ${isAITopic ? `data-topic-id="${comment.topicId}"` : ''}>
+                 data-comment-id="${comment.id}" ${isAITopic ? `data-topic-id="${topicIdentifier}"` : ''}>
                 <div class="bubble-content">
                     ${displayText}
                 </div>
