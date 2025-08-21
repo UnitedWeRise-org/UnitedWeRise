@@ -1,6 +1,270 @@
 /* United We Rise - Main Stylesheet */
 
 /* ========================================
+   TOTP/2FA STYLES
+======================================== */
+
+.totp-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.totp-status {
+    margin-bottom: 1rem;
+}
+
+.totp-enabled, .totp-disabled, .totp-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.totp-enabled {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.totp-disabled {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.totp-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.totp-icon {
+    font-size: 1.2rem;
+}
+
+.totp-date {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-left: auto;
+}
+
+.totp-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.totp-info, .backup-codes-info {
+    margin-top: 0.5rem;
+}
+
+.backup-codes-info small {
+    color: #6c757d;
+}
+
+/* TOTP Setup Modal */
+.totp-setup-modal {
+    min-width: 500px;
+    max-width: 600px;
+}
+
+.setup-step {
+    margin-bottom: 2rem;
+}
+
+.setup-step h4 {
+    color: #4b5c09;
+    margin-bottom: 0.5rem;
+}
+
+.qr-code-container {
+    text-align: center;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.qr-code {
+    max-width: 200px;
+    height: auto;
+}
+
+.manual-code {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.manual-code code {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #495057;
+    border: 1px solid #e9ecef;
+}
+
+.totp-input {
+    width: 150px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-family: monospace;
+    padding: 0.75rem;
+    border: 2px solid #4b5c09;
+    border-radius: 6px;
+    margin: 1rem 0;
+    letter-spacing: 0.2rem;
+}
+
+.totp-input:focus {
+    outline: none;
+    border-color: #6b8109;
+    box-shadow: 0 0 0 3px rgba(75, 92, 9, 0.1);
+}
+
+/* Backup Codes Modal */
+.backup-codes-modal {
+    min-width: 500px;
+    max-width: 600px;
+}
+
+.backup-codes-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.backup-code {
+    font-family: monospace;
+    background: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #dee2e6;
+}
+
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+/* Modal Overlay for TOTP */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.modal-close:hover {
+    background: #f8f9fa;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Responsive Design for TOTP */
+@media (max-width: 768px) {
+    .totp-setup-modal,
+    .backup-codes-modal {
+        min-width: 90vw;
+        max-width: 90vw;
+        margin: 1rem;
+    }
+    
+    .backup-codes-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .totp-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+}
+
+/* ========================================
    CONVERSATION VIEW STYLES
 ======================================== */
 

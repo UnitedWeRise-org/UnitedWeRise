@@ -134,6 +134,13 @@ model User {
   payments                Payment[]
   stripeCustomer          StripeCustomer?
 
+  // TOTP (Two-Factor Authentication)
+  totpSecret              String?                   // Base32 encoded secret for TOTP
+  totpEnabled             Boolean                   @default(false)
+  totpBackupCodes         String[]                  @default([]) // One-time backup codes
+  totpLastUsedAt          DateTime?                 // Track last TOTP use to prevent replay
+  totpSetupAt             DateTime?                 // When TOTP was first enabled
+
   @@index([username])
   @@index([createdAt])
   @@index([h3Index])

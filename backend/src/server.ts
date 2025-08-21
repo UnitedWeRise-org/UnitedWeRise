@@ -36,6 +36,7 @@ import oauthRoutes from './routes/oauth';
 import trendingTopicsRoutes from './routes/trendingTopics';
 import paymentsRoutes from './routes/payments';
 import searchRoutes from './routes/search';
+import totpRoutes from './routes/totp';
 import { initializeWebSocket } from './websocket';
 import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -178,6 +179,7 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/trending', trendingTopicsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/totp', totpRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically

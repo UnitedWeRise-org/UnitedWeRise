@@ -41,6 +41,7 @@ const oauth_1 = __importDefault(require("./routes/oauth"));
 const trendingTopics_1 = __importDefault(require("./routes/trendingTopics"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const search_1 = __importDefault(require("./routes/search"));
+const totp_1 = __importDefault(require("./routes/totp"));
 const websocket_1 = require("./websocket");
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -166,6 +167,7 @@ app.use('/api/oauth', oauth_1.default);
 app.use('/api/trending', trendingTopics_1.default);
 app.use('/api/payments', payments_1.default);
 app.use('/api/search', search_1.default);
+app.use('/api/totp', totp_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));

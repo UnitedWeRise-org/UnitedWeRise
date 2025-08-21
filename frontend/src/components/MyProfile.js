@@ -160,6 +160,8 @@ class MyProfile {
             case 'political':
                 return this.renderPoliticalTab();
             case 'settings':
+                // Load TOTP status when settings tab is rendered
+                setTimeout(() => this.loadTOTPStatus(), 100);
                 return this.renderSettingsTab();
             default:
                 return this.renderPostsTab();
@@ -456,6 +458,14 @@ class MyProfile {
                     <div class="settings-group">
                         <h4>Security</h4>
                         <button onclick="window.myProfile.changePassword()" class="btn">Change Password</button>
+                        <div class="totp-section">
+                            <div id="totpStatus" class="totp-status">
+                                <div class="loading">Loading 2FA status...</div>
+                            </div>
+                            <div id="totpControls" class="totp-controls" style="display: none;">
+                                <!-- TOTP controls will be populated here -->
+                            </div>
+                        </div>
                         <button onclick="window.myProfile.downloadData()" class="btn">Download My Data</button>
                     </div>
 
@@ -963,6 +973,275 @@ class MyProfile {
     deactivateAccount() {
         if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
             alert('Account deactivation coming soon!');
+        }
+    }
+
+    // TOTP (Two-Factor Authentication) Methods
+    async loadTOTPStatus() {
+        try {
+            const response = await window.apiCall('/totp/status');
+            if (response.ok) {
+                this.renderTOTPControls(response.data);
+            } else {
+                this.renderTOTPError('Failed to load 2FA status');
+            }
+        } catch (error) {
+            console.error('Error loading TOTP status:', error);
+            this.renderTOTPError('Network error loading 2FA status');
+        }
+    }
+
+    renderTOTPControls(status) {
+        const totpStatus = document.getElementById('totpStatus');
+        const totpControls = document.getElementById('totpControls');
+        
+        if (!totpStatus || !totpControls) return;
+
+        if (status.enabled) {
+            totpStatus.innerHTML = `
+                <div class="totp-enabled">
+                    <span class="totp-icon">🔒</span>
+                    <span>Two-Factor Authentication is <strong>enabled</strong></span>
+                    <span class="totp-date">Setup: ${new Date(status.setupAt).toLocaleDateString()}</span>
+                </div>
+            `;
+            
+            totpControls.innerHTML = `
+                <div class="totp-actions">
+                    <button onclick="window.myProfile.regenerateBackupCodes()" class="btn-secondary">
+                        Generate New Backup Codes
+                    </button>
+                    <button onclick="window.myProfile.disableTOTP()" class="btn-danger">
+                        Disable 2FA
+                    </button>
+                    <div class="backup-codes-info">
+                        <small>Backup codes remaining: ${status.backupCodesRemaining}</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            totpStatus.innerHTML = `
+                <div class="totp-disabled">
+                    <span class="totp-icon">🔓</span>
+                    <span>Two-Factor Authentication is <strong>disabled</strong></span>
+                    <small>Recommended for admin users</small>
+                </div>
+            `;
+            
+            totpControls.innerHTML = `
+                <div class="totp-actions">
+                    <button onclick="window.myProfile.setupTOTP()" class="btn">
+                        🔒 Enable Two-Factor Authentication
+                    </button>
+                    <div class="totp-info">
+                        <small>Use Google Authenticator, Authy, or similar apps</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        totpControls.style.display = 'block';
+    }
+
+    renderTOTPError(message) {
+        const totpStatus = document.getElementById('totpStatus');
+        if (totpStatus) {
+            totpStatus.innerHTML = `
+                <div class="totp-error">
+                    <span class="totp-icon">⚠️</span>
+                    <span>${message}</span>
+                    <button onclick="window.myProfile.loadTOTPStatus()" class="btn-small">Retry</button>
+                </div>
+            `;
+        }
+    }
+
+    async setupTOTP() {
+        try {
+            const response = await window.apiCall('/totp/setup', { method: 'POST' });
+            if (response.ok) {
+                this.showTOTPSetupModal(response.data);
+            } else {
+                alert('Failed to setup 2FA. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error setting up TOTP:', error);
+            alert('Network error setting up 2FA. Please try again.');
+        }
+    }
+
+    showTOTPSetupModal(setupData) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal totp-setup-modal">
+                <div class="modal-header">
+                    <h3>Setup Two-Factor Authentication</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setup-step">
+                        <h4>Step 1: Scan QR Code</h4>
+                        <p>Use Google Authenticator, Authy, or similar app to scan this QR code:</p>
+                        <div class="qr-code-container">
+                            <img src="${setupData.qrCode}" alt="QR Code" class="qr-code">
+                        </div>
+                        <p class="manual-code">
+                            <small>Manual entry code: <code>${setupData.secret}</code></small>
+                        </p>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <h4>Step 2: Enter Verification Code</h4>
+                        <p>Enter the 6-digit code from your authenticator app:</p>
+                        <input type="text" id="totpVerificationCode" placeholder="000000" maxlength="6" 
+                               class="totp-input" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        <div class="modal-actions">
+                            <button onclick="window.myProfile.verifyTOTPSetup()" class="btn">
+                                Verify & Enable 2FA
+                            </button>
+                            <button onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        document.getElementById('totpVerificationCode').focus();
+    }
+
+    async verifyTOTPSetup() {
+        const code = document.getElementById('totpVerificationCode').value;
+        if (!code || code.length !== 6) {
+            alert('Please enter a 6-digit verification code');
+            return;
+        }
+
+        try {
+            const response = await window.apiCall('/totp/verify-setup', {
+                method: 'POST',
+                body: JSON.stringify({ token: code })
+            });
+
+            if (response.ok) {
+                this.showBackupCodesModal(response.data.backupCodes);
+                document.querySelector('.modal-overlay').remove();
+                this.loadTOTPStatus(); // Refresh status
+            } else {
+                alert(response.data?.error || 'Invalid verification code. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error verifying TOTP setup:', error);
+            alert('Network error. Please try again.');
+        }
+    }
+
+    showBackupCodesModal(backupCodes) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal backup-codes-modal">
+                <div class="modal-header">
+                    <h3>🔑 Backup Codes</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="backup-codes-info">
+                        <p><strong>Important:</strong> Save these backup codes in a secure location. Each code can only be used once if you lose access to your authenticator app.</p>
+                    </div>
+                    <div class="backup-codes-list">
+                        ${backupCodes.map(code => `<div class="backup-code">${code}</div>`).join('')}
+                    </div>
+                    <div class="modal-actions">
+                        <button onclick="window.myProfile.downloadBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" class="btn">
+                            📄 Download Codes
+                        </button>
+                        <button onclick="window.myProfile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" class="btn-secondary">
+                            📋 Copy to Clipboard
+                        </button>
+                        <button onclick="this.closest('.modal-overlay').remove()" class="btn">
+                            I've Saved My Codes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    downloadBackupCodes(codes) {
+        const content = `UnitedWeRise Two-Factor Authentication Backup Codes\n\nGenerated: ${new Date().toLocaleString()}\n\nIMPORTANT: Each code can only be used once. Store these securely.\n\n${codes.join('\n')}\n\nIf you lose access to your authenticator app, you can use these codes to regain access to your account.`;
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'unitedwerise-backup-codes.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    copyBackupCodes(codes) {
+        const text = codes.join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Backup codes copied to clipboard!');
+        }).catch(() => {
+            alert('Failed to copy codes. Please manually copy them.');
+        });
+    }
+
+    async regenerateBackupCodes() {
+        if (!confirm('Generate new backup codes? This will invalidate all existing backup codes.')) {
+            return;
+        }
+
+        const token = prompt('Enter your 2FA code to confirm:');
+        if (!token) return;
+
+        try {
+            const response = await window.apiCall('/totp/regenerate-backup-codes', {
+                method: 'POST',
+                body: JSON.stringify({ token })
+            });
+
+            if (response.ok) {
+                this.showBackupCodesModal(response.data.backupCodes);
+                this.loadTOTPStatus(); // Refresh status
+            } else {
+                alert(response.data?.error || 'Failed to regenerate backup codes');
+            }
+        } catch (error) {
+            console.error('Error regenerating backup codes:', error);
+            alert('Network error. Please try again.');
+        }
+    }
+
+    async disableTOTP() {
+        if (!confirm('Disable Two-Factor Authentication? This will make your account less secure.')) {
+            return;
+        }
+
+        const password = prompt('Enter your password to confirm:');
+        if (!password) return;
+
+        try {
+            const response = await window.apiCall('/totp/disable', {
+                method: 'POST',
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                alert('Two-Factor Authentication has been disabled.');
+                this.loadTOTPStatus(); // Refresh status
+            } else {
+                alert(response.data?.error || 'Failed to disable 2FA');
+            }
+        } catch (error) {
+            console.error('Error disabling TOTP:', error);
+            alert('Network error. Please try again.');
         }
     }
 

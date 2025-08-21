@@ -287,6 +287,7 @@
                 <button class="nav-button" onclick="showSection('ai-insights')">🤖 AI Insights</button>
                 <button class="nav-button" onclick="showSection('deployment')">🚀 Deployment</button>
                 <button class="nav-button" onclick="showSection('system')">⚙️ System</button>
+                <button class="nav-button" onclick="showSection('database')">🗄️ Database</button>
             </div>
 
             <!-- Overview Section -->
@@ -563,6 +564,23 @@ Loading deployment status...
                     <div class="loading">Loading system information...</div>
                 </div>
             </div>
+
+            <!-- Database Schema Section -->
+            <div id="database" class="dashboard-section">
+                <h2>🗄️ Database Schema</h2>
+                
+                <div id="schemaStats">
+                    <div class="loading">Loading database schema...</div>
+                </div>
+                
+                <div id="schemaModels" style="margin-top: 2rem;">
+                    <!-- Models list will be populated here -->
+                </div>
+                
+                <div id="schemaContent" style="margin-top: 2rem;">
+                    <!-- Full schema will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -767,6 +785,9 @@ Loading deployment status...
                     break;
                 case 'system':
                     loadSystemData();
+                    break;
+                case 'database':
+                    loadDatabaseSchema();
                     break;
             }
         }
@@ -1105,20 +1126,79 @@ Current Status: Use deploymentStatus.check() for real-time status
         async function loadSystemData() {
             try {
                 const [healthResponse, metricsResponse] = await Promise.all([
-                    fetch(`${BACKEND_URL}/health`),
-                    fetch(`${BACKEND_URL}/metrics`)
+                    fetch(`${BACKEND_URL}/api/health/detailed`),
+                    fetch(`${BACKEND_URL}/api/metrics`)
                 ]);
 
-                let systemInfo = '<h3>System Health</h3>';
+                let systemInfo = '<h3>⚙️ System Information</h3>';
                 
                 if (healthResponse.ok) {
                     const health = await healthResponse.json();
                     systemInfo += `
-                        <p><strong>Status:</strong> ${health.status}</p>
-                        <p><strong>Uptime:</strong> ${Math.round(health.uptime / 3600)} hours</p>
-                        <p><strong>Database:</strong> ${health.database}</p>
-                        <p><strong>Memory Used:</strong> ${Math.round(health.memory.used / 1024 / 1024)} MB</p>
-                        <p><strong>Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</p>
+                        <div class="analytics-section">
+                            <h4>🏥 System Health</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${health.status}</div>
+                                    <div class="metric-label">Status</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${Math.round(health.uptime / 3600)}h</div>
+                                    <div class="metric-label">Uptime</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${health.database?.status || health.database}</div>
+                                    <div class="metric-label">Database</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${health.memory ? health.memory.used : 'N/A'}</div>
+                                    <div class="metric-label">Memory Used</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${health.metrics?.requests?.errorRate?.toFixed(2) || '0.00'}%</div>
+                                    <div class="metric-label">Error Rate</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${health.metrics?.requests?.total?.toLocaleString() || '0'}</div>
+                                    <div class="metric-label">Total Requests</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (metricsResponse.ok) {
+                    const metrics = await metricsResponse.json();
+                    systemInfo += `
+                        <div class="analytics-section">
+                            <h4>📊 Application Metrics</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${metrics.counters?.http_requests_total || 0}</div>
+                                    <div class="metric-label">HTTP Requests</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${metrics.gauges?.active_users || 0}</div>
+                                    <div class="metric-label">Active Users</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${metrics.gauges?.websocket_connections || 0}</div>
+                                    <div class="metric-label">WebSocket Connections</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${Math.round((metrics.gauges?.memory_usage_bytes || 0) / 1024 / 1024)} MB</div>
+                                    <div class="metric-label">Node.js Memory</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    systemInfo += `
+                        <div class="alert-medium" style="padding: 1rem; border-radius: 6px;">
+                            <h4>📊 Application Metrics</h4>
+                            <p>Detailed metrics are available but require authentication. Basic system health shown above.</p>
+                            <p><em>Note: Advanced metrics tracking includes request counts, user activity, and performance monitoring.</em></p>
+                        </div>
                     `;
                 }
 
@@ -1127,7 +1207,177 @@ Current Status: Use deploymentStatus.check() for real-time status
             } catch (error) {
                 console.error('Error loading system data:', error);
                 document.getElementById('systemInfo').innerHTML = 
-                    '<div class="error">Failed to load system data</div>';
+                    '<div class="error">Failed to load system data. Please check if the backend services are running.</div>';
+            }
+        }
+
+        // Load database schema with enhanced security
+        async function loadDatabaseSchema() {
+            try {
+                // First attempt without re-auth
+                let response = await fetch(`${BACKEND_URL}/api/admin/schema`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                // If requires re-authentication, prompt user
+                if (response.status === 403) {
+                    const errorData = await response.json();
+                    if (errorData.requiresReauth) {
+                        const password = prompt('🔒 Database access requires password confirmation for security.\n\nPlease enter your password:');
+                        if (!password) {
+                            document.getElementById('schemaStats').innerHTML = 
+                                '<div class="alert-warning">❌ Password required for database schema access</div>';
+                            return;
+                        }
+
+                        // Verify password and get recent auth token
+                        const authResponse = await fetch(`${BACKEND_URL}/api/auth/verify-password`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
+                            },
+                            body: JSON.stringify({ password })
+                        });
+
+                        if (authResponse.ok) {
+                            const authData = await authResponse.json();
+                            // Retry with recent auth header
+                            response = await fetch(`${BACKEND_URL}/api/admin/schema`, {
+                                headers: { 
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Recent-Auth': authData.token || 'verified'
+                                }
+                            });
+                        } else {
+                            document.getElementById('schemaStats').innerHTML = 
+                                '<div class="error">❌ Invalid password. Database access denied.</div>';
+                            return;
+                        }
+                    }
+                }
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Display schema statistics
+                    document.getElementById('schemaStats').innerHTML = `
+                        <div class="analytics-section">
+                            <h4>📊 Database Statistics</h4>
+                            <div class="metric-cards">
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.modelCount}</div>
+                                    <div class="metric-label">Models</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.enumCount}</div>
+                                    <div class="metric-label">Enums</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.totalFields}</div>
+                                    <div class="metric-label">Total Fields</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.modelsWithRelations}</div>
+                                    <div class="metric-label">With Relations</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.modelsWithIndexes}</div>
+                                    <div class="metric-label">With Indexes</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-number">${data.stats.totalLines}</div>
+                                    <div class="metric-label">Schema Lines</div>
+                                </div>
+                            </div>
+                            <p><strong>Last Modified:</strong> ${new Date(data.lastModified).toLocaleString()}</p>
+                        </div>
+                    `;
+                    
+                    // Display models overview
+                    const modelsHtml = data.models.map(model => `
+                        <div class="metric-card" style="margin: 0.5rem; cursor: pointer;" onclick="toggleModelDetails('${model.name}')">
+                            <div class="metric-number">${model.fields}</div>
+                            <div class="metric-label">${model.name}</div>
+                            <div style="font-size: 0.8em; color: #666;">
+                                ${model.hasRelations ? '🔗' : ''} 
+                                ${model.hasIndexes ? '📑' : ''} 
+                                ${model.hasUnique ? '🔑' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('schemaModels').innerHTML = `
+                        <div class="analytics-section">
+                            <h4>📋 Database Models</h4>
+                            <div class="metric-cards" style="flex-wrap: wrap;">
+                                ${modelsHtml}
+                            </div>
+                            <p><em>Click on a model to see its definition. 🔗=Relations, 📑=Indexes, 🔑=Unique constraints</em></p>
+                        </div>
+                    `;
+                    
+                    // Display full schema (initially collapsed)
+                    document.getElementById('schemaContent').innerHTML = `
+                        <div class="analytics-section">
+                            <h4>📝 Full Prisma Schema 
+                                <button onclick="toggleSchemaVisibility()" style="margin-left: 1rem; padding: 0.25rem 0.5rem;">
+                                    <span id="schemaToggleText">Show</span>
+                                </button>
+                            </h4>
+                            <div id="fullSchema" style="display: none;">
+                                <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">${data.schema}</pre>
+                                <p><em>${data.note}</em></p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Failed to load schema');
+                }
+            } catch (error) {
+                console.error('Error loading database schema:', error);
+                document.getElementById('schemaStats').innerHTML = 
+                    '<div class="error">Failed to load database schema</div>';
+            }
+        }
+
+        // Toggle schema visibility
+        function toggleSchemaVisibility() {
+            const schemaDiv = document.getElementById('fullSchema');
+            const toggleText = document.getElementById('schemaToggleText');
+            
+            if (schemaDiv.style.display === 'none') {
+                schemaDiv.style.display = 'block';
+                toggleText.textContent = 'Hide';
+            } else {
+                schemaDiv.style.display = 'none';
+                toggleText.textContent = 'Show';
+            }
+        }
+
+        // Toggle model details (could be enhanced to show just that model)
+        function toggleModelDetails(modelName) {
+            // For now, just show the full schema
+            const schemaDiv = document.getElementById('fullSchema');
+            const toggleText = document.getElementById('schemaToggleText');
+            
+            if (schemaDiv.style.display === 'none') {
+                schemaDiv.style.display = 'block';
+                toggleText.textContent = 'Hide';
+                
+                // Scroll to the model in the schema
+                setTimeout(() => {
+                    const schemaText = schemaDiv.querySelector('pre');
+                    const modelRegex = new RegExp(`model\\s+${modelName}\\s*{`, 'i');
+                    const match = schemaText.textContent.match(modelRegex);
+                    if (match) {
+                        const modelIndex = match.index;
+                        const lines = schemaText.textContent.substring(0, modelIndex).split('\\n').length;
+                        schemaText.style.lineHeight = '1.4';
+                        // Highlight the model (simple approach)
+                        console.log(`Found ${modelName} model at line approximately ${lines}`);
+                    }
+                }, 100);
             }
         }
 

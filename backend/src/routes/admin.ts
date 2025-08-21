@@ -1,11 +1,14 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireTOTPForAdmin } from '../middleware/totpAuth';
 import { moderationService } from '../services/moderationService';
 import { body, query, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { SecurityService } from '../services/securityService';
 import { metricsService } from '../services/metricsService';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -28,7 +31,7 @@ const handleValidationErrors = (req: express.Request, res: express.Response, nex
 };
 
 // Dashboard Overview
-router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/dashboard', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const [
       totalUsers,
@@ -108,7 +111,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res
 });
 
 // User Management
-router.get('/users', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/users', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -217,7 +220,7 @@ router.get('/users', requireAuth, requireAdmin, async (req: AuthRequest, res) =>
 });
 
 // Get detailed user info
-router.get('/users/:userId', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/users/:userId', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
 
@@ -337,6 +340,7 @@ router.get('/users/:userId', requireAuth, requireAdmin, async (req: AuthRequest,
 router.post('/users/:userId/suspend', 
   requireAuth, 
   requireAdmin,
+  requireTOTPForAdmin,
   [
     body('reason').notEmpty().trim().withMessage('Reason is required'),
     body('type').isIn(['TEMPORARY', 'PERMANENT', 'POSTING_RESTRICTED', 'COMMENTING_RESTRICTED']),
@@ -382,7 +386,7 @@ router.post('/users/:userId/suspend',
 );
 
 // Lift suspension
-router.post('/users/:userId/unsuspend', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/users/:userId/unsuspend', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
 
@@ -409,6 +413,7 @@ router.post('/users/:userId/unsuspend', requireAuth, requireAdmin, async (req: A
 router.post('/users/:userId/role', 
   requireAuth, 
   requireAdmin,
+  requireTOTPForAdmin,
   [
     body('role').isIn(['user', 'moderator', 'admin']).withMessage('Invalid role'),
     handleValidationErrors
@@ -451,7 +456,7 @@ router.post('/users/:userId/role',
 );
 
 // Content Management
-router.get('/content/flagged', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/content/flagged', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -527,7 +532,7 @@ router.get('/content/flagged', requireAuth, requireAdmin, async (req: AuthReques
 });
 
 // Resolve content flag
-router.post('/content/flags/:flagId/resolve', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/content/flags/:flagId/resolve', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const { flagId } = req.params;
     const adminId = req.user!.id;
@@ -549,7 +554,7 @@ router.post('/content/flags/:flagId/resolve', requireAuth, requireAdmin, async (
 });
 
 // System Analytics - Enhanced with comprehensive metrics
-router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/analytics', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -787,7 +792,7 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
 });
 
 // System Settings
-router.get('/settings', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/settings', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     // Return current system configuration
     const settings = {
@@ -822,7 +827,7 @@ router.get('/settings', requireAuth, requireAdmin, async (req: AuthRequest, res)
 });
 
 // Security Events Endpoint
-router.get('/security/events', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/security/events', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -862,7 +867,7 @@ router.get('/security/events', requireAuth, requireAdmin, async (req: AuthReques
 });
 
 // Security Statistics Endpoint
-router.get('/security/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/security/stats', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const timeframe = (req.query.timeframe as '24h' | '7d' | '30d') || '24h';
     const stats = await SecurityService.getSecurityStats(timeframe);
@@ -875,7 +880,7 @@ router.get('/security/stats', requireAuth, requireAdmin, async (req: AuthRequest
 });
 
 // Enhanced Dashboard with Security Metrics
-router.get('/dashboard/enhanced', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/dashboard/enhanced', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const [
       basicDashboard,
@@ -930,7 +935,7 @@ router.get('/dashboard/enhanced', requireAuth, requireAdmin, async (req: AuthReq
 });
 
 // Error Tracking Endpoints
-router.get('/errors', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/errors', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const severity = req.query.severity as string || 'all';
     const timeframe = req.query.timeframe as string || '24h';
@@ -1002,7 +1007,7 @@ router.get('/errors', requireAuth, requireAdmin, async (req: AuthRequest, res) =
 });
 
 // AI Insights - User Suggestions Endpoint (Now with REAL feedback data!)
-router.get('/ai-insights/suggestions', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/ai-insights/suggestions', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     const category = req.query.category as string || 'all';
     const status = req.query.status as string || 'all';
@@ -1117,7 +1122,7 @@ router.get('/ai-insights/suggestions', requireAuth, requireAdmin, async (req: Au
 });
 
 // AI Insights - Content Analysis Endpoint
-router.get('/ai-insights/analysis', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/ai-insights/analysis', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
     // Generate real AI analysis data based on actual database content
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -1196,6 +1201,83 @@ router.get('/ai-insights/analysis', requireAuth, requireAdmin, async (req: AuthR
   } catch (error) {
     console.error('AI insights analysis error:', error);
     res.status(500).json({ error: 'Failed to retrieve AI analysis' });
+  }
+});
+
+// Enhanced admin middleware for sensitive operations
+const requireSuperAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  // For now, require explicit super admin flag or additional verification
+  // TODO: Implement TOTP verification here
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: 'Super admin access required for database operations' });
+  }
+  
+  // Additional security check - could be TOTP, recent password verification, etc.
+  const recentAuth = req.headers['x-recent-auth']; // Frontend should prompt for password again
+  if (!recentAuth) {
+    return res.status(403).json({ 
+      error: 'Recent authentication required for sensitive operations',
+      requiresReauth: true 
+    });
+  }
+  
+  next();
+};
+
+// Prisma Schema Viewer - Database Administration (Enhanced Security)
+router.get('/schema', requireAuth, requireAdmin, requireTOTPForAdmin, requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    const schemaPath = path.join(__dirname, '../../prisma/schema.prisma');
+    
+    // Check if schema file exists
+    if (!fs.existsSync(schemaPath)) {
+      return res.status(404).json({ error: 'Prisma schema file not found' });
+    }
+    
+    // Read the schema file
+    const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+    
+    // Parse basic schema info for stats
+    const modelCount = (schemaContent.match(/^model\s+\w+\s*{/gm) || []).length;
+    const enumCount = (schemaContent.match(/^enum\s+\w+\s*{/gm) || []).length;
+    const lines = schemaContent.split('\n').length;
+    
+    // Extract models with basic info
+    const models = [];
+    const modelMatches = schemaContent.match(/model\s+(\w+)\s*{[^}]*}/gs) || [];
+    
+    for (const modelMatch of modelMatches) {
+      const nameMatch = modelMatch.match(/model\s+(\w+)/);
+      const fieldMatches = modelMatch.match(/^\s+\w+\s+\w+/gm) || [];
+      
+      if (nameMatch) {
+        models.push({
+          name: nameMatch[1],
+          fields: fieldMatches.length,
+          hasRelations: modelMatch.includes('@relation'),
+          hasIndexes: modelMatch.includes('@@index'),
+          hasUnique: modelMatch.includes('@unique') || modelMatch.includes('@@unique')
+        });
+      }
+    }
+    
+    res.json({
+      schema: schemaContent,
+      stats: {
+        totalLines: lines,
+        modelCount: modelCount,
+        enumCount: enumCount,
+        totalFields: models.reduce((sum, model) => sum + model.fields, 0),
+        modelsWithRelations: models.filter(m => m.hasRelations).length,
+        modelsWithIndexes: models.filter(m => m.hasIndexes).length
+      },
+      models: models.sort((a, b) => a.name.localeCompare(b.name)),
+      lastModified: fs.statSync(schemaPath).mtime,
+      note: 'Read-only view of the Prisma database schema. Changes must be made via migrations.'
+    });
+  } catch (error) {
+    console.error('Schema retrieval error:', error);
+    res.status(500).json({ error: 'Failed to retrieve database schema' });
   }
 });
 

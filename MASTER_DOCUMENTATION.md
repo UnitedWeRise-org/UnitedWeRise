@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
 **Last Updated**: August 21, 2025  
-**Version**: 4.3 (MapLibre Navigation Optimizations)  
+**Version**: 4.4 (TOTP Two-Factor Authentication Implementation)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -1441,10 +1441,56 @@ const corsOptions = {
 - Currently demo mode only
 - Test phones: +15551234567 (code: 123456)
 
-#### Two-Factor Authentication (Roadmap)
-- TOTP support planned
-- Backup codes
-- Recovery options
+#### Two-Factor Authentication (TOTP)
+**Status**: ✅ **FULLY IMPLEMENTED** - Complete TOTP authentication system with Google Authenticator support
+
+##### TOTP Implementation Features
+- **Setup Process**: QR code generation for easy mobile app setup
+- **Verification**: Standard 6-digit TOTP tokens with 30-second rotation
+- **Backup Codes**: 8 one-time recovery codes generated during setup
+- **Admin Enforcement**: Required for all admin access to dashboard
+- **User Settings**: Available to all users in My Profile → Settings tab
+- **Security**: Base32 secret storage, replay attack prevention
+
+##### Database Schema Addition
+```sql
+-- User table additions
+totpSecret              String?     -- Base32 encoded TOTP secret
+totpEnabled             Boolean     @default(false)
+totpBackupCodes         String[]    @default([])
+totpLastUsedAt          DateTime?   -- Prevent token replay
+totpSetupAt             DateTime?   -- Track when enabled
+```
+
+##### API Endpoints
+```javascript
+POST /api/totp/setup              // Generate secret and QR code
+POST /api/totp/verify-setup       // Verify initial setup token
+POST /api/totp/verify             // Verify TOTP for authentication
+POST /api/totp/disable            // Disable TOTP (requires password)
+GET  /api/totp/status             // Get current TOTP status
+POST /api/totp/regenerate-backup-codes  // Generate new backup codes
+```
+
+##### Frontend Integration
+- **User Settings**: Complete UI in My Profile → Settings tab
+- **Setup Modal**: QR code display with Google Authenticator instructions
+- **Backup Codes**: Secure display, download, and copy functionality
+- **Admin Dashboard**: TOTP verification required for all admin routes
+- **Visual Indicators**: Clear status display (enabled/disabled)
+
+##### Security Features
+- **Admin Enforcement**: `requireTOTPForAdmin` middleware on all admin routes
+- **Token Validation**: Speakeasy library with time window tolerance
+- **Backup Code Management**: Single-use codes with secure generation
+- **Session Tracking**: TOTP verification state management
+- **Password Confirmation**: Required for disabling TOTP
+
+##### Implementation Files
+- `backend/src/routes/totp.ts` - Complete TOTP API endpoints
+- `backend/src/middleware/totpAuth.ts` - Admin TOTP enforcement
+- `frontend/src/components/MyProfile.js` - User settings interface
+- `frontend/src/styles/main.css` - TOTP modal and UI styling
 
 ### OAuth Social Login System
 
@@ -4662,6 +4708,56 @@ POST /api/debug/clear-cache
 
 ## 📜 SESSION HISTORY {#session-history}
 
+### August 21, 2025 - TOTP Two-Factor Authentication Implementation
+
+#### Complete 2FA/TOTP System Deployment
+**Achievement**: Full implementation of Time-based One-Time Password (TOTP) authentication system
+**Impact**: Significantly enhanced security, especially for admin dashboard access
+
+**New Security Features Implemented**:
+1. **User TOTP Management** - Complete setup/disable workflow in user settings
+   - QR code generation for Google Authenticator setup
+   - 6-digit verification token system with 30-second rotation
+   - 8 one-time backup codes for account recovery
+   - Password confirmation required for disabling 2FA
+
+2. **Admin Dashboard Security Enhancement** - TOTP now required for all admin access
+   - `requireTOTPForAdmin` middleware applied to all admin routes
+   - Admin users must enable TOTP to access dashboard features
+   - Session-based TOTP verification tracking
+   - Clear error messages for missing 2FA setup
+
+3. **Database Schema Extensions** - New TOTP fields added to User model
+   - `totpSecret` - Base32 encoded secret for TOTP generation
+   - `totpEnabled` - Boolean flag for 2FA status
+   - `totpBackupCodes` - Array of single-use recovery codes
+   - `totpLastUsedAt` - Timestamp to prevent token replay attacks
+   - `totpSetupAt` - Track when 2FA was first enabled
+
+**Technical Implementation**:
+- `backend/src/routes/totp.ts` - Complete TOTP API with 6 endpoints
+- `backend/src/middleware/totpAuth.ts` - Admin enforcement middleware
+- `backend/prisma/schema.prisma` - Database schema additions
+- `frontend/src/components/MyProfile.js` - User settings interface (300+ lines)
+- `frontend/src/styles/main.css` - Complete modal and UI styling
+
+**API Endpoints Created**:
+```
+POST /api/totp/setup              # Generate secret and QR code
+POST /api/totp/verify-setup       # Verify initial setup token  
+POST /api/totp/verify             # Verify TOTP for authentication
+POST /api/totp/disable            # Disable TOTP (requires password)
+GET  /api/totp/status             # Get current TOTP status
+POST /api/totp/regenerate-backup-codes  # Generate new backup codes
+```
+
+**Security Enhancements**:
+- Speakeasy library integration for RFC 6238 compliant TOTP
+- QRCode generation for easy mobile app setup
+- Secure backup code generation and management
+- Admin route protection with middleware enforcement
+- Password verification for sensitive operations
+
 ### August 20, 2025 - API Optimization Implementation & Logo Integration
 
 #### Major API Optimization Rollout
@@ -4957,7 +5053,10 @@ showDefaultView()
 
 ## 🔮 FUTURE ROADMAP {#future-roadmap}
 
-### Phase 1: Immediate Fixes (This Week)
+### Phase 1: Recent Completions (August 2025)
+- [x] **TOTP/2FA Implementation**: Complete two-factor authentication system
+- [x] Admin dashboard security enhancements
+- [x] Database schema access for administrators
 - [ ] Fix legislative routes loading issue
 - [ ] Resolve checkbox display bug
 - [ ] Optimize trending cache system
@@ -4978,7 +5077,6 @@ showDefaultView()
 ```javascript
 // Twilio integration
 - Phone number verification
-- 2FA support
 - Account recovery
 ```
 
