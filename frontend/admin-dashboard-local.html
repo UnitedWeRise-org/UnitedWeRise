@@ -584,10 +584,8 @@ Loading deployment status...
             lastChecked: 0
         };
         
-        // Auto-detect environment: localhost for development, production URL for live
-        const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:3001' 
-            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
+        // LOCAL DEVELOPMENT VERSION - connects to localhost backend
+        const BACKEND_URL = 'http://localhost:3001';
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {

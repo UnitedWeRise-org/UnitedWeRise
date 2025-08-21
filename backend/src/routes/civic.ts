@@ -7,8 +7,8 @@
 
 import express from 'express';
 import { body, query, param, validationResult } from 'express-validator';
-import civicOrganizingService from '../services/civicOrganizingService.js';
-import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import civicOrganizingService from '../services/civicOrganizingService';
+import { requireAuth, AuthRequest } from '../middleware/auth';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();

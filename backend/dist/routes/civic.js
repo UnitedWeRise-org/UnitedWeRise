@@ -11,8 +11,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const express_validator_1 = require("express-validator");
-const civicOrganizingService_js_1 = __importDefault(require("../services/civicOrganizingService.js"));
-const auth_js_1 = require("../middleware/auth.js");
+const civicOrganizingService_1 = __importDefault(require("../services/civicOrganizingService"));
+const auth_1 = require("../middleware/auth");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const router = express_1.default.Router();
 // Rate limiting for civic actions
@@ -34,7 +34,7 @@ const civicBrowseLimit = (0, express_rate_limit_1.default)({
  * PETITION ENDPOINTS
  */
 // Create petition
-router.post('/petitions', auth_js_1.requireAuth, civicActionLimit, [
+router.post('/petitions', auth_1.requireAuth, civicActionLimit, [
     (0, express_validator_1.body)('title').isLength({ min: 10, max: 200 }).withMessage('Title must be 10-200 characters'),
     (0, express_validator_1.body)('description').isLength({ min: 50, max: 5000 }).withMessage('Description must be 50-5000 characters'),
     (0, express_validator_1.body)('petitionType').isIn(['PETITION', 'REFERENDUM']).withMessage('Invalid petition type'),
@@ -62,7 +62,7 @@ router.post('/petitions', auth_js_1.requireAuth, civicActionLimit, [
         if (petitionData.expiresAt) {
             petitionData.expiresAt = new Date(petitionData.expiresAt);
         }
-        const petition = await civicOrganizingService_js_1.default.createPetition(userId, petitionData);
+        const petition = await civicOrganizingService_1.default.createPetition(userId, petitionData);
         res.status(201).json({
             success: true,
             message: 'Petition created successfully',
@@ -108,7 +108,7 @@ router.get('/petitions', civicBrowseLimit, [
                 lon: parseFloat(req.query.lon)
             };
         }
-        const result = await civicOrganizingService_js_1.default.getPetitions(filters, page, limit);
+        const result = await civicOrganizingService_1.default.getPetitions(filters, page, limit);
         res.json({
             success: true,
             data: result
@@ -130,7 +130,7 @@ router.get('/petitions/:id', civicBrowseLimit, [
         if (!errors.isEmpty()) {
             return res.status(400).json({ error: 'Validation failed', details: errors.array() });
         }
-        const petition = await civicOrganizingService_js_1.default.getPetitionById(req.params.id);
+        const petition = await civicOrganizingService_1.default.getPetitionById(req.params.id);
         if (!petition) {
             return res.status(404).json({ error: 'Petition not found' });
         }
@@ -147,7 +147,7 @@ router.get('/petitions/:id', civicBrowseLimit, [
     }
 });
 // Sign petition
-router.post('/petitions/:id/sign', auth_js_1.requireAuth, civicActionLimit, [
+router.post('/petitions/:id/sign', auth_1.requireAuth, civicActionLimit, [
     (0, express_validator_1.param)('id').isString().withMessage('Invalid petition ID')
 ], async (req, res) => {
     try {
@@ -158,7 +158,7 @@ router.post('/petitions/:id/sign', auth_js_1.requireAuth, civicActionLimit, [
         const userId = req.user.id;
         const petitionId = req.params.id;
         const ipAddress = req.ip;
-        const signature = await civicOrganizingService_js_1.default.signPetition(userId, petitionId, ipAddress);
+        const signature = await civicOrganizingService_1.default.signPetition(userId, petitionId, ipAddress);
         res.status(201).json({
             success: true,
             message: 'Petition signed successfully',
@@ -176,7 +176,7 @@ router.post('/petitions/:id/sign', auth_js_1.requireAuth, civicActionLimit, [
  * EVENT ENDPOINTS
  */
 // Create event
-router.post('/events', auth_js_1.requireAuth, civicActionLimit, [
+router.post('/events', auth_1.requireAuth, civicActionLimit, [
     (0, express_validator_1.body)('title').isLength({ min: 10, max: 200 }).withMessage('Title must be 10-200 characters'),
     (0, express_validator_1.body)('description').isLength({ min: 50, max: 5000 }).withMessage('Description must be 50-5000 characters'),
     (0, express_validator_1.body)('eventType').isIn([
@@ -221,7 +221,7 @@ router.post('/events', auth_js_1.requireAuth, civicActionLimit, [
         if (eventData.endDate && eventData.endDate <= eventData.scheduledDate) {
             return res.status(400).json({ error: 'End date must be after start date' });
         }
-        const event = await civicOrganizingService_js_1.default.createEvent(userId, eventData);
+        const event = await civicOrganizingService_1.default.createEvent(userId, eventData);
         res.status(201).json({
             success: true,
             message: 'Event created successfully',
@@ -270,7 +270,7 @@ router.get('/events', civicBrowseLimit, [
                 lon: parseFloat(req.query.lon)
             };
         }
-        const result = await civicOrganizingService_js_1.default.getEvents(filters, page, limit);
+        const result = await civicOrganizingService_1.default.getEvents(filters, page, limit);
         res.json({
             success: true,
             data: result
@@ -292,7 +292,7 @@ router.get('/events/:id', civicBrowseLimit, [
         if (!errors.isEmpty()) {
             return res.status(400).json({ error: 'Validation failed', details: errors.array() });
         }
-        const event = await civicOrganizingService_js_1.default.getEventById(req.params.id);
+        const event = await civicOrganizingService_1.default.getEventById(req.params.id);
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
@@ -309,7 +309,7 @@ router.get('/events/:id', civicBrowseLimit, [
     }
 });
 // RSVP to event
-router.post('/events/:id/rsvp', auth_js_1.requireAuth, civicActionLimit, [
+router.post('/events/:id/rsvp', auth_1.requireAuth, civicActionLimit, [
     (0, express_validator_1.param)('id').isString().withMessage('Invalid event ID'),
     (0, express_validator_1.body)('status').optional().isIn(['ATTENDING', 'MAYBE', 'NOT_ATTENDING']).withMessage('Invalid RSVP status')
 ], async (req, res) => {
@@ -321,7 +321,7 @@ router.post('/events/:id/rsvp', auth_js_1.requireAuth, civicActionLimit, [
         const userId = req.user.id;
         const eventId = req.params.id;
         const status = req.body.status || 'ATTENDING';
-        const rsvp = await civicOrganizingService_js_1.default.rsvpToEvent(userId, eventId, status);
+        const rsvp = await civicOrganizingService_1.default.rsvpToEvent(userId, eventId, status);
         res.status(201).json({
             success: true,
             message: 'RSVP recorded successfully',
@@ -359,7 +359,7 @@ router.get('/search', civicBrowseLimit, [
             filters.category = req.query.category;
         if (req.query.eventType)
             filters.eventType = req.query.eventType;
-        const result = await civicOrganizingService_js_1.default.searchCivic(query, filters, page, limit);
+        const result = await civicOrganizingService_1.default.searchCivic(query, filters, page, limit);
         res.json({
             success: true,
             data: result
@@ -376,10 +376,10 @@ router.get('/search', civicBrowseLimit, [
  * USER ACTIVITY ENDPOINTS
  */
 // Get user's created petitions
-router.get('/user/petitions', auth_js_1.requireAuth, async (req, res) => {
+router.get('/user/petitions', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const petitions = await civicOrganizingService_js_1.default.getUserPetitions(userId);
+        const petitions = await civicOrganizingService_1.default.getUserPetitions(userId);
         res.json({
             success: true,
             data: petitions
@@ -393,10 +393,10 @@ router.get('/user/petitions', auth_js_1.requireAuth, async (req, res) => {
     }
 });
 // Get user's created events
-router.get('/user/events', auth_js_1.requireAuth, async (req, res) => {
+router.get('/user/events', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const events = await civicOrganizingService_js_1.default.getUserEvents(userId);
+        const events = await civicOrganizingService_1.default.getUserEvents(userId);
         res.json({
             success: true,
             data: events
@@ -410,10 +410,10 @@ router.get('/user/events', auth_js_1.requireAuth, async (req, res) => {
     }
 });
 // Get user's signed petitions
-router.get('/user/signatures', auth_js_1.requireAuth, async (req, res) => {
+router.get('/user/signatures', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const signatures = await civicOrganizingService_js_1.default.getUserSignedPetitions(userId);
+        const signatures = await civicOrganizingService_1.default.getUserSignedPetitions(userId);
         res.json({
             success: true,
             data: signatures
@@ -427,10 +427,10 @@ router.get('/user/signatures', auth_js_1.requireAuth, async (req, res) => {
     }
 });
 // Get user's RSVP'd events
-router.get('/user/rsvps', auth_js_1.requireAuth, async (req, res) => {
+router.get('/user/rsvps', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const rsvps = await civicOrganizingService_js_1.default.getUserRSVPedEvents(userId);
+        const rsvps = await civicOrganizingService_1.default.getUserRSVPedEvents(userId);
         res.json({
             success: true,
             data: rsvps

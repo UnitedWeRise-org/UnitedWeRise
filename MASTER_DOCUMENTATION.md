@@ -1680,7 +1680,7 @@ if (riskScore > 70) {
   
 - **Development Branch**: `azure-static-web-apps-staging.yml`
   - **Triggers**: Every push to `development` branch  
-  - **Deploys To**: Staging environment
+  - **Deploys To**: https://delightful-smoke-097b2fa0f.1.azurestaticapps.net
   - **Time to Live**: 3-5 minutes
   
 ##### Backend Deployment (Manual Only)
