@@ -1141,10 +1141,20 @@ class MyProfile {
         `;
         
         console.log('🔒 Modal added to DOM with ultra-forced styles');
-        console.log('🔒 Modal dimensions:', modal.offsetWidth, 'x', modal.offsetHeight);
-        console.log('🔒 Modal computed style z-index:', window.getComputedStyle(modal).zIndex);
-        console.log('🔒 Modal is in body:', document.body.contains(modal));
-        console.log('🔒 Body children count:', document.body.children.length);
+        
+        // Add a delay to ensure styles are applied
+        setTimeout(() => {
+            console.log('🔒 Modal dimensions:', modal.offsetWidth, 'x', modal.offsetHeight);
+            console.log('🔒 Modal computed style z-index:', window.getComputedStyle(modal).zIndex);
+            console.log('🔒 Modal is in body:', document.body.contains(modal));
+            console.log('🔒 Body children count:', document.body.children.length);
+            console.log('🔒 Modal visible elements check:', {
+                modal: modal.offsetParent !== null,
+                display: window.getComputedStyle(modal).display,
+                visibility: window.getComputedStyle(modal).visibility,
+                opacity: window.getComputedStyle(modal).opacity
+            });
+        }, 50);
         
         // Focus input after a brief delay
         setTimeout(() => {
