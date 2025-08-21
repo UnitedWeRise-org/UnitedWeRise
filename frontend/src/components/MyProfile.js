@@ -1100,7 +1100,7 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
-        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.4.1]');
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.5.0]');
         console.log('🔒 Creating TOTP setup modal with data:', setupData);
         
         // Remove any existing modals first
@@ -1149,14 +1149,14 @@ class MyProfile {
         
         document.body.appendChild(modal);
         
-        // Force modal styles to ensure visibility with extra debugging
+        // Force modal styles with container escape
         modal.style.cssText = `
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(255, 0, 0, 0.5) !important;
+            background: rgba(0, 0, 0, 0.5) !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
@@ -1164,7 +1164,15 @@ class MyProfile {
             pointer-events: auto !important;
             visibility: visible !important;
             opacity: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            outline: none !important;
+            transform: none !important;
         `;
+        
+        // Force append to document root to escape any container restrictions
+        document.documentElement.appendChild(modal);
         
         console.log('🔒 Modal added to DOM with ultra-forced styles');
         
