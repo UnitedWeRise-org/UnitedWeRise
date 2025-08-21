@@ -553,6 +553,11 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
   try {
     const days = parseInt(req.query.days as string) || 30;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    
+    // Pre-calculate date ranges for SQL queries
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     // Run all analytics queries in parallel for better performance
     const [
@@ -603,9 +608,9 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
       SELECT 
         COUNT(*) as total_users,
         COUNT(CASE WHEN "createdAt" >= ${startDate} THEN 1 END) as new_users,
-        COUNT(CASE WHEN "lastSeenAt" >= ${new Date(Date.now() - 24 * 60 * 60 * 1000)} THEN 1 END) as active_24h,
-        COUNT(CASE WHEN "lastSeenAt" >= ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)} THEN 1 END) as active_7d,
-        COUNT(CASE WHEN "lastSeenAt" >= ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)} THEN 1 END) as active_30d,
+        COUNT(CASE WHEN "lastSeenAt" >= ${oneDayAgo} THEN 1 END) as active_24h,
+        COUNT(CASE WHEN "lastSeenAt" >= ${sevenDaysAgo} THEN 1 END) as active_7d,
+        COUNT(CASE WHEN "lastSeenAt" >= ${thirtyDaysAgo} THEN 1 END) as active_30d,
         COUNT(CASE WHEN "isSuspended" = true THEN 1 END) as suspended_users,
         COUNT(CASE WHEN "emailVerified" = true THEN 1 END) as verified_users,
         COUNT(CASE WHEN state IS NOT NULL THEN 1 END) as users_with_location
@@ -1077,14 +1082,14 @@ router.get('/ai-insights/suggestions', requireAuth, requireAdmin, async (req: Au
     
     const accuracy = Math.round((avgConfidence._avg.feedbackConfidence || 0.75) * 100);
     
-    // If no real feedback exists yet, include helpful examples
+    // If no real feedback exists yet, include helpful examples with historical dates
     if (suggestions.length === 0) {
       suggestions.push({
         id: 'example_1',
         category: 'features',
         summary: 'Example: "You shouldn\'t be able to scroll to the end of your Feed, it should populate infinitely"',
         status: 'new',
-        createdAt: new Date(),
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
         confidence: 85,
         source: 'example',
         author: 'System',
