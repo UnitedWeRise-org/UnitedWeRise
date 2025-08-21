@@ -45,6 +45,18 @@ THE_NEWS_API_KEY=your_thenewsapi_key_here
 
 ## Development Workflow Rules
 
+### 🚨 CRITICAL - Backend Deployment Process (ALWAYS FOLLOW)
+**WHEN USER SAYS "rebuild backend" or "deploy backend" YOU MUST:**
+```bash
+# STEP 1: Build new Docker image from current GitHub code (MANDATORY)
+az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+
+# STEP 2: Deploy the new image to Container Apps (ONLY AFTER STEP 1)
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+```
+**NEVER skip Step 1!** Running `az containerapp update` without building a new Docker image just restarts old code.
+**These are NOT separate processes** - they are two required steps of ONE deployment process.
+
 ### 🚨 CRITICAL - Server Operations
 - **PROHIBITED**: Never run `npm run dev`, `npm start`, or server startup commands
 - **REQUIRED**: Always ask user to run server commands

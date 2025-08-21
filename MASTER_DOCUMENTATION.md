@@ -1711,6 +1711,23 @@ if (riskScore > 70) {
 | Azure CLI backend update | Backend API server | 2-5 minutes | Manual trigger |
 | Prisma migration | Database schema | ~30 seconds | Manual via npm scripts |
 
+### 🚨 **CRITICAL: Backend Deployment Process**
+
+**Backend deployment is a TWO-STEP process that must ALWAYS be followed in order:**
+
+```bash
+# STEP 1: Build new Docker image from current GitHub code (MANDATORY - NEVER SKIP)
+az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+
+# STEP 2: Deploy the new image to Container Apps (ONLY AFTER STEP 1 COMPLETES)
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+```
+
+**⚠️ COMMON MISTAKE TO AVOID:**
+- Running only `az containerapp update` without building new image = **Old code restarts**
+- Environment variable updates alone = **Configuration change, NOT code deployment**
+- These are NOT optional steps - both are REQUIRED for backend deployment
+
 ### Azure Infrastructure
 
 #### Resource Group Structure
