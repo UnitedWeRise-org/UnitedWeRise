@@ -1100,48 +1100,67 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
-        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.5.0]');
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.6.0]');
         console.log('🔒 Creating TOTP setup modal with data:', setupData);
         
         // Remove any existing modals first
-        const existingModals = document.querySelectorAll('.modal-overlay');
+        const existingModals = document.querySelectorAll('.modal-overlay, .totp-modal-simple');
         existingModals.forEach(modal => modal.remove());
         
+        // Create simple modal similar to working test modal
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'totp-modal-simple';
         modal.id = 'totp-setup-modal';
-        console.log('🔒 Modal element created, adding to DOM...');
+        console.log('🔒 Modal element created, using simplified approach...');
+        
+        // Use inline styles like the working test modal
+        modal.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 999999 !important;
+            font-family: Arial, sans-serif !important;
+        `;
+        
         modal.innerHTML = `
-            <div class="modal totp-setup-modal">
-                <div class="modal-header">
-                    <h3>Setup Two-Factor Authentication</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #333;">Setup Two-Factor Authentication</h3>
+                    <button onclick="this.closest('.totp-modal-simple').remove()" 
+                            style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
                 </div>
-                <div class="modal-body">
-                    <div class="setup-step">
-                        <h4>Step 1: Scan QR Code</h4>
-                        <p>Use Google Authenticator, Authy, or similar app to scan this QR code:</p>
-                        <div class="qr-code-container">
-                            <img src="${setupData.qrCode}" alt="QR Code" class="qr-code">
-                        </div>
-                        <p class="manual-code">
-                            <small>Manual entry code: <code>${setupData.secret}</code></small>
-                        </p>
+                <div style="margin-bottom: 25px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">Step 1: Scan QR Code</h4>
+                    <p style="color: #666; margin-bottom: 15px;">Use Google Authenticator, Authy, or similar app:</p>
+                    <div style="text-align: center; margin: 15px 0;">
+                        <img src="${setupData.qrCode}" alt="QR Code" style="max-width: 200px; border: 1px solid #ddd;">
                     </div>
-                    
-                    <div class="setup-step">
-                        <h4>Step 2: Enter Verification Code</h4>
-                        <p>Enter the 6-digit code from your authenticator app:</p>
-                        <input type="text" id="totpVerificationCode" placeholder="000000" maxlength="6" 
-                               class="totp-input" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                        <div class="modal-actions">
-                            <button onclick="window.myProfile.verifyTOTPSetup()" class="btn">
-                                Verify & Enable 2FA
-                            </button>
-                            <button onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">
-                                Cancel
-                            </button>
-                        </div>
+                    <p style="font-size: 12px; color: #888; text-align: center;">
+                        Manual code: <code style="background: #f0f0f0; padding: 2px 4px;">${setupData.secret}</code>
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">Step 2: Enter Verification Code</h4>
+                    <p style="color: #666; margin-bottom: 10px;">Enter the 6-digit code:</p>
+                    <input type="text" id="totpVerificationCode" placeholder="000000" maxlength="6" 
+                           style="width: 100%; padding: 10px; font-size: 18px; text-align: center; border: 2px solid #ddd; border-radius: 5px; margin-bottom: 15px;"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <div style="text-align: center;">
+                        <button onclick="window.myProfile.verifyTOTPSetup()" 
+                                style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
+                            Verify & Enable 2FA
+                        </button>
+                        <button onclick="this.closest('.totp-modal-simple').remove()" 
+                                style="background: #ccc; color: #333; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Cancel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1149,46 +1168,7 @@ class MyProfile {
         
         document.body.appendChild(modal);
         
-        // Force modal styles with container escape
-        modal.style.cssText = `
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: rgba(0, 0, 0, 0.5) !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            z-index: 999999 !important;
-            pointer-events: auto !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            transform: none !important;
-        `;
-        
-        // Force append to document root to escape any container restrictions
-        document.documentElement.appendChild(modal);
-        
-        console.log('🔒 Modal added to DOM with ultra-forced styles');
-        
-        // Add a delay to ensure styles are applied
-        setTimeout(() => {
-            console.log('🔒 Modal dimensions:', modal.offsetWidth, 'x', modal.offsetHeight);
-            console.log('🔒 Modal computed style z-index:', window.getComputedStyle(modal).zIndex);
-            console.log('🔒 Modal is in body:', document.body.contains(modal));
-            console.log('🔒 Body children count:', document.body.children.length);
-            console.log('🔒 Modal visible elements check:', {
-                modal: modal.offsetParent !== null,
-                display: window.getComputedStyle(modal).display,
-                visibility: window.getComputedStyle(modal).visibility,
-                opacity: window.getComputedStyle(modal).opacity
-            });
-        }, 50);
+        console.log('🔒 Simple modal added to DOM');
         
         // Focus input after a brief delay
         setTimeout(() => {
@@ -1196,8 +1176,6 @@ class MyProfile {
             if (input) {
                 input.focus();
                 console.log('🔒 Input focused');
-            } else {
-                console.log('🔒 Input not found!');
             }
         }, 100);
     }
