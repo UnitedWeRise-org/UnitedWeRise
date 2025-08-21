@@ -628,14 +628,14 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
         (SELECT COUNT(*) FROM "Message" WHERE "createdAt" >= ${startDate}) as messages_sent
     `,
 
-    // Civic Engagement Analytics
+    // Civic Engagement Analytics - Using correct field names
     prisma.$queryRaw`
       SELECT 
         (SELECT COUNT(*) FROM "Petition" WHERE "createdAt" >= ${startDate}) as petitions_created,
-        (SELECT COUNT(*) FROM "PetitionSignature" WHERE "createdAt" >= ${startDate}) as petition_signatures,
+        (SELECT COUNT(*) FROM "PetitionSignature" WHERE "signedAt" >= ${startDate}) as petition_signatures,
         (SELECT COUNT(*) FROM "CivicEvent" WHERE "createdAt" >= ${startDate}) as events_created,
-        (SELECT COUNT(*) FROM "EventRSVP" WHERE "createdAt" >= ${startDate}) as event_rsvps,
-        (SELECT COUNT(*) FROM "Election" WHERE date >= NOW()) as upcoming_elections
+        (SELECT COUNT(*) FROM "EventRSVP" WHERE "rsvpedAt" >= ${startDate}) as event_rsvps,
+        (SELECT COUNT(*) FROM "Election" WHERE date >= ${new Date()}) as upcoming_elections
     `,
 
     // Content Analytics
