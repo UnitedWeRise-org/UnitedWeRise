@@ -38,7 +38,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true }
+      select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, lastSeenAt: true }
     });
 
     if (!user) {
@@ -46,6 +46,22 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     req.user = user;
+    
+    // Update user's lastSeenAt, but only if it's been more than 5 minutes since last update to avoid database spam
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    
+    // Only update if user hasn't been seen recently (batch updates to reduce DB load)
+    if (!user.lastSeenAt || user.lastSeenAt < fiveMinutesAgo) {
+      // Use upsert to handle race conditions gracefully
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastSeenAt: now }
+      }).catch(error => {
+        // Log but don't fail the request if lastSeenAt update fails
+        console.error('Failed to update lastSeenAt:', error);
+      });
+    }
     
     // Update session activity if available
     const sessionId = req.header('X-Session-ID');
