@@ -195,11 +195,19 @@ app.get('/health', async (req, res) => {
   try {
     await prisma.$connect();
     const healthMetrics = metricsService.getHealthMetrics();
+    
+    // Calculate deployment time from uptime
+    const uptimeSeconds = process.uptime();
+    const deploymentTime = new Date(Date.now() - (uptimeSeconds * 1000));
+    
     res.json({
       ...healthMetrics,
       database: 'Connected',
       websocket: 'Active',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.2.1',
+      deployedAt: deploymentTime.toISOString(),
+      uptime: uptimeSeconds
     });
   } catch (error) {
     res.status(500).json({ 

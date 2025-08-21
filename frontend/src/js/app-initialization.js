@@ -32,6 +32,9 @@ class AppInitializer {
     }
 
     async performInitialization() {
+        // Display version information for deployment tracking
+        this.displayVersionInfo();
+        
         AppInitializer.log('🚀 Starting optimized app initialization...');
 
         try {
@@ -396,6 +399,61 @@ class AppInitializer {
     getCurrentUser() {
         return this.userData;
     }
+
+    // Display version information for deployment tracking
+    displayVersionInfo() {
+        try {
+            // Get frontend version from meta tags
+            const buildTime = document.querySelector('meta[name="build-time"]')?.content || 'Unknown';
+            const version = document.querySelector('meta[name="version"]')?.content || 'Unknown';
+            const lastUpdated = document.querySelector('meta[name="last-updated"]')?.content || 'Unknown';
+            
+            // Format frontend version info
+            const frontendTime = new Date(buildTime).toLocaleString();
+            
+            console.log('🏗️ ================ DEPLOYMENT STATUS ================');
+            console.log(`📦 Frontend Version: ${version}`);
+            console.log(`🕐 Frontend Build Time: ${frontendTime}`);
+            console.log(`📅 Frontend Last Updated: ${new Date(lastUpdated).toLocaleString()}`);
+            
+            // Check backend version asynchronously
+            this.checkBackendVersion();
+            
+        } catch (error) {
+            console.warn('Failed to display version info:', error);
+        }
+    }
+
+    // Check backend version and display
+    async checkBackendVersion() {
+        try {
+            const response = await fetch(`${window.BACKEND_URL || 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'}/health`);
+            const healthData = await response.json();
+            
+            if (healthData.uptime) {
+                console.log(`🖥️ Backend Version: ${healthData.version || 'Unknown'}`);
+                console.log(`🕐 Backend Uptime: ${healthData.uptime}s`);
+                
+                // Use deployedAt from backend if available, otherwise calculate
+                if (healthData.deployedAt) {
+                    console.log(`🚀 Backend Deployed: ${new Date(healthData.deployedAt).toLocaleString()}`);
+                } else {
+                    const uptimeMs = parseFloat(healthData.uptime) * 1000;
+                    const deploymentTime = new Date(Date.now() - uptimeMs);
+                    console.log(`🚀 Backend Deployed: ${deploymentTime.toLocaleString()}`);
+                }
+                
+                console.log(`💚 Backend Status: ${healthData.status || 'Healthy'}`);
+                console.log(`🗃️ Database: ${healthData.database}`);
+            }
+            
+            console.log('🏗️ ================================================');
+            
+        } catch (error) {
+            console.log(`❌ Backend Status: Unreachable (${error.message})`);
+            console.log('🏗️ ================================================');
+        }
+    }
 }
 
 // Create global instance
@@ -409,6 +467,11 @@ window.initializeApp = async () => {
 // Quick user data refresh for when needed
 window.refreshUserData = async () => {
     return window.appInitializer.refreshUserData();
+};
+
+// Global function to check deployment versions
+window.checkVersions = () => {
+    window.appInitializer.displayVersionInfo();
 };
 
 AppInitializer.log('🎯 App Initializer ready');
