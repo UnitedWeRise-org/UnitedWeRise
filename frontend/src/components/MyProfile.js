@@ -1115,7 +1115,20 @@ class MyProfile {
         `;
         
         document.body.appendChild(modal);
-        console.log('🔒 Modal added to DOM, focusing input...');
+        
+        // Force modal styles to ensure visibility
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '99999';
+        
+        console.log('🔒 Modal added to DOM with forced styles, focusing input...');
         document.getElementById('totpVerificationCode').focus();
     }
 
@@ -1176,6 +1189,18 @@ class MyProfile {
         `;
         
         document.body.appendChild(modal);
+        
+        // Force modal styles to ensure visibility
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '99999';
     }
 
     downloadBackupCodes(codes) {
