@@ -29,6 +29,10 @@ class UWRMapLibre {
         this.layerPopups = new Map(); // Track popups by layer
         this.layerIntervals = new Map(); // Track intervals by layer
         
+        // Animation management to prevent overlapping flyTo operations
+        this.isAnimating = false;
+        this.animationQueue = [];
+        
         // Civic social infrastructure
         this.civicGroups = new Map();
         this.userCivicActions = [];
@@ -103,8 +107,18 @@ class UWRMapLibre {
             this.startTrendingComments();
         });
 
-        // Handle map errors
+        // Handle map errors (filter out expected navigation AbortErrors)
         this.map.on('error', (e) => {
+            // Filter out AbortErrors during map navigation - these are expected
+            if (e.error && e.error.name === 'AbortError' && e.error.message.includes('signal is aborted')) {
+                // Only log these in debug mode, not as errors
+                if (window.DEBUG_MAP) {
+                    console.debug('MapLibre tile request aborted (expected during navigation):', e.error.message);
+                }
+                return;
+            }
+            
+            // Log other errors normally
             console.error('MapLibre error:', e);
             this.showLoadingError();
         });
@@ -116,6 +130,48 @@ class UWRMapLibre {
         }, 5000);
         
         return this.map;
+    }
+
+    // Smart flyTo method that prevents overlapping animations and reduces abort errors
+    async smartFlyTo(options) {
+        return new Promise((resolve) => {
+            // If already animating, queue this request
+            if (this.isAnimating) {
+                this.animationQueue.push({ options, resolve });
+                return;
+            }
+
+            this.isAnimating = true;
+            
+            // Enhanced options to reduce tile abort errors
+            const enhancedOptions = {
+                ...options,
+                // Smoother animation reduces tile request conflicts
+                speed: options.speed || 0.8,
+                curve: options.curve || 1.2,
+                // Mark as essential to prevent skipping on reduced motion
+                essential: options.essential !== undefined ? options.essential : true
+            };
+
+            // Handle animation completion
+            const onMoveEnd = () => {
+                this.map.off('moveend', onMoveEnd);
+                this.isAnimating = false;
+                
+                // Process next animation in queue
+                if (this.animationQueue.length > 0) {
+                    const { options: nextOptions, resolve: nextResolve } = this.animationQueue.shift();
+                    setTimeout(() => {
+                        this.smartFlyTo(nextOptions).then(nextResolve);
+                    }, 50); // Small delay to let tiles stabilize
+                }
+                
+                resolve();
+            };
+
+            this.map.on('moveend', onMoveEnd);
+            this.map.flyTo(enhancedOptions);
+        });
     }
 
     setupResponsiveBehavior() {
@@ -201,10 +257,9 @@ class UWRMapLibre {
             : [center.lng || center.lon, center.lat];
         
         this.currentView = 'center';
-        this.map.flyTo({
+        this.smartFlyTo({
             center: mapLibreCenter,
-            zoom: zoom,
-            essential: true
+            zoom: zoom
         });
     }
 
@@ -487,7 +542,7 @@ class UWRMapLibre {
                     this.zoomToState(userState);
                 } else {
                     // Fallback to center US if no profile state
-                    this.map.flyTo({ center: this.US_CENTER, zoom: 5 });
+                    this.smartFlyTo({ center: this.US_CENTER, zoom: 5 });
                 }
                 break;
             case 'local':
@@ -501,7 +556,7 @@ class UWRMapLibre {
                     if (userState) {
                         this.zoomToState(userState, 8); // Closer zoom for local
                     } else {
-                        this.map.flyTo({ zoom: 8 });
+                        this.smartFlyTo({ zoom: 8 });
                     }
                 }
                 break;
@@ -589,7 +644,7 @@ class UWRMapLibre {
         
         const center = stateCenters[stateCode];
         if (center) {
-            this.map.flyTo({
+            this.smartFlyTo({
                 center: center,
                 zoom: zoom
             });
@@ -1332,10 +1387,9 @@ class UWRMapLibre {
                 const userState = this.getUserState();
                 if (userState) {
                     const stateCoords = this.getStateCapitolCoords(userState);
-                    this.map.flyTo({
+                    this.smartFlyTo({
                         center: stateCoords,
-                        zoom: zoomLevel,
-                        duration: 1000
+                        zoom: zoomLevel
                     });
                 }
                 break;
@@ -1344,10 +1398,9 @@ class UWRMapLibre {
                 const userDistrict = this.getUserDistrict();
                 if (userDistrict) {
                     const localCoords = this.getSecureLocalCoordinates(userDistrict);
-                    this.map.flyTo({
+                    this.smartFlyTo({
                         center: localCoords,
-                        zoom: zoomLevel,
-                        duration: 1000
+                        zoom: zoomLevel
                     });
                 }
                 break;
