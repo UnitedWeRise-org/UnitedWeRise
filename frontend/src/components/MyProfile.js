@@ -1024,7 +1024,6 @@ class MyProfile {
                 <div class="totp-disabled">
                     <span class="totp-icon">🔓</span>
                     <span>Two-Factor Authentication is <strong>disabled</strong></span>
-                    <small>Recommended for admin users</small>
                 </div>
             `;
             
