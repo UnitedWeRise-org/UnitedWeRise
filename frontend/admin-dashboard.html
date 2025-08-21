@@ -1205,8 +1205,15 @@ Current Status: Use deploymentStatus.check() for real-time status
 
                 // If requires re-authentication, prompt user
                 if (response.status === 403) {
-                    const errorData = await response.json();
-                    if (errorData.requiresReauth) {
+                    const responseText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch {
+                        errorData = { requiresReauth: true };
+                    }
+                    
+                    if (errorData.requiresReauth || errorData.error?.includes('Super admin')) {
                         const password = prompt('🔒 Database access requires password confirmation for security.\n\nPlease enter your password:');
                         if (!password) {
                             document.getElementById('schemaStats').innerHTML = 
@@ -1227,7 +1234,11 @@ Current Status: Use deploymentStatus.check() for real-time status
                         if (authResponse.ok) {
                             const authData = await authResponse.json();
                             // Retry with recent auth header
-                            response = await adminApiCall(`${BACKEND_URL}/api/admin/schema`);
+                            response = await adminApiCall(`${BACKEND_URL}/api/admin/schema`, {
+                                headers: {
+                                    'X-Recent-Auth': authData.token || 'verified'
+                                }
+                            });
                         } else {
                             document.getElementById('schemaStats').innerHTML = 
                                 '<div class="error">❌ Invalid password. Database access denied.</div>';

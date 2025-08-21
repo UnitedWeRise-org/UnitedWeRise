@@ -578,32 +578,32 @@ router.get('/analytics', requireAuth, requireAdmin, requireTOTPForAdmin, async (
       // Daily activity metrics
       prisma.$queryRaw`
         SELECT 
-          DATE("createdAt") as date,
+          DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'users' as type
         FROM "User"
         WHERE "createdAt" >= ${startDate}
-        GROUP BY DATE("createdAt")
+        GROUP BY DATE_TRUNC('day', "createdAt")
         
         UNION ALL
         
         SELECT 
-          DATE("createdAt") as date,
+          DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'posts' as type
         FROM "Post"
         WHERE "createdAt" >= ${startDate}
-        GROUP BY DATE("createdAt")
+        GROUP BY DATE_TRUNC('day', "createdAt")
         
         UNION ALL
         
         SELECT 
-          DATE("createdAt") as date,
+          DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
           'reports' as type
       FROM "Report"
       WHERE "createdAt" >= ${startDate}
-      GROUP BY DATE("createdAt")
+      GROUP BY DATE_TRUNC('day', "createdAt")
       
       ORDER BY date DESC
     `,
