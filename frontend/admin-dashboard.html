@@ -2550,11 +2550,20 @@ Example: adminConsole.getSuggestions('features', 'new')
                         });
                         
                         if (response.ok) {
-                            totpVerified = true;
-                            totpToken = code; // Store for header
-                            modal.remove();
-                            console.log('✅ TOTP verified for admin access');
-                            resolve();
+                            const result = await response.json();
+                            const verificationToken = result.data?.verificationToken || result.verificationToken;
+                            
+                            if (verificationToken) {
+                                totpVerified = true;
+                                totpToken = verificationToken; // Store verification token for header
+                                modal.remove();
+                                console.log('✅ TOTP verified for admin access');
+                                resolve();
+                            } else {
+                                alert('Verification successful but no token received. Please try again.');
+                                verifyBtn.textContent = 'Verify';
+                                verifyBtn.disabled = false;
+                            }
                         } else {
                             const errorData = await response.json().catch(() => ({}));
                             alert(errorData.error || 'Invalid verification code. Please try again.');
