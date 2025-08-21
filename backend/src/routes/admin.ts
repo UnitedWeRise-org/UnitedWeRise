@@ -563,9 +563,7 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
       contentStats,
       systemHealthStats,
       geographicStats,
-      retentionStats,
-      reputationStats,
-      searchStats
+      reputationStats
     ] = await Promise.all([
       // Daily activity metrics
       prisma.$queryRaw`
@@ -667,7 +665,7 @@ router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res
     // Reputation System Analytics - simplified to avoid TypeScript circular reference
     prisma.reputationEvent.findMany({
       where: { createdAt: { gte: startDate } },
-      select: { eventType: true, scoreChange: true },
+      select: { eventType: true, impact: true },
       take: 100
     })
   ]);

@@ -78,7 +78,10 @@
       "Bash(npx tsc:*)",
       "WebFetch(domain:delightful-smoke-097b2fa0f.1.azurestaticapps.net)",
       "Bash(gh secret:*)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(where magick)",
+      "Bash(pip install:*)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }

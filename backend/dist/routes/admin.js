@@ -505,7 +505,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
         const days = parseInt(req.query.days) || 30;
         const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
         // Run all analytics queries in parallel for better performance
-        const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, retentionStats, reputationStats, searchStats] = await Promise.all([
+        const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, reputationStats] = await Promise.all([
             // Daily activity metrics
             prisma.$queryRaw `
         SELECT 
@@ -599,7 +599,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, async (req, res) => {
             // Reputation System Analytics - simplified to avoid TypeScript circular reference
             prisma.reputationEvent.findMany({
                 where: { createdAt: { gte: startDate } },
-                select: { eventType: true, scoreChange: true },
+                select: { eventType: true, impact: true },
                 take: 100
             })
         ]);
