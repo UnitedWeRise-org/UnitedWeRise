@@ -1062,7 +1062,10 @@ class MyProfile {
             console.log('🔒 TOTP setup API response:', response);
             if (response.ok) {
                 console.log('🔒 API success, showing modal with data:', response.data);
-                this.showTOTPSetupModal(response.data);
+                // Extract the actual data from the nested response
+                const totpData = response.data?.data || response.data;
+                console.log('🔒 Extracted TOTP data:', totpData);
+                this.showTOTPSetupModal(totpData);
             } else {
                 console.error('🔒 TOTP setup failed:', response);
                 alert('Failed to setup 2FA. Please try again.');
@@ -1100,8 +1103,10 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
-        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.6.0]');
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.1.3]');
         console.log('🔒 Creating TOTP setup modal with data:', setupData);
+        console.log('🔒 QR Code URL:', setupData?.qrCode);
+        console.log('🔒 Secret:', setupData?.secret);
         
         // Remove any existing modals first
         const existingModals = document.querySelectorAll('.modal-overlay, .totp-modal-simple');
