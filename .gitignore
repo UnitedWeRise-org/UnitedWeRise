@@ -67,3 +67,14 @@ Thumbs.db
 # Temporary files
 temp/
 tmp/
+
+# Development & Testing Files
+*-local.html
+*-test.html
+*-debug.html
+*-dev.html
+check-*.js
+test-*.js
+debug-*.js
+*.bak
+*.backup
