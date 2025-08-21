@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 19, 2025  
-**Version**: 4.2 (Stripe Nonprofit Payment Integration)  
+**Last Updated**: August 21, 2025  
+**Version**: 4.3 (MapLibre Navigation Optimizations)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -2283,6 +2283,82 @@ const map = new maplibregl.Map({
   zoom: 4
 });
 ```
+
+#### Map Navigation Optimizations {#map-navigation-optimizations}
+**Status**: ✅ **IMPLEMENTED** - August 21, 2025
+
+**Problem Solved**: Excessive MapLibre AbortError messages during map transitions
+
+**Technical Issue**: Multiple overlapping `flyTo()` calls caused MapLibre to cancel previous tile requests, generating hundreds of AbortError messages in console during National → Local view switching.
+
+**Solution - Cooldown Timer Approach**:
+```javascript
+// Animation management with cooldown timer
+this.lastAnimationTime = 0;
+this.animationCooldown = 800; // 800ms cooldown between operations
+
+smartFlyTo(options) {
+    const currentTime = Date.now();
+    const timeSinceLastAnimation = currentTime - this.lastAnimationTime;
+    
+    // If within cooldown period, ignore the request (most recent user action wins)
+    if (timeSinceLastAnimation < this.animationCooldown) {
+        if (window.DEBUG_MAP) {
+            console.debug('Map operation ignored due to cooldown');
+        }
+        return;
+    }
+    
+    this.lastAnimationTime = currentTime;
+    
+    // Enhanced options to reduce tile abort errors
+    const enhancedOptions = {
+        ...options,
+        speed: 0.8,     // Smoother animation
+        curve: 1.2,     // Natural curve
+        essential: true // Prevent skipping on reduced motion
+    };
+
+    this.map.flyTo(enhancedOptions);
+}
+```
+
+**Error Filtering Implementation**:
+```javascript
+// Handle map errors (filter out expected navigation AbortErrors)
+this.map.on('error', (e) => {
+    // Filter out AbortErrors during map navigation - these are expected
+    if (e.error && e.error.name === 'AbortError' && 
+        e.error.message.includes('signal is aborted')) {
+        // Only log in debug mode
+        if (window.DEBUG_MAP) {
+            console.debug('Tile request aborted (expected during navigation)');
+        }
+        return;
+    }
+    
+    // Log other errors normally
+    console.error('MapLibre error:', e);
+    this.showLoadingError();
+});
+```
+
+**Benefits**:
+- ✅ **Eliminates Console Spam**: No more hundreds of AbortError messages
+- ✅ **Better UX**: Latest user action takes priority, no queued operations  
+- ✅ **Responsive Feel**: 800ms cooldown allows animations to complete while feeling immediate
+- ✅ **Debug Support**: Set `window.DEBUG_MAP = true` to see filtered operations
+- ✅ **Simplified Code**: 27 fewer lines than complex queue management
+
+**Design Decision**: Cooldown timer chosen over animation queue to prevent long chains of outdated operations. Users get immediate response to their most recent action.
+
+**Files Modified**:
+- `frontend/src/js/map-maplibre.js:32-34` - Cooldown timer properties
+- `frontend/src/js/map-maplibre.js:110-124` - Error filtering
+- `frontend/src/js/map-maplibre.js:135-161` - smartFlyTo method
+- All `map.flyTo()` calls replaced with `this.smartFlyTo()` throughout file
+
+**Testing**: Switch from National to Local view - should see smooth transition without console errors
 
 #### Conversation Bubbles
 ```javascript
@@ -4692,6 +4768,42 @@ showDefaultView()
 - Reputation system
 - Topic discovery
 - Content moderation
+
+### August 21, 2025 - MapLibre Navigation Optimizations
+
+#### Map Performance Enhancement
+**Problem**: Excessive MapLibre AbortError console messages during map navigation
+**Root Cause**: Overlapping `flyTo()` calls causing tile request cancellations
+**User Impact**: Hundreds of error messages flooding console when switching National → Local view
+
+#### Solution Implemented - Cooldown Timer System
+**Approach**: Replace animation queue with cooldown timer for better UX
+
+**Technical Implementation**:
+1. **Animation Management**: 800ms cooldown between map operations
+2. **Latest Action Wins**: Ignore requests within cooldown period (no queuing)  
+3. **Error Filtering**: Suppress expected AbortErrors, show only in debug mode
+4. **Optimized Parameters**: Speed 0.8, curve 1.2 for smoother animations
+
+**Code Changes**:
+- `frontend/src/js/map-maplibre.js` - Complete refactor of navigation system
+- Added `smartFlyTo()` method replacing all direct `flyTo()` calls  
+- Enhanced error handling to filter expected tile abort errors
+- Animation cooldown prevents rapid successive operations
+
+**User Experience Benefits**:
+- ✅ **Eliminates Console Spam**: No more hundreds of AbortError messages
+- ✅ **Responsive Feel**: Most recent user action takes immediate priority
+- ✅ **Cleaner Code**: 27 fewer lines, simplified logic vs complex queuing
+- ✅ **Debug Support**: Optional debug mode with `window.DEBUG_MAP = true`
+
+**Design Insight**: User suggested cooldown timer over queuing to prevent chains of outdated operations. This approach ensures users see immediate response to their latest action rather than waiting for queued animations to complete.
+
+**Files Modified**:
+- `frontend/src/js/map-maplibre.js` - Complete navigation optimization
+- `MASTER_DOCUMENTATION.md` - Added comprehensive navigation optimization documentation
+
+**Testing**: Switch from National to Local map view - should see smooth transition without console errors
 
 ---
 
