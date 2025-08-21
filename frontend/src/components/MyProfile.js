@@ -979,10 +979,16 @@ class MyProfile {
     // TOTP (Two-Factor Authentication) Methods
     async loadTOTPStatus() {
         try {
+            console.log('🔒 Loading TOTP status...');
             const response = await window.apiCall('/totp/status');
+            console.log('🔒 TOTP status API response:', response);
             if (response.ok) {
-                this.renderTOTPControls(response.data);
+                // Extract nested data like other endpoints
+                const statusData = response.data?.data || response.data;
+                console.log('🔒 Extracted TOTP status:', statusData);
+                this.renderTOTPControls(statusData);
             } else {
+                console.error('🔒 TOTP status failed:', response);
                 this.renderTOTPError('Failed to load 2FA status');
             }
         } catch (error) {
@@ -1068,7 +1074,9 @@ class MyProfile {
                 this.showTOTPSetupModal(totpData);
             } else {
                 console.error('🔒 TOTP setup failed:', response);
-                alert('Failed to setup 2FA. Please try again.');
+                console.error('🔒 Setup error details:', response.data);
+                const errorMsg = response.data?.error || response.data?.message || 'Failed to setup 2FA. Please try again.';
+                alert(`Setup failed: ${errorMsg}`);
             }
         } catch (error) {
             console.error('Error setting up TOTP:', error);
