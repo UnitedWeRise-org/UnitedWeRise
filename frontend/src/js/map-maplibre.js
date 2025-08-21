@@ -29,9 +29,9 @@ class UWRMapLibre {
         this.layerPopups = new Map(); // Track popups by layer
         this.layerIntervals = new Map(); // Track intervals by layer
         
-        // Animation management to prevent overlapping flyTo operations
-        this.isAnimating = false;
-        this.animationQueue = [];
+        // Animation management with cooldown timer
+        this.lastAnimationTime = 0;
+        this.animationCooldown = 800; // 800ms cooldown between operations
         
         // Civic social infrastructure
         this.civicGroups = new Map();
@@ -132,46 +132,32 @@ class UWRMapLibre {
         return this.map;
     }
 
-    // Smart flyTo method that prevents overlapping animations and reduces abort errors
-    async smartFlyTo(options) {
-        return new Promise((resolve) => {
-            // If already animating, queue this request
-            if (this.isAnimating) {
-                this.animationQueue.push({ options, resolve });
-                return;
+    // Smart flyTo method with cooldown timer to prevent rapid successive operations
+    smartFlyTo(options) {
+        const currentTime = Date.now();
+        const timeSinceLastAnimation = currentTime - this.lastAnimationTime;
+        
+        // If within cooldown period, ignore the request (most recent user action wins)
+        if (timeSinceLastAnimation < this.animationCooldown) {
+            if (window.DEBUG_MAP) {
+                console.debug('Map operation ignored due to cooldown:', timeSinceLastAnimation + 'ms since last');
             }
+            return;
+        }
+        
+        this.lastAnimationTime = currentTime;
+        
+        // Enhanced options to reduce tile abort errors
+        const enhancedOptions = {
+            ...options,
+            // Smoother animation reduces tile request conflicts
+            speed: options.speed || 0.8,
+            curve: options.curve || 1.2,
+            // Mark as essential to prevent skipping on reduced motion
+            essential: options.essential !== undefined ? options.essential : true
+        };
 
-            this.isAnimating = true;
-            
-            // Enhanced options to reduce tile abort errors
-            const enhancedOptions = {
-                ...options,
-                // Smoother animation reduces tile request conflicts
-                speed: options.speed || 0.8,
-                curve: options.curve || 1.2,
-                // Mark as essential to prevent skipping on reduced motion
-                essential: options.essential !== undefined ? options.essential : true
-            };
-
-            // Handle animation completion
-            const onMoveEnd = () => {
-                this.map.off('moveend', onMoveEnd);
-                this.isAnimating = false;
-                
-                // Process next animation in queue
-                if (this.animationQueue.length > 0) {
-                    const { options: nextOptions, resolve: nextResolve } = this.animationQueue.shift();
-                    setTimeout(() => {
-                        this.smartFlyTo(nextOptions).then(nextResolve);
-                    }, 50); // Small delay to let tiles stabilize
-                }
-                
-                resolve();
-            };
-
-            this.map.on('moveend', onMoveEnd);
-            this.map.flyTo(enhancedOptions);
-        });
+        this.map.flyTo(enhancedOptions);
     }
 
     setupResponsiveBehavior() {
