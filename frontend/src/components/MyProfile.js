@@ -1056,11 +1056,15 @@ class MyProfile {
     }
 
     async setupTOTP() {
+        console.log('🔒 Starting TOTP setup...');
         try {
             const response = await window.apiCall('/totp/setup', { method: 'POST' });
+            console.log('🔒 TOTP setup API response:', response);
             if (response.ok) {
+                console.log('🔒 API success, showing modal with data:', response.data);
                 this.showTOTPSetupModal(response.data);
             } else {
+                console.error('🔒 TOTP setup failed:', response);
                 alert('Failed to setup 2FA. Please try again.');
             }
         } catch (error) {
@@ -1070,8 +1074,10 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
+        console.log('🔒 Creating TOTP setup modal with data:', setupData);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        console.log('🔒 Modal element created, adding to DOM...');
         modal.innerHTML = `
             <div class="modal totp-setup-modal">
                 <div class="modal-header">
@@ -1109,6 +1115,7 @@ class MyProfile {
         `;
         
         document.body.appendChild(modal);
+        console.log('🔒 Modal added to DOM, focusing input...');
         document.getElementById('totpVerificationCode').focus();
     }
 
