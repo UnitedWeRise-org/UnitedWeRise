@@ -1073,8 +1073,34 @@ class MyProfile {
         }
     }
 
+    // Test function to create a simple visible modal
+    testModal() {
+        console.log('🧪 Creating test modal...');
+        const testModal = document.createElement('div');
+        testModal.style.cssText = `
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 300px !important;
+            height: 200px !important;
+            background: red !important;
+            border: 5px solid yellow !important;
+            z-index: 999999 !important;
+            color: white !important;
+            text-align: center !important;
+            padding: 20px !important;
+            font-size: 20px !important;
+        `;
+        testModal.innerHTML = 'TEST MODAL - Click to close';
+        testModal.onclick = () => testModal.remove();
+        document.body.appendChild(testModal);
+        console.log('🧪 Test modal added');
+        return testModal;
+    }
+
     showTOTPSetupModal(setupData) {
-        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.4.0]');
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.4.1]');
         console.log('🔒 Creating TOTP setup modal with data:', setupData);
         
         // Remove any existing modals first
