@@ -31,7 +31,8 @@ class UWRMapLibre {
         
         // Animation management with cooldown timer
         this.lastAnimationTime = 0;
-        this.animationCooldown = 800; // 800ms cooldown between operations
+        this.baseCooldown = 800; // Base cooldown between operations
+        this.lastZoom = null; // Track last zoom for dynamic cooldown
         
         // Civic social infrastructure
         this.civicGroups = new Map();
@@ -132,30 +133,46 @@ class UWRMapLibre {
         return this.map;
     }
 
-    // Smart flyTo method with cooldown timer to prevent rapid successive operations
+    // Smart flyTo method with dynamic cooldown based on zoom level changes
     smartFlyTo(options) {
         const currentTime = Date.now();
         const timeSinceLastAnimation = currentTime - this.lastAnimationTime;
         
+        // Calculate dynamic cooldown based on zoom level change
+        const currentZoom = this.map.getZoom();
+        const targetZoom = options.zoom || currentZoom;
+        const zoomDifference = this.lastZoom ? Math.abs(targetZoom - this.lastZoom) : 0;
+        
+        // Dynamic cooldown: larger zoom changes need more time
+        // Local → National (zoom 10 → 4) = 6 levels = 1400ms cooldown
+        // National → Local (zoom 4 → 10) = 6 levels = 1400ms cooldown  
+        // State transitions = smaller changes = shorter cooldown
+        const dynamicCooldown = this.baseCooldown + (zoomDifference * 100);
+        
         // If within cooldown period, ignore the request (most recent user action wins)
-        if (timeSinceLastAnimation < this.animationCooldown) {
+        if (timeSinceLastAnimation < dynamicCooldown) {
             if (window.DEBUG_MAP) {
-                console.debug('Map operation ignored due to cooldown:', timeSinceLastAnimation + 'ms since last');
+                console.debug(`Map operation ignored due to dynamic cooldown: ${timeSinceLastAnimation}ms < ${dynamicCooldown}ms (zoom change: ${zoomDifference})`);
             }
             return;
         }
         
         this.lastAnimationTime = currentTime;
+        this.lastZoom = targetZoom;
         
         // Enhanced options to reduce tile abort errors
         const enhancedOptions = {
             ...options,
-            // Smoother animation reduces tile request conflicts
-            speed: options.speed || 0.8,
-            curve: options.curve || 1.2,
+            // Smoother animation for larger transitions
+            speed: options.speed || (zoomDifference > 4 ? 0.6 : 0.8),
+            curve: options.curve || (zoomDifference > 4 ? 1.4 : 1.2),
             // Mark as essential to prevent skipping on reduced motion
             essential: options.essential !== undefined ? options.essential : true
         };
+
+        if (window.DEBUG_MAP) {
+            console.debug(`Map flyTo: zoom ${currentZoom} → ${targetZoom}, cooldown: ${dynamicCooldown}ms, speed: ${enhancedOptions.speed}`);
+        }
 
         this.map.flyTo(enhancedOptions);
     }
@@ -164,6 +181,7 @@ class UWRMapLibre {
         // Store initial bounds when map loads
         this.map.on('load', () => {
             this.initialBounds = this.map.getBounds();
+            this.lastZoom = this.map.getZoom(); // Initialize zoom tracking
             
             // Fit to US bounds initially
             this.fitUSBounds();
