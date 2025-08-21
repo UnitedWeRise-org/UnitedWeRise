@@ -11,6 +11,7 @@ import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -513,6 +514,46 @@ router.get('/debug-test-user', async (req, res) => {
   } catch (error) {
     console.error('Error checking test user:', error);
     res.status(500).json({ error: 'Failed to check test user' });
+  }
+});
+
+// Verify password for sensitive operations
+router.post('/verify-password', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user!.id;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    // Get user's current password hash
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true }
+    });
+
+    if (!user || !user.password) {
+      return res.status(400).json({ error: 'User account not found or has no password set' });
+    }
+
+    // Verify the provided password
+    const isValid = await bcrypt.compare(password, user.password);
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Return a verification token (timestamp for simple implementation)
+    res.json({
+      success: true,
+      token: Date.now().toString(),
+      message: 'Password verified successfully'
+    });
+
+  } catch (error) {
+    console.error('Password verification error:', error);
+    res.status(500).json({ error: 'Failed to verify password' });
   }
 });
 
