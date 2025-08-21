@@ -2551,15 +2551,17 @@ Example: adminConsole.getSuggestions('features', 'new')
                         
                         if (response.ok) {
                             const result = await response.json();
+                            console.log('TOTP verify response:', result);
                             const verificationToken = result.data?.verificationToken || result.verificationToken;
                             
                             if (verificationToken) {
                                 totpVerified = true;
                                 totpToken = verificationToken; // Store verification token for header
                                 modal.remove();
-                                console.log('✅ TOTP verified for admin access');
+                                console.log('✅ TOTP verified for admin access with token:', verificationToken);
                                 resolve();
                             } else {
+                                console.error('No verification token in response:', result);
                                 alert('Verification successful but no token received. Please try again.');
                                 verifyBtn.textContent = 'Verify';
                                 verifyBtn.disabled = false;
