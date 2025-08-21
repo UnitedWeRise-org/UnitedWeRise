@@ -1199,10 +1199,14 @@ class MyProfile {
             });
 
             if (response.ok) {
-                this.showBackupCodesModal(response.data.backupCodes);
-                document.querySelector('.modal-overlay').remove();
+                // Extract nested response data, same as setup
+                const verifyData = response.data?.data || response.data;
+                console.log('🔒 TOTP verify response data:', verifyData);
+                this.showBackupCodesModal(verifyData?.backupCodes);
+                document.querySelector('.totp-modal-simple').remove(); // Use correct selector
                 this.loadTOTPStatus(); // Refresh status
             } else {
+                console.error('🔒 TOTP verify failed:', response);
                 alert(response.data?.error || 'Invalid verification code. Please try again.');
             }
         } catch (error) {
@@ -1212,28 +1216,49 @@ class MyProfile {
     }
 
     showBackupCodesModal(backupCodes) {
+        console.log('🔒 Showing backup codes modal with:', backupCodes);
+        
+        // Handle undefined or empty backup codes
+        if (!backupCodes || !Array.isArray(backupCodes) || backupCodes.length === 0) {
+            alert('2FA has been enabled successfully! However, backup codes were not generated. You can generate them later in your settings.');
+            return;
+        }
+        
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'totp-modal-simple'; // Use same class as setup modal
+        modal.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 999999 !important;
+            font-family: Arial, sans-serif !important;
+        `;
+        
         modal.innerHTML = `
-            <div class="modal backup-codes-modal">
-                <div class="modal-header">
-                    <h3>🔑 Backup Codes</h3>
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #333;">🔑 Backup Codes</h3>
+                    <button onclick="this.closest('.totp-modal-simple').remove()" 
+                            style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
                 </div>
-                <div class="modal-body">
-                    <div class="backup-codes-info">
-                        <p><strong>Important:</strong> Save these backup codes in a secure location. Each code can only be used once if you lose access to your authenticator app.</p>
+                <div style="margin-bottom: 20px;">
+                    <p style="color: #666; margin-bottom: 15px;"><strong>Important:</strong> Save these backup codes in a secure location. Each code can only be used once if you lose access to your authenticator app.</p>
+                    <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; font-family: monospace;">
+                        ${backupCodes.map(code => `<div style="padding: 3px 0; font-size: 14px;">${code}</div>`).join('')}
                     </div>
-                    <div class="backup-codes-list">
-                        ${backupCodes.map(code => `<div class="backup-code">${code}</div>`).join('')}
-                    </div>
-                    <div class="modal-actions">
-                        <button onclick="window.myProfile.downloadBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" class="btn">
-                            📄 Download Codes
-                        </button>
-                        <button onclick="window.myProfile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" class="btn-secondary">
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="window.myProfile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" 
+                                style="background: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
                             📋 Copy to Clipboard
                         </button>
-                        <button onclick="this.closest('.modal-overlay').remove()" class="btn">
+                        <button onclick="this.closest('.totp-modal-simple').remove()" 
+                                style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
                             I've Saved My Codes
                         </button>
                     </div>
@@ -1242,18 +1267,6 @@ class MyProfile {
         `;
         
         document.body.appendChild(modal);
-        
-        // Force modal styles to ensure visibility
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '99999';
     }
 
     downloadBackupCodes(codes) {
