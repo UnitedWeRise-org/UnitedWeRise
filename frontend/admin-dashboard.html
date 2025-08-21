@@ -2432,7 +2432,9 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 // Handle TOTP verification required
                 if (response.status === 403) {
-                    const errorData = await response.json().catch(() => ({}));
+                    // Clone the response so we can read it without consuming the original
+                    const clonedResponse = response.clone();
+                    const errorData = await clonedResponse.json().catch(() => ({}));
                     if (errorData.error === 'TOTP_VERIFICATION_REQUIRED') {
                         console.log('🔒 TOTP verification required for admin access');
                         await showTOTPModal();
