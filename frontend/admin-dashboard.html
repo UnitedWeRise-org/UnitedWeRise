@@ -823,12 +823,8 @@ Loading deployment status...
         async function loadSecurityData() {
             try {
                 const [statsResponse, eventsResponse] = await Promise.all([
-                    fetch(`${BACKEND_URL}/api/admin/security/stats?timeframe=24h`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    }),
-                    fetch(`${BACKEND_URL}/api/admin/security/events?limit=10&minRiskScore=50`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    })
+                    adminApiCall(`${BACKEND_URL}/api/admin/security/stats?timeframe=24h`),
+                    adminApiCall(`${BACKEND_URL}/api/admin/security/events?limit=10&minRiskScore=50`)
                 ]);
 
                 if (statsResponse.ok) {
@@ -857,9 +853,7 @@ Loading deployment status...
         // Load users data
         async function loadUsersData() {
             try {
-                const response = await fetch(`${BACKEND_URL}/api/admin/users`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users`);
 
                 if (response.ok) {
                     const data = await response.json();
@@ -877,9 +871,7 @@ Loading deployment status...
         // Load content data
         async function loadContentData() {
             try {
-                const response = await fetch(`${BACKEND_URL}/api/admin/content/flagged`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/content/flagged`);
 
                 if (response.ok) {
                     const data = await response.json();
@@ -899,9 +891,7 @@ Loading deployment status...
             const days = document.getElementById('analyticsDateRange').value;
             
             try {
-                const response = await fetch(`${BACKEND_URL}/api/admin/analytics?days=${days}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/analytics?days=${days}`);
 
                 if (response.ok) {
                     const data = await response.json();
@@ -1211,9 +1201,7 @@ Current Status: Use deploymentStatus.check() for real-time status
         async function loadDatabaseSchema() {
             try {
                 // First attempt without re-auth
-                let response = await fetch(`${BACKEND_URL}/api/admin/schema`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+                let response = await adminApiCall(`${BACKEND_URL}/api/admin/schema`);
 
                 // If requires re-authentication, prompt user
                 if (response.status === 403) {
@@ -1239,12 +1227,7 @@ Current Status: Use deploymentStatus.check() for real-time status
                         if (authResponse.ok) {
                             const authData = await authResponse.json();
                             // Retry with recent auth header
-                            response = await fetch(`${BACKEND_URL}/api/admin/schema`, {
-                                headers: { 
-                                    'Authorization': `Bearer ${authToken}`,
-                                    'X-Recent-Auth': authData.token || 'verified'
-                                }
-                            });
+                            response = await adminApiCall(`${BACKEND_URL}/api/admin/schema`);
                         } else {
                             document.getElementById('schemaStats').innerHTML = 
                                 '<div class="error">❌ Invalid password. Database access denied.</div>';
@@ -1987,9 +1970,7 @@ Current Status: Use deploymentStatus.check() for real-time status
             }
             
             try {
-                const response = await fetch(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`);
 
                 if (response.ok) {
                     endpointStatus.errors = true;
@@ -2040,12 +2021,8 @@ Current Status: Use deploymentStatus.check() for real-time status
             
             try {
                 const [suggestionsResponse, analysisResponse] = await Promise.all([
-                    fetch(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    }),
-                    fetch(`${BACKEND_URL}/api/admin/ai-insights/analysis`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    })
+                    adminApiCall(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`),
+                    adminApiCall(`${BACKEND_URL}/api/admin/ai-insights/analysis`)
                 ]);
 
                 if (suggestionsResponse.ok) {
@@ -2313,9 +2290,7 @@ Current Status: Use deploymentStatus.check() for real-time status
             getSuggestions: async function(category = 'all', status = 'all') {
                 if (!validateAdminSession()) return null;
                 try {
-                    const response = await fetch(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
+                    const response = await adminApiCall(`${BACKEND_URL}/api/admin/ai-insights/suggestions?category=${category}&status=${status}`);
                     const data = await response.json();
                     console.table(data.suggestions);
                     console.log('📊 Suggestions Stats:', data.stats);
@@ -2331,9 +2306,7 @@ Current Status: Use deploymentStatus.check() for real-time status
             getErrors: async function(severity = 'all', timeframe = '24h') {
                 if (!validateAdminSession()) return null;
                 try {
-                    const response = await fetch(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
+                    const response = await adminApiCall(`${BACKEND_URL}/api/admin/errors?severity=${severity}&timeframe=${timeframe}`);
                     const data = await response.json();
                     console.table(data.errors);
                     console.log('📊 Error Stats:', data.stats);
@@ -2365,9 +2338,7 @@ Current Status: Use deploymentStatus.check() for real-time status
             getSecurity: async function(minRiskScore = 0) {
                 if (!validateAdminSession()) return null;
                 try {
-                    const response = await fetch(`${BACKEND_URL}/api/admin/security/events?limit=20&minRiskScore=${minRiskScore}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
+                    const response = await adminApiCall(`${BACKEND_URL}/api/admin/security/events?limit=20&minRiskScore=${minRiskScore}`);
                     const data = await response.json();
                     console.table(data.events);
                     return data;
