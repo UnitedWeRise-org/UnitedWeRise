@@ -1056,7 +1056,7 @@ class MyProfile {
     }
 
     async setupTOTP() {
-        console.log('🔒 Starting TOTP setup...');
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.3.1]');
         try {
             const response = await window.apiCall('/totp/setup', { method: 'POST' });
             console.log('🔒 TOTP setup API response:', response);
@@ -1074,9 +1074,16 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
+        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.4.0]');
         console.log('🔒 Creating TOTP setup modal with data:', setupData);
+        
+        // Remove any existing modals first
+        const existingModals = document.querySelectorAll('.modal-overlay');
+        existingModals.forEach(modal => modal.remove());
+        
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.id = 'totp-setup-modal';
         console.log('🔒 Modal element created, adding to DOM...');
         modal.innerHTML = `
             <div class="modal totp-setup-modal">
@@ -1116,20 +1123,39 @@ class MyProfile {
         
         document.body.appendChild(modal);
         
-        // Force modal styles to ensure visibility
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '99999';
+        // Force modal styles to ensure visibility with extra debugging
+        modal.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(255, 0, 0, 0.5) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 999999 !important;
+            pointer-events: auto !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        `;
         
-        console.log('🔒 Modal added to DOM with forced styles, focusing input...');
-        document.getElementById('totpVerificationCode').focus();
+        console.log('🔒 Modal added to DOM with ultra-forced styles');
+        console.log('🔒 Modal dimensions:', modal.offsetWidth, 'x', modal.offsetHeight);
+        console.log('🔒 Modal computed style z-index:', window.getComputedStyle(modal).zIndex);
+        console.log('🔒 Modal is in body:', document.body.contains(modal));
+        console.log('🔒 Body children count:', document.body.children.length);
+        
+        // Focus input after a brief delay
+        setTimeout(() => {
+            const input = document.getElementById('totpVerificationCode');
+            if (input) {
+                input.focus();
+                console.log('🔒 Input focused');
+            } else {
+                console.log('🔒 Input not found!');
+            }
+        }, 100);
     }
 
     async verifyTOTPSetup() {
