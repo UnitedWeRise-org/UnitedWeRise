@@ -1383,8 +1383,8 @@ router.get('/candidates/:id', requireAuth, requireAdmin, requireTOTPForAdmin, as
             lastName: true,
             createdAt: true,
             lastSeenAt: true,
-            isVerified: true,
-            reputation: true
+            verified: true,
+            reputationScore: true
           }
         }
       }
@@ -1431,27 +1431,13 @@ router.post('/candidates/:id/approve', requireAuth, requireAdmin, requireTOTPFor
       }
     });
 
-    // Create or update candidate profile
-    await prisma.candidate.upsert({
-      where: { userId: registration.userId },
-      create: {
-        userId: registration.userId,
-        name: `${registration.firstName} ${registration.lastName}`,
-        party: 'Independent', // Default, can be updated later
-        isIncumbent: false,
-        platform: registration.campaignDescription || '',
-        website: registration.campaignWebsite,
-        campaignEmail: registration.email,
-        isVerified: true
-      },
-      update: {
-        name: `${registration.firstName} ${registration.lastName}`,
-        platform: registration.campaignDescription || '',
-        website: registration.campaignWebsite,
-        campaignEmail: registration.email,
-        isVerified: true
-      }
-    });
+    // TODO: Create or update candidate profile
+    // Note: Candidate creation requires officeId which needs to be determined from registration
+    // await prisma.candidate.upsert({
+    //   where: { userId: registration.userId },
+    //   create: { ... },
+    //   update: { ... }
+    // });
 
     // TODO: Send approval email notification
     // TODO: Create candidate inbox for messaging
