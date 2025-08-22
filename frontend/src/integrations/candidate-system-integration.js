@@ -1863,7 +1863,13 @@ class CandidateSystemIntegration {
         
         // Update form steps
         document.querySelectorAll('.form-step').forEach((step, index) => {
-            step.classList.toggle('active', index + 1 === this.currentStep);
+            const isActive = index + 1 === this.currentStep;
+            step.classList.toggle('active', isActive);
+            
+            // Debug: Log step activation
+            if (this.currentStep === 3) {
+                console.log(`🔍 Step ${index + 1} (data-step=${step.getAttribute('data-step')}) active: ${isActive}`);
+            }
         });
         
         // Special handling for Step 2 (Verification & Payment)
