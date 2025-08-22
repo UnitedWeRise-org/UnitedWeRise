@@ -281,6 +281,7 @@
                 <button class="nav-button active" onclick="showSection('overview')">📊 Overview</button>
                 <button class="nav-button" onclick="showSection('security')">🔒 Security</button>
                 <button class="nav-button" onclick="showSection('users')">👥 Users</button>
+                <button class="nav-button" onclick="showSection('candidates')">🗳️ Candidates</button>
                 <button class="nav-button" onclick="showSection('content')">📝 Content</button>
                 <button class="nav-button" onclick="showSection('analytics')">📈 Analytics</button>
                 <button class="nav-button" onclick="showSection('errors')">🐛 Errors</button>
@@ -368,6 +369,36 @@
 
                 <div id="usersTable">
                     <div class="loading">Loading users...</div>
+                </div>
+            </div>
+
+            <!-- Candidates Section -->
+            <div id="candidates" class="dashboard-section">
+                <h2>🗳️ Candidate Registration Management</h2>
+                
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <input type="text" id="candidateSearch" placeholder="Search candidates..." style="width: 300px; padding: 0.5rem;">
+                        <select id="candidateStatusFilter" style="padding: 0.5rem;">
+                            <option value="all">All Statuses</option>
+                            <option value="PENDING_VERIFICATION">Pending Verification</option>
+                            <option value="PENDING_PAYMENT">Pending Payment</option>
+                            <option value="PENDING_APPROVAL">Pending Approval</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                        <button onclick="loadCandidatesData()" class="nav-button">🔍 Search</button>
+                        <button onclick="showFeeWaivers()" class="nav-button">💰 Fee Waivers</button>
+                    </div>
+                    
+                    <!-- Summary Stats -->
+                    <div id="candidateStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1rem;">
+                        <!-- Stats will be populated here -->
+                    </div>
+                </div>
+
+                <div id="candidatesTable">
+                    <div class="loading">Loading candidate registrations...</div>
                 </div>
             </div>
 
@@ -766,6 +797,9 @@ Loading deployment status...
                 case 'users':
                     loadUsersData();
                     break;
+                case 'candidates':
+                    loadCandidatesData();
+                    break;
                 case 'content':
                     loadContentData();
                     break;
@@ -884,6 +918,297 @@ Loading deployment status...
                 document.getElementById('flaggedContent').innerHTML = 
                     '<div class="error">Failed to load content data</div>';
             }
+        }
+
+        // Load candidates data
+        async function loadCandidatesData() {
+            try {
+                const search = document.getElementById('candidateSearch').value;
+                const status = document.getElementById('candidateStatusFilter').value;
+                
+                let url = `${BACKEND_URL}/api/admin/candidates?limit=50`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (status && status !== 'all') url += `&status=${status}`;
+                
+                const response = await adminApiCall(url);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCandidatesTable(data.data.registrations);
+                    displayCandidateStats(data.data.summary);
+                } else {
+                    throw new Error('Failed to load candidates data');
+                }
+            } catch (error) {
+                console.error('Error loading candidates:', error);
+                document.getElementById('candidatesTable').innerHTML = 
+                    '<div class="error">Failed to load candidates data</div>';
+            }
+        }
+
+        // Display candidate statistics
+        function displayCandidateStats(summary) {
+            const statusCounts = summary.byStatus || {};
+            const waiverCounts = summary.feeWaivers || {};
+            
+            const html = `
+                <div class="stat-card" style="background: linear-gradient(135deg, #4b5c09 0%, #6b8109 100%);">
+                    <div class="stat-number">${statusCounts.PENDING_VERIFICATION || 0}</div>
+                    <div class="stat-label">Pending Verification</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                    <div class="stat-number">${statusCounts.PENDING_APPROVAL || 0}</div>
+                    <div class="stat-label">Pending Approval</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <div class="stat-number">${waiverCounts.hardship_pending || 0}</div>
+                    <div class="stat-label">Fee Waivers Pending</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+                    <div class="stat-number">${statusCounts.APPROVED || 0}</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+            `;
+            
+            document.getElementById('candidateStats').innerHTML = html;
+        }
+
+        // Display candidates table
+        function displayCandidatesTable(registrations) {
+            if (registrations.length === 0) {
+                document.getElementById('candidatesTable').innerHTML = 
+                    '<p>No candidate registrations found.</p>';
+                return;
+            }
+
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Status</th>
+                            <th>Fee Waiver</th>
+                            <th>Registration Fee</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            registrations.forEach(reg => {
+                const submittedDate = new Date(reg.createdAt).toLocaleDateString();
+                const statusColor = {
+                    'PENDING_VERIFICATION': '#f39c12',
+                    'PENDING_PAYMENT': '#e67e22', 
+                    'PENDING_APPROVAL': '#3498db',
+                    'APPROVED': '#27ae60',
+                    'REJECTED': '#e74c3c'
+                }[reg.status] || '#95a5a6';
+
+                const waiverStatus = reg.hasFinancialHardship ? 
+                    `<span style="color: ${reg.feeWaiverStatus === 'approved' ? '#27ae60' : reg.feeWaiverStatus === 'denied' ? '#e74c3c' : '#f39c12'};">
+                        ${reg.feeWaiverStatus}
+                    </span>` : 
+                    '<span style="color: #95a5a6;">None</span>';
+
+                html += `
+                    <tr>
+                        <td><strong>${reg.firstName} ${reg.lastName}</strong><br>
+                            <small>${reg.email}</small></td>
+                        <td>${reg.positionTitle}<br>
+                            <small>${reg.positionLevel}</small></td>
+                        <td><span style="color: ${statusColor}; font-weight: bold;">${reg.status}</span></td>
+                        <td>${waiverStatus}</td>
+                        <td>$${reg.registrationFee}
+                            ${reg.originalFee !== reg.registrationFee ? `<br><small style="text-decoration: line-through;">$${reg.originalFee}</small>` : ''}
+                        </td>
+                        <td>${submittedDate}</td>
+                        <td>
+                            <button onclick="viewCandidate('${reg.id}')" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">View</button>
+                            ${reg.hasFinancialHardship && reg.feeWaiverStatus === 'hardship_pending' ? 
+                                `<button onclick="reviewWaiver('${reg.id}')" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f39c12;">Waiver</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('candidatesTable').innerHTML = html;
+        }
+
+        // View candidate details
+        async function viewCandidate(registrationId) {
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${registrationId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const reg = data.data.registration;
+                    
+                    const modal = document.createElement('div');
+                    modal.className = 'modal-overlay';
+                    modal.style.cssText = `
+                        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(0,0,0,0.8); z-index: 10000;
+                        display: flex; align-items: center; justify-content: center;
+                        padding: 2rem;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 800px; max-height: 90vh; overflow-y: auto; width: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                <h3>🗳️ Candidate Registration Details</h3>
+                                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                <div>
+                                    <h4>📋 Personal Information</h4>
+                                    <p><strong>Name:</strong> ${reg.firstName} ${reg.lastName}</p>
+                                    <p><strong>Email:</strong> ${reg.email}</p>
+                                    <p><strong>Phone:</strong> ${reg.phone}</p>
+                                    <p><strong>Address:</strong> ${reg.street}, ${reg.city}, ${reg.state} ${reg.zipCode}</p>
+                                    
+                                    <h4>🏛️ Position Details</h4>
+                                    <p><strong>Position:</strong> ${reg.positionTitle}</p>
+                                    <p><strong>Level:</strong> ${reg.positionLevel}</p>
+                                    <p><strong>Election Date:</strong> ${new Date(reg.electionDate).toLocaleDateString()}</p>
+                                    ${reg.positionDistrict ? `<p><strong>District:</strong> ${reg.positionDistrict}</p>` : ''}
+                                </div>
+                                
+                                <div>
+                                    <h4>🚩 Campaign Information</h4>
+                                    <p><strong>Campaign Name:</strong> ${reg.campaignName}</p>
+                                    ${reg.campaignWebsite ? `<p><strong>Website:</strong> <a href="${reg.campaignWebsite}" target="_blank">${reg.campaignWebsite}</a></p>` : ''}
+                                    ${reg.campaignSlogan ? `<p><strong>Slogan:</strong> ${reg.campaignSlogan}</p>` : ''}
+                                    ${reg.campaignDescription ? `<p><strong>Description:</strong> ${reg.campaignDescription}</p>` : ''}
+                                    
+                                    <h4>💰 Fee Information</h4>
+                                    <p><strong>Registration Fee:</strong> $${reg.registrationFee}</p>
+                                    ${reg.originalFee !== reg.registrationFee ? `<p><strong>Original Fee:</strong> $${reg.originalFee}</p>` : ''}
+                                    <p><strong>Fee Waiver:</strong> ${reg.feeWaiverStatus}</p>
+                                    ${reg.hasFinancialHardship ? `<p><strong>Hardship Reason:</strong> ${reg.hardshipReason}</p>` : ''}
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                                <p><strong>Status:</strong> <span style="color: #3498db;">${reg.status}</span></p>
+                                <p><strong>Submitted:</strong> ${new Date(reg.createdAt).toLocaleString()}</p>
+                                ${reg.verificationNotes ? `<p><strong>Notes:</strong> ${reg.verificationNotes}</p>` : ''}
+                            </div>
+                            
+                            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                ${reg.status === 'PENDING_APPROVAL' ? `
+                                    <button onclick="approveCandidate('${reg.id}')" class="nav-button" style="background: #27ae60;">✅ Approve</button>
+                                    <button onclick="rejectCandidate('${reg.id}')" class="nav-button" style="background: #e74c3c;">❌ Reject</button>
+                                ` : ''}
+                                ${reg.hasFinancialHardship && reg.feeWaiverStatus === 'hardship_pending' ? `
+                                    <button onclick="reviewWaiver('${reg.id}')" class="nav-button" style="background: #f39c12;">💰 Review Waiver</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                } else {
+                    throw new Error('Failed to load candidate details');
+                }
+            } catch (error) {
+                console.error('Error loading candidate details:', error);
+                alert('Failed to load candidate details');
+            }
+        }
+
+        // Approve candidate
+        async function approveCandidate(registrationId) {
+            const notes = prompt('Add approval notes (optional):');
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${registrationId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes })
+                });
+                
+                if (response.ok) {
+                    alert('Candidate approved successfully!');
+                    document.querySelector('.modal-overlay')?.remove();
+                    loadCandidatesData();
+                } else {
+                    throw new Error('Failed to approve candidate');
+                }
+            } catch (error) {
+                console.error('Error approving candidate:', error);
+                alert('Failed to approve candidate');
+            }
+        }
+
+        // Reject candidate
+        async function rejectCandidate(registrationId) {
+            const reason = prompt('Rejection reason (required):');
+            if (!reason) return;
+            
+            const notes = prompt('Additional notes (optional):');
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${registrationId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason, notes })
+                });
+                
+                if (response.ok) {
+                    alert('Candidate registration rejected');
+                    document.querySelector('.modal-overlay')?.remove();
+                    loadCandidatesData();
+                } else {
+                    throw new Error('Failed to reject candidate');
+                }
+            } catch (error) {
+                console.error('Error rejecting candidate:', error);
+                alert('Failed to reject candidate');
+            }
+        }
+
+        // Review fee waiver
+        async function reviewWaiver(registrationId) {
+            const action = confirm('Approve this fee waiver request?') ? 'approve' : 'deny';
+            let waiverAmount = null;
+            
+            if (action === 'approve') {
+                const amountStr = prompt('Final fee amount (0 for full waiver):');
+                waiverAmount = parseFloat(amountStr) || 0;
+            }
+            
+            const notes = prompt('Waiver review notes:');
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${registrationId}/waiver`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, notes, waiverAmount })
+                });
+                
+                if (response.ok) {
+                    alert(`Fee waiver ${action}d successfully!`);
+                    document.querySelector('.modal-overlay')?.remove();
+                    loadCandidatesData();
+                } else {
+                    throw new Error('Failed to process waiver');
+                }
+            } catch (error) {
+                console.error('Error processing waiver:', error);
+                alert('Failed to process fee waiver');
+            }
+        }
+
+        // Show fee waivers filter
+        function showFeeWaivers() {
+            document.getElementById('candidateStatusFilter').value = 'all';
+            document.getElementById('candidateSearch').value = '';
+            loadCandidatesData(); // Could add specific waiver filtering logic here
         }
 
         // Load analytics
@@ -1856,6 +2181,9 @@ Current Status: Use deploymentStatus.check() for real-time status
                     break;
                 case 'users':
                     loadUsersData();
+                    break;
+                case 'candidates':
+                    loadCandidatesData();
                     break;
                 case 'content':
                     loadContentData();

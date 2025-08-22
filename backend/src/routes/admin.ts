@@ -1281,4 +1281,297 @@ router.get('/schema', requireAuth, requireAdmin, requireTOTPForAdmin, requireSup
   }
 });
 
+// GET /api/admin/candidates - Get all candidate registrations
+router.get('/candidates', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const status = req.query.status as string;
+    const search = req.query.search as string;
+    const offset = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { positionTitle: { contains: search, mode: 'insensitive' } },
+        { campaignName: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const [registrations, totalCount] = await Promise.all([
+      prisma.candidateRegistration.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              createdAt: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.candidateRegistration.count({ where })
+    ]);
+
+    // Get summary statistics
+    const summaryStats = await prisma.candidateRegistration.groupBy({
+      by: ['status'],
+      _count: { status: true }
+    });
+
+    const feeWaiverStats = await prisma.candidateRegistration.groupBy({
+      by: ['feeWaiverStatus'],
+      _count: { feeWaiverStatus: true },
+      where: { hasFinancialHardship: true }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        registrations,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
+        },
+        summary: {
+          byStatus: summaryStats.reduce((acc, item) => {
+            acc[item.status] = item._count.status;
+            return acc;
+          }, {} as Record<string, number>),
+          feeWaivers: feeWaiverStats.reduce((acc, item) => {
+            acc[item.feeWaiverStatus] = item._count.feeWaiverStatus;
+            return acc;
+          }, {} as Record<string, number>)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching candidate registrations:', error);
+    res.status(500).json({ error: 'Failed to fetch candidate registrations' });
+  }
+});
+
+// GET /api/admin/candidates/:id - Get specific candidate registration details
+router.get('/candidates/:id', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const registrationId = req.params.id;
+
+    const registration = await prisma.candidateRegistration.findUnique({
+      where: { id: registrationId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            createdAt: true,
+            lastSeenAt: true,
+            isVerified: true,
+            reputation: true
+          }
+        }
+      }
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Candidate registration not found' });
+    }
+
+    res.json({
+      success: true,
+      data: { registration }
+    });
+
+  } catch (error) {
+    console.error('Error fetching candidate registration:', error);
+    res.status(500).json({ error: 'Failed to fetch candidate registration details' });
+  }
+});
+
+// POST /api/admin/candidates/:id/approve - Approve candidate registration
+router.post('/candidates/:id/approve', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const registrationId = req.params.id;
+    const { notes } = req.body;
+
+    const registration = await prisma.candidateRegistration.findUnique({
+      where: { id: registrationId },
+      include: { user: true }
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Candidate registration not found' });
+    }
+
+    // Update registration status
+    const updatedRegistration = await prisma.candidateRegistration.update({
+      where: { id: registrationId },
+      data: {
+        status: 'APPROVED',
+        verifiedAt: new Date(),
+        verifiedBy: req.user!.id,
+        verificationNotes: notes
+      }
+    });
+
+    // Create or update candidate profile
+    await prisma.candidate.upsert({
+      where: { userId: registration.userId },
+      create: {
+        userId: registration.userId,
+        name: `${registration.firstName} ${registration.lastName}`,
+        party: 'Independent', // Default, can be updated later
+        isIncumbent: false,
+        platform: registration.campaignDescription || '',
+        website: registration.campaignWebsite,
+        campaignEmail: registration.email,
+        isVerified: true
+      },
+      update: {
+        name: `${registration.firstName} ${registration.lastName}`,
+        platform: registration.campaignDescription || '',
+        website: registration.campaignWebsite,
+        campaignEmail: registration.email,
+        isVerified: true
+      }
+    });
+
+    // TODO: Send approval email notification
+    // TODO: Create candidate inbox for messaging
+
+    res.json({
+      success: true,
+      message: 'Candidate registration approved successfully',
+      data: { registration: updatedRegistration }
+    });
+
+  } catch (error) {
+    console.error('Error approving candidate registration:', error);
+    res.status(500).json({ error: 'Failed to approve candidate registration' });
+  }
+});
+
+// POST /api/admin/candidates/:id/reject - Reject candidate registration
+router.post('/candidates/:id/reject', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const registrationId = req.params.id;
+    const { reason, notes } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+
+    const registration = await prisma.candidateRegistration.findUnique({
+      where: { id: registrationId }
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Candidate registration not found' });
+    }
+
+    // Update registration status
+    const updatedRegistration = await prisma.candidateRegistration.update({
+      where: { id: registrationId },
+      data: {
+        status: 'REJECTED',
+        rejectedAt: new Date(),
+        rejectedBy: req.user!.id,
+        rejectionReason: reason,
+        verificationNotes: notes
+      }
+    });
+
+    // TODO: Send rejection email with reason
+    // TODO: Process refund if payment was made
+
+    res.json({
+      success: true,
+      message: 'Candidate registration rejected',
+      data: { registration: updatedRegistration }
+    });
+
+  } catch (error) {
+    console.error('Error rejecting candidate registration:', error);
+    res.status(500).json({ error: 'Failed to reject candidate registration' });
+  }
+});
+
+// POST /api/admin/candidates/:id/waiver - Process fee waiver request
+router.post('/candidates/:id/waiver', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const registrationId = req.params.id;
+    const { action, notes, waiverAmount } = req.body; // action: 'approve' | 'deny'
+
+    if (!['approve', 'deny'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid waiver action' });
+    }
+
+    const registration = await prisma.candidateRegistration.findUnique({
+      where: { id: registrationId }
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Candidate registration not found' });
+    }
+
+    if (!registration.hasFinancialHardship) {
+      return res.status(400).json({ error: 'No fee waiver request found for this registration' });
+    }
+
+    let updateData: any = {
+      verificationNotes: notes
+    };
+
+    if (action === 'approve') {
+      const finalFee = waiverAmount !== undefined ? waiverAmount : 0;
+      updateData = {
+        ...updateData,
+        feeWaiverStatus: 'approved',
+        registrationFee: finalFee,
+        status: finalFee === 0 ? 'PENDING_VERIFICATION' : 'PENDING_PAYMENT'
+      };
+    } else {
+      updateData = {
+        ...updateData,
+        feeWaiverStatus: 'denied',
+        registrationFee: registration.originalFee
+      };
+    }
+
+    const updatedRegistration = await prisma.candidateRegistration.update({
+      where: { id: registrationId },
+      data: updateData
+    });
+
+    // TODO: Send waiver decision email
+    
+    res.json({
+      success: true,
+      message: `Fee waiver ${action}d successfully`,
+      data: { registration: updatedRegistration }
+    });
+
+  } catch (error) {
+    console.error('Error processing fee waiver:', error);
+    res.status(500).json({ error: 'Failed to process fee waiver request' });
+  }
+});
+
 export default router;
