@@ -1884,6 +1884,15 @@ class CandidateSystemIntegration {
         if (this.currentStep === 3) {
             this.populateOfficeOptionsBasedOnPaymentLevel();
             this.updatePaidLevelDisplay();
+            
+            // Debug: Check if Step 3 fields are visible
+            const step3Fields = ['positionTitle', 'positionLevel', 'electionDate', 'campaignName'];
+            console.log('🔍 Step 3 field visibility:', step3Fields.map(id => ({
+                id: id,
+                exists: !!document.getElementById(id),
+                visible: document.getElementById(id)?.offsetParent !== null,
+                value: document.getElementById(id)?.value
+            })));
         }
         
         // Update navigation buttons
@@ -2189,11 +2198,21 @@ class CandidateSystemIntegration {
     }
     
     async submitRegistration() {
-        if (!this.validateCurrentStep()) return;
+        console.log('🔍 Submit Registration called');
+        console.log('🔍 Current step:', this.currentStep);
+        console.log('🔍 ID.me verified:', this.idmeVerified);
+        
+        if (!this.validateCurrentStep()) {
+            console.log('🔍 Submit failed: validation failed');
+            return;
+        }
         if (!this.idmeVerified) {
+            console.log('🔍 Submit failed: ID.me not verified');
             this.showMessage('Please complete ID.me verification first');
             return;
         }
+        
+        console.log('🔍 Submit validation passed, proceeding...');
         
         const form = document.getElementById('candidateRegistrationForm');
         const formData = new FormData(form);
