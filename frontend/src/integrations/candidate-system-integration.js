@@ -1357,8 +1357,10 @@ class CandidateSystemIntegration {
             .candidate-registration-modal .modal-container {
                 max-width: 900px;
                 width: 90vw;
-                max-height: 90vh;
+                max-height: 95vh;
                 overflow-y: auto;
+                display: flex;
+                flex-direction: column;
             }
             
             .registration-header {
@@ -1367,13 +1369,15 @@ class CandidateSystemIntegration {
                 padding: 1.5rem 2rem;
                 margin: 0;
                 border-radius: 12px 12px 0 0;
+                flex-shrink: 0;
             }
             
             .registration-steps {
                 display: flex;
                 justify-content: center;
-                margin: 2rem 0;
+                margin: 1.5rem 0;
                 gap: 2rem;
+                flex-shrink: 0;
             }
             
             .step {
@@ -1408,6 +1412,9 @@ class CandidateSystemIntegration {
             
             .registration-form {
                 padding: 0 2rem;
+                flex: 1;
+                overflow-y: auto;
+                max-height: calc(95vh - 200px);
             }
             
             .form-step {
@@ -1737,9 +1744,11 @@ class CandidateSystemIntegration {
             .form-navigation {
                 display: flex;
                 justify-content: space-between;
-                padding: 2rem;
+                padding: 1.5rem 2rem;
                 border-top: 1px solid #e9ecef;
-                margin-top: 2rem;
+                background: white;
+                flex-shrink: 0;
+                margin-top: auto;
             }
             
             .nav-btn {
