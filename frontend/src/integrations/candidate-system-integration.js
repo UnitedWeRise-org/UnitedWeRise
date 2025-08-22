@@ -1957,7 +1957,9 @@ class CandidateSystemIntegration {
     isCurrentStepValid() {
         // Silent validation check without showing error messages
         const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
-        const requiredFields = currentStepElement.querySelectorAll('input[required], select[required]');
+        
+        // Only get required fields that are within the current active step
+        const requiredFields = currentStepElement ? currentStepElement.querySelectorAll('input[required], select[required], textarea[required]') : [];
         
         // Debug: Log required fields found
         if (this.currentStep === 2) {
@@ -1966,12 +1968,20 @@ class CandidateSystemIntegration {
                 type: f.type,
                 name: f.name,
                 value: f.value,
-                checked: f.checked
+                checked: f.checked,
+                parentStep: f.closest('.form-step')?.getAttribute('data-step')
             })));
         }
         
-        // Check standard required fields
+        // Check standard required fields only within current step
         for (let field of requiredFields) {
+            // Double-check the field is actually in the current step
+            const fieldStep = field.closest('.form-step')?.getAttribute('data-step');
+            if (fieldStep != this.currentStep) {
+                console.log('🔍 Skipping field from different step:', field.id, 'from step', fieldStep);
+                continue;
+            }
+            
             if (field.type === 'checkbox') {
                 if (!field.checked) {
                     console.log('🔍 Checkbox validation failed:', field.id, field.checked);
