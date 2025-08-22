@@ -221,11 +221,43 @@
         const sessionId = urlParams.get('session_id');
         const paymentId = urlParams.get('payment_id');
         
-        // Update donation details (in production, fetch from backend)
+        // Update donation details from payment data
         document.addEventListener('DOMContentLoaded', function() {
-            // For now, show mock data
-            setTimeout(() => {
-                document.getElementById('donationAmount').textContent = 'Amount: $25.00';
+            // Try to get payment details from URL or fetch from backend
+            setTimeout(async () => {
+                let donationAmount = 'Unknown';
+                
+                // Try to fetch from backend using payment_id
+                if (paymentId) {
+                    try {
+                        const authToken = localStorage.getItem('authToken');
+                        const response = await fetch(`https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/payments/receipt/${paymentId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.success && result.data) {
+                                donationAmount = `$${(result.data.amount / 100).toFixed(2)}`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching payment details:', error);
+                    }
+                }
+                
+                // Fallback: try to get amount from URL parameters
+                if (donationAmount === 'Unknown') {
+                    const amount = urlParams.get('amount');
+                    if (amount) {
+                        donationAmount = `$${(parseInt(amount) / 100).toFixed(2)}`;
+                    }
+                }
+                
+                // Update display
+                document.getElementById('donationAmount').textContent = `Amount: ${donationAmount}`;
                 document.getElementById('donationDate').textContent = 'Date: ' + new Date().toLocaleDateString();
                 document.getElementById('receiptNumber').textContent = 'Receipt #: UWR-' + Date.now().toString().slice(-8);
             }, 500);

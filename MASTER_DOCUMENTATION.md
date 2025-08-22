@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 22, 2025 (1:30 AM EST)  
-**Version**: 4.6 (Candidate Registration Admin System + Live Stripe Payments)  
+**Last Updated**: August 22, 2025 (8:45 PM EST)  
+**Version**: 4.7.0 (Logical Candidate Registration Flow Implementation)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -3666,9 +3666,28 @@ POST /api/elections/candidates/compare # Compare multiple candidates
 ## 🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM {#candidate-registration-admin-system}
 
 ### Overview
-Comprehensive candidate registration management system providing full administrative oversight of candidate applications, fee waiver processing, and approval workflows. Integrates with the existing admin dashboard to provide secure, TOTP-protected candidate management capabilities.
+Comprehensive candidate registration management system providing full administrative oversight of candidate applications, fee waiver processing, and approval workflows. Features a **logical payment-driven registration flow** that prevents fraud by requiring users to pay for their office level before selecting specific positions. Integrates with the existing admin dashboard to provide secure, TOTP-protected candidate management capabilities.
 
 **Status**: ✅ **FULLY DEPLOYED & OPERATIONAL**
+
+### Logical Registration Flow (Updated August 22, 2025)
+The candidate registration process follows a secure **Payment → Office Selection** flow:
+
+1. **Personal Information** - Basic user details and address verification
+2. **Identity Verification** - ID.me verification for platform integrity  
+3. **Payment Selection** - Users select and pay for office level tier:
+   - Local Office: $50 (School Board, City Council, Local Judges)
+   - Regional Office: $100 (Mayor, County, State House/Senate)
+   - State Office: $200 (US House, Governor, Attorney General)
+   - Federal Office: $400 (US Senate, Lt. Governor)
+   - Presidential: $1,000 (President of the United States)
+4. **Campaign Information** - Office dropdown **filtered by payment level**
+
+**Security Features**:
+- ✅ **Payment Integrity**: Cannot select Presidential office with Local payment
+- ✅ **Hierarchical Access**: Only offices at/below paid tier are selectable
+- ✅ **Fraud Prevention**: Disabled options show "Requires upgrade" messages
+- ✅ **Clear Feedback**: Payment level displayed in campaign step
 
 ### Core Features
 
@@ -4572,6 +4591,20 @@ try {
 
 ## 🐛 KNOWN ISSUES & BUGS {#known-issues-bugs}
 
+### 🚨 RECENTLY FIXED - August 22, 2025
+
+#### Donation Success Page Amount Display Bug (FIXED)
+**Issue**: Donation success page displaying incorrect amount ($25.00 hardcoded instead of actual donation amount)
+- **Problem**: User donated $10 but confirmation page showed hardcoded "$25.00" value
+- **Root Cause**: Mock data placeholder in `donation-success.html` line 228 with hardcoded amount
+- **Fix**: Implemented dynamic amount retrieval from payment API and URL parameters
+- **Fix**: Added `amount` parameter to Stripe success URL for fallback display
+- **Files Modified**: 
+  - `frontend/donation-success.html` - Dynamic payment detail fetching
+  - `backend/src/services/stripeService.ts` - Added amount parameter to success URLs
+- **Status**: ✅ Fixed in code, requires backend deployment
+- **User Impact**: Critical UX issue - users see correct donation amount on confirmation
+
 ### 🚨 RECENTLY FIXED - August 17, 2025
 
 #### CORS & Rate Limiting Production Issues (FIXED)
@@ -4949,6 +4982,38 @@ POST /api/totp/regenerate-backup-codes  # Generate new backup codes
 
 ### August 22, 2025 - Candidate Registration Admin System & Live Stripe Integration
 
+#### Session 3: Logical Registration Flow Implementation (Evening)
+**Achievement**: Restructured candidate registration to prevent payment fraud through logical flow design
+
+##### Payment-Driven Office Selection System
+**Problem Solved**: Previous flow allowed users to select high-level offices (e.g., President) then pay for low-level fees (e.g., Local $50), creating fraud vulnerability and user confusion.
+
+**New Registration Flow**: Personal Info → Verification → **Payment** → Campaign Info
+1. **Step 3 - Payment Selection**: Users select office level tier and pay first
+   - Cannot proceed to campaign step without payment
+   - Clear pricing: Local $50, Regional $100, State $200, Federal $400, Presidential $1,000
+
+2. **Step 4 - Campaign Info**: Office dropdown filtered by payment level
+   - Only shows offices at/below paid tier
+   - Higher options disabled with "Requires upgrade" messages
+   - Payment level displayed: "Payment Completed: State Office ($200)"
+
+##### Technical Implementation
+- `populateOfficeOptionsBasedOnPaymentLevel()` - Dynamic office filtering based on payment hierarchy
+- `updatePaidLevelDisplay()` - Shows user's paid level in campaign step
+- Enhanced step navigation with payment verification
+- CSS styling for payment level display with visual indicators
+
+##### Security & Fraud Prevention
+- ✅ **Payment Integrity**: Cannot select Presidential office with Local payment
+- ✅ **Hierarchical Access**: Office selection restricted to paid tier and below
+- ✅ **Clear User Feedback**: Payment level prominently displayed
+- ✅ **Logical Flow**: Payment commitment before office selection
+
+**Files Modified**: 
+- `frontend/src/integrations/candidate-system-integration.js` - Core registration flow logic
+- Enhanced step display, office filtering, and payment validation
+
 #### Session 1: Complete Candidate Admin Management System (Early Morning)
 **Achievement**: Full-featured candidate registration management with fee waiver processing
 
@@ -5062,6 +5127,39 @@ POST /api/admin/candidates/:id/waiver  // Process fee waiver (approve/deny)
 - Automatic receipt generation and email delivery
 - Payment intent tracking and webhook handling
 - Refund processing for candidate registration cancellations
+
+#### Session 3: Stripe Payment Amount Display Bug Fix (Afternoon)
+**Achievement**: Critical UX bug fix for donation confirmation page
+
+**Issue Identified**: User donated $10 but confirmation page displayed hardcoded "$25.00"
+- **Root Cause**: Mock data placeholder in `donation-success.html` showing hardcoded amount
+- **User Impact**: Critical UX issue causing confusion about actual charge amount
+- **Discovery**: User testing revealed payments processed correctly but confirmation incorrect
+
+**Technical Investigation**:
+1. **Backend Analysis**: Confirmed Payment Links implementation working correctly
+2. **Deployment Verification**: Backend uptime 25 minutes, latest revision active
+3. **API Testing**: `/api/payments/donation` endpoint returning proper Payment Link URLs
+4. **Adblocker Research**: Confirmed checkout.stripe.com redirects are normal Stripe behavior
+
+**Payment Links vs Checkout Sessions Clarification**:
+- ✅ Payment Links ARE working correctly (not a deployment issue)
+- ✅ Payment Links still redirect to checkout.stripe.com (expected Stripe behavior)
+- ✅ Adblocker issues are inherent to all Stripe implementations
+- ✅ Current implementation is optimal for adblocker resistance
+
+**Bug Fix Implementation**:
+- **Frontend Fix**: `frontend/donation-success.html` - Dynamic payment amount retrieval
+  - Removed hardcoded "$25.00" value on line 228
+  - Added API call to fetch actual payment details via `/api/payments/receipt/`
+  - Added fallback to parse amount from URL parameters
+  - Proper error handling for failed API calls
+- **Backend Enhancement**: `backend/src/services/stripeService.ts` - Enhanced success URLs
+  - Added `amount` parameter to Stripe success redirect URLs
+  - Both recurring and one-time donations now include actual amount
+  - URL format: `donation-success.html?payment_id=abc123&amount=1000`
+
+**Status**: ✅ Code fixes completed, requires backend deployment for full resolution
 
 ### August 20, 2025 - API Optimization Implementation & Logo Integration
 
