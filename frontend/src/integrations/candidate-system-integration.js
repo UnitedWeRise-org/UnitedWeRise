@@ -1317,6 +1317,7 @@ class CandidateSystemIntegration {
         // Initialize form state
         this.currentStep = 1;
         this.selectedOfficeLevel = 'state';
+        console.log('🏆 Initializing candidate registration modal, step:', this.currentStep);
         this.updateStepDisplay();
         this.setupOfficeLevelSelector();
         this.setupWaiverHandlers();
@@ -1804,11 +1805,17 @@ class CandidateSystemIntegration {
     }
     
     nextStep() {
+        console.log('🏆 NextStep called, current step:', this.currentStep);
         if (this.currentStep < 4) {
             if (this.validateCurrentStep()) {
                 this.currentStep++;
+                console.log('🏆 Moving to step:', this.currentStep);
                 this.updateStepDisplay();
+            } else {
+                console.log('🏆 Validation failed for step:', this.currentStep);
             }
+        } else {
+            console.log('🏆 Already at final step');
         }
     }
     
@@ -1841,9 +1848,22 @@ class CandidateSystemIntegration {
         const nextBtn = document.getElementById('nextStep');
         const submitBtn = document.getElementById('submitRegistration');
         
+        console.log('🏆 UpdateStepDisplay - Step:', this.currentStep);
+        console.log('🏆 Navigation buttons found:', {
+            prevBtn: !!prevBtn,
+            nextBtn: !!nextBtn, 
+            submitBtn: !!submitBtn
+        });
+        
         if (prevBtn) prevBtn.style.display = this.currentStep === 1 ? 'none' : 'block';
         if (nextBtn) nextBtn.style.display = this.currentStep === 4 ? 'none' : 'block';
         if (submitBtn) submitBtn.style.display = this.currentStep === 4 ? 'block' : 'none';
+        
+        console.log('🏆 Button display states:', {
+            prevBtn: prevBtn?.style.display,
+            nextBtn: nextBtn?.style.display,
+            submitBtn: submitBtn?.style.display
+        });
     }
     
     validateCurrentStep() {
