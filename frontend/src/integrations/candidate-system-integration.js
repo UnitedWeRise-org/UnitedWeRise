@@ -1053,15 +1053,15 @@ class CandidateSystemIntegration {
                         </div>
                         <div class="step" data-step="2">
                             <div class="step-number">2</div>
-                            <span>Position & Campaign</span>
+                            <span>Verification</span>
                         </div>
                         <div class="step" data-step="3">
                             <div class="step-number">3</div>
-                            <span>Verification</span>
+                            <span>Payment</span>
                         </div>
                         <div class="step" data-step="4">
                             <div class="step-number">4</div>
-                            <span>Payment</span>
+                            <span>Campaign Info</span>
                         </div>
                     </div>
                     
@@ -1120,58 +1120,8 @@ class CandidateSystemIntegration {
                             </div>
                         </div>
                         
-                        <!-- Step 2: Position & Campaign -->
+                        <!-- Step 2: Verification -->
                         <div class="form-step" data-step="2">
-                            <h4>🏗️ Position & Campaign Details</h4>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="positionTitle">Office Title *</label>
-                                    <input type="text" id="positionTitle" name="positionTitle" placeholder="e.g., Mayor, City Council, State Senator" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="positionLevel">Government Level *</label>
-                                    <select id="positionLevel" name="positionLevel" required>
-                                        <option value="">Select Level</option>
-                                        <option value="federal">Federal</option>
-                                        <option value="state">State</option>
-                                        <option value="county">County</option>
-                                        <option value="city">City</option>
-                                        <option value="local">Local</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="positionDistrict">District/Jurisdiction</label>
-                                    <input type="text" id="positionDistrict" name="positionDistrict" placeholder="e.g., District 5, Ward 3">
-                                </div>
-                                <div class="form-group">
-                                    <label for="electionDate">Election Date *</label>
-                                    <input type="date" id="electionDate" name="electionDate" required>
-                                </div>
-                            </div>
-                            
-                            <h5>💯 Campaign Information</h5>
-                            <div class="form-grid">
-                                <div class="form-group span-2">
-                                    <label for="campaignName">Campaign Name *</label>
-                                    <input type="text" id="campaignName" name="campaignName" placeholder="e.g., Smith for Mayor" required>
-                                </div>
-                                <div class="form-group span-2">
-                                    <label for="campaignWebsite">Campaign Website</label>
-                                    <input type="url" id="campaignWebsite" name="campaignWebsite" placeholder="https://www.yourname.com">
-                                </div>
-                                <div class="form-group span-2">
-                                    <label for="campaignSlogan">Campaign Slogan</label>
-                                    <input type="text" id="campaignSlogan" name="campaignSlogan" placeholder="Your campaign motto" maxlength="500">
-                                </div>
-                                <div class="form-group span-2">
-                                    <label for="campaignDescription">Campaign Description</label>
-                                    <textarea id="campaignDescription" name="campaignDescription" placeholder="Brief description of your campaign and key issues" maxlength="2000" rows="4"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 3: Verification -->
-                        <div class="form-step" data-step="3">
                             <h4>🔐 Identity Verification</h4>
                             <div class="verification-section">
                                 <div class="verification-card">
@@ -1194,8 +1144,8 @@ class CandidateSystemIntegration {
                             </div>
                         </div>
                         
-                        <!-- Step 4: Payment -->
-                        <div class="form-step" data-step="4">
+                        <!-- Step 3: Payment -->
+                        <div class="form-step" data-step="3">
                             <h4>💳 Registration Payment</h4>
                             <div class="nonprofit-message">
                                 <div class="nonprofit-badge">
@@ -1280,22 +1230,59 @@ class CandidateSystemIntegration {
                                         </div>
                                     </div>
                                 </div>
-                                    
-                                    <div class="payment-methods">
-                                        <h6>Payment Method</h6>
-                                        <div class="payment-options">
-                                            <label class="payment-option">
-                                                <input type="radio" name="paymentMethod" value="card" checked>
-                                                <span class="payment-icon">💳</span>
-                                                Credit/Debit Card
-                                            </label>
-                                            <label class="payment-option">
-                                                <input type="radio" name="paymentMethod" value="bank">
-                                                <span class="payment-icon">🏦</span>
-                                                Bank Transfer
-                                            </label>
-                                        </div>
-                                    </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Campaign Info -->
+                        <div class="form-step" data-step="4">
+                            <h4>🏗️ Position & Campaign Details</h4>
+                            <div class="payment-level-info">
+                                <div class="paid-level-badge">
+                                    <span class="badge-icon">💳</span>
+                                    <strong>Payment Completed:</strong> <span id="paidOfficeLevelName">Office Level</span>
+                                </div>
+                                <p>You can select any office that falls under your paid level or lower. Higher level offices require additional payment.</p>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="positionTitle">Office Title *</label>
+                                    <input type="text" id="positionTitle" name="positionTitle" placeholder="e.g., Mayor, City Council, State Senator" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="positionLevel">Government Level *</label>
+                                    <select id="positionLevel" name="positionLevel" required>
+                                        <option value="">Select Level</option>
+                                        <!-- Options will be populated based on payment level -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="positionDistrict">District/Jurisdiction</label>
+                                    <input type="text" id="positionDistrict" name="positionDistrict" placeholder="e.g., District 5, Ward 3">
+                                </div>
+                                <div class="form-group">
+                                    <label for="electionDate">Election Date *</label>
+                                    <input type="date" id="electionDate" name="electionDate" required>
+                                </div>
+                            </div>
+                            
+                            <h5>💯 Campaign Information</h5>
+                            <div class="form-grid">
+                                <div class="form-group span-2">
+                                    <label for="campaignName">Campaign Name *</label>
+                                    <input type="text" id="campaignName" name="campaignName" placeholder="e.g., Smith for Mayor" required>
+                                </div>
+                                <div class="form-group span-2">
+                                    <label for="campaignWebsite">Campaign Website</label>
+                                    <input type="url" id="campaignWebsite" name="campaignWebsite" placeholder="https://www.yourname.com">
+                                </div>
+                                <div class="form-group span-2">
+                                    <label for="campaignSlogan">Campaign Slogan</label>
+                                    <input type="text" id="campaignSlogan" name="campaignSlogan" placeholder="Your campaign motto" maxlength="500">
+                                </div>
+                                <div class="form-group span-2">
+                                    <label for="campaignDescription">Campaign Description</label>
+                                    <textarea id="campaignDescription" name="campaignDescription" placeholder="Brief description of your campaign and key issues" maxlength="2000" rows="4"></textarea>
                                 </div>
                             </div>
                             
@@ -1551,6 +1538,25 @@ class CandidateSystemIntegration {
             
             .badge-icon {
                 font-size: 1.3rem;
+            }
+            
+            .payment-level-info {
+                background: #e8f5e8;
+                border: 1px solid #28a745;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 2rem;
+            }
+            
+            .paid-level-badge {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .paid-level-badge .badge-icon {
+                font-size: 1.2rem;
             }
             
             .office-level-selector {
@@ -1824,6 +1830,12 @@ class CandidateSystemIntegration {
             step.classList.toggle('active', index + 1 === this.currentStep);
         });
         
+        // Special handling for Step 4 (Campaign Info)
+        if (this.currentStep === 4) {
+            this.populateOfficeOptionsBasedOnPaymentLevel();
+            this.updatePaidLevelDisplay();
+        }
+        
         // Update navigation buttons
         const prevBtn = document.getElementById('prevStep');
         const nextBtn = document.getElementById('nextStep');
@@ -1927,6 +1939,74 @@ class CandidateSystemIntegration {
         }
     }
     
+    populateOfficeOptionsBasedOnPaymentLevel() {
+        const positionLevelSelect = document.getElementById('positionLevel');
+        if (!positionLevelSelect) return;
+        
+        // Clear existing options except the first one
+        positionLevelSelect.innerHTML = '<option value="">Select Level</option>';
+        
+        // Define office level hierarchy (lower index = lower level)
+        const officeLevels = [
+            { value: 'local', label: 'Local', paidLevel: 'local' },
+            { value: 'county', label: 'County', paidLevel: 'regional' },
+            { value: 'city', label: 'City', paidLevel: 'regional' },
+            { value: 'state', label: 'State', paidLevel: 'state' },
+            { value: 'federal', label: 'Federal', paidLevel: 'federal' },
+            { value: 'presidential', label: 'Presidential', paidLevel: 'presidential' }
+        ];
+        
+        // Define payment level hierarchy
+        const paymentHierarchy = {
+            'local': 0,
+            'regional': 1,
+            'state': 2,
+            'federal': 3,
+            'presidential': 4
+        };
+        
+        const userPaidLevel = paymentHierarchy[this.selectedOfficeLevel] || 0;
+        
+        // Add options that are at or below the paid level
+        officeLevels.forEach(level => {
+            const levelHierarchy = paymentHierarchy[level.paidLevel];
+            if (levelHierarchy <= userPaidLevel) {
+                const option = document.createElement('option');
+                option.value = level.value;
+                option.textContent = level.label;
+                positionLevelSelect.appendChild(option);
+            }
+        });
+        
+        // Add disabled options for higher levels with upgrade message
+        officeLevels.forEach(level => {
+            const levelHierarchy = paymentHierarchy[level.paidLevel];
+            if (levelHierarchy > userPaidLevel) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = `${level.label} (Requires upgrade to ${level.paidLevel})`;
+                option.disabled = true;
+                option.style.color = '#6c757d';
+                positionLevelSelect.appendChild(option);
+            }
+        });
+    }
+    
+    updatePaidLevelDisplay() {
+        const paidLevelName = document.getElementById('paidOfficeLevelName');
+        if (!paidLevelName) return;
+        
+        const officeLevelNames = {
+            'local': 'Local Office ($50)',
+            'regional': 'Regional Office ($100)',
+            'state': 'State Office ($200)',
+            'federal': 'Federal Office ($400)',
+            'presidential': 'Presidential ($1,000)'
+        };
+        
+        paidLevelName.textContent = officeLevelNames[this.selectedOfficeLevel] || 'Office Level';
+    }
+    
     startIdmeVerification() {
         // TODO: Integrate with actual ID.me API
         console.log('Starting ID.me verification...');
@@ -1992,20 +2072,35 @@ class CandidateSystemIntegration {
         };
         
         try {
-            // TODO: Make actual API call to register candidate
+            // Make actual API call to register candidate
             console.log('Submitting candidate registration:', registrationData);
             
-            // Simulate API call
-            this.showMessage('Registration submitted successfully! You will receive confirmation via email.');
+            const response = await fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/candidates/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify(registrationData)
+            });
             
-            // Close modal after successful submission
-            setTimeout(() => {
-                document.querySelector('.candidate-registration-modal').remove();
-            }, 2000);
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                this.showMessage('Registration submitted successfully! You will receive confirmation via email.');
+                console.log('✅ Candidate registration successful:', result);
+                
+                // Close modal after successful submission
+                setTimeout(() => {
+                    document.querySelector('.candidate-registration-modal').remove();
+                }, 2000);
+            } else {
+                throw new Error(result.message || 'Registration failed');
+            }
             
         } catch (error) {
             console.error('Registration failed:', error);
-            this.showMessage('Registration failed. Please try again.');
+            this.showMessage(`Registration failed: ${error.message}`);
         }
     }
 
