@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 21, 2025 (5:30 PM EST)  
-**Version**: 4.5 (Complete TOTP Admin Dashboard Integration)  
+**Last Updated**: August 22, 2025 (1:30 AM EST)  
+**Version**: 4.6 (Candidate Registration Admin System + Live Stripe Payments)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -39,14 +39,15 @@ Do NOT create separate documentation files. This consolidation was created after
 16. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
 17. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
 18. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-19. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-20. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-21. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-22. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-23. [📝 DEVELOPMENT PRACTICES](#development-practices)
-24. [📜 SESSION HISTORY](#session-history)
-25. [🔮 FUTURE ROADMAP](#future-roadmap)
-26. [🆘 TROUBLESHOOTING](#troubleshooting)
+19. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+20. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+21. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+22. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+23. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+24. [📝 DEVELOPMENT PRACTICES](#development-practices)
+25. [📜 SESSION HISTORY](#session-history)
+26. [🔮 FUTURE ROADMAP](#future-roadmap)
+27. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -3662,6 +3663,148 @@ POST /api/elections/candidates/compare # Compare multiple candidates
 
 ---
 
+## 🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM {#candidate-registration-admin-system}
+
+### Overview
+Comprehensive candidate registration management system providing full administrative oversight of candidate applications, fee waiver processing, and approval workflows. Integrates with the existing admin dashboard to provide secure, TOTP-protected candidate management capabilities.
+
+**Status**: ✅ **FULLY DEPLOYED & OPERATIONAL**
+
+### Core Features
+
+#### Admin Dashboard Integration
+- **New Navigation Tab**: 🗳️ Candidates section in admin dashboard
+- **Real-Time Statistics**: Live counts of pending verifications, approvals, and fee waivers
+- **Search & Filter System**: Multi-field search with status-based filtering
+- **Pagination Support**: Efficient handling of large candidate datasets
+
+#### Fee Waiver Management
+- **Financial Hardship Processing**: Complete workflow for fee waiver requests
+- **Custom Fee Setting**: Admins can approve partial or full waivers with custom amounts
+- **Visual Fee Tracking**: Original fee vs final fee with strike-through display
+- **Hardship Documentation**: Reason display and administrative notes system
+
+#### Candidate Review System
+- **Detailed Registration Modal**: Comprehensive candidate information view
+- **Personal Information**: Name, contact details, address verification
+- **Position Details**: Office sought, election date, district information
+- **Campaign Information**: Campaign name, website, slogan, platform description
+- **Administrative Actions**: Approve, reject, or process waiver with audit trail
+
+#### Complete Approval Workflow
+- **Status Progression**: PENDING_VERIFICATION → PENDING_PAYMENT → PENDING_APPROVAL → APPROVED
+- **One-Click Approval**: Automatic candidate profile creation upon approval
+- **Rejection Management**: Required reason with optional detailed notes
+- **Audit Trail**: Full tracking of admin decisions with timestamps and user IDs
+
+### Backend API Implementation
+
+#### TOTP-Protected Endpoints
+All candidate admin endpoints require TOTP verification for enhanced security:
+
+```javascript
+GET  /api/admin/candidates              // List all registrations with pagination
+GET  /api/admin/candidates/:id         // View specific registration details  
+POST /api/admin/candidates/:id/approve // Approve candidate registration
+POST /api/admin/candidates/:id/reject  // Reject candidate registration
+POST /api/admin/candidates/:id/waiver  // Process fee waiver (approve/deny)
+```
+
+#### Advanced Features
+- **Multi-Field Search**: Name, email, position, campaign name search
+- **Status Filtering**: Filter by verification, payment, approval status
+- **Summary Statistics**: Real-time counts by status and waiver type
+- **Relationship Queries**: User data integration for admin context
+- **Custom Fee Processing**: Flexible waiver amounts from $0 to full fee
+
+### Post-Approval Candidate Features
+
+#### Enhanced Platform Access
+- **Verified Badge**: Special candidate verification on all interactions
+- **Priority Placement**: Enhanced visibility in location-based feeds
+- **Campaign Integration**: Website, slogan, and platform display throughout site
+- **Election Content**: Featured placement in election-related sections
+
+#### Candidate Communication Tools
+- **Inbox System**: Direct constituent messaging with 21 policy categories
+- **Public Q&A**: Convert private inquiries to public policy statements
+- **Staff Management**: Delegate inbox access to campaign staff
+- **Auto-Response**: Configurable automated responses for common inquiries
+
+#### Political Engagement Features
+- **Voter Messaging**: Direct communication with constituents
+- **Event Promotion**: Town halls, forums, and campaign events
+- **Position Publishing**: Public policy statement platform
+- **Feedback Collection**: Constituent input and engagement tracking
+
+### Technical Implementation
+
+#### Frontend Components
+- **Admin Navigation**: Integrated candidate tab with consistent styling
+- **Statistics Cards**: Real-time dashboard metrics with color coding
+- **Data Tables**: Sortable, searchable candidate registration listings
+- **Modal System**: Detailed candidate review with inline editing
+- **Action Buttons**: Context-sensitive approval, rejection, and waiver controls
+
+#### Backend Architecture
+- **Prisma Integration**: Leverages existing database schema without migrations
+- **TOTP Security**: All endpoints protected with two-factor authentication
+- **Relationship Queries**: Efficient joins with user data for admin context
+- **Error Handling**: Comprehensive validation and user-friendly error messages
+- **Audit Logging**: Administrative actions tracked with timestamps and user IDs
+
+#### Database Integration
+- **Existing Schema**: Uses current CandidateRegistration table structure
+- **Status Management**: Leverages existing status enum with proper transitions
+- **Fee Tracking**: Original and final fee amounts with waiver status
+- **User Relationships**: Seamless integration with user management system
+
+### Administrative Workflow
+
+#### Standard Processing Flow
+1. **Registration Submitted**: Candidate completes registration with optional fee waiver request
+2. **Admin Review**: Admin views candidate details through dashboard interface
+3. **Fee Waiver Decision**: If requested, admin approves/denies with custom amounts
+4. **Final Approval**: Admin approves or rejects with required reasoning
+5. **Profile Creation**: Automatic candidate profile generation upon approval
+6. **Notification**: Candidate receives approval/rejection notification (future enhancement)
+
+#### Fee Waiver Processing
+1. **Hardship Review**: Admin reviews financial hardship documentation
+2. **Amount Decision**: Set custom fee (0 for full waiver, partial amounts allowed)
+3. **Status Update**: Waiver marked as approved/denied with administrative notes
+4. **Workflow Continuation**: Registration proceeds to payment or approval phase
+
+### Integration Points
+
+#### Related Systems
+- **{#security-authentication}**: TOTP protection for all admin endpoints
+- **{#stripe-nonprofit-payment-system}**: Payment processing for registration fees
+- **{#election-tracking-system}**: Candidate profiles integrate with election data
+- **{#monitoring-admin}**: Candidate management extends existing admin capabilities
+
+#### Files Modified
+- **Frontend**: `admin-dashboard.html` - Complete candidate admin interface (350+ lines)
+- **Backend**: `admin.ts` - 5 new API endpoints with full CRUD operations
+- **Navigation**: Enhanced admin menu with candidate management section
+- **Documentation**: Complete system documentation and implementation guide
+
+### Deployment Status
+- **Backend**: Live on revision --0000086 with all candidate admin APIs
+- **Frontend**: Deployed to admin dashboard with full management interface
+- **Database**: No migrations required, uses existing schema
+- **Security**: TOTP protection active on all administrative functions
+- **Testing**: End-to-end candidate workflow verified and operational
+
+### Future Enhancements
+- **Email Notifications**: Automated approval/rejection notifications
+- **Bulk Operations**: Multi-candidate approval/rejection capabilities
+- **Advanced Analytics**: Candidate registration trends and statistics
+- **Document Upload**: Fee waiver documentation attachment system
+- **Candidate Onboarding**: Automated candidate profile setup and training
+
+---
+
 ## 🤝 RELATIONSHIP SYSTEM {#relationship-system}
 
 ### Overview
@@ -4802,7 +4945,123 @@ POST /api/totp/regenerate-backup-codes  # Generate new backup codes
 - ✅ **Analytics Endpoint**: PostgreSQL DATE_TRUNC syntax corrected
 - ✅ **Database Schema**: Password verification working, super admin access functional
 - ✅ **Admin Dashboard**: All sections operational except Analytics (minimal data)
-- **Active Revision**: unitedwerise-backend--0000083 with image `cors-final-fix`
+- **Active Revision**: unitedwerise-backend--0000086 with image `cors-final-fix`
+
+### August 22, 2025 - Candidate Registration Admin System & Live Stripe Integration
+
+#### Session 1: Complete Candidate Admin Management System (Early Morning)
+**Achievement**: Full-featured candidate registration management with fee waiver processing
+
+##### Candidate Registration Admin Interface
+**Completed**: Comprehensive admin dashboard section for candidate management
+
+1. **Admin Dashboard Integration** - New "🗳️ Candidates" tab in admin navigation
+   - Real-time statistics: Pending verification, pending approval, fee waivers pending, approved
+   - Search and filtering by candidate name, email, position, campaign name, and status
+   - Status filtering: PENDING_VERIFICATION, PENDING_PAYMENT, PENDING_APPROVAL, APPROVED, REJECTED
+   - Pagination support with 50 candidates per page default
+
+2. **Fee Waiver Management System** - Complete workflow for processing financial hardship requests
+   - Visual indicators for fee waiver status (pending, approved, denied)
+   - Admin approval workflow with custom fee amounts (0 for full waiver)
+   - Original fee vs final fee tracking with visual strike-through
+   - Hardship reason display and admin notes system
+
+3. **Candidate Registration Review** - Detailed candidate information modal
+   - Personal information: Name, email, phone, address
+   - Position details: Title, level, election date, district
+   - Campaign information: Name, website, slogan, description
+   - Fee tracking: Registration fee, original fee, waiver status
+   - Admin actions: Approve, reject, process waiver with notes
+
+4. **Complete Admin Workflow** - End-to-end candidate management
+   - One-click approval with automatic candidate profile creation
+   - Rejection system with required reason and optional notes
+   - Fee waiver processing with approve/deny and custom amounts
+   - Audit trail with timestamps, admin IDs, and decision notes
+
+##### Backend API Implementation
+**Completed**: TOTP-protected admin endpoints for candidate management
+
+```javascript
+// New Admin API Endpoints (All TOTP-Protected)
+GET  /api/admin/candidates              // List all registrations with search/filter
+GET  /api/admin/candidates/:id         // View specific registration details  
+POST /api/admin/candidates/:id/approve // Approve candidate registration
+POST /api/admin/candidates/:id/reject  // Reject candidate registration
+POST /api/admin/candidates/:id/waiver  // Process fee waiver (approve/deny)
+```
+
+**Features Implemented**:
+- Comprehensive search and filtering with Prisma queries
+- Status-based grouping and summary statistics
+- Fee waiver statistics and tracking
+- Complete candidate approval workflow
+- Rejection handling with reason requirements
+- Custom fee amount setting for partial waivers
+- User relationship joins for admin context
+
+##### Candidate Tools & Features Post-Approval
+**Available after admin approval**:
+
+1. **Enhanced Candidate Profile** - Verified candidate status with platform benefits
+   - Verified candidate badge on all posts and interactions
+   - Campaign information display throughout platform
+   - Priority content placement in location-based feeds
+   - Enhanced visibility in election-related content
+
+2. **Candidate Inbox System** - Direct constituent communication
+   - Categorized message handling (21 policy categories)
+   - Anonymous and public inquiry support
+   - Staff delegation and management capabilities
+   - Auto-response configuration
+
+3. **Public Q&A Platform** - Policy transparency tools
+   - Convert private inquiries to public policy statements
+   - Searchable policy position database
+   - Voter engagement analytics
+   - Response tracking and management
+
+4. **Campaign Integration** - Political engagement features
+   - Direct voter messaging capabilities
+   - Event and town hall promotion
+   - Position statement publishing
+   - Constituent feedback collection
+
+**Technical Implementation**:
+- Complete frontend admin interface with modal system
+- TOTP-secured backend endpoints with proper authorization
+- Database schema integration with existing candidate systems
+- Audit trail and administrative oversight
+- Integration with existing user management and verification systems
+
+**Files Modified**:
+- `frontend/admin-dashboard.html` - Complete candidate admin interface (300+ lines)
+- `backend/src/routes/admin.ts` - 5 new API endpoints with full CRUD operations
+- Admin navigation enhanced with candidate management section
+- Modal system for detailed candidate review and actions
+
+**Deployment Status**:
+- Backend: Deployed as revision --0000086 with candidate admin APIs
+- Frontend: Live on admin dashboard with full candidate management interface
+- Database: Existing schema supports all operations without migrations
+
+#### Session 2: Live Stripe Payment System Integration (Morning)
+**Achievement**: Production-ready payment processing with live Stripe keys
+
+**Live Stripe Integration**: 
+- Production Stripe keys configured for real payment processing
+- Candidate registration payment workflow operational
+- Donation system with live payment collection
+- Tax-deductible donation receipts with 501(c)(3) compliance
+- Real-time payment status tracking and confirmation
+
+**Payment Features**:
+- Secure payment processing with Stripe Elements
+- Multiple payment methods: Cards, digital wallets, bank transfers
+- Automatic receipt generation and email delivery
+- Payment intent tracking and webhook handling
+- Refund processing for candidate registration cancellations
 
 ### August 20, 2025 - API Optimization Implementation & Logo Integration
 
