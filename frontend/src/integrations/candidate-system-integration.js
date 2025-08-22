@@ -1297,7 +1297,7 @@ class CandidateSystemIntegration {
                     </form>
                 </div>
                 
-                <div class="form-navigation" style="display: flex !important; justify-content: space-between; padding: 2rem; border-top: 1px solid #e9ecef; background: white;">
+                <div class="form-navigation" style="display: flex !important; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid #e9ecef; background: white;">
                     <button type="button" class="nav-btn prev" id="prevStep" onclick="candidateSystemIntegration.previousStep()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
                         ← Previous
                     </button>
@@ -1364,7 +1364,7 @@ class CandidateSystemIntegration {
             .registration-header {
                 background: linear-gradient(135deg, #ff6b35, #f7931e);
                 color: white;
-                padding: 1.5rem 2rem;
+                padding: 1rem 1.5rem;
                 margin: 0;
                 border-radius: 12px 12px 0 0;
             }
@@ -1372,8 +1372,8 @@ class CandidateSystemIntegration {
             .registration-steps {
                 display: flex;
                 justify-content: center;
-                margin: 2rem 0;
-                gap: 2rem;
+                margin: 1rem 0;
+                gap: 1.5rem;
             }
             
             .step {
@@ -1407,7 +1407,7 @@ class CandidateSystemIntegration {
             }
             
             .registration-form {
-                padding: 0 2rem;
+                padding: 0 1.5rem;
             }
             
             .form-step {
@@ -1419,6 +1419,16 @@ class CandidateSystemIntegration {
                 display: block;
             }
             
+            .form-step h4 {
+                margin: 0.75rem 0;
+                font-size: 1.25rem;
+            }
+            
+            .form-step h5 {
+                margin: 0.75rem 0 0.5rem 0;
+                font-size: 1.1rem;
+            }
+            
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateX(20px); }
                 to { opacity: 1; transform: translateX(0); }
@@ -1427,8 +1437,8 @@ class CandidateSystemIntegration {
             .form-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 1rem;
-                margin-bottom: 1.5rem;
+                gap: 0.75rem;
+                margin-bottom: 1rem;
             }
             
             .form-group {
@@ -1442,14 +1452,15 @@ class CandidateSystemIntegration {
             
             .form-group label {
                 font-weight: 500;
-                margin-bottom: 0.5rem;
+                margin-bottom: 0.25rem;
                 color: #333;
+                font-size: 0.9rem;
             }
             
             .form-group input,
             .form-group select,
             .form-group textarea {
-                padding: 0.75rem;
+                padding: 0.5rem;
                 border: 2px solid #e9ecef;
                 border-radius: 6px;
                 font-size: 0.9rem;
@@ -1468,7 +1479,7 @@ class CandidateSystemIntegration {
                 background: #f8f9fa;
                 border: 2px solid #e9ecef;
                 border-radius: 12px;
-                padding: 2rem;
+                padding: 1.25rem;
                 text-align: center;
             }
             
