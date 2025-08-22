@@ -10,8 +10,8 @@ const STRIPE_CONFIG = {
     
     // Production
     production: {
-        publishableKey: 'pk_live_YOUR_LIVE_PUBLISHABLE_KEY', // Update when ready for production
-        backendUrl: 'https://www.unitedwerise.org/api' // Production backend URL
+        publishableKey: 'pk_live_51Rv6pdI45l290VNEaZeT1tEHp0roeCyAVrQWNxpfjzaR1k3zxfWxp4Q6yrzbtriTPVohY9MiAXOjyrxasVevuJmX00Mwl1BcP1', // Live key
+        backendUrl: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api' // Production backend URL
     }
 };
 

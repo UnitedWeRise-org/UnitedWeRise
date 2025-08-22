@@ -114,9 +114,9 @@ class DonationSystem {
                             <p>💳 Your card will be charged <span id="recurringAmount">$25</span> <span id="recurringFrequency">monthly</span></p>
                         </div>
                         
-                        <!-- Test Mode Warning -->
-                        <div class="test-mode-warning">
-                            <strong>🧪 TEST MODE</strong> - Use card number 4242 4242 4242 4242 with any future date
+                        <!-- Live Mode Notice -->
+                        <div class="live-mode-notice">
+                            <strong>💳 SECURE PAYMENT</strong> - Your donation is processed securely through Stripe
                         </div>
                         
                         <!-- Donate Button -->
@@ -329,10 +329,10 @@ class DonationSystem {
                     color: #555;
                 }
                 
-                .test-mode-warning {
-                    background: #fff3cd;
-                    border: 1px solid #ffc107;
-                    color: #856404;
+                .live-mode-notice {
+                    background: #d4edda;
+                    border: 1px solid #28a745;
+                    color: #155724;
                     padding: 12px;
                     border-radius: 8px;
                     margin-bottom: 20px;
@@ -586,9 +586,9 @@ class DonationSystem {
             const result = await response.json();
             
             if (response.ok && result.success) {
-                // Redirect to Stripe Checkout
-                console.log('💳 Redirecting to Stripe Checkout:', result.data.checkoutUrl);
-                window.location.href = result.data.checkoutUrl;
+                // Open Stripe Checkout in new tab instead of redirect
+                console.log('💳 Opening Stripe Checkout in new tab:', result.data.checkoutUrl);
+                window.open(result.data.checkoutUrl, '_blank');
             } else {
                 throw new Error(result.error || 'Failed to create donation');
             }
