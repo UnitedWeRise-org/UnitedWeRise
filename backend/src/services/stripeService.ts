@@ -104,7 +104,6 @@ export class StripeService {
           },
           product_data: {
             name: 'United We Rise Recurring Donation',
-            description: 'Monthly recurring donation to support civic engagement',
             metadata: {
               taxDeductible: 'true',
               donationType: params.donationType
@@ -151,7 +150,6 @@ export class StripeService {
           currency: 'usd',
           product_data: {
             name: 'One-time Donation to United We Rise',
-            description: 'Your tax-deductible donation supports civic engagement and democratic participation',
             metadata: {
               taxDeductible: 'true',
               donationType: params.donationType
@@ -343,13 +341,11 @@ export class StripeService {
           break;
         
         case 'invoice.payment_succeeded':
-          // Handle successful payments from Payment Links
-          await this.handleInvoicePaymentSuccess(event.data.object as Stripe.Invoice);
+          console.log('Payment Link invoice payment succeeded:', event.data.object);
           break;
         
         case 'invoice.payment_failed':
-          // Handle failed payments from Payment Links  
-          await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+          console.log('Payment Link invoice payment failed:', event.data.object);
           break;
         
         case 'customer.subscription.created':
@@ -488,71 +484,6 @@ export class StripeService {
     console.log('Subscription cancelled:', subscription.id);
   }
 
-  /**
-   * Handle successful invoice payments from Payment Links
-   */
-  private static async handleInvoicePaymentSuccess(invoice: Stripe.Invoice) {
-    // Find payment by metadata or charge
-    if (invoice.charge && typeof invoice.charge === 'string') {
-      const charge = await stripe.charges.retrieve(invoice.charge);
-      const paymentId = charge.metadata?.paymentId;
-      
-      if (paymentId) {
-        const payment = await prisma.payment.findUnique({
-          where: { id: paymentId }
-        });
-
-        if (payment) {
-          await prisma.payment.update({
-            where: { id: paymentId },
-            data: {
-              status: PaymentStatus.COMPLETED,
-              processedAt: new Date(),
-              stripeChargeId: invoice.charge
-            }
-          });
-
-          // Generate receipt
-          await this.generateReceipt(paymentId);
-
-          // Handle campaign updates, candidate registration, etc.
-          if (payment.candidateRegistrationId) {
-            await prisma.candidateRegistration.update({
-              where: { id: payment.candidateRegistrationId },
-              data: { status: 'PENDING_VERIFICATION' }
-            });
-          }
-
-          if (payment.campaignId) {
-            await prisma.donationCampaign.update({
-              where: { id: payment.campaignId },
-              data: { raised: { increment: payment.amount } }
-            });
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Handle failed invoice payments from Payment Links
-   */
-  private static async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-    if (invoice.charge && typeof invoice.charge === 'string') {
-      const charge = await stripe.charges.retrieve(invoice.charge);
-      const paymentId = charge.metadata?.paymentId;
-      
-      if (paymentId) {
-        await prisma.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: PaymentStatus.FAILED,
-            failureReason: invoice.status_transitions?.finalized_at ? 'Payment failed' : 'Payment not completed'
-          }
-        });
-      }
-    }
-  }
 
   /**
    * Generate tax-compliant receipt
