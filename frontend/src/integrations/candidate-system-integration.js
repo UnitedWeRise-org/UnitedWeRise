@@ -1959,22 +1959,49 @@ class CandidateSystemIntegration {
         const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
         const requiredFields = currentStepElement.querySelectorAll('input[required], select[required]');
         
+        // Debug: Log required fields found
+        if (this.currentStep === 2) {
+            console.log('🔍 Required fields in Step 2:', Array.from(requiredFields).map(f => ({
+                id: f.id,
+                type: f.type,
+                name: f.name,
+                value: f.value,
+                checked: f.checked
+            })));
+        }
+        
         // Check standard required fields
         for (let field of requiredFields) {
             if (field.type === 'checkbox') {
-                if (!field.checked) return false;
+                if (!field.checked) {
+                    console.log('🔍 Checkbox validation failed:', field.id, field.checked);
+                    return false;
+                }
             } else {
-                if (!field.value.trim()) return false;
+                if (!field.value.trim()) {
+                    console.log('🔍 Field validation failed:', field.id, field.value);
+                    return false;
+                }
             }
         }
         
         // Special validation for Step 2 (Verification & Payment)
         if (this.currentStep === 2) {
-            if (!this.idmeVerified) return false;
-            if (!this.selectedOfficeLevel) return false;
-            if (!document.getElementById('candidateAgreement')?.checked) return false;
+            if (!this.idmeVerified) {
+                console.log('🔍 ID.me verification failed');
+                return false;
+            }
+            if (!this.selectedOfficeLevel) {
+                console.log('🔍 Office level selection failed');
+                return false;
+            }
+            if (!document.getElementById('candidateAgreement')?.checked) {
+                console.log('🔍 Candidate agreement failed');
+                return false;
+            }
         }
         
+        console.log('🔍 All validations passed for step', this.currentStep);
         return true;
     }
     
