@@ -586,16 +586,62 @@ class DonationSystem {
             const result = await response.json();
             
             if (response.ok && result.success) {
-                // Open Stripe Checkout in new tab instead of redirect
-                console.log('💳 Opening Stripe Checkout in new tab:', result.data.checkoutUrl);
-                window.open(result.data.checkoutUrl, '_blank');
+                // Store checkout URL for fallback
+                const checkoutUrl = result.data.checkoutUrl;
+                console.log('💳 Redirecting to Stripe Checkout:', checkoutUrl);
+                
+                // Update loading message
+                const loadingText = loadingDiv.querySelector('p');
+                if (loadingText) {
+                    loadingText.textContent = 'Redirecting to secure payment page...';
+                }
+                
+                // Try direct redirect (most reliable with adblockers)
+                setTimeout(() => {
+                    window.location.href = checkoutUrl;
+                }, 500);
+                
+                // Show fallback link after delay in case redirect is blocked
+                setTimeout(() => {
+                    if (loadingDiv.style.display !== 'none') {
+                        loadingDiv.innerHTML = `
+                            <div class="spinner"></div>
+                            <p>If you're not redirected automatically:</p>
+                            <a href="${checkoutUrl}" target="_blank" style="
+                                display: inline-block;
+                                margin-top: 10px;
+                                padding: 10px 20px;
+                                background: #667eea;
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 5px;
+                                font-weight: bold;
+                            ">Click here to complete your donation</a>
+                            <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                                💡 Tip: If you have an adblocker, you may need to disable it or whitelist our domain.
+                            </p>
+                        `;
+                    }
+                }, 3000);
+                
             } else {
                 throw new Error(result.error || 'Failed to create donation');
             }
             
         } catch (error) {
             console.error('Donation error:', error);
-            errorDiv.textContent = error.message || 'Failed to process donation. Please try again.';
+            errorDiv.innerHTML = `
+                <strong>Unable to process donation</strong><br>
+                ${error.message || 'Failed to connect to payment processor.'}<br>
+                <small style="display: block; margin-top: 10px;">
+                    If you have an ad blocker enabled, please try:
+                    <ul style="text-align: left; margin-top: 5px;">
+                        <li>Disabling your ad blocker for this site</li>
+                        <li>Using a different browser</li>
+                        <li>Opening this page in an incognito/private window</li>
+                    </ul>
+                </small>
+            `;
             errorDiv.style.display = 'block';
             donateBtn.disabled = false;
             loadingDiv.style.display = 'none';
