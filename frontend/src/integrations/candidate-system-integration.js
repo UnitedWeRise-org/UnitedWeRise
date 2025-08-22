@@ -1887,12 +1887,18 @@ class CandidateSystemIntegration {
             
             // Debug: Check if Step 3 fields are visible
             const step3Fields = ['positionTitle', 'positionLevel', 'electionDate', 'campaignName'];
-            console.log('🔍 Step 3 field visibility:', step3Fields.map(id => ({
-                id: id,
-                exists: !!document.getElementById(id),
-                visible: document.getElementById(id)?.offsetParent !== null,
-                value: document.getElementById(id)?.value
-            })));
+            const fieldStatus = step3Fields.map(id => {
+                const element = document.getElementById(id);
+                return {
+                    id: id,
+                    exists: !!element,
+                    visible: element?.offsetParent !== null,
+                    value: element?.value || '',
+                    display: element ? window.getComputedStyle(element).display : 'none',
+                    parentVisible: element?.parentElement?.offsetParent !== null
+                };
+            });
+            console.log('🔍 Step 3 field visibility (expanded):', fieldStatus);
         }
         
         // Update navigation buttons
