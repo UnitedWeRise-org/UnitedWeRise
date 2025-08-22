@@ -1165,12 +1165,12 @@ class CandidateSystemIntegration {
                                         <div class="office-card recommended" data-level="state">
                                             <h5>State Office</h5>
                                             <div class="office-price">$200</div>
-                                            <div class="office-examples">US House • Governor • Attorney General</div>
+                                            <div class="office-examples">Governor • Lt. Governor • Attorney General</div>
                                         </div>
                                         <div class="office-card" data-level="federal">
                                             <h5>Federal Office</h5>
                                             <div class="office-price">$400</div>
-                                            <div class="office-examples">US Senate • Lt. Governor</div>
+                                            <div class="office-examples">US House • US Senate</div>
                                         </div>
                                         <div class="office-card presidential" data-level="presidential">
                                             <h5>Presidential</h5>
@@ -1880,6 +1880,9 @@ class CandidateSystemIntegration {
         if (prevBtn) prevBtn.style.display = this.currentStep === 1 ? 'none' : 'inline-block';
         if (nextBtn) nextBtn.style.display = this.currentStep === 3 ? 'none' : 'inline-block';
         if (submitBtn) submitBtn.style.display = this.currentStep === 3 ? 'inline-block' : 'none';
+        
+        // Update Next button state based on validation
+        this.updateNextButtonState();
     }
     
     validateCurrentStep() {
@@ -1937,6 +1940,49 @@ class CandidateSystemIntegration {
         return isValid;
     }
     
+    isCurrentStepValid() {
+        // Silent validation check without showing error messages
+        const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
+        const requiredFields = currentStepElement.querySelectorAll('input[required], select[required]');
+        
+        // Check standard required fields
+        for (let field of requiredFields) {
+            if (field.type === 'checkbox') {
+                if (!field.checked) return false;
+            } else {
+                if (!field.value.trim()) return false;
+            }
+        }
+        
+        // Special validation for Step 2 (Verification & Payment)
+        if (this.currentStep === 2) {
+            if (!this.idmeVerified) return false;
+            if (!this.selectedOfficeLevel) return false;
+            if (!document.getElementById('candidateAgreement')?.checked) return false;
+        }
+        
+        return true;
+    }
+    
+    updateNextButtonState() {
+        const nextBtn = document.getElementById('nextStep');
+        if (!nextBtn) return;
+        
+        const isValid = this.isCurrentStepValid();
+        
+        if (isValid) {
+            nextBtn.style.background = '#ff6b35';
+            nextBtn.style.cursor = 'pointer';
+            nextBtn.style.opacity = '1';
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.style.background = '#ccc';
+            nextBtn.style.cursor = 'not-allowed';
+            nextBtn.style.opacity = '0.6';
+            nextBtn.disabled = true;
+        }
+    }
+    
     setupOfficeLevelSelector() {
         const officeCards = document.querySelectorAll('.office-card');
         officeCards.forEach(card => {
@@ -1945,6 +1991,7 @@ class CandidateSystemIntegration {
                 card.classList.add('selected');
                 this.selectedOfficeLevel = card.dataset.level;
                 this.updateFeeDisplay();
+                this.updateNextButtonState();
             });
         });
         
@@ -1964,6 +2011,25 @@ class CandidateSystemIntegration {
                 this.updateFeeDisplay();
             });
         }
+        
+        // Add listener for candidate agreement checkbox
+        const agreementCheckbox = document.getElementById('candidateAgreement');
+        if (agreementCheckbox) {
+            agreementCheckbox.addEventListener('change', () => {
+                this.updateNextButtonState();
+            });
+        }
+        
+        // Add listeners for all form inputs to update button state
+        const allInputs = document.querySelectorAll('#candidateRegistrationForm input, #candidateRegistrationForm select, #candidateRegistrationForm textarea');
+        allInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                this.updateNextButtonState();
+            });
+            input.addEventListener('change', () => {
+                this.updateNextButtonState();
+            });
+        });
     }
     
     updateFeeDisplay() {
@@ -2083,6 +2149,7 @@ class CandidateSystemIntegration {
             verifyBtn.style.background = '#28a745';
             this.idmeVerified = true;
             this.showMessage('ID.me verification completed successfully!');
+            this.updateNextButtonState();
         }, 3000);
     }
     
