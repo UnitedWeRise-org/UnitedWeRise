@@ -1901,13 +1901,20 @@ class CandidateSystemIntegration {
     
     validateCurrentStep() {
         const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
-        const requiredFields = currentStepElement.querySelectorAll('input[required], select[required]');
+        const requiredFields = currentStepElement ? currentStepElement.querySelectorAll('input[required], select[required], textarea[required]') : [];
         
         let isValid = true;
         let errorMessage = 'Please fill in all required fields';
         
-        // Standard field validation
+        // Standard field validation - only for fields in current step
         requiredFields.forEach(field => {
+            // Double-check the field is actually in the current step
+            const fieldStep = field.closest('.form-step')?.getAttribute('data-step');
+            if (fieldStep != this.currentStep) {
+                console.log('🔍 Skipping validation for field from different step:', field.id, 'from step', fieldStep);
+                return; // Skip this field
+            }
+            
             if (field.type === 'checkbox') {
                 if (!field.checked) {
                     field.style.outline = '2px solid #dc3545';
@@ -1948,7 +1955,10 @@ class CandidateSystemIntegration {
         }
         
         if (!isValid) {
+            console.log('🔍 Click validation failed:', errorMessage);
             this.showMessage(errorMessage);
+        } else {
+            console.log('🔍 Click validation passed for step', this.currentStep);
         }
         
         return isValid;
@@ -1961,35 +1971,23 @@ class CandidateSystemIntegration {
         // Only get required fields that are within the current active step
         const requiredFields = currentStepElement ? currentStepElement.querySelectorAll('input[required], select[required], textarea[required]') : [];
         
-        // Debug: Log required fields found
-        if (this.currentStep === 2) {
-            console.log('🔍 Required fields in Step 2:', Array.from(requiredFields).map(f => ({
-                id: f.id,
-                type: f.type,
-                name: f.name,
-                value: f.value,
-                checked: f.checked,
-                parentStep: f.closest('.form-step')?.getAttribute('data-step')
-            })));
-        }
+        // Debug: Only log when debugging is needed
+        // console.log('🔍 Required fields in Step', this.currentStep, ':', Array.from(requiredFields).length);
         
         // Check standard required fields only within current step
         for (let field of requiredFields) {
             // Double-check the field is actually in the current step
             const fieldStep = field.closest('.form-step')?.getAttribute('data-step');
             if (fieldStep != this.currentStep) {
-                console.log('🔍 Skipping field from different step:', field.id, 'from step', fieldStep);
                 continue;
             }
             
             if (field.type === 'checkbox') {
                 if (!field.checked) {
-                    console.log('🔍 Checkbox validation failed:', field.id, field.checked);
                     return false;
                 }
             } else {
                 if (!field.value.trim()) {
-                    console.log('🔍 Field validation failed:', field.id, field.value);
                     return false;
                 }
             }
@@ -1997,21 +1995,11 @@ class CandidateSystemIntegration {
         
         // Special validation for Step 2 (Verification & Payment)
         if (this.currentStep === 2) {
-            if (!this.idmeVerified) {
-                console.log('🔍 ID.me verification failed');
-                return false;
-            }
-            if (!this.selectedOfficeLevel) {
-                console.log('🔍 Office level selection failed');
-                return false;
-            }
-            if (!document.getElementById('candidateAgreement')?.checked) {
-                console.log('🔍 Candidate agreement failed');
-                return false;
-            }
+            if (!this.idmeVerified) return false;
+            if (!this.selectedOfficeLevel) return false;
+            if (!document.getElementById('candidateAgreement')?.checked) return false;
         }
         
-        console.log('🔍 All validations passed for step', this.currentStep);
         return true;
     }
     
@@ -2021,16 +2009,8 @@ class CandidateSystemIntegration {
         
         const isValid = this.isCurrentStepValid();
         
-        // Debug logging for Step 2
-        if (this.currentStep === 2) {
-            console.log('🔍 Step 2 Validation Debug:', {
-                idmeVerified: this.idmeVerified,
-                selectedOfficeLevel: this.selectedOfficeLevel,
-                candidateAgreementChecked: document.getElementById('candidateAgreement')?.checked,
-                candidateAgreementExists: !!document.getElementById('candidateAgreement'),
-                isValid: isValid
-            });
-        }
+        // Debug logging for Step 2 (only when needed)
+        // console.log('🔍 Button state:', isValid ? 'enabled' : 'disabled');
         
         if (isValid) {
             nextBtn.style.background = '#ff6b35';
