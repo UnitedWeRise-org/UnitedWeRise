@@ -63,7 +63,7 @@ export class StripeService {
   }
 
   /**
-   * Create a tax-deductible donation
+   * Create a tax-deductible donation using Payment Links (most adblocker-resistant)
    */
   static async createDonation(params: {
     userId: string;
@@ -95,7 +95,7 @@ export class StripeService {
 
     try {
       if (params.isRecurring && params.recurringInterval) {
-        // Create subscription for recurring donation
+        // Create recurring price
         const price = await stripe.prices.create({
           unit_amount: params.amount,
           currency: 'usd',
@@ -104,6 +104,7 @@ export class StripeService {
           },
           product_data: {
             name: 'United We Rise Recurring Donation',
+            description: 'Monthly recurring donation to support civic engagement',
             metadata: {
               taxDeductible: 'true',
               donationType: params.donationType
@@ -111,17 +112,20 @@ export class StripeService {
           }
         });
 
-        // Return checkout session for subscription
-        const session = await stripe.checkout.sessions.create({
-          customer: customerId,
-          payment_method_types: ['card'],
+        // Create Payment Link for subscription (most adblocker-resistant)
+        const paymentLink = await stripe.paymentLinks.create({
           line_items: [{
             price: price.id,
             quantity: 1
           }],
-          mode: 'subscription',
-          success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
+          after_completion: {
+            type: 'redirect',
+            redirect: {
+              url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}`
+            }
+          },
+          automatic_tax: { enabled: true },
+          allow_promotion_codes: true,
           metadata: {
             paymentId: payment.id,
             userId: params.userId,
@@ -129,39 +133,46 @@ export class StripeService {
           }
         });
 
-        // Update payment with Stripe session ID
+        // Update payment with Payment Link ID
         await prisma.payment.update({
           where: { id: payment.id },
-          data: { stripePaymentIntentId: session.id }
+          data: { stripePaymentIntentId: paymentLink.id }
         });
 
         return {
           paymentId: payment.id,
-          checkoutUrl: session.url,
-          sessionId: session.id
+          checkoutUrl: paymentLink.url,
+          paymentLinkId: paymentLink.id
         };
       } else {
-        // One-time donation
-        const session = await stripe.checkout.sessions.create({
-          customer: customerId,
-          payment_method_types: ['card'],
+        // Create one-time price
+        const price = await stripe.prices.create({
+          unit_amount: params.amount,
+          currency: 'usd',
+          product_data: {
+            name: 'One-time Donation to United We Rise',
+            description: 'Your tax-deductible donation supports civic engagement and democratic participation',
+            metadata: {
+              taxDeductible: 'true',
+              donationType: params.donationType
+            }
+          }
+        });
+
+        // Create Payment Link for one-time donation (most adblocker-resistant)
+        const paymentLink = await stripe.paymentLinks.create({
           line_items: [{
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'One-time Donation to United We Rise',
-                description: 'Your tax-deductible donation supports civic engagement',
-                metadata: {
-                  taxDeductible: 'true'
-                }
-              },
-              unit_amount: params.amount
-            },
+            price: price.id,
             quantity: 1
           }],
-          mode: 'payment',
-          success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
+          after_completion: {
+            type: 'redirect',
+            redirect: {
+              url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}`
+            }
+          },
+          automatic_tax: { enabled: true },
+          allow_promotion_codes: true,
           metadata: {
             paymentId: payment.id,
             userId: params.userId,
@@ -169,16 +180,16 @@ export class StripeService {
           }
         });
 
-        // Update payment with Stripe session ID
+        // Update payment with Payment Link ID
         await prisma.payment.update({
           where: { id: payment.id },
-          data: { stripePaymentIntentId: session.id }
+          data: { stripePaymentIntentId: paymentLink.id }
         });
 
         return {
           paymentId: payment.id,
-          checkoutUrl: session.url,
-          sessionId: session.id
+          checkoutUrl: paymentLink.url,
+          paymentLinkId: paymentLink.id
         };
       }
     } catch (error) {
@@ -331,6 +342,16 @@ export class StripeService {
           await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
           break;
         
+        case 'invoice.payment_succeeded':
+          // Handle successful payments from Payment Links
+          await this.handleInvoicePaymentSuccess(event.data.object as Stripe.Invoice);
+          break;
+        
+        case 'invoice.payment_failed':
+          // Handle failed payments from Payment Links  
+          await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+          break;
+        
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
           await this.handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
@@ -465,6 +486,72 @@ export class StripeService {
   private static async handleSubscriptionCancelled(subscription: Stripe.Subscription) {
     // Handle recurring donation cancellation
     console.log('Subscription cancelled:', subscription.id);
+  }
+
+  /**
+   * Handle successful invoice payments from Payment Links
+   */
+  private static async handleInvoicePaymentSuccess(invoice: Stripe.Invoice) {
+    // Find payment by metadata or charge
+    if (invoice.charge && typeof invoice.charge === 'string') {
+      const charge = await stripe.charges.retrieve(invoice.charge);
+      const paymentId = charge.metadata?.paymentId;
+      
+      if (paymentId) {
+        const payment = await prisma.payment.findUnique({
+          where: { id: paymentId }
+        });
+
+        if (payment) {
+          await prisma.payment.update({
+            where: { id: paymentId },
+            data: {
+              status: PaymentStatus.COMPLETED,
+              processedAt: new Date(),
+              stripeChargeId: invoice.charge
+            }
+          });
+
+          // Generate receipt
+          await this.generateReceipt(paymentId);
+
+          // Handle campaign updates, candidate registration, etc.
+          if (payment.candidateRegistrationId) {
+            await prisma.candidateRegistration.update({
+              where: { id: payment.candidateRegistrationId },
+              data: { status: 'PENDING_VERIFICATION' }
+            });
+          }
+
+          if (payment.campaignId) {
+            await prisma.donationCampaign.update({
+              where: { id: payment.campaignId },
+              data: { raised: { increment: payment.amount } }
+            });
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle failed invoice payments from Payment Links
+   */
+  private static async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+    if (invoice.charge && typeof invoice.charge === 'string') {
+      const charge = await stripe.charges.retrieve(invoice.charge);
+      const paymentId = charge.metadata?.paymentId;
+      
+      if (paymentId) {
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: PaymentStatus.FAILED,
+            failureReason: invoice.status_transitions?.finalized_at ? 'Payment failed' : 'Payment not completed'
+          }
+        });
+      }
+    }
   }
 
   /**
