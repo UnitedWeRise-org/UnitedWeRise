@@ -1866,6 +1866,20 @@ class CandidateSystemIntegration {
             step.classList.toggle('active', index + 1 === this.currentStep);
         });
         
+        // Special handling for Step 2 (Verification & Payment)
+        if (this.currentStep === 2) {
+            // Set up candidate agreement checkbox listener when step 2 is displayed
+            setTimeout(() => {
+                const agreementCheckbox = document.getElementById('candidateAgreement');
+                if (agreementCheckbox && !agreementCheckbox.hasAttribute('data-listener-added')) {
+                    agreementCheckbox.addEventListener('change', () => {
+                        this.updateNextButtonState();
+                    });
+                    agreementCheckbox.setAttribute('data-listener-added', 'true');
+                }
+            }, 100);
+        }
+        
         // Special handling for Step 3 (Campaign Info)
         if (this.currentStep === 3) {
             this.populateOfficeOptionsBasedOnPaymentLevel();
@@ -1970,6 +1984,17 @@ class CandidateSystemIntegration {
         
         const isValid = this.isCurrentStepValid();
         
+        // Debug logging for Step 2
+        if (this.currentStep === 2) {
+            console.log('🔍 Step 2 Validation Debug:', {
+                idmeVerified: this.idmeVerified,
+                selectedOfficeLevel: this.selectedOfficeLevel,
+                candidateAgreementChecked: document.getElementById('candidateAgreement')?.checked,
+                candidateAgreementExists: !!document.getElementById('candidateAgreement'),
+                isValid: isValid
+            });
+        }
+        
         if (isValid) {
             nextBtn.style.background = '#ff6b35';
             nextBtn.style.cursor = 'pointer';
@@ -2012,13 +2037,6 @@ class CandidateSystemIntegration {
             });
         }
         
-        // Add listener for candidate agreement checkbox
-        const agreementCheckbox = document.getElementById('candidateAgreement');
-        if (agreementCheckbox) {
-            agreementCheckbox.addEventListener('change', () => {
-                this.updateNextButtonState();
-            });
-        }
         
         // Add listeners for all form inputs to update button state
         const allInputs = document.querySelectorAll('#candidateRegistrationForm input, #candidateRegistrationForm select, #candidateRegistrationForm textarea');
