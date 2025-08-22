@@ -1053,14 +1053,10 @@ class CandidateSystemIntegration {
                         </div>
                         <div class="step" data-step="2">
                             <div class="step-number">2</div>
-                            <span>Verification</span>
+                            <span>Verification & Payment</span>
                         </div>
                         <div class="step" data-step="3">
                             <div class="step-number">3</div>
-                            <span>Payment</span>
-                        </div>
-                        <div class="step" data-step="4">
-                            <div class="step-number">4</div>
                             <span>Campaign Info</span>
                         </div>
                     </div>
@@ -1120,9 +1116,9 @@ class CandidateSystemIntegration {
                             </div>
                         </div>
                         
-                        <!-- Step 2: Verification -->
+                        <!-- Step 2: Verification & Payment -->
                         <div class="form-step" data-step="2">
-                            <h4>🔐 Identity Verification</h4>
+                            <h4>🔐 Identity Verification & Payment</h4>
                             <div class="verification-section">
                                 <div class="verification-card">
                                     <div class="verification-icon">🆔</div>
@@ -1142,11 +1138,8 @@ class CandidateSystemIntegration {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Step 3: Payment -->
-                        <div class="form-step" data-step="3">
-                            <h4>💳 Registration Payment</h4>
+                            
+                            <h4 style="margin-top: 1rem;">💳 Registration Payment</h4>
                             <div class="nonprofit-message">
                                 <div class="nonprofit-badge">
                                     <span class="badge-icon">💚</span>
@@ -1204,13 +1197,6 @@ class CandidateSystemIntegration {
                                         </div>
                                     </div>
                                     
-                                    <div class="community-endorsement-info">
-                                        <div class="endorsement-badge">
-                                            <span class="badge-icon">👥</span>
-                                            <strong>Community Endorsement Discount:</strong> Get 50% off with 10+ community endorsements
-                                        </div>
-                                        <small>Gather endorsements from community members to demonstrate grassroots support</small>
-                                    </div>
                                 </div>
                                 
                                 <div class="selected-office" id="selectedOfficeInfo">
@@ -1219,10 +1205,6 @@ class CandidateSystemIntegration {
                                         <div class="fee-line">
                                             <span>Base Fee:</span>
                                             <span id="baseFee">$0.00</span>
-                                        </div>
-                                        <div class="fee-line discount" id="discountLine" style="display: none;">
-                                            <span>Community Discount (50%):</span>
-                                            <span id="discountAmount">-$0.00</span>
                                         </div>
                                         <div class="fee-line total">
                                             <span><strong>Total Due:</strong></span>
@@ -1233,8 +1215,8 @@ class CandidateSystemIntegration {
                             </div>
                         </div>
                         
-                        <!-- Step 4: Campaign Info -->
-                        <div class="form-step" data-step="4">
+                        <!-- Step 3: Campaign Info -->
+                        <div class="form-step" data-step="3">
                             <h4>🏗️ Position & Campaign Details</h4>
                             <div class="payment-level-info">
                                 <div class="paid-level-badge">
@@ -1479,8 +1461,9 @@ class CandidateSystemIntegration {
                 background: #f8f9fa;
                 border: 2px solid #e9ecef;
                 border-radius: 12px;
-                padding: 1.25rem;
+                padding: 1rem;
                 text-align: center;
+                margin-bottom: 1rem;
             }
             
             .verification-icon {
@@ -1532,8 +1515,8 @@ class CandidateSystemIntegration {
                 background: linear-gradient(135deg, #e8f5e8, #f0fff0);
                 border: 2px solid #28a745;
                 border-radius: 12px;
-                padding: 1.5rem;
-                margin-bottom: 2rem;
+                padding: 1rem;
+                margin-bottom: 1rem;
                 text-align: center;
             }
             
@@ -1542,7 +1525,7 @@ class CandidateSystemIntegration {
                 align-items: center;
                 justify-content: center;
                 gap: 0.5rem;
-                margin-bottom: 1rem;
+                margin-bottom: 0.5rem;
                 color: #28a745;
                 font-size: 1.1rem;
             }
@@ -1815,7 +1798,7 @@ class CandidateSystemIntegration {
     }
     
     nextStep() {
-        if (this.currentStep < 4) {
+        if (this.currentStep < 3) {
             if (this.validateCurrentStep()) {
                 this.currentStep++;
                 this.updateStepDisplay();
@@ -1841,8 +1824,8 @@ class CandidateSystemIntegration {
             step.classList.toggle('active', index + 1 === this.currentStep);
         });
         
-        // Special handling for Step 4 (Campaign Info)
-        if (this.currentStep === 4) {
+        // Special handling for Step 3 (Campaign Info)
+        if (this.currentStep === 3) {
             this.populateOfficeOptionsBasedOnPaymentLevel();
             this.updatePaidLevelDisplay();
         }
@@ -1853,8 +1836,8 @@ class CandidateSystemIntegration {
         const submitBtn = document.getElementById('submitRegistration');
         
         if (prevBtn) prevBtn.style.display = this.currentStep === 1 ? 'none' : 'inline-block';
-        if (nextBtn) nextBtn.style.display = this.currentStep === 4 ? 'none' : 'inline-block';
-        if (submitBtn) submitBtn.style.display = this.currentStep === 4 ? 'inline-block' : 'none';
+        if (nextBtn) nextBtn.style.display = this.currentStep === 3 ? 'none' : 'inline-block';
+        if (submitBtn) submitBtn.style.display = this.currentStep === 3 ? 'inline-block' : 'none';
     }
     
     validateCurrentStep() {
@@ -1919,14 +1902,6 @@ class CandidateSystemIntegration {
         const selectedOffice = officeLevels[this.selectedOfficeLevel];
         const baseFee = selectedOffice.fee;
         let totalFee = baseFee;
-        let hasDiscount = false;
-        
-        // Check for community endorsement discount (simplified - in real implementation would check actual endorsements)
-        const communityEndorsements = 0; // TODO: Get from form or API
-        if (communityEndorsements >= 10) {
-            totalFee = baseFee * 0.5;
-            hasDiscount = true;
-        }
         
         // Check for hardship waiver request
         const hardshipRequested = document.getElementById('requestHardshipWaiver')?.checked;
@@ -1935,13 +1910,6 @@ class CandidateSystemIntegration {
         document.getElementById('selectedOfficeName').textContent = selectedOffice.name;
         document.getElementById('baseFee').textContent = `$${baseFee.toFixed(2)}`;
         
-        const discountLine = document.getElementById('discountLine');
-        if (hasDiscount) {
-            document.getElementById('discountAmount').textContent = `-$${(baseFee * 0.5).toFixed(2)}`;
-            discountLine.style.display = 'flex';
-        } else {
-            discountLine.style.display = 'none';
-        }
         
         if (hardshipRequested) {
             document.getElementById('totalFee').innerHTML = '<strong>Waiver Requested</strong>';
