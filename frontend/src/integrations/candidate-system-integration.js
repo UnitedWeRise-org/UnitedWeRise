@@ -1212,6 +1212,16 @@ class CandidateSystemIntegration {
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <div class="candidate-agreement">
+                                    <h6>📝 Candidate Agreement</h6>
+                                    <label class="agreement-checkbox">
+                                        <input type="checkbox" id="candidateAgreement" name="candidateAgreement" required>
+                                        <div class="agreement-text">
+                                            <strong>I confirm in good faith that I am running for the selected office.</strong> I acknowledge that as part of my Candidate registration, I must confirm that I continue to be eligible for this race, and will meet all filing deadlines. I acknowledge that if I fail to meet a deadline, my candidate profile may be revoked. Any revocation may be appealed in writing. I further agree to abide by all of the rules of UnitedWeRise and am in compliance with all federal, state, and local election laws and regulations.
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         
@@ -1684,6 +1694,38 @@ class CandidateSystemIntegration {
                 margin-top: 2rem;
             }
             
+            .candidate-agreement {
+                background: #f8f9fa;
+                border: 2px solid #007bff;
+                border-radius: 12px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            
+            .candidate-agreement h6 {
+                margin: 0 0 0.75rem 0;
+                color: #007bff;
+                font-size: 1rem;
+            }
+            
+            .agreement-checkbox {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.75rem;
+                cursor: pointer;
+            }
+            
+            .agreement-checkbox input[type="checkbox"] {
+                margin-top: 0.25rem;
+                flex-shrink: 0;
+            }
+            
+            .agreement-text {
+                font-size: 0.9rem;
+                line-height: 1.4;
+                color: #333;
+            }
+            
             .fee-breakdown {
                 margin-top: 1rem;
             }
@@ -1845,17 +1887,51 @@ class CandidateSystemIntegration {
         const requiredFields = currentStepElement.querySelectorAll('input[required], select[required]');
         
         let isValid = true;
+        let errorMessage = 'Please fill in all required fields';
+        
+        // Standard field validation
         requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                field.style.borderColor = '#dc3545';
-                isValid = false;
+            if (field.type === 'checkbox') {
+                if (!field.checked) {
+                    field.style.outline = '2px solid #dc3545';
+                    isValid = false;
+                } else {
+                    field.style.outline = 'none';
+                }
             } else {
-                field.style.borderColor = '#e9ecef';
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#dc3545';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#e9ecef';
+                }
             }
         });
         
+        // Special validation for Step 2 (Verification & Payment)
+        if (this.currentStep === 2) {
+            // Check ID.me verification
+            if (!this.idmeVerified) {
+                errorMessage = 'Please complete ID.me verification first';
+                isValid = false;
+            }
+            // Check office level selection
+            else if (!this.selectedOfficeLevel) {
+                errorMessage = 'Please select an office level for payment';
+                isValid = false;
+            }
+            // Check candidate agreement checkbox
+            else if (!document.getElementById('candidateAgreement')?.checked) {
+                errorMessage = 'Please accept the candidate agreement to proceed';
+                document.getElementById('candidateAgreement').style.outline = '2px solid #dc3545';
+                isValid = false;
+            } else {
+                document.getElementById('candidateAgreement').style.outline = 'none';
+            }
+        }
+        
         if (!isValid) {
-            this.showMessage('Please fill in all required fields');
+            this.showMessage(errorMessage);
         }
         
         return isValid;
