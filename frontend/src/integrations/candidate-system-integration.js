@@ -1296,14 +1296,14 @@ class CandidateSystemIntegration {
                         </div>
                     </form>
                     
-                    <div class="form-navigation">
-                        <button type="button" class="nav-btn prev" id="prevStep" onclick="candidateSystemIntegration.previousStep()">
+                    <div class="form-navigation" style="display: flex !important; justify-content: space-between; padding: 2rem; border-top: 1px solid #e9ecef; margin-top: 2rem; background: white;">
+                        <button type="button" class="nav-btn prev" id="prevStep" onclick="candidateSystemIntegration.previousStep()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             ← Previous
                         </button>
-                        <button type="button" class="nav-btn next" id="nextStep" onclick="candidateSystemIntegration.nextStep()">
+                        <button type="button" class="nav-btn next" id="nextStep" onclick="candidateSystemIntegration.nextStep()" style="padding: 0.75rem 1.5rem; background: #ff6b35; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             Next →
                         </button>
-                        <button type="button" class="nav-btn submit" id="submitRegistration" onclick="candidateSystemIntegration.submitRegistration()">
+                        <button type="button" class="nav-btn submit" id="submitRegistration" onclick="candidateSystemIntegration.submitRegistration()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">
                             🏆 Complete Registration
                         </button>
                     </div>
@@ -1841,9 +1841,9 @@ class CandidateSystemIntegration {
         const nextBtn = document.getElementById('nextStep');
         const submitBtn = document.getElementById('submitRegistration');
         
-        if (prevBtn) prevBtn.style.display = this.currentStep === 1 ? 'none' : 'block';
-        if (nextBtn) nextBtn.style.display = this.currentStep === 4 ? 'none' : 'block';
-        if (submitBtn) submitBtn.style.display = this.currentStep === 4 ? 'block' : 'none';
+        if (prevBtn) prevBtn.style.display = this.currentStep === 1 ? 'none' : 'inline-block';
+        if (nextBtn) nextBtn.style.display = this.currentStep === 4 ? 'none' : 'inline-block';
+        if (submitBtn) submitBtn.style.display = this.currentStep === 4 ? 'inline-block' : 'none';
     }
     
     validateCurrentStep() {
