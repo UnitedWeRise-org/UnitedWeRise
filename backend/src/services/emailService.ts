@@ -444,6 +444,144 @@ The United We Rise Moderation Team`,
     return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
   }
 
+  // Candidate waiver approval template
+  generateWaiverApprovalTemplate(email: string, candidateName: string, officeLevel: string, finalFee: number, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+    const isFullWaiver = finalFee === 0;
+    
+    return {
+      to: email,
+      subject: '✅ Fee Waiver Approved - United We Rise',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Fee Waiver Approved</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">🎉 Waiver Approved!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Candidate Registration - United We Rise</p>
+          </div>
+          
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Great news, ${name}!</h2>
+            
+            <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #155724; font-weight: 600;">
+                Your hardship fee waiver has been approved for ${officeLevel} level candidacy.
+              </p>
+            </div>
+            
+            <p><strong>Final Registration Fee:</strong> ${isFullWaiver ? 'FREE (100% waiver)' : `$${finalFee} (reduced from original fee)`}</p>
+            
+            ${isFullWaiver ? `
+              <p>Your registration is now <strong>complete</strong>! You can begin using your candidate profile immediately.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL}/candidate-dashboard" 
+                   style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                  Access Your Candidate Dashboard
+                </a>
+              </div>
+            ` : `
+              <p>Please complete your registration by paying the reduced fee:</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL}/candidate/payment" 
+                   style="background: #4b5c09; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                  Pay $${finalFee} to Complete Registration
+                </a>
+              </div>
+            `}
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Next Steps:</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #666;">
+                <li>Complete your candidate profile</li>
+                <li>Verify all required documents</li>
+                <li>Begin engaging with constituents</li>
+                <li>Access campaign tools and resources</li>
+              </ul>
+            </div>
+            
+            <p style="font-size: 14px; color: #666;">
+              Questions? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+            </p>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  }
+
+  // Candidate waiver denial template
+  generateWaiverDenialTemplate(email: string, candidateName: string, officeLevel: string, originalFee: number, denialReason?: string, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+    
+    return {
+      to: email,
+      subject: '📋 Fee Waiver Decision - United We Rise',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Fee Waiver Decision</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">📋 Waiver Decision</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Candidate Registration - United We Rise</p>
+          </div>
+          
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Hello ${name},</h2>
+            
+            <p>Thank you for your interest in becoming a candidate on United We Rise. We have carefully reviewed your hardship fee waiver request.</p>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #856404; font-weight: 600;">
+                Unfortunately, your fee waiver request was not approved at this time.
+              </p>
+              ${denialReason ? `<p style="margin: 10px 0 0 0; color: #856404; font-size: 14px;">Reason: ${denialReason}</p>` : ''}
+            </div>
+            
+            <p><strong>Registration Fee Required:</strong> $${originalFee} (${officeLevel} level)</p>
+            
+            <p>You can still complete your candidate registration by paying the standard fee:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/candidate/payment" 
+                 style="background: #4b5c09; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                Pay $${originalFee} to Complete Registration
+              </a>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Other Options:</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #666;">
+                <li><strong>Community Endorsement:</strong> Get 10+ endorsements for 50% fee reduction</li>
+                <li><strong>Reapply Later:</strong> You can request another waiver in 30 days</li>
+                <li><strong>Appeal:</strong> Contact support if you believe this decision was in error</li>
+              </ul>
+            </div>
+            
+            <p style="font-size: 14px; color: #666;">
+              Questions or want to appeal? Contact us at <a href="mailto:waivers@unitedwerise.org" style="color: #4b5c09;">waivers@unitedwerise.org</a>
+            </p>
+            
+            <p style="font-size: 14px; color: #666;">
+              <em>Note: Your registration will remain in our system for 60 days. You can complete payment anytime within this period.</em>
+            </p>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  }
+
   // Test email service
   async testConnection(): Promise<boolean> {
     if (!this.transporter) {

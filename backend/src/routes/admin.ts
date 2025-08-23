@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { requireTOTPForAdmin } from '../middleware/totpAuth';
 import { moderationService } from '../services/moderationService';
+import { emailService } from '../services/emailService';
 import { body, query, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { SecurityService } from '../services/securityService';
@@ -1546,7 +1547,44 @@ router.post('/candidates/:id/waiver', requireAuth, requireAdmin, requireTOTPForA
       data: updateData
     });
 
-    // TODO: Send waiver decision email
+    // Send waiver decision email
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: registration.userId },
+        select: { email: true, firstName: true }
+      });
+
+      if (user) {
+        const candidateName = `${registration.firstName} ${registration.lastName}`;
+        const officeLevelName = registration.officeLevel.charAt(0).toUpperCase() + registration.officeLevel.slice(1);
+        
+        let emailTemplate;
+        if (action === 'approve') {
+          emailTemplate = emailService.generateWaiverApprovalTemplate(
+            user.email,
+            candidateName,
+            officeLevelName,
+            updatedRegistration.registrationFee,
+            user.firstName
+          );
+        } else {
+          emailTemplate = emailService.generateWaiverDenialTemplate(
+            user.email,
+            candidateName,
+            officeLevelName,
+            registration.originalFee,
+            notes,
+            user.firstName
+          );
+        }
+        
+        await emailService.sendEmail(emailTemplate);
+        console.log(`Waiver ${action} email sent to ${user.email}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send waiver decision email:', emailError);
+      // Don't fail the entire request if email fails
+    }
     
     res.json({
       success: true,
