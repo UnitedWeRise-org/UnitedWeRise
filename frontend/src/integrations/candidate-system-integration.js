@@ -1405,6 +1405,8 @@ class CandidateSystemIntegration {
             .form-step {
                 display: none;
                 animation: fadeIn 0.3s ease;
+                min-height: 400px;
+                width: 100%;
             }
             
             .form-step.active {
@@ -2299,7 +2301,13 @@ class CandidateSystemIntegration {
                     document.querySelector('.candidate-registration-modal').remove();
                 }, 2000);
             } else {
-                throw new Error(result.message || 'Registration failed');
+                console.log('🔍 Registration failed - Response:', {
+                    ok: response.ok,
+                    status: response.status,
+                    statusText: response.statusText,
+                    result: result
+                });
+                throw new Error(result.message || result.error || 'Registration failed');
             }
             
         } catch (error) {
