@@ -1890,40 +1890,93 @@ class CandidateSystemIntegration {
         
         // Special handling for Step 3 (Campaign Info)
         if (this.currentStep === 3) {
-            this.populateOfficeOptionsBasedOnPaymentLevel();
-            this.updatePaidLevelDisplay();
-            
-            // Debug: Check if Step 3 fields are visible
-            const step3Fields = ['positionTitle', 'positionLevel', 'electionDate', 'campaignName'];
-            const fieldStatus = step3Fields.map(id => {
-                const element = document.getElementById(id);
-                return {
-                    id: id,
-                    exists: !!element,
-                    visible: element?.offsetParent !== null,
-                    value: element?.value || '',
-                    display: element ? window.getComputedStyle(element).display : 'none',
-                    parentVisible: element?.parentElement?.offsetParent !== null
-                };
-            });
-            console.log('🔍 Step 3 field visibility (expanded):');
-            fieldStatus.forEach(field => {
-                console.log(`  ${field.id}: exists=${field.exists}, visible=${field.visible}, display="${field.display}", value="${field.value}"`);
-            });
-            
-            // Force fix for Step 3 visibility issue
+            // Instead of trying to fix CSS, completely rebuild Step 3 content
+            console.log('🔄 Rebuilding Step 3 content from scratch...');
             const step3Container = document.querySelector('.form-step[data-step="3"]');
             if (step3Container) {
-                console.log('🔍 Forcing Step 3 container to be visible...');
-                step3Container.style.cssText += `
-                    display: block !important;
-                    min-height: 500px !important;
-                    width: 100% !important;
-                    visibility: visible !important;
-                    position: relative !important;
-                    z-index: 1 !important;
+                // Clear existing content and rebuild
+                step3Container.innerHTML = `
+                    <h4>🏗️ Position & Campaign Details</h4>
+                    <div class="payment-level-info">
+                        <div class="paid-level-badge">
+                            <span class="badge-icon">💳</span>
+                            <strong>Payment Completed:</strong> <span id="paidOfficeLevelName">${this.currentPaymentLevel || 'Federal'}</span>
+                        </div>
+                        <p>You can select any office that falls under your paid level or lower. Higher level offices require additional payment.</p>
+                    </div>
+                    
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label for="positionTitle" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Office Title *</label>
+                            <input type="text" id="positionTitle" name="positionTitle" 
+                                   placeholder="e.g., Mayor, City Council, State Senator"
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                                   value="President of the United States" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="positionLevel" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Office Level *</label>
+                            <select id="positionLevel" name="positionLevel" 
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+                                <option value="federal">Federal</option>
+                                <option value="state">State</option>
+                                <option value="local">Local</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="electionDate" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Election Date *</label>
+                            <input type="date" id="electionDate" name="electionDate" 
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                                   value="2025-11-05" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="campaignName" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Campaign Name</label>
+                            <input type="text" id="campaignName" name="campaignName" 
+                                   placeholder="e.g., Smith for Mayor"
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                                   value="Campaign for Unity">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="campaignWebsite" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Campaign Website</label>
+                        <input type="url" id="campaignWebsite" name="campaignWebsite" 
+                               placeholder="https://yourwebsite.com"
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                               value="">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="campaignSlogan" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Campaign Slogan</label>
+                        <input type="text" id="campaignSlogan" name="campaignSlogan" 
+                               placeholder="e.g., Together We Rise"
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                               value="Together We Rise">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="campaignDescription" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Campaign Description</label>
+                        <textarea id="campaignDescription" name="campaignDescription" rows="3" 
+                                  placeholder="Brief description of your campaign and key issues..."
+                                  style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; resize: vertical;">A campaign focused on unity, progress, and bringing positive change to our community.</textarea>
+                    </div>
                 `;
+                
+                // Force visibility with aggressive CSS
+                step3Container.style.cssText = `
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-height: 600px !important;
+                    width: 100% !important;
+                    position: relative !important;
+                    z-index: 10 !important;
+                `;
+                
+                console.log('✅ Step 3 rebuilt with inline styles and forced visibility');
             }
+            
+            // Update paid level display
+            this.updatePaidLevelDisplay();
         }
         
         // Update navigation buttons
