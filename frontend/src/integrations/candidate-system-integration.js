@@ -2344,6 +2344,7 @@ class CandidateSystemIntegration {
                     statusText: response.statusText,
                     result: result
                 });
+                console.log('🔍 Backend error details:', JSON.stringify(result, null, 2));
                 throw new Error(result.message || result.error || 'Registration failed');
             }
             

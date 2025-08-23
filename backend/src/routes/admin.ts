@@ -1094,7 +1094,7 @@ router.get('/ai-insights/suggestions', requireAuth, requireAdmin, requireTOTPFor
         category: 'features',
         summary: 'Example: "You shouldn\'t be able to scroll to the end of your Feed, it should populate infinitely"',
         status: 'new',
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        createdAt: new Date('2025-08-19T10:30:00.000Z'), // Fixed historical date
         confidence: 85,
         source: 'example',
         author: 'System',

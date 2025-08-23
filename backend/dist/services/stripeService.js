@@ -59,7 +59,7 @@ class StripeService {
         return customer.id;
     }
     /**
-     * Create a tax-deductible donation
+     * Create a tax-deductible donation using Payment Links (most adblocker-resistant)
      */
     static async createDonation(params) {
         const customerId = await this.getOrCreateCustomer(params.userId);
@@ -82,7 +82,7 @@ class StripeService {
         });
         try {
             if (params.isRecurring && params.recurringInterval) {
-                // Create subscription for recurring donation
+                // Create recurring price
                 const price = await stripe.prices.create({
                     unit_amount: params.amount,
                     currency: 'usd',
@@ -97,71 +97,79 @@ class StripeService {
                         }
                     }
                 });
-                // Return checkout session for subscription
-                const session = await stripe.checkout.sessions.create({
-                    customer: customerId,
-                    payment_method_types: ['card'],
+                // Create Payment Link for subscription (most adblocker-resistant)
+                const paymentLink = await stripe.paymentLinks.create({
                     line_items: [{
                             price: price.id,
                             quantity: 1
                         }],
-                    mode: 'subscription',
-                    success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
+                    after_completion: {
+                        type: 'redirect',
+                        redirect: {
+                            url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}`
+                        }
+                    },
+                    automatic_tax: { enabled: true },
+                    allow_promotion_codes: true,
                     metadata: {
                         paymentId: payment.id,
                         userId: params.userId,
                         taxDeductible: 'true'
                     }
                 });
-                // Update payment with Stripe session ID
+                // Update payment with Payment Link ID
                 await prisma.payment.update({
                     where: { id: payment.id },
-                    data: { stripePaymentIntentId: session.id }
+                    data: { stripePaymentIntentId: paymentLink.id }
                 });
                 return {
                     paymentId: payment.id,
-                    checkoutUrl: session.url,
-                    sessionId: session.id
+                    checkoutUrl: paymentLink.url,
+                    paymentLinkId: paymentLink.id
                 };
             }
             else {
-                // One-time donation
-                const session = await stripe.checkout.sessions.create({
-                    customer: customerId,
-                    payment_method_types: ['card'],
+                // Create one-time price
+                const price = await stripe.prices.create({
+                    unit_amount: params.amount,
+                    currency: 'usd',
+                    product_data: {
+                        name: 'One-time Donation to United We Rise',
+                        metadata: {
+                            taxDeductible: 'true',
+                            donationType: params.donationType
+                        }
+                    }
+                });
+                // Create Payment Link for one-time donation (most adblocker-resistant)
+                const paymentLink = await stripe.paymentLinks.create({
                     line_items: [{
-                            price_data: {
-                                currency: 'usd',
-                                product_data: {
-                                    name: 'One-time Donation to United We Rise',
-                                    description: 'Your tax-deductible donation supports civic engagement',
-                                    metadata: {
-                                        taxDeductible: 'true'
-                                    }
-                                },
-                                unit_amount: params.amount
-                            },
+                            price: price.id,
                             quantity: 1
                         }],
-                    mode: 'payment',
-                    success_url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: process.env.CANCEL_URL || `${process.env.FRONTEND_URL}/donation-cancelled.html`,
+                    after_completion: {
+                        type: 'redirect',
+                        redirect: {
+                            url: process.env.SUCCESS_URL || `${process.env.FRONTEND_URL}/donation-success.html?payment_id=${payment.id}`
+                        }
+                    },
+                    automatic_tax: { enabled: true },
+                    allow_promotion_codes: true,
                     metadata: {
                         paymentId: payment.id,
                         userId: params.userId,
                         taxDeductible: 'true'
                     }
                 });
-                // Update payment with Stripe session ID
+                // Update payment with Payment Link ID
                 await prisma.payment.update({
                     where: { id: payment.id },
-                    data: { stripePaymentIntentId: session.id }
+                    data: { stripePaymentIntentId: paymentLink.id }
                 });
                 return {
                     paymentId: payment.id,
-                    checkoutUrl: session.url,
-                    sessionId: session.id
+                    checkoutUrl: paymentLink.url,
+                    paymentLinkId: paymentLink.id
                 };
             }
         }
@@ -295,6 +303,12 @@ class StripeService {
                     break;
                 case 'payment_intent.payment_failed':
                     await this.handlePaymentFailed(event.data.object);
+                    break;
+                case 'invoice.payment_succeeded':
+                    console.log('Payment Link invoice payment succeeded:', event.data.object);
+                    break;
+                case 'invoice.payment_failed':
+                    console.log('Payment Link invoice payment failed:', event.data.object);
                     break;
                 case 'customer.subscription.created':
                 case 'customer.subscription.updated':

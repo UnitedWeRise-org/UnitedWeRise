@@ -210,10 +210,18 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
         if (!verified) {
             return res.status(400).json({ error: 'Invalid TOTP token or backup code' });
         }
+        // Generate a temporary verification token (valid for 5 minutes)
+        // In production, this should be stored in Redis or a session store
+        const verificationToken = speakeasy.totp({
+            secret: user.totpSecret,
+            encoding: 'base32',
+            step: 300 // 5 minutes
+        });
         res.json({
             success: true,
             data: {
                 verified: true,
+                verificationToken: verificationToken, // Send this for admin access
                 usedBackupCode: usedBackupCode,
                 remainingBackupCodes: usedBackupCode ?
                     user.totpBackupCodes.length - 1 :

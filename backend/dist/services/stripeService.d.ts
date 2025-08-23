@@ -5,7 +5,7 @@ export declare class StripeService {
      */
     static getOrCreateCustomer(userId: string): Promise<string>;
     /**
-     * Create a tax-deductible donation
+     * Create a tax-deductible donation using Payment Links (most adblocker-resistant)
      */
     static createDonation(params: {
         userId: string;
@@ -17,7 +17,7 @@ export declare class StripeService {
     }): Promise<{
         paymentId: string;
         checkoutUrl: string;
-        sessionId: string;
+        paymentLinkId: string;
     }>;
     /**
      * Create a non-deductible fee payment (e.g., candidate registration)
