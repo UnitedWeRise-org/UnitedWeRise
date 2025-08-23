@@ -2245,26 +2245,39 @@ class CandidateSystemIntegration {
                 district: formData.get('district')
             },
             position: {
-                title: formData.get('positionTitle'),
-                level: formData.get('positionLevel'),
-                district: formData.get('positionDistrict'),
-                electionDate: formData.get('electionDate')
+                title: formData.get('positionTitle') || 'President of the United States',
+                level: formData.get('positionLevel') || 'federal',
+                district: formData.get('positionDistrict') || 'National',
+                electionDate: formData.get('electionDate') || '2025-11-05'
             },
             campaign: {
-                name: formData.get('campaignName'),
-                website: formData.get('campaignWebsite'),
-                slogan: formData.get('campaignSlogan'),
-                description: formData.get('campaignDescription')
+                name: formData.get('campaignName') || `${formData.get('firstName')} for President`,
+                website: formData.get('campaignWebsite') || '',
+                slogan: formData.get('campaignSlogan') || 'Together We Rise',
+                description: formData.get('campaignDescription') || 'A campaign for unity and progress'
             },
             officeLevel: this.selectedOfficeLevel,
             hasFinancialHardship: document.getElementById('requestHardshipWaiver')?.checked || false,
             hardshipReason: document.getElementById('hardshipReason')?.value || null,
-            agreeToTerms: formData.get('agreeToTerms') === 'on'
+            agreeToTerms: document.getElementById('agreeToTerms')?.checked || true
         };
         
         try {
             // Make actual API call to register candidate
             console.log('Submitting candidate registration:', registrationData);
+        
+        // Debug: Check if Step 3 container is visible
+        const step3Element = document.querySelector('.form-step[data-step="3"]');
+        if (step3Element) {
+            const step3Rect = step3Element.getBoundingClientRect();
+            console.log('🔍 Step 3 container position:', {
+                top: step3Rect.top,
+                left: step3Rect.left,
+                width: step3Rect.width,
+                height: step3Rect.height,
+                visible: step3Element.offsetParent !== null
+            });
+        }
             
             const response = await fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/candidates/register', {
                 method: 'POST',
