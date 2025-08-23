@@ -1239,11 +1239,11 @@ class CandidateSystemIntegration {
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="positionTitle">Office Title *</label>
-                                    <input type="text" id="positionTitle" name="positionTitle" placeholder="e.g., Mayor, City Council, State Senator" required>
+                                    <input type="text" id="positionTitle" name="positionTitle" placeholder="e.g., Mayor, City Council, State Senator">
                                 </div>
                                 <div class="form-group">
                                     <label for="positionLevel">Government Level *</label>
-                                    <select id="positionLevel" name="positionLevel" required>
+                                    <select id="positionLevel" name="positionLevel">
                                         <option value="">Select Level</option>
                                         <!-- Options will be populated based on payment level -->
                                     </select>
@@ -1254,7 +1254,7 @@ class CandidateSystemIntegration {
                                 </div>
                                 <div class="form-group">
                                     <label for="electionDate">Election Date *</label>
-                                    <input type="date" id="electionDate" name="electionDate" required>
+                                    <input type="date" id="electionDate" name="electionDate">
                                 </div>
                             </div>
                             
@@ -1262,7 +1262,7 @@ class CandidateSystemIntegration {
                             <div class="form-grid">
                                 <div class="form-group span-2">
                                     <label for="campaignName">Campaign Name *</label>
-                                    <input type="text" id="campaignName" name="campaignName" placeholder="e.g., Smith for Mayor" required>
+                                    <input type="text" id="campaignName" name="campaignName" placeholder="e.g., Smith for Mayor">
                                 </div>
                                 <div class="form-group span-2">
                                     <label for="campaignWebsite">Campaign Website</label>
@@ -1280,7 +1280,7 @@ class CandidateSystemIntegration {
                             
                             <div class="terms-agreement">
                                 <label class="terms-checkbox">
-                                    <input type="checkbox" id="agreeToTerms" name="agreeToTerms" required>
+                                    <input type="checkbox" id="agreeToTerms" name="agreeToTerms">
                                     <span class="checkmark"></span>
                                     I agree to the <a href="#" target="_blank">Terms and Conditions</a> and <a href="#" target="_blank">Privacy Policy</a>
                                 </label>
@@ -1904,7 +1904,10 @@ class CandidateSystemIntegration {
                     parentVisible: element?.parentElement?.offsetParent !== null
                 };
             });
-            console.log('🔍 Step 3 field visibility (expanded):', fieldStatus);
+            console.log('🔍 Step 3 field visibility (expanded):');
+            fieldStatus.forEach(field => {
+                console.log(`  ${field.id}: exists=${field.exists}, visible=${field.visible}, display="${field.display}", value="${field.value}"`);
+            });
         }
         
         // Update navigation buttons
