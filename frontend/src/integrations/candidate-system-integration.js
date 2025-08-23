@@ -1910,6 +1910,20 @@ class CandidateSystemIntegration {
             fieldStatus.forEach(field => {
                 console.log(`  ${field.id}: exists=${field.exists}, visible=${field.visible}, display="${field.display}", value="${field.value}"`);
             });
+            
+            // Force fix for Step 3 visibility issue
+            const step3Container = document.querySelector('.form-step[data-step="3"]');
+            if (step3Container) {
+                console.log('🔍 Forcing Step 3 container to be visible...');
+                step3Container.style.cssText += `
+                    display: block !important;
+                    min-height: 500px !important;
+                    width: 100% !important;
+                    visibility: visible !important;
+                    position: relative !important;
+                    z-index: 1 !important;
+                `;
+            }
         }
         
         // Update navigation buttons
@@ -2268,17 +2282,40 @@ class CandidateSystemIntegration {
             // Make actual API call to register candidate
             console.log('Submitting candidate registration:', registrationData);
         
-        // Debug: Check if Step 3 container is visible
+        // Debug: Check if Step 3 container is visible and force fix if needed
         const step3Element = document.querySelector('.form-step[data-step="3"]');
         if (step3Element) {
             const step3Rect = step3Element.getBoundingClientRect();
-            console.log('🔍 Step 3 container position:', {
+            console.log('🔍 Step 3 container position (before fix):', {
                 top: step3Rect.top,
                 left: step3Rect.left,
                 width: step3Rect.width,
                 height: step3Rect.height,
-                visible: step3Element.offsetParent !== null
+                visible: step3Element.offsetParent !== null,
+                display: window.getComputedStyle(step3Element).display,
+                minHeight: window.getComputedStyle(step3Element).minHeight
             });
+            
+            // Force fix Step 3 dimensions if they're zero
+            if (step3Rect.width === 0 || step3Rect.height === 0) {
+                console.log('🔍 Forcing Step 3 dimensions...');
+                step3Element.style.cssText += `
+                    min-height: 400px !important;
+                    width: 100% !important;
+                    display: block !important;
+                    visibility: visible !important;
+                `;
+                
+                // Check again after fix
+                const step3RectAfter = step3Element.getBoundingClientRect();
+                console.log('🔍 Step 3 container position (after fix):', {
+                    top: step3RectAfter.top,
+                    left: step3RectAfter.left,
+                    width: step3RectAfter.width,
+                    height: step3RectAfter.height,
+                    visible: step3Element.offsetParent !== null
+                });
+            }
         }
             
             const response = await fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/candidates/register', {
