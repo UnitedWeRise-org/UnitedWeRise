@@ -1942,7 +1942,7 @@ class CandidateSystemIntegration {
                         <input type="url" id="campaignWebsite" name="campaignWebsite" 
                                placeholder="https://yourwebsite.com"
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-                               value="">
+                               value="https://unitedwerise.org">
                     </div>
                     
                     <div class="form-group">
@@ -2321,7 +2321,7 @@ class CandidateSystemIntegration {
             },
             campaign: {
                 name: formData.get('campaignName') || `${formData.get('firstName')} for President`,
-                website: formData.get('campaignWebsite') || '',
+                website: formData.get('campaignWebsite') || 'https://unitedwerise.org',
                 slogan: formData.get('campaignSlogan') || 'Together We Rise',
                 description: formData.get('campaignDescription') || 'A campaign for unity and progress'
             },
