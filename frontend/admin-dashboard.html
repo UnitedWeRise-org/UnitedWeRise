@@ -1100,8 +1100,12 @@ Loading deployment status...
                             </div>
                             
                             <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                ${reg.status === 'PENDING_VERIFICATION' ? `
+                                    <button onclick="verifyCandidate('${reg.id}')" class="nav-button" style="background: #3498db;">✅ Verify & Approve</button>
+                                    <button onclick="rejectCandidate('${reg.id}')" class="nav-button" style="background: #e74c3c;">❌ Reject</button>
+                                ` : ''}
                                 ${reg.status === 'PENDING_APPROVAL' ? `
-                                    <button onclick="approveCandidate('${reg.id}')" class="nav-button" style="background: #27ae60;">✅ Approve</button>
+                                    <button onclick="approveCandidate('${reg.id}')" class="nav-button" style="background: #27ae60;">✅ Final Approval</button>
                                     <button onclick="rejectCandidate('${reg.id}')" class="nav-button" style="background: #e74c3c;">❌ Reject</button>
                                 ` : ''}
                                 ${reg.hasFinancialHardship && reg.feeWaiverStatus === 'hardship_pending' ? `
@@ -1121,7 +1125,31 @@ Loading deployment status...
             }
         }
 
-        // Approve candidate
+        // Verify and approve candidate (from PENDING_VERIFICATION)
+        async function verifyCandidate(registrationId) {
+            const notes = prompt('Add verification notes (optional):');
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${registrationId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes })
+                });
+                
+                if (response.ok) {
+                    alert('Candidate verified and approved successfully! 🎉');
+                    document.querySelector('.modal-overlay')?.remove();
+                    loadCandidatesData();
+                } else {
+                    throw new Error('Failed to verify candidate');
+                }
+            } catch (error) {
+                console.error('Error verifying candidate:', error);
+                alert('Failed to verify candidate');
+            }
+        }
+
+        // Final approve candidate (from PENDING_APPROVAL)
         async function approveCandidate(registrationId) {
             const notes = prompt('Add approval notes (optional):');
             
