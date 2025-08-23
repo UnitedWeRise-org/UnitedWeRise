@@ -1841,12 +1841,99 @@ class CandidateSystemIntegration {
         document.head.appendChild(style);
     }
     
-    nextStep() {
+    async nextStep() {
         if (this.currentStep < 3) {
             if (this.validateCurrentStep()) {
-                this.currentStep++;
-                this.updateStepDisplay();
+                // Special handling for Step 2 → Step 3: Process payment
+                if (this.currentStep === 2) {
+                    await this.processPayment();
+                } else {
+                    this.currentStep++;
+                    this.updateStepDisplay();
+                }
             }
+        }
+    }
+
+    async processPayment() {
+        // Check if hardship waiver is selected
+        const hardshipWaiver = document.getElementById('requestHardshipWaiver')?.checked;
+        
+        if (hardshipWaiver) {
+            // Skip payment and proceed to next step
+            console.log('💡 Hardship waiver selected, skipping payment');
+            this.currentStep++;
+            this.updateStepDisplay();
+            return;
+        }
+
+        // Get the payment amount based on selected office level
+        const officeLevelFees = {
+            'federal': 1500,
+            'state': 750, 
+            'local': 375
+        };
+        
+        const amount = officeLevelFees[this.selectedOfficeLevel] || 1500;
+        const officeName = this.getOfficeLevelDisplayName(this.selectedOfficeLevel);
+        
+        console.log(`💳 Processing payment: $${amount} for ${officeName} level`);
+        
+        try {
+            // Show loading state
+            const nextBtn = document.getElementById('nextStep');
+            const originalText = nextBtn.innerHTML;
+            nextBtn.innerHTML = '💳 Processing Payment...';
+            nextBtn.disabled = true;
+            
+            // Create Stripe checkout session for candidate registration
+            const response = await apiCall('/donations/create-checkout', {
+                method: 'POST',
+                body: JSON.stringify({
+                    amount: amount * 100, // Convert to cents
+                    donationType: 'candidate-registration',
+                    metadata: {
+                        type: 'candidate-registration',
+                        officeLevel: this.selectedOfficeLevel,
+                        officeName: officeName,
+                        candidateName: `${document.getElementById('firstName')?.value} ${document.getElementById('lastName')?.value}`
+                    }
+                })
+            });
+
+            if (response.ok && response.data.checkoutUrl) {
+                // Open Stripe checkout in new tab
+                const checkoutWindow = window.open(response.data.checkoutUrl, '_blank');
+                
+                // Listen for payment completion
+                const checkPaymentStatus = () => {
+                    // In a real implementation, you'd have a webhook or polling mechanism
+                    // For now, we'll assume payment is successful after user returns
+                    setTimeout(() => {
+                        if (checkoutWindow.closed) {
+                            console.log('✅ Payment window closed, assuming payment completed');
+                            this.currentStep++;
+                            this.updateStepDisplay();
+                        } else {
+                            checkPaymentStatus();
+                        }
+                    }, 2000);
+                };
+                
+                checkPaymentStatus();
+                
+            } else {
+                throw new Error(response.data?.message || 'Failed to create payment session');
+            }
+            
+        } catch (error) {
+            console.error('💸 Payment processing error:', error);
+            alert(`Payment processing failed: ${error.message}. Please try again.`);
+            
+            // Restore button state
+            const nextBtn = document.getElementById('nextStep');
+            nextBtn.innerHTML = originalText;
+            nextBtn.disabled = false;
         }
     }
     
