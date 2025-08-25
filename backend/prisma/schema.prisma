@@ -133,6 +133,10 @@ model User {
   // Payment relations
   payments                Payment[]
   stripeCustomer          StripeCustomer?
+  
+  // Candidate-Admin Communication Relations
+  sentAdminMessages       CandidateAdminMessage[] @relation("SentAdminMessages")
+  readAdminMessages       CandidateAdminMessage[] @relation("ReadAdminMessages")
 
   // TOTP (Two-Factor Authentication)
   totpSecret              String?                   // Base32 encoded secret for TOTP
@@ -337,6 +341,7 @@ model Candidate {
   photos             Photo[]
   politicalInquiries PoliticalInquiry[]
   publicQAs          PublicQA[]
+  adminMessages      CandidateAdminMessage[]
 
   @@index([officeId])
   @@index([party])
@@ -790,6 +795,44 @@ model CandidateInbox {
   staffMembers CandidateStaff[]
 
   @@index([candidateId])
+}
+
+// Candidate-Admin Direct Communication System
+model CandidateAdminMessage {
+  id          String                @id @default(cuid())
+  candidateId String
+  senderId    String?               // User ID of sender (null for system messages)
+  isFromAdmin Boolean               @default(false)
+  messageType AdminMessageType     @default(GENERAL)
+  priority    AdminMessagePriority @default(NORMAL)
+  subject     String?               // Optional subject line
+  content     String                // Message content
+  attachments String[]              @default([]) // File URLs if needed
+  isRead      Boolean               @default(false)
+  readAt      DateTime?
+  readBy      String?               // User ID who marked as read
+  
+  // Threading support
+  threadId    String?               // For grouping related messages
+  replyToId   String?               // ID of message being replied to
+  
+  // Metadata
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  
+  // Relations
+  candidate   Candidate             @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  sender      User?                 @relation("SentAdminMessages", fields: [senderId], references: [id])
+  readByUser  User?                 @relation("ReadAdminMessages", fields: [readBy], references: [id])
+  
+  // Self-referential for threading
+  replyTo     CandidateAdminMessage? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     CandidateAdminMessage[] @relation("MessageReplies")
+  
+  @@index([candidateId, createdAt])
+  @@index([threadId])
+  @@index([isRead, priority])
+  @@index([messageType, createdAt])
 }
 
 // Electoral District Crowdsourcing System
@@ -1635,6 +1678,23 @@ enum CandidateStatus {
   REVOKED       // Access revoked pending appeal
   BANNED        // Permanently banned after appeal denial
   WITHDRAWN     // Voluntarily withdrew from race
+}
+
+enum AdminMessageType {
+  SUPPORT_REQUEST    // General support question
+  STATUS_INQUIRY     // Question about candidate status
+  TECHNICAL_ISSUE    // Technical problem report
+  POLICY_QUESTION    // Platform policy clarification
+  FEATURE_REQUEST    // Request for new features
+  APPEAL_MESSAGE     // Appeal-related communication
+  GENERAL            // General communication
+}
+
+enum AdminMessagePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
 enum FlagSource {

@@ -1153,6 +1153,13 @@ Loading deployment status...
                                 <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
                             </div>
                             
+                            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-left: 4px solid #4b5c09; border-radius: 4px;">
+                                <p style="margin: 0;"><strong>Registration ID:</strong> 
+                                    <code style="background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 1.1em; color: #4b5c09; border: 1px solid #ddd; margin-left: 0.5rem; user-select: all;">${reg.id}</code>
+                                    <small style="display: block; margin-top: 0.5rem; color: #666;">💡 Use this ID when creating a candidate profile</small>
+                                </p>
+                            </div>
+                            
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                                 <div>
                                     <h4>📋 Personal Information</h4>
@@ -3078,7 +3085,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                             <th>Office</th>
                             <th>Election</th>
                             <th>Status</th>
-                            <th>Last Changed</th>
+                            <th>Messages</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -3087,8 +3094,8 @@ Example: adminConsole.getSuggestions('features', 'new')
             
             profiles.forEach(profile => {
                 const statusClass = 'status-' + profile.status.toLowerCase();
-                const statusChanged = profile.statusChangedAt ? 
-                    new Date(profile.statusChangedAt).toLocaleDateString() : 'Never';
+                const unreadCount = profile.unreadMessages || 0;
+                const hasUnread = unreadCount > 0;
                 
                 html += `
                     <tr>
@@ -3107,7 +3114,13 @@ Example: adminConsole.getSuggestions('features', 'new')
                         <td>
                             <span class="status-badge ${statusClass}">${profile.status}</span>
                         </td>
-                        <td>${statusChanged}</td>
+                        <td>
+                            <button onclick="openCandidateMessaging('${profile.id}', '${profile.name.replace(/'/g, "\\'")}')" 
+                                    style="background: ${hasUnread ? '#dc3545' : '#6c757d'}; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; position: relative;">
+                                💬 Messages
+                                ${hasUnread ? `<span style="position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center;">${unreadCount}</span>` : ''}
+                            </button>
+                        </td>
                         <td>
                             <button onclick="showProfileStatusModal('${profile.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; margin-right: 0.5rem;">
                                 Change Status
@@ -3289,6 +3302,171 @@ Example: adminConsole.getSuggestions('features', 'new')
             } catch (error) {
                 console.error('Error creating candidate profile:', error);
                 alert('Error creating candidate profile: ' + error.message);
+            }
+        }
+        
+        async function openCandidateMessaging(candidateId, candidateName) {
+            try {
+                // Load existing messages for this candidate
+                const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
+                
+                if (!response.success) {
+                    throw new Error(response.message || 'Failed to load messages');
+                }
+                
+                const messages = response.data || [];
+                
+                // Create messaging modal
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+                modal.innerHTML = `
+                    <div class="modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 90%; height: 70vh; display: flex; flex-direction: column;">
+                        <div style="padding: 1rem; border-bottom: 1px solid #ddd; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+                            <h3 style="margin: 0; color: #333;">💬 Messages with ${candidateName}</h3>
+                            <small style="color: #666;">Candidate ID: ${candidateId}</small>
+                        </div>
+                        
+                        <div id="messagesContainer" style="flex: 1; overflow-y: auto; padding: 1rem; background: #fafafa;">
+                            ${messages.length === 0 ? '<p style="text-align: center; color: #666; font-style: italic;">No messages yet</p>' : ''}
+                        </div>
+                        
+                        <div style="padding: 1rem; border-top: 1px solid #ddd; background: white;">
+                            <form id="messageForm" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <select id="messageType" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="GENERAL">General</option>
+                                        <option value="VERIFICATION">Verification</option>
+                                        <option value="POLICY_VIOLATION">Policy Violation</option>
+                                        <option value="TECHNICAL_SUPPORT">Technical Support</option>
+                                        <option value="CAMPAIGN_RELATED">Campaign Related</option>
+                                    </select>
+                                    <select id="messagePriority" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="NORMAL">Normal</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="URGENT">Urgent</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <textarea id="messageContent" placeholder="Type your message..." required 
+                                        style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical; min-height: 60px;"></textarea>
+                                    <button type="submit" style="background: #4b5c09; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; height: fit-content;">Send</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div style="padding: 0.5rem 1rem; background: #f8f9fa; border-radius: 0 0 8px 8px; display: flex; justify-content: end;">
+                            <button onclick="closeModal()" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Display existing messages
+                if (messages.length > 0) {
+                    displayMessages(messages, candidateId);
+                }
+                
+                // Handle message form submission
+                document.getElementById('messageForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await sendMessageToCandidate(candidateId, candidateName);
+                });
+                
+            } catch (error) {
+                console.error('Error opening candidate messaging:', error);
+                alert('Error loading messages: ' + error.message);
+            }
+        }
+        
+        function displayMessages(messages, candidateId) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            
+            // Sort messages by creation date (oldest first)
+            messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                const isFromAdmin = message.isFromAdmin;
+                const timestamp = new Date(message.createdAt).toLocaleString();
+                
+                messageDiv.style.cssText = `
+                    margin-bottom: 1rem; 
+                    padding: 0.75rem; 
+                    border-radius: 8px; 
+                    max-width: 80%; 
+                    ${isFromAdmin 
+                        ? 'margin-left: auto; background: #4b5c09; color: white; text-align: right;' 
+                        : 'margin-right: auto; background: white; border: 1px solid #ddd;'}
+                `;
+                
+                const priorityBadge = message.priority !== 'NORMAL' ? 
+                    `<span style="font-size: 0.75rem; padding: 0.125rem 0.25rem; border-radius: 3px; background: ${message.priority === 'URGENT' ? '#dc3545' : '#ffc107'}; color: ${message.priority === 'URGENT' ? 'white' : 'black'};">${message.priority}</span>` : '';
+                
+                const typeBadge = message.messageType !== 'GENERAL' ?
+                    `<span style="font-size: 0.75rem; padding: 0.125rem 0.25rem; border-radius: 3px; background: #6c757d; color: white; margin-left: 0.25rem;">${message.messageType.replace('_', ' ')}</span>` : '';
+                
+                messageDiv.innerHTML = `
+                    <div style="font-size: 0.875rem; margin-bottom: 0.5rem; opacity: 0.8;">
+                        <strong>${isFromAdmin ? 'Admin' : 'Candidate'}</strong>
+                        <span style="margin-left: 0.5rem; font-size: 0.75rem;">${timestamp}</span>
+                        ${priorityBadge}${typeBadge}
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.4;">${message.content}</div>
+                `;
+                
+                container.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        async function sendMessageToCandidate(candidateId, candidateName) {
+            const content = document.getElementById('messageContent').value.trim();
+            const messageType = document.getElementById('messageType').value;
+            const priority = document.getElementById('messagePriority').value;
+            
+            if (!content) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            try {
+                const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        content,
+                        messageType,
+                        priority
+                    })
+                });
+                
+                if (!response.success) {
+                    throw new Error(response.message || 'Failed to send message');
+                }
+                
+                // Clear form
+                document.getElementById('messageContent').value = '';
+                document.getElementById('messageType').value = 'GENERAL';
+                document.getElementById('messagePriority').value = 'NORMAL';
+                
+                // Reload messages to show the new one
+                const messagesResponse = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
+                if (messagesResponse.success) {
+                    displayMessages(messagesResponse.data || [], candidateId);
+                }
+                
+                // Update the messaging button in the main table to remove unread indicator
+                loadCandidateProfiles();
+                
+                alert('Message sent successfully!');
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Error sending message: ' + error.message);
             }
         }
         

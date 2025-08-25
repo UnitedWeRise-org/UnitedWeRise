@@ -134,6 +134,12 @@ class MyProfile {
                     <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.myProfile.switchTab('political')">
                         Political Profile
                     </button>
+                    ${user.candidateProfile ? `
+                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.myProfile.switchTab('messages')" id="messagesTab">
+                            💬 Admin Messages
+                            <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
+                        </button>
+                    ` : ''}
                     <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.myProfile.switchTab('settings')">
                         Settings
                     </button>
@@ -159,6 +165,8 @@ class MyProfile {
                 return this.renderDemographicsTab();
             case 'political':
                 return this.renderPoliticalTab();
+            case 'messages':
+                return this.renderMessagesTab();
             case 'settings':
                 // Load TOTP status when settings tab is rendered
                 setTimeout(() => this.loadTOTPStatus(), 100);
@@ -447,6 +455,39 @@ class MyProfile {
         `;
     }
 
+    renderMessagesTab() {
+        return `
+            <div class="tab-pane">
+                <div class="messaging-section">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #ddd;">
+                        <h3 style="margin: 0;">💬 Messages with Site Admins</h3>
+                        <button onclick="window.myProfile.refreshMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Refresh</button>
+                    </div>
+                    
+                    <div id="candidateMessagesContainer" style="height: 400px; overflow-y: auto; padding: 1rem; background: #fafafa;">
+                        <div style="text-align: center; color: #666; margin: 2rem 0;">
+                            <div class="loading-spinner" style="margin: 0 auto 1rem;"></div>
+                            Loading messages...
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; border-top: 1px solid #ddd; background: white;">
+                        <form id="candidateMessageForm" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <textarea id="candidateMessageContent" placeholder="Type your message to site admins..." required 
+                                    style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical; min-height: 80px; font-family: inherit;"></textarea>
+                                <button type="submit" style="background: #4b5c09; color: white; padding: 0.75rem 1rem; border: none; border-radius: 4px; cursor: pointer; height: fit-content; min-width: 80px;">Send</button>
+                            </div>
+                            <small style="color: #666; font-size: 0.875rem;">
+                                💡 Use this to report issues, ask for help, or communicate directly with site administrators.
+                            </small>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     renderSettingsTab() {
         return `
             <div class="tab-pane">
@@ -594,6 +635,11 @@ class MyProfile {
         // Load data for specific tabs
         if (tabName === 'photos') {
             setTimeout(() => this.loadPhotoGalleries(), 100);
+        } else if (tabName === 'messages') {
+            setTimeout(() => {
+                this.loadCandidateMessages();
+                this.setupMessageForm();
+            }, 100);
         }
     }
 
@@ -2447,6 +2493,181 @@ class MyProfile {
             }
         } catch (error) {
             console.error('Error updating pending tags count:', error);
+        }
+    }
+
+    /**
+     * Load messages from admin for candidate users
+     */
+    async loadCandidateMessages() {
+        try {
+            const response = await window.apiCall('/candidate/admin-messages');
+            
+            if (response.ok && response.data) {
+                this.displayCandidateMessages(response.data);
+                // Update unread badge
+                await this.updateUnreadBadge();
+            } else {
+                throw new Error(response.message || 'Failed to load messages');
+            }
+        } catch (error) {
+            console.error('Error loading candidate messages:', error);
+            const container = document.getElementById('candidateMessagesContainer');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #dc3545; margin: 2rem 0;">
+                        <p>❌ Error loading messages</p>
+                        <p style="font-size: 0.875rem;">${error.message}</p>
+                        <button onclick="window.myProfile.loadCandidateMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * Display candidate messages in the UI
+     */
+    displayCandidateMessages(messages) {
+        const container = document.getElementById('candidateMessagesContainer');
+        if (!container) return;
+
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: #666; margin: 2rem 0;">
+                    <p>💬 No messages yet</p>
+                    <p style="font-size: 0.875rem;">When admins send you messages, they'll appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort messages by creation date (oldest first)
+        messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+        let messagesHtml = '';
+        messages.forEach(message => {
+            const isFromAdmin = message.isFromAdmin;
+            const timestamp = new Date(message.createdAt).toLocaleString();
+            
+            const priorityBadge = message.priority !== 'NORMAL' ? 
+                `<span style="font-size: 0.75rem; padding: 0.125rem 0.25rem; border-radius: 3px; background: ${message.priority === 'URGENT' ? '#dc3545' : '#ffc107'}; color: ${message.priority === 'URGENT' ? 'white' : 'black'};">${message.priority}</span>` : '';
+                
+            const typeBadge = message.messageType !== 'GENERAL' ?
+                `<span style="font-size: 0.75rem; padding: 0.125rem 0.25rem; border-radius: 3px; background: #6c757d; color: white; margin-left: 0.25rem;">${message.messageType.replace('_', ' ')}</span>` : '';
+
+            messagesHtml += `
+                <div style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; max-width: 80%; 
+                    ${isFromAdmin 
+                        ? 'margin-left: auto; background: #e3f2fd; border-left: 4px solid #2196f3;' 
+                        : 'margin-right: auto; background: white; border: 1px solid #ddd; border-left: 4px solid #4b5c09;'}">
+                    <div style="font-size: 0.875rem; margin-bottom: 0.5rem; color: #555;">
+                        <strong>${isFromAdmin ? '👨‍💼 Admin' : '🗳️ You'}</strong>
+                        <span style="margin-left: 0.5rem; font-size: 0.75rem;">${timestamp}</span>
+                        ${priorityBadge}${typeBadge}
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.4;">${message.content}</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = messagesHtml;
+        // Scroll to bottom to show latest messages
+        container.scrollTop = container.scrollHeight;
+    }
+
+    /**
+     * Setup message form event handling
+     */
+    setupMessageForm() {
+        const form = document.getElementById('candidateMessageForm');
+        if (!form) return;
+
+        // Remove existing listeners
+        form.removeEventListener('submit', this.handleMessageSubmit);
+        
+        // Add new listener
+        this.handleMessageSubmit = this.handleMessageSubmit.bind(this);
+        form.addEventListener('submit', this.handleMessageSubmit);
+    }
+
+    /**
+     * Handle message form submission
+     */
+    async handleMessageSubmit(e) {
+        e.preventDefault();
+        
+        const contentInput = document.getElementById('candidateMessageContent');
+        const content = contentInput.value.trim();
+        
+        if (!content) {
+            alert('Please enter a message');
+            return;
+        }
+
+        // Disable form during submission
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
+
+        try {
+            const response = await window.apiCall('/candidate/admin-messages', {
+                method: 'POST',
+                body: JSON.stringify({ content })
+            });
+
+            if (response.ok) {
+                // Clear form
+                contentInput.value = '';
+                
+                // Reload messages to show the new one
+                await this.loadCandidateMessages();
+                
+                this.showToast('Message sent successfully!');
+            } else {
+                throw new Error(response.message || 'Failed to send message');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Error sending message: ' + error.message);
+        } finally {
+            // Re-enable form
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    }
+
+    /**
+     * Refresh messages manually
+     */
+    async refreshMessages() {
+        await this.loadCandidateMessages();
+        this.showToast('Messages refreshed');
+    }
+
+    /**
+     * Update unread messages badge
+     */
+    async updateUnreadBadge() {
+        try {
+            const response = await window.apiCall('/candidate/admin-messages/unread-count');
+            
+            if (response.ok && response.data) {
+                const unreadCount = response.data.unreadCount || 0;
+                const badge = document.getElementById('unreadBadge');
+                
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.textContent = unreadCount;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating unread badge:', error);
         }
     }
 

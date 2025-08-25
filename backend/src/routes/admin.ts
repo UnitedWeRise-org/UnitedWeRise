@@ -2111,4 +2111,325 @@ router.post('/candidates/profiles/:registrationId/create', requireAuth, requireA
   }
 });
 
+// Candidate-Admin Messaging Endpoints
+
+/**
+ * @swagger
+ * /api/admin/candidates/{candidateId}/messages:
+ *   get:
+ *     tags: [Admin Candidates]
+ *     summary: Get admin messages for a candidate
+ *     description: Retrieve conversation history between admin and candidate
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: candidateId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of messages to return
+ *       - in: query
+ *         name: before
+ *         schema:
+ *           type: string
+ *         description: Message ID to paginate before
+ *     responses:
+ *       200:
+ *         description: Conversation history
+ *       404:
+ *         description: Candidate not found
+ */
+// GET /api/admin/candidates/:candidateId/messages - Get admin messages for candidate
+router.get('/candidates/:candidateId/messages', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { limit = 50, before } = req.query;
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true, name: true, user: { select: { id: true, firstName: true, lastName: true, email: true } } }
+    });
+
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
+    const where: any = { candidateId };
+    if (before) {
+      where.createdAt = { lt: new Date(before as string) };
+    }
+
+    const messages = await prisma.candidateAdminMessage.findMany({
+      where,
+      include: {
+        sender: { select: { id: true, firstName: true, lastName: true, email: true, isAdmin: true } },
+        readByUser: { select: { id: true, firstName: true, lastName: true } },
+        replyTo: { select: { id: true, content: true, createdAt: true, isFromAdmin: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Number(limit)
+    });
+
+    // Mark admin messages as read
+    const unreadAdminMessages = messages.filter(m => m.isFromAdmin && !m.isRead);
+    if (unreadAdminMessages.length > 0) {
+      await prisma.candidateAdminMessage.updateMany({
+        where: {
+          id: { in: unreadAdminMessages.map(m => m.id) },
+          isFromAdmin: true,
+          isRead: false
+        },
+        data: {
+          isRead: true,
+          readAt: new Date(),
+          readBy: req.user!.id
+        }
+      });
+    }
+
+    // Get unread counts for other conversations
+    const unreadCount = await prisma.candidateAdminMessage.count({
+      where: {
+        candidateId: { not: candidateId },
+        isFromAdmin: false,
+        isRead: false
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        candidate: {
+          id: candidate.id,
+          name: candidate.name,
+          user: candidate.user
+        },
+        messages: messages.reverse(), // Show oldest first for chat display
+        unreadCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin messages:', error);
+    res.status(500).json({ error: 'Failed to retrieve messages' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/candidates/{candidateId}/messages:
+ *   post:
+ *     tags: [Admin Candidates]
+ *     summary: Send message to candidate
+ *     description: Send a message from admin to candidate
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: candidateId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Message content
+ *               messageType:
+ *                 type: string
+ *                 enum: [SUPPORT_REQUEST, STATUS_INQUIRY, TECHNICAL_ISSUE, POLICY_QUESTION, FEATURE_REQUEST, APPEAL_MESSAGE, GENERAL]
+ *                 default: GENERAL
+ *               priority:
+ *                 type: string
+ *                 enum: [LOW, NORMAL, HIGH, URGENT]
+ *                 default: NORMAL
+ *               subject:
+ *                 type: string
+ *                 description: Optional subject line
+ *               replyToId:
+ *                 type: string
+ *                 description: ID of message being replied to
+ *             required:
+ *               - content
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *       404:
+ *         description: Candidate not found
+ */
+// POST /api/admin/candidates/:candidateId/messages - Send message from admin to candidate
+router.post('/candidates/:candidateId/messages', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { content, messageType = 'GENERAL', priority = 'NORMAL', subject, replyToId } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true, name: true, user: { select: { id: true, email: true } } }
+    });
+
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
+    // Generate thread ID if this is a new conversation or reply
+    let threadId = null;
+    if (replyToId) {
+      const replyToMessage = await prisma.candidateAdminMessage.findUnique({
+        where: { id: replyToId },
+        select: { threadId: true }
+      });
+      threadId = replyToMessage?.threadId || replyToId;
+    } else {
+      // New conversation thread
+      threadId = `thread_${Date.now()}_${candidateId}`;
+    }
+
+    const message = await prisma.candidateAdminMessage.create({
+      data: {
+        candidateId,
+        senderId: req.user!.id,
+        isFromAdmin: true,
+        messageType,
+        priority,
+        subject,
+        content: content.trim(),
+        threadId,
+        replyToId,
+        isRead: false
+      },
+      include: {
+        sender: { select: { id: true, firstName: true, lastName: true, email: true } },
+        candidate: { select: { name: true, user: { select: { email: true } } } }
+      }
+    });
+
+    console.log(`✅ Admin message sent from ${req.user!.firstName} to candidate ${candidate.name}`);
+
+    // TODO: Send email notification to candidate about new admin message
+    // TODO: Send push notification if implemented
+
+    res.status(201).json({
+      success: true,
+      message: 'Message sent successfully',
+      data: { message }
+    });
+
+  } catch (error) {
+    console.error('Error sending admin message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/messages/overview:
+ *   get:
+ *     tags: [Admin Candidates]
+ *     summary: Get admin messaging overview
+ *     description: Get summary of all candidate conversations with unread counts
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Messaging overview
+ */
+// GET /api/admin/messages/overview - Get messaging overview for admin dashboard
+router.get('/messages/overview', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    // Get candidates with recent messages
+    const candidatesWithMessages = await prisma.candidate.findMany({
+      where: {
+        adminMessages: { some: {} }
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        office: { select: { title: true, state: true } },
+        adminMessages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            sender: { select: { firstName: true, lastName: true, isAdmin: true } }
+          }
+        },
+        _count: {
+          select: {
+            adminMessages: {
+              where: {
+                isFromAdmin: false,
+                isRead: false
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Sort by latest message date
+    candidatesWithMessages.sort((a, b) => {
+      const aLatest = a.adminMessages[0]?.createdAt || new Date(0);
+      const bLatest = b.adminMessages[0]?.createdAt || new Date(0);
+      return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+    });
+
+    // Get overall statistics
+    const stats = await prisma.candidateAdminMessage.groupBy({
+      by: ['messageType', 'priority', 'isRead', 'isFromAdmin'],
+      _count: { id: true }
+    });
+
+    const totalUnread = await prisma.candidateAdminMessage.count({
+      where: { isFromAdmin: false, isRead: false }
+    });
+
+    const priorityStats = stats
+      .filter(s => !s.isRead && !s.isFromAdmin)
+      .reduce((acc, stat) => {
+        acc[stat.priority] = (acc[stat.priority] || 0) + stat._count.id;
+        return acc;
+      }, {} as Record<string, number>);
+
+    res.json({
+      success: true,
+      data: {
+        conversations: candidatesWithMessages.map(candidate => ({
+          candidateId: candidate.id,
+          candidateName: candidate.name,
+          office: candidate.office?.title,
+          state: candidate.office?.state,
+          user: candidate.user,
+          lastMessage: candidate.adminMessages[0] || null,
+          unreadCount: candidate._count.adminMessages
+        })),
+        stats: {
+          totalUnread,
+          priorityBreakdown: priorityStats,
+          totalConversations: candidatesWithMessages.length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching messaging overview:', error);
+    res.status(500).json({ error: 'Failed to retrieve messaging overview' });
+  }
+});
+
 export default router;

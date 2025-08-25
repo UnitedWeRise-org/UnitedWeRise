@@ -42,7 +42,16 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 office: true,
                 officialTitle: true,
                 politicalParty: true,
-                campaignWebsite: true
+                campaignWebsite: true,
+                // Candidate profile relation
+                candidateProfile: {
+                    select: {
+                        id: true,
+                        name: true,
+                        office: true,
+                        status: true
+                    }
+                }
             }
         });
 
