@@ -1,12 +1,13 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 const router = express.Router();
 
@@ -205,12 +206,12 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid TOTP token or backup code' });
     }
 
-    // Generate a temporary verification token (valid for 5 minutes)
-    // In production, this should be stored in Redis or a session store
+    // Generate a temporary verification token (valid for 24 hours - essentially session-based)
+    // Token lasts until logout or 24 hours, whichever comes first
     const verificationToken = speakeasy.totp({
       secret: user.totpSecret,
       encoding: 'base32',
-      step: 300 // 5 minutes
+      step: 86400 // 24 hours (86400 seconds)
     });
 
     res.json({

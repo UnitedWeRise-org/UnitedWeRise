@@ -34,9 +34,10 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clearTOTPVerification = exports.markTOTPVerified = exports.requireTOTPForAdmin = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const speakeasy = __importStar(require("speakeasy"));
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * Middleware to require TOTP verification for admin access
  * Should be used after requireAuth and requireAdmin middleware
@@ -52,7 +53,7 @@ const requireTOTPForAdmin = async (req, res, next) => {
             return next(); // Non-admin users don't need TOTP
         }
         // Check if admin has TOTP enabled and get their secret
-        const userData = await prisma.user.findUnique({
+        const userData = await prisma_1.prisma.user.findUnique({
             where: { id: user.id },
             select: {
                 totpEnabled: true,
@@ -75,12 +76,12 @@ const requireTOTPForAdmin = async (req, res, next) => {
             });
         }
         // Verify the temporary verification token
-        // This uses a 5-minute window for the verification token
+        // This uses a 24-hour window for the verification token (session-based)
         const isValidToken = speakeasy.totp.verify({
             secret: userData.totpSecret,
             encoding: 'base32',
             token: totpToken,
-            step: 300, // 5 minutes - must match the generation in /api/totp/verify
+            step: 86400, // 24 hours - must match the generation in /api/totp/verify
             window: 1 // Allow 1 step for slight timing differences
         });
         if (!isValidToken) {

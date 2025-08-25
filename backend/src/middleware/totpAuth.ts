@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import type { AuthRequest } from './auth';
 import * as speakeasy from 'speakeasy';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * Middleware to require TOTP verification for admin access
@@ -50,12 +51,12 @@ export const requireTOTPForAdmin = async (req: AuthRequest, res: Response, next:
     }
 
     // Verify the temporary verification token
-    // This uses a 5-minute window for the verification token
+    // This uses a 24-hour window for the verification token (session-based)
     const isValidToken = speakeasy.totp.verify({
       secret: userData.totpSecret!,
       encoding: 'base32',
       token: totpToken,
-      step: 300, // 5 minutes - must match the generation in /api/totp/verify
+      step: 86400, // 24 hours - must match the generation in /api/totp/verify
       window: 1 // Allow 1 step for slight timing differences
     });
 

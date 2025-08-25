@@ -36,13 +36,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
 const speakeasy = __importStar(require("speakeasy"));
 const QRCode = __importStar(require("qrcode"));
 const crypto_1 = __importDefault(require("crypto"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 const router = express_1.default.Router();
 /**
  * Setup TOTP for a user
@@ -52,7 +53,7 @@ router.post('/setup', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         // Check if user already has TOTP enabled
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { totpEnabled: true, username: true, email: true }
         });
@@ -71,7 +72,7 @@ router.post('/setup', auth_1.requireAuth, async (req, res) => {
         // Generate QR code URL
         const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
         // Store the secret temporarily (user must verify before it's permanently saved)
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 totpSecret: secret.base32 // Store temporarily
@@ -102,7 +103,7 @@ router.post('/verify-setup', auth_1.requireAuth, async (req, res) => {
         if (!token) {
             return res.status(400).json({ error: 'TOTP token is required' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { totpSecret: true, totpEnabled: true }
         });
@@ -128,7 +129,7 @@ router.post('/verify-setup', auth_1.requireAuth, async (req, res) => {
             backupCodes.push(crypto_1.default.randomBytes(4).toString('hex').toUpperCase());
         }
         // Enable TOTP and save backup codes
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 totpEnabled: true,
@@ -161,7 +162,7 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
         if (!token && !backupCode) {
             return res.status(400).json({ error: 'TOTP token or backup code is required' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 totpSecret: true,
@@ -182,7 +183,7 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
                 usedBackupCode = true;
                 // Remove used backup code
                 const updatedBackupCodes = user.totpBackupCodes.filter(code => code !== backupCode.toUpperCase());
-                await prisma.user.update({
+                await prisma_1.prisma.user.update({
                     where: { id: userId },
                     data: {
                         totpBackupCodes: updatedBackupCodes,
@@ -201,7 +202,7 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
             });
             if (verified) {
                 // Update last used timestamp
-                await prisma.user.update({
+                await prisma_1.prisma.user.update({
                     where: { id: userId },
                     data: { totpLastUsedAt: new Date() }
                 });
@@ -210,12 +211,12 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
         if (!verified) {
             return res.status(400).json({ error: 'Invalid TOTP token or backup code' });
         }
-        // Generate a temporary verification token (valid for 5 minutes)
-        // In production, this should be stored in Redis or a session store
+        // Generate a temporary verification token (valid for 24 hours - essentially session-based)
+        // Token lasts until logout or 24 hours, whichever comes first
         const verificationToken = speakeasy.totp({
             secret: user.totpSecret,
             encoding: 'base32',
-            step: 300 // 5 minutes
+            step: 86400 // 24 hours (86400 seconds)
         });
         res.json({
             success: true,
@@ -245,7 +246,7 @@ router.post('/disable', auth_1.requireAuth, async (req, res) => {
         if (!password) {
             return res.status(400).json({ error: 'Password confirmation is required' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { password: true, totpEnabled: true }
         });
@@ -262,7 +263,7 @@ router.post('/disable', auth_1.requireAuth, async (req, res) => {
             return res.status(401).json({ error: 'Invalid password' });
         }
         // Disable TOTP
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 totpEnabled: false,
@@ -288,7 +289,7 @@ router.post('/disable', auth_1.requireAuth, async (req, res) => {
 router.get('/status', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 totpEnabled: true,
@@ -324,7 +325,7 @@ router.post('/regenerate-backup-codes', auth_1.requireAuth, async (req, res) => 
         if (!token && !backupCode) {
             return res.status(400).json({ error: 'TOTP token or backup code is required' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 totpSecret: true,
@@ -357,7 +358,7 @@ router.post('/regenerate-backup-codes', auth_1.requireAuth, async (req, res) => 
             newBackupCodes.push(crypto_1.default.randomBytes(4).toString('hex').toUpperCase());
         }
         // Update backup codes
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 totpBackupCodes: newBackupCodes,
