@@ -185,7 +185,7 @@
             <!-- Desktop/Tablet Navigation -->
             <div class="desktop-nav">
                 <givebutter-widget id="p75ZaL" class="donation-widget"></givebutter-widget>
-                <a href="#" class="nav-link">About UWR</a>
+                <a href="#" class="nav-link" onclick="openAboutModal()">About UWR</a>
                 <div id="notificationSection" class="notification-section" style="display: none;">
                     <button onclick="toggleNotifications()" class="notification-btn">
                         <span class="notification-icon">🔔</span>
@@ -359,6 +359,126 @@
             <div class="modal-body">
                 <div id="legalContent">
                     <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About United We Rise Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2>About United We Rise</h2>
+                <button onclick="closeAboutModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <img src="logo.png" alt="United We Rise" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 1rem;">
+                    <h3 style="color: #2c3e50; margin-bottom: 0.5rem;">Reimagining Civic Engagement</h3>
+                    <p style="font-style: italic; color: #7f8c8d;">Geography-based social media for democratic participation</p>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Our Revolutionary Vision</h4>
+                    <p>United We Rise fundamentally reimagines social media for civic engagement. Instead of personal relationship-based graphs that create echo chambers, we organize conversations by <strong>geographic boundaries and political districts</strong>, ensuring citizens engage with their actual representatives and neighbors.</p>
+                    
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <strong>Traditional Social Media:</strong> Friends → Posts → Engagement → Echo Chambers<br>
+                        <strong style="color: #3498db;">United We Rise:</strong> Geography → Representatives → Issues → Balanced Discourse
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Key Features</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗺️</div>
+                            <strong>Geography-First Social Graph</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Your ZIP code determines your primary social graph and content feed</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏛️</div>
+                            <strong>Direct Representative Access</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Message your elected officials directly with built-in accountability</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🤖</div>
+                            <strong>AI-Powered Topic Discovery</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Semantic analysis reveals trending local issues and balanced perspectives</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚖️</div>
+                            <strong>Reputation-Based Moderation</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Community-driven accountability without censorship</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                            <strong>Multi-Scale Discovery</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">National issues → State concerns → Local problems with proper context</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗳️</div>
+                            <strong>Integrated Civic Action</strong>
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Elections, petitions, town halls, and voting information in one place</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">How We're Different</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                        <div>
+                            <h5 style="color: #e74c3c; margin-bottom: 0.5rem;">❌ Traditional Social Media</h5>
+                            <ul style="list-style: none; padding: 0;">
+                                <li>• Algorithm-driven echo chambers</li>
+                                <li>• Friend-based content filtering</li>
+                                <li>• No geographic relevance</li>
+                                <li>• Representatives can hide</li>
+                                <li>• Engagement over accuracy</li>
+                                <li>• Censorship-based moderation</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 style="color: #27ae60; margin-bottom: 0.5rem;">✅ United We Rise</h5>
+                            <ul style="list-style: none; padding: 0;">
+                                <li>• Location-based balanced discourse</li>
+                                <li>• District and geographic content</li>
+                                <li>• Actual neighbors and issues</li>
+                                <li>• Direct accountability to constituents</li>
+                                <li>• Truth and civic engagement</li>
+                                <li>• Reputation-based self-governance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Current Platform Status</h4>
+                    <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 8px;">
+                        <strong style="color: #155724;">🟢 LIVE & OPERATIONAL</strong>
+                        <ul style="margin: 0.5rem 0; color: #155724;">
+                            <li><strong>50+ Features Deployed:</strong> Full social media platform with civic integration</li>
+                            <li><strong>Live Payment System:</strong> Nonprofit donation processing with Stripe integration</li>
+                            <li><strong>AI-Powered Analysis:</strong> Azure OpenAI for topic discovery and content analysis</li>
+                            <li><strong>Complete Admin Dashboard:</strong> Real-time platform monitoring and management</li>
+                            <li><strong>Production Architecture:</strong> Azure cloud infrastructure with auto-scaling</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Join the Movement</h4>
+                    <p>We're building the future of civic engagement, where every citizen has a voice and every representative is accountable. This isn't just social media—it's democracy in action.</p>
+                    
+                    <div style="text-align: center; margin-top: 1.5rem;">
+                        <strong style="color: #2c3e50;">Ready to get involved?</strong><br>
+                        <span style="color: #7f8c8d; font-size: 0.9rem;">Create an account to connect with your representatives and neighbors</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #dee2e6; padding-top: 1rem; text-align: center; color: #6c757d; font-size: 0.9rem;">
+                    <p><strong>United We Rise</strong> - Where Geography Meets Democracy<br>
+                    Proudly built with transparency and accountability at our core</p>
                 </div>
             </div>
         </div>
@@ -1332,6 +1452,27 @@
             const messageEl = document.getElementById('authMessage');
             messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
         }
+
+        // About Modal Functions
+        function openAboutModal() {
+            document.getElementById('aboutModal').style.display = 'block';
+        }
+
+        function closeAboutModal() {
+            document.getElementById('aboutModal').style.display = 'none';
+        }
+
+        // Add click-outside-to-close functionality for About modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const aboutModal = document.getElementById('aboutModal');
+            if (aboutModal) {
+                aboutModal.addEventListener('click', (e) => {
+                    if (e.target === aboutModal) {
+                        closeAboutModal();
+                    }
+                });
+            }
+        });
 
         // OAuth Authentication Functions
         async function handleGoogleLogin() {
