@@ -2811,6 +2811,57 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         }
         
+        // Auto-refresh TOTP token to prevent session expiration
+        // Shows a non-intrusive refresh prompt when token is about to expire
+        let refreshTimeoutId = null;
+        
+        function refreshTOTPToken() {
+            if (!totpVerified || !currentUser) {
+                console.log('⏰ TOTP refresh skipped - not verified or no user');
+                return;
+            }
+            
+            console.log('⏰ TOTP token expiring in 1 minute - showing refresh prompt');
+            
+            // Create a small, non-intrusive notification
+            const refreshNotice = document.createElement('div');
+            refreshNotice.style.cssText = `
+                position: fixed !important;
+                top: 20px !important;
+                right: 20px !important;
+                background: #2196F3 !important;
+                color: white !important;
+                padding: 12px 16px !important;
+                border-radius: 6px !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+                z-index: 10000 !important;
+                font-size: 14px !important;
+                max-width: 300px !important;
+                cursor: pointer !important;
+            `;
+            refreshNotice.innerHTML = `
+                🔒 Admin session expiring soon<br>
+                <small>Click to refresh (prevents disconnection)</small>
+            `;
+            
+            refreshNotice.onclick = async () => {
+                refreshNotice.remove();
+                console.log('🔄 User clicked to refresh TOTP token');
+                await showTOTPModal();
+                // showTOTPModal already handles setting up the next refresh
+            };
+            
+            document.body.appendChild(refreshNotice);
+            
+            // Auto-remove notice after 30 seconds if not clicked
+            setTimeout(() => {
+                if (refreshNotice.parentNode) {
+                    refreshNotice.remove();
+                    console.log('⏰ TOTP refresh notice expired - will show modal on next API call');
+                }
+            }, 30000);
+        }
+        
         // Show TOTP verification modal
         function showTOTPModal() {
             return new Promise((resolve, reject) => {
@@ -2899,6 +2950,16 @@ Example: adminConsole.getSuggestions('features', 'new')
                                 totpToken = verificationToken; // Store verification token for header
                                 modal.remove();
                                 console.log('✅ TOTP verified for admin access with token:', verificationToken);
+                                
+                                // Clear any existing refresh timeout
+                                if (refreshTimeoutId) {
+                                    clearTimeout(refreshTimeoutId);
+                                }
+                                
+                                // Set up automatic token refresh (4 minutes = 240,000ms)
+                                // This prevents the 403 errors by showing a refresh prompt
+                                refreshTimeoutId = setTimeout(refreshTOTPToken, 240000);
+                                
                                 resolve();
                             } else {
                                 console.error('No verification token in response:', result);
