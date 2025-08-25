@@ -1,4 +1,5 @@
-import { PrismaClient, Photo, PhotoType, PhotoPurpose } from '@prisma/client';
+import { Photo, PhotoType, PhotoPurpose } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import multer from 'multer';
 import sharp from 'sharp';
 import path from 'path';
@@ -6,7 +7,7 @@ import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { AzureBlobService } from './azureBlobService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface PhotoUploadOptions {
   userId: string;

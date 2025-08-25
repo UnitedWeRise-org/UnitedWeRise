@@ -1699,4 +1699,416 @@ router.post('/candidates/:id/waiver', requireAuth, requireAdmin, requireTOTPForA
   }
 });
 
+// Candidate Status Management Endpoints
+
+/**
+ * @swagger
+ * /api/admin/candidates/profiles:
+ *   get:
+ *     tags: [Admin Candidates]
+ *     summary: Get all candidate profiles with status
+ *     description: Get candidate profiles (not registrations) for status management
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
+ *         description: Filter by candidate status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of candidate profiles
+ *       401:
+ *         description: Unauthorized
+ */
+// GET /api/admin/candidates/profiles - Get candidate profiles for status management
+router.get('/candidates/profiles', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { status, page = 1, limit = 50, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: 'insensitive' } },
+        { campaignEmail: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    const [candidates, total] = await Promise.all([
+      prisma.candidate.findMany({
+        where,
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          office: {
+            include: { election: { select: { name: true, date: true, state: true } } }
+          },
+          inbox: { select: { isActive: true, allowPublicQ: true } }
+        },
+        orderBy: [
+          { statusChangedAt: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip,
+        take: Number(limit)
+      }),
+      prisma.candidate.count({ where })
+    ]);
+
+    // Get status summary counts
+    const statusCounts = await prisma.candidate.groupBy({
+      by: ['status'],
+      _count: { status: true }
+    });
+
+    const summary = Object.fromEntries(
+      statusCounts.map(item => [item.status, item._count.status])
+    );
+
+    res.json({
+      success: true,
+      data: {
+        candidates,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        },
+        summary
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching candidate profiles:', error);
+    res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/candidates/profiles/{id}/status:
+ *   put:
+ *     tags: [Admin Candidates]
+ *     summary: Update candidate status
+ *     description: Change candidate status (suspend, end, revoke, ban, etc.)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
+ *               reason:
+ *                 type: string
+ *                 description: Reason for status change
+ *               suspendedUntil:
+ *                 type: string
+ *                 format: date-time
+ *                 description: End date for suspension (SUSPENDED status only)
+ *               appealDeadline:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Deadline for appeal (REVOKED status only)
+ *               appealNotes:
+ *                 type: string
+ *                 description: Notes about appeal process
+ *             required:
+ *               - status
+ *               - reason
+ *     responses:
+ *       200:
+ *         description: Status updated successfully
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Candidate not found
+ */
+// PUT /api/admin/candidates/profiles/:id/status - Update candidate status
+router.put('/candidates/profiles/:id/status', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason, suspendedUntil, appealDeadline, appealNotes } = req.body;
+
+    if (!status || !reason) {
+      return res.status(400).json({ error: 'Status and reason are required' });
+    }
+
+    // Validate status
+    const validStatuses = ['ACTIVE', 'SUSPENDED', 'ENDED', 'REVOKED', 'BANNED', 'WITHDRAWN'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        office: { include: { election: true } },
+        inbox: { select: { id: true, isActive: true } }
+      }
+    });
+
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      status,
+      statusChangedAt: new Date(),
+      statusChangedBy: req.user!.id,
+      statusReason: reason
+    };
+
+    // Status-specific fields
+    if (status === 'SUSPENDED' && suspendedUntil) {
+      updateData.suspendedUntil = new Date(suspendedUntil);
+    }
+    if (status === 'REVOKED' && appealDeadline) {
+      updateData.appealDeadline = new Date(appealDeadline);
+    }
+    if (appealNotes) {
+      updateData.appealNotes = appealNotes;
+    }
+
+    // Handle legacy field compatibility
+    if (status === 'WITHDRAWN') {
+      updateData.isWithdrawn = true;
+      updateData.withdrawnAt = new Date();
+      updateData.withdrawnReason = reason;
+    } else {
+      updateData.isWithdrawn = false;
+    }
+
+    const updatedCandidate = await prisma.candidate.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        office: { include: { election: true } },
+        inbox: true
+      }
+    });
+
+    // Update inbox status based on candidate status
+    if (candidate.inbox) {
+      const inboxActive = ['ACTIVE', 'SUSPENDED'].includes(status);
+      await prisma.candidateInbox.update({
+        where: { candidateId: id },
+        data: { isActive: inboxActive }
+      });
+    }
+
+    console.log(`✅ Updated candidate ${candidate.name} status to ${status} by admin ${req.user!.id}`);
+
+    // TODO: Send notification email to candidate about status change
+    // TODO: Log audit trail entry
+
+    res.json({
+      success: true,
+      message: `Candidate status updated to ${status}`,
+      data: { candidate: updatedCandidate }
+    });
+
+  } catch (error) {
+    console.error('Error updating candidate status:', error);
+    res.status(500).json({ error: 'Failed to update candidate status' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/candidates/profiles/{id}/create:
+ *   post:
+ *     tags: [Admin Candidates]
+ *     summary: Create profile for approved candidate
+ *     description: Manually create candidate profile for already-approved registrations
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate Registration ID
+ *     responses:
+ *       200:
+ *         description: Profile created successfully
+ *       400:
+ *         description: Registration not approved or profile already exists
+ *       404:
+ *         description: Registration not found
+ */
+// POST /api/admin/candidates/profiles/:registrationId/create - Create profile for approved candidate
+router.post('/candidates/profiles/:registrationId/create', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    const registration = await prisma.candidateRegistration.findUnique({
+      where: { id: registrationId },
+      include: { user: true }
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    if (registration.status !== 'APPROVED') {
+      return res.status(400).json({ error: 'Registration must be approved first' });
+    }
+
+    // Check if profile already exists
+    const existingCandidate = await prisma.candidate.findUnique({
+      where: { userId: registration.userId }
+    });
+
+    if (existingCandidate) {
+      return res.status(400).json({ 
+        error: 'Candidate profile already exists',
+        candidateId: existingCandidate.id
+      });
+    }
+
+    // Create the candidate profile (reuse the logic from approval)
+    try {
+      // Find or create the appropriate office
+      let office = await prisma.office.findFirst({
+        where: {
+          title: registration.positionTitle,
+          level: registration.positionLevel as any,
+          state: registration.state,
+          district: registration.positionDistrict || null
+        },
+        include: { election: true }
+      });
+
+      if (!office) {
+        // Create election and office as needed
+        let election = await prisma.election.findFirst({
+          where: {
+            date: registration.electionDate,
+            state: registration.state,
+            type: 'GENERAL'
+          }
+        });
+
+        if (!election) {
+          election = await prisma.election.create({
+            data: {
+              name: `${registration.state} ${registration.electionDate.getFullYear()} Election`,
+              date: registration.electionDate,
+              type: 'GENERAL',
+              level: 'STATE',
+              state: registration.state,
+              county: registration.city,
+              description: `Election for ${registration.positionTitle} and other offices`,
+              registrationDeadline: new Date(registration.electionDate.getTime() - 30 * 24 * 60 * 60 * 1000),
+              isActive: true
+            }
+          });
+        }
+
+        office = await prisma.office.create({
+          data: {
+            title: registration.positionTitle,
+            level: registration.positionLevel as any,
+            state: registration.state,
+            district: registration.positionDistrict || null,
+            description: `${registration.positionTitle} for ${registration.state}${registration.positionDistrict ? ` District ${registration.positionDistrict}` : ''}`,
+            electionId: election.id
+          },
+          include: { election: true }
+        });
+      }
+
+      // Create the candidate profile
+      const candidate = await prisma.candidate.create({
+        data: {
+          name: `${registration.firstName} ${registration.lastName}`,
+          party: null,
+          isIncumbent: false,
+          campaignWebsite: registration.campaignWebsite,
+          campaignEmail: registration.email,
+          campaignPhone: registration.phone,
+          platformSummary: registration.campaignDescription,
+          keyIssues: [],
+          isVerified: true,
+          status: 'ACTIVE',
+          statusChangedAt: new Date(),
+          statusChangedBy: req.user!.id,
+          statusReason: 'Profile created from approved registration',
+          userId: registration.userId,
+          officeId: office.id
+        },
+        include: {
+          user: true,
+          office: { include: { election: true } }
+        }
+      });
+
+      // Create candidate inbox
+      await prisma.candidateInbox.create({
+        data: {
+          candidateId: candidate.id,
+          isActive: true,
+          allowPublicQ: true,
+          categories: [
+            'HEALTHCARE', 'EDUCATION', 'ECONOMY', 'ENVIRONMENT', 'IMMIGRATION',
+            'INFRASTRUCTURE', 'TAXES', 'HEALTHCARE', 'CRIMINAL_JUSTICE', 'VETERANS',
+            'HOUSING', 'ENERGY', 'AGRICULTURE', 'TECHNOLOGY', 'FOREIGN_POLICY',
+            'CIVIL_RIGHTS', 'LABOR', 'TRANSPORTATION', 'BUDGET', 'ETHICS', 'OTHER'
+          ]
+        }
+      });
+
+      console.log(`✅ Manually created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+
+      res.json({
+        success: true,
+        message: 'Candidate profile created successfully',
+        data: { candidate }
+      });
+
+    } catch (profileError) {
+      console.error('Error creating candidate profile:', profileError);
+      res.status(500).json({ error: 'Failed to create candidate profile' });
+    }
+
+  } catch (error) {
+    console.error('Error creating candidate profile:', error);
+    res.status(500).json({ error: 'Failed to create candidate profile' });
+  }
+});
+
 export default router;

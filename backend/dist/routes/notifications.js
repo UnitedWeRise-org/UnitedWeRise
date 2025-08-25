@@ -4,11 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createNotification = void 0;
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get user's notifications
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
@@ -20,7 +21,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
         if (unreadOnly === 'true') {
             whereClause.read = false;
         }
-        const notifications = await prisma.notification.findMany({
+        const notifications = await prisma_1.prisma.notification.findMany({
             where: whereClause,
             include: {
                 sender: {
@@ -39,7 +40,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             skip: offsetNum
         });
         // Get unread count
-        const unreadCount = await prisma.notification.count({
+        const unreadCount = await prisma_1.prisma.notification.count({
             where: {
                 receiverId: userId,
                 read: false
@@ -65,7 +66,7 @@ router.put('/:notificationId/read', auth_1.requireAuth, async (req, res) => {
     try {
         const { notificationId } = req.params;
         const userId = req.user.id;
-        const notification = await prisma.notification.findFirst({
+        const notification = await prisma_1.prisma.notification.findFirst({
             where: {
                 id: notificationId,
                 receiverId: userId
@@ -74,7 +75,7 @@ router.put('/:notificationId/read', auth_1.requireAuth, async (req, res) => {
         if (!notification) {
             return res.status(404).json({ error: 'Notification not found' });
         }
-        await prisma.notification.update({
+        await prisma_1.prisma.notification.update({
             where: { id: notificationId },
             data: { read: true }
         });
@@ -94,7 +95,7 @@ router.put('/mark-read-batch', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'notificationIds array is required' });
         }
         // Verify all notifications belong to the current user
-        const userNotifications = await prisma.notification.findMany({
+        const userNotifications = await prisma_1.prisma.notification.findMany({
             where: {
                 id: { in: notificationIds },
                 receiverId: userId
@@ -106,7 +107,7 @@ router.put('/mark-read-batch', auth_1.requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'No valid notifications found' });
         }
         // Batch update all valid notifications
-        const updateResult = await prisma.notification.updateMany({
+        const updateResult = await prisma_1.prisma.notification.updateMany({
             where: {
                 id: { in: validIds },
                 receiverId: userId
@@ -129,7 +130,7 @@ router.put('/mark-read-batch', auth_1.requireAuth, async (req, res) => {
 router.put('/read-all', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        await prisma.notification.updateMany({
+        await prisma_1.prisma.notification.updateMany({
             where: {
                 receiverId: userId,
                 read: false
@@ -146,7 +147,7 @@ router.put('/read-all', auth_1.requireAuth, async (req, res) => {
 // Helper function to create notifications (we'll use this in other routes)
 const createNotification = async (type, senderId, receiverId, message, postId, commentId) => {
     try {
-        await prisma.notification.create({
+        await prisma_1.prisma.notification.create({
             data: {
                 type,
                 senderId,

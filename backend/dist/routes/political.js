@@ -3,14 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const geospatial_1 = require("../utils/geospatial");
 const representativeService_1 = require("../services/representativeService");
 const validation_1 = require("../middleware/validation");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Update user's address and political info (existing route - enhanced)
 router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile, async (req, res) => {
     try {
@@ -62,7 +63,7 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
         if (termEnd) {
             updateData.termEnd = new Date(termEnd);
         }
-        const updatedUser = await prisma.user.update({
+        const updatedUser = await prisma_1.prisma.user.update({
             where: { id: userId },
             data: updateData,
             select: {
@@ -107,7 +108,7 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
         const userId = req.user.id;
         const { forceRefresh } = req.query;
         // Get user's address
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { streetAddress: true, city: true, state: true, zipCode: true }
         });
@@ -172,7 +173,7 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
         const userId = req.user.id;
         const { forceRefresh } = req.query;
         // Get user's address
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { streetAddress: true, city: true, state: true, zipCode: true }
         });
@@ -286,7 +287,7 @@ router.get('/representatives/lookup', async (req, res) => {
 router.post('/officials/refresh', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { zipCode: true, state: true }
         });

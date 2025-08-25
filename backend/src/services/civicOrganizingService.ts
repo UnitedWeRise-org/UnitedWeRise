@@ -5,9 +5,10 @@
  * Provides geographic search and filtering capabilities
  */
 
-import { PrismaClient, Petition, CivicEvent, PetitionSignature, EventRSVP, EventType, EventCategory, IssueCategory, GeographicScope, PetitionType, EventStatus, PetitionStatus, RSVPStatus } from '@prisma/client';
+import { Petition, CivicEvent, PetitionSignature, EventRSVP, EventType, EventCategory, IssueCategory, GeographicScope, PetitionType, EventStatus, PetitionStatus, RSVPStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Types for API requests
 interface CreatePetitionRequest {

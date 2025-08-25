@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+;
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * Get trending topics - simplified fallback implementation with mock data

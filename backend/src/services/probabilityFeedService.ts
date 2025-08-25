@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Probability-based Feed Algorithm
  * Created: August 10, 2025
@@ -5,11 +6,11 @@
  * Author: Claude Code Assistant
  */
 
-import { PrismaClient } from '@prisma/client';
+;
 import { azureOpenAI } from './azureOpenAIService';
 import { reputationService } from './reputationService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface FeedWeights {
     recency: number;     // 0-1, weight for how much recency matters

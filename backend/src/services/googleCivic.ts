@@ -1,7 +1,8 @@
+import { prisma } from '../lib/prisma';
 import { ApiCacheService } from './apiCache';
-import { PrismaClient } from '@prisma/client';
+;
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
 const GEOCODIO_BASE_URL = 'https://api.geocod.io/v1.7';

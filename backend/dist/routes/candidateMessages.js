@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const candidateInboxService_1 = require("../services/candidateInboxService");
 const metricsService_1 = require("../services/metricsService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * @swagger
  * tags:
@@ -299,7 +300,7 @@ router.post('/inquiry/:inquiryId/respond', auth_1.requireAuth, async (req, res) 
         const { inquiryId } = req.params;
         const userId = req.user.id;
         // Verify user has access to respond (need to check if user is candidate or staff)
-        const inquiry = await prisma.politicalInquiry.findUnique({
+        const inquiry = await prisma_1.prisma.politicalInquiry.findUnique({
             where: { id: inquiryId },
             include: {
                 candidate: true
@@ -312,7 +313,7 @@ router.post('/inquiry/:inquiryId/respond', auth_1.requireAuth, async (req, res) 
         const isCandidate = inquiry.candidate.userId === userId;
         let staffMember = null;
         if (!isCandidate) {
-            staffMember = await prisma.candidateStaff.findFirst({
+            staffMember = await prisma_1.prisma.candidateStaff.findFirst({
                 where: {
                     userId,
                     inbox: {
@@ -332,10 +333,10 @@ router.post('/inquiry/:inquiryId/respond', auth_1.requireAuth, async (req, res) 
         let responderId = staffMember?.id;
         if (!responderId && isCandidate) {
             // Create or get candidate as their own staff member for responses
-            const candidateStaff = await prisma.candidateStaff.upsert({
+            const candidateStaff = await prisma_1.prisma.candidateStaff.upsert({
                 where: {
                     inboxId_userId: {
-                        inboxId: (await prisma.candidateInbox.findUnique({
+                        inboxId: (await prisma_1.prisma.candidateInbox.findUnique({
                             where: { candidateId: inquiry.candidateId }
                         })).id,
                         userId
@@ -343,7 +344,7 @@ router.post('/inquiry/:inquiryId/respond', auth_1.requireAuth, async (req, res) 
                 },
                 update: {},
                 create: {
-                    inboxId: (await prisma.candidateInbox.findUnique({
+                    inboxId: (await prisma_1.prisma.candidateInbox.findUnique({
                         where: { candidateId: inquiry.candidateId }
                     })).id,
                     userId,
@@ -537,7 +538,7 @@ router.post('/:candidateId/public-qa/:qaId/vote', auth_1.requireAuth, async (req
             return res.status(400).json({ error: 'Invalid vote type' });
         }
         // Check if Q&A exists and belongs to candidate
-        const qa = await prisma.publicQA.findFirst({
+        const qa = await prisma_1.prisma.publicQA.findFirst({
             where: {
                 id: qaId,
                 candidateId
@@ -547,7 +548,7 @@ router.post('/:candidateId/public-qa/:qaId/vote', auth_1.requireAuth, async (req
             return res.status(404).json({ error: 'Q&A entry not found' });
         }
         // Upsert vote (update if exists, create if not)
-        const vote = await prisma.publicQAVote.upsert({
+        const vote = await prisma_1.prisma.publicQAVote.upsert({
             where: {
                 qaId_userId: {
                     qaId,
@@ -565,14 +566,14 @@ router.post('/:candidateId/public-qa/:qaId/vote', auth_1.requireAuth, async (req
         });
         // Update vote counts on the Q&A
         const [upvoteCount, downvoteCount] = await Promise.all([
-            prisma.publicQAVote.count({
+            prisma_1.prisma.publicQAVote.count({
                 where: { qaId, voteType: 'UPVOTE' }
             }),
-            prisma.publicQAVote.count({
+            prisma_1.prisma.publicQAVote.count({
                 where: { qaId, voteType: 'DOWNVOTE' }
             })
         ]);
-        await prisma.publicQA.update({
+        await prisma_1.prisma.publicQA.update({
             where: { id: qaId },
             data: {
                 upvotes: upvoteCount - downvoteCount // Net upvotes
@@ -726,7 +727,7 @@ router.get('/:candidateId/staff', auth_1.requireAuth, async (req, res) => {
         const { candidateId } = req.params;
         const userId = req.user.id;
         // Verify user has access to view staff
-        const hasAccess = await prisma.candidateStaff.findFirst({
+        const hasAccess = await prisma_1.prisma.candidateStaff.findFirst({
             where: {
                 userId,
                 inbox: {
@@ -739,7 +740,7 @@ router.get('/:candidateId/staff', auth_1.requireAuth, async (req, res) => {
             }
         });
         // Or check if user is the candidate themselves
-        const candidate = await prisma.candidate.findFirst({
+        const candidate = await prisma_1.prisma.candidate.findFirst({
             where: {
                 id: candidateId,
                 userId
@@ -748,7 +749,7 @@ router.get('/:candidateId/staff', auth_1.requireAuth, async (req, res) => {
         if (!hasAccess && !candidate) {
             return res.status(403).json({ error: 'Access denied' });
         }
-        const staffMembers = await prisma.candidateStaff.findMany({
+        const staffMembers = await prisma_1.prisma.candidateStaff.findMany({
             where: {
                 inbox: {
                     candidateId

@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Feedback Management Routes
  * 
@@ -6,13 +7,13 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import logger from '../utils/logger';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * Get all feedback posts for admin dashboard

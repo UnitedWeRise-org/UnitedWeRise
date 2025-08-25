@@ -1,6 +1,7 @@
-import { PrismaClient, PhotoTag, PhotoTagStatus, PhotoPrivacyRequest, PhotoPrivacyRequestType, PhotoPrivacyRequestStatus } from '@prisma/client';
+import { PhotoTag, PhotoTagStatus, PhotoPrivacyRequest, PhotoPrivacyRequestType, PhotoPrivacyRequestStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface CreateTagOptions {
   photoId: string;

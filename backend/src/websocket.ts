@@ -1,9 +1,10 @@
+import { prisma } from './lib/prisma';
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import { PrismaClient } from '@prisma/client';
+;
 import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
 
 export const initializeWebSocket = (httpServer: HTTPServer) => {

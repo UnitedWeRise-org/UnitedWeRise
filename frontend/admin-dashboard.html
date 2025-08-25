@@ -232,6 +232,53 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        
+        /* Tab Styles */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+        }
+        
+        .tab-button:hover {
+            color: #4b5c09;
+            background: #f8f9fa;
+        }
+        
+        .tab-button.active {
+            color: #4b5c09;
+            border-bottom-color: #4b5c09;
+            background: #f8f9fa;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Status Badge Styles */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .status-active { background: #d4edda; color: #155724; }
+        .status-suspended { background: #fff3cd; color: #856404; }
+        .status-ended { background: #d1ecf1; color: #0c5460; }
+        .status-revoked { background: #f8d7da; color: #721c24; }
+        .status-banned { background: #f5c6cb; color: #721c24; }
+        .status-withdrawn { background: #e2e3e5; color: #41464b; }
     </style>
 </head>
 <body>
@@ -374,31 +421,74 @@
 
             <!-- Candidates Section -->
             <div id="candidates" class="dashboard-section">
-                <h2>🗳️ Candidate Registration Management</h2>
+                <h2>🗳️ Candidate Management</h2>
                 
-                <div style="margin-bottom: 2rem;">
-                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
-                        <input type="text" id="candidateSearch" placeholder="Search candidates..." style="width: 300px; padding: 0.5rem;">
-                        <select id="candidateStatusFilter" style="padding: 0.5rem;">
-                            <option value="all">All Statuses</option>
-                            <option value="PENDING_VERIFICATION">Pending Verification</option>
-                            <option value="PENDING_PAYMENT">Pending Payment</option>
-                            <option value="PENDING_APPROVAL">Pending Approval</option>
-                            <option value="APPROVED">Approved</option>
-                            <option value="REJECTED">Rejected</option>
-                        </select>
-                        <button onclick="loadCandidatesData()" class="nav-button">🔍 Search</button>
-                        <button onclick="showFeeWaivers()" class="nav-button">💰 Fee Waivers</button>
+                <!-- Candidate Management Tabs -->
+                <div style="display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                    <button id="registrationsTab" class="tab-button active" onclick="showCandidateTab('registrations')">
+                        📋 Registrations
+                    </button>
+                    <button id="profilesTab" class="tab-button" onclick="showCandidateTab('profiles')">
+                        👤 Active Profiles
+                    </button>
+                </div>
+                
+                <!-- Registrations Tab Content -->
+                <div id="registrationsContent" class="tab-content active">
+                    <h3>Candidate Registration Management</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <input type="text" id="candidateSearch" placeholder="Search candidates..." style="width: 300px; padding: 0.5rem;">
+                            <select id="candidateStatusFilter" style="padding: 0.5rem;">
+                                <option value="all">All Statuses</option>
+                                <option value="PENDING_VERIFICATION">Pending Verification</option>
+                                <option value="PENDING_PAYMENT">Pending Payment</option>
+                                <option value="PENDING_APPROVAL">Pending Approval</option>
+                                <option value="APPROVED">Approved</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+                            <button onclick="loadCandidatesData()" class="nav-button">🔍 Search</button>
+                            <button onclick="showFeeWaivers()" class="nav-button">💰 Fee Waivers</button>
+                        </div>
+                        
+                        <!-- Summary Stats -->
+                        <div id="candidateStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1rem;">
+                            <!-- Stats will be populated here -->
+                        </div>
                     </div>
-                    
-                    <!-- Summary Stats -->
-                    <div id="candidateStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1rem;">
-                        <!-- Stats will be populated here -->
+
+                    <div id="candidatesTable">
+                        <div class="loading">Loading candidate registrations...</div>
                     </div>
                 </div>
+                
+                <!-- Profiles Tab Content -->
+                <div id="profilesContent" class="tab-content">
+                    <h3>Active Candidate Profiles</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <input type="text" id="profileSearch" placeholder="Search profiles..." style="width: 300px; padding: 0.5rem;">
+                            <select id="profileStatusFilter" style="padding: 0.5rem;">
+                                <option value="all">All Statuses</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="SUSPENDED">Suspended</option>
+                                <option value="ENDED">Ended</option>
+                                <option value="REVOKED">Revoked</option>
+                                <option value="BANNED">Banned</option>
+                                <option value="WITHDRAWN">Withdrawn</option>
+                            </select>
+                            <button onclick="loadCandidateProfiles()" class="nav-button">🔍 Search</button>
+                            <button onclick="showCreateProfileModal()" class="nav-button">➕ Create Profile</button>
+                        </div>
 
-                <div id="candidatesTable">
-                    <div class="loading">Loading candidate registrations...</div>
+                        <div id="profilesSummary" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+                            <!-- Status statistics will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div id="profilesTable">
+                        <div class="loading">Loading candidate profiles...</div>
+                    </div>
                 </div>
             </div>
 
@@ -2926,6 +3016,287 @@ Example: adminConsole.getSuggestions('features', 'new')
                     }
                 };
             });
+        }
+        
+        // Candidate Profile Management Functions
+        
+        function showCandidateTab(tab) {
+            // Update tab buttons
+            document.getElementById('registrationsTab').classList.toggle('active', tab === 'registrations');
+            document.getElementById('profilesTab').classList.toggle('active', tab === 'profiles');
+            
+            // Update tab content
+            document.getElementById('registrationsContent').classList.toggle('active', tab === 'registrations');
+            document.getElementById('profilesContent').classList.toggle('active', tab === 'profiles');
+            
+            // Load data for the active tab
+            if (tab === 'profiles') {
+                loadCandidateProfiles();
+            }
+        }
+        
+        async function loadCandidateProfiles() {
+            const search = document.getElementById('profileSearch').value;
+            const status = document.getElementById('profileStatusFilter').value;
+            
+            try {
+                let url = '/api/admin/candidates/profiles?';
+                const params = new URLSearchParams();
+                
+                if (search) params.append('search', search);
+                if (status !== 'all') params.append('status', status);
+                params.append('limit', '50');
+                
+                const response = await adminApiCall(url + params.toString());
+                
+                if (response.success) {
+                    displayCandidateProfiles(response.data.candidates);
+                    displayProfilesSummary(response.data.summary);
+                } else {
+                    throw new Error(response.message || 'Failed to load profiles');
+                }
+            } catch (error) {
+                console.error('Error loading candidate profiles:', error);
+                document.getElementById('profilesTable').innerHTML = 
+                    '<div class="error">Error loading candidate profiles: ' + error.message + '</div>';
+            }
+        }
+        
+        function displayCandidateProfiles(profiles) {
+            const container = document.getElementById('profilesTable');
+            
+            if (!profiles || profiles.length === 0) {
+                container.innerHTML = '<div class="no-data">No candidate profiles found</div>';
+                return;
+            }
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Candidate</th>
+                            <th>Office</th>
+                            <th>Election</th>
+                            <th>Status</th>
+                            <th>Last Changed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            profiles.forEach(profile => {
+                const statusClass = 'status-' + profile.status.toLowerCase();
+                const statusChanged = profile.statusChangedAt ? 
+                    new Date(profile.statusChangedAt).toLocaleDateString() : 'Never';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${profile.name}</strong><br>
+                            <small>${profile.campaignEmail || profile.user?.email || 'No email'}</small>
+                        </td>
+                        <td>
+                            ${profile.office.title}<br>
+                            <small>${profile.office.state}${profile.office.district ? ' - District ' + profile.office.district : ''}</small>
+                        </td>
+                        <td>
+                            ${profile.office.election.name}<br>
+                            <small>${new Date(profile.office.election.date).toLocaleDateString()}</small>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${profile.status}</span>
+                        </td>
+                        <td>${statusChanged}</td>
+                        <td>
+                            <button onclick="showProfileStatusModal('${profile.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; margin-right: 0.5rem;">
+                                Change Status
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        function displayProfilesSummary(summary) {
+            const container = document.getElementById('profilesSummary');
+            
+            const statuses = [
+                { key: 'ACTIVE', label: 'Active', color: '#28a745' },
+                { key: 'SUSPENDED', label: 'Suspended', color: '#ffc107' },
+                { key: 'ENDED', label: 'Ended', color: '#17a2b8' },
+                { key: 'REVOKED', label: 'Revoked', color: '#dc3545' },
+                { key: 'BANNED', label: 'Banned', color: '#dc3545' },
+                { key: 'WITHDRAWN', label: 'Withdrawn', color: '#6c757d' }
+            ];
+            
+            let html = '';
+            statuses.forEach(status => {
+                const count = summary[status.key] || 0;
+                html += `
+                    <div class="stat-card" style="border-left: 4px solid ${status.color}">
+                        <div class="stat-value">${count}</div>
+                        <div class="stat-label">${status.label}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function showProfileStatusModal(profileId) {
+            // Create and show modal for changing candidate status
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h3>Change Candidate Status</h3>
+                    <form id="statusForm">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>New Status:</label>
+                            <select id="newStatus" required style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                                <option value="ACTIVE">Active - Currently running</option>
+                                <option value="SUSPENDED">Suspended - Temporarily paused</option>
+                                <option value="ENDED">Ended - Election concluded</option>
+                                <option value="REVOKED">Revoked - Pending appeal</option>
+                                <option value="BANNED">Banned - Permanently restricted</option>
+                                <option value="WITHDRAWN">Withdrawn - Voluntarily withdrew</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Reason (required):</label>
+                            <textarea id="statusReason" required rows="3" placeholder="Explain the reason for this status change..." style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;"></textarea>
+                        </div>
+                        <div class="form-group" id="suspendedUntilGroup" style="display: none; margin-bottom: 1rem;">
+                            <label>Suspended Until:</label>
+                            <input type="datetime-local" id="suspendedUntil" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                        </div>
+                        <div class="form-group" id="appealDeadlineGroup" style="display: none; margin-bottom: 1rem;">
+                            <label>Appeal Deadline:</label>
+                            <input type="datetime-local" id="appealDeadline" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Additional Notes:</label>
+                            <textarea id="appealNotes" rows="2" placeholder="Optional notes about appeals, timeline, etc." style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" style="background: #4b5c09; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer;">Update Status</button>
+                            <button type="button" onclick="closeModal()" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Show/hide date fields based on status
+            document.getElementById('newStatus').addEventListener('change', function() {
+                const status = this.value;
+                document.getElementById('suspendedUntilGroup').style.display = 
+                    status === 'SUSPENDED' ? 'block' : 'none';
+                document.getElementById('appealDeadlineGroup').style.display = 
+                    status === 'REVOKED' ? 'block' : 'none';
+            });
+            
+            // Handle form submission
+            document.getElementById('statusForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await updateCandidateStatus(profileId);
+            });
+        }
+        
+        async function updateCandidateStatus(profileId) {
+            const status = document.getElementById('newStatus').value;
+            const reason = document.getElementById('statusReason').value;
+            const suspendedUntil = document.getElementById('suspendedUntil').value;
+            const appealDeadline = document.getElementById('appealDeadline').value;
+            const appealNotes = document.getElementById('appealNotes').value;
+            
+            try {
+                const data = { status, reason };
+                if (suspendedUntil) data.suspendedUntil = suspendedUntil;
+                if (appealDeadline) data.appealDeadline = appealDeadline;
+                if (appealNotes) data.appealNotes = appealNotes;
+                
+                const response = await adminApiCall(`/api/admin/candidates/profiles/${profileId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.success) {
+                    alert('Candidate status updated successfully');
+                    closeModal();
+                    loadCandidateProfiles(); // Refresh the table
+                } else {
+                    throw new Error(response.message || 'Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error updating candidate status:', error);
+                alert('Error updating candidate status: ' + error.message);
+            }
+        }
+        
+        function showCreateProfileModal() {
+            // Show modal to create profile from approved registration
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%;">
+                    <h3>Create Candidate Profile</h3>
+                    <p>Enter the Registration ID of an approved candidate to create their profile:</p>
+                    <form id="createProfileForm">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Registration ID:</label>
+                            <input type="text" id="registrationId" required placeholder="Enter candidate registration ID" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                            <small>Find this in the Registrations tab</small>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" style="background: #4b5c09; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer;">Create Profile</button>
+                            <button type="button" onclick="closeModal()" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            document.getElementById('createProfileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await createCandidateProfile();
+            });
+        }
+        
+        async function createCandidateProfile() {
+            const registrationId = document.getElementById('registrationId').value;
+            
+            try {
+                const response = await adminApiCall(`/api/admin/candidates/profiles/${registrationId}/create`, {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    alert('Candidate profile created successfully!');
+                    closeModal();
+                    loadCandidateProfiles(); // Refresh the profiles table
+                } else {
+                    throw new Error(response.message || 'Failed to create profile');
+                }
+            } catch (error) {
+                console.error('Error creating candidate profile:', error);
+                alert('Error creating candidate profile: ' + error.message);
+            }
+        }
+        
+        function closeModal() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
         }
         
         // Auto-load console helpers when dashboard loads

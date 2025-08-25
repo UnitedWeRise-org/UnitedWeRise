@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { metricsService } from './metricsService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface OnboardingStep {
   id: string;

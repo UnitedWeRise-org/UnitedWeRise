@@ -1,21 +1,22 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 /**
  * Feedback Management Routes
  *
  * API endpoints for managing site feedback detected through AI analysis
  * Provides admin dashboard capabilities and feedback response system
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService");
 const logger_1 = __importDefault(require("../utils/logger"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * Get all feedback posts for admin dashboard
  * GET /api/feedback
@@ -37,7 +38,7 @@ router.get('/', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
             where.feedbackStatus = status;
         const offset = (Number(page) - 1) * Number(limit);
         const [posts, totalCount] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where,
                 include: {
                     author: {
@@ -62,7 +63,7 @@ router.get('/', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
                 skip: offset,
                 take: Number(limit)
             }),
-            prisma.post.count({ where })
+            prisma_1.prisma.post.count({ where })
         ]);
         // Add engagement metrics
         const feedbackPosts = posts.map(post => ({
@@ -122,14 +123,14 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
         // Get feedback counts by type, category, priority, and status
         const [totalFeedback, byType, byCategory, byPriority, byStatus, recentFeedback] = await Promise.all([
             // Total feedback count
-            prisma.post.count({
+            prisma_1.prisma.post.count({
                 where: {
                     containsFeedback: true,
                     createdAt: { gte: startDate }
                 }
             }),
             // Group by feedback type
-            prisma.post.groupBy({
+            prisma_1.prisma.post.groupBy({
                 by: ['feedbackType'],
                 where: {
                     containsFeedback: true,
@@ -138,7 +139,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
                 _count: true
             }),
             // Group by category
-            prisma.post.groupBy({
+            prisma_1.prisma.post.groupBy({
                 by: ['feedbackCategory'],
                 where: {
                     containsFeedback: true,
@@ -147,7 +148,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
                 _count: true
             }),
             // Group by priority
-            prisma.post.groupBy({
+            prisma_1.prisma.post.groupBy({
                 by: ['feedbackPriority'],
                 where: {
                     containsFeedback: true,
@@ -156,7 +157,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
                 _count: true
             }),
             // Group by status
-            prisma.post.groupBy({
+            prisma_1.prisma.post.groupBy({
                 by: ['feedbackStatus'],
                 where: {
                     containsFeedback: true,
@@ -165,7 +166,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
                 _count: true
             }),
             // Recent feedback trend (daily counts)
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
                 SELECT DATE(created_at) as date, COUNT(*) as count
                 FROM "Post" 
                 WHERE "contain_feedback" = true 
@@ -175,7 +176,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
             `
         ]);
         // Calculate average confidence
-        const avgConfidenceResult = await prisma.post.aggregate({
+        const avgConfidenceResult = await prisma_1.prisma.post.aggregate({
             where: {
                 containsFeedback: true,
                 createdAt: { gte: startDate }
@@ -229,7 +230,7 @@ router.put('/:id/status', auth_1.requireAuth, auth_1.requireAdmin, async (req, r
             });
         }
         // Update the post feedback status
-        const updatedPost = await prisma.post.update({
+        const updatedPost = await prisma_1.prisma.post.update({
             where: {
                 id,
                 containsFeedback: true
@@ -274,7 +275,7 @@ router.post('/analyze', auth_1.requireAuth, auth_1.requireAdmin, async (req, res
         let analysisContent = content;
         // If postId provided, fetch the post content
         if (postId && !content) {
-            const post = await prisma.post.findUnique({
+            const post = await prisma_1.prisma.post.findUnique({
                 where: { id: postId },
                 select: { content: true }
             });
@@ -303,7 +304,7 @@ router.post('/batch-analyze', auth_1.requireAuth, auth_1.requireAdmin, async (re
     try {
         const { limit = 100, offset = 0 } = req.body;
         // Get posts that haven't been analyzed for feedback yet
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: {
                 containsFeedback: null // Not yet analyzed
             },
@@ -323,7 +324,7 @@ router.post('/batch-analyze', auth_1.requireAuth, auth_1.requireAdmin, async (re
         // Update posts with feedback analysis results
         const updatePromises = Array.from(analyses.entries()).map(([postId, analysis]) => {
             if (analysis.isFeedback && analysis.confidence > 0.6) {
-                return prisma.post.update({
+                return prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: {
                         containsFeedback: true,
@@ -337,7 +338,7 @@ router.post('/batch-analyze', auth_1.requireAuth, auth_1.requireAdmin, async (re
                 });
             }
             else {
-                return prisma.post.update({
+                return prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: {
                         containsFeedback: false

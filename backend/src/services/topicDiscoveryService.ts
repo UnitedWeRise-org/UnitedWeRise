@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Universal Semantic Topic Discovery and Navigation System
  * 
@@ -10,7 +11,7 @@
  * Designed to be reusable across different content types and domains.
  */
 
-import { PrismaClient } from '@prisma/client';
+;
 import { EmbeddingService } from './embeddingService';
 import { QdrantService } from './qdrantService';
 import { QwenService } from './qwenService';
@@ -19,7 +20,7 @@ import { ProbabilityFeedService } from './probabilityFeedService';
 import { getSemanticConfig, isProduction } from '../config/azureConfig';
 import logger from '../utils/logger';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export interface TopicCluster {
     id: string;

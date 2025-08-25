@@ -1,20 +1,21 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 /**
  * Health and Deployment Status Endpoints
  *
  * Provides detailed information about component deployment status
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get deployment information from package.json
 function getPackageInfo() {
     try {
@@ -62,7 +63,7 @@ function getDeploymentInfo() {
 async function getDatabaseInfo() {
     try {
         // Get database connection info
-        await prisma.$connect();
+        await prisma_1.prisma.$connect();
         // Try to get migration info (this is a simplified approach)
         const migrationInfo = await getMigrationInfo();
         return {
@@ -88,7 +89,7 @@ async function getDatabaseInfo() {
 async function getMigrationInfo() {
     try {
         // Check if _prisma_migrations table exists and get last migration
-        const migrations = await prisma.$queryRaw `
+        const migrations = await prisma_1.prisma.$queryRaw `
       SELECT migration_name, finished_at 
       FROM _prisma_migrations 
       ORDER BY finished_at DESC 
@@ -113,7 +114,7 @@ async function getMigrationInfo() {
 // Basic health endpoint (existing)
 router.get('/', async (req, res) => {
     try {
-        await prisma.$connect();
+        await prisma_1.prisma.$connect();
         res.json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -160,7 +161,7 @@ router.get('/deployment', async (req, res) => {
 async function checkReputationService() {
     try {
         // Test basic reputation functionality
-        const eventCount = await prisma.reputationEvent.count({
+        const eventCount = await prisma_1.prisma.reputationEvent.count({
             take: 1
         });
         return {

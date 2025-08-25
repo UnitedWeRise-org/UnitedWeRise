@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ElectionService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 class ElectionService {
     /**
      * Get elections by user location
@@ -22,7 +21,7 @@ class ElectionService {
             };
         }
         where.isActive = true;
-        return await prisma.election.findMany({
+        return await prisma_1.prisma.election.findMany({
             where,
             include: {
                 offices: {
@@ -55,7 +54,7 @@ class ElectionService {
      * Get specific election with all details
      */
     static async getElectionById(electionId) {
-        return await prisma.election.findUnique({
+        return await prisma_1.prisma.election.findUnique({
             where: { id: electionId },
             include: {
                 offices: {
@@ -118,7 +117,7 @@ class ElectionService {
                 electionId: params.electionId
             };
         }
-        return await prisma.candidate.findMany({
+        return await prisma_1.prisma.candidate.findMany({
             where,
             include: {
                 office: {
@@ -162,7 +161,7 @@ class ElectionService {
      */
     static async createCandidateProfile(userId, candidateData) {
         // Check if user is already a candidate for any active office
-        const existingCandidate = await prisma.candidate.findFirst({
+        const existingCandidate = await prisma_1.prisma.candidate.findFirst({
             where: {
                 userId,
                 isWithdrawn: false,
@@ -178,7 +177,7 @@ class ElectionService {
             throw new Error('User is already registered as a candidate for an active election');
         }
         // Verify the office exists and election is active
-        const office = await prisma.office.findUnique({
+        const office = await prisma_1.prisma.office.findUnique({
             where: { id: candidateData.officeId },
             include: { election: true }
         });
@@ -192,7 +191,7 @@ class ElectionService {
             throw new Error('Cannot register for past elections');
         }
         // Create candidate profile
-        const candidate = await prisma.candidate.create({
+        const candidate = await prisma_1.prisma.candidate.create({
             data: {
                 userId,
                 name: candidateData.name,
@@ -221,7 +220,7 @@ class ElectionService {
             }
         });
         // Update user's political profile type if they're not already a candidate
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 politicalProfileType: 'CANDIDATE'
@@ -234,7 +233,7 @@ class ElectionService {
      */
     static async updateCandidateProfile(candidateId, userId, updates) {
         // Verify user owns this candidate profile
-        const candidate = await prisma.candidate.findFirst({
+        const candidate = await prisma_1.prisma.candidate.findFirst({
             where: {
                 id: candidateId,
                 userId,
@@ -244,7 +243,7 @@ class ElectionService {
         if (!candidate) {
             throw new Error('Candidate profile not found or access denied');
         }
-        return await prisma.candidate.update({
+        return await prisma_1.prisma.candidate.update({
             where: { id: candidateId },
             data: updates,
             include: {
@@ -268,7 +267,7 @@ class ElectionService {
      * Withdraw candidacy
      */
     static async withdrawCandidacy(candidateId, userId, reason) {
-        const candidate = await prisma.candidate.findFirst({
+        const candidate = await prisma_1.prisma.candidate.findFirst({
             where: {
                 id: candidateId,
                 userId,
@@ -278,7 +277,7 @@ class ElectionService {
         if (!candidate) {
             throw new Error('Candidate profile not found or access denied');
         }
-        return await prisma.candidate.update({
+        return await prisma_1.prisma.candidate.update({
             where: { id: candidateId },
             data: {
                 isWithdrawn: true,
@@ -292,7 +291,7 @@ class ElectionService {
      */
     static async endorseCandidate(userId, candidateId, reason, isPublic = false) {
         // Check if user has already endorsed this candidate
-        const existingEndorsement = await prisma.endorsement.findUnique({
+        const existingEndorsement = await prisma_1.prisma.endorsement.findUnique({
             where: {
                 userId_candidateId: {
                     userId,
@@ -302,7 +301,7 @@ class ElectionService {
         });
         if (existingEndorsement) {
             // Update existing endorsement
-            return await prisma.endorsement.update({
+            return await prisma_1.prisma.endorsement.update({
                 where: {
                     id: existingEndorsement.id
                 },
@@ -324,7 +323,7 @@ class ElectionService {
             });
         }
         // Create new endorsement
-        return await prisma.endorsement.create({
+        return await prisma_1.prisma.endorsement.create({
             data: {
                 userId,
                 candidateId,
@@ -348,7 +347,7 @@ class ElectionService {
      * Remove endorsement
      */
     static async removeEndorsement(userId, candidateId) {
-        const endorsement = await prisma.endorsement.findUnique({
+        const endorsement = await prisma_1.prisma.endorsement.findUnique({
             where: {
                 userId_candidateId: {
                     userId,
@@ -359,7 +358,7 @@ class ElectionService {
         if (!endorsement) {
             throw new Error('Endorsement not found');
         }
-        return await prisma.endorsement.delete({
+        return await prisma_1.prisma.endorsement.delete({
             where: { id: endorsement.id }
         });
     }
@@ -370,7 +369,7 @@ class ElectionService {
         if (candidateIds.length < 2) {
             throw new Error('At least 2 candidates required for comparison');
         }
-        return await prisma.candidate.findMany({
+        return await prisma_1.prisma.candidate.findMany({
             where: {
                 id: { in: candidateIds },
                 isWithdrawn: false

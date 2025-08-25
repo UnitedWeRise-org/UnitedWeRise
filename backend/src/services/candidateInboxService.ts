@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { emailService } from './emailService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export interface InquiryData {
   candidateId: string;

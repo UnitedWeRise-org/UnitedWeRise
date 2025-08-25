@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
@@ -28,7 +29,7 @@ class MetricsService {
   private startTime: number;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.startTime = Date.now();
     this.initializeMetrics();
     this.startPeriodicCollection();

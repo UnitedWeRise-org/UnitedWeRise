@@ -3,14 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const express_validator_1 = require("express-validator");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const emailService_1 = require("../services/emailService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Validation middleware
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
@@ -37,7 +38,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
         const { suspensionId, reason, additionalInfo } = req.body;
         const userId = req.user.id;
         // Verify the suspension belongs to the user and is active
-        const suspension = await prisma.userSuspension.findFirst({
+        const suspension = await prisma_1.prisma.userSuspension.findFirst({
             where: {
                 id: suspensionId,
                 userId,
@@ -51,7 +52,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
             return res.status(409).json({ error: 'This suspension has already been appealed' });
         }
         // Check if user has submitted too many appeals recently
-        const recentAppeals = await prisma.appeal.count({
+        const recentAppeals = await prisma_1.prisma.appeal.count({
             where: {
                 userId,
                 createdAt: {
@@ -65,7 +66,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
             });
         }
         // Create appeal
-        const appeal = await prisma.appeal.create({
+        const appeal = await prisma_1.prisma.appeal.create({
             data: {
                 userId,
                 suspensionId,
@@ -75,7 +76,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
             }
         });
         // Mark suspension as appealed
-        await prisma.userSuspension.update({
+        await prisma_1.prisma.userSuspension.update({
             where: { id: suspensionId },
             data: {
                 appealed: true,
@@ -103,7 +104,7 @@ router.get('/my', auth_1.requireAuth, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 10, 50);
         const offset = (page - 1) * limit;
-        const appeals = await prisma.appeal.findMany({
+        const appeals = await prisma_1.prisma.appeal.findMany({
             where: { userId },
             include: {
                 suspension: {
@@ -125,7 +126,7 @@ router.get('/my', auth_1.requireAuth, async (req, res) => {
             skip: offset,
             take: limit
         });
-        const total = await prisma.appeal.count({ where: { userId } });
+        const total = await prisma_1.prisma.appeal.count({ where: { userId } });
         res.json({
             appeals,
             pagination: {
@@ -146,7 +147,7 @@ router.get('/:appealId', auth_1.requireAuth, async (req, res) => {
     try {
         const { appealId } = req.params;
         const userId = req.user.id;
-        const appeal = await prisma.appeal.findFirst({
+        const appeal = await prisma_1.prisma.appeal.findFirst({
             where: {
                 id: appealId,
                 userId // Ensure user can only see their own appeals
@@ -189,7 +190,7 @@ router.get('/queue/all', auth_1.requireAuth, requireModerator, async (req, res) 
         const where = {};
         if (status)
             where.status = status;
-        const appeals = await prisma.appeal.findMany({
+        const appeals = await prisma_1.prisma.appeal.findMany({
             where,
             include: {
                 user: {
@@ -222,7 +223,7 @@ router.get('/queue/all', auth_1.requireAuth, requireModerator, async (req, res) 
             skip: offset,
             take: limit
         });
-        const total = await prisma.appeal.count({ where });
+        const total = await prisma_1.prisma.appeal.count({ where });
         res.json({
             appeals,
             pagination: {
@@ -248,7 +249,7 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
         const { appealId } = req.params;
         const { decision, reviewNotes } = req.body;
         const reviewerId = req.user.id;
-        const appeal = await prisma.appeal.findUnique({
+        const appeal = await prisma_1.prisma.appeal.findUnique({
             where: { id: appealId },
             include: {
                 user: {
@@ -268,7 +269,7 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
             return res.status(400).json({ error: 'Appeal has already been reviewed' });
         }
         // Update appeal
-        await prisma.appeal.update({
+        await prisma_1.prisma.appeal.update({
             where: { id: appealId },
             data: {
                 status: decision,
@@ -279,12 +280,12 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
         });
         // If approved, lift the suspension
         if (decision === 'APPROVED' && appeal.suspension) {
-            await prisma.userSuspension.update({
+            await prisma_1.prisma.userSuspension.update({
                 where: { id: appeal.suspension.id },
                 data: { isActive: false }
             });
             // Check if user has other active suspensions
-            const otherSuspensions = await prisma.userSuspension.findFirst({
+            const otherSuspensions = await prisma_1.prisma.userSuspension.findFirst({
                 where: {
                     userId: appeal.userId,
                     isActive: true,
@@ -292,13 +293,13 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
                 }
             });
             if (!otherSuspensions) {
-                await prisma.user.update({
+                await prisma_1.prisma.user.update({
                     where: { id: appeal.userId },
                     data: { isSuspended: false }
                 });
             }
             // Create moderation log
-            await prisma.moderationLog.create({
+            await prisma_1.prisma.moderationLog.create({
                 data: {
                     moderatorId: reviewerId,
                     targetType: 'USER',
@@ -315,7 +316,7 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
         }
         else {
             // Create moderation log for denied appeal
-            await prisma.moderationLog.create({
+            await prisma_1.prisma.moderationLog.create({
                 data: {
                     moderatorId: reviewerId,
                     targetType: 'USER',

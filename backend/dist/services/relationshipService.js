@@ -1,15 +1,16 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RelationshipUtils = exports.FriendService = exports.FollowService = exports.FriendshipStatus = exports.RelationshipType = void 0;
+const prisma_1 = require("../lib/prisma");
 /**
  * Relationship Service
  *
  * Reusable service layer for managing user relationships (following and friendships)
  * Can be used across different contexts: API routes, components, background jobs, etc.
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.RelationshipUtils = exports.FriendService = exports.FollowService = exports.FriendshipStatus = exports.RelationshipType = void 0;
-const client_1 = require("@prisma/client");
+;
 const notifications_1 = require("../routes/notifications");
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 var RelationshipType;
 (function (RelationshipType) {
     RelationshipType["FOLLOW"] = "FOLLOW";
@@ -36,7 +37,7 @@ class FollowService {
                 return { success: false, message: 'Cannot follow yourself' };
             }
             // Check if user exists
-            const userToFollow = await prisma.user.findUnique({
+            const userToFollow = await prisma_1.prisma.user.findUnique({
                 where: { id: followingId },
                 select: { id: true, username: true }
             });
@@ -49,24 +50,24 @@ class FollowService {
                 return { success: false, message: 'Already following this user' };
             }
             // Create follow relationship and update counts atomically
-            await prisma.$transaction([
-                prisma.follow.create({
+            await prisma_1.prisma.$transaction([
+                prisma_1.prisma.follow.create({
                     data: {
                         followerId,
                         followingId
                     }
                 }),
-                prisma.user.update({
+                prisma_1.prisma.user.update({
                     where: { id: followerId },
                     data: { followingCount: { increment: 1 } }
                 }),
-                prisma.user.update({
+                prisma_1.prisma.user.update({
                     where: { id: followingId },
                     data: { followersCount: { increment: 1 } }
                 })
             ]);
             // Create notification (async, don't block response)
-            const follower = await prisma.user.findUnique({
+            const follower = await prisma_1.prisma.user.findUnique({
                 where: { id: followerId },
                 select: { username: true }
             });
@@ -90,7 +91,7 @@ class FollowService {
     static async unfollowUser(followerId, followingId) {
         try {
             // Check if following
-            const existingFollow = await prisma.follow.findUnique({
+            const existingFollow = await prisma_1.prisma.follow.findUnique({
                 where: {
                     followerId_followingId: {
                         followerId,
@@ -102,8 +103,8 @@ class FollowService {
                 return { success: false, message: 'Not following this user' };
             }
             // Remove follow relationship and update counts atomically
-            await prisma.$transaction([
-                prisma.follow.delete({
+            await prisma_1.prisma.$transaction([
+                prisma_1.prisma.follow.delete({
                     where: {
                         followerId_followingId: {
                             followerId,
@@ -111,11 +112,11 @@ class FollowService {
                         }
                     }
                 }),
-                prisma.user.update({
+                prisma_1.prisma.user.update({
                     where: { id: followerId },
                     data: { followingCount: { decrement: 1 } }
                 }),
-                prisma.user.update({
+                prisma_1.prisma.user.update({
                     where: { id: followingId },
                     data: { followersCount: { decrement: 1 } }
                 })
@@ -136,7 +137,7 @@ class FollowService {
      */
     static async getFollowStatus(followerId, followingId) {
         try {
-            const follow = await prisma.follow.findUnique({
+            const follow = await prisma_1.prisma.follow.findUnique({
                 where: {
                     followerId_followingId: {
                         followerId,
@@ -160,7 +161,7 @@ class FollowService {
      */
     static async getFollowers(userId, limit = 20, offset = 0) {
         try {
-            const followers = await prisma.follow.findMany({
+            const followers = await prisma_1.prisma.follow.findMany({
                 where: { followingId: userId },
                 include: {
                     follower: {
@@ -179,7 +180,7 @@ class FollowService {
                 skip: offset,
                 orderBy: { createdAt: 'desc' }
             });
-            const total = await prisma.follow.count({
+            const total = await prisma_1.prisma.follow.count({
                 where: { followingId: userId }
             });
             return {
@@ -200,7 +201,7 @@ class FollowService {
      */
     static async getFollowing(userId, limit = 20, offset = 0) {
         try {
-            const following = await prisma.follow.findMany({
+            const following = await prisma_1.prisma.follow.findMany({
                 where: { followerId: userId },
                 include: {
                     following: {
@@ -219,7 +220,7 @@ class FollowService {
                 skip: offset,
                 orderBy: { createdAt: 'desc' }
             });
-            const total = await prisma.follow.count({
+            const total = await prisma_1.prisma.follow.count({
                 where: { followerId: userId }
             });
             return {
@@ -240,7 +241,7 @@ class FollowService {
      */
     static async getBulkFollowStatus(currentUserId, userIds) {
         try {
-            const follows = await prisma.follow.findMany({
+            const follows = await prisma_1.prisma.follow.findMany({
                 where: {
                     followerId: currentUserId,
                     followingId: { in: userIds }
@@ -273,7 +274,7 @@ class FriendService {
                 return { success: false, message: 'Cannot send friend request to yourself' };
             }
             // Check if user exists
-            const recipient = await prisma.user.findUnique({
+            const recipient = await prisma_1.prisma.user.findUnique({
                 where: { id: recipientId },
                 select: { id: true, username: true }
             });
@@ -295,7 +296,7 @@ class FriendService {
                 }
             }
             // Create friend request
-            await prisma.friendship.create({
+            await prisma_1.prisma.friendship.create({
                 data: {
                     requesterId,
                     recipientId,
@@ -303,7 +304,7 @@ class FriendService {
                 }
             });
             // Create notification
-            const requester = await prisma.user.findUnique({
+            const requester = await prisma_1.prisma.user.findUnique({
                 where: { id: requesterId },
                 select: { username: true }
             });
@@ -327,7 +328,7 @@ class FriendService {
     static async acceptFriendRequest(userId, friendId) {
         try {
             // Find pending request where current user is the recipient
-            const friendRequest = await prisma.friendship.findFirst({
+            const friendRequest = await prisma_1.prisma.friendship.findFirst({
                 where: {
                     OR: [
                         { requesterId: friendId, recipientId: userId, status: FriendshipStatus.PENDING },
@@ -339,7 +340,7 @@ class FriendService {
                 return { success: false, message: 'No pending friend request found' };
             }
             // Update to accepted
-            await prisma.friendship.update({
+            await prisma_1.prisma.friendship.update({
                 where: { id: friendRequest.id },
                 data: {
                     status: FriendshipStatus.ACCEPTED,
@@ -347,7 +348,7 @@ class FriendService {
                 }
             });
             // Create notification
-            const accepter = await prisma.user.findUnique({
+            const accepter = await prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: { username: true }
             });
@@ -370,7 +371,7 @@ class FriendService {
      */
     static async rejectFriendRequest(userId, friendId) {
         try {
-            const friendRequest = await prisma.friendship.findFirst({
+            const friendRequest = await prisma_1.prisma.friendship.findFirst({
                 where: {
                     OR: [
                         { requesterId: friendId, recipientId: userId, status: FriendshipStatus.PENDING },
@@ -382,7 +383,7 @@ class FriendService {
                 return { success: false, message: 'No pending friend request found' };
             }
             // Update to rejected
-            await prisma.friendship.update({
+            await prisma_1.prisma.friendship.update({
                 where: { id: friendRequest.id },
                 data: { status: FriendshipStatus.REJECTED }
             });
@@ -402,7 +403,7 @@ class FriendService {
      */
     static async removeFriend(userId, friendId) {
         try {
-            const friendship = await prisma.friendship.findFirst({
+            const friendship = await prisma_1.prisma.friendship.findFirst({
                 where: {
                     OR: [
                         { requesterId: userId, recipientId: friendId, status: FriendshipStatus.ACCEPTED },
@@ -414,7 +415,7 @@ class FriendService {
                 return { success: false, message: 'No friendship found' };
             }
             // Delete the friendship
-            await prisma.friendship.delete({
+            await prisma_1.prisma.friendship.delete({
                 where: { id: friendship.id }
             });
             return {
@@ -433,7 +434,7 @@ class FriendService {
      */
     static async getFriendStatus(userId, otherUserId) {
         try {
-            const friendship = await prisma.friendship.findFirst({
+            const friendship = await prisma_1.prisma.friendship.findFirst({
                 where: {
                     OR: [
                         { requesterId: userId, recipientId: otherUserId },
@@ -466,7 +467,7 @@ class FriendService {
      */
     static async getFriends(userId, limit = 20, offset = 0) {
         try {
-            const friendships = await prisma.friendship.findMany({
+            const friendships = await prisma_1.prisma.friendship.findMany({
                 where: {
                     OR: [
                         { requesterId: userId, status: FriendshipStatus.ACCEPTED },
@@ -505,7 +506,7 @@ class FriendService {
                     ? friendship.recipient
                     : friendship.requester;
             });
-            const total = await prisma.friendship.count({
+            const total = await prisma_1.prisma.friendship.count({
                 where: {
                     OR: [
                         { requesterId: userId, status: FriendshipStatus.ACCEPTED },
@@ -531,7 +532,7 @@ class FriendService {
      */
     static async getPendingRequests(userId) {
         try {
-            const requests = await prisma.friendship.findMany({
+            const requests = await prisma_1.prisma.friendship.findMany({
                 where: {
                     recipientId: userId,
                     status: FriendshipStatus.PENDING
@@ -569,7 +570,7 @@ class FriendService {
      */
     static async getBulkFriendStatus(currentUserId, userIds) {
         try {
-            const friendships = await prisma.friendship.findMany({
+            const friendships = await prisma_1.prisma.friendship.findMany({
                 where: {
                     OR: [
                         { requesterId: currentUserId, recipientId: { in: userIds } },
@@ -667,7 +668,7 @@ class RelationshipUtils {
                 ORDER BY mutual_count DESC
                 LIMIT $2
             `;
-            const suggestions = await prisma.$queryRawUnsafe(mutualQuery, userId, limit);
+            const suggestions = await prisma_1.prisma.$queryRawUnsafe(mutualQuery, userId, limit);
             return {
                 success: true,
                 data: suggestions

@@ -5,8 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QwenService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 class QwenService {
     /**
      * Test Qwen3 API connection
@@ -42,7 +41,7 @@ class QwenService {
      */
     static async analyzeCandidatePositions(candidateId, content) {
         try {
-            const candidate = await prisma.candidate.findUnique({
+            const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: candidateId }
             });
             if (!candidate) {
@@ -78,7 +77,7 @@ class QwenService {
         try {
             console.log(`🔄 Comparing ${candidateIds.length} candidates...`);
             // Get candidate data
-            const candidates = await prisma.candidate.findMany({
+            const candidates = await prisma_1.prisma.candidate.findMany({
                 where: {
                     id: { in: candidateIds },
                     ...(officeId ? { officeId } : {})

@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get user's conversations
 router.get('/conversations', auth_1.requireAuth, async (req, res) => {
     try {
@@ -17,7 +18,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        const conversations = await prisma.conversationParticipant.findMany({
+        const conversations = await prisma_1.prisma.conversationParticipant.findMany({
             where: { userId },
             include: {
                 conversation: {
@@ -86,7 +87,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Cannot start conversation with yourself' });
         }
         // Check if participant exists
-        const participant = await prisma.user.findUnique({
+        const participant = await prisma_1.prisma.user.findUnique({
             where: { id: participantId },
             select: { id: true, username: true, firstName: true, lastName: true, avatar: true }
         });
@@ -94,7 +95,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         // Check if conversation already exists between these users
-        const existingConversation = await prisma.conversation.findFirst({
+        const existingConversation = await prisma_1.prisma.conversation.findFirst({
             where: {
                 participants: {
                     every: {
@@ -132,7 +133,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Create new conversation
-        const conversation = await prisma.conversation.create({
+        const conversation = await prisma_1.prisma.conversation.create({
             data: {
                 participants: {
                     create: [
@@ -181,7 +182,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
         // Verify user is participant in conversation
-        const participant = await prisma.conversationParticipant.findUnique({
+        const participant = await prisma_1.prisma.conversationParticipant.findUnique({
             where: {
                 userId_conversationId: {
                     userId,
@@ -196,7 +197,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
         if (before) {
             whereClause.createdAt = { lt: new Date(before.toString()) };
         }
-        const messages = await prisma.message.findMany({
+        const messages = await prisma_1.prisma.message.findMany({
             where: whereClause,
             include: {
                 sender: {
@@ -214,7 +215,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
             skip: offsetNum
         });
         // Update last read timestamp
-        await prisma.conversationParticipant.update({
+        await prisma_1.prisma.conversationParticipant.update({
             where: {
                 userId_conversationId: {
                     userId,
@@ -248,7 +249,7 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
             return res.status(400).json({ error: 'Message content is required' });
         }
         // Verify user is participant
-        const participant = await prisma.conversationParticipant.findUnique({
+        const participant = await prisma_1.prisma.conversationParticipant.findUnique({
             where: {
                 userId_conversationId: {
                     userId,
@@ -260,7 +261,7 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
             return res.status(403).json({ error: 'Access denied to this conversation' });
         }
         // Create message
-        const message = await prisma.message.create({
+        const message = await prisma_1.prisma.message.create({
             data: {
                 content: content.trim(),
                 senderId: userId,
@@ -279,7 +280,7 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
             }
         });
         // Update conversation
-        await prisma.conversation.update({
+        await prisma_1.prisma.conversation.update({
             where: { id: conversationId },
             data: {
                 lastMessageAt: new Date(),

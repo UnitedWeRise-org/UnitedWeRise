@@ -1,14 +1,3 @@
-/**
- * Universal Semantic Topic Discovery and Navigation System
- *
- * Implements the complete workflow you described:
- * 1. Group similar vectors into trending topics
- * 2. Generate AI summaries with prevailing positions and critiques
- * 3. Enable topic-filtered navigation and content creation
- * 4. Seamless return to algorithm-based feed when exiting topics
- *
- * Designed to be reusable across different content types and domains.
- */
 export interface TopicCluster {
     id: string;
     title: string;

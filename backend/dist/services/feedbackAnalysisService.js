@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.feedbackAnalysisService = exports.FeedbackAnalysisService = void 0;
 const azureOpenAIService_1 = require("./azureOpenAIService");
+const prisma_1 = require("../lib/prisma");
 const logger_1 = __importDefault(require("../utils/logger"));
 class FeedbackAnalysisService {
     constructor() {
@@ -224,9 +225,7 @@ Respond with JSON only:
             const analysis = await this.analyzePost(content, userId);
             if (analysis.isFeedback && analysis.confidence > 0.6) {
                 // Update the post with feedback data
-                const { PrismaClient } = require('@prisma/client');
-                const prisma = new PrismaClient();
-                await prisma.post.update({
+                await prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: {
                         containsFeedback: true,
@@ -239,17 +238,15 @@ Respond with JSON only:
                     }
                 });
                 logger_1.default.info(`Post ${postId} updated with ${analysis.type} feedback (${Math.round(analysis.confidence * 100)}% confidence)`);
-                await prisma.$disconnect();
+                await prisma_1.prisma.$disconnect();
             }
             else {
                 // Mark as analyzed but not feedback
-                const { PrismaClient } = require('@prisma/client');
-                const prisma = new PrismaClient();
-                await prisma.post.update({
+                await prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: { containsFeedback: false }
                 });
-                await prisma.$disconnect();
+                await prisma_1.prisma.$disconnect();
             }
         }
         catch (error) {

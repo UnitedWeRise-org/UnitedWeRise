@@ -4,10 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OAuthService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const auth_1 = require("../utils/auth");
 const crypto_1 = __importDefault(require("crypto"));
-const prisma = new client_1.PrismaClient();
 class OAuthService {
     /**
      * Handle OAuth login/registration flow
@@ -15,7 +15,7 @@ class OAuthService {
     static async handleOAuthLogin(profile) {
         try {
             // First, check if user already has this OAuth provider linked
-            const existingOAuthProvider = await prisma.userOAuthProvider.findUnique({
+            const existingOAuthProvider = await prisma_1.prisma.userOAuthProvider.findUnique({
                 where: {
                     provider_providerId: {
                         provider: profile.provider,
@@ -26,7 +26,7 @@ class OAuthService {
             });
             if (existingOAuthProvider) {
                 // Update OAuth tokens
-                await prisma.userOAuthProvider.update({
+                await prisma_1.prisma.userOAuthProvider.update({
                     where: { id: existingOAuthProvider.id },
                     data: {
                         accessToken: profile.accessToken ? this.encryptToken(profile.accessToken) : undefined,
@@ -52,12 +52,12 @@ class OAuthService {
                 };
             }
             // Check if user exists with this email
-            const existingUser = await prisma.user.findUnique({
+            const existingUser = await prisma_1.prisma.user.findUnique({
                 where: { email: profile.email }
             });
             if (existingUser) {
                 // Link OAuth provider to existing user account
-                await prisma.userOAuthProvider.create({
+                await prisma_1.prisma.userOAuthProvider.create({
                     data: {
                         userId: existingUser.id,
                         provider: profile.provider,
@@ -81,7 +81,7 @@ class OAuthService {
                 if (!existingUser.emailVerified)
                     updateData.emailVerified = true; // OAuth emails are pre-verified
                 if (Object.keys(updateData).length > 0) {
-                    await prisma.user.update({
+                    await prisma_1.prisma.user.update({
                         where: { id: existingUser.id },
                         data: updateData
                     });
@@ -102,7 +102,7 @@ class OAuthService {
             }
             // Create new user account
             const username = await this.generateUniqueUsername(profile.email, profile.name);
-            const newUser = await prisma.user.create({
+            const newUser = await prisma_1.prisma.user.create({
                 data: {
                     email: profile.email,
                     username,
@@ -116,7 +116,7 @@ class OAuthService {
                 }
             });
             // Create OAuth provider record
-            await prisma.userOAuthProvider.create({
+            await prisma_1.prisma.userOAuthProvider.create({
                 data: {
                     userId: newUser.id,
                     provider: profile.provider,
@@ -154,7 +154,7 @@ class OAuthService {
     static async linkOAuthProvider(userId, profile) {
         try {
             // Check if this OAuth provider is already linked to another account
-            const existingProvider = await prisma.userOAuthProvider.findUnique({
+            const existingProvider = await prisma_1.prisma.userOAuthProvider.findUnique({
                 where: {
                     provider_providerId: {
                         provider: profile.provider,
@@ -166,7 +166,7 @@ class OAuthService {
                 throw new Error('This OAuth account is already linked to another user');
             }
             // Check if user already has this provider linked
-            const userProvider = await prisma.userOAuthProvider.findUnique({
+            const userProvider = await prisma_1.prisma.userOAuthProvider.findUnique({
                 where: {
                     userId_provider: {
                         userId,
@@ -176,7 +176,7 @@ class OAuthService {
             });
             if (userProvider) {
                 // Update existing provider
-                await prisma.userOAuthProvider.update({
+                await prisma_1.prisma.userOAuthProvider.update({
                     where: { id: userProvider.id },
                     data: {
                         providerId: profile.id,
@@ -191,7 +191,7 @@ class OAuthService {
             }
             else {
                 // Create new provider link
-                await prisma.userOAuthProvider.create({
+                await prisma_1.prisma.userOAuthProvider.create({
                     data: {
                         userId,
                         provider: profile.provider,
@@ -217,7 +217,7 @@ class OAuthService {
     static async unlinkOAuthProvider(userId, provider) {
         try {
             // Check if user has a password or other OAuth providers
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 include: { oauthProviders: true }
             });
@@ -228,7 +228,7 @@ class OAuthService {
             if (!user.password && otherProviders.length === 1) {
                 throw new Error('Cannot unlink the last authentication method. Please set a password first.');
             }
-            await prisma.userOAuthProvider.deleteMany({
+            await prisma_1.prisma.userOAuthProvider.deleteMany({
                 where: {
                     userId,
                     provider
@@ -245,7 +245,7 @@ class OAuthService {
      */
     static async getUserOAuthProviders(userId) {
         try {
-            const providers = await prisma.userOAuthProvider.findMany({
+            const providers = await prisma_1.prisma.userOAuthProvider.findMany({
                 where: { userId },
                 select: {
                     provider: true,
@@ -288,7 +288,7 @@ class OAuthService {
         let username = baseUsername;
         let counter = 1;
         while (true) {
-            const existing = await prisma.user.findUnique({
+            const existing = await prisma_1.prisma.user.findUnique({
                 where: { username }
             });
             if (!existing) {

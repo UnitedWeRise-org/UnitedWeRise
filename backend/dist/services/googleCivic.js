@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.googleCivicService = exports.GeolocationService = void 0;
+const prisma_1 = require("../lib/prisma");
 const apiCache_1 = require("./apiCache");
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+;
+// Using singleton prisma from lib/prisma.ts
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
 const GEOCODIO_BASE_URL = 'https://api.geocod.io/v1.7';
 class GeolocationService {
@@ -130,7 +131,7 @@ class GeolocationService {
     static async storeOfficialsInDb(officials, zipCode, state) {
         try {
             // Clear existing officials for this location to avoid duplicates
-            await prisma.externalOfficial.deleteMany({
+            await prisma_1.prisma.externalOfficial.deleteMany({
                 where: {
                     provider: 'geocodio',
                     zipCode,
@@ -141,7 +142,7 @@ class GeolocationService {
             for (const official of officials) {
                 if (!official.name || !official.office)
                     continue;
-                await prisma.externalOfficial.create({
+                await prisma_1.prisma.externalOfficial.create({
                     data: {
                         externalId: `${official.name}_${official.office}`.replace(/[^a-zA-Z0-9]/g, '_'),
                         provider: 'geocodio',
@@ -173,7 +174,7 @@ class GeolocationService {
      */
     static async getCachedOfficialsByLocation(zipCode, state) {
         try {
-            const officials = await prisma.externalOfficial.findMany({
+            const officials = await prisma_1.prisma.externalOfficial.findMany({
                 where: {
                     provider: 'geocodio',
                     zipCode,

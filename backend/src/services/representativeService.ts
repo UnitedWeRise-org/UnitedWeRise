@@ -1,8 +1,9 @@
+import { prisma } from '../lib/prisma';
 import { ApiCacheService } from './apiCache';
-import { PrismaClient } from '@prisma/client';
+;
 import { GoogleCivicService } from './googleCivicService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // API Configuration
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;

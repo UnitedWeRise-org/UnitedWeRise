@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TopicService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
-const prisma = new client_1.PrismaClient();
 class TopicService {
     /**
      * Analyze recent posts and generate topic clusters
@@ -14,7 +13,7 @@ class TopicService {
             console.log(`Analyzing posts from last ${timeframe} hours...`);
             // Get recent posts with embeddings
             const cutoffDate = new Date(Date.now() - timeframe * 60 * 60 * 1000);
-            const posts = await prisma.post.findMany({
+            const posts = await prisma_1.prisma.post.findMany({
                 where: {
                     createdAt: { gte: cutoffDate },
                     embedding: {
@@ -64,7 +63,7 @@ class TopicService {
             console.log('Saving topics to database...');
             for (const cluster of analysis.topics) {
                 // Create or update topic
-                const topic = await prisma.topic.create({
+                const topic = await prisma_1.prisma.topic.create({
                     data: {
                         title: cluster.title,
                         description: cluster.description,
@@ -82,7 +81,7 @@ class TopicService {
                 });
                 // Link posts to topic
                 for (const post of cluster.posts) {
-                    await prisma.topicPost.create({
+                    await prisma_1.prisma.topicPost.create({
                         data: {
                             topicId: topic.id,
                             postId: post.id,
@@ -103,7 +102,7 @@ class TopicService {
      * Get trending topics
      */
     static async getTrendingTopics(limit = 10) {
-        return await prisma.topic.findMany({
+        return await prisma_1.prisma.topic.findMany({
             where: {
                 isActive: true,
                 postCount: { gte: this.MIN_POSTS_PER_TOPIC }
@@ -148,7 +147,7 @@ class TopicService {
      * Get topic details with posts and comments
      */
     static async getTopicDetails(topicId) {
-        return await prisma.topic.findUnique({
+        return await prisma_1.prisma.topic.findUnique({
             where: { id: topicId },
             include: {
                 posts: {
@@ -265,7 +264,7 @@ class TopicService {
             throw new Error('Either topicId or subTopicId must be provided');
         }
         const analysis = await embeddingService_1.EmbeddingService.analyzeText(content);
-        const comment = await prisma.topicComment.create({
+        const comment = await prisma_1.prisma.topicComment.create({
             data: {
                 content,
                 authorId: userId,
@@ -293,7 +292,7 @@ class TopicService {
         });
         // Update comment counts
         if (subTopicId) {
-            await prisma.subTopic.update({
+            await prisma_1.prisma.subTopic.update({
                 where: { id: subTopicId },
                 data: {
                     commentCount: { increment: 1 }
@@ -302,12 +301,12 @@ class TopicService {
         }
         // Update topic activity
         if (topicId || subTopicId) {
-            const targetTopicId = topicId || (await prisma.subTopic.findUnique({
+            const targetTopicId = topicId || (await prisma_1.prisma.subTopic.findUnique({
                 where: { id: subTopicId },
                 select: { parentTopicId: true }
             }))?.parentTopicId;
             if (targetTopicId) {
-                await prisma.topic.update({
+                await prisma_1.prisma.topic.update({
                     where: { id: targetTopicId },
                     data: {
                         lastActivityAt: new Date(),
@@ -324,7 +323,7 @@ class TopicService {
     static async updateTrendingScores() {
         try {
             console.log('Updating trending scores...');
-            const topics = await prisma.topic.findMany({
+            const topics = await prisma_1.prisma.topic.findMany({
                 where: { isActive: true },
                 include: {
                     posts: {
@@ -347,7 +346,7 @@ class TopicService {
             });
             for (const topic of topics) {
                 const score = this.calculateTrendingScore(topic);
-                await prisma.topic.update({
+                await prisma_1.prisma.topic.update({
                     where: { id: topic.id },
                     data: { trendingScore: score }
                 });

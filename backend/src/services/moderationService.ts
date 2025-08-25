@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 import { PrismaClient } from '@prisma/client';
 import { emailService } from './emailService';
 import { azureOpenAI, AzureOpenAIService } from './azureOpenAIService';
@@ -9,7 +10,7 @@ class ModerationService {
   private spamKeywords: string[];
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.toxicityThreshold = 0.8; // Confidence threshold for flagging content
     this.spamKeywords = [
       'click here', 'buy now', 'free money', 'guaranteed', 'make money fast',

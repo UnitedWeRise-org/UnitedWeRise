@@ -310,9 +310,21 @@ model Candidate {
   keyIssues          String[]           @default([])
   embedding          Float[]            @default([])
   isVerified         Boolean            @default(false)
+  
+  // Status management
+  status             CandidateStatus    @default(ACTIVE)
+  statusChangedAt    DateTime?
+  statusChangedBy    String?           // Admin user ID who changed status
+  statusReason       String?           // Reason for status change
+  suspendedUntil     DateTime?         // For temporary suspensions
+  appealDeadline     DateTime?         // Deadline for appeals when revoked
+  appealNotes        String?           // Notes from appeal process
+  
+  // Legacy fields (kept for backward compatibility)
   isWithdrawn        Boolean            @default(false)
   withdrawnAt        DateTime?
   withdrawnReason    String?
+  
   userId             String?            @unique
   officeId           String
   createdAt          DateTime           @default(now())
@@ -1614,6 +1626,15 @@ enum FlagType {
   FAKE_ENGAGEMENT
   DUPLICATE_CONTENT
   SUSPICIOUS_ACTIVITY
+}
+
+enum CandidateStatus {
+  ACTIVE        // Currently running for office
+  SUSPENDED     // Voluntarily paused candidacy
+  ENDED         // Election concluded, historical record
+  REVOKED       // Access revoked pending appeal
+  BANNED        // Permanently banned after appeal denial
+  WITHDRAWN     // Voluntarily withdrew from race
 }
 
 enum FlagSource {

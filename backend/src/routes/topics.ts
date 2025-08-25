@@ -1,12 +1,13 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { TopicService } from '../services/topicService';
 import { EmbeddingService } from '../services/embeddingService';
 import { metricsService } from '../services/metricsService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * @swagger

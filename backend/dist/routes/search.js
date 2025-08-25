@@ -3,11 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // 🎯 OPTIMIZED: Unified search endpoint (replaces 4 separate API calls)
 // Replaces: /search/users + /search/posts + /search/officials + /search/topics
 router.get('/unified', auth_1.requireAuth, async (req, res) => {
@@ -27,7 +28,7 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         // Search Users
         if (includeAll || searchTypes.includes('users')) {
             resultTypes.push('users');
-            searchPromises.push(prisma.user.findMany({
+            searchPromises.push(prisma_1.prisma.user.findMany({
                 where: {
                     OR: [
                         {
@@ -79,7 +80,7 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         // Search Posts
         if (includeAll || searchTypes.includes('posts')) {
             resultTypes.push('posts');
-            searchPromises.push(prisma.post.findMany({
+            searchPromises.push(prisma_1.prisma.post.findMany({
                 where: {
                     content: {
                         contains: searchTerm,
@@ -114,7 +115,7 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         // Search Officials/Representatives
         if (includeAll || searchTypes.includes('officials')) {
             resultTypes.push('officials');
-            searchPromises.push(prisma.user.findMany({
+            searchPromises.push(prisma_1.prisma.user.findMany({
                 where: {
                     AND: [
                         {
@@ -184,7 +185,7 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         // Search Topics (simplified for now - topics are stored as JSON array)
         if (includeAll || searchTypes.includes('topics')) {
             resultTypes.push('topics');
-            searchPromises.push(prisma.post.findMany({
+            searchPromises.push(prisma_1.prisma.post.findMany({
                 where: {
                     content: {
                         contains: searchTerm,
@@ -263,7 +264,7 @@ router.get('/users', auth_1.requireAuth, async (req, res) => {
         const searchTerm = q.toString().toLowerCase();
         const limitNum = parseInt(limit.toString());
         const currentUserId = req.user.id;
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: {
                 OR: [
                     {
@@ -331,7 +332,7 @@ router.get('/posts', auth_1.requireAuth, async (req, res) => {
         }
         const searchTerm = q.toString().toLowerCase();
         const limitNum = parseInt(limit.toString());
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: {
                 content: {
                     contains: searchTerm,
@@ -377,7 +378,7 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
         }
         const searchTerm = q.toString().toLowerCase();
         const limitNum = parseInt(limit.toString());
-        const officials = await prisma.user.findMany({
+        const officials = await prisma_1.prisma.user.findMany({
             where: {
                 AND: [
                     {
@@ -459,7 +460,7 @@ router.get('/topics', auth_1.requireAuth, async (req, res) => {
         const searchTerm = q.toString().toLowerCase();
         const limitNum = parseInt(limit.toString());
         // Search for posts containing the topic term
-        const topicPosts = await prisma.post.findMany({
+        const topicPosts = await prisma_1.prisma.post.findMany({
             where: {
                 content: {
                     contains: searchTerm,

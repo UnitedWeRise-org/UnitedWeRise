@@ -1,4 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TopicDiscoveryService = void 0;
+const prisma_1 = require("../lib/prisma");
 /**
  * Universal Semantic Topic Discovery and Navigation System
  *
@@ -10,19 +16,13 @@
  *
  * Designed to be reusable across different content types and domains.
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TopicDiscoveryService = void 0;
-const client_1 = require("@prisma/client");
+;
 const qdrantService_1 = require("./qdrantService");
 const qwenService_1 = require("./qwenService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const probabilityFeedService_1 = require("./probabilityFeedService");
 const azureConfig_1 = require("../config/azureConfig");
 const logger_1 = __importDefault(require("../utils/logger"));
-const prisma = new client_1.PrismaClient();
 class TopicDiscoveryService {
     /**
      * Main entry point: Discover trending topics from recent activity
@@ -57,7 +57,7 @@ class TopicDiscoveryService {
      */
     static async getRecentEngagedPosts(timeframeHours) {
         const cutoffDate = new Date(Date.now() - timeframeHours * 60 * 60 * 1000);
-        return await prisma.post.findMany({
+        return await prisma_1.prisma.post.findMany({
             where: {
                 createdAt: { gte: cutoffDate },
                 embedding: { isEmpty: false }, // Must have embeddings
@@ -362,7 +362,7 @@ Respond with JSON only:
             .map(([word]) => word);
     }
     static async enrichPostsWithMetadata(postIds) {
-        return await prisma.post.findMany({
+        return await prisma_1.prisma.post.findMany({
             where: { id: { in: postIds } },
             include: {
                 author: {

@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Health and Deployment Status Endpoints
  * 
@@ -5,13 +6,13 @@
  */
 
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import fs from 'fs';
 import path from 'path';
 import logger from '../utils/logger';
 
 const router = Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get deployment information from package.json
 function getPackageInfo() {

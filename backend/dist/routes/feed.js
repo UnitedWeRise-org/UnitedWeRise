@@ -3,12 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const probabilityFeedService_1 = require("../services/probabilityFeedService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get personalized feed using probability cloud algorithm
 router.get('/', auth_1.requireAuth, async (req, res) => {
     try {
@@ -26,7 +26,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
         const paginatedPosts = feedResult.posts.slice(offsetNum, offsetNum + limitNum);
         // Add user's like status to each post (use paginated posts)
         const postIds = paginatedPosts.map(p => p.id);
-        const userLikes = await prisma.like.findMany({
+        const userLikes = await prisma_1.prisma.like.findMany({
             where: {
                 userId,
                 postId: { in: postIds }
@@ -66,7 +66,7 @@ router.get('/trending', async (req, res) => {
         const limitNum = Math.max(1, parseInt(limit.toString()) || 20);
         const offsetNum = Math.max(0, parseInt(offset.toString()) || 0);
         // Check if any posts exist first
-        const totalPosts = await prisma.post.count();
+        const totalPosts = await prisma_1.prisma.post.count();
         if (totalPosts === 0) {
             return res.json({
                 posts: [],
@@ -78,7 +78,7 @@ router.get('/trending', async (req, res) => {
             });
         }
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const trendingPosts = await prisma.post.findMany({
+        const trendingPosts = await prisma_1.prisma.post.findMany({
             where: {
                 createdAt: {
                     gte: oneDayAgo

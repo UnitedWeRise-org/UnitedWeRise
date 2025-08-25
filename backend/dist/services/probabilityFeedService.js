@@ -1,14 +1,14 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProbabilityFeedService = void 0;
+const prisma_1 = require("../lib/prisma");
 /**
  * Probability-based Feed Algorithm
  * Created: August 10, 2025
  * Purpose: Implement electron-cloud-like probability sampling for social media feed
  * Author: Claude Code Assistant
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProbabilityFeedService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+;
 class ProbabilityFeedService {
     /**
      * Generate personalized feed using probability cloud sampling
@@ -52,7 +52,7 @@ class ProbabilityFeedService {
      */
     static async getUserProfile(userId) {
         const [user, followedUsers, likedPosts, userPosts] = await Promise.all([
-            prisma.user.findUnique({
+            prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
                     id: true,
@@ -60,17 +60,17 @@ class ProbabilityFeedService {
                     interests: true // if we add this field later
                 }
             }),
-            prisma.follow.findMany({
+            prisma_1.prisma.follow.findMany({
                 where: { followerId: userId },
                 select: { followingId: true }
             }),
-            prisma.like.findMany({
+            prisma_1.prisma.like.findMany({
                 where: { userId },
                 include: { post: { select: { embedding: true, authorId: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: 50 // Recent likes for interest profiling
             }),
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { authorId: userId },
                 select: { embedding: true },
                 orderBy: { createdAt: 'desc' },
@@ -91,7 +91,7 @@ class ProbabilityFeedService {
      */
     static async getCandidatePosts(userId) {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        return prisma.post.findMany({
+        return prisma_1.prisma.post.findMany({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
                 authorId: { not: userId } // Don't include user's own posts

@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Relationship Service
  * 
@@ -5,10 +6,10 @@
  * Can be used across different contexts: API routes, components, background jobs, etc.
  */
 
-import { PrismaClient } from '@prisma/client';
+;
 import { createNotification } from '../routes/notifications';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export enum RelationshipType {
     FOLLOW = 'FOLLOW',

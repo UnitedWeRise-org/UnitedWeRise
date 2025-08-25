@@ -1,8 +1,9 @@
-import { PrismaClient, Candidate, Photo } from '@prisma/client';
+import { Candidate, Photo } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { QwenService } from './qwenService';
 import { PhotoService } from './photoService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface CandidateProfile {
   id: string;

@@ -1,5 +1,6 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ElectionService } from '../services/electionService';
 import { EnhancedCandidateService } from '../services/enhancedCandidateService';
@@ -9,7 +10,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Validation schemas for candidate registration
 const candidateRegistrationSchema = z.object({

@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get user's notifications
 router.get('/', requireAuth, async (req: AuthRequest, res) => {

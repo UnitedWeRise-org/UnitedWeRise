@@ -1,4 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.reputationService = exports.ReputationService = void 0;
+const prisma_1 = require("../lib/prisma");
 /**
  * Reputation Service for UnitedWeRise
  *
@@ -8,12 +14,6 @@
  * - Per-post penalty cap (prevents pile-ons)
  * - Mild algorithmic effects (±10-20% visibility)
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.reputationService = exports.ReputationService = void 0;
-const client_1 = require("@prisma/client");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const logger_1 = __importDefault(require("../utils/logger"));
 // Score thresholds and effects
@@ -46,7 +46,7 @@ const REWARDS = {
 const DAILY_MAX_GAIN = 2;
 class ReputationService {
     constructor() {
-        this.prisma = new client_1.PrismaClient();
+        this.prisma = prisma_1.prisma;
     }
     /**
      * Get user's current reputation score

@@ -39,9 +39,9 @@ export declare class OAuthService {
      * Get user's linked OAuth providers
      */
     static getUserOAuthProviders(userId: string): Promise<{
+        name: string;
         email: string;
         createdAt: Date;
-        name: string;
         provider: import(".prisma/client").$Enums.OAuthProvider;
         picture: string;
     }[]>;

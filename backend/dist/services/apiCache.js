@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApiCacheService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
+;
 class ApiCacheService {
     /**
      * Get cached data or return null if not found/expired
      */
     static async get(provider, cacheKey) {
         try {
-            const cached = await prisma.apiCache.findUnique({
+            const cached = await prisma_1.prisma.apiCache.findUnique({
                 where: {
                     provider_cacheKey: {
                         provider,
@@ -27,7 +27,7 @@ class ApiCacheService {
                 return null;
             }
             // Increment hit count
-            await prisma.apiCache.update({
+            await prisma_1.prisma.apiCache.update({
                 where: { id: cached.id },
                 data: { hitCount: { increment: 1 } }
             });
@@ -44,7 +44,7 @@ class ApiCacheService {
     static async set(provider, cacheKey, data, ttlMinutes = 60) {
         try {
             const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-            await prisma.apiCache.upsert({
+            await prisma_1.prisma.apiCache.upsert({
                 where: {
                     provider_cacheKey: {
                         provider,
@@ -75,7 +75,7 @@ class ApiCacheService {
      */
     static async delete(provider, cacheKey) {
         try {
-            await prisma.apiCache.delete({
+            await prisma_1.prisma.apiCache.delete({
                 where: {
                     provider_cacheKey: {
                         provider,
@@ -93,7 +93,7 @@ class ApiCacheService {
      */
     static async clearExpired() {
         try {
-            const result = await prisma.apiCache.deleteMany({
+            const result = await prisma_1.prisma.apiCache.deleteMany({
                 where: {
                     expiresAt: {
                         lt: new Date()
@@ -113,14 +113,14 @@ class ApiCacheService {
     static async getStats(provider) {
         try {
             const where = provider ? { provider } : {};
-            const total = await prisma.apiCache.count({ where });
-            const expired = await prisma.apiCache.count({
+            const total = await prisma_1.prisma.apiCache.count({ where });
+            const expired = await prisma_1.prisma.apiCache.count({
                 where: {
                     ...where,
                     expiresAt: { lt: new Date() }
                 }
             });
-            const hitStats = await prisma.apiCache.aggregate({
+            const hitStats = await prisma_1.prisma.apiCache.aggregate({
                 where,
                 _sum: { hitCount: true },
                 _avg: { hitCount: true }

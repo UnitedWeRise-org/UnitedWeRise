@@ -1,10 +1,10 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ProbabilityFeedService } from '../services/probabilityFeedService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get personalized feed using probability cloud algorithm
 router.get('/', requireAuth, async (req: AuthRequest, res) => {

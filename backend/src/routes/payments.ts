@@ -1,11 +1,12 @@
 import express, { Router, Response, Request } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { StripeService } from '../services/stripeService';
-import { PrismaClient, DonationType, FeeType } from '@prisma/client';
+import { DonationType, FeeType } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { body, validationResult } from 'express-validator';
 
 const router = Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * Create a tax-deductible donation

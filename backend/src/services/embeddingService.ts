@@ -1,11 +1,12 @@
+import { prisma } from '../lib/prisma';
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+;
 import { SentenceTransformersService } from './sentenceTransformersService';
 import { azureOpenAI } from './azureOpenAIService';
 import { getSemanticConfig, isProduction } from '../config/azureConfig';
 // import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface EmbeddingResponse {
   embedding: number[];

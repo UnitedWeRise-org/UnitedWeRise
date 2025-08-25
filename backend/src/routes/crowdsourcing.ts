@@ -1,11 +1,12 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { DistrictIdentificationService } from '../services/districtIdentificationService';
 import { createNotification } from './notifications';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Rate limiting for crowdsourcing submissions
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();

@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SecurityService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
+;
 class SecurityService {
     /**
      * Log a security event
@@ -10,7 +10,7 @@ class SecurityService {
     static async logEvent(eventData) {
         try {
             const riskScore = eventData.riskScore || this.calculateRiskScore(eventData);
-            await prisma.securityEvent.create({
+            await prisma_1.prisma.securityEvent.create({
                 data: {
                     userId: eventData.userId || null,
                     eventType: eventData.eventType,
@@ -37,7 +37,7 @@ class SecurityService {
     static async handleFailedLogin(userId, ipAddress, userAgent) {
         try {
             // Get current user data
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: userId }
             });
             if (!user)
@@ -52,7 +52,7 @@ class SecurityService {
                 updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
             }
             // Update user
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: updateData
             });
@@ -84,7 +84,7 @@ class SecurityService {
                 lastLoginIp: ipAddress,
                 loginAttempts: 0 // Reset failed attempts on successful login
             };
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: updateData
             });
@@ -111,7 +111,7 @@ class SecurityService {
      */
     static async isAccountLocked(userId) {
         try {
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: { lockedUntil: true }
             });
@@ -139,7 +139,7 @@ class SecurityService {
                     lte: endDate
                 };
             }
-            return await prisma.securityEvent.findMany({
+            return await prisma_1.prisma.securityEvent.findMany({
                 where,
                 include: {
                     user: {
@@ -173,22 +173,22 @@ class SecurityService {
             const hours = timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 720;
             const startDate = new Date(Date.now() - hours * 60 * 60 * 1000);
             const [totalEvents, failedLogins, highRiskEvents, uniqueIPs, lockedAccounts, avgRiskScore] = await Promise.all([
-                prisma.securityEvent.count({
+                prisma_1.prisma.securityEvent.count({
                     where: { createdAt: { gte: startDate } }
                 }),
-                prisma.securityEvent.count({
+                prisma_1.prisma.securityEvent.count({
                     where: {
                         eventType: this.EVENT_TYPES.LOGIN_FAILED,
                         createdAt: { gte: startDate }
                     }
                 }),
-                prisma.securityEvent.count({
+                prisma_1.prisma.securityEvent.count({
                     where: {
                         riskScore: { gte: this.RISK_THRESHOLDS.HIGH },
                         createdAt: { gte: startDate }
                     }
                 }),
-                prisma.securityEvent.findMany({
+                prisma_1.prisma.securityEvent.findMany({
                     where: {
                         createdAt: { gte: startDate },
                         ipAddress: { not: null }
@@ -196,12 +196,12 @@ class SecurityService {
                     select: { ipAddress: true },
                     distinct: ['ipAddress']
                 }),
-                prisma.user.count({
+                prisma_1.prisma.user.count({
                     where: {
                         lockedUntil: { gt: new Date() }
                     }
                 }),
-                prisma.securityEvent.aggregate({
+                prisma_1.prisma.securityEvent.aggregate({
                     where: { createdAt: { gte: startDate } },
                     _avg: { riskScore: true }
                 })
@@ -276,7 +276,7 @@ class SecurityService {
             let riskScore = 5; // Base score for successful login
             // Check recent failed attempts from this IP
             if (ipAddress) {
-                const recentFailures = await prisma.securityEvent.count({
+                const recentFailures = await prisma_1.prisma.securityEvent.count({
                     where: {
                         ipAddress,
                         eventType: this.EVENT_TYPES.LOGIN_FAILED,
@@ -290,7 +290,7 @@ class SecurityService {
                 }
             }
             // Check for rapid login attempts
-            const recentLogins = await prisma.securityEvent.count({
+            const recentLogins = await prisma_1.prisma.securityEvent.count({
                 where: {
                     userId,
                     eventType: this.EVENT_TYPES.LOGIN_SUCCESS,
@@ -339,7 +339,7 @@ class SecurityService {
     static async cleanupOldEvents(daysToKeep = 90) {
         try {
             const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
-            const result = await prisma.securityEvent.deleteMany({
+            const result = await prisma_1.prisma.securityEvent.deleteMany({
                 where: {
                     createdAt: { lt: cutoffDate },
                     riskScore: { lt: this.RISK_THRESHOLDS.HIGH } // Keep high-risk events longer

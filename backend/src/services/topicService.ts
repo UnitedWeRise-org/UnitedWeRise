@@ -1,7 +1,8 @@
-import { PrismaClient, Topic, Post, TopicPost } from '@prisma/client';
+import { Topic, Post, TopicPost } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { EmbeddingService } from './embeddingService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface TopicCluster {
   centroid: number[];

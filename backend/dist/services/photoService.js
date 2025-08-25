@@ -4,14 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PhotoService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const multer_1 = __importDefault(require("multer"));
 const sharp_1 = __importDefault(require("sharp"));
 const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
 const uuid_1 = require("uuid");
 const azureBlobService_1 = require("./azureBlobService");
-const prisma = new client_1.PrismaClient();
 class PhotoService {
     /**
      * Initialize photo storage (Azure Blob Storage)
@@ -130,7 +129,7 @@ class PhotoService {
                 thumbnailUrl = `/uploads/thumbnails/${thumbnailFilename}`;
             }
             // Save to database
-            const photo = await prisma.photo.create({
+            const photo = await prisma_1.prisma.photo.create({
                 data: {
                     userId: options.userId,
                     candidateId: options.candidateId,
@@ -202,7 +201,7 @@ class PhotoService {
             where.purpose = purpose;
         if (candidateId)
             where.candidateId = candidateId;
-        return await prisma.photo.findMany({
+        return await prisma_1.prisma.photo.findMany({
             where,
             orderBy: { createdAt: 'desc' },
             include: {
@@ -228,7 +227,7 @@ class PhotoService {
      * Get candidate's campaign photos
      */
     static async getCandidatePhotos(candidateId) {
-        return await prisma.photo.findMany({
+        return await prisma_1.prisma.photo.findMany({
             where: {
                 candidateId,
                 purpose: {
@@ -255,7 +254,7 @@ class PhotoService {
      */
     static async deletePhoto(photoId, userId) {
         try {
-            const photo = await prisma.photo.findUnique({
+            const photo = await prisma_1.prisma.photo.findUnique({
                 where: { id: photoId }
             });
             if (!photo) {
@@ -266,7 +265,7 @@ class PhotoService {
                 throw new Error('Permission denied: You can only delete your own photos');
             }
             // Mark as inactive instead of hard delete (for audit trail)
-            await prisma.photo.update({
+            await prisma_1.prisma.photo.update({
                 where: { id: photoId },
                 data: { isActive: false }
             });
@@ -295,7 +294,7 @@ class PhotoService {
      */
     static async setPhotoPurpose(photoId, userId, purpose, candidateId) {
         try {
-            const photo = await prisma.photo.findUnique({
+            const photo = await prisma_1.prisma.photo.findUnique({
                 where: { id: photoId }
             });
             if (!photo || photo.userId !== userId) {
@@ -303,14 +302,14 @@ class PhotoService {
             }
             // If setting to CAMPAIGN or BOTH, validate candidate relationship
             if ((purpose === 'CAMPAIGN' || purpose === 'BOTH') && candidateId) {
-                const candidate = await prisma.candidate.findUnique({
+                const candidate = await prisma_1.prisma.candidate.findUnique({
                     where: { id: candidateId }
                 });
                 if (!candidate || candidate.userId !== userId) {
                     throw new Error('Invalid candidate relationship');
                 }
             }
-            await prisma.photo.update({
+            await prisma_1.prisma.photo.update({
                 where: { id: photoId },
                 data: {
                     purpose,
@@ -328,7 +327,7 @@ class PhotoService {
      * Flag photo for moderation
      */
     static async flagPhoto(photoId, flaggedBy, reason) {
-        await prisma.photo.update({
+        await prisma_1.prisma.photo.update({
             where: { id: photoId },
             data: {
                 isApproved: false,
@@ -343,7 +342,7 @@ class PhotoService {
      * Approve photo (moderator action)
      */
     static async approvePhoto(photoId, moderatorId) {
-        await prisma.photo.update({
+        await prisma_1.prisma.photo.update({
             where: { id: photoId },
             data: {
                 isApproved: true,
@@ -358,7 +357,7 @@ class PhotoService {
      * Get photos pending moderation
      */
     static async getPendingModeration() {
-        return await prisma.photo.findMany({
+        return await prisma_1.prisma.photo.findMany({
             where: {
                 OR: [
                     { isApproved: false, flaggedBy: { not: null } },
@@ -388,7 +387,7 @@ class PhotoService {
     }
     // Private helper methods
     static async validateStorageLimit(userId, fileSize) {
-        const userPhotos = await prisma.photo.findMany({
+        const userPhotos = await prisma_1.prisma.photo.findMany({
             where: {
                 userId,
                 isActive: true
@@ -405,7 +404,7 @@ class PhotoService {
         }
     }
     static async validateUserPermissions(userId, candidateId) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: { candidateProfile: true }
         });
@@ -413,7 +412,7 @@ class PhotoService {
             throw new Error('User not found');
         }
         if (candidateId) {
-            const candidate = await prisma.candidate.findUnique({
+            const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: candidateId }
             });
             if (!candidate || candidate.userId !== userId) {
@@ -465,14 +464,14 @@ class PhotoService {
     static async updateProfileAvatar(userId, photoUrl, candidateId) {
         try {
             // Update user avatar
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: { avatar: photoUrl }
             });
             // If this is for a candidate and they don't have a separate campaign photo,
             // we might also use it as their campaign headshot
             if (candidateId) {
-                const existingCampaignPhoto = await prisma.photo.findFirst({
+                const existingCampaignPhoto = await prisma_1.prisma.photo.findFirst({
                     where: {
                         candidateId,
                         photoType: 'CAMPAIGN',
@@ -495,7 +494,7 @@ class PhotoService {
      * Get user's photo galleries (organized by gallery name)
      */
     static async getUserGalleries(userId) {
-        const userPhotos = await prisma.photo.findMany({
+        const userPhotos = await prisma_1.prisma.photo.findMany({
             where: {
                 userId,
                 isActive: true,
@@ -537,13 +536,13 @@ class PhotoService {
      * Move photo to different gallery
      */
     static async movePhotoToGallery(photoId, userId, newGallery) {
-        const photo = await prisma.photo.findUnique({
+        const photo = await prisma_1.prisma.photo.findUnique({
             where: { id: photoId }
         });
         if (!photo || photo.userId !== userId) {
             throw new Error('Photo not found or permission denied');
         }
-        await prisma.photo.update({
+        await prisma_1.prisma.photo.update({
             where: { id: photoId },
             data: { gallery: newGallery.trim() || 'My Photos' }
         });
@@ -553,7 +552,7 @@ class PhotoService {
      * Set user's profile picture
      */
     static async setAsProfilePicture(photoId, userId) {
-        const photo = await prisma.photo.findUnique({
+        const photo = await prisma_1.prisma.photo.findUnique({
             where: { id: photoId }
         });
         if (!photo || photo.userId !== userId) {
@@ -563,7 +562,7 @@ class PhotoService {
             throw new Error('Only gallery photos can be set as profile pictures');
         }
         // Update user's avatar
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { avatar: photo.url }
         });
@@ -574,17 +573,17 @@ class PhotoService {
      */
     static async getStorageStats() {
         const [totalCount, sizeAgg, typeCount, pendingCount] = await Promise.all([
-            prisma.photo.count({ where: { isActive: true } }),
-            prisma.photo.aggregate({
+            prisma_1.prisma.photo.count({ where: { isActive: true } }),
+            prisma_1.prisma.photo.aggregate({
                 where: { isActive: true },
                 _sum: { compressedSize: true }
             }),
-            prisma.photo.groupBy({
+            prisma_1.prisma.photo.groupBy({
                 by: ['photoType'],
                 where: { isActive: true },
                 _count: { _all: true }
             }),
-            prisma.photo.count({
+            prisma_1.prisma.photo.count({
                 where: {
                     isActive: true,
                     isApproved: false

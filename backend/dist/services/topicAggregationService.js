@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TopicAggregationService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
-const prisma = new client_1.PrismaClient();
 class TopicAggregationService {
     /**
      * Generate aggregated topics with dual-vector stance detection
@@ -101,7 +100,7 @@ class TopicAggregationService {
                 state: userState
             };
         }
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: whereClause,
             include: {
                 author: {

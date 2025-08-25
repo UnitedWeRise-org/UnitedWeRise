@@ -1,6 +1,7 @@
+import { prisma } from '../lib/prisma';
 import { createNotification } from './notifications';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validatePost, validateComment } from '../middleware/validation';
 import { postLimiter } from '../middleware/rateLimiting';
@@ -10,7 +11,7 @@ import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import { reputationService } from '../services/reputationService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Create a new post
 router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {

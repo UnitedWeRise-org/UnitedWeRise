@@ -1,9 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { ApiCacheService } from './apiCache';
 import { GoogleCivicService } from './googleCivicService';
 import { addressToH3, geocodeAddress } from '../utils/geospatial';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export interface AddressComponents {
   streetAddress: string;

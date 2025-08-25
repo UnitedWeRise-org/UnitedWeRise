@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CandidateInboxService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
+;
 class CandidateInboxService {
     /**
      * Initialize candidate inbox (automatically created when candidate registers)
@@ -10,7 +10,7 @@ class CandidateInboxService {
     static async createInbox(candidateId, settings) {
         try {
             console.log(`📬 Creating inbox for candidate ${candidateId}`);
-            const inbox = await prisma.candidateInbox.create({
+            const inbox = await prisma_1.prisma.candidateInbox.create({
                 data: {
                     candidateId,
                     allowPublicQ: settings?.allowPublicQ ?? true,
@@ -45,7 +45,7 @@ class CandidateInboxService {
         try {
             console.log(`📝 Submitting inquiry to candidate ${inquiryData.candidateId}`);
             // Validate candidate exists and has active inbox
-            const candidate = await prisma.candidate.findUnique({
+            const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: inquiryData.candidateId },
                 include: {
                     inbox: true,
@@ -63,7 +63,7 @@ class CandidateInboxService {
                 throw new Error('Candidate inbox is not accepting inquiries');
             }
             // Create the inquiry
-            const inquiry = await prisma.politicalInquiry.create({
+            const inquiry = await prisma_1.prisma.politicalInquiry.create({
                 data: {
                     candidateId: inquiryData.candidateId,
                     inquirerId: inquiryData.inquirerId || null,
@@ -133,7 +133,7 @@ class CandidateInboxService {
                 where.priority = { in: priority };
             }
             const [inquiries, totalCount, inbox] = await Promise.all([
-                prisma.politicalInquiry.findMany({
+                prisma_1.prisma.politicalInquiry.findMany({
                     where,
                     include: {
                         inquirer: {
@@ -181,8 +181,8 @@ class CandidateInboxService {
                     skip: offset,
                     take: limit
                 }),
-                prisma.politicalInquiry.count({ where }),
-                prisma.candidateInbox.findUnique({
+                prisma_1.prisma.politicalInquiry.count({ where }),
+                prisma_1.prisma.candidateInbox.findUnique({
                     where: { candidateId },
                     include: {
                         candidate: {
@@ -227,7 +227,7 @@ class CandidateInboxService {
     static async respondToInquiry(responseData) {
         try {
             console.log(`💬 Responding to inquiry ${responseData.inquiryId}`);
-            const inquiry = await prisma.politicalInquiry.findUnique({
+            const inquiry = await prisma_1.prisma.politicalInquiry.findUnique({
                 where: { id: responseData.inquiryId },
                 include: {
                     candidate: true,
@@ -238,7 +238,7 @@ class CandidateInboxService {
                 throw new Error('Inquiry not found');
             }
             // Create response
-            const response = await prisma.inquiryResponse.create({
+            const response = await prisma_1.prisma.inquiryResponse.create({
                 data: {
                     inquiryId: responseData.inquiryId,
                     responderId: responseData.responderId,
@@ -262,7 +262,7 @@ class CandidateInboxService {
                 }
             });
             // Update inquiry status
-            await prisma.politicalInquiry.update({
+            await prisma_1.prisma.politicalInquiry.update({
                 where: { id: responseData.inquiryId },
                 data: {
                     status: 'RESOLVED',
@@ -293,14 +293,14 @@ class CandidateInboxService {
      */
     static async convertToPublicQA(inquiryId, question, answer) {
         try {
-            const inquiry = await prisma.politicalInquiry.findUnique({
+            const inquiry = await prisma_1.prisma.politicalInquiry.findUnique({
                 where: { id: inquiryId },
                 include: { candidate: true }
             });
             if (!inquiry) {
                 throw new Error('Inquiry not found');
             }
-            const publicQA = await prisma.publicQA.create({
+            const publicQA = await prisma_1.prisma.publicQA.create({
                 data: {
                     candidateId: inquiry.candidateId,
                     question,
@@ -335,7 +335,7 @@ class CandidateInboxService {
                 where.isPinned = pinned;
             }
             const [qas, totalCount] = await Promise.all([
-                prisma.publicQA.findMany({
+                prisma_1.prisma.publicQA.findMany({
                     where,
                     include: {
                         candidate: {
@@ -355,7 +355,7 @@ class CandidateInboxService {
                     skip: offset,
                     take: limit
                 }),
-                prisma.publicQA.count({ where })
+                prisma_1.prisma.publicQA.count({ where })
             ]);
             return {
                 qas,
@@ -378,13 +378,13 @@ class CandidateInboxService {
             if (!hasPermission) {
                 throw new Error('Permission denied: Cannot manage staff');
             }
-            const inbox = await prisma.candidateInbox.findUnique({
+            const inbox = await prisma_1.prisma.candidateInbox.findUnique({
                 where: { candidateId }
             });
             if (!inbox) {
                 throw new Error('Candidate inbox not found');
             }
-            const staffMember = await prisma.candidateStaff.create({
+            const staffMember = await prisma_1.prisma.candidateStaff.create({
                 data: {
                     inboxId: inbox.id,
                     userId,
@@ -446,14 +446,14 @@ class CandidateInboxService {
     static async verifyInboxAccess(candidateId, userId) {
         try {
             // Check if user is the candidate themselves
-            const candidate = await prisma.candidate.findUnique({
+            const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: candidateId }
             });
             if (candidate?.userId === userId) {
                 return true;
             }
             // Check if user is staff member
-            const staffMember = await prisma.candidateStaff.findFirst({
+            const staffMember = await prisma_1.prisma.candidateStaff.findFirst({
                 where: {
                     userId,
                     inbox: {
@@ -471,7 +471,7 @@ class CandidateInboxService {
     }
     static async verifyStaffPermission(candidateId, userId, permission) {
         try {
-            const staffMember = await prisma.candidateStaff.findFirst({
+            const staffMember = await prisma_1.prisma.candidateStaff.findFirst({
                 where: {
                     userId,
                     inbox: {
@@ -493,16 +493,16 @@ class CandidateInboxService {
     static async getInboxStats(candidateId) {
         try {
             const [total, open, inProgress, resolved] = await Promise.all([
-                prisma.politicalInquiry.count({
+                prisma_1.prisma.politicalInquiry.count({
                     where: { candidateId }
                 }),
-                prisma.politicalInquiry.count({
+                prisma_1.prisma.politicalInquiry.count({
                     where: { candidateId, status: 'OPEN' }
                 }),
-                prisma.politicalInquiry.count({
+                prisma_1.prisma.politicalInquiry.count({
                     where: { candidateId, status: 'IN_PROGRESS' }
                 }),
-                prisma.politicalInquiry.count({
+                prisma_1.prisma.politicalInquiry.count({
                     where: { candidateId, status: 'RESOLVED' }
                 })
             ]);

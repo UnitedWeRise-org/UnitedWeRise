@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StripeService = void 0;
 const stripe_1 = __importDefault(require("stripe"));
 const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
+// Using singleton prisma from lib/prisma.ts
 // Initialize Stripe with nonprofit account
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || '', {
     typescript: true,
@@ -17,7 +18,7 @@ class StripeService {
      */
     static async getOrCreateCustomer(userId) {
         // Check if customer already exists
-        const existingCustomer = await prisma.stripeCustomer.findUnique({
+        const existingCustomer = await prisma_1.prisma.stripeCustomer.findUnique({
             where: { userId },
             include: { user: true }
         });
@@ -25,7 +26,7 @@ class StripeService {
             return existingCustomer.stripeCustomerId;
         }
         // Get user details
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId }
         });
         if (!user) {
@@ -41,7 +42,7 @@ class StripeService {
             }
         });
         // Save customer to database
-        await prisma.stripeCustomer.create({
+        await prisma_1.prisma.stripeCustomer.create({
             data: {
                 userId,
                 stripeCustomerId: customer.id,
@@ -64,7 +65,7 @@ class StripeService {
     static async createDonation(params) {
         const customerId = await this.getOrCreateCustomer(params.userId);
         // Create payment record
-        const payment = await prisma.payment.create({
+        const payment = await prisma_1.prisma.payment.create({
             data: {
                 userId: params.userId,
                 amount: params.amount,
@@ -118,7 +119,7 @@ class StripeService {
                     }
                 });
                 // Update payment with Payment Link ID
-                await prisma.payment.update({
+                await prisma_1.prisma.payment.update({
                     where: { id: payment.id },
                     data: { stripePaymentIntentId: paymentLink.id }
                 });
@@ -162,7 +163,7 @@ class StripeService {
                     }
                 });
                 // Update payment with Payment Link ID
-                await prisma.payment.update({
+                await prisma_1.prisma.payment.update({
                     where: { id: payment.id },
                     data: { stripePaymentIntentId: paymentLink.id }
                 });
@@ -175,7 +176,7 @@ class StripeService {
         }
         catch (error) {
             // Update payment status to failed
-            await prisma.payment.update({
+            await prisma_1.prisma.payment.update({
                 where: { id: payment.id },
                 data: {
                     status: client_1.PaymentStatus.FAILED,
@@ -191,7 +192,7 @@ class StripeService {
     static async createFeePayment(params) {
         const customerId = await this.getOrCreateCustomer(params.userId);
         // Create payment record
-        const payment = await prisma.payment.create({
+        const payment = await prisma_1.prisma.payment.create({
             data: {
                 userId: params.userId,
                 amount: params.amount,
@@ -236,7 +237,7 @@ class StripeService {
                 }
             });
             // Update payment with Stripe session ID
-            await prisma.payment.update({
+            await prisma_1.prisma.payment.update({
                 where: { id: payment.id },
                 data: { stripePaymentIntentId: session.id }
             });
@@ -248,7 +249,7 @@ class StripeService {
         }
         catch (error) {
             // Update payment status to failed
-            await prisma.payment.update({
+            await prisma_1.prisma.payment.update({
                 where: { id: payment.id },
                 data: {
                     status: client_1.PaymentStatus.FAILED,
@@ -274,14 +275,14 @@ class StripeService {
             throw new Error(`Webhook signature verification failed: ${err}`);
         }
         // Check if we've already processed this event
-        const existingWebhook = await prisma.paymentWebhook.findUnique({
+        const existingWebhook = await prisma_1.prisma.paymentWebhook.findUnique({
             where: { stripeEventId: event.id }
         });
         if (existingWebhook?.processed) {
             return { success: true, message: 'Event already processed' };
         }
         // Save webhook event
-        await prisma.paymentWebhook.upsert({
+        await prisma_1.prisma.paymentWebhook.upsert({
             where: { stripeEventId: event.id },
             create: {
                 stripeEventId: event.id,
@@ -321,7 +322,7 @@ class StripeService {
                     console.log(`Unhandled event type: ${event.type}`);
             }
             // Mark webhook as processed
-            await prisma.paymentWebhook.update({
+            await prisma_1.prisma.paymentWebhook.update({
                 where: { stripeEventId: event.id },
                 data: { processed: true, processedAt: new Date() }
             });
@@ -329,7 +330,7 @@ class StripeService {
         }
         catch (error) {
             // Log error
-            await prisma.paymentWebhook.update({
+            await prisma_1.prisma.paymentWebhook.update({
                 where: { stripeEventId: event.id },
                 data: {
                     error: error instanceof Error ? error.message : 'Unknown error'
@@ -345,13 +346,13 @@ class StripeService {
         const paymentId = session.metadata?.paymentId;
         if (!paymentId)
             return;
-        const payment = await prisma.payment.findUnique({
+        const payment = await prisma_1.prisma.payment.findUnique({
             where: { id: paymentId }
         });
         if (!payment)
             return;
         // Update payment status
-        await prisma.payment.update({
+        await prisma_1.prisma.payment.update({
             where: { id: paymentId },
             data: {
                 status: client_1.PaymentStatus.COMPLETED,
@@ -364,7 +365,7 @@ class StripeService {
         await this.generateReceipt(paymentId);
         // If this was a candidate registration fee, update the registration
         if (payment.candidateRegistrationId) {
-            await prisma.candidateRegistration.update({
+            await prisma_1.prisma.candidateRegistration.update({
                 where: { id: payment.candidateRegistrationId },
                 data: {
                     status: 'PENDING_VERIFICATION' // Move to next step after payment
@@ -374,7 +375,7 @@ class StripeService {
         }
         // Update campaign raised amount if applicable
         if (payment.campaignId) {
-            await prisma.donationCampaign.update({
+            await prisma_1.prisma.donationCampaign.update({
                 where: { id: payment.campaignId },
                 data: {
                     raised: { increment: payment.amount }
@@ -386,12 +387,12 @@ class StripeService {
      * Handle payment success
      */
     static async handlePaymentSuccess(paymentIntent) {
-        const payment = await prisma.payment.findUnique({
+        const payment = await prisma_1.prisma.payment.findUnique({
             where: { stripePaymentIntentId: paymentIntent.id }
         });
         if (!payment)
             return;
-        await prisma.payment.update({
+        await prisma_1.prisma.payment.update({
             where: { id: payment.id },
             data: {
                 status: client_1.PaymentStatus.COMPLETED,
@@ -404,12 +405,12 @@ class StripeService {
      * Handle payment failure
      */
     static async handlePaymentFailed(paymentIntent) {
-        const payment = await prisma.payment.findUnique({
+        const payment = await prisma_1.prisma.payment.findUnique({
             where: { stripePaymentIntentId: paymentIntent.id }
         });
         if (!payment)
             return;
-        await prisma.payment.update({
+        await prisma_1.prisma.payment.update({
             where: { id: payment.id },
             data: {
                 status: client_1.PaymentStatus.FAILED,
@@ -435,7 +436,7 @@ class StripeService {
      * Generate tax-compliant receipt
      */
     static async generateReceipt(paymentId) {
-        const payment = await prisma.payment.findUnique({
+        const payment = await prisma_1.prisma.payment.findUnique({
             where: { id: paymentId },
             include: { user: true }
         });
@@ -445,7 +446,7 @@ class StripeService {
         // Create receipt in Stripe
         if (payment.stripeChargeId) {
             const charge = await stripe.charges.retrieve(payment.stripeChargeId);
-            await prisma.payment.update({
+            await prisma_1.prisma.payment.update({
                 where: { id: paymentId },
                 data: {
                     receiptUrl: charge.receipt_url || undefined,

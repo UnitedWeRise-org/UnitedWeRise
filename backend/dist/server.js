@@ -8,7 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const http_1 = __importDefault(require("http"));
-const client_1 = require("@prisma/client");
+const prisma_1 = require("./lib/prisma");
 const auth_1 = __importDefault(require("./routes/auth"));
 const users_1 = __importDefault(require("./routes/users"));
 const posts_1 = __importDefault(require("./routes/posts"));
@@ -53,19 +53,8 @@ const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
 app.set('trust proxy', 1);
 const httpServer = http_1.default.createServer(app);
-// Configure Prisma Client with connection pooling for shared database
-const prisma = new client_1.PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.DATABASE_URL
-        }
-    },
-    log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
-});
-// Configure connection pool limits to handle shared database between production and staging
-process.env.DATABASE_URL = process.env.DATABASE_URL?.includes('connection_limit=')
-    ? process.env.DATABASE_URL
-    : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=20`;
+// Prisma singleton is now imported from lib/prisma.ts to prevent connection leaks
+// Previously, 60+ files were each creating their own PrismaClient instance
 const PORT = process.env.PORT || 3001;
 // Initialize WebSocket server
 const io = (0, websocket_1.initializeWebSocket)(httpServer);
@@ -178,7 +167,7 @@ if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true')
 // Monitoring endpoints
 app.get('/health', async (req, res) => {
     try {
-        await prisma.$connect();
+        await prisma_1.prisma.$connect();
         const healthMetrics = metricsService_1.metricsService.getHealthMetrics();
         // Calculate deployment time from uptime
         const uptimeSeconds = process.uptime();
@@ -216,7 +205,7 @@ app.get('/api/health/detailed', async (req, res) => {
     try {
         // Test database connection
         const dbStart = Date.now();
-        await prisma.$connect();
+        await prisma_1.prisma.$connect();
         const dbDuration = Date.now() - dbStart;
         // Get system info
         const memUsage = process.memoryUsage();
@@ -268,7 +257,7 @@ const gracefulShutdown = async () => {
     });
     // Close database connections
     try {
-        await prisma.$disconnect();
+        await prisma_1.prisma.$disconnect();
         console.log('Database connections closed');
     }
     catch (error) {

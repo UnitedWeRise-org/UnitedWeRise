@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
-const client_1 = require("@prisma/client");
+;
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Batch endpoint for page initialization - reduces multiple API calls to one
 router.get('/initialize', auth_1.requireAuth, async (req, res) => {
     try {
@@ -12,7 +13,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
         // Parallel fetch all initialization data
         const [user, notifications, recentPosts, trendingTopics, trendingPosts, relationships] = await Promise.all([
             // User data (already have basic info from auth, but get fresh data)
-            prisma.user.findUnique({
+            prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
                     id: true,
@@ -39,14 +40,14 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                 }
             }),
             // Unread notifications count
-            prisma.notification.count({
+            prisma_1.prisma.notification.count({
                 where: {
                     receiverId: userId,
                     read: false
                 }
             }),
             // Recent posts for feed (limit to 10 for initial load)
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: {
                     OR: [
                         { authorId: userId }, // User's own posts
@@ -80,7 +81,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                 take: 10
             }),
             // Trending topics (consolidate multiple trending endpoints)
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: {
                     createdAt: {
                         gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
@@ -113,7 +114,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                 take: 20
             }),
             // Trending posts (popular posts for feed)
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: {
                     createdAt: {
                         gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
@@ -145,7 +146,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
             // Get all relationships in parallel (no blocking system implemented yet)
             Promise.all([
                 // Friends (both directions)
-                prisma.friendship.findMany({
+                prisma_1.prisma.friendship.findMany({
                     where: {
                         OR: [
                             { requesterId: userId },
@@ -159,7 +160,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                     }
                 }),
                 // Following/Followers
-                prisma.follow.findMany({
+                prisma_1.prisma.follow.findMany({
                     where: {
                         OR: [
                             { followerId: userId },
@@ -274,7 +275,7 @@ router.get('/auth-status', auth_1.requireAuth, async (req, res) => {
 router.get('/health-check', async (req, res) => {
     try {
         // Simple database ping
-        await prisma.$queryRaw `SELECT 1`;
+        await prisma_1.prisma.$queryRaw `SELECT 1`;
         res.json({
             success: true,
             status: 'healthy',

@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../utils/auth");
 const auth_2 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
@@ -18,7 +19,7 @@ const securityService_1 = require("../services/securityService");
 const crypto_1 = __importDefault(require("crypto"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * @swagger
  * /api/auth/register:
@@ -144,7 +145,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
             }
         }
         // Check if user exists
-        const existingUser = await prisma.user.findFirst({
+        const existingUser = await prisma_1.prisma.user.findFirst({
             where: {
                 OR: [
                     { email },
@@ -170,7 +171,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
         const emailVerifyToken = crypto_1.default.randomBytes(32).toString('hex');
         const emailVerifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         // Create user
-        const user = await prisma.user.create({
+        const user = await prisma_1.prisma.user.create({
             data: {
                 email,
                 username,
@@ -234,7 +235,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
         // Find user
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { email }
         });
         if (!user) {
@@ -343,7 +344,7 @@ router.post('/forgot-password', async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { email }
         });
         if (!user) {
@@ -352,7 +353,7 @@ router.post('/forgot-password', async (req, res) => {
         }
         const resetToken = (0, auth_1.generateResetToken)();
         const resetExpiry = new Date(Date.now() + 3600000); // 1 hour
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 resetToken,
@@ -375,7 +376,7 @@ router.post('/reset-password', async (req, res) => {
         if (!token || !newPassword) {
             return res.status(400).json({ error: 'Token and new password are required' });
         }
-        const user = await prisma.user.findFirst({
+        const user = await prisma_1.prisma.user.findFirst({
             where: {
                 resetToken: token,
                 resetExpiry: {
@@ -387,7 +388,7 @@ router.post('/reset-password', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or expired reset token' });
         }
         const hashedPassword = await (0, auth_1.hashPassword)(newPassword);
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 password: hashedPassword,
@@ -435,7 +436,7 @@ router.get('/debug-test-user', async (req, res) => {
         return res.status(403).json({ error: 'Not allowed in production' });
     }
     try {
-        const testUser = await prisma.user.findUnique({
+        const testUser = await prisma_1.prisma.user.findUnique({
             where: { email: 'test@test.com' },
             select: {
                 id: true,
@@ -474,7 +475,7 @@ router.post('/verify-password', auth_2.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Password is required' });
         }
         // Get user's current password hash
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { password: true }
         });
@@ -507,7 +508,7 @@ router.post('/create-test-user', async (req, res) => {
     try {
         const hashedPassword = await (0, auth_1.hashPassword)('test123');
         // Always update the test user to ensure it has all fields
-        const testUser = await prisma.user.upsert({
+        const testUser = await prisma_1.prisma.user.upsert({
             where: { email: 'test@test.com' },
             update: {
                 firstName: 'Test',

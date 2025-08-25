@@ -1,7 +1,8 @@
 import Stripe from 'stripe';
-import { PrismaClient, PaymentType, PaymentStatus, FeeType, DonationType } from '@prisma/client';
+import { PaymentType, PaymentStatus, FeeType, DonationType } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Initialize Stripe with nonprofit account
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {

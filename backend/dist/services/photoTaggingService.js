@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PhotoTaggingService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 class PhotoTaggingService {
     /**
      * Create a new photo tag
@@ -10,7 +9,7 @@ class PhotoTaggingService {
     static async createTag(options) {
         const { photoId, taggedById, taggedId, x, y } = options;
         // Validate photo exists and is active
-        const photo = await prisma.photo.findUnique({
+        const photo = await prisma_1.prisma.photo.findUnique({
             where: { id: photoId, isActive: true },
             include: { user: true }
         });
@@ -18,7 +17,7 @@ class PhotoTaggingService {
             throw new Error('Photo not found or inactive');
         }
         // Check if user being tagged allows tagging
-        const taggedUser = await prisma.user.findUnique({
+        const taggedUser = await prisma_1.prisma.user.findUnique({
             where: { id: taggedId }
         });
         if (!taggedUser || !taggedUser.photoTaggingEnabled) {
@@ -26,7 +25,7 @@ class PhotoTaggingService {
         }
         // Check if only friends can tag
         if (taggedUser.allowTagsByFriendsOnly) {
-            const friendship = await prisma.friendship.findUnique({
+            const friendship = await prisma_1.prisma.friendship.findUnique({
                 where: {
                     requesterId_recipientId: {
                         requesterId: taggedById,
@@ -34,7 +33,7 @@ class PhotoTaggingService {
                     }
                 }
             });
-            const reverseFriendship = await prisma.friendship.findUnique({
+            const reverseFriendship = await prisma_1.prisma.friendship.findUnique({
                 where: {
                     requesterId_recipientId: {
                         requesterId: taggedId,
@@ -48,7 +47,7 @@ class PhotoTaggingService {
             }
         }
         // Create the tag
-        const tag = await prisma.photoTag.create({
+        const tag = await prisma_1.prisma.photoTag.create({
             data: {
                 photoId,
                 taggedById,
@@ -80,7 +79,7 @@ class PhotoTaggingService {
         });
         // Create notification if tag requires approval
         if (taggedUser.requireTagApproval) {
-            await prisma.notification.create({
+            await prisma_1.prisma.notification.create({
                 data: {
                     type: 'PHOTO_TAG_REQUEST',
                     senderId: taggedById,
@@ -98,7 +97,7 @@ class PhotoTaggingService {
      */
     static async respondToTag(options) {
         const { tagId, userId, approve } = options;
-        const tag = await prisma.photoTag.findUnique({
+        const tag = await prisma_1.prisma.photoTag.findUnique({
             where: { id: tagId },
             include: {
                 tagged: true,
@@ -115,7 +114,7 @@ class PhotoTaggingService {
         if (tag.status !== 'PENDING') {
             throw new Error('Tag has already been responded to');
         }
-        const updatedTag = await prisma.photoTag.update({
+        const updatedTag = await prisma_1.prisma.photoTag.update({
             where: { id: tagId },
             data: {
                 status: approve ? 'APPROVED' : 'DECLINED'
@@ -142,7 +141,7 @@ class PhotoTaggingService {
             }
         });
         // Notify the tagger of the response
-        await prisma.notification.create({
+        await prisma_1.prisma.notification.create({
             data: {
                 type: approve ? 'PHOTO_TAG_APPROVED' : 'PHOTO_TAG_DECLINED',
                 senderId: userId,
@@ -160,7 +159,7 @@ class PhotoTaggingService {
      * Remove a photo tag
      */
     static async removeTag(tagId, userId) {
-        const tag = await prisma.photoTag.findUnique({
+        const tag = await prisma_1.prisma.photoTag.findUnique({
             where: { id: tagId },
             include: { photo: true }
         });
@@ -171,7 +170,7 @@ class PhotoTaggingService {
         if (tag.taggedId !== userId && tag.taggedById !== userId && tag.photo.userId !== userId) {
             throw new Error('Permission denied');
         }
-        await prisma.photoTag.update({
+        await prisma_1.prisma.photoTag.update({
             where: { id: tagId },
             data: { status: 'REMOVED' }
         });
@@ -181,7 +180,7 @@ class PhotoTaggingService {
      * Get tags for a photo
      */
     static async getPhotoTags(photoId) {
-        return await prisma.photoTag.findMany({
+        return await prisma_1.prisma.photoTag.findMany({
             where: {
                 photoId,
                 status: 'APPROVED'
@@ -204,7 +203,7 @@ class PhotoTaggingService {
      * Get pending tag approvals for a user
      */
     static async getPendingTags(userId) {
-        return await prisma.photoTag.findMany({
+        return await prisma_1.prisma.photoTag.findMany({
             where: {
                 taggedId: userId,
                 status: 'PENDING'
@@ -236,14 +235,14 @@ class PhotoTaggingService {
      */
     static async createPrivacyRequest(options) {
         const { photoId, userId, type, reason } = options;
-        const photo = await prisma.photo.findUnique({
+        const photo = await prisma_1.prisma.photo.findUnique({
             where: { id: photoId, isActive: true }
         });
         if (!photo) {
             throw new Error('Photo not found');
         }
         // Check if user has an existing request for this photo
-        const existingRequest = await prisma.photoPrivacyRequest.findUnique({
+        const existingRequest = await prisma_1.prisma.photoPrivacyRequest.findUnique({
             where: {
                 photoId_userId: {
                     photoId,
@@ -254,7 +253,7 @@ class PhotoTaggingService {
         if (existingRequest && existingRequest.status === 'PENDING') {
             throw new Error('You already have a pending privacy request for this photo');
         }
-        const request = await prisma.photoPrivacyRequest.create({
+        const request = await prisma_1.prisma.photoPrivacyRequest.create({
             data: {
                 photoId,
                 userId,
@@ -286,7 +285,7 @@ class PhotoTaggingService {
             }
         });
         // Notify photo owner
-        await prisma.notification.create({
+        await prisma_1.prisma.notification.create({
             data: {
                 type: 'PRIVACY_REQUEST',
                 senderId: userId,
@@ -302,7 +301,7 @@ class PhotoTaggingService {
      * Update user tagging preferences
      */
     static async updateTaggingPreferences(userId, preferences) {
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: preferences
         });
@@ -312,7 +311,7 @@ class PhotoTaggingService {
      * Search users for tagging (respects privacy settings)
      */
     static async searchUsersForTagging(query, searcherId) {
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: {
                 AND: [
                     {
@@ -344,7 +343,7 @@ class PhotoTaggingService {
             }
             else {
                 // Check if they're friends
-                const friendship = await prisma.friendship.findFirst({
+                const friendship = await prisma_1.prisma.friendship.findFirst({
                     where: {
                         OR: [
                             { requesterId: searcherId, recipientId: user.id, status: 'ACCEPTED' },

@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { PrismaClient, Candidate } from '@prisma/client';
+import { Candidate } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface QwenAnalysisRequest {
   prompt: string;

@@ -8,6 +8,7 @@
  */
 
 import { azureOpenAI, AzureOpenAIService } from './azureOpenAIService';
+import { prisma } from '../lib/prisma';
 import logger from '../utils/logger';
 
 export interface FeedbackAnalysis {
@@ -248,8 +249,6 @@ Respond with JSON only:
             
             if (analysis.isFeedback && analysis.confidence > 0.6) {
                 // Update the post with feedback data
-                const { PrismaClient } = require('@prisma/client');
-                const prisma = new PrismaClient();
                 
                 await prisma.post.update({
                     where: { id: postId },
@@ -268,8 +267,6 @@ Respond with JSON only:
                 await prisma.$disconnect();
             } else {
                 // Mark as analyzed but not feedback
-                const { PrismaClient } = require('@prisma/client');
-                const prisma = new PrismaClient();
                 
                 await prisma.post.update({
                     where: { id: postId },

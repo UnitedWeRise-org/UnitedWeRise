@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RepresentativeService = void 0;
+const prisma_1 = require("../lib/prisma");
 const apiCache_1 = require("./apiCache");
-const client_1 = require("@prisma/client");
+;
 const googleCivicService_1 = require("./googleCivicService");
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // API Configuration
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
 const FEC_API_KEY = process.env.FEC_API_KEY;
@@ -370,7 +371,7 @@ class RepresentativeService {
     static async storeRepresentativesInDb(representatives, zipCode, state) {
         try {
             // Clear existing representatives for this location
-            await prisma.externalOfficial.deleteMany({
+            await prisma_1.prisma.externalOfficial.deleteMany({
                 where: {
                     provider: 'representatives_service',
                     zipCode,
@@ -381,7 +382,7 @@ class RepresentativeService {
             for (const rep of representatives) {
                 if (!rep.name || !rep.office)
                     continue;
-                await prisma.externalOfficial.create({
+                await prisma_1.prisma.externalOfficial.create({
                     data: {
                         externalId: `${rep.name}_${rep.office}`.replace(/[^a-zA-Z0-9]/g, '_'),
                         provider: 'representatives_service',
@@ -412,7 +413,7 @@ class RepresentativeService {
      */
     static async getCachedRepresentativesByLocation(zipCode, state) {
         try {
-            const officials = await prisma.externalOfficial.findMany({
+            const officials = await prisma_1.prisma.externalOfficial.findMany({
                 where: {
                     provider: 'representatives_service',
                     zipCode,

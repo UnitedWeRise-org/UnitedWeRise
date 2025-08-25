@@ -1,3 +1,5 @@
+import { prisma } from '../lib/prisma';
+import { PrismaClient } from '@prisma/client';
 /**
  * Reputation Service for UnitedWeRise
  * 
@@ -8,7 +10,6 @@
  * - Mild algorithmic effects (±10-20% visibility)
  */
 
-import { PrismaClient } from '@prisma/client';
 import { azureOpenAI } from './azureOpenAIService';
 import logger from '../utils/logger';
 
@@ -65,7 +66,7 @@ export class ReputationService {
   private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
   }
 
   /**

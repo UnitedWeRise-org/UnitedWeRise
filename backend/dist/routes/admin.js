@@ -3,18 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const totpAuth_1 = require("../middleware/totpAuth");
 const moderationService_1 = require("../services/moderationService");
+const emailService_1 = require("../services/emailService");
 const express_validator_1 = require("express-validator");
 const securityService_1 = require("../services/securityService");
 const metricsService_1 = require("../services/metricsService");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Admin-only middleware
 const requireAdmin = async (req, res, next) => {
     if (!req.user?.isAdmin) {
@@ -34,31 +36,31 @@ const handleValidationErrors = (req, res, next) => {
 router.get('/dashboard', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
     try {
         const [totalUsers, activeUsers, totalPosts, totalComments, pendingReports, resolvedReports, activeSuspensions, totalFlags, moderatorCount] = await Promise.all([
-            prisma.user.count(),
-            prisma.user.count({
+            prisma_1.prisma.user.count(),
+            prisma_1.prisma.user.count({
                 where: {
                     lastSeenAt: {
                         gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
                     }
                 }
             }),
-            prisma.post.count(),
-            prisma.comment.count(),
-            prisma.report.count({ where: { status: 'PENDING' } }),
-            prisma.report.count({ where: { status: 'RESOLVED' } }),
-            prisma.userSuspension.count({ where: { isActive: true } }),
-            prisma.contentFlag.count({ where: { resolved: false } }),
-            prisma.user.count({ where: { isModerator: true } })
+            prisma_1.prisma.post.count(),
+            prisma_1.prisma.comment.count(),
+            prisma_1.prisma.report.count({ where: { status: 'PENDING' } }),
+            prisma_1.prisma.report.count({ where: { status: 'RESOLVED' } }),
+            prisma_1.prisma.userSuspension.count({ where: { isActive: true } }),
+            prisma_1.prisma.contentFlag.count({ where: { resolved: false } }),
+            prisma_1.prisma.user.count({ where: { isModerator: true } })
         ]);
         // Growth metrics
         const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const [newUsers, newPosts, newReports] = await Promise.all([
-            prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
-            prisma.post.count({ where: { createdAt: { gte: last30Days } } }),
-            prisma.report.count({ where: { createdAt: { gte: last30Days } } })
+            prisma_1.prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
+            prisma_1.prisma.post.count({ where: { createdAt: { gte: last30Days } } }),
+            prisma_1.prisma.report.count({ where: { createdAt: { gte: last30Days } } })
         ]);
         // Recent activity
-        const recentReports = await prisma.report.findMany({
+        const recentReports = await prisma_1.prisma.report.findMany({
             where: { priority: { in: ['HIGH', 'URGENT'] } },
             include: {
                 reporter: {
@@ -130,7 +132,7 @@ router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPFor
             where.isAdmin = false;
         }
         const [users, total] = await Promise.all([
-            prisma.user.findMany({
+            prisma_1.prisma.user.findMany({
                 where,
                 select: {
                     id: true,
@@ -160,11 +162,11 @@ router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPFor
                 skip: offset,
                 take: limit
             }),
-            prisma.user.count({ where })
+            prisma_1.prisma.user.count({ where })
         ]);
         // Get suspension details for suspended users
         const suspendedUserIds = users.filter(u => u.isSuspended).map(u => u.id);
-        const activeSuspensions = suspendedUserIds.length > 0 ? await prisma.userSuspension.findMany({
+        const activeSuspensions = suspendedUserIds.length > 0 ? await prisma_1.prisma.userSuspension.findMany({
             where: {
                 userId: { in: suspendedUserIds },
                 isActive: true
@@ -207,7 +209,7 @@ router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPFor
 router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 _count: {
@@ -229,7 +231,7 @@ router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requir
         }
         // Get recent activity
         const [recentPosts, recentComments, recentReports, warnings, suspensions] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { authorId: userId },
                 orderBy: { createdAt: 'desc' },
                 take: 5,
@@ -241,7 +243,7 @@ router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requir
                     commentsCount: true
                 }
             }),
-            prisma.comment.findMany({
+            prisma_1.prisma.comment.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' },
                 take: 5,
@@ -254,7 +256,7 @@ router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requir
                     }
                 }
             }),
-            prisma.report.findMany({
+            prisma_1.prisma.report.findMany({
                 where: { reporterId: userId },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
@@ -266,7 +268,7 @@ router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requir
                     createdAt: true
                 }
             }),
-            prisma.userWarning.findMany({
+            prisma_1.prisma.userWarning.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -275,7 +277,7 @@ router.get('/users/:userId', auth_1.requireAuth, requireAdmin, totpAuth_1.requir
                     }
                 }
             }),
-            prisma.userSuspension.findMany({
+            prisma_1.prisma.userSuspension.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -327,7 +329,7 @@ router.post('/users/:userId/suspend', auth_1.requireAuth, requireAdmin, totpAuth
         const { userId } = req.params;
         const { reason, type, duration } = req.body;
         const adminId = req.user.id;
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -359,12 +361,12 @@ router.post('/users/:userId/unsuspend', auth_1.requireAuth, requireAdmin, totpAu
     try {
         const { userId } = req.params;
         // Deactivate all active suspensions
-        await prisma.userSuspension.updateMany({
+        await prisma_1.prisma.userSuspension.updateMany({
             where: { userId, isActive: true },
             data: { isActive: false }
         });
         // Update user suspension status
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { isSuspended: false }
         });
@@ -383,7 +385,7 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.
     try {
         const { userId } = req.params;
         const { role } = req.body;
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -397,7 +399,7 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.
             updates.isModerator = true;
             updates.isAdmin = true;
         }
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: updates
         });
@@ -425,7 +427,7 @@ router.get('/content/flagged', auth_1.requireAuth, requireAdmin, totpAuth_1.requ
         if (confidence > 0)
             where.confidence = { gte: confidence };
         const [flags, total] = await Promise.all([
-            prisma.contentFlag.findMany({
+            prisma_1.prisma.contentFlag.findMany({
                 where,
                 orderBy: [
                     { confidence: 'desc' },
@@ -434,7 +436,7 @@ router.get('/content/flagged', auth_1.requireAuth, requireAdmin, totpAuth_1.requ
                 skip: offset,
                 take: limit
             }),
-            prisma.contentFlag.count({ where })
+            prisma_1.prisma.contentFlag.count({ where })
         ]);
         // Get content details for each flag
         const enrichedFlags = await Promise.all(flags.map(async (flag) => {
@@ -442,7 +444,7 @@ router.get('/content/flagged', auth_1.requireAuth, requireAdmin, totpAuth_1.requ
             try {
                 switch (flag.contentType) {
                     case 'POST':
-                        content = await prisma.post.findUnique({
+                        content = await prisma_1.prisma.post.findUnique({
                             where: { id: flag.contentId },
                             include: {
                                 author: { select: { id: true, username: true, email: true } }
@@ -450,7 +452,7 @@ router.get('/content/flagged', auth_1.requireAuth, requireAdmin, totpAuth_1.requ
                         });
                         break;
                     case 'COMMENT':
-                        content = await prisma.comment.findUnique({
+                        content = await prisma_1.prisma.comment.findUnique({
                             where: { id: flag.contentId },
                             include: {
                                 user: { select: { id: true, username: true, email: true } }
@@ -487,7 +489,7 @@ router.post('/content/flags/:flagId/resolve', auth_1.requireAuth, requireAdmin, 
     try {
         const { flagId } = req.params;
         const adminId = req.user.id;
-        await prisma.contentFlag.update({
+        await prisma_1.prisma.contentFlag.update({
             where: { id: flagId },
             data: {
                 resolved: true,
@@ -514,7 +516,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         // Run all analytics queries in parallel for better performance
         const [dailyStats, userGrowthStats, engagementStats, civicEngagementStats, contentStats, systemHealthStats, geographicStats, reputationStats] = await Promise.all([
             // Daily activity metrics
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
         SELECT 
           DATE_TRUNC('day', "createdAt")::date as date,
           COUNT(*) as count,
@@ -546,7 +548,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
       ORDER BY date DESC
     `,
             // User Growth & Demographics
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
       SELECT 
         COUNT(*) as total_users,
         COUNT(CASE WHEN "createdAt" >= ${startDate} THEN 1 END) as new_users,
@@ -559,7 +561,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
       FROM "User"
     `,
             // Engagement Statistics
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
       SELECT 
         (SELECT COUNT(*) FROM "Post" WHERE "createdAt" >= ${startDate}) as posts_created,
         (SELECT COUNT(*) FROM "Comment" WHERE "createdAt" >= ${startDate}) as comments_created,
@@ -569,7 +571,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         (SELECT COUNT(*) FROM "Message" WHERE "createdAt" >= ${startDate}) as messages_sent
     `,
             // Civic Engagement Analytics - Using correct field names
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
       SELECT 
         (SELECT COUNT(*) FROM "Petition" WHERE "createdAt" >= ${startDate}) as petitions_created,
         (SELECT COUNT(*) FROM "PetitionSignature" WHERE "signedAt" >= ${startDate}) as petition_signatures,
@@ -578,7 +580,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         (SELECT COUNT(*) FROM "Election" WHERE date >= ${new Date()}) as upcoming_elections
     `,
             // Content Analytics
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
       SELECT 
         (SELECT COUNT(*) FROM "Post" WHERE "isPolitical" = true AND "createdAt" >= ${startDate}) as political_posts,
         (SELECT COUNT(*) FROM "Post" WHERE "containsFeedback" = true AND "createdAt" >= ${startDate}) as posts_with_feedback,
@@ -586,14 +588,14 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         (SELECT COUNT(*) FROM "Report" WHERE "createdAt" >= ${startDate}) as reports_filed
     `,
             // System Health Metrics
-            prisma.$queryRaw `
+            prisma_1.prisma.$queryRaw `
       SELECT 
         (SELECT COUNT(*) FROM "ReputationEvent" WHERE "createdAt" >= ${startDate}) as reputation_events,
         (SELECT AVG("reputationScore") FROM "User" WHERE "reputationScore" IS NOT NULL) as avg_reputation,
         (SELECT COUNT(*) FROM "User" WHERE "reputationScore" < 30) as low_reputation_users
     `,
             // Geographic Distribution  
-            prisma.user.groupBy({
+            prisma_1.prisma.user.groupBy({
                 by: ['state'],
                 where: {
                     state: { not: null },
@@ -604,7 +606,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
                 take: 10
             }),
             // Reputation System Analytics - simplified to avoid TypeScript circular reference
-            prisma.reputationEvent.findMany({
+            prisma_1.prisma.reputationEvent.findMany({
                 where: { createdAt: { gte: startDate } },
                 select: { eventType: true, impact: true },
                 take: 100
@@ -617,7 +619,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         const content = contentStats[0];
         const health = systemHealthStats[0];
         // Report breakdown by reason
-        const reportReasons = await prisma.report.groupBy({
+        const reportReasons = await prisma_1.prisma.report.groupBy({
             by: ['reason'],
             where: {
                 createdAt: { gte: startDate }
@@ -632,7 +634,7 @@ router.get('/analytics', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
             }
         });
         // Flag distribution
-        const flagDistribution = await prisma.contentFlag.groupBy({
+        const flagDistribution = await prisma_1.prisma.contentFlag.groupBy({
             by: ['flagType'],
             where: {
                 createdAt: { gte: startDate }
@@ -802,17 +804,17 @@ router.get('/dashboard/enhanced', auth_1.requireAuth, requireAdmin, totpAuth_1.r
         const [basicDashboard, securityStats, recentSecurityEvents] = await Promise.all([
             // Get basic dashboard data
             Promise.all([
-                prisma.user.count(),
-                prisma.user.count({
+                prisma_1.prisma.user.count(),
+                prisma_1.prisma.user.count({
                     where: {
                         lastSeenAt: {
                             gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
                         }
                     }
                 }),
-                prisma.post.count(),
-                prisma.comment.count(),
-                prisma.report.count({ where: { status: 'PENDING' } })
+                prisma_1.prisma.post.count(),
+                prisma_1.prisma.comment.count(),
+                prisma_1.prisma.report.count({ where: { status: 'PENDING' } })
             ]).then(([totalUsers, activeUsers, totalPosts, totalComments, pendingReports]) => ({
                 totalUsers,
                 activeUsers,
@@ -933,7 +935,7 @@ router.get('/ai-insights/suggestions', auth_1.requireAuth, requireAdmin, totpAut
             where.feedbackStatus = status === 'implemented' ? 'resolved' : status;
         }
         // Fetch real feedback posts from database
-        const feedbackPosts = await prisma.post.findMany({
+        const feedbackPosts = await prisma_1.prisma.post.findMany({
             where,
             include: {
                 author: {
@@ -969,13 +971,13 @@ router.get('/ai-insights/suggestions', auth_1.requireAuth, requireAdmin, totpAut
         }));
         // Get real statistics from database
         const [totalCount, implementedCount, newCount, highPriorityCount] = await Promise.all([
-            prisma.post.count({ where: { containsFeedback: true } }),
-            prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'resolved' } }),
-            prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'new' } }),
-            prisma.post.count({ where: { containsFeedback: true, feedbackPriority: 'high' } })
+            prisma_1.prisma.post.count({ where: { containsFeedback: true } }),
+            prisma_1.prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'resolved' } }),
+            prisma_1.prisma.post.count({ where: { containsFeedback: true, feedbackStatus: 'new' } }),
+            prisma_1.prisma.post.count({ where: { containsFeedback: true, feedbackPriority: 'high' } })
         ]);
         // Calculate average confidence from real data
-        const avgConfidence = await prisma.post.aggregate({
+        const avgConfidence = await prisma_1.prisma.post.aggregate({
             where: { containsFeedback: true },
             _avg: { feedbackConfidence: true }
         });
@@ -1020,22 +1022,22 @@ router.get('/ai-insights/analysis', auth_1.requireAuth, requireAdmin, totpAuth_1
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         // Query actual data for analysis
         const [recentPosts, politicalPosts, recentLikes, recentReports] = await Promise.all([
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { createdAt: { gte: sevenDaysAgo } },
                 select: { id: true, createdAt: true, isPolitical: true, likesCount: true },
                 orderBy: { createdAt: 'desc' },
                 take: 100
             }),
-            prisma.post.count({
+            prisma_1.prisma.post.count({
                 where: {
                     isPolitical: true,
                     createdAt: { gte: sevenDaysAgo }
                 }
             }),
-            prisma.like.count({
+            prisma_1.prisma.like.count({
                 where: { createdAt: { gte: sevenDaysAgo } }
             }),
-            prisma.report.count({
+            prisma_1.prisma.report.count({
                 where: { createdAt: { gte: sevenDaysAgo } }
             })
         ]);
@@ -1177,7 +1179,7 @@ router.get('/candidates', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTO
             ];
         }
         const [registrations, totalCount] = await Promise.all([
-            prisma.candidateRegistration.findMany({
+            prisma_1.prisma.candidateRegistration.findMany({
                 where,
                 include: {
                     user: {
@@ -1193,14 +1195,14 @@ router.get('/candidates', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTO
                 skip: offset,
                 take: limit
             }),
-            prisma.candidateRegistration.count({ where })
+            prisma_1.prisma.candidateRegistration.count({ where })
         ]);
         // Get summary statistics
-        const summaryStats = await prisma.candidateRegistration.groupBy({
+        const summaryStats = await prisma_1.prisma.candidateRegistration.groupBy({
             by: ['status'],
             _count: { status: true }
         });
-        const feeWaiverStats = await prisma.candidateRegistration.groupBy({
+        const feeWaiverStats = await prisma_1.prisma.candidateRegistration.groupBy({
             by: ['feeWaiverStatus'],
             _count: { feeWaiverStatus: true },
             where: { hasFinancialHardship: true }
@@ -1237,7 +1239,7 @@ router.get('/candidates', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTO
 router.get('/candidates/:id', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
     try {
         const registrationId = req.params.id;
-        const registration = await prisma.candidateRegistration.findUnique({
+        const registration = await prisma_1.prisma.candidateRegistration.findUnique({
             where: { id: registrationId },
             include: {
                 user: {
@@ -1273,7 +1275,7 @@ router.post('/candidates/:id/approve', auth_1.requireAuth, requireAdmin, totpAut
     try {
         const registrationId = req.params.id;
         const { notes } = req.body;
-        const registration = await prisma.candidateRegistration.findUnique({
+        const registration = await prisma_1.prisma.candidateRegistration.findUnique({
             where: { id: registrationId },
             include: { user: true }
         });
@@ -1281,7 +1283,7 @@ router.post('/candidates/:id/approve', auth_1.requireAuth, requireAdmin, totpAut
             return res.status(404).json({ error: 'Candidate registration not found' });
         }
         // Update registration status
-        const updatedRegistration = await prisma.candidateRegistration.update({
+        const updatedRegistration = await prisma_1.prisma.candidateRegistration.update({
             where: { id: registrationId },
             data: {
                 status: 'APPROVED',
@@ -1290,15 +1292,109 @@ router.post('/candidates/:id/approve', auth_1.requireAuth, requireAdmin, totpAut
                 verificationNotes: notes
             }
         });
-        // TODO: Create or update candidate profile
-        // Note: Candidate creation requires officeId which needs to be determined from registration
-        // await prisma.candidate.upsert({
-        //   where: { userId: registration.userId },
-        //   create: { ... },
-        //   update: { ... }
-        // });
+        // Create or update candidate profile
+        try {
+            // First, find or create the appropriate office
+            let office = await prisma_1.prisma.office.findFirst({
+                where: {
+                    title: registration.positionTitle,
+                    level: registration.positionLevel,
+                    state: registration.state,
+                    district: registration.positionDistrict || null
+                },
+                include: { election: true }
+            });
+            // If office doesn't exist, we need to find a matching election or create a temporary one
+            if (!office) {
+                // Try to find an existing election for the same date/state
+                let election = await prisma_1.prisma.election.findFirst({
+                    where: {
+                        date: registration.electionDate,
+                        state: registration.state,
+                        type: 'GENERAL' // Default to general election
+                    }
+                });
+                // If no election exists, create one
+                if (!election) {
+                    election = await prisma_1.prisma.election.create({
+                        data: {
+                            name: `${registration.state} ${registration.electionDate.getFullYear()} Election`,
+                            date: registration.electionDate,
+                            type: 'GENERAL',
+                            level: 'STATE', // Default level
+                            state: registration.state,
+                            county: registration.city, // Use city as county approximation
+                            description: `Election for ${registration.positionTitle} and other offices`,
+                            registrationDeadline: new Date(registration.electionDate.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 days before
+                            isActive: true
+                        }
+                    });
+                }
+                // Create the office and include election data
+                office = await prisma_1.prisma.office.create({
+                    data: {
+                        title: registration.positionTitle,
+                        level: registration.positionLevel,
+                        state: registration.state,
+                        district: registration.positionDistrict || null,
+                        description: `${registration.positionTitle} for ${registration.state}${registration.positionDistrict ? ` District ${registration.positionDistrict}` : ''}`,
+                        electionId: election.id
+                    },
+                    include: { election: true }
+                });
+            }
+            // Create or update the candidate profile
+            const candidate = await prisma_1.prisma.candidate.upsert({
+                where: { userId: registration.userId },
+                create: {
+                    name: `${registration.firstName} ${registration.lastName}`,
+                    party: null, // Will be set later by candidate
+                    isIncumbent: false, // Default to false
+                    campaignWebsite: registration.campaignWebsite,
+                    campaignEmail: registration.email,
+                    campaignPhone: registration.phone,
+                    platformSummary: registration.campaignDescription,
+                    keyIssues: [], // Will be populated later
+                    isVerified: true, // Admin approved = verified
+                    userId: registration.userId,
+                    officeId: office.id
+                },
+                update: {
+                    name: `${registration.firstName} ${registration.lastName}`,
+                    campaignWebsite: registration.campaignWebsite,
+                    campaignEmail: registration.email,
+                    campaignPhone: registration.phone,
+                    platformSummary: registration.campaignDescription,
+                    isVerified: true,
+                    officeId: office.id
+                }
+            });
+            // Create candidate inbox for messaging
+            await prisma_1.prisma.candidateInbox.upsert({
+                where: { candidateId: candidate.id },
+                create: {
+                    candidateId: candidate.id,
+                    isActive: true,
+                    allowPublicQ: true,
+                    categories: [
+                        'HEALTHCARE', 'EDUCATION', 'ECONOMY', 'ENVIRONMENT', 'IMMIGRATION',
+                        'INFRASTRUCTURE', 'TAXES', 'HEALTHCARE', 'CRIMINAL_JUSTICE', 'VETERANS',
+                        'HOUSING', 'ENERGY', 'AGRICULTURE', 'TECHNOLOGY', 'FOREIGN_POLICY',
+                        'CIVIL_RIGHTS', 'LABOR', 'TRANSPORTATION', 'BUDGET', 'ETHICS', 'OTHER'
+                    ]
+                },
+                update: {
+                    isActive: true
+                }
+            });
+            console.log(`✅ Created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+        }
+        catch (profileError) {
+            console.error('Error creating candidate profile:', profileError);
+            // Don't fail the whole approval if profile creation fails
+            // The registration is still approved, profile can be created manually later
+        }
         // TODO: Send approval email notification
-        // TODO: Create candidate inbox for messaging
         res.json({
             success: true,
             message: 'Candidate registration approved successfully',
@@ -1318,14 +1414,14 @@ router.post('/candidates/:id/reject', auth_1.requireAuth, requireAdmin, totpAuth
         if (!reason) {
             return res.status(400).json({ error: 'Rejection reason is required' });
         }
-        const registration = await prisma.candidateRegistration.findUnique({
+        const registration = await prisma_1.prisma.candidateRegistration.findUnique({
             where: { id: registrationId }
         });
         if (!registration) {
             return res.status(404).json({ error: 'Candidate registration not found' });
         }
         // Update registration status
-        const updatedRegistration = await prisma.candidateRegistration.update({
+        const updatedRegistration = await prisma_1.prisma.candidateRegistration.update({
             where: { id: registrationId },
             data: {
                 status: 'REJECTED',
@@ -1356,7 +1452,7 @@ router.post('/candidates/:id/waiver', auth_1.requireAuth, requireAdmin, totpAuth
         if (!['approve', 'deny'].includes(action)) {
             return res.status(400).json({ error: 'Invalid waiver action' });
         }
-        const registration = await prisma.candidateRegistration.findUnique({
+        const registration = await prisma_1.prisma.candidateRegistration.findUnique({
             where: { id: registrationId }
         });
         if (!registration) {
@@ -1384,11 +1480,34 @@ router.post('/candidates/:id/waiver', auth_1.requireAuth, requireAdmin, totpAuth
                 registrationFee: registration.originalFee
             };
         }
-        const updatedRegistration = await prisma.candidateRegistration.update({
+        const updatedRegistration = await prisma_1.prisma.candidateRegistration.update({
             where: { id: registrationId },
             data: updateData
         });
-        // TODO: Send waiver decision email
+        // Send waiver decision email
+        try {
+            const user = await prisma_1.prisma.user.findUnique({
+                where: { id: registration.userId },
+                select: { email: true, firstName: true }
+            });
+            if (user) {
+                const candidateName = `${registration.firstName} ${registration.lastName}`;
+                const officeLevelName = registration.officeLevel.charAt(0).toUpperCase() + registration.officeLevel.slice(1);
+                let emailTemplate;
+                if (action === 'approve') {
+                    emailTemplate = emailService_1.emailService.generateWaiverApprovalTemplate(user.email, candidateName, officeLevelName, updatedRegistration.registrationFee, user.firstName);
+                }
+                else {
+                    emailTemplate = emailService_1.emailService.generateWaiverDenialTemplate(user.email, candidateName, officeLevelName, registration.originalFee, notes, user.firstName);
+                }
+                await emailService_1.emailService.sendEmail(emailTemplate);
+                console.log(`Waiver ${action} email sent to ${user.email}`);
+            }
+        }
+        catch (emailError) {
+            console.error('Failed to send waiver decision email:', emailError);
+            // Don't fail the entire request if email fails
+        }
         res.json({
             success: true,
             message: `Fee waiver ${action}d successfully`,
@@ -1398,6 +1517,384 @@ router.post('/candidates/:id/waiver', auth_1.requireAuth, requireAdmin, totpAuth
     catch (error) {
         console.error('Error processing fee waiver:', error);
         res.status(500).json({ error: 'Failed to process fee waiver request' });
+    }
+});
+// Candidate Status Management Endpoints
+/**
+ * @swagger
+ * /api/admin/candidates/profiles:
+ *   get:
+ *     tags: [Admin Candidates]
+ *     summary: Get all candidate profiles with status
+ *     description: Get candidate profiles (not registrations) for status management
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
+ *         description: Filter by candidate status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of candidate profiles
+ *       401:
+ *         description: Unauthorized
+ */
+// GET /api/admin/candidates/profiles - Get candidate profiles for status management
+router.get('/candidates/profiles', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 50, search } = req.query;
+        const skip = (Number(page) - 1) * Number(limit);
+        const where = {};
+        if (status)
+            where.status = status;
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { campaignEmail: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+        const [candidates, total] = await Promise.all([
+            prisma_1.prisma.candidate.findMany({
+                where,
+                include: {
+                    user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    office: {
+                        include: { election: { select: { name: true, date: true, state: true } } }
+                    },
+                    inbox: { select: { isActive: true, allowPublicQ: true } }
+                },
+                orderBy: [
+                    { statusChangedAt: 'desc' },
+                    { createdAt: 'desc' }
+                ],
+                skip,
+                take: Number(limit)
+            }),
+            prisma_1.prisma.candidate.count({ where })
+        ]);
+        // Get status summary counts
+        const statusCounts = await prisma_1.prisma.candidate.groupBy({
+            by: ['status'],
+            _count: { status: true }
+        });
+        const summary = Object.fromEntries(statusCounts.map(item => [item.status, item._count.status]));
+        res.json({
+            success: true,
+            data: {
+                candidates,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                },
+                summary
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching candidate profiles:', error);
+        res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/candidates/profiles/{id}/status:
+ *   put:
+ *     tags: [Admin Candidates]
+ *     summary: Update candidate status
+ *     description: Change candidate status (suspend, end, revoke, ban, etc.)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
+ *               reason:
+ *                 type: string
+ *                 description: Reason for status change
+ *               suspendedUntil:
+ *                 type: string
+ *                 format: date-time
+ *                 description: End date for suspension (SUSPENDED status only)
+ *               appealDeadline:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Deadline for appeal (REVOKED status only)
+ *               appealNotes:
+ *                 type: string
+ *                 description: Notes about appeal process
+ *             required:
+ *               - status
+ *               - reason
+ *     responses:
+ *       200:
+ *         description: Status updated successfully
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Candidate not found
+ */
+// PUT /api/admin/candidates/profiles/:id/status - Update candidate status
+router.put('/candidates/profiles/:id/status', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, reason, suspendedUntil, appealDeadline, appealNotes } = req.body;
+        if (!status || !reason) {
+            return res.status(400).json({ error: 'Status and reason are required' });
+        }
+        // Validate status
+        const validStatuses = ['ACTIVE', 'SUSPENDED', 'ENDED', 'REVOKED', 'BANNED', 'WITHDRAWN'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+        const candidate = await prisma_1.prisma.candidate.findUnique({
+            where: { id },
+            include: {
+                user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                office: { include: { election: true } },
+                inbox: { select: { id: true, isActive: true } }
+            }
+        });
+        if (!candidate) {
+            return res.status(404).json({ error: 'Candidate not found' });
+        }
+        // Prepare update data
+        const updateData = {
+            status,
+            statusChangedAt: new Date(),
+            statusChangedBy: req.user.id,
+            statusReason: reason
+        };
+        // Status-specific fields
+        if (status === 'SUSPENDED' && suspendedUntil) {
+            updateData.suspendedUntil = new Date(suspendedUntil);
+        }
+        if (status === 'REVOKED' && appealDeadline) {
+            updateData.appealDeadline = new Date(appealDeadline);
+        }
+        if (appealNotes) {
+            updateData.appealNotes = appealNotes;
+        }
+        // Handle legacy field compatibility
+        if (status === 'WITHDRAWN') {
+            updateData.isWithdrawn = true;
+            updateData.withdrawnAt = new Date();
+            updateData.withdrawnReason = reason;
+        }
+        else {
+            updateData.isWithdrawn = false;
+        }
+        const updatedCandidate = await prisma_1.prisma.candidate.update({
+            where: { id },
+            data: updateData,
+            include: {
+                user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                office: { include: { election: true } },
+                inbox: true
+            }
+        });
+        // Update inbox status based on candidate status
+        if (candidate.inbox) {
+            const inboxActive = ['ACTIVE', 'SUSPENDED'].includes(status);
+            await prisma_1.prisma.candidateInbox.update({
+                where: { candidateId: id },
+                data: { isActive: inboxActive }
+            });
+        }
+        console.log(`✅ Updated candidate ${candidate.name} status to ${status} by admin ${req.user.id}`);
+        // TODO: Send notification email to candidate about status change
+        // TODO: Log audit trail entry
+        res.json({
+            success: true,
+            message: `Candidate status updated to ${status}`,
+            data: { candidate: updatedCandidate }
+        });
+    }
+    catch (error) {
+        console.error('Error updating candidate status:', error);
+        res.status(500).json({ error: 'Failed to update candidate status' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/candidates/profiles/{id}/create:
+ *   post:
+ *     tags: [Admin Candidates]
+ *     summary: Create profile for approved candidate
+ *     description: Manually create candidate profile for already-approved registrations
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate Registration ID
+ *     responses:
+ *       200:
+ *         description: Profile created successfully
+ *       400:
+ *         description: Registration not approved or profile already exists
+ *       404:
+ *         description: Registration not found
+ */
+// POST /api/admin/candidates/profiles/:registrationId/create - Create profile for approved candidate
+router.post('/candidates/profiles/:registrationId/create', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
+    try {
+        const { registrationId } = req.params;
+        const registration = await prisma_1.prisma.candidateRegistration.findUnique({
+            where: { id: registrationId },
+            include: { user: true }
+        });
+        if (!registration) {
+            return res.status(404).json({ error: 'Registration not found' });
+        }
+        if (registration.status !== 'APPROVED') {
+            return res.status(400).json({ error: 'Registration must be approved first' });
+        }
+        // Check if profile already exists
+        const existingCandidate = await prisma_1.prisma.candidate.findUnique({
+            where: { userId: registration.userId }
+        });
+        if (existingCandidate) {
+            return res.status(400).json({
+                error: 'Candidate profile already exists',
+                candidateId: existingCandidate.id
+            });
+        }
+        // Create the candidate profile (reuse the logic from approval)
+        try {
+            // Find or create the appropriate office
+            let office = await prisma_1.prisma.office.findFirst({
+                where: {
+                    title: registration.positionTitle,
+                    level: registration.positionLevel,
+                    state: registration.state,
+                    district: registration.positionDistrict || null
+                },
+                include: { election: true }
+            });
+            if (!office) {
+                // Create election and office as needed
+                let election = await prisma_1.prisma.election.findFirst({
+                    where: {
+                        date: registration.electionDate,
+                        state: registration.state,
+                        type: 'GENERAL'
+                    }
+                });
+                if (!election) {
+                    election = await prisma_1.prisma.election.create({
+                        data: {
+                            name: `${registration.state} ${registration.electionDate.getFullYear()} Election`,
+                            date: registration.electionDate,
+                            type: 'GENERAL',
+                            level: 'STATE',
+                            state: registration.state,
+                            county: registration.city,
+                            description: `Election for ${registration.positionTitle} and other offices`,
+                            registrationDeadline: new Date(registration.electionDate.getTime() - 30 * 24 * 60 * 60 * 1000),
+                            isActive: true
+                        }
+                    });
+                }
+                office = await prisma_1.prisma.office.create({
+                    data: {
+                        title: registration.positionTitle,
+                        level: registration.positionLevel,
+                        state: registration.state,
+                        district: registration.positionDistrict || null,
+                        description: `${registration.positionTitle} for ${registration.state}${registration.positionDistrict ? ` District ${registration.positionDistrict}` : ''}`,
+                        electionId: election.id
+                    },
+                    include: { election: true }
+                });
+            }
+            // Create the candidate profile
+            const candidate = await prisma_1.prisma.candidate.create({
+                data: {
+                    name: `${registration.firstName} ${registration.lastName}`,
+                    party: null,
+                    isIncumbent: false,
+                    campaignWebsite: registration.campaignWebsite,
+                    campaignEmail: registration.email,
+                    campaignPhone: registration.phone,
+                    platformSummary: registration.campaignDescription,
+                    keyIssues: [],
+                    isVerified: true,
+                    status: 'ACTIVE',
+                    statusChangedAt: new Date(),
+                    statusChangedBy: req.user.id,
+                    statusReason: 'Profile created from approved registration',
+                    userId: registration.userId,
+                    officeId: office.id
+                },
+                include: {
+                    user: true,
+                    office: { include: { election: true } }
+                }
+            });
+            // Create candidate inbox
+            await prisma_1.prisma.candidateInbox.create({
+                data: {
+                    candidateId: candidate.id,
+                    isActive: true,
+                    allowPublicQ: true,
+                    categories: [
+                        'HEALTHCARE', 'EDUCATION', 'ECONOMY', 'ENVIRONMENT', 'IMMIGRATION',
+                        'INFRASTRUCTURE', 'TAXES', 'HEALTHCARE', 'CRIMINAL_JUSTICE', 'VETERANS',
+                        'HOUSING', 'ENERGY', 'AGRICULTURE', 'TECHNOLOGY', 'FOREIGN_POLICY',
+                        'CIVIL_RIGHTS', 'LABOR', 'TRANSPORTATION', 'BUDGET', 'ETHICS', 'OTHER'
+                    ]
+                }
+            });
+            console.log(`✅ Manually created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+            res.json({
+                success: true,
+                message: 'Candidate profile created successfully',
+                data: { candidate }
+            });
+        }
+        catch (profileError) {
+            console.error('Error creating candidate profile:', profileError);
+            res.status(500).json({ error: 'Failed to create candidate profile' });
+        }
+    }
+    catch (error) {
+        console.error('Error creating candidate profile:', error);
+        res.status(500).json({ error: 'Failed to create candidate profile' });
     }
 });
 exports.default = router;

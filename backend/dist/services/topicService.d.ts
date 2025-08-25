@@ -74,10 +74,10 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
-            summary: string | null;
             participantCount: number;
-            commentCount: number;
             parentTopicId: string;
+            summary: string | null;
+            commentCount: number;
         }[];
     } & {
         id: string;
@@ -85,12 +85,11 @@ export declare class TopicService {
         createdAt: Date;
         updatedAt: Date;
         state: string | null;
-        description: string | null;
         district: string | null;
         isActive: boolean;
         category: string | null;
+        description: string | null;
         title: string;
-        trendingScore: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
@@ -100,6 +99,7 @@ export declare class TopicService {
         postCount: number;
         participantCount: number;
         viewCount: number;
+        trendingScore: number;
         lastActivityAt: Date;
     })[]>;
     /**
@@ -116,17 +116,17 @@ export declare class TopicService {
                         lastName: string;
                     };
                 } & {
-                    userId: string;
                     id: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    userId: string;
                     content: string;
                     postId: string;
                 })[];
                 likes: {
-                    userId: string;
                     id: string;
                     createdAt: Date;
+                    userId: string;
                     postId: string;
                 }[];
                 author: {
@@ -274,10 +274,10 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
-            summary: string | null;
             participantCount: number;
-            commentCount: number;
             parentTopicId: string;
+            summary: string | null;
+            commentCount: number;
         })[];
     } & {
         id: string;
@@ -285,12 +285,11 @@ export declare class TopicService {
         createdAt: Date;
         updatedAt: Date;
         state: string | null;
-        description: string | null;
         district: string | null;
         isActive: boolean;
         category: string | null;
+        description: string | null;
         title: string;
-        trendingScore: number;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
@@ -300,6 +299,7 @@ export declare class TopicService {
         postCount: number;
         participantCount: number;
         viewCount: number;
+        trendingScore: number;
         lastActivityAt: Date;
     }>;
     /**

@@ -1,6 +1,7 @@
+import { prisma } from '../lib/prisma';
 import { createNotification } from './notifications';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateProfileUpdate } from '../middleware/validation';
 import { FollowService } from '../services/relationshipService';
@@ -8,7 +9,7 @@ import { PhotoService } from '../services/photoService';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get current user's full profile
 router.get('/profile', requireAuth, async (req: AuthRequest, res) => {

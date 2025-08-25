@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { generateToken, hashPassword } from '../utils/auth';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export interface OAuthProfile {
   id: string;

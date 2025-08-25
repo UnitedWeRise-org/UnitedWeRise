@@ -1,7 +1,8 @@
-import { PrismaClient, Election, Candidate, Office, BallotMeasure } from '@prisma/client';
+import { Election, Candidate, Office, BallotMeasure } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import axios from 'axios';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface ElectionSearchParams {
   state?: string;

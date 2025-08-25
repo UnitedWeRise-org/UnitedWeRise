@@ -4,10 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnhancedElectionService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const axios_1 = __importDefault(require("axios"));
 const electionService_1 = require("./electionService");
-const prisma = new client_1.PrismaClient();
 class EnhancedElectionService {
     /**
      * Main entry point - get election data using multi-tier strategy
@@ -87,7 +86,7 @@ class EnhancedElectionService {
     static async getCachedData(state) {
         try {
             // Using Prisma to store cache (could also use Redis in production)
-            const cacheEntry = await prisma.electionCache.findUnique({
+            const cacheEntry = await prisma_1.prisma.electionCache.findUnique({
                 where: { stateCode: state.toUpperCase() }
             });
             if (!cacheEntry) {
@@ -107,7 +106,7 @@ class EnhancedElectionService {
     }
     static async setCachedData(state, elections, source) {
         try {
-            await prisma.electionCache.upsert({
+            await prisma_1.prisma.electionCache.upsert({
                 where: { stateCode: state.toUpperCase() },
                 create: {
                     stateCode: state.toUpperCase(),
@@ -394,13 +393,13 @@ class EnhancedElectionService {
     static async refreshCache(state) {
         try {
             if (state) {
-                await prisma.electionCache.delete({
+                await prisma_1.prisma.electionCache.delete({
                     where: { stateCode: state.toUpperCase() }
                 });
                 console.log(`🗑️  Cleared cache for ${state}`);
             }
             else {
-                await prisma.electionCache.deleteMany({});
+                await prisma_1.prisma.electionCache.deleteMany({});
                 console.log('🗑️  Cleared all election cache');
             }
         }

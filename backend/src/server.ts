@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import http from 'http';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './lib/prisma';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import postRoutes from './routes/posts';
@@ -53,20 +53,8 @@ app.set('trust proxy', 1);
 
 const httpServer = http.createServer(app);
 
-// Configure Prisma Client with connection pooling for shared database
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL
-    }
-  },
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
-});
-
-// Configure connection pool limits to handle shared database between production and staging
-process.env.DATABASE_URL = process.env.DATABASE_URL?.includes('connection_limit=') 
-  ? process.env.DATABASE_URL 
-  : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=20`;
+// Prisma singleton is now imported from lib/prisma.ts to prevent connection leaks
+// Previously, 60+ files were each creating their own PrismaClient instance
 
 const PORT = process.env.PORT || 3001;
 

@@ -1,12 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmbeddingService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const sentenceTransformersService_1 = require("./sentenceTransformersService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const azureConfig_1 = require("../config/azureConfig");
-// import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
-const prisma = new client_1.PrismaClient();
 class EmbeddingService {
     /**
      * Generate embedding using best available service (Azure OpenAI > Local)
@@ -87,7 +86,7 @@ class EmbeddingService {
                 try {
                     // Use raw SQL for vector similarity search
                     const embeddingString = `[${targetEmbedding.join(',')}]`;
-                    const similarPosts = await prisma.$queryRaw `
+                    const similarPosts = await prisma_1.prisma.$queryRaw `
             SELECT 
               p.id,
               p.content,
@@ -117,7 +116,7 @@ class EmbeddingService {
                 }
             }
             // Fallback to in-memory similarity calculation
-            const posts = await prisma.post.findMany({
+            const posts = await prisma_1.prisma.post.findMany({
                 where: {
                     embedding: {
                         isEmpty: false // Only posts with embeddings
@@ -160,7 +159,7 @@ class EmbeddingService {
      */
     static async updatePostEmbedding(postId, content) {
         try {
-            const post = await prisma.post.findUnique({
+            const post = await prisma_1.prisma.post.findUnique({
                 where: { id: postId },
                 include: {
                     author: {
@@ -178,7 +177,7 @@ class EmbeddingService {
             }
             const analysis = await this.analyzeText(content);
             // Update PostgreSQL
-            await prisma.post.update({
+            await prisma_1.prisma.post.update({
                 where: { id: postId },
                 data: {
                     embedding: analysis.embedding
@@ -203,7 +202,7 @@ class EmbeddingService {
     static async batchProcessEmbeddings(batchSize = 50) {
         try {
             console.log('Starting batch embedding processing...');
-            const postsWithoutEmbeddings = await prisma.post.findMany({
+            const postsWithoutEmbeddings = await prisma_1.prisma.post.findMany({
                 where: {
                     embedding: {
                         isEmpty: true

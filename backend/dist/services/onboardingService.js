@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onboardingService = exports.OnboardingService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const metricsService_1 = require("./metricsService");
-const prisma = new client_1.PrismaClient();
 // Political terms to subtly filter from search (without showing errors)
 const FILTERED_POLITICAL_TERMS = [
     'republican', 'democrat', 'democratic', 'gop', 'liberal', 'conservative',
@@ -21,7 +21,7 @@ class OnboardingService {
             profileData: {}
         };
         // Store in database
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 onboardingData: profile,
@@ -31,7 +31,7 @@ class OnboardingService {
         return profile;
     }
     async getOnboardingSteps(userId) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 onboardingData: true,
@@ -106,7 +106,7 @@ class OnboardingService {
         return steps;
     }
     async completeStep(userId, stepId, stepData) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { onboardingData: true }
         });
@@ -134,7 +134,7 @@ class OnboardingService {
             metricsService_1.metricsService.incrementCounter('onboarding_completed_total');
         }
         // Update database
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 onboardingData: profile,
@@ -172,7 +172,7 @@ class OnboardingService {
                 break;
         }
         if (Object.keys(updateData).length > 0) {
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: updateData
             });
@@ -265,7 +265,7 @@ class OnboardingService {
     async getOnboardingAnalytics() {
         // This would typically query analytics data
         // For now, return calculated metrics from user data
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: {
                 onboardingData: {
                     not: null

@@ -1,11 +1,12 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateMessage } from '../middleware/validation';
 import { messageLimiter } from '../middleware/rateLimiting';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get user's conversations
 router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {

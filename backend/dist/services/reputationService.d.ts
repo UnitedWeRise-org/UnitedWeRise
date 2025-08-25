@@ -1,12 +1,3 @@
-/**
- * Reputation Service for UnitedWeRise
- *
- * Simple 0-100 scoring system focused on behavior, not content
- * - Starts at 70 for new users
- * - No automatic decay (scores only change through actions)
- * - Per-post penalty cap (prevents pile-ons)
- * - Mild algorithmic effects (±10-20% visibility)
- */
 interface ReputationEvent {
     userId: string;
     eventType: string;

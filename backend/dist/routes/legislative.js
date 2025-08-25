@@ -3,14 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const legislativeDataService_1 = require("../services/legislativeDataService");
 const newsAggregationService_1 = require("../services/newsAggregationService");
 const newsApiRateLimiter_1 = require("../services/newsApiRateLimiter");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get voting records for a specific official
 router.get('/voting-records/:bioguideId', async (req, res) => {
     try {
@@ -19,7 +20,7 @@ router.get('/voting-records/:bioguideId', async (req, res) => {
         // Get voting records from service
         const votingRecords = await legislativeDataService_1.LegislativeDataService.getVotingRecords(bioguideId, parseInt(limit.toString()));
         // Get voting statistics from database
-        const membership = await prisma.legislativeMembership.findFirst({
+        const membership = await prisma_1.prisma.legislativeMembership.findFirst({
             where: { bioguideId },
             include: { votingSummary: true }
         });
@@ -53,7 +54,7 @@ router.get('/news/:officialName', async (req, res) => {
 router.post('/sync/federal', auth_1.requireAuth, async (req, res) => {
     try {
         // Check if user is admin
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: { isAdmin: true }
         });
@@ -76,7 +77,7 @@ router.post('/sync/state/:stateCode', auth_1.requireAuth, async (req, res) => {
     try {
         const { stateCode } = req.params;
         // Check if user is admin
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: { isAdmin: true }
         });
@@ -137,7 +138,7 @@ router.post('/voting-statistics', async (req, res) => {
         if (bioguideIds.length > 50) {
             return res.status(400).json({ error: 'Maximum 50 bioguide IDs per request' });
         }
-        const statistics = await prisma.legislativeMembership.findMany({
+        const statistics = await prisma_1.prisma.legislativeMembership.findMany({
             where: {
                 bioguideId: { in: bioguideIds }
             },
@@ -161,14 +162,14 @@ router.get('/bills/:bioguideId', async (req, res) => {
         const { bioguideId } = req.params;
         const { limit = 10 } = req.query;
         // Find the membership
-        const membership = await prisma.legislativeMembership.findFirst({
+        const membership = await prisma_1.prisma.legislativeMembership.findFirst({
             where: { bioguideId }
         });
         if (!membership) {
             return res.status(404).json({ error: 'Legislator not found' });
         }
         // Get bills they sponsored
-        const sponsoredBills = await prisma.billSponsorship.findMany({
+        const sponsoredBills = await prisma_1.prisma.billSponsorship.findMany({
             where: { membershipId: membership.id },
             include: {
                 bill: {
@@ -203,9 +204,9 @@ router.get('/bills/:bioguideId', async (req, res) => {
 router.get('/health', async (req, res) => {
     try {
         // Quick database check
-        const legislatureCount = await prisma.legislature.count();
-        const membershipCount = await prisma.legislativeMembership.count();
-        const newsCount = await prisma.newsArticle.count();
+        const legislatureCount = await prisma_1.prisma.legislature.count();
+        const membershipCount = await prisma_1.prisma.legislativeMembership.count();
+        const newsCount = await prisma_1.prisma.newsArticle.count();
         res.json({
             status: 'healthy',
             timestamp: new Date().toISOString(),

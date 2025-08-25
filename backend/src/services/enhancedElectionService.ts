@@ -1,8 +1,9 @@
-import { PrismaClient, Election, Candidate, Office, BallotMeasure } from '@prisma/client';
+import { Election, Candidate, Office, BallotMeasure } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import axios from 'axios';
 import { ElectionService } from './electionService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface CachedElectionData {
   elections: any[];

@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import { Router } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+;
 
 const router = Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Batch endpoint for page initialization - reduces multiple API calls to one
 router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {

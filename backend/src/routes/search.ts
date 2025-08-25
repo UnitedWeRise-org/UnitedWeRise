@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // 🎯 OPTIMIZED: Unified search endpoint (replaces 4 separate API calls)
 // Replaces: /search/users + /search/posts + /search/officials + /search/topics

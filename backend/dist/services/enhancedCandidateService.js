@@ -1,10 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnhancedCandidateService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const qwenService_1 = require("./qwenService");
 const photoService_1 = require("./photoService");
-const prisma = new client_1.PrismaClient();
 class EnhancedCandidateService {
     /**
      * Get enhanced candidate profile with photos and AI-analyzed positions
@@ -12,7 +11,7 @@ class EnhancedCandidateService {
     static async getCandidateProfile(candidateId) {
         try {
             console.log(`👤 Loading enhanced profile for candidate ${candidateId}`);
-            const candidate = await prisma.candidate.findUnique({
+            const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: candidateId },
                 include: {
                     office: {
@@ -160,7 +159,7 @@ class EnhancedCandidateService {
      */
     static async getCandidatesByOffice(officeId, includeAnalysis = true) {
         try {
-            const candidates = await prisma.candidate.findMany({
+            const candidates = await prisma_1.prisma.candidate.findMany({
                 where: {
                     officeId,
                     isWithdrawn: false
@@ -221,7 +220,7 @@ class EnhancedCandidateService {
                 if (office)
                     where.office.title = { contains: office, mode: 'insensitive' };
             }
-            const candidates = await prisma.candidate.findMany({
+            const candidates = await prisma_1.prisma.candidate.findMany({
                 where,
                 include: {
                     office: {
@@ -251,7 +250,7 @@ class EnhancedCandidateService {
      */
     static async updateCandidatePlatform(candidateId, updates) {
         try {
-            await prisma.candidate.update({
+            await prisma_1.prisma.candidate.update({
                 where: { id: candidateId },
                 data: {
                     ...updates,

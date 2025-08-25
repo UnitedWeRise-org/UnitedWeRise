@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { ApiCacheService } from './apiCache';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // API Configuration
 const CONGRESS_API_KEY = process.env.CONGRESS_API_KEY;

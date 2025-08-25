@@ -7,8 +7,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CivicOrganizingService = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 class CivicOrganizingService {
     /**
      * PETITION MANAGEMENT
@@ -18,7 +17,7 @@ class CivicOrganizingService {
         if (data.geographicScope === 'LOCAL' && !data.location) {
             throw new Error('Local petitions require location information');
         }
-        const petition = await prisma.petition.create({
+        const petition = await prisma_1.prisma.petition.create({
             data: {
                 title: data.title,
                 description: data.description,
@@ -52,7 +51,7 @@ class CivicOrganizingService {
     }
     async signPetition(userId, petitionId, ipAddress) {
         // Check if user already signed
-        const existingSignature = await prisma.petitionSignature.findUnique({
+        const existingSignature = await prisma_1.prisma.petitionSignature.findUnique({
             where: {
                 petitionId_userId: {
                     petitionId,
@@ -64,7 +63,7 @@ class CivicOrganizingService {
             throw new Error('You have already signed this petition');
         }
         // Verify petition is still active
-        const petition = await prisma.petition.findUnique({
+        const petition = await prisma_1.prisma.petition.findUnique({
             where: { id: petitionId }
         });
         if (!petition) {
@@ -77,7 +76,7 @@ class CivicOrganizingService {
             throw new Error('This petition has expired');
         }
         // Create signature and update petition count
-        const signature = await prisma.$transaction(async (tx) => {
+        const signature = await prisma_1.prisma.$transaction(async (tx) => {
             const newSignature = await tx.petitionSignature.create({
                 data: {
                     petitionId,
@@ -130,7 +129,7 @@ class CivicOrganizingService {
             where.location = { not: null };
         }
         const [petitions, total] = await Promise.all([
-            prisma.petition.findMany({
+            prisma_1.prisma.petition.findMany({
                 where,
                 include: {
                     creator: {
@@ -154,7 +153,7 @@ class CivicOrganizingService {
                 skip,
                 take: limit
             }),
-            prisma.petition.count({ where })
+            prisma_1.prisma.petition.count({ where })
         ]);
         // Calculate progress for each petition
         const petitionsWithProgress = petitions.map(petition => ({
@@ -169,7 +168,7 @@ class CivicOrganizingService {
         };
     }
     async getPetitionById(id) {
-        const petition = await prisma.petition.findUnique({
+        const petition = await prisma_1.prisma.petition.findUnique({
             where: { id },
             include: {
                 creator: {
@@ -215,7 +214,7 @@ class CivicOrganizingService {
      * EVENT MANAGEMENT
      */
     async createEvent(userId, data) {
-        const event = await prisma.civicEvent.create({
+        const event = await prisma_1.prisma.civicEvent.create({
             data: {
                 title: data.title,
                 description: data.description,
@@ -254,7 +253,7 @@ class CivicOrganizingService {
     }
     async rsvpToEvent(userId, eventId, status = 'ATTENDING') {
         // Check if user already RSVP'd
-        const existingRSVP = await prisma.eventRSVP.findUnique({
+        const existingRSVP = await prisma_1.prisma.eventRSVP.findUnique({
             where: {
                 eventId_userId: {
                     eventId,
@@ -264,7 +263,7 @@ class CivicOrganizingService {
         });
         if (existingRSVP) {
             // Update existing RSVP
-            const updatedRSVP = await prisma.eventRSVP.update({
+            const updatedRSVP = await prisma_1.prisma.eventRSVP.update({
                 where: {
                     eventId_userId: {
                         eventId,
@@ -292,7 +291,7 @@ class CivicOrganizingService {
             return updatedRSVP;
         }
         // Verify event exists and is accepting RSVPs
-        const event = await prisma.civicEvent.findUnique({
+        const event = await prisma_1.prisma.civicEvent.findUnique({
             where: { id: eventId }
         });
         if (!event) {
@@ -309,7 +308,7 @@ class CivicOrganizingService {
             throw new Error('Event is at capacity');
         }
         // Create RSVP and update event count
-        const rsvp = await prisma.$transaction(async (tx) => {
+        const rsvp = await prisma_1.prisma.$transaction(async (tx) => {
             const newRSVP = await tx.eventRSVP.create({
                 data: {
                     eventId,
@@ -379,7 +378,7 @@ class CivicOrganizingService {
             where.location = { not: null };
         }
         const [events, total] = await Promise.all([
-            prisma.civicEvent.findMany({
+            prisma_1.prisma.civicEvent.findMany({
                 where,
                 include: {
                     creator: {
@@ -403,7 +402,7 @@ class CivicOrganizingService {
                 skip,
                 take: limit
             }),
-            prisma.civicEvent.count({ where })
+            prisma_1.prisma.civicEvent.count({ where })
         ]);
         return {
             events,
@@ -412,7 +411,7 @@ class CivicOrganizingService {
         };
     }
     async getEventById(id) {
-        const event = await prisma.civicEvent.findUnique({
+        const event = await prisma_1.prisma.civicEvent.findUnique({
             where: { id },
             include: {
                 creator: {
@@ -457,13 +456,13 @@ class CivicOrganizingService {
      * UTILITY METHODS
      */
     async updateEventRSVPCount(eventId) {
-        const attendingCount = await prisma.eventRSVP.count({
+        const attendingCount = await prisma_1.prisma.eventRSVP.count({
             where: {
                 eventId,
                 rsvpStatus: 'ATTENDING'
             }
         });
-        await prisma.civicEvent.update({
+        await prisma_1.prisma.civicEvent.update({
             where: { id: eventId },
             data: {
                 currentRSVPs: attendingCount
@@ -502,7 +501,7 @@ class CivicOrganizingService {
             eventWhere.eventType = filters.eventType;
         }
         const [petitions, events] = await Promise.all([
-            prisma.petition.findMany({
+            prisma_1.prisma.petition.findMany({
                 where: petitionWhere,
                 include: {
                     creator: {
@@ -522,7 +521,7 @@ class CivicOrganizingService {
                 take: Math.ceil(limit / 2),
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.civicEvent.findMany({
+            prisma_1.prisma.civicEvent.findMany({
                 where: eventWhere,
                 include: {
                     creator: {
@@ -553,7 +552,7 @@ class CivicOrganizingService {
      * USER ACTIVITY
      */
     async getUserPetitions(userId) {
-        return prisma.petition.findMany({
+        return prisma_1.prisma.petition.findMany({
             where: { createdBy: userId },
             include: {
                 _count: {
@@ -566,7 +565,7 @@ class CivicOrganizingService {
         });
     }
     async getUserEvents(userId) {
-        return prisma.civicEvent.findMany({
+        return prisma_1.prisma.civicEvent.findMany({
             where: { createdBy: userId },
             include: {
                 _count: {
@@ -579,7 +578,7 @@ class CivicOrganizingService {
         });
     }
     async getUserSignedPetitions(userId) {
-        const signatures = await prisma.petitionSignature.findMany({
+        const signatures = await prisma_1.prisma.petitionSignature.findMany({
             where: { userId },
             include: {
                 petition: {
@@ -608,7 +607,7 @@ class CivicOrganizingService {
         }));
     }
     async getUserRSVPedEvents(userId) {
-        const rsvps = await prisma.eventRSVP.findMany({
+        const rsvps = await prisma_1.prisma.eventRSVP.findMany({
             where: { userId },
             include: {
                 event: {

@@ -1,5 +1,6 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { moderationService } from '../services/moderationService';
 import { emailService } from '../services/emailService';
@@ -8,7 +9,7 @@ import { apiLimiter } from '../middleware/rateLimiting';
 import { metricsService } from '../services/metricsService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 const requireModerator = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   if (!req.user?.isModerator && !req.user?.isAdmin) {

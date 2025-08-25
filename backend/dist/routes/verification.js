@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
@@ -13,13 +14,13 @@ const smsService_1 = require("../services/smsService");
 const captchaService_1 = require("../services/captchaService");
 const crypto_1 = __importDefault(require("crypto"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Send email verification
 router.post('/email/send', auth_1.requireAuth, rateLimiting_1.verificationLimiter, async (req, res) => {
     try {
         const userId = req.user.id;
         // Get user details
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 email: true,
@@ -41,7 +42,7 @@ router.post('/email/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
         const verifyToken = crypto_1.default.randomBytes(32).toString('hex');
         const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         // Update user with verification token
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 emailVerifyToken: verifyToken,
@@ -69,7 +70,7 @@ router.post('/email/verify', validation_1.validateEmailVerification, async (req,
     try {
         const { token } = req.body;
         // Find user with this verification token
-        const user = await prisma.user.findFirst({
+        const user = await prisma_1.prisma.user.findFirst({
             where: {
                 emailVerifyToken: token,
                 emailVerifyExpiry: {
@@ -90,7 +91,7 @@ router.post('/email/verify', validation_1.validateEmailVerification, async (req,
             return res.status(400).json({ error: 'Email already verified' });
         }
         // Verify the email
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 emailVerified: true,
@@ -144,7 +145,7 @@ router.post('/phone/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
             return res.status(400).json({ error: 'Invalid phone number format' });
         }
         // Check if phone is already verified by another user
-        const existingUser = await prisma.user.findFirst({
+        const existingUser = await prisma_1.prisma.user.findFirst({
             where: {
                 phoneNumber,
                 phoneVerified: true,
@@ -155,7 +156,7 @@ router.post('/phone/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
             return res.status(400).json({ error: 'Phone number already registered' });
         }
         // Get current user
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 phoneVerifyExpiry: true,
@@ -177,7 +178,7 @@ router.post('/phone/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
         const verifyCode = smsService_1.smsService.generateVerificationCode();
         const verifyExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         // Update user with verification code
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 phoneNumber,
@@ -207,7 +208,7 @@ router.post('/phone/verify', auth_1.requireAuth, validation_1.validatePhoneCode,
         const userId = req.user.id;
         const { phoneNumber, code } = req.body;
         // Find user and verify code
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 phoneNumber: true,
@@ -235,7 +236,7 @@ router.post('/phone/verify', auth_1.requireAuth, validation_1.validatePhoneCode,
             return res.status(400).json({ error: 'Invalid verification code' });
         }
         // Verify the phone number
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 phoneVerified: true,
@@ -257,7 +258,7 @@ router.post('/phone/verify', auth_1.requireAuth, validation_1.validatePhoneCode,
 router.get('/status', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 emailVerified: true,

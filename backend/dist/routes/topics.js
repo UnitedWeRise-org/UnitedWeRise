@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const topicService_1 = require("../services/topicService");
 const metricsService_1 = require("../services/metricsService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * @swagger
  * /api/topics/trending:
@@ -110,7 +111,7 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Topic not found' });
         }
         // Increment view count
-        await prisma.topic.update({
+        await prisma_1.prisma.topic.update({
             where: { id },
             data: {
                 viewCount: { increment: 1 }
@@ -187,7 +188,7 @@ router.post('/:id/comment', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Comment must be 2000 characters or less' });
         }
         // Verify topic exists
-        const topic = await prisma.topic.findUnique({
+        const topic = await prisma_1.prisma.topic.findUnique({
             where: { id: topicId },
             select: { id: true, isActive: true }
         });
@@ -199,7 +200,7 @@ router.post('/:id/comment', auth_1.requireAuth, async (req, res) => {
         }
         // Verify parent comment exists if provided
         if (parentId) {
-            const parentComment = await prisma.topicComment.findUnique({
+            const parentComment = await prisma_1.prisma.topicComment.findUnique({
                 where: { id: parentId },
                 select: { id: true, topicId: true }
             });
@@ -281,7 +282,7 @@ router.post('/:id/subtopics/:subTopicId/comment', auth_1.requireAuth, async (req
             return res.status(400).json({ error: 'Comment content is required' });
         }
         // Verify sub-topic exists and belongs to topic
-        const subTopic = await prisma.subTopic.findUnique({
+        const subTopic = await prisma_1.prisma.subTopic.findUnique({
             where: { id: subTopicId },
             include: {
                 parentTopic: {
@@ -448,7 +449,7 @@ router.get('/search', async (req, res) => {
                 }
             ];
         }
-        const topics = await prisma.topic.findMany({
+        const topics = await prisma_1.prisma.topic.findMany({
             where,
             include: {
                 posts: {

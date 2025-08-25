@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const districtIdentificationService_1 = require("../services/districtIdentificationService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Rate limiting for crowdsourcing submissions
 const rateLimitMap = new Map();
 function checkRateLimit(userId, maxSubmissions = 5, windowMs = 60 * 60 * 1000) {
@@ -96,7 +97,7 @@ router.post('/districts', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Check for duplicate
-        const existing = await prisma.electoralDistrict.findFirst({
+        const existing = await prisma_1.prisma.electoralDistrict.findFirst({
             where: {
                 identifier,
                 state,
@@ -108,7 +109,7 @@ router.post('/districts', auth_1.requireAuth, async (req, res) => {
                 error: 'District with this identifier already exists in this state'
             });
         }
-        const district = await prisma.electoralDistrict.create({
+        const district = await prisma_1.prisma.electoralDistrict.create({
             data: {
                 name,
                 type,
@@ -160,7 +161,7 @@ router.post('/districts/:districtId/offices', auth_1.requireAuth, async (req, re
             });
         }
         // Verify district exists
-        const district = await prisma.electoralDistrict.findUnique({
+        const district = await prisma_1.prisma.electoralDistrict.findUnique({
             where: { id: districtId }
         });
         if (!district) {
@@ -168,7 +169,7 @@ router.post('/districts/:districtId/offices', auth_1.requireAuth, async (req, re
                 error: 'District not found'
             });
         }
-        const office = await prisma.districtOffice.create({
+        const office = await prisma_1.prisma.districtOffice.create({
             data: {
                 title,
                 level,
@@ -230,7 +231,7 @@ router.post('/offices/:officeId/officials', auth_1.requireAuth, async (req, res)
             });
         }
         // Verify office exists
-        const office = await prisma.districtOffice.findUnique({
+        const office = await prisma_1.prisma.districtOffice.findUnique({
             where: { id: officeId }
         });
         if (!office) {
@@ -238,7 +239,7 @@ router.post('/offices/:officeId/officials', auth_1.requireAuth, async (req, res)
                 error: 'Office not found'
             });
         }
-        const official = await prisma.crowdsourcedOfficial.create({
+        const official = await prisma_1.prisma.crowdsourcedOfficial.create({
             data: {
                 name,
                 party,
@@ -283,7 +284,7 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
             });
         }
         // Verify official exists
-        const official = await prisma.crowdsourcedOfficial.findUnique({
+        const official = await prisma_1.prisma.crowdsourcedOfficial.findUnique({
             where: { id: officialId }
         });
         if (!official) {
@@ -298,7 +299,7 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
             });
         }
         // Update or create vote
-        const existingVote = await prisma.crowdsourceVote.findUnique({
+        const existingVote = await prisma_1.prisma.crowdsourceVote.findUnique({
             where: {
                 userId_officialId: {
                     userId,
@@ -308,14 +309,14 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
         });
         if (existingVote) {
             // Update existing vote
-            await prisma.crowdsourceVote.update({
+            await prisma_1.prisma.crowdsourceVote.update({
                 where: { id: existingVote.id },
                 data: { voteType, reason }
             });
         }
         else {
             // Create new vote
-            await prisma.crowdsourceVote.create({
+            await prisma_1.prisma.crowdsourceVote.create({
                 data: {
                     userId,
                     officialId,
@@ -325,13 +326,13 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
             });
         }
         // Update vote counts
-        const votes = await prisma.crowdsourceVote.findMany({
+        const votes = await prisma_1.prisma.crowdsourceVote.findMany({
             where: { officialId }
         });
         const upvotes = votes.filter(v => v.voteType === 'UPVOTE').length;
         const downvotes = votes.filter(v => v.voteType === 'DOWNVOTE').length;
         const reports = votes.filter(v => v.voteType === 'REPORT').length;
-        await prisma.crowdsourcedOfficial.update({
+        await prisma_1.prisma.crowdsourcedOfficial.update({
             where: { id: officialId },
             data: {
                 upvotes,
@@ -341,7 +342,7 @@ router.post('/officials/:officialId/vote', auth_1.requireAuth, async (req, res) 
         });
         // Auto-verify if enough upvotes
         if (upvotes >= 3 && downvotes === 0) {
-            await prisma.crowdsourcedOfficial.update({
+            await prisma_1.prisma.crowdsourcedOfficial.update({
                 where: { id: officialId },
                 data: { verificationLevel: 'COMMUNITY_VERIFIED' }
             });
@@ -380,7 +381,7 @@ router.post('/districts/:districtId/conflicts', auth_1.requireAuth, async (req, 
             });
         }
         // Verify district exists
-        const district = await prisma.electoralDistrict.findUnique({
+        const district = await prisma_1.prisma.electoralDistrict.findUnique({
             where: { id: districtId }
         });
         if (!district) {
@@ -388,7 +389,7 @@ router.post('/districts/:districtId/conflicts', auth_1.requireAuth, async (req, 
                 error: 'District not found'
             });
         }
-        const conflict = await prisma.districtConflict.create({
+        const conflict = await prisma_1.prisma.districtConflict.create({
             data: {
                 type,
                 description,
@@ -400,7 +401,7 @@ router.post('/districts/:districtId/conflicts', auth_1.requireAuth, async (req, 
             }
         });
         // Increment conflict count on district
-        await prisma.electoralDistrict.update({
+        await prisma_1.prisma.electoralDistrict.update({
             where: { id: districtId },
             data: {
                 conflictCount: { increment: 1 }
@@ -429,7 +430,7 @@ router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
         const limitNum = Math.min(parseInt(limit.toString()), 100);
         const offset = (pageNum - 1) * limitNum;
         const [districts, offices, officials, conflicts] = await Promise.all([
-            prisma.electoralDistrict.findMany({
+            prisma_1.prisma.electoralDistrict.findMany({
                 where: { submittedBy: userId },
                 select: {
                     id: true,
@@ -442,7 +443,7 @@ router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
                 take: limitNum,
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.districtOffice.findMany({
+            prisma_1.prisma.districtOffice.findMany({
                 where: { submittedBy: userId },
                 select: {
                     id: true,
@@ -458,7 +459,7 @@ router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
                 take: limitNum,
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.crowdsourcedOfficial.findMany({
+            prisma_1.prisma.crowdsourcedOfficial.findMany({
                 where: { submittedBy: userId },
                 select: {
                     id: true,
@@ -481,7 +482,7 @@ router.get('/my-contributions', auth_1.requireAuth, async (req, res) => {
                 take: limitNum,
                 orderBy: { createdAt: 'desc' }
             }),
-            prisma.districtConflict.findMany({
+            prisma_1.prisma.districtConflict.findMany({
                 where: { reportedBy: userId },
                 select: {
                     id: true,
@@ -529,7 +530,7 @@ router.get('/leaderboard', async (req, res) => {
         const cutoffDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
         // Get contribution counts by user
         const [districtCounts, officeCounts, officialCounts] = await Promise.all([
-            prisma.electoralDistrict.groupBy({
+            prisma_1.prisma.electoralDistrict.groupBy({
                 by: ['submittedBy'],
                 where: {
                     submittedBy: { not: null },
@@ -537,7 +538,7 @@ router.get('/leaderboard', async (req, res) => {
                 },
                 _count: { id: true }
             }),
-            prisma.districtOffice.groupBy({
+            prisma_1.prisma.districtOffice.groupBy({
                 by: ['submittedBy'],
                 where: {
                     submittedBy: { not: null },
@@ -545,7 +546,7 @@ router.get('/leaderboard', async (req, res) => {
                 },
                 _count: { id: true }
             }),
-            prisma.crowdsourcedOfficial.groupBy({
+            prisma_1.prisma.crowdsourcedOfficial.groupBy({
                 by: ['submittedBy'],
                 where: {
                     createdAt: { gte: cutoffDate }
@@ -574,7 +575,7 @@ router.get('/leaderboard', async (req, res) => {
             .slice(0, limitNum);
         // Get user details
         const userIds = sortedContributors.map(([userId]) => userId);
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: { id: { in: userIds } },
             select: {
                 id: true,

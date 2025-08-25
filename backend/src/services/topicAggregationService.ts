@@ -1,7 +1,8 @@
-import { PrismaClient, Post } from '@prisma/client';
+import { Post } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { EmbeddingService } from './embeddingService';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 interface StanceVector {
   vector: number[];

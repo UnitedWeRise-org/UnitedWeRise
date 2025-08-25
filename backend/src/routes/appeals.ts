@@ -1,12 +1,13 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { emailService } from '../services/emailService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Validation middleware
 const handleValidationErrors = (req: express.Request, res: express.Response, next: express.NextFunction) => {

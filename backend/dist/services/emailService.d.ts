@@ -16,6 +16,8 @@ declare class EmailService {
     generateSuspensionTemplate(email: string, reason: string, type: string, endsAt?: Date, firstName?: string): EmailTemplate;
     generateReportUpdateTemplate(email: string, reportId: string, action: string, notes?: string, firstName?: string): EmailTemplate;
     private stripHtml;
+    generateWaiverApprovalTemplate(email: string, candidateName: string, officeLevel: string, finalFee: number, firstName?: string): EmailTemplate;
+    generateWaiverDenialTemplate(email: string, candidateName: string, officeLevel: string, originalFee: number, denialReason?: string, firstName?: string): EmailTemplate;
     testConnection(): Promise<boolean>;
 }
 export declare const emailService: EmailService;

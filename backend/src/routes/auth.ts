@@ -1,5 +1,6 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { hashPassword, comparePassword, generateToken, generateResetToken } from '../utils/auth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateRegistration, validateLogin } from '../middleware/validation';
@@ -14,7 +15,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 /**
  * @swagger

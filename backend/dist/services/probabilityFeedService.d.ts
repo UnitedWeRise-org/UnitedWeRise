@@ -1,9 +1,3 @@
-/**
- * Probability-based Feed Algorithm
- * Created: August 10, 2025
- * Purpose: Implement electron-cloud-like probability sampling for social media feed
- * Author: Claude Code Assistant
- */
 interface FeedWeights {
     recency: number;
     similarity: number;

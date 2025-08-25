@@ -4,10 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeWebSocket = void 0;
+const prisma_1 = require("./lib/prisma");
 const socket_io_1 = require("socket.io");
-const client_1 = require("@prisma/client");
+;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
 const initializeWebSocket = (httpServer) => {
     const io = new socket_io_1.Server(httpServer, {
@@ -24,7 +25,7 @@ const initializeWebSocket = (httpServer) => {
                 return next(new Error('Authentication token required'));
             }
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: decoded.userId },
                 select: { id: true, username: true }
             });
@@ -42,7 +43,7 @@ const initializeWebSocket = (httpServer) => {
     io.on('connection', async (socket) => {
         console.log(`User ${socket.user?.username} connected`);
         // Update user online status
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: socket.userId },
             data: {
                 isOnline: true,
@@ -50,7 +51,7 @@ const initializeWebSocket = (httpServer) => {
             }
         });
         // Join user to their conversation rooms
-        const userConversations = await prisma.conversationParticipant.findMany({
+        const userConversations = await prisma_1.prisma.conversationParticipant.findMany({
             where: { userId: socket.userId },
             select: { conversationId: true }
         });
@@ -63,7 +64,7 @@ const initializeWebSocket = (httpServer) => {
             try {
                 const { conversationId, content } = data;
                 // Verify user is participant
-                const participant = await prisma.conversationParticipant.findUnique({
+                const participant = await prisma_1.prisma.conversationParticipant.findUnique({
                     where: {
                         userId_conversationId: {
                             userId: socket.userId,
@@ -76,7 +77,7 @@ const initializeWebSocket = (httpServer) => {
                     return;
                 }
                 // Create the message
-                const message = await prisma.message.create({
+                const message = await prisma_1.prisma.message.create({
                     data: {
                         content,
                         senderId: socket.userId,
@@ -95,7 +96,7 @@ const initializeWebSocket = (httpServer) => {
                     }
                 });
                 // Update conversation
-                await prisma.conversation.update({
+                await prisma_1.prisma.conversation.update({
                     where: { id: conversationId },
                     data: {
                         lastMessageAt: new Date(),
@@ -117,7 +118,7 @@ const initializeWebSocket = (httpServer) => {
         });
         socket.on('disconnect', async () => {
             console.log(`User ${socket.user?.username} disconnected`);
-            await prisma.user.update({
+            await prisma_1.prisma.user.update({
                 where: { id: socket.userId },
                 data: {
                     isOnline: false,

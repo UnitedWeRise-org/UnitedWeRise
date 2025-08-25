@@ -1,20 +1,21 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 /**
  * Reputation API Routes
  *
  * Handles reputation scores, content warnings, reports, and appeals
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const reputationService_1 = require("../services/reputationService");
 const logger_1 = __importDefault(require("../utils/logger"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get user's reputation score
 router.get('/user/:userId', async (req, res) => {
     try {
@@ -51,7 +52,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        const events = await prisma.reputationEvent.findMany({
+        const events = await prisma_1.prisma.reputationEvent.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
             take: limitNum,
@@ -102,7 +103,7 @@ router.post('/report', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Cannot report your own content' });
         }
         // Check if post exists
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             select: { id: true, authorId: true, content: true }
         });
@@ -113,7 +114,7 @@ router.post('/report', auth_1.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Post does not belong to target user' });
         }
         // Rate limit: Check if user has already reported this post
-        const existingReport = await prisma.reputationEvent.findFirst({
+        const existingReport = await prisma_1.prisma.reputationEvent.findFirst({
             where: {
                 userId: targetUserId,
                 postId: postId,
@@ -219,7 +220,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
                 startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         }
         // Get reputation distribution
-        const reputationDistribution = await prisma.user.groupBy({
+        const reputationDistribution = await prisma_1.prisma.user.groupBy({
             by: ['reputationScore'],
             _count: { reputationScore: true },
             where: {
@@ -227,7 +228,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
             }
         });
         // Get recent events
-        const recentEvents = await prisma.reputationEvent.findMany({
+        const recentEvents = await prisma_1.prisma.reputationEvent.findMany({
             where: {
                 createdAt: { gte: startDate }
             },
@@ -276,7 +277,7 @@ router.get('/low-reputation', auth_1.requireAuth, auth_1.requireAdmin, async (re
         const { threshold = 30, limit = 20 } = req.query;
         const thresholdNum = parseInt(threshold.toString());
         const limitNum = parseInt(limit.toString());
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: {
                 reputationScore: { lt: thresholdNum }
             },
@@ -293,7 +294,7 @@ router.get('/low-reputation', auth_1.requireAuth, auth_1.requireAdmin, async (re
         });
         // Get recent events for each user
         const usersWithEvents = await Promise.all(users.map(async (user) => {
-            const recentEvents = await prisma.reputationEvent.findMany({
+            const recentEvents = await prisma_1.prisma.reputationEvent.findMany({
                 where: { userId: user.id },
                 orderBy: { createdAt: 'desc' },
                 take: 5
@@ -317,8 +318,8 @@ router.get('/low-reputation', auth_1.requireAuth, auth_1.requireAdmin, async (re
 router.get('/health', async (req, res) => {
     try {
         // Test reputation system functionality
-        const eventCount = await prisma.reputationEvent.count();
-        const userCount = await prisma.user.count({
+        const eventCount = await prisma_1.prisma.reputationEvent.count();
+        const userCount = await prisma_1.prisma.user.count({
             where: {
                 reputationScore: { not: null }
             }

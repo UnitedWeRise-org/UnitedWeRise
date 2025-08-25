@@ -1,9 +1,3 @@
-/**
- * Relationship Service
- *
- * Reusable service layer for managing user relationships (following and friendships)
- * Can be used across different contexts: API routes, components, background jobs, etc.
- */
 export declare enum RelationshipType {
     FOLLOW = "FOLLOW",
     FRIEND = "FRIEND"

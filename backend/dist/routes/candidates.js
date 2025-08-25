@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const electionService_1 = require("../services/electionService");
 const enhancedCandidateService_1 = require("../services/enhancedCandidateService");
@@ -13,7 +14,7 @@ const metricsService_1 = require("../services/metricsService");
 const zod_1 = require("zod");
 const crypto_1 = __importDefault(require("crypto"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Validation schemas for candidate registration
 const candidateRegistrationSchema = zod_1.z.object({
     firstName: zod_1.z.string().min(1).max(100),
@@ -214,7 +215,7 @@ router.get('/pricing', (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { id },
             include: {
                 office: {
@@ -317,7 +318,7 @@ router.post('/:id/endorse', auth_1.requireAuth, async (req, res) => {
         const userId = req.user.id;
         const { reason, isPublic = false } = req.body;
         // Verify candidate exists and is active
-        const candidate = await prisma.candidate.findUnique({
+        const candidate = await prisma_1.prisma.candidate.findUnique({
             where: { id: candidateId },
             include: {
                 office: {
@@ -423,7 +424,7 @@ router.delete('/:id/endorse', auth_1.requireAuth, async (req, res) => {
 router.get('/my-candidacy', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const candidates = await prisma.candidate.findMany({
+        const candidates = await prisma_1.prisma.candidate.findMany({
             where: { userId },
             include: {
                 office: {
@@ -952,7 +953,7 @@ router.post('/register', auth_1.requireAuth, async (req, res) => {
         }
         const validatedData = validationResult.data;
         // Check if user already has a pending or active candidate registration
-        const existingRegistration = await prisma.candidateRegistration.findFirst({
+        const existingRegistration = await prisma_1.prisma.candidateRegistration.findFirst({
             where: {
                 userId,
                 status: { in: ['PENDING_VERIFICATION', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'APPROVED'] }
@@ -988,7 +989,7 @@ router.post('/register', auth_1.requireAuth, async (req, res) => {
             feeWaiverStatus = 'community_endorsed';
         }
         // Create candidate registration record
-        const registration = await prisma.candidateRegistration.create({
+        const registration = await prisma_1.prisma.candidateRegistration.create({
             data: {
                 id: crypto_1.default.randomUUID(),
                 userId,
@@ -1059,7 +1060,7 @@ router.post('/registration/:id/verify-idme', auth_1.requireAuth, async (req, res
     try {
         const { id } = req.params;
         const { verificationToken, idmeUserId, verified, userData } = req.body;
-        const registration = await prisma.candidateRegistration.findFirst({
+        const registration = await prisma_1.prisma.candidateRegistration.findFirst({
             where: {
                 id,
                 userId: req.user.id
@@ -1072,7 +1073,7 @@ router.post('/registration/:id/verify-idme', auth_1.requireAuth, async (req, res
             });
         }
         if (verified) {
-            await prisma.candidateRegistration.update({
+            await prisma_1.prisma.candidateRegistration.update({
                 where: { id },
                 data: {
                     idmeVerified: true,
@@ -1113,7 +1114,7 @@ router.post('/registration/:id/payment', auth_1.requireAuth, async (req, res) =>
     try {
         const { id } = req.params;
         const { paymentMethod, stripePaymentIntentId } = req.body;
-        const registration = await prisma.candidateRegistration.findFirst({
+        const registration = await prisma_1.prisma.candidateRegistration.findFirst({
             where: {
                 id,
                 userId: req.user.id
@@ -1135,7 +1136,7 @@ router.post('/registration/:id/payment', auth_1.requireAuth, async (req, res) =>
         // For now, simulate payment processing
         const paymentSuccessful = true;
         if (paymentSuccessful) {
-            await prisma.candidateRegistration.update({
+            await prisma_1.prisma.candidateRegistration.update({
                 where: { id },
                 data: {
                     status: 'PENDING_APPROVAL',
@@ -1173,7 +1174,7 @@ router.post('/registration/:id/withdraw', auth_1.requireAuth, async (req, res) =
     try {
         const { id } = req.params;
         const { reason } = req.body;
-        const registration = await prisma.candidateRegistration.findFirst({
+        const registration = await prisma_1.prisma.candidateRegistration.findFirst({
             where: {
                 id,
                 userId: req.user.id
@@ -1202,7 +1203,7 @@ router.post('/registration/:id/withdraw', auth_1.requireAuth, async (req, res) =
             refundAmount = registration.registrationFee || 0;
             // Create 7-day lockout record
             const lockoutUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            await prisma.candidateRegistration.update({
+            await prisma_1.prisma.candidateRegistration.update({
                 where: { id },
                 data: {
                     status: 'REFUNDED',
@@ -1230,7 +1231,7 @@ router.post('/registration/:id/withdraw', auth_1.requireAuth, async (req, res) =
         }
         else {
             // Outside 48-hour window - mark as withdrawn but no automatic refund
-            await prisma.candidateRegistration.update({
+            await prisma_1.prisma.candidateRegistration.update({
                 where: { id },
                 data: {
                     status: 'REJECTED',
@@ -1262,7 +1263,7 @@ router.post('/registration/:id/withdraw', auth_1.requireAuth, async (req, res) =
 router.post('/request-waiver', auth_1.requireAuth, async (req, res) => {
     try {
         const { registrationId, waiverType, reason, documentation } = req.body;
-        const registration = await prisma.candidateRegistration.findFirst({
+        const registration = await prisma_1.prisma.candidateRegistration.findFirst({
             where: {
                 id: registrationId,
                 userId: req.user.id,
@@ -1276,7 +1277,7 @@ router.post('/request-waiver', auth_1.requireAuth, async (req, res) => {
             });
         }
         // Update registration to show waiver requested
-        await prisma.candidateRegistration.update({
+        await prisma_1.prisma.candidateRegistration.update({
             where: { id: registrationId },
             data: {
                 feeWaiverStatus: waiverType === 'hardship' ? 'hardship_pending' : 'community_pending',
@@ -1305,7 +1306,7 @@ router.post('/request-waiver', auth_1.requireAuth, async (req, res) => {
 router.get('/my-registrations', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const registrations = await prisma.candidateRegistration.findMany({
+        const registrations = await prisma_1.prisma.candidateRegistration.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' }
         });

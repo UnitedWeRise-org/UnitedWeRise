@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DistrictIdentificationService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const apiCache_1 = require("./apiCache");
 const googleCivicService_1 = require("./googleCivicService");
 const geospatial_1 = require("../utils/geospatial");
-const prisma = new client_1.PrismaClient();
 class DistrictIdentificationService {
     /**
      * Identify all electoral districts for a given address
@@ -59,7 +59,7 @@ class DistrictIdentificationService {
         const districts = [];
         // Look up by H3 index (most precise)
         if (h3Index) {
-            const h3Mappings = await prisma.addressDistrictMapping.findMany({
+            const h3Mappings = await prisma_1.prisma.addressDistrictMapping.findMany({
                 where: { h3Index },
                 include: { district: true },
                 orderBy: { confidence: 'desc' }
@@ -77,7 +77,7 @@ class DistrictIdentificationService {
         }
         // Fallback to ZIP+State lookup
         if (districts.length === 0) {
-            const zipMappings = await prisma.addressDistrictMapping.findMany({
+            const zipMappings = await prisma_1.prisma.addressDistrictMapping.findMany({
                 where: {
                     zipCode: address.zipCode,
                     state: address.state
@@ -279,7 +279,7 @@ class DistrictIdentificationService {
         try {
             for (const district of identification.districts) {
                 // Create or update electoral district
-                const dbDistrict = await prisma.electoralDistrict.upsert({
+                const dbDistrict = await prisma_1.prisma.electoralDistrict.upsert({
                     where: {
                         identifier_state_type: {
                             identifier: district.identifier,
@@ -303,7 +303,7 @@ class DistrictIdentificationService {
                     }
                 });
                 // Create address mapping
-                await prisma.addressDistrictMapping.create({
+                await prisma_1.prisma.addressDistrictMapping.create({
                     data: {
                         address: `${address.streetAddress || ''} ${address.city || ''} ${address.state} ${address.zipCode}`.trim(),
                         lat: identification.location.lat,
@@ -328,7 +328,7 @@ class DistrictIdentificationService {
     static async findMissingOffices(districtIds) {
         const missingOffices = [];
         for (const districtId of districtIds) {
-            const district = await prisma.electoralDistrict.findUnique({
+            const district = await prisma_1.prisma.electoralDistrict.findUnique({
                 where: { id: districtId },
                 include: { offices: true }
             });

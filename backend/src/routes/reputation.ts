@@ -1,3 +1,4 @@
+import { prisma } from '../lib/prisma';
 /**
  * Reputation API Routes
  * 
@@ -5,13 +6,13 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { reputationService } from '../services/reputationService';
 import logger from '../utils/logger';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Get user's reputation score
 router.get('/user/:userId', async (req, res) => {

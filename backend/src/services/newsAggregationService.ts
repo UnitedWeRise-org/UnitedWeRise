@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+;
 import { ApiCacheService } from './apiCache';
 import { NewsApiRateLimiter } from './newsApiRateLimiter';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // API Configuration
 const NEWS_API_KEY = process.env.NEWS_API_KEY;

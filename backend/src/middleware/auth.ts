@@ -1,9 +1,10 @@
+import { prisma } from '../lib/prisma';
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
-import { PrismaClient } from '@prisma/client';
+;
 import { sessionManager } from '../services/sessionManager';
 
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 export interface AuthRequest extends Request {
   user?: {

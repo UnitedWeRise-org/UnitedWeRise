@@ -3,19 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const relationshipService_1 = require("../services/relationshipService");
 const photoService_1 = require("../services/photoService");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Get current user's full profile
 router.get('/profile', auth_1.requireAuth, async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: {
                 id: true,
@@ -57,7 +58,7 @@ router.get('/profile', auth_1.requireAuth, async (req, res) => {
 router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, async (req, res) => {
     try {
         const { firstName, lastName, bio, website, location } = req.body;
-        const updatedUser = await prisma.user.update({
+        const updatedUser = await prisma_1.prisma.user.update({
             where: { id: req.user.id },
             data: {
                 firstName,
@@ -95,7 +96,7 @@ router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, a
 router.get('/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 id: true,
@@ -178,7 +179,7 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
         const currentUserId = req.user.id;
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.prisma.user.findMany({
             where: {
                 OR: [
                     {
@@ -259,7 +260,7 @@ router.get('/:userId/complete', async (req, res) => {
         // Parallel fetch all profile-related data
         const [user, posts, followersCount, followingCount, relationshipStatus] = await Promise.all([
             // User profile data
-            prisma.user.findUnique({
+            prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
                     id: true,
@@ -292,7 +293,7 @@ router.get('/:userId/complete', async (req, res) => {
                 }
             }),
             // User's posts
-            prisma.post.findMany({
+            prisma_1.prisma.post.findMany({
                 where: { authorId: userId },
                 include: {
                     author: {
@@ -318,31 +319,31 @@ router.get('/:userId/complete', async (req, res) => {
                 skip: offsetNum
             }),
             // Followers count (actual count for accuracy)
-            prisma.follow.count({
+            prisma_1.prisma.follow.count({
                 where: { followingId: userId }
             }),
             // Following count (actual count for accuracy) 
-            prisma.follow.count({
+            prisma_1.prisma.follow.count({
                 where: { followerId: userId }
             }),
             // Relationship status with current user (if authenticated)
             currentUserId ? Promise.all([
                 // Check if current user follows this user
-                prisma.follow.findFirst({
+                prisma_1.prisma.follow.findFirst({
                     where: {
                         followerId: currentUserId,
                         followingId: userId
                     }
                 }),
                 // Check if this user follows current user
-                prisma.follow.findFirst({
+                prisma_1.prisma.follow.findFirst({
                     where: {
                         followerId: userId,
                         followingId: currentUserId
                     }
                 }),
                 // Check friendship status
-                prisma.friendship.findFirst({
+                prisma_1.prisma.friendship.findFirst({
                     where: {
                         OR: [
                             { requesterId: currentUserId, recipientId: userId },
@@ -404,7 +405,7 @@ router.get('/:userId/complete', async (req, res) => {
 router.get('/:username', async (req, res) => {
     try {
         const { username } = req.params;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { username },
             select: {
                 id: true,
@@ -438,7 +439,7 @@ router.get('/:userId/followers', async (req, res) => {
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        const followers = await prisma.follow.findMany({
+        const followers = await prisma_1.prisma.follow.findMany({
             where: { followingId: userId },
             include: {
                 follower: {
@@ -478,7 +479,7 @@ router.get('/:userId/following', async (req, res) => {
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        const following = await prisma.follow.findMany({
+        const following = await prisma_1.prisma.follow.findMany({
             where: { followerId: userId },
             include: {
                 following: {
@@ -554,7 +555,7 @@ router.post('/background-image', auth_1.requireAuth, backgroundUploadLimiter, as
                 maxHeight: 1080
             });
             // Update user's background image
-            const updatedUser = await prisma.user.update({
+            const updatedUser = await prisma_1.prisma.user.update({
                 where: { id: req.user.id },
                 data: { backgroundImage: photoData.url },
                 select: {
@@ -576,7 +577,7 @@ router.post('/background-image', auth_1.requireAuth, backgroundUploadLimiter, as
 // Remove background image
 router.delete('/background-image', auth_1.requireAuth, async (req, res) => {
     try {
-        const updatedUser = await prisma.user.update({
+        const updatedUser = await prisma_1.prisma.user.update({
             where: { id: req.user.id },
             data: { backgroundImage: null },
             select: {

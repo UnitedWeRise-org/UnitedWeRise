@@ -4,13 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.moderationService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const emailService_1 = require("./emailService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const logger_1 = __importDefault(require("../utils/logger"));
 class ModerationService {
     constructor() {
-        this.prisma = new client_1.PrismaClient();
+        this.prisma = prisma_1.prisma;
         this.toxicityThreshold = 0.8; // Confidence threshold for flagging content
         this.spamKeywords = [
             'click here', 'buy now', 'free money', 'guaranteed', 'make money fast',

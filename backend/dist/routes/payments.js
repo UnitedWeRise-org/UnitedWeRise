@@ -36,10 +36,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importStar(require("express"));
 const auth_1 = require("../middleware/auth");
 const stripeService_1 = require("../services/stripeService");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const express_validator_1 = require("express-validator");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 /**
  * Create a tax-deductible donation
  */
@@ -121,7 +121,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
         if (type) {
             where.type = type;
         }
-        const payments = await prisma.payment.findMany({
+        const payments = await prisma_1.prisma.payment.findMany({
             where,
             orderBy: { createdAt: 'desc' },
             take: Number(limit),
@@ -130,7 +130,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
                 refunds: true
             }
         });
-        const total = await prisma.payment.count({ where });
+        const total = await prisma_1.prisma.payment.count({ where });
         res.json({
             success: true,
             data: {
@@ -153,7 +153,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
  */
 router.get('/campaigns', async (req, res) => {
     try {
-        const campaigns = await prisma.donationCampaign.findMany({
+        const campaigns = await prisma_1.prisma.donationCampaign.findMany({
             where: {
                 isActive: true,
                 OR: [
@@ -186,7 +186,7 @@ router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
     try {
         const { paymentId } = req.params;
         const userId = req.user.id;
-        const payment = await prisma.payment.findFirst({
+        const payment = await prisma_1.prisma.payment.findFirst({
             where: {
                 id: paymentId,
                 userId // Ensure user can only access their own receipts
@@ -202,7 +202,7 @@ router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
             // Generate receipt if not exists
             await stripeService_1.StripeService.generateReceipt(paymentId);
             // Fetch updated payment
-            const updatedPayment = await prisma.payment.findUnique({
+            const updatedPayment = await prisma_1.prisma.payment.findUnique({
                 where: { id: paymentId }
             });
             return res.json({
@@ -244,7 +244,7 @@ router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
         const year = parseInt(req.params.year);
         const startDate = new Date(year, 0, 1);
         const endDate = new Date(year + 1, 0, 1);
-        const donations = await prisma.payment.findMany({
+        const donations = await prisma_1.prisma.payment.findMany({
             where: {
                 userId,
                 type: 'DONATION',

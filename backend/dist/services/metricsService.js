@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.metricsService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 class MetricsService {
     constructor() {
         this.metrics = new Map();
         this.counters = new Map();
         this.histograms = new Map();
         this.gauges = new Map();
-        this.prisma = new client_1.PrismaClient();
+        this.prisma = prisma_1.prisma;
         this.startTime = Date.now();
         this.initializeMetrics();
         this.startPeriodicCollection();

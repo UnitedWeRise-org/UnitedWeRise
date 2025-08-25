@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAdmin = exports.requireAuth = void 0;
+const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
-const client_1 = require("@prisma/client");
+;
 const sessionManager_1 = require("../services/sessionManager");
-const prisma = new client_1.PrismaClient();
 const requireAuth = async (req, res, next) => {
     try {
         const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -20,7 +20,7 @@ const requireAuth = async (req, res, next) => {
         if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
             return res.status(401).json({ error: 'Token has been revoked.' });
         }
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
             select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, lastSeenAt: true }
         });
@@ -34,7 +34,7 @@ const requireAuth = async (req, res, next) => {
         // Only update if user hasn't been seen recently (batch updates to reduce DB load)
         if (!user.lastSeenAt || user.lastSeenAt < fiveMinutesAgo) {
             // Use upsert to handle race conditions gracefully
-            prisma.user.update({
+            prisma_1.prisma.user.update({
                 where: { id: user.id },
                 data: { lastSeenAt: now }
             }).catch(error => {

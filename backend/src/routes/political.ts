@@ -1,5 +1,6 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { createNotification } from './notifications';
 import { addressToH3, getNearbyH3Indexes } from '../utils/geospatial';
@@ -7,7 +8,7 @@ import { RepresentativeService } from '../services/representativeService';
 import { validatePoliticalProfile } from '../middleware/validation';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Update user's address and political info (existing route - enhanced)
 router.put('/profile', requireAuth, validatePoliticalProfile, async (req: AuthRequest, res) => {

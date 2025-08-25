@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NewsAggregationService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const apiCache_1 = require("./apiCache");
 const newsApiRateLimiter_1 = require("./newsApiRateLimiter");
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // API Configuration
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 const THE_NEWS_API_KEY = process.env.THE_NEWS_API_KEY;
@@ -80,7 +81,7 @@ class NewsAggregationService {
     static async getHistoricalArticles(officialName, limit, daysBack) {
         const fromDate = new Date();
         fromDate.setDate(fromDate.getDate() - daysBack);
-        return await prisma.newsArticle.findMany({
+        return await prisma_1.prisma.newsArticle.findMany({
             where: {
                 mentions: {
                     some: {
@@ -345,7 +346,7 @@ Summary:`;
             where.sentiment = sentiment;
         }
         const [articles, total] = await Promise.all([
-            prisma.newsArticle.findMany({
+            prisma_1.prisma.newsArticle.findMany({
                 where,
                 include: {
                     mentions: {
@@ -361,7 +362,7 @@ Summary:`;
                 skip: offset,
                 take: limit
             }),
-            prisma.newsArticle.count({ where })
+            prisma_1.prisma.newsArticle.count({ where })
         ]);
         return { articles, total };
     }
@@ -444,7 +445,7 @@ Summary:`;
     static async storeArticle(article, officialName, officialId) {
         try {
             // Check if article already exists (permanent cache - never expires)
-            const existing = await prisma.newsArticle.findUnique({
+            const existing = await prisma_1.prisma.newsArticle.findUnique({
                 where: { url: article.url }
             });
             if (existing) {
@@ -461,7 +462,7 @@ Summary:`;
             const relevanceScore = officialName ?
                 this.calculateRelevanceScore(article, officialName) : 0.5;
             // Store optimized article data (permanent historical cache)
-            const storedArticle = await prisma.newsArticle.create({
+            const storedArticle = await prisma_1.prisma.newsArticle.create({
                 data: {
                     title: article.title,
                     aiSummary, // AI-generated summary instead of full content
@@ -491,7 +492,7 @@ Summary:`;
             // Create official mention if applicable
             if (officialName && storedArticle) {
                 const mentionContext = this.extractMentionContext(article.title + ' ' + (article.description || ''), officialName);
-                await prisma.officialMention.create({
+                await prisma_1.prisma.officialMention.create({
                     data: {
                         articleId: storedArticle.id,
                         officialName,

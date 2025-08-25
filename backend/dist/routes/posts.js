@@ -3,9 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const notifications_1 = require("./notifications");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
@@ -14,7 +15,7 @@ const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService");
 const reputationService_1 = require("../services/reputationService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // Create a new post
 router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimiting_1.postLimiter, moderation_1.contentFilter, validation_1.validatePost, (0, moderation_1.moderateContent)('POST'), async (req, res) => {
     try {
@@ -26,7 +27,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         // Validate media attachment if provided
         let mediaPhoto = null;
         if (mediaId) {
-            mediaPhoto = await prisma.photo.findUnique({
+            mediaPhoto = await prisma_1.prisma.photo.findUnique({
                 where: { id: mediaId }
             });
             if (!mediaPhoto || mediaPhoto.userId !== userId || !mediaPhoto.isActive) {
@@ -69,7 +70,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         };
         // Get user's current reputation for post attribution
         const userReputation = await reputationService_1.reputationService.getUserReputation(userId);
-        const post = await prisma.post.create({
+        const post = await prisma_1.prisma.post.create({
             data: {
                 content: content.trim(),
                 imageUrl,
@@ -114,7 +115,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         // Link media to post if provided
         if (mediaId && mediaPhoto) {
             try {
-                await prisma.photo.update({
+                await prisma_1.prisma.photo.update({
                     where: { id: mediaId },
                     data: { postId: post.id }
                 });
@@ -128,7 +129,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         // Update reputation event with actual post ID if penalties were applied
         if (reputationImpact.totalPenalty < 0) {
             try {
-                await prisma.reputationEvent.updateMany({
+                await prisma_1.prisma.reputationEvent.updateMany({
                     where: {
                         userId: userId,
                         postId: 'temp-post-id',
@@ -178,7 +179,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: { authorId: userId },
             include: {
                 author: {
@@ -240,7 +241,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
 router.get('/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             include: {
                 author: {
@@ -298,14 +299,14 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
         const { postId } = req.params;
         const userId = req.user.id;
         // Check if post exists
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
         // Check if already liked
-        const existingLike = await prisma.like.findUnique({
+        const existingLike = await prisma_1.prisma.like.findUnique({
             where: {
                 userId_postId: {
                     userId,
@@ -315,8 +316,8 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
         });
         if (existingLike) {
             // Unlike the post
-            await prisma.$transaction([
-                prisma.like.delete({
+            await prisma_1.prisma.$transaction([
+                prisma_1.prisma.like.delete({
                     where: {
                         userId_postId: {
                             userId,
@@ -324,7 +325,7 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                         }
                     }
                 }),
-                prisma.post.update({
+                prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: { likesCount: { decrement: 1 } }
                 })
@@ -333,14 +334,14 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
         }
         else {
             // Like the post
-            await prisma.$transaction([
-                prisma.like.create({
+            await prisma_1.prisma.$transaction([
+                prisma_1.prisma.like.create({
                     data: {
                         userId,
                         postId
                     }
                 }),
-                prisma.post.update({
+                prisma_1.prisma.post.update({
                     where: { id: postId },
                     data: { likesCount: { increment: 1 } }
                 })
@@ -350,7 +351,7 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                 await (0, notifications_1.createNotification)('LIKE', userId, post.authorId, `${req.user.username} liked your post`, postId);
             }
             // Check if this qualifies as a quality post for reputation reward
-            const totalLikes = await prisma.like.count({
+            const totalLikes = await prisma_1.prisma.like.count({
                 where: { postId }
             });
             // Award reputation for quality posts (5+ likes)
@@ -383,14 +384,14 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             return res.status(400).json({ error: 'Comment must be 300 characters or less' });
         }
         // Check if post exists
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
         // Create comment and update post comment count
-        const comment = await prisma.$transaction(async (tx) => {
+        const comment = await prisma_1.prisma.$transaction(async (tx) => {
             const newComment = await tx.comment.create({
                 data: {
                     content: content.trim(),
@@ -438,13 +439,13 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
         // Check if post exists
-        const post = await prisma.post.findUnique({
+        const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        const comments = await prisma.comment.findMany({
+        const comments = await prisma_1.prisma.comment.findMany({
             where: { postId },
             include: {
                 user: {
@@ -484,14 +485,14 @@ router.get('/user/:userId', async (req, res) => {
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
         // Verify user exists
-        const userExists = await prisma.user.findUnique({
+        const userExists = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: { id: true }
         });
         if (!userExists) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const posts = await prisma.post.findMany({
+        const posts = await prisma_1.prisma.post.findMany({
             where: { authorId: userId },
             include: {
                 author: {

@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LegislativeDataService = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+;
 const apiCache_1 = require("./apiCache");
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 // API Configuration
 const CONGRESS_API_KEY = process.env.CONGRESS_API_KEY;
 const OPEN_STATES_API_KEY = process.env.OPEN_STATES_API_KEY;
@@ -34,7 +35,7 @@ class LegislativeDataService {
             }
             const data = await congressResponse.json();
             // Create or update 118th Congress legislature record
-            const legislature = await prisma.legislature.upsert({
+            const legislature = await prisma_1.prisma.legislature.upsert({
                 where: {
                     level_state_session: {
                         level: 'FEDERAL',
@@ -97,7 +98,7 @@ class LegislativeDataService {
             }
             const data = await peopleResponse.json();
             // Create or update state legislature record
-            const legislature = await prisma.legislature.upsert({
+            const legislature = await prisma_1.prisma.legislature.upsert({
                 where: {
                     level_state_session: {
                         level: 'STATE',
@@ -221,7 +222,7 @@ class LegislativeDataService {
             }
             const data = await billsResponse.json();
             // Get legislature record
-            const legislature = await prisma.legislature.findFirst({
+            const legislature = await prisma_1.prisma.legislature.findFirst({
                 where: {
                     level: 'FEDERAL',
                     session: `${congress}th`
@@ -246,7 +247,7 @@ class LegislativeDataService {
      */
     static async calculateVotingStatistics(membershipId) {
         try {
-            const membership = await prisma.legislativeMembership.findUnique({
+            const membership = await prisma_1.prisma.legislativeMembership.findUnique({
                 where: { id: membershipId },
                 include: { votes: true }
             });
@@ -266,7 +267,7 @@ class LegislativeDataService {
             const abstainVotes = votes.filter(v => v.position === 'ABSTAIN').length;
             const participationRate = ((totalVotes - notVotingCount) / totalVotes) * 100;
             // Update or create voting summary
-            await prisma.votingRecordSummary.upsert({
+            await prisma_1.prisma.votingRecordSummary.upsert({
                 where: { membershipId },
                 create: {
                     membershipId,
@@ -306,7 +307,7 @@ class LegislativeDataService {
             const district = member.terms?.[0]?.district;
             const party = member.partyName;
             const state = member.terms?.[0]?.stateCode;
-            await prisma.legislativeMembership.upsert({
+            await prisma_1.prisma.legislativeMembership.upsert({
                 where: {
                     bioguideId_legislatureId: {
                         bioguideId: bioguideId,
@@ -339,7 +340,7 @@ class LegislativeDataService {
             const chamber = person.current_role?.chamber === 'upper' ? 'SENATE' : 'HOUSE';
             const district = person.current_role?.district;
             const party = person.current_role?.party;
-            await prisma.legislativeMembership.upsert({
+            await prisma_1.prisma.legislativeMembership.upsert({
                 where: {
                     openStatesId_legislatureId: {
                         openStatesId: person.id,
@@ -371,7 +372,7 @@ class LegislativeDataService {
             const chamber = voteData.chamber === 'House of Representatives' ? 'HOUSE' : 'SENATE';
             const voteId = `${voteData.congress}-${chamber}-${voteData.number}`;
             // Find the legislature
-            const legislature = await prisma.legislature.findFirst({
+            const legislature = await prisma_1.prisma.legislature.findFirst({
                 where: {
                     level: 'FEDERAL',
                     session: `${voteData.congress}th`
@@ -382,7 +383,7 @@ class LegislativeDataService {
                 return;
             }
             // Create or update vote record
-            await prisma.vote.upsert({
+            await prisma_1.prisma.vote.upsert({
                 where: {
                     externalId_chamber: {
                         externalId: voteId,
@@ -426,7 +427,7 @@ class LegislativeDataService {
         try {
             const billId = `${billData.type.toLowerCase()}${billData.number}-${billData.congress}`;
             const chamber = billData.originChamber === 'House' ? 'HOUSE' : 'SENATE';
-            await prisma.bill.upsert({
+            await prisma_1.prisma.bill.upsert({
                 where: {
                     externalId_level: {
                         externalId: billId,

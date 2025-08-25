@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
-const client_1 = require("@prisma/client");
+;
 const auth_1 = require("../middleware/auth");
 const moderationService_1 = require("../services/moderationService");
 const emailService_1 = require("../services/emailService");
@@ -12,7 +13,7 @@ const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 const requireModerator = async (req, res, next) => {
     if (!req.user?.isModerator && !req.user?.isAdmin) {
         return res.status(403).json({ error: 'Moderator access required' });
@@ -32,7 +33,7 @@ router.post('/reports', auth_1.requireAuth, rateLimiting_1.apiLimiter, validatio
         const { targetType, targetId, reason, description } = req.body;
         const reporterId = req.user.id;
         // Check if user has already reported this content
-        const existingReport = await prisma.report.findFirst({
+        const existingReport = await prisma_1.prisma.report.findFirst({
             where: {
                 reporterId,
                 targetType,
@@ -47,16 +48,16 @@ router.post('/reports', auth_1.requireAuth, rateLimiting_1.apiLimiter, validatio
         let targetExists = false;
         switch (targetType) {
             case 'POST':
-                targetExists = !!(await prisma.post.findUnique({ where: { id: targetId } }));
+                targetExists = !!(await prisma_1.prisma.post.findUnique({ where: { id: targetId } }));
                 break;
             case 'COMMENT':
-                targetExists = !!(await prisma.comment.findUnique({ where: { id: targetId } }));
+                targetExists = !!(await prisma_1.prisma.comment.findUnique({ where: { id: targetId } }));
                 break;
             case 'USER':
-                targetExists = !!(await prisma.user.findUnique({ where: { id: targetId } }));
+                targetExists = !!(await prisma_1.prisma.user.findUnique({ where: { id: targetId } }));
                 break;
             case 'MESSAGE':
-                targetExists = !!(await prisma.message.findUnique({ where: { id: targetId } }));
+                targetExists = !!(await prisma_1.prisma.message.findUnique({ where: { id: targetId } }));
                 break;
         }
         if (!targetExists) {
@@ -84,7 +85,7 @@ router.get('/reports/my', auth_1.requireAuth, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
         const offset = (page - 1) * limit;
-        const reports = await prisma.report.findMany({
+        const reports = await prisma_1.prisma.report.findMany({
             where: { reporterId: userId },
             include: {
                 moderator: {
@@ -98,7 +99,7 @@ router.get('/reports/my', auth_1.requireAuth, async (req, res) => {
             skip: offset,
             take: limit
         });
-        const total = await prisma.report.count({
+        const total = await prisma_1.prisma.report.count({
             where: { reporterId: userId }
         });
         res.json({
@@ -136,7 +137,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
             where.priority = priority;
         if (targetType)
             where.targetType = targetType;
-        const reports = await prisma.report.findMany({
+        const reports = await prisma_1.prisma.report.findMany({
             where,
             include: {
                 reporter: {
@@ -160,14 +161,14 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
             skip: offset,
             take: limit
         });
-        const total = await prisma.report.count({ where });
+        const total = await prisma_1.prisma.report.count({ where });
         // Get target content details
         const enrichedReports = await Promise.all(reports.map(async (report) => {
             let targetContent = null;
             try {
                 switch (report.targetType) {
                     case 'POST':
-                        targetContent = await prisma.post.findUnique({
+                        targetContent = await prisma_1.prisma.post.findUnique({
                             where: { id: report.targetId },
                             include: {
                                 author: { select: { id: true, username: true, email: true } }
@@ -175,7 +176,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
                         });
                         break;
                     case 'COMMENT':
-                        targetContent = await prisma.comment.findUnique({
+                        targetContent = await prisma_1.prisma.comment.findUnique({
                             where: { id: report.targetId },
                             include: {
                                 user: { select: { id: true, username: true, email: true } },
@@ -184,7 +185,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
                         });
                         break;
                     case 'USER':
-                        targetContent = await prisma.user.findUnique({
+                        targetContent = await prisma_1.prisma.user.findUnique({
                             where: { id: report.targetId },
                             select: {
                                 id: true,
@@ -201,7 +202,7 @@ router.get('/reports', auth_1.requireAuth, requireModerator, async (req, res) =>
                         });
                         break;
                     case 'MESSAGE':
-                        targetContent = await prisma.message.findUnique({
+                        targetContent = await prisma_1.prisma.message.findUnique({
                             where: { id: report.targetId },
                             include: {
                                 sender: { select: { id: true, username: true, email: true } }
@@ -239,7 +240,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
         const { reportId } = req.params;
         const { action, notes } = req.body;
         const moderatorId = req.user.id;
-        const report = await prisma.report.findUnique({
+        const report = await prisma_1.prisma.report.findUnique({
             where: { id: reportId }
         });
         if (!report) {
@@ -249,7 +250,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
             return res.status(400).json({ error: 'Report already resolved' });
         }
         // Update report
-        await prisma.report.update({
+        await prisma_1.prisma.report.update({
             where: { id: reportId },
             data: {
                 status: 'RESOLVED',
@@ -260,7 +261,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
             }
         });
         // Create moderation log
-        await prisma.moderationLog.create({
+        await prisma_1.prisma.moderationLog.create({
             data: {
                 moderatorId,
                 targetType: report.targetType,
@@ -278,7 +279,7 @@ router.post('/reports/:reportId/action', auth_1.requireAuth, requireModerator, v
         await executeModeratorAction(action, report.targetType, report.targetId, moderatorId, notes || '');
         // Send notification email to reporter
         try {
-            const reporter = await prisma.user.findUnique({
+            const reporter = await prisma_1.prisma.user.findUnique({
                 where: { id: report.reporterId },
                 select: { email: true, firstName: true }
             });
@@ -314,10 +315,10 @@ async function executeModeratorAction(action, targetType, targetId, moderatorId,
             break;
         case 'CONTENT_DELETED':
             if (targetType === 'POST') {
-                await prisma.post.delete({ where: { id: targetId } });
+                await prisma_1.prisma.post.delete({ where: { id: targetId } });
             }
             else if (targetType === 'COMMENT') {
-                await prisma.comment.delete({ where: { id: targetId } });
+                await prisma_1.prisma.comment.delete({ where: { id: targetId } });
             }
             break;
         case 'USER_WARNED':
@@ -325,11 +326,11 @@ async function executeModeratorAction(action, targetType, targetId, moderatorId,
                 let userId = targetId;
                 // Get userId if targeting content
                 if (targetType === 'POST') {
-                    const post = await prisma.post.findUnique({ where: { id: targetId } });
+                    const post = await prisma_1.prisma.post.findUnique({ where: { id: targetId } });
                     userId = post?.authorId || '';
                 }
                 else if (targetType === 'COMMENT') {
-                    const comment = await prisma.comment.findUnique({ where: { id: targetId } });
+                    const comment = await prisma_1.prisma.comment.findUnique({ where: { id: targetId } });
                     userId = comment?.userId || '';
                 }
                 if (userId) {
@@ -342,11 +343,11 @@ async function executeModeratorAction(action, targetType, targetId, moderatorId,
                 let userId = targetId;
                 // Get userId if targeting content
                 if (targetType === 'POST') {
-                    const post = await prisma.post.findUnique({ where: { id: targetId } });
+                    const post = await prisma_1.prisma.post.findUnique({ where: { id: targetId } });
                     userId = post?.authorId || '';
                 }
                 else if (targetType === 'COMMENT') {
-                    const comment = await prisma.comment.findUnique({ where: { id: targetId } });
+                    const comment = await prisma_1.prisma.comment.findUnique({ where: { id: targetId } });
                     userId = comment?.userId || '';
                 }
                 if (userId) {
@@ -360,11 +361,11 @@ async function executeModeratorAction(action, targetType, targetId, moderatorId,
                 let userId = targetId;
                 // Get userId if targeting content
                 if (targetType === 'POST') {
-                    const post = await prisma.post.findUnique({ where: { id: targetId } });
+                    const post = await prisma_1.prisma.post.findUnique({ where: { id: targetId } });
                     userId = post?.authorId || '';
                 }
                 else if (targetType === 'COMMENT') {
-                    const comment = await prisma.comment.findUnique({ where: { id: targetId } });
+                    const comment = await prisma_1.prisma.comment.findUnique({ where: { id: targetId } });
                     userId = comment?.userId || '';
                 }
                 if (userId) {
@@ -378,8 +379,8 @@ async function executeModeratorAction(action, targetType, targetId, moderatorId,
 router.get('/stats', auth_1.requireAuth, requireModerator, async (req, res) => {
     try {
         const [pendingReports, resolvedToday, activeFlags, suspendedUsers, totalReports] = await Promise.all([
-            prisma.report.count({ where: { status: 'PENDING' } }),
-            prisma.report.count({
+            prisma_1.prisma.report.count({ where: { status: 'PENDING' } }),
+            prisma_1.prisma.report.count({
                 where: {
                     status: 'RESOLVED',
                     moderatedAt: {
@@ -387,11 +388,11 @@ router.get('/stats', auth_1.requireAuth, requireModerator, async (req, res) => {
                     }
                 }
             }),
-            prisma.contentFlag.count({ where: { resolved: false } }),
-            prisma.user.count({ where: { isSuspended: true } }),
-            prisma.report.count()
+            prisma_1.prisma.contentFlag.count({ where: { resolved: false } }),
+            prisma_1.prisma.user.count({ where: { isSuspended: true } }),
+            prisma_1.prisma.report.count()
         ]);
-        const urgentReports = await prisma.report.count({
+        const urgentReports = await prisma_1.prisma.report.count({
             where: { priority: 'URGENT', status: 'PENDING' }
         });
         res.json({
@@ -414,14 +415,14 @@ router.get('/stats', auth_1.requireAuth, requireModerator, async (req, res) => {
 router.post('/users/:userId/promote', auth_1.requireAuth, requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         if (user.isModerator) {
             return res.status(400).json({ error: 'User is already a moderator' });
         }
-        await prisma.user.update({
+        await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { isModerator: true }
         });
