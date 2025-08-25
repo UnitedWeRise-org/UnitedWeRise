@@ -3047,7 +3047,7 @@ Example: adminConsole.getSuggestions('features', 'new')
             const status = document.getElementById('profileStatusFilter').value;
             
             try {
-                let url = '/api/admin/candidates/profiles?';
+                let url = `${BACKEND_URL}/api/admin/candidates/profiles?`;
                 const params = new URLSearchParams();
                 
                 if (search) params.append('search', search);

@@ -2504,7 +2504,9 @@ class MyProfile {
             const response = await window.apiCall('/candidate/admin-messages');
             
             if (response.ok && response.data) {
-                this.displayCandidateMessages(response.data);
+                // Handle the API response structure: { success: true, data: messages }
+                const messages = response.data.data || response.data;
+                this.displayCandidateMessages(messages);
                 // Update unread badge
                 await this.updateUnreadBadge();
             } else {
@@ -2531,6 +2533,12 @@ class MyProfile {
     displayCandidateMessages(messages) {
         const container = document.getElementById('candidateMessagesContainer');
         if (!container) return;
+
+        // Ensure messages is an array
+        if (!Array.isArray(messages)) {
+            console.error('Messages is not an array:', messages);
+            messages = [];
+        }
 
         if (!messages || messages.length === 0) {
             container.innerHTML = `
