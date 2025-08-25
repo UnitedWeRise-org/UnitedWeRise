@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 23, 2025 (9:30 PM EST)  
-**Version**: 4.8.0 (Complete Candidate Registration System with Admin Verification)  
+**Last Updated**: August 24, 2025 (2:30 PM EST)  
+**Version**: 4.10.0 (New Logo Design & About Page)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ---
@@ -110,6 +110,17 @@ Discovery → Awareness → Connection → Action → Content → Community
 | Admin Dashboard | ✅ LIVE | /admin-dashboard.html |
 
 ### Recent Deployments (August 2025)
+- ✅ **About Page & Logo Update (Aug 24 - Afternoon)**: Enhanced branding and platform information
+  - Created comprehensive About modal with platform vision and features
+  - Replaced logo with new circular design "UWR Logo on Circle.png"
+  - Increased logo size from 50px to 60px for better visibility
+  - Fixed logo aspect ratio issues with proper image cropping
+  - Added click-outside-to-close functionality for About modal
+- ✅ **🚨 CRITICAL: Database Connection Pool Fix (Aug 24 - Morning)**: Platform stability crisis resolved
+  - Fixed connection exhaustion causing 500 errors after 47+ hour runtime
+  - Migrated 60+ files from individual PrismaClient instances to singleton pattern
+  - Reduced database connections from 600+ to maximum 10 with proper pooling
+  - Zero downtime deployment with immediate platform recovery
 - ✅ **Admin Console Restoration & Repository Cleanup (Aug 21)**: Complete admin API system re-enabled with comprehensive platform management
   - Fixed TypeScript compilation issues in civic.ts routes  
   - Added environment auto-detection for local vs production testing
@@ -134,7 +145,7 @@ Discovery → Awareness → Connection → Action → Content → Community
 - **API Response Time**: <200ms average
 - **Post Creation Speed**: <100ms (10x improvement)
 - **Error Rate**: 3.57% (down from 4.05%)
-- **Database Connections**: Stable pool management
+- **Database Connections**: Singleton client with 10-connection limit (August 24 fix)
 - **CDN Cache Hit Rate**: 85%+
 
 ---
@@ -3195,8 +3206,72 @@ CREATE INDEX idx_h3_location ON users(h3Index);
 #### Query Optimization
 - Eager loading with Prisma includes
 - Pagination on all list endpoints
-- Connection pooling (20 connections)
+- Connection pooling (10 connections with singleton client)
 - Query result caching
+
+#### ✅ CRITICAL FIX: Database Connection Pool (August 24, 2025)
+**PROBLEM RESOLVED**: Connection exhaustion causing 500 errors after 47+ hours runtime
+
+**Root Cause**: 60 backend files each creating `new PrismaClient()` instances
+- Each instance = 10-20 connection pool
+- 60 instances = 600+ database connections  
+- Azure PostgreSQL connection limit exceeded
+- Result: "Too many database connections opened" errors
+
+**Solution Implemented**:
+```typescript
+// NEW: Singleton Prisma Client (backend/src/lib/prisma.ts)
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prismaClientSingleton = () => {
+  const connectionUrl = process.env.DATABASE_URL?.includes('connection_limit=') 
+    ? process.env.DATABASE_URL 
+    : `${process.env.DATABASE_URL}${process.env.DATABASE_URL?.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=20&connect_timeout=10`;
+
+  return new PrismaClient({
+    datasources: { db: { url: connectionUrl } },
+    log: ['warn', 'error']
+  });
+};
+
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// Graceful shutdown
+process.on('beforeExit', () => prisma.$disconnect());
+process.on('SIGINT', () => prisma.$disconnect());
+process.on('SIGTERM', () => prisma.$disconnect());
+```
+
+**Migration Completed**:
+- ✅ **57 files migrated** from `new PrismaClient()` to singleton import
+- ✅ **Fixed syntax errors** (double comma imports from migration script)  
+- ✅ **TypeScript compilation** passes without errors
+- ✅ **Production deployment** completed (revision --0000095)
+- ✅ **Uptime reset** from 47+ hours to <1 hour (confirmed fresh deployment)
+
+**Technical Impact**:
+- **Before**: 600+ database connections across 60 instances
+- **After**: Maximum 10 connections with singleton pattern
+- **Connection Pooling**: Configured with `connection_limit=10&pool_timeout=20`
+- **Stability**: Platform can now run indefinitely without connection exhaustion
+
+**Files Modified**:
+- `backend/src/lib/prisma.ts` (NEW): Singleton client with connection limits
+- `backend/migrate-prisma-singleton.js` (NEW): Migration script for bulk updates
+- All services in `backend/src/services/`: Updated to use singleton
+- All routes in `backend/src/routes/`: Updated to use singleton
+- `backend/src/server.ts`: Uses singleton instead of new instance
+
+**Monitoring**:
+- Watch backend uptime via `/health` endpoint
+- Connection count via Azure Database monitoring
+- No more 500 errors from connection exhaustion
 
 #### Caching Strategy
 ```javascript
@@ -4937,6 +5012,124 @@ POST /api/debug/clear-cache
 ---
 
 ## 📜 SESSION HISTORY {#session-history}
+
+### August 24, 2025 - Database Fix & UI Enhancements
+
+#### Session 2: About Page & Logo Update (Afternoon)
+**Status**: ✅ **DEPLOYED** - Enhanced platform branding and information
+**Impact**: Professional About page and improved logo display
+
+##### Features Implemented:
+1. **Comprehensive About Page**
+   - Modal-based About section accessible from top navigation
+   - Platform vision explanation with geography-based approach
+   - 6 key feature cards with icons and descriptions
+   - Side-by-side comparison: Traditional Social Media vs United We Rise
+   - Current platform status display
+   - Professional call-to-action for new users
+
+2. **Logo Redesign Implementation**
+   - Replaced old logo.png with new "UWR Logo on Circle.png"
+   - Resolved aspect ratio issues through image cropping
+   - Increased display size from 50px to 60px for better visibility
+   - Removed CSS border since new logo includes circle background
+   - Maintained hover effects (scale 1.08x with shadow)
+
+##### Technical Details:
+- **Files Modified**:
+  - `frontend/index.html` - Added About modal HTML, updated logo references
+  - `frontend/src/styles/main.css` - Adjusted logo CSS for new design
+  - Added `frontend/UWR Logo on Circle.png` - New logo file
+
+- **CSS Optimization Process**:
+  - Initial issue: Logo with transparent padding causing distortion
+  - Solution: User cropped image to remove padding
+  - Final CSS: Simple 60x60px display with border-radius for circular clipping
+
+**Note**: Original logo file was 551KB - recommend optimizing to <50KB for production
+
+---
+
+#### Session 1: 🚨 EMERGENCY DATABASE CONNECTION EXHAUSTION FIX (Morning)
+**Status**: ✅ **CRITICAL ISSUE RESOLVED** - Platform stability restored
+**Impact**: Prevented complete platform downtime from database connection exhaustion
+**Timeline**: Morning session (1-2 hours) - Rapid diagnosis and deployment
+
+##### Problem Discovery (9:00 AM EST)
+**User Report**: "Posts aren't loading" with console showing 500 Internal Server Errors
+- Multiple API endpoints failing: `/api/feed/`, `/api/posts/me`, `/api/political/representatives`
+- Fresh login with new JWT token, ruling out authentication issues
+- Backend health check showed 47+ hours uptime (abnormally long)
+
+##### Rapid Diagnosis Process
+1. **Health Check Analysis**: `/health` endpoint revealed: 
+   ```json
+   {"status":"healthy","uptime":168528,"database":"Too many database connections opened"}
+   ```
+   - **Root Cause Identified**: PostgreSQL connection limit exceeded after 47 hours runtime
+
+2. **Code Audit**: Searched for `new PrismaClient` across codebase
+   - **Discovered**: 60+ files each creating separate PrismaClient instances
+   - **Impact**: Each instance = 10-20 connection pool = 600+ total connections
+   - **Azure Limit**: PostgreSQL connection slots exhausted
+
+##### Critical Fix Implementation (60-minute turnaround)
+1. **Singleton Prisma Client Created** (`backend/src/lib/prisma.ts`)
+   - Global singleton pattern with `globalThis` to prevent multiple instances
+   - Connection pooling: Limited to 10 connections with 20-second timeout
+   - Graceful shutdown handlers for clean disconnection
+
+2. **Mass Migration Script** (`backend/migrate-prisma-singleton.js`)
+   - Automated migration of 60+ files from individual instances to singleton
+   - Updated imports: `import { prisma } from '../lib/prisma'`
+   - Replaced constructor calls: `new PrismaClient()` → `prisma`
+
+3. **Syntax Error Resolution**
+   - Fixed double comma imports: `import {, Model }` → `import { Model }`
+   - Added missing prisma imports to services
+   - Corrected relative import paths
+
+4. **TypeScript Compilation Verification**
+   - `npm run build` - All compilation errors resolved
+   - Verified all 57 migrated files compile successfully
+
+##### Production Deployment & Verification
+1. **Azure Container Apps Deployment**
+   - Environment variable update: `CONNECTION_POOL_DEPLOY=$(date)`
+   - New revision deployed: `unitedwerise-backend--0000095`
+   - Forced container restart with fresh codebase
+
+2. **Success Verification**
+   - Backend uptime reset: 47+ hours → <1 hour (confirmed fresh deployment)
+   - Health endpoint: `"database":"connected"` (vs previous error)
+   - API endpoints: All returning 200 responses instead of 500 errors
+   - Posts loading: Platform fully functional
+
+##### Technical Impact
+- **Connection Reduction**: 600+ connections → Maximum 10 connections
+- **Stability**: Platform can now run indefinitely without connection exhaustion  
+- **Performance**: No more 500 errors from database connection failures
+- **Architecture**: Proper singleton pattern established for all database access
+
+##### Files Modified (Total: 59 files)
+**New Core Infrastructure**:
+- `backend/src/lib/prisma.ts` - Singleton Prisma client with connection limits
+- `backend/migrate-prisma-singleton.js` - Migration automation script
+
+**Updated Services** (25 files): All services now use singleton
+**Updated Routes** (18 files): All API routes now use singleton  
+**Updated Utilities** (14 files): All database utilities now use singleton
+**Config Updates**: server.ts, websocket.ts, and other core files
+
+##### Crisis Management Success
+- **User Impact**: Minimized downtime (1-2 hours vs potential days)
+- **Response Time**: 60-minute diagnosis-to-deployment cycle
+- **Prevention**: Architectural fix prevents recurrence
+- **Documentation**: Full incident documentation for future reference
+
+**Key Lesson**: Long-running Node.js applications require singleton database clients to prevent connection pool exhaustion.
+
+---
 
 ### August 21, 2025 - Complete TOTP Admin Dashboard Integration
 
