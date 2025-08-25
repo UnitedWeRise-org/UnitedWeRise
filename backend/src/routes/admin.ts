@@ -1,5 +1,6 @@
+import { prisma } from '../lib/prisma';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { requireTOTPForAdmin } from '../middleware/totpAuth';
 import { moderationService } from '../services/moderationService';
@@ -12,7 +13,7 @@ import fs from 'fs';
 import path from 'path';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// Using singleton prisma from lib/prisma.ts
 
 // Admin-only middleware
 const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
@@ -1432,16 +1433,116 @@ router.post('/candidates/:id/approve', requireAuth, requireAdmin, requireTOTPFor
       }
     });
 
-    // TODO: Create or update candidate profile
-    // Note: Candidate creation requires officeId which needs to be determined from registration
-    // await prisma.candidate.upsert({
-    //   where: { userId: registration.userId },
-    //   create: { ... },
-    //   update: { ... }
-    // });
+    // Create or update candidate profile
+    try {
+      // First, find or create the appropriate office
+      let office = await prisma.office.findFirst({
+        where: {
+          title: registration.positionTitle,
+          level: registration.positionLevel as any,
+          state: registration.state,
+          district: registration.positionDistrict || null
+        },
+        include: { election: true }
+      });
+
+      // If office doesn't exist, we need to find a matching election or create a temporary one
+      if (!office) {
+        // Try to find an existing election for the same date/state
+        let election = await prisma.election.findFirst({
+          where: {
+            date: registration.electionDate,
+            state: registration.state,
+            type: 'GENERAL' // Default to general election
+          }
+        });
+
+        // If no election exists, create one
+        if (!election) {
+          election = await prisma.election.create({
+            data: {
+              name: `${registration.state} ${registration.electionDate.getFullYear()} Election`,
+              date: registration.electionDate,
+              type: 'GENERAL',
+              level: 'STATE', // Default level
+              state: registration.state,
+              county: registration.city, // Use city as county approximation
+              description: `Election for ${registration.positionTitle} and other offices`,
+              registrationDeadline: new Date(registration.electionDate.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 days before
+              isActive: true
+            }
+          });
+        }
+
+        // Create the office and include election data
+        office = await prisma.office.create({
+          data: {
+            title: registration.positionTitle,
+            level: registration.positionLevel as any,
+            state: registration.state,
+            district: registration.positionDistrict || null,
+            description: `${registration.positionTitle} for ${registration.state}${registration.positionDistrict ? ` District ${registration.positionDistrict}` : ''}`,
+            electionId: election.id
+          },
+          include: { election: true }
+        });
+      }
+
+      // Create or update the candidate profile
+      const candidate = await prisma.candidate.upsert({
+        where: { userId: registration.userId },
+        create: {
+          name: `${registration.firstName} ${registration.lastName}`,
+          party: null, // Will be set later by candidate
+          isIncumbent: false, // Default to false
+          campaignWebsite: registration.campaignWebsite,
+          campaignEmail: registration.email,
+          campaignPhone: registration.phone,
+          platformSummary: registration.campaignDescription,
+          keyIssues: [], // Will be populated later
+          isVerified: true, // Admin approved = verified
+          userId: registration.userId,
+          officeId: office.id
+        },
+        update: {
+          name: `${registration.firstName} ${registration.lastName}`,
+          campaignWebsite: registration.campaignWebsite,
+          campaignEmail: registration.email,
+          campaignPhone: registration.phone,
+          platformSummary: registration.campaignDescription,
+          isVerified: true,
+          officeId: office.id
+        }
+      });
+
+      // Create candidate inbox for messaging
+      await prisma.candidateInbox.upsert({
+        where: { candidateId: candidate.id },
+        create: {
+          candidateId: candidate.id,
+          isActive: true,
+          allowPublicQ: true,
+          categories: [
+            'HEALTHCARE', 'EDUCATION', 'ECONOMY', 'ENVIRONMENT', 'IMMIGRATION',
+            'INFRASTRUCTURE', 'TAXES', 'HEALTHCARE', 'CRIMINAL_JUSTICE', 'VETERANS',
+            'HOUSING', 'ENERGY', 'AGRICULTURE', 'TECHNOLOGY', 'FOREIGN_POLICY',
+            'CIVIL_RIGHTS', 'LABOR', 'TRANSPORTATION', 'BUDGET', 'ETHICS', 'OTHER'
+          ]
+        },
+        update: {
+          isActive: true
+        }
+      });
+
+      console.log(`✅ Created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+      
+    } catch (profileError) {
+      console.error('Error creating candidate profile:', profileError);
+      // Don't fail the whole approval if profile creation fails
+      // The registration is still approved, profile can be created manually later
+    }
 
     // TODO: Send approval email notification
-    // TODO: Create candidate inbox for messaging
 
     res.json({
       success: true,
