@@ -3288,7 +3288,7 @@ Example: adminConsole.getSuggestions('features', 'new')
             const registrationId = document.getElementById('registrationId').value;
             
             try {
-                const response = await adminApiCall(`/api/admin/candidates/profiles/${registrationId}/create`, {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/profiles/${registrationId}/create`, {
                     method: 'POST'
                 });
                 
