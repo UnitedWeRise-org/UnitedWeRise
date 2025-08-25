@@ -1,7 +1,10 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 25, 2025 (3:10 PM EST)  
-**Version**: 4.11.0 (Candidate Profile Auto-Creation)  
+**Last Updated**: August 25, 2025 (4:45 PM EST)  
+**Version**: 4.11.1 (Extended TOTP Session Duration)  
 **Status**: 🟢 PRODUCTION LIVE
+
+### 🆕 RECENT CHANGES (August 25, 2025)
+**TOTP Session Duration Extended**: Admin dashboard TOTP tokens now last 24 hours instead of 5 minutes, eliminating frequent re-authentication interruptions while maintaining security through initial TOTP verification.
 
 ---
 
@@ -1465,7 +1468,7 @@ const corsOptions = {
 - **User Settings**: Complete UI in My Profile → Settings tab with status indicators
 - **Security**: Base32 secret storage, replay attack prevention, time window tolerance
 - **Modal System**: Professional TOTP setup and verification modals with error handling
-- **Verification Tokens**: Temporary 5-minute tokens for admin API access after TOTP verification
+- **Verification Tokens**: Session-based 24-hour tokens for admin API access after TOTP verification (updated August 25, 2025)
 - **Admin Integration**: Seamless TOTP flow for admin console with automatic prompting
 
 ##### Database Schema (Implemented)
@@ -1495,9 +1498,9 @@ POST /api/totp/regenerate-backup-codes  // Generate new backup codes
 - **Admin Dashboard**: TOTP verification required for all admin routes
 - **Visual Indicators**: Clear status display (enabled/disabled)
 
-##### Security Features (Enhanced August 21, 2025)
+##### Security Features (Enhanced August 25, 2025)
 - **Admin Enforcement**: `requireTOTPForAdmin` middleware on ALL admin routes
-- **Verification Token System**: 5-minute temporary tokens for admin API access
+- **Verification Token System**: 24-hour session-based tokens for admin API access (eliminates frequent re-authentication)
 - **CORS Headers**: Added `X-TOTP-Verified` and `X-TOTP-Token` to allowed headers
 - **Token Validation**: Speakeasy library with time window tolerance
 - **Backup Code Management**: Single-use codes with secure generation
@@ -1510,9 +1513,9 @@ POST /api/totp/regenerate-backup-codes  // Generate new backup codes
 2. Backend returns 403 with `TOTP_VERIFICATION_REQUIRED` error
 3. Frontend displays professional TOTP verification modal
 4. User enters 6-digit Google Authenticator code
-5. Backend validates code and generates temporary verification token (5 min)
+5. Backend validates code and generates session verification token (24 hours)
 6. Token included in all subsequent admin API calls via headers
-7. Full admin dashboard access granted with all features operational
+7. Full admin dashboard access granted until logout (no re-authentication needed)
 
 ##### Implementation Files (Complete)
 - `backend/src/routes/totp.ts` - Complete TOTP API endpoints with token generation
@@ -5028,6 +5031,39 @@ POST /api/debug/clear-cache
 ---
 
 ## 📜 SESSION HISTORY {#session-history}
+
+### August 25, 2025 - TOTP Session Duration Extension
+
+#### Admin Dashboard UX Enhancement: Extended TOTP Sessions
+**Achievement**: Eliminated frequent re-authentication interruptions in admin dashboard
+
+**Problem Solved**: 
+- Admin dashboard TOTP tokens expired every 5 minutes causing "Failed to load candidates data" errors
+- Administrators experienced frequent interruptions requiring TOTP re-verification
+- Poor user experience for legitimate admin users during extended work sessions
+
+**Technical Solution**:
+1. **Backend Token Duration** - Extended TOTP verification tokens from 5 minutes to 24 hours
+   - Modified `backend/src/routes/totp.ts` step parameter from 300 seconds to 86400 seconds
+   - Updated `backend/src/middleware/totpAuth.ts` validation to match 24-hour window
+   
+2. **Frontend Cleanup** - Removed unnecessary refresh notification system
+   - Eliminated proactive refresh prompts and timers from `admin-dashboard.html`
+   - Simplified session management to rely on natural logout flow
+   
+3. **Security Balance** - Maintained strong authentication while improving usability
+   - Initial TOTP verification still required (maintains security barrier)
+   - Sessions persist until logout or 24-hour maximum (reasonable session length)
+   - No reduction in actual security - same TOTP verification strength
+
+**Files Modified**:
+- `backend/src/routes/totp.ts` - Token generation duration (line 214)
+- `backend/src/middleware/totpAuth.ts` - Token validation window (line 59) 
+- `frontend/admin-dashboard.html` - Removed refresh logic (simplified session management)
+
+**Deployment Status**: ✅ Committed and ready for backend deployment
+
+---
 
 ### August 25, 2025 - Candidate Profile Auto-Creation Fix
 
