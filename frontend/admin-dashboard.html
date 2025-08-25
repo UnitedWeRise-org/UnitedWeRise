@@ -3070,16 +3070,51 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 const response = await adminApiCall(url + params.toString());
                 
-                if (response.success) {
-                    displayCandidateProfiles(response.data.candidates);
-                    displayProfilesSummary(response.data.summary);
+                console.log('Profiles API response:', response);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                // Handle HTTP errors first
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.log('Error response body:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+                }
+                
+                // Parse JSON response
+                const data = await response.json();
+                console.log('Parsed response data:', data);
+                
+                if (data.success) {
+                    displayCandidateProfiles(data.data.candidates);
+                    displayProfilesSummary(data.data.summary);
                 } else {
-                    throw new Error(response.message || 'Failed to load profiles');
+                    throw new Error(data.message || data.error || 'Failed to load profiles');
                 }
             } catch (error) {
                 console.error('Error loading candidate profiles:', error);
+                
+                // Enhanced error debugging
+                let errorMsg = error.message || 'Unknown error';
+                
+                // Check if it's a network/HTTP error vs empty results
+                if (error.status) {
+                    errorMsg = `HTTP ${error.status}: ${errorMsg}`;
+                }
+                
+                console.log('Full error details:', {
+                    message: error.message,
+                    status: error.status,
+                    stack: error.stack
+                });
+                
                 document.getElementById('profilesTable').innerHTML = 
-                    '<div class="error">Error loading candidate profiles: ' + error.message + '</div>';
+                    `<div class="error">
+                        <p><strong>Debug Info:</strong></p>
+                        <p>Error: ${errorMsg}</p>
+                        <p>Check console for full details</p>
+                        <p><em>This enhanced error info will help determine if it's a technical error or no results found.</em></p>
+                    </div>`;
             }
         }
         
