@@ -849,6 +849,8 @@ Loading deployment status...
         function logout() {
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('admin_totp_verified');
+            localStorage.removeItem('admin_totp_token');
             
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
@@ -2860,8 +2862,8 @@ Example: adminConsole.getSuggestions('features', 'new')
         };
 
         // TOTP Verification System for Admin Dashboard
-        let totpVerified = false;
-        let totpToken = null;
+        let totpVerified = localStorage.getItem('admin_totp_verified') === 'true';
+        let totpToken = localStorage.getItem('admin_totp_token');
         
         // Enhanced API call function with TOTP support
         async function adminApiCall(url, options = {}) {
@@ -2888,8 +2890,15 @@ Example: adminConsole.getSuggestions('features', 'new')
                     // Clone the response so we can read it without consuming the original
                     const clonedResponse = response.clone();
                     const errorData = await clonedResponse.json().catch(() => ({}));
-                    if (errorData.error === 'TOTP_VERIFICATION_REQUIRED') {
+                    if (errorData.error === 'TOTP_VERIFICATION_REQUIRED' || errorData.error === 'TOTP_VERIFICATION_EXPIRED') {
                         console.log('🔒 TOTP verification required for admin access');
+                        
+                        // Clear invalid TOTP data
+                        totpVerified = false;
+                        totpToken = null;
+                        localStorage.removeItem('admin_totp_verified');
+                        localStorage.removeItem('admin_totp_token');
+                        
                         await showTOTPModal();
                         // Retry the request with TOTP verification
                         return adminApiCall(url, options);
@@ -2995,9 +3004,14 @@ Example: adminConsole.getSuggestions('features', 'new')
                             
                             if (verificationToken) {
                                 totpVerified = true;
-                                totpToken = verificationToken; // Store verification token for header
+                                totpToken = verificationToken;
+                                
+                                // Persist TOTP verification across page refreshes
+                                localStorage.setItem('admin_totp_verified', 'true');
+                                localStorage.setItem('admin_totp_token', verificationToken);
+                                
                                 modal.remove();
-                                console.log('✅ TOTP verified for admin access - token valid for 24 hours');
+                                console.log('✅ TOTP verified for admin access - token valid for 24 hours (persisted)');
                                 
                                 // No refresh needed - tokens now last 24 hours
                                 
