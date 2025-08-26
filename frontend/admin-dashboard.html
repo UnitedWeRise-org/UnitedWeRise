@@ -3366,11 +3366,18 @@ Example: adminConsole.getSuggestions('features', 'new')
                 const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
                 console.log('Messages API response:', response);
                 
-                if (!response.success) {
-                    throw new Error(response.message || response.error || 'Failed to load messages');
+                if (!response.ok) {
+                    throw new Error(`API call failed: ${response.status} ${response.statusText}`);
                 }
                 
-                const messages = response.data || [];
+                const responseData = await response.json();
+                console.log('Parsed response data:', responseData);
+                
+                if (!responseData.success) {
+                    throw new Error(responseData.message || responseData.error || 'Failed to load messages');
+                }
+                
+                const messages = responseData.data || [];
                 
                 // Create messaging modal
                 const modal = document.createElement('div');
