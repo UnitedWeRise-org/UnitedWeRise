@@ -3062,19 +3062,7 @@ Example: adminConsole.getSuggestions('features', 'new')
             // Load data for the active tab
             if (tab === 'profiles') {
                 loadCandidateProfiles();
-                // Set up periodic refresh for unread counts (every 30 seconds)
-                if (window.profilesRefreshInterval) clearInterval(window.profilesRefreshInterval);
-                window.profilesRefreshInterval = setInterval(() => {
-                    if (document.getElementById('profilesTab').classList.contains('active')) {
-                        loadCandidateProfiles();
-                    }
-                }, 30000);
-            } else {
-                // Clear refresh interval when leaving profiles tab
-                if (window.profilesRefreshInterval) {
-                    clearInterval(window.profilesRefreshInterval);
-                    window.profilesRefreshInterval = null;
-                }
+                // Note: No auto-refresh polling - updates triggered by message events
             }
         }
         
@@ -3635,7 +3623,15 @@ Example: adminConsole.getSuggestions('features', 'new')
                 }
                 
                 // Update the messaging button in the main table to refresh unread indicators
-                setTimeout(() => loadCandidateProfiles(), 500); // Small delay to ensure message is saved
+                setTimeout(() => {
+                    loadCandidateProfiles(); // Update badge counts
+                    
+                    // Trigger notification refresh for potential candidate users online
+                    // Note: In future, this could be a WebSocket broadcast
+                    if (window.triggerCandidateRefresh) {
+                        window.triggerCandidateRefresh(candidateId);
+                    }
+                }, 500); // Small delay to ensure message is saved
                 
                 console.log('✅ Message sent successfully - should appear in chat automatically');
                 

@@ -643,21 +643,7 @@ class MyProfile {
             setTimeout(() => {
                 this.loadCandidateMessages();
                 this.setupMessageForm();
-                
-                // Set up auto-refresh every 10 seconds for messages
-                if (this.messageRefreshInterval) {
-                    clearInterval(this.messageRefreshInterval);
-                }
-                this.messageRefreshInterval = setInterval(() => {
-                    this.loadCandidateMessages();
-                }, 10000); // Refresh every 10 seconds
             }, 100);
-        } else {
-            // Clear interval when leaving messages tab (for tabs other than photos)
-            if (this.messageRefreshInterval) {
-                clearInterval(this.messageRefreshInterval);
-                this.messageRefreshInterval = null;
-            }
         }
     }
 
@@ -2661,6 +2647,17 @@ class MyProfile {
                 
                 // Reload messages to show the new one
                 await this.loadCandidateMessages();
+                
+                // Trigger admin refresh if they're viewing profiles
+                // Note: In future, this could be a WebSocket broadcast
+                if (window.triggerAdminRefresh) {
+                    window.triggerAdminRefresh();
+                }
+                
+                // Also refresh notifications for admin users
+                if (window.fetchNotifications) {
+                    window.fetchNotifications().catch(console.error);
+                }
                 
                 this.showToast('Message sent successfully!');
             } else {

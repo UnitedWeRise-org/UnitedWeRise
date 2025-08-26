@@ -7301,19 +7301,38 @@
             if (authToken) {
                 fetchNotifications().catch(console.error);
                 
-                // Clear any existing interval
-                if (window.notificationRefreshInterval) {
-                    clearInterval(window.notificationRefreshInterval);
-                }
-                
-                // Poll for new notifications every 10 seconds
-                window.notificationRefreshInterval = setInterval(() => {
-                    if (authToken) {
-                        fetchNotifications().catch(console.error);
-                    }
-                }, 10000); // Changed from 30 seconds to 10 seconds
+                // Note: No polling - notifications refresh triggered by events
+                // For future: Consider WebSocket/SSE for real-time notifications
             }
         }
+
+        // Global functions for push-based message refresh
+        window.triggerAdminRefresh = function() {
+            console.log('🔄 Triggering admin refresh...');
+            // Refresh admin dashboard if profiles tab is active
+            if (typeof loadCandidateProfiles === 'function' && 
+                document.getElementById('profilesTab')?.classList.contains('active')) {
+                loadCandidateProfiles();
+            }
+            // Refresh notifications
+            if (authToken && typeof fetchNotifications === 'function') {
+                fetchNotifications().catch(console.error);
+            }
+        };
+
+        window.triggerCandidateRefresh = function(candidateId) {
+            console.log('🔄 Triggering candidate refresh for:', candidateId);
+            // Refresh candidate messages if they're on messages tab
+            if (window.myProfile && 
+                window.myProfile.currentTab === 'messages' &&
+                typeof window.myProfile.loadCandidateMessages === 'function') {
+                window.myProfile.loadCandidateMessages();
+            }
+            // Refresh notifications
+            if (authToken && typeof fetchNotifications === 'function') {
+                fetchNotifications().catch(console.error);
+            }
+        };
 
         // Close notifications when clicking outside
         document.addEventListener('click', (event) => {
