@@ -3356,11 +3356,18 @@ Example: adminConsole.getSuggestions('features', 'new')
         
         async function openCandidateMessaging(candidateId, candidateName) {
             try {
+                console.log('Opening messaging for candidate:', candidateId, candidateName);
+                
+                if (!candidateId) {
+                    throw new Error('Candidate ID is missing');
+                }
+                
                 // Load existing messages for this candidate
                 const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
+                console.log('Messages API response:', response);
                 
                 if (!response.success) {
-                    throw new Error(response.message || 'Failed to load messages');
+                    throw new Error(response.message || response.error || 'Failed to load messages');
                 }
                 
                 const messages = response.data || [];
