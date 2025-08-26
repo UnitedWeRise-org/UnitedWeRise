@@ -3372,12 +3372,26 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 const responseData = await response.json();
                 console.log('Parsed response data:', responseData);
+                console.log('Messages data structure:', responseData.data);
+                console.log('Messages data type:', typeof responseData.data, 'isArray:', Array.isArray(responseData.data));
                 
                 if (!responseData.success) {
                     throw new Error(responseData.message || responseData.error || 'Failed to load messages');
                 }
                 
-                const messages = responseData.data || [];
+                // Extract messages array - handle both object wrapper and direct array
+                let messages = [];
+                if (responseData.data) {
+                    if (Array.isArray(responseData.data)) {
+                        messages = responseData.data;
+                    } else if (responseData.data.messages && Array.isArray(responseData.data.messages)) {
+                        messages = responseData.data.messages;
+                    } else if (typeof responseData.data === 'object') {
+                        // Check if it's an object with numeric keys (like {0: msg1, 1: msg2})
+                        messages = Object.values(responseData.data);
+                    }
+                }
+                console.log('Extracted messages array:', messages);
                 
                 // Create messaging modal
                 const modal = document.createElement('div');
