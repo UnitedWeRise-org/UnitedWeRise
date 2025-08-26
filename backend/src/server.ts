@@ -20,6 +20,7 @@ import electionRoutes from './routes/elections';
 import candidateRoutes from './routes/candidates';
 import candidateMessagesRoutes from './routes/candidateMessages';
 import candidateAdminMessagesRoutes from './routes/candidateAdminMessages';
+import unifiedMessagesRoutes from './routes/unifiedMessages';
 import topicRoutes from './routes/topics';
 import topicNavigationRoutes from './routes/topicNavigation';
 import photoRoutes from './routes/photos';
@@ -38,7 +39,7 @@ import trendingTopicsRoutes from './routes/trendingTopics';
 import paymentsRoutes from './routes/payments';
 import searchRoutes from './routes/search';
 import totpRoutes from './routes/totp';
-import { initializeWebSocket } from './websocket';
+import WebSocketService from './services/WebSocketService';
 import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
@@ -59,8 +60,8 @@ const httpServer = http.createServer(app);
 
 const PORT = process.env.PORT || 3001;
 
-// Initialize WebSocket server
-const io = initializeWebSocket(httpServer);
+// Initialize unified WebSocket service
+const webSocketService = new WebSocketService(httpServer);
 
 // Security Middleware
 app.use(helmet({
@@ -153,6 +154,7 @@ app.use('/api/elections', electionRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/candidate-messages', candidateMessagesRoutes);
 app.use('/api/candidate', candidateAdminMessagesRoutes);
+app.use('/api/unified-messages', unifiedMessagesRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/topic-navigation', topicNavigationRoutes);
 app.use('/api/photos', photoRoutes);
@@ -194,6 +196,7 @@ app.get('/health', async (req, res) => {
       ...healthMetrics,
       database: 'Connected',
       websocket: 'Active',
+      onlineUsers: webSocketService.getOnlineUsersCount(),
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.2.1',
       deployedAt: deploymentTime.toISOString(),

@@ -1,6 +1,83 @@
 /* United We Rise - Messaging System Styles */
 
 /* ========================================
+   MESSAGE ALIGNMENT SYSTEM
+======================================== */
+
+/* Admin Dashboard Messages */
+.message {
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+    clear: both;
+}
+
+.message.from-admin {
+    background: #4b5c09;
+    color: white;
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+    border-bottom-right-radius: 5px;
+}
+
+.message.from-candidate {
+    background: #f1f1f1;
+    color: #333;
+    margin-left: 0;
+    margin-right: auto;
+    text-align: left;
+    border-bottom-left-radius: 5px;
+}
+
+/* Candidate Profile Messages */
+.candidate-message {
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+    clear: both;
+}
+
+.candidate-message.from-admin {
+    background: #f1f1f1;
+    color: #333;
+    margin-left: 0;
+    margin-right: auto;
+    text-align: left;
+    border-bottom-left-radius: 5px;
+}
+
+.candidate-message.from-candidate {
+    background: #4b5c09;
+    color: white;
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+    border-bottom-right-radius: 5px;
+}
+
+.message-header {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 5px;
+}
+
+.message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-left: 10px;
+}
+
+.message-content {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* ========================================
    MESSAGES CONTAINER
 ======================================== */
 

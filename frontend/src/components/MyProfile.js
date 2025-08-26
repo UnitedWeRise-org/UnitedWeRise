@@ -10,6 +10,77 @@ class MyProfile {
         this.currentTab = 'posts'; // Default to posts tab
         this.userPosts = [];
         this.userProfile = null;
+        
+        // Setup WebSocket event handlers
+        this.setupWebSocketHandlers();
+    }
+
+    /**
+     * Setup WebSocket event handlers for candidate messaging
+     */
+    setupWebSocketHandlers() {
+        if (!window.unifiedMessaging) {
+            console.warn('WebSocket client not available');
+            return;
+        }
+        
+        // Handle incoming admin-candidate messages (when admin sends to candidate)
+        window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
+            console.log('📨 Candidate received admin message:', messageData);
+            
+            // Check if we're currently viewing the admin messages tab
+            if (this.currentTab === 'messages') {
+                this.addMessageToDisplay(messageData);
+            }
+            
+            // Update unread badge
+            this.updateUnreadBadge();
+        });
+        
+        // Handle message sent confirmations (when candidate sends to admin)
+        window.unifiedMessaging.onMessage('MESSAGE_SENT', (messageData) => {
+            console.log('✅ Candidate message sent confirmation:', messageData);
+            
+            // Add sent message to display if we're viewing messages tab
+            if (this.currentTab === 'messages' && messageData.type === 'ADMIN_CANDIDATE') {
+                // Get current user info
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const candidateId = currentUser?.candidateProfile?.id;
+                
+                if (candidateId) {
+                    this.addMessageToDisplay({
+                        id: messageData.messageId || Date.now(),
+                        senderId: candidateId,
+                        content: messageData.content,
+                        createdAt: messageData.timestamp || new Date().toISOString(),
+                        isFromAdmin: false
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * Add a message to the current messages display
+     */
+    addMessageToDisplay(messageData) {
+        const container = document.getElementById('candidateMessagesContainer');
+        if (!container) return;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `candidate-message ${messageData.isFromAdmin ? 'from-admin' : 'from-candidate'}`;
+        
+        const time = new Date(messageData.createdAt).toLocaleString();
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <strong>${messageData.isFromAdmin ? 'Admin' : 'You'}:</strong>
+                <span class="message-time">${time}</span>
+            </div>
+            <div class="message-content">${messageData.content}</div>
+        `;
+        
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
     }
 
     async render(containerId) {
@@ -2636,9 +2707,34 @@ class MyProfile {
         submitButton.textContent = 'Sending...';
 
         try {
-            const response = await window.apiCall('/candidate/admin-messages', {
+            // Use WebSocket if available, fallback to REST API
+            if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
+                console.log('📤 Sending candidate message via WebSocket');
+                const success = window.unifiedMessaging.sendMessage(
+                    'ADMIN_CANDIDATE',
+                    'admin', // recipient is admin
+                    content
+                );
+                
+                if (success) {
+                    // Clear form
+                    contentInput.value = '';
+                    this.showToast('Message sent successfully!');
+                    return; // Message will be added to UI via WebSocket event handler
+                } else {
+                    console.warn('WebSocket send failed, falling back to REST API');
+                }
+            }
+            
+            // Fallback to REST API
+            console.log('📤 Sending candidate message via REST API');
+            const response = await window.apiCall('/unified-messages/send', {
                 method: 'POST',
-                body: JSON.stringify({ content })
+                body: JSON.stringify({
+                    type: 'ADMIN_CANDIDATE',
+                    recipientId: 'admin',
+                    content
+                })
             });
 
             if (response.ok) {
@@ -2648,20 +2744,9 @@ class MyProfile {
                 // Reload messages to show the new one
                 await this.loadCandidateMessages();
                 
-                // Trigger admin refresh if they're viewing profiles
-                // Note: In future, this could be a WebSocket broadcast
-                if (window.triggerAdminRefresh) {
-                    window.triggerAdminRefresh();
-                }
-                
-                // Also refresh notifications for admin users
-                if (window.fetchNotifications) {
-                    window.fetchNotifications().catch(console.error);
-                }
-                
                 this.showToast('Message sent successfully!');
             } else {
-                throw new Error(response.message || 'Failed to send message');
+                throw new Error(response.data?.error || 'Failed to send message');
             }
         } catch (error) {
             console.error('Error sending message:', error);

@@ -714,7 +714,9 @@ Loading deployment status...
         </div>
     </div>
 
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="src/config/api.js"></script>
+    <script src="src/js/websocket-client.js"></script>
     <script src="src/js/deployment-status.js"></script>
     <script>
         // Global state
@@ -740,6 +742,7 @@ Loading deployment status...
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             checkAuthStatus();
+            setupWebSocketHandlers();
             
             // Set up login form
             document.getElementById('adminLoginForm').addEventListener('submit', handleLogin);
@@ -3507,6 +3510,7 @@ Example: adminConsole.getSuggestions('features', 'new')
         function displayMessages(messages, candidateId) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
+            container.dataset.candidateId = candidateId; // For WebSocket handler reference
             
             console.log('displayMessages called with:', messages, 'type:', typeof messages, 'isArray:', Array.isArray(messages));
             
@@ -3556,6 +3560,121 @@ Example: adminConsole.getSuggestions('features', 'new')
             container.scrollTop = container.scrollHeight;
         }
         
+        // Setup WebSocket event handlers for admin messaging
+        function setupWebSocketHandlers() {
+            if (!window.unifiedMessaging) {
+                console.warn('WebSocket client not available');
+                return;
+            }
+            
+            // Handle incoming admin-candidate messages
+            window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
+                console.log('📨 Received admin-candidate message:', messageData);
+                
+                // Check if we're currently viewing this candidate's messages
+                const messagesContainer = document.getElementById('messagesContainer');
+                if (messagesContainer && messagesContainer.dataset.candidateId) {
+                    const currentCandidateId = messagesContainer.dataset.candidateId;
+                    const conversationId = `admin_candidate_${currentCandidateId}`;
+                    
+                    // Only add to display if it's for the current conversation
+                    if (messageData.conversationId === conversationId) {
+                        addMessageToDisplay(messageData, currentCandidateId);
+                    }
+                }
+                
+                // Update any notification badges or counters
+                updateUnreadBadges();
+            });
+            
+            // Handle message sent confirmations
+            window.unifiedMessaging.onMessage('MESSAGE_SENT', (messageData) => {
+                console.log('✅ Message sent confirmation:', messageData);
+                
+                // Add sent message to display if we're viewing this conversation
+                const messagesContainer = document.getElementById('messagesContainer');
+                if (messagesContainer && messagesContainer.dataset.candidateId) {
+                    const currentCandidateId = messagesContainer.dataset.candidateId;
+                    const conversationId = `admin_candidate_${currentCandidateId}`;
+                    
+                    if (messageData.conversationId === conversationId) {
+                        addMessageToDisplay({
+                            id: messageData.messageId || Date.now(),
+                            senderId: 'admin',
+                            content: messageData.content,
+                            createdAt: messageData.timestamp || new Date().toISOString(),
+                            type: 'ADMIN_CANDIDATE'
+                        }, currentCandidateId);
+                    }
+                }
+            });
+            
+            // Handle connection status changes
+            window.unifiedMessaging.onConnection((isConnected) => {
+                const statusIndicator = document.createElement('div');
+                statusIndicator.id = 'websocket-status';
+                statusIndicator.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    padding: 5px 10px;
+                    border-radius: 5px;
+                    color: white;
+                    font-size: 12px;
+                    z-index: 10000;
+                    ${isConnected ? 'background: #28a745;' : 'background: #dc3545;'}
+                `;
+                statusIndicator.textContent = isConnected ? '🟢 WebSocket Connected' : '🔴 WebSocket Disconnected';
+                
+                // Remove any existing status indicator
+                const existing = document.getElementById('websocket-status');
+                if (existing) {
+                    existing.remove();
+                }
+                
+                document.body.appendChild(statusIndicator);
+                
+                // Auto-hide after 3 seconds if connected
+                if (isConnected) {
+                    setTimeout(() => {
+                        if (statusIndicator.parentNode) {
+                            statusIndicator.remove();
+                        }
+                    }, 3000);
+                }
+            });
+        }
+        
+        // Add a message to the current display
+        function addMessageToDisplay(messageData, candidateId) {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return;
+            
+            const isFromAdmin = messageData.senderId === 'admin';
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isFromAdmin ? 'from-admin' : 'from-candidate'}`;
+            
+            const time = new Date(messageData.createdAt).toLocaleString();
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong>${isFromAdmin ? 'Admin' : 'Candidate'}:</strong>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${messageData.content}</div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Update unread message badges
+        function updateUnreadBadges() {
+            // Refresh the candidate profiles to update badge counts
+            if (typeof loadCandidateProfiles === 'function') {
+                loadCandidateProfiles();
+            }
+        }
+        
         async function sendMessageToCandidate(candidateId, candidateName) {
             const content = document.getElementById('messageContent').value.trim();
             const messageType = document.getElementById('messageType').value;
@@ -3567,12 +3686,40 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
             
             try {
-                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`, {
+                // Use WebSocket if available, fallback to REST API
+                if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
+                    console.log('📤 Sending admin message via WebSocket');
+                    const success = window.unifiedMessaging.sendMessage(
+                        'ADMIN_CANDIDATE',
+                        candidateId,
+                        content,
+                        `admin_candidate_${candidateId}`
+                    );
+                    
+                    if (success) {
+                        // Clear form
+                        document.getElementById('messageContent').value = '';
+                        document.getElementById('messageType').value = 'GENERAL';
+                        document.getElementById('messagePriority').value = 'NORMAL';
+                        
+                        // Message will be added to UI via WebSocket event handler
+                        console.log('✅ Message sent via WebSocket');
+                        return;
+                    } else {
+                        console.warn('WebSocket send failed, falling back to REST API');
+                    }
+                }
+                
+                // Fallback to REST API - use unified messaging endpoint
+                console.log('📤 Sending admin message via REST API');
+                const response = await adminApiCall(`${BACKEND_URL}/api/unified-messages/send`, {
                     method: 'POST',
                     body: JSON.stringify({
+                        type: 'ADMIN_CANDIDATE',
+                        recipientId: candidateId,
                         content,
-                        messageType,
-                        priority
+                        conversationId: `admin_candidate_${candidateId}`,
+                        metadata: { messageType, priority }
                     })
                 });
                 
@@ -3582,7 +3729,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 const responseData = await response.json();
                 if (!responseData.success) {
-                    throw new Error(responseData.message || 'Failed to send message');
+                    throw new Error(responseData.error || 'Failed to send message');
                 }
                 
                 // Clear form
@@ -3592,48 +3739,18 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 // Reload messages to show the new one
                 console.log('🔄 Reloading messages after send...');
-                const messagesResponse = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`);
-                console.log('📨 Messages reload response status:', messagesResponse.status, messagesResponse.ok);
+                const messagesResponse = await adminApiCall(`${BACKEND_URL}/api/unified-messages/admin/candidate/${candidateId}`);
                 
                 if (messagesResponse.ok) {
                     const messagesData = await messagesResponse.json();
-                    console.log('📨 Reload messages response:', messagesData);
-                    console.log('📨 Messages data type:', typeof messagesData.data, 'Array?', Array.isArray(messagesData.data));
-                    
-                    if (messagesData.success) {
-                        // Extract messages array from nested structure
-                        let messages = [];
-                        if (Array.isArray(messagesData.data)) {
-                            messages = messagesData.data;
-                        } else if (messagesData.data && messagesData.data.messages && Array.isArray(messagesData.data.messages)) {
-                            messages = messagesData.data.messages;
-                        } else if (messagesData.data && typeof messagesData.data === 'object') {
-                            // Try to extract from object values
-                            messages = Object.values(messagesData.data).filter(item => 
-                                item && typeof item === 'object' && item.content
-                            );
-                        }
-                        console.log('📨 Calling displayMessages with extracted array:', messages);
-                        displayMessages(messages, candidateId);
-                    } else {
-                        console.warn('❌ Messages reload failed:', messagesData.error || messagesData.message);
+                    if (messagesData.success && messagesData.data && messagesData.data.messages) {
+                        displayMessages(messagesData.data.messages, candidateId);
                     }
                 } else {
                     console.error('❌ Messages reload HTTP error:', messagesResponse.status, messagesResponse.statusText);
                 }
                 
-                // Update the messaging button in the main table to refresh unread indicators
-                setTimeout(() => {
-                    loadCandidateProfiles(); // Update badge counts
-                    
-                    // Trigger notification refresh for potential candidate users online
-                    // Note: In future, this could be a WebSocket broadcast
-                    if (window.triggerCandidateRefresh) {
-                        window.triggerCandidateRefresh(candidateId);
-                    }
-                }, 500); // Small delay to ensure message is saved
-                
-                console.log('✅ Message sent successfully - should appear in chat automatically');
+                console.log('✅ Message sent successfully via REST API');
                 
             } catch (error) {
                 console.error('Error sending message:', error);
