@@ -2654,9 +2654,9 @@ class MyProfile {
             messagesHtml += `
                 <div style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; max-width: 80%; 
                     ${isFromAdmin 
-                        ? 'margin-left: auto; background: #e3f2fd; border-left: 4px solid #2196f3;' 
-                        : 'margin-right: auto; background: white; border: 1px solid #ddd; border-left: 4px solid #4b5c09;'}">
-                    <div style="font-size: 0.875rem; margin-bottom: 0.5rem; color: #555;">
+                        ? 'margin-right: auto; background: #e3f2fd; border-left: 4px solid #2196f3;' 
+                        : 'margin-left: auto; background: #4b5c09; color: white; border-left: 4px solid #2196f3;'}">
+                    <div style="font-size: 0.875rem; margin-bottom: 0.5rem; ${isFromAdmin ? 'color: #555;' : 'color: #fff; opacity: 0.9;'}">
                         <strong>${isFromAdmin ? '👨‍💼 Admin' : '🗳️ You'}</strong>
                         <span style="margin-left: 0.5rem; font-size: 0.75rem;">${timestamp}</span>
                         ${priorityBadge}${typeBadge}
