@@ -21,12 +21,12 @@ class UnifiedMessagingClient {
             return;
         }
 
-        const wsUrl = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.hostname;
-        const wsPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+        // Connect to backend WebSocket server
+        const backendUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001'  // Local development
+            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'; // Production
         
-        // Connect to same host as frontend, backend handles WebSocket on same port
-        const socketUrl = `${wsUrl}//${wsHost}${wsPort !== '80' && wsPort !== '443' ? ':' + wsPort : ''}`;
+        const socketUrl = backendUrl;
         
         try {
             this.socket = io(socketUrl, {
@@ -137,17 +137,24 @@ class UnifiedMessagingClient {
     // Schedule reconnection attempt
     scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error('Max reconnection attempts reached');
+            console.warn('🚫 Max WebSocket reconnection attempts reached. WebSocket disabled, using REST API fallback only.');
+            // Clear any existing socket to prevent further attempts
+            if (this.socket) {
+                this.socket.removeAllListeners();
+                this.socket.disconnect();
+                this.socket = null;
+            }
             return;
         }
 
         this.reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
         
-        console.log(`⏳ Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
+        console.log(`⏳ Scheduling WebSocket reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
         
         setTimeout(() => {
-            if (!this.isConnected) {
+            if (!this.isConnected && this.reconnectAttempts <= this.maxReconnectAttempts) {
+                console.log(`📡 Attempting WebSocket reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
                 this.connect();
             }
         }, delay);
