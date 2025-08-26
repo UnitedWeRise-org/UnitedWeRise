@@ -643,7 +643,21 @@ class MyProfile {
             setTimeout(() => {
                 this.loadCandidateMessages();
                 this.setupMessageForm();
+                
+                // Set up auto-refresh every 10 seconds for messages
+                if (this.messageRefreshInterval) {
+                    clearInterval(this.messageRefreshInterval);
+                }
+                this.messageRefreshInterval = setInterval(() => {
+                    this.loadCandidateMessages();
+                }, 10000); // Refresh every 10 seconds
             }, 100);
+        } else {
+            // Clear interval when leaving messages tab (for tabs other than photos)
+            if (this.messageRefreshInterval) {
+                clearInterval(this.messageRefreshInterval);
+                this.messageRefreshInterval = null;
+            }
         }
     }
 
@@ -2508,8 +2522,20 @@ class MyProfile {
             const response = await window.apiCall('/candidate/admin-messages');
             
             if (response.ok && response.data) {
-                // Handle the API response structure: { success: true, data: messages }
-                const messages = response.data.data || response.data;
+                // Handle the API response structure: { success: true, data: { candidate, messages, unreadAdminCount } }
+                const responseData = response.data.data || response.data;
+                console.log('Candidate messages API response:', responseData);
+                
+                // Extract messages array from nested structure
+                let messages = [];
+                if (Array.isArray(responseData)) {
+                    messages = responseData;
+                } else if (responseData.messages && Array.isArray(responseData.messages)) {
+                    messages = responseData.messages;
+                } else if (responseData.data && Array.isArray(responseData.data)) {
+                    messages = responseData.data;
+                }
+                
                 this.displayCandidateMessages(messages);
                 // Update unread badge
                 await this.updateUnreadBadge();

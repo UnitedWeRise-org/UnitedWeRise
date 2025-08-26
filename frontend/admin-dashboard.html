@@ -3613,8 +3613,20 @@ Example: adminConsole.getSuggestions('features', 'new')
                     console.log('📨 Messages data type:', typeof messagesData.data, 'Array?', Array.isArray(messagesData.data));
                     
                     if (messagesData.success) {
-                        console.log('📨 Calling displayMessages with:', messagesData.data);
-                        displayMessages(messagesData.data || [], candidateId);
+                        // Extract messages array from nested structure
+                        let messages = [];
+                        if (Array.isArray(messagesData.data)) {
+                            messages = messagesData.data;
+                        } else if (messagesData.data && messagesData.data.messages && Array.isArray(messagesData.data.messages)) {
+                            messages = messagesData.data.messages;
+                        } else if (messagesData.data && typeof messagesData.data === 'object') {
+                            // Try to extract from object values
+                            messages = Object.values(messagesData.data).filter(item => 
+                                item && typeof item === 'object' && item.content
+                            );
+                        }
+                        console.log('📨 Calling displayMessages with extracted array:', messages);
+                        displayMessages(messages, candidateId);
                     } else {
                         console.warn('❌ Messages reload failed:', messagesData.error || messagesData.message);
                     }

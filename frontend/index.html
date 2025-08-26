@@ -7301,12 +7301,17 @@
             if (authToken) {
                 fetchNotifications().catch(console.error);
                 
-                // Poll for new notifications every 30 seconds
-                setInterval(() => {
+                // Clear any existing interval
+                if (window.notificationRefreshInterval) {
+                    clearInterval(window.notificationRefreshInterval);
+                }
+                
+                // Poll for new notifications every 10 seconds
+                window.notificationRefreshInterval = setInterval(() => {
                     if (authToken) {
                         fetchNotifications().catch(console.error);
                     }
-                }, 30000);
+                }, 10000); // Changed from 30 seconds to 10 seconds
             }
         }
 
