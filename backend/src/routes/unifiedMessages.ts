@@ -149,28 +149,8 @@ router.post('/send', requireAuth, async (req: AuthRequest, res) => {
     let finalConversationId = conversationId;
     if (!finalConversationId) {
       if (type === 'ADMIN_CANDIDATE') {
-        // For admin-candidate messages, use candidate profile ID (not user ID)
-        let candidateProfileId;
-        
-        if (senderId === 'admin') {
-          candidateProfileId = recipientId; // Admin sending to candidate
-        } else {
-          // User sending to admin - need to find their candidate profile ID
-          const candidateProfile = await prisma.candidate.findUnique({
-            where: { userId: senderId },
-            select: { id: true }
-          });
-          candidateProfileId = candidateProfile?.id;
-          
-          if (!candidateProfileId) {
-            return res.status(400).json({
-              success: false,
-              error: `No candidate profile found for user ${senderId}`
-            });
-          }
-        }
-        
-        finalConversationId = `admin_candidate_${candidateProfileId}`;
+        const candidateId = senderId === 'admin' ? recipientId : senderId;
+        finalConversationId = `admin_candidate_${candidateId}`;
       } else if (type === 'USER_USER') {
         const sortedIds = [senderId, recipientId].sort();
         finalConversationId = `user_${sortedIds[0]}_${sortedIds[1]}`;

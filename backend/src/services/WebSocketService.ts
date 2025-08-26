@@ -250,25 +250,9 @@ export class WebSocketService {
     let finalConversationId = conversationId;
     if (!finalConversationId) {
       if (type === MessageType.ADMIN_CANDIDATE) {
-        // For admin-candidate messages, use candidate profile ID (not user ID)
-        let candidateProfileId;
-        
-        if (senderId === 'admin') {
-          candidateProfileId = recipientId; // Admin sending to candidate
-        } else {
-          // User sending to admin - need to find their candidate profile ID
-          const candidateProfile = await prisma.candidate.findUnique({
-            where: { userId: senderId },
-            select: { id: true }
-          });
-          candidateProfileId = candidateProfile?.id;
-          
-          if (!candidateProfileId) {
-            throw new Error(`No candidate profile found for user ${senderId}`);
-          }
-        }
-        
-        finalConversationId = `admin_candidate_${candidateProfileId}`;
+        // For admin-candidate messages, use predictable conversation ID
+        const candidateId = senderId === 'admin' ? recipientId : senderId;
+        finalConversationId = `admin_candidate_${candidateId}`;
       } else if (type === MessageType.USER_USER) {
         // For user-user messages, sort IDs for consistent conversation ID
         const sortedIds = [senderId, recipientId].sort();
