@@ -3202,7 +3202,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                             <span class="status-badge ${statusClass}">${profile.status}</span>
                         </td>
                         <td>
-                            <button onclick="openCandidateMessaging('${profile.user.id}', '${profile.name.replace(/'/g, "\\'")}')" 
+                            <button onclick="openCandidateMessaging('${profile.id}', '${profile.name.replace(/'/g, "\\'")}', '${profile.user.id}')" 
                                     style="background: ${hasUnread ? '#dc3545' : '#6c757d'}; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; position: relative;">
                                 💬 Messages
                                 ${hasUnread ? `<span style="position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center;">${unreadCount}</span>` : ''}
@@ -3404,9 +3404,9 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         }
         
-        async function openCandidateMessaging(candidateId, candidateName) {
+        async function openCandidateMessaging(candidateId, candidateName, userId) {
             try {
-                console.log('Opening messaging for candidate:', candidateId, candidateName);
+                console.log('Opening messaging for candidate:', candidateId, candidateName, 'userId:', userId);
                 
                 if (!candidateId) {
                     throw new Error('Candidate ID is missing');
@@ -3492,7 +3492,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 // Display existing messages
                 if (messages.length > 0) {
-                    displayMessages(messages, candidateId);
+                    displayMessages(messages, candidateId, userId);
                 }
                 
                 // Handle message form submission
@@ -3507,10 +3507,10 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         }
         
-        function displayMessages(messages, candidateId) {
+        function displayMessages(messages, candidateId, userId) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
-            container.dataset.candidateId = candidateId; // For WebSocket handler reference
+            container.dataset.candidateId = userId || candidateId; // Use userId for WebSocket, fallback to candidateId
             
             console.log('displayMessages called with:', messages, 'type:', typeof messages, 'isArray:', Array.isArray(messages));
             
@@ -3775,7 +3775,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 if (messagesResponse.ok) {
                     const messagesData = await messagesResponse.json();
                     if (messagesData.success && messagesData.data && messagesData.data.messages) {
-                        displayMessages(messagesData.data.messages, candidateId);
+                        displayMessages(messagesData.data.messages, candidateId, userId);
                     }
                 } else {
                     console.error('❌ Messages reload HTTP error:', messagesResponse.status, messagesResponse.statusText);
