@@ -3562,14 +3562,21 @@ Example: adminConsole.getSuggestions('features', 'new')
         
         // Setup WebSocket event handlers for admin messaging
         function setupWebSocketHandlers() {
+            console.log('🔧 Setting up WebSocket handlers for admin dashboard');
+            
             if (!window.unifiedMessaging) {
-                console.warn('WebSocket client not available');
+                console.warn('⚠️ WebSocket client not available');
                 return;
             }
             
+            console.log('✅ WebSocket client available:', {
+                isConnected: window.unifiedMessaging.isWebSocketConnected(),
+                connectionStatus: window.unifiedMessaging.isConnected
+            });
+            
             // Handle incoming admin-candidate messages
             window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
-                console.log('📨 Received admin-candidate message:', messageData);
+                console.log('📨 ADMIN RECEIVED admin-candidate message:', messageData);
                 
                 // Check if we're currently viewing this candidate's messages
                 const messagesContainer = document.getElementById('messagesContainer');
