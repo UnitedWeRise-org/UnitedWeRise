@@ -1368,6 +1368,107 @@ router.get('/candidates', requireAuth, requireAdmin, requireTOTPForAdmin, async 
   }
 });
 
+// Candidate Status Management Endpoints
+
+/**
+ * @swagger
+ * /api/admin/candidates/profiles:
+ *   get:
+ *     tags: [Admin Candidates]
+ *     summary: Get all candidate profiles with status
+ *     description: Get candidate profiles (not registrations) for status management
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
+ *         description: Filter by candidate status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of candidate profiles
+ *       401:
+ *         description: Unauthorized
+ */
+// GET /api/admin/candidates/profiles - Get candidate profiles for status management
+router.get('/candidates/profiles', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { status, page = 1, limit = 50, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: 'insensitive' } },
+        { campaignEmail: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    const [candidates, total] = await Promise.all([
+      prisma.candidate.findMany({
+        where,
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          office: {
+            include: { election: { select: { name: true, date: true, state: true } } }
+          },
+          inbox: { select: { isActive: true, allowPublicQ: true } }
+        },
+        orderBy: [
+          { statusChangedAt: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip,
+        take: Number(limit)
+      }),
+      prisma.candidate.count({ where })
+    ]);
+
+    // Get status summary counts
+    const statusCounts = await prisma.candidate.groupBy({
+      by: ['status'],
+      _count: { status: true }
+    });
+
+    const summary = Object.fromEntries(
+      statusCounts.map(item => [item.status, item._count.status])
+    );
+
+    res.json({
+      success: true,
+      data: {
+        candidates,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        },
+        summary
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching candidate profiles:', error);
+    res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
+  }
+});
+
 // GET /api/admin/candidates/:id - Get specific candidate registration details
 router.get('/candidates/:id', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
@@ -1699,106 +1800,6 @@ router.post('/candidates/:id/waiver', requireAuth, requireAdmin, requireTOTPForA
   }
 });
 
-// Candidate Status Management Endpoints
-
-/**
- * @swagger
- * /api/admin/candidates/profiles:
- *   get:
- *     tags: [Admin Candidates]
- *     summary: Get all candidate profiles with status
- *     description: Get candidate profiles (not registrations) for status management
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [ACTIVE, SUSPENDED, ENDED, REVOKED, BANNED, WITHDRAWN]
- *         description: Filter by candidate status
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 50
- *         description: Items per page
- *     responses:
- *       200:
- *         description: List of candidate profiles
- *       401:
- *         description: Unauthorized
- */
-// GET /api/admin/candidates/profiles - Get candidate profiles for status management
-router.get('/candidates/profiles', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { status, page = 1, limit = 50, search } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const where: any = {};
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { campaignEmail: { contains: search as string, mode: 'insensitive' } }
-      ];
-    }
-
-    const [candidates, total] = await Promise.all([
-      prisma.candidate.findMany({
-        where,
-        include: {
-          user: { select: { id: true, firstName: true, lastName: true, email: true } },
-          office: {
-            include: { election: { select: { name: true, date: true, state: true } } }
-          },
-          inbox: { select: { isActive: true, allowPublicQ: true } }
-        },
-        orderBy: [
-          { statusChangedAt: 'desc' },
-          { createdAt: 'desc' }
-        ],
-        skip,
-        take: Number(limit)
-      }),
-      prisma.candidate.count({ where })
-    ]);
-
-    // Get status summary counts
-    const statusCounts = await prisma.candidate.groupBy({
-      by: ['status'],
-      _count: { status: true }
-    });
-
-    const summary = Object.fromEntries(
-      statusCounts.map(item => [item.status, item._count.status])
-    );
-
-    res.json({
-      success: true,
-      data: {
-        candidates,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total,
-          pages: Math.ceil(total / Number(limit))
-        },
-        summary
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching candidate profiles:', error);
-    res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
-  }
-});
 
 /**
  * @swagger
