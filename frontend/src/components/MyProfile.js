@@ -2707,46 +2707,70 @@ class MyProfile {
         submitButton.textContent = 'Sending...';
 
         try {
-            // Use WebSocket if available, fallback to REST API
+            let messageSent = false;
+            
+            // Debug WebSocket availability
+            console.log('🔍 WebSocket Debug Info:');
+            console.log('  - window.unifiedMessaging exists:', !!window.unifiedMessaging);
+            console.log('  - isWebSocketConnected:', window.unifiedMessaging?.isWebSocketConnected?.());
+            console.log('  - isConnected:', window.unifiedMessaging?.isConnected);
+            
+            // Try WebSocket first if available and connected
             if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
-                console.log('📤 Sending candidate message via WebSocket');
-                const success = window.unifiedMessaging.sendMessage(
-                    'ADMIN_CANDIDATE',
-                    'admin', // recipient is admin
-                    content
-                );
-                
-                if (success) {
+                console.log('📤 Attempting to send candidate message via WebSocket');
+                try {
+                    const success = window.unifiedMessaging.sendMessage(
+                        'ADMIN_CANDIDATE',
+                        'admin', // recipient is admin
+                        content
+                    );
+                    
+                    if (success) {
+                        console.log('✅ WebSocket message sent successfully');
+                        messageSent = true;
+                        // Clear form immediately for WebSocket (message will appear via event handler)
+                        contentInput.value = '';
+                        this.showToast('Message sent successfully!');
+                    } else {
+                        console.warn('⚠️ WebSocket send returned false, falling back to REST API');
+                    }
+                } catch (wsError) {
+                    console.error('❌ WebSocket send error:', wsError);
+                    console.log('🔄 Falling back to REST API due to WebSocket error');
+                }
+            } else {
+                console.log('🔌 WebSocket not available or not connected, using REST API');
+            }
+            
+            // Use REST API if WebSocket failed or unavailable
+            if (!messageSent) {
+                console.log('📤 Sending candidate message via REST API');
+                const response = await window.apiCall('/unified-messages/send', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'ADMIN_CANDIDATE',
+                        recipientId: 'admin',
+                        content
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('✅ REST API message sent successfully');
                     // Clear form
                     contentInput.value = '';
+                    
+                    // Reload messages to show the new one
+                    await this.loadCandidateMessages();
+                    
                     this.showToast('Message sent successfully!');
-                    return; // Message will be added to UI via WebSocket event handler
+                    messageSent = true;
                 } else {
-                    console.warn('WebSocket send failed, falling back to REST API');
+                    throw new Error(response.data?.error || 'Failed to send message');
                 }
             }
             
-            // Fallback to REST API
-            console.log('📤 Sending candidate message via REST API');
-            const response = await window.apiCall('/unified-messages/send', {
-                method: 'POST',
-                body: JSON.stringify({
-                    type: 'ADMIN_CANDIDATE',
-                    recipientId: 'admin',
-                    content
-                })
-            });
-
-            if (response.ok) {
-                // Clear form
-                contentInput.value = '';
-                
-                // Reload messages to show the new one
-                await this.loadCandidateMessages();
-                
-                this.showToast('Message sent successfully!');
-            } else {
-                throw new Error(response.data?.error || 'Failed to send message');
+            if (!messageSent) {
+                throw new Error('Failed to send message via both WebSocket and REST API');
             }
         } catch (error) {
             console.error('Error sending message:', error);
