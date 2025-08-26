@@ -7155,7 +7155,9 @@
                 'post_comment': '💬',
                 'mention': '🏷️',
                 'follow': '👤',
-                'system': '⚙️'
+                'system': '⚙️',
+                'admin_message': '🛡️',
+                'ADMIN_MESSAGE': '🛡️'
             };
             return icons[type] || '🔔';
         }
@@ -7177,6 +7179,9 @@
                     return `${data.followerName || 'Someone'} started following you`;
                 case 'mention':
                     return `${data.mentionerName || 'Someone'} mentioned you`;
+                case 'admin_message':
+                case 'ADMIN_MESSAGE':
+                    return `New message from site administrator`;
                 default:
                     return notification.title || 'New notification';
             }
@@ -7259,6 +7264,16 @@
                 case 'post_like':
                 case 'post_comment':
                     // Could open the specific post
+                    break;
+                case 'admin_message':
+                case 'ADMIN_MESSAGE':
+                    // Open My Profile on Messages tab
+                    if (window.myProfile) {
+                        showMyProfile();
+                        setTimeout(() => {
+                            window.myProfile.switchTab('messages');
+                        }, 100);
+                    }
                     break;
                 // Add more cases as needed
             }
