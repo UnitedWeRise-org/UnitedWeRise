@@ -4,17 +4,27 @@ class UnifiedMessagingClient {
         this.socket = null;
         this.isConnected = false;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
+        this.maxReconnectAttempts = 3; // Reduced attempts
         this.messageHandlers = new Map();
         this.typingHandlers = new Map();
         this.connectionHandlers = [];
+        this.disabled = false; // Circuit breaker
         
-        // Initialize connection
-        this.connect();
+        // Delay initial connection to prevent immediate spam
+        setTimeout(() => {
+            if (!this.disabled) {
+                this.connect();
+            }
+        }, 2000);
     }
 
     // Connect to WebSocket server
     connect() {
+        if (this.disabled) {
+            console.log('🚫 WebSocket disabled due to repeated failures');
+            return;
+        }
+
         const authToken = localStorage.getItem('authToken');
         if (!authToken) {
             console.warn('No auth token available for WebSocket connection');
@@ -137,7 +147,9 @@ class UnifiedMessagingClient {
     // Schedule reconnection attempt
     scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.warn('🚫 Max WebSocket reconnection attempts reached. WebSocket disabled, using REST API fallback only.');
+            console.warn('🚫 Max WebSocket reconnection attempts reached. WebSocket permanently disabled, using REST API fallback only.');
+            // Permanently disable WebSocket
+            this.disabled = true;
             // Clear any existing socket to prevent further attempts
             if (this.socket) {
                 this.socket.removeAllListeners();
