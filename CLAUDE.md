@@ -64,17 +64,29 @@ DELETE FROM "StripeCustomer";
 **Run**: `npx prisma db execute --file scripts/clear-stripe-customers.sql --schema prisma/schema.prisma`
 **Result**: Users will get new live Stripe customers on first live payment
 
-### 🚨 CRITICAL - Backend Deployment Process (ALWAYS FOLLOW)
-**WHEN USER SAYS "rebuild backend" or "deploy backend" YOU MUST:**
+### 🚨 CRITICAL - Schema-First Deployment Process (ALWAYS FOLLOW)
+**MANDATORY 3-STEP DEPLOYMENT SEQUENCE:**
+
 ```bash
-# STEP 1: Build new Docker image from current GitHub code (MANDATORY)
+# STEP 1: DATABASE SCHEMA FIRST (If models/enums added)
+# Check: Does this change add/modify Prisma models or enums?
+# → YES: Run migration BEFORE any backend deployment
+cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+
+# STEP 2: Build new Docker image from current GitHub code
 az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
-# STEP 2: Deploy the new image to Container Apps (ONLY AFTER STEP 1)
+# STEP 3: Deploy the new image to Container Apps  
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
 ```
-**NEVER skip Step 1!** Running `az containerapp update` without building a new Docker image just restarts old code.
-**These are NOT separate processes** - they are two required steps of ONE deployment process.
+
+**CRITICAL LESSONS LEARNED (August 25, 2025):**
+- **Schema dependency failures**: Backend code referencing non-existent database models causes 404 errors on ALL routes in that file
+- **Root cause**: CandidateAdminMessage model referenced in admin.ts but table didn't exist in production database  
+- **Time waste**: Multiple deployment cycles failed because schema wasn't updated first
+- **Solution**: ALWAYS check for new Prisma models and run migrations before deploying backend code
+
+**NEVER skip Step 1!** Backend code depending on missing schema will fail at runtime with 404 route errors.
 
 ### 🚨 CRITICAL - Server Operations
 - **PROHIBITED**: Never run `npm run dev`, `npm start`, or server startup commands
@@ -172,6 +184,19 @@ authToken          // Global variable should match
 
 ### 🚨 CRITICAL: Route Loading & Data Issues Debugging (August 2025)
 
+#### Schema Dependency Failures Causing 404 Route Errors (August 25, 2025)
+**Problem**: All routes in admin.ts returning 404 "Route not found" despite code being deployed
+**Root Cause**: Backend code referencing CandidateAdminMessage model but database table didn't exist
+**Symptoms**: 
+- Routes work locally but fail in production with 404
+- Other routes in different files work fine
+- Backend starts successfully but specific route file fails to load
+**RESOLUTION**: Run database migration BEFORE backend deployment
+- Command: `npx prisma db execute --file scripts/add-candidate-admin-messaging.sql --schema prisma/schema.prisma`
+- Result: All admin.ts routes immediately started working (404 → 401 auth errors)
+
+**CRITICAL INSIGHT**: When Prisma models reference non-existent database tables/enums, the entire route file fails to load at runtime, causing 404 errors for ALL routes in that file.
+
 #### TypeScript Compilation Errors Blocking Route Loading (August 16, 2025)
 **Problem**: All API routes returning 404 "Route not found" despite successful route mounting in server.ts
 **Root Cause**: TypeScript compilation errors preventing Express.js from loading route modules
@@ -185,24 +210,30 @@ authToken          // Global variable should match
 **RESOLVED**: Fixed admin.ts TypeScript errors and AI insights date logic
 
 **DEBUGGING PROCESS** (Future Reference):
-1. **ALWAYS verify TypeScript compilation** when debugging route loading issues
+1. **FIRST: Check for schema dependencies** when debugging 404 route errors
+   - Symptom: Specific route file returns 404 for ALL endpoints while other files work
+   - Check: Does the route file import any new Prisma models?
+   - Solution: Run database migration for missing tables/enums before deployment
+   - Command: `npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma`
+
+2. **SECOND: Verify TypeScript compilation** when debugging route loading issues
    - Command: `cd backend && npm run build` - must complete without errors
    - Symptom: All API routes return 404 even for basic endpoints
    - Common Errors: Field name mismatches, object property issues
 
-2. **Check database schema field names** when working with Prisma models
+3. **Check database schema field names** when working with Prisma models
    - Use: `grep -A 15 "model ModelName" backend/prisma/schema.prisma`
    - Fix: Update field references to match actual schema
 
-3. **Dynamic Date Issues**: Avoid using relative date calculations like `new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)`
+4. **Dynamic Date Issues**: Avoid using relative date calculations like `new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)`
    - Problem: Creates "rolling" dates that change each time API is called
    - Solution: Use fixed historical dates like `new Date('2025-08-19T10:30:00.000Z')`
 
-4. **Deploy with forced revision** if Docker build encounters encoding errors
+5. **Deploy with forced revision** if Docker build encounters encoding errors
    - Azure CLI Unicode issues: Use environment variable update to force new revision
    - Command: `az containerapp update --name app-name --resource-group rg-name --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)"`
 
-5. **Verify deployment success** by checking backend uptime
+6. **Verify deployment success** by checking backend uptime
    - Health check: `curl https://backend-url/health | grep uptime`
    - New deployment: Uptime should be <60 seconds
    - Stale deployment: Uptime in minutes/hours indicates old revision

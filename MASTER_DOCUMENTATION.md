@@ -1,9 +1,14 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 25, 2025 (4:45 PM EST)  
-**Version**: 4.11.1 (Extended TOTP Session Duration)  
+**Last Updated**: August 25, 2025 (6:20 PM EST)  
+**Version**: 4.12.0 (Candidate-Admin Messaging System)  
 **Status**: 🟢 PRODUCTION LIVE
 
 ### 🆕 RECENT CHANGES (August 25, 2025)
+
+**Candidate-Admin Direct Messaging System**: Complete bidirectional communication system between site admins and registered candidates deployed. Features dedicated messaging tabs in candidate profiles, admin dashboard integration with unread count badges, and comprehensive database schema with threading support.
+
+**CRITICAL Deployment Lesson Learned**: Schema dependencies must be resolved BEFORE backend deployment. When Prisma models reference non-existent database tables, entire route files fail to load causing 404 errors for ALL endpoints in that file. Mandatory deployment sequence now established: Schema → Backend → Verification.
+
 **TOTP Session Duration Extended**: Admin dashboard TOTP tokens now last 24 hours instead of 5 minutes, eliminating frequent re-authentication interruptions while maintaining security through initial TOTP verification.
 
 ---
@@ -3937,10 +3942,263 @@ POST /api/admin/candidates/:id/waiver  // Process fee waiver with email notifica
 - **Frontend**: `admin-dashboard.html` - Complete candidate admin interface (350+ lines)
 - **Backend**: `admin.ts` - 5 new API endpoints with full CRUD operations
 - **Navigation**: Enhanced admin menu with candidate management section
+
+### 🆕 CANDIDATE-ADMIN DIRECT MESSAGING SYSTEM (August 25, 2025)
+
+**Status**: ✅ **IMPLEMENTED & DEPLOYED** - Complete bidirectional messaging system
+
+**Overview**: Direct communication channel between site admins and registered candidates, providing professional support channel for campaign-related inquiries, technical assistance, and administrative guidance.
+
+#### Core Features
+
+**Candidate-Side Interface**:
+- **Profile Integration**: Dedicated "Messages from Admins" tab in candidate profiles
+- **Conversation View**: Chronological message history with admin responses
+- **Two-Way Communication**: Candidates can send messages to admins and receive responses
+- **Real-Time Notifications**: Visual indicators for new messages from administrators
+- **Professional Context**: Clean, focused interface for campaign-related communications
+
+**Admin Dashboard Integration**:
+- **Unified Messaging Interface**: Complete message management in candidate profiles table
+- **Visual Notification System**: Red message buttons with unread count badges for immediate attention
+- **Conversation Threading**: Full message history per candidate with chronological ordering
+- **Quick Response System**: Inline messaging modal for efficient admin communication
+- **Candidate Context**: Messages displayed alongside candidate profile information
+
+#### Technical Implementation
+
+**Database Schema**:
+```prisma
+model CandidateAdminMessage {
+  id          String                @id @default(cuid())
+  candidateId String
+  senderId    String?               // User ID of sender (null for anonymous admin)
+  isFromAdmin Boolean               @default(false)
+  messageType AdminMessageType     @default(GENERAL)
+  priority    AdminMessagePriority @default(NORMAL)
+  content     String
+  threadId    String?              // For conversation threading
+  replyToId   String?             // For direct reply relationships
+  readByAdmin Boolean              @default(false)
+  readByCandidate Boolean          @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  candidate   Candidate            @relation(fields: [candidateId], references: [id])
+  sender      User?                @relation("SentAdminMessages", fields: [senderId], references: [id])
+  readByUser  User?                @relation("ReadAdminMessages", fields: [readByUserId], references: [id])
+  readByUserId String?
+
+  @@index([candidateId, createdAt])
+  @@index([isFromAdmin, readByAdmin])
+  @@index([threadId])
+}
+
+enum AdminMessageType {
+  GENERAL
+  TECHNICAL_SUPPORT
+  CAMPAIGN_GUIDANCE  
+  POLICY_INQUIRY
+  PLATFORM_ASSISTANCE
+}
+
+enum AdminMessagePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+```
+
+**API Endpoints**:
+
+*Admin Endpoints* (TOTP Protected):
+```javascript
+GET  /api/admin/candidates/:candidateId/messages    // View conversation with candidate
+POST /api/admin/candidates/:candidateId/messages    // Send message to candidate
+GET  /api/admin/messages/overview                   // Dashboard overview with unread counts
+```
+
+*Candidate Endpoints*:
+```javascript
+GET  /api/candidate/admin-messages                  // View messages from admin
+POST /api/candidate/admin-messages                  // Send message to admin  
+GET  /api/candidate/admin-messages/unread-count     // Get notification badge count
+```
+
+#### User Interface Components
+
+**Admin Dashboard Enhancements**:
+- **Messaging Column**: Added "Messages" column to candidate profiles table
+- **Visual Indicators**: Color-coded buttons (red for unread, gray for no messages)
+- **Unread Badges**: Numerical indicators showing count of unread messages
+- **Modal Interface**: Professional messaging window with full conversation history
+- **Integrated Access**: Messages accessible directly from candidate management interface
+
+**Candidate Profile Integration**:
+- **Dedicated Tab**: "Messages from Admins" tab in candidate profiles
+- **Message History**: Complete chronological conversation display
+- **Response Interface**: Text area for sending messages to site administrators
+- **Status Indicators**: Visual feedback for message delivery and admin reading status
+
+#### Future Enhancements (Planned)
+
+**Delegation System**:
+- **Candidate Liaisons**: Assign specific admin staff to candidate communications
+- **Regional Management**: Territory-based message routing for geographic coverage
+- **Escalation Workflows**: Priority-based message routing and response requirements
+
+**AI Integration**:
+- **Priority Assessment**: Automated message priority assignment based on content analysis
+- **Response Templates**: AI-suggested responses for common inquiries
+- **Sentiment Analysis**: Emotional tone detection for improved response prioritization
+
+#### Integration Points
+
+**Related Systems**:
+- **{#candidate-registration-admin-system}**: Messages linked to candidate profiles and registration data
+- **{#security-authentication}**: TOTP protection for all admin messaging endpoints
+- **{#monitoring-admin}**: Message activity tracked in administrative audit logs
+- **{#social-features}**: Notification system integration for real-time message alerts
+
+**Files Modified**:
+- **Database**: `schema.prisma` - CandidateAdminMessage model with full threading support
+- **Backend**: `admin.ts` - Admin messaging endpoints with TOTP protection
+- **Backend**: `candidateAdminMessages.ts` - New route file for candidate-side messaging
+- **Backend**: `server.ts` - Route registration for candidate messaging APIs
+- **Frontend**: `admin-dashboard.html` - Messaging interface in candidate profiles table
+- **Frontend**: `MyProfile.js` - Candidate messaging tab integration
+- **Database**: Migration script for production deployment
+
+#### Database Migration & Critical Deployment Lessons
+
+**🚨 CRITICAL DEPLOYMENT FAILURE (August 25, 2025)**
+**Problem**: Backend deployed successfully but ALL admin routes returned 404 errors
+**Root Cause**: CandidateAdminMessage model referenced in admin.ts but database table didn't exist
+**Time Lost**: Multiple deployment cycles, extensive debugging
+**Resolution**: Database migration run BEFORE backend deployment
+
+**LESSON LEARNED**: When Prisma models reference non-existent database tables/enums, the entire route file fails to load at runtime, causing 404 errors for ALL routes in that file.
+
+**MANDATORY DEPLOYMENT SEQUENCE**:
+1. **Schema First**: Run database migration if new models/enums added
+2. **Code Second**: Deploy backend code that depends on the schema  
+3. **Test Third**: Verify endpoints work with complete infrastructure
+
+**Production Deployment Script**:
+```sql
+-- Script: scripts/add-candidate-admin-messaging.sql
+-- CRITICAL: Must be run BEFORE backend deployment
+
+-- Create enums for message types and priorities
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AdminMessageType') THEN
+        CREATE TYPE "AdminMessageType" AS ENUM (
+            'SUPPORT_REQUEST', 'STATUS_INQUIRY', 'TECHNICAL_ISSUE',
+            'POLICY_QUESTION', 'FEATURE_REQUEST', 'APPEAL_MESSAGE', 'GENERAL'
+        );
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AdminMessagePriority') THEN
+        CREATE TYPE "AdminMessagePriority" AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
+    END IF;
+END $$;
+
+-- Create the CandidateAdminMessage table
+CREATE TABLE IF NOT EXISTS "CandidateAdminMessage" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "candidateId" TEXT NOT NULL,
+    "senderId" TEXT,
+    "isFromAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "messageType" "AdminMessageType" NOT NULL DEFAULT 'GENERAL',
+    "priority" "AdminMessagePriority" NOT NULL DEFAULT 'NORMAL',
+    "subject" TEXT,
+    "content" TEXT NOT NULL,
+    "attachments" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "readAt" TIMESTAMP(3),
+    "readBy" TEXT,
+    "threadId" TEXT,
+    "replyToId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT "CandidateAdminMessage_candidateId_fkey" FOREIGN KEY ("candidateId") REFERENCES "Candidate"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "CandidateAdminMessage_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "CandidateAdminMessage_readBy_fkey" FOREIGN KEY ("readBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "CandidateAdminMessage_replyToId_fkey" FOREIGN KEY ("replyToId") REFERENCES "CandidateAdminMessage"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- Create indexes for performance  
+CREATE INDEX IF NOT EXISTS "CandidateAdminMessage_candidateId_createdAt_idx" ON "CandidateAdminMessage"("candidateId", "createdAt");
+CREATE INDEX IF NOT EXISTS "CandidateAdminMessage_threadId_idx" ON "CandidateAdminMessage"("threadId");
+CREATE INDEX IF NOT EXISTS "CandidateAdminMessage_isRead_priority_idx" ON "CandidateAdminMessage"("isRead", "priority");
+CREATE INDEX IF NOT EXISTS "CandidateAdminMessage_messageType_createdAt_idx" ON "CandidateAdminMessage"("messageType", "createdAt");
+
+-- Create trigger to update updatedAt timestamp
+CREATE OR REPLACE FUNCTION update_candidate_admin_message_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updatedAt" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_candidate_admin_message_updated_at ON "CandidateAdminMessage";
+CREATE TRIGGER update_candidate_admin_message_updated_at
+    BEFORE UPDATE ON "CandidateAdminMessage"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_candidate_admin_message_updated_at();
+```
+
+**Migration Command** (MUST be run first):
+```bash
+cd backend && npx prisma db execute --file scripts/add-candidate-admin-messaging.sql --schema prisma/schema.prisma
+```
 - **Documentation**: Complete system documentation and implementation guide
 
-### Deployment Status
-- **Backend**: Live on revision --0000086 with all candidate admin APIs
+### Deployment Status & Lessons Learned
+
+#### ✅ SUCCESSFULLY DEPLOYED (August 25, 2025)
+- **Backend**: Live on revision --0000104 with complete candidate-admin messaging system
+- **Database**: CandidateAdminMessage schema deployed and operational
+- **Frontend**: Admin dashboard messaging interface fully integrated
+- **Status**: All endpoints working (404 errors resolved after schema migration)
+
+#### 🚨 CRITICAL DEPLOYMENT LESSONS LEARNED
+
+**Schema Dependency Failure Pattern**:
+1. **Symptom**: Backend deploys successfully but specific route file returns 404 for ALL endpoints
+2. **Root Cause**: Route file imports Prisma models that reference non-existent database tables/enums
+3. **Impact**: Entire route file fails to load at runtime, causing 404 errors for all routes in that file
+4. **Other Routes**: Unaffected route files continue working normally
+5. **Solution**: Run database migration BEFORE backend deployment
+
+**Time Impact**: 
+- **Failed Deployment Cycles**: 4+ attempts over 45+ minutes
+- **Root Cause Discovery**: Schema dependency not checked first
+- **Resolution Time**: 2 minutes after running database migration
+- **Lesson**: Schema-first deployment prevents all future occurrences
+
+**Deployment Sequence Established**:
+```bash
+# 1. SCHEMA FIRST (if models added)
+npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+
+# 2. BACKEND DEPLOYMENT
+az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+
+# 3. VERIFICATION
+curl -s backend-url/api/admin/candidates/profiles # Should return 401, not 404
+```
+
+**Never Again**: This schema-dependency pattern is now documented and will be checked first in all future deployments.
 - **Frontend**: Deployed to admin dashboard with full management interface
 - **Database**: No migrations required, uses existing schema
 - **Security**: TOTP protection active on all administrative functions
@@ -4851,6 +5109,41 @@ import legislativeRoutes from './routes/legislative';
 ---
 
 ## 📝 DEVELOPMENT PRACTICES {#development-practices}
+
+### 🚨 MANDATORY Schema-First Deployment Process (CRITICAL)
+
+**Established August 25, 2025** after critical deployment failure that caused 45+ minutes of debugging time.
+
+**SCHEMA DEPENDENCY CHECK (FIRST STEP)**:
+```bash
+# Before ANY backend deployment, ask:
+# "Does this change add/modify Prisma models or enums?"
+
+# If YES → Run database migration FIRST:
+cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+
+# If NO → Proceed with normal deployment
+```
+
+**COMPLETE DEPLOYMENT SEQUENCE**:
+```bash
+# 1. SCHEMA (if new models/enums)
+npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+
+# 2. BACKEND
+az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+
+# 3. VERIFICATION  
+curl -s backend-url/api/endpoint # Check 401 (auth) not 404 (missing route)
+```
+
+**WHY THIS IS CRITICAL**:
+- **Failure Pattern**: Backend code referencing missing database models causes entire route files to fail at runtime
+- **Symptom**: All endpoints in affected route file return 404 errors while other routes work fine  
+- **Root Cause**: Prisma models import non-existent database tables/enums
+- **Solution**: Create database schema BEFORE deploying code that depends on it
+- **Never Skip**: This check prevents all schema dependency failures
 
 ### 🧹 Repository Management (August 21, 2025)
 #### Development File Cleanup
