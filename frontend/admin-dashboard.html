@@ -3578,16 +3578,40 @@ Example: adminConsole.getSuggestions('features', 'new')
             window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
                 console.log('📨 ADMIN RECEIVED admin-candidate message:', messageData);
                 
-                // Check if we're currently viewing this candidate's messages
+                // Debug container state
                 const messagesContainer = document.getElementById('messagesContainer');
+                console.log('🔍 Container Debug:', {
+                    exists: !!messagesContainer,
+                    candidateId: messagesContainer?.dataset?.candidateId,
+                    expectedConversationId: messagesContainer?.dataset?.candidateId ? `admin_candidate_${messagesContainer.dataset.candidateId}` : 'none',
+                    messageConversationId: messageData.conversationId,
+                    messageSender: messageData.senderId,
+                    display: messagesContainer?.style?.display
+                });
+                
+                // Check if we're currently viewing this candidate's messages
                 if (messagesContainer && messagesContainer.dataset.candidateId) {
                     const currentCandidateId = messagesContainer.dataset.candidateId;
-                    const conversationId = `admin_candidate_${currentCandidateId}`;
+                    const expectedConversationId = `admin_candidate_${currentCandidateId}`;
                     
-                    // Only add to display if it's for the current conversation
-                    if (messageData.conversationId === conversationId) {
+                    console.log('🔍 Conversation Match Check:', {
+                        expected: expectedConversationId,
+                        received: messageData.conversationId,
+                        match: messageData.conversationId === expectedConversationId
+                    });
+                    
+                    // Check if this message is for the current conversation OR from current candidate
+                    const isCurrentConversation = messageData.conversationId === expectedConversationId;
+                    const isFromCurrentCandidate = messageData.senderId === currentCandidateId;
+                    
+                    if (isCurrentConversation || isFromCurrentCandidate) {
+                        console.log('✅ Adding message to display for candidate:', currentCandidateId);
                         addMessageToDisplay(messageData, currentCandidateId);
+                    } else {
+                        console.log('⚠️ Message not for current conversation - not displaying');
                     }
+                } else {
+                    console.log('⚠️ No messages container or candidate ID not set');
                 }
                 
                 // Update any notification badges or counters
