@@ -3447,6 +3447,14 @@ Example: adminConsole.getSuggestions('features', 'new')
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
             
+            console.log('displayMessages called with:', messages, 'type:', typeof messages, 'isArray:', Array.isArray(messages));
+            
+            // Ensure messages is an array
+            if (!Array.isArray(messages)) {
+                console.warn('Messages is not an array, converting:', messages);
+                messages = [];
+            }
+            
             // Sort messages by creation date (oldest first)
             messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
             
@@ -3525,6 +3533,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 const messagesResponse = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`);
                 if (messagesResponse.ok) {
                     const messagesData = await messagesResponse.json();
+                    console.log('Reload messages response:', messagesData);
                     if (messagesData.success) {
                         displayMessages(messagesData.data || [], candidateId);
                     }
