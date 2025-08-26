@@ -477,6 +477,15 @@
                                 <option value="BANNED">Banned</option>
                                 <option value="WITHDRAWN">Withdrawn</option>
                             </select>
+                            <select id="messageFilter" style="padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107;">
+                                <option value="all">All Messages</option>
+                                <option value="unread">🔴 Unread Messages Only</option>
+                            </select>
+                            <select id="sortOrder" style="padding: 0.5rem;">
+                                <option value="recent">Most Recent</option>
+                                <option value="unread">Unread First</option>
+                                <option value="name">By Name</option>
+                            </select>
                             <button onclick="loadCandidateProfiles()" class="nav-button">🔍 Search</button>
                             <button onclick="showCreateProfileModal()" class="nav-button">➕ Create Profile</button>
                         </div>
@@ -3053,12 +3062,27 @@ Example: adminConsole.getSuggestions('features', 'new')
             // Load data for the active tab
             if (tab === 'profiles') {
                 loadCandidateProfiles();
+                // Set up periodic refresh for unread counts (every 30 seconds)
+                if (window.profilesRefreshInterval) clearInterval(window.profilesRefreshInterval);
+                window.profilesRefreshInterval = setInterval(() => {
+                    if (document.getElementById('profilesTab').classList.contains('active')) {
+                        loadCandidateProfiles();
+                    }
+                }, 30000);
+            } else {
+                // Clear refresh interval when leaving profiles tab
+                if (window.profilesRefreshInterval) {
+                    clearInterval(window.profilesRefreshInterval);
+                    window.profilesRefreshInterval = null;
+                }
             }
         }
         
         async function loadCandidateProfiles() {
             const search = document.getElementById('profileSearch').value;
             const status = document.getElementById('profileStatusFilter').value;
+            const messageFilter = document.getElementById('messageFilter').value;
+            const sortOrder = document.getElementById('sortOrder').value;
             
             try {
                 let url = `${BACKEND_URL}/api/admin/candidates/profiles?`;
@@ -3086,7 +3110,30 @@ Example: adminConsole.getSuggestions('features', 'new')
                 console.log('Parsed response data:', data);
                 
                 if (data.success) {
-                    displayCandidateProfiles(data.data.candidates);
+                    // Apply client-side filtering and sorting
+                    let filteredProfiles = data.data.candidates || [];
+                    
+                    // Filter by unread messages if selected
+                    if (messageFilter === 'unread') {
+                        filteredProfiles = filteredProfiles.filter(profile => profile.unreadMessages > 0);
+                    }
+                    
+                    // Sort based on selected order
+                    if (sortOrder === 'unread') {
+                        // Sort by unread count descending, then by name
+                        filteredProfiles.sort((a, b) => {
+                            if (b.unreadMessages !== a.unreadMessages) {
+                                return b.unreadMessages - a.unreadMessages;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
+                    } else if (sortOrder === 'name') {
+                        filteredProfiles.sort((a, b) => a.name.localeCompare(b.name));
+                    } else { // 'recent' - default sort from backend
+                        // Keep original order (most recent activity first)
+                    }
+                    
+                    displayCandidateProfiles(filteredProfiles);
                     displayProfilesSummary(data.data.summary);
                 } else {
                     throw new Error(data.message || data.error || 'Failed to load profiles');
@@ -3186,7 +3233,18 @@ Example: adminConsole.getSuggestions('features', 'new')
         function displayProfilesSummary(summary) {
             const container = document.getElementById('profilesSummary');
             
+            // Calculate total unread messages from current filtered profiles
+            const profilesTable = document.querySelectorAll('#profilesTableBody tr');
+            let totalUnread = 0;
+            profilesTable.forEach(row => {
+                const badge = row.querySelector('button[onclick*="openCandidateMessaging"] span');
+                if (badge) {
+                    totalUnread += parseInt(badge.textContent) || 0;
+                }
+            });
+            
             const statuses = [
+                { key: 'UNREAD', label: '💬 Unread Messages', color: '#dc3545', value: totalUnread },
                 { key: 'ACTIVE', label: 'Active', color: '#28a745' },
                 { key: 'SUSPENDED', label: 'Suspended', color: '#ffc107' },
                 { key: 'ENDED', label: 'Ended', color: '#17a2b8' },
@@ -3197,10 +3255,11 @@ Example: adminConsole.getSuggestions('features', 'new')
             
             let html = '';
             statuses.forEach(status => {
-                const count = summary[status.key] || 0;
+                const count = status.value !== undefined ? status.value : (summary[status.key] || 0);
+                const isUnread = status.key === 'UNREAD';
                 html += `
-                    <div class="stat-card" style="border-left: 4px solid ${status.color}">
-                        <div class="stat-value">${count}</div>
+                    <div class="stat-card" style="border-left: 4px solid ${status.color}; ${isUnread && count > 0 ? 'background: #fff3cd;' : ''}">
+                        <div class="stat-value" style="${isUnread && count > 0 ? 'color: #dc3545; font-weight: bold;' : ''}">${count}</div>
                         <div class="stat-label">${status.label}</div>
                     </div>
                 `;
@@ -3563,8 +3622,8 @@ Example: adminConsole.getSuggestions('features', 'new')
                     console.error('❌ Messages reload HTTP error:', messagesResponse.status, messagesResponse.statusText);
                 }
                 
-                // Update the messaging button in the main table to remove unread indicator
-                loadCandidateProfiles();
+                // Update the messaging button in the main table to refresh unread indicators
+                setTimeout(() => loadCandidateProfiles(), 500); // Small delay to ensure message is saved
                 
                 console.log('✅ Message sent successfully - should appear in chat automatically');
                 
