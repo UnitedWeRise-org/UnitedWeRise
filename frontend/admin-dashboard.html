@@ -3530,19 +3530,29 @@ Example: adminConsole.getSuggestions('features', 'new')
                 document.getElementById('messagePriority').value = 'NORMAL';
                 
                 // Reload messages to show the new one
+                console.log('🔄 Reloading messages after send...');
                 const messagesResponse = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`);
+                console.log('📨 Messages reload response status:', messagesResponse.status, messagesResponse.ok);
+                
                 if (messagesResponse.ok) {
                     const messagesData = await messagesResponse.json();
-                    console.log('Reload messages response:', messagesData);
+                    console.log('📨 Reload messages response:', messagesData);
+                    console.log('📨 Messages data type:', typeof messagesData.data, 'Array?', Array.isArray(messagesData.data));
+                    
                     if (messagesData.success) {
+                        console.log('📨 Calling displayMessages with:', messagesData.data);
                         displayMessages(messagesData.data || [], candidateId);
+                    } else {
+                        console.warn('❌ Messages reload failed:', messagesData.error || messagesData.message);
                     }
+                } else {
+                    console.error('❌ Messages reload HTTP error:', messagesResponse.status, messagesResponse.statusText);
                 }
                 
                 // Update the messaging button in the main table to remove unread indicator
                 loadCandidateProfiles();
                 
-                alert('Message sent successfully!');
+                console.log('✅ Message sent successfully - should appear in chat automatically');
                 
             } catch (error) {
                 console.error('Error sending message:', error);
