@@ -3363,7 +3363,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 }
                 
                 // Load existing messages for this candidate
-                const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`);
                 console.log('Messages API response:', response);
                 
                 if (!response.ok) {
@@ -3498,7 +3498,7 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
             
             try {
-                const response = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`, {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`, {
                     method: 'POST',
                     body: JSON.stringify({
                         content,
@@ -3507,8 +3507,13 @@ Example: adminConsole.getSuggestions('features', 'new')
                     })
                 });
                 
-                if (!response.success) {
-                    throw new Error(response.message || 'Failed to send message');
+                if (!response.ok) {
+                    throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+                }
+                
+                const responseData = await response.json();
+                if (!responseData.success) {
+                    throw new Error(responseData.message || 'Failed to send message');
                 }
                 
                 // Clear form
@@ -3517,9 +3522,12 @@ Example: adminConsole.getSuggestions('features', 'new')
                 document.getElementById('messagePriority').value = 'NORMAL';
                 
                 // Reload messages to show the new one
-                const messagesResponse = await adminApiCall(`/api/admin/candidates/${candidateId}/messages`);
-                if (messagesResponse.success) {
-                    displayMessages(messagesResponse.data || [], candidateId);
+                const messagesResponse = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}/messages`);
+                if (messagesResponse.ok) {
+                    const messagesData = await messagesResponse.json();
+                    if (messagesData.success) {
+                        displayMessages(messagesData.data || [], candidateId);
+                    }
                 }
                 
                 // Update the messaging button in the main table to remove unread indicator
