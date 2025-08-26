@@ -33,6 +33,8 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
+                console.log('🔍 MyProfile: User data loaded:', this.userProfile);
+                console.log('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
@@ -66,6 +68,8 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
+                console.log('🔍 MyProfile: User data loaded:', this.userProfile);
+                console.log('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
