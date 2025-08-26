@@ -3202,7 +3202,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                             <span class="status-badge ${statusClass}">${profile.status}</span>
                         </td>
                         <td>
-                            <button onclick="openCandidateMessaging('${profile.id}', '${profile.name.replace(/'/g, "\\'")}')" 
+                            <button onclick="openCandidateMessaging('${profile.user.id}', '${profile.name.replace(/'/g, "\\'")}')" 
                                     style="background: ${hasUnread ? '#dc3545' : '#6c757d'}; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; position: relative;">
                                 💬 Messages
                                 ${hasUnread ? `<span style="position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center;">${unreadCount}</span>` : ''}
