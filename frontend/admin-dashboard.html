@@ -3695,17 +3695,29 @@ Example: adminConsole.getSuggestions('features', 'new')
             const container = document.getElementById('messagesContainer');
             if (!container) return;
             
-            const isFromAdmin = messageData.senderId === 'admin';
+            // Check if message is from admin (admin sends with their user ID, not 'admin')
+            // If senderId is NOT the candidateId, it must be from admin
+            const isFromAdmin = messageData.senderId !== candidateId;
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isFromAdmin ? 'from-admin' : 'from-candidate'}`;
             
-            const time = new Date(messageData.createdAt).toLocaleString();
+            // Apply proper styling based on who sent the message
+            messageDiv.style.cssText = `
+                margin-bottom: 1rem; 
+                padding: 0.75rem; 
+                border-radius: 8px; 
+                max-width: 80%; 
+                ${isFromAdmin 
+                    ? 'margin-left: auto; background: #4b5c09; color: white; text-align: right;' 
+                    : 'margin-right: auto; background: white; border: 1px solid #ddd;'}
+            `;
+            
+            const time = new Date(messageData.createdAt || messageData.timestamp).toLocaleString();
             messageDiv.innerHTML = `
-                <div class="message-header">
-                    <strong>${isFromAdmin ? 'Admin' : 'Candidate'}:</strong>
-                    <span class="message-time">${time}</span>
+                <div style="font-size: 0.875rem; margin-bottom: 0.5rem; opacity: 0.8;">
+                    <strong>${isFromAdmin ? 'Admin' : 'Candidate'}</strong>
+                    <span style="margin-left: 0.5rem; font-size: 0.75rem;">${time}</span>
                 </div>
-                <div class="message-content">${messageData.content}</div>
+                <div style="white-space: pre-wrap; line-height: 1.4;">${messageData.content}</div>
             `;
             
             container.appendChild(messageDiv);

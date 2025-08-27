@@ -133,6 +133,7 @@ export class WebSocketService {
         type,
         content: message.content,
         recipientId,
+        conversationId: message.conversationId,
         timestamp: message.createdAt
       });
 
@@ -152,16 +153,16 @@ export class WebSocketService {
         timestamp: new Date()
       };
 
-      // Send to recipient
+      // Send to recipient (but not back to sender)
       if (type === MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
-        // Admin to candidate message
-        this.io.to(`user:${recipientId}`).emit('new_message', payload);
+        // Admin to candidate message - send to candidate's room (exclude sender)
+        socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
       } else if (type === MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
-        // Candidate to admin message
-        this.io.to('admin:room').emit('new_message', payload);
+        // Candidate to admin message - send to admin room (exclude sender)
+        socket.broadcast.to('admin:room').emit('new_message', payload);
       } else if (type === MessageType.USER_USER) {
-        // User to user message
-        this.io.to(`user:${recipientId}`).emit('new_message', payload);
+        // User to user message - send to recipient (exclude sender)
+        socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
       }
 
       console.log(`Message sent: ${type} from ${senderId} to ${recipientId}`);

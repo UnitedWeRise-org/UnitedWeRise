@@ -87,9 +87,9 @@ export declare class TopicService {
         state: string | null;
         district: string | null;
         isActive: boolean;
-        category: string | null;
-        description: string | null;
         title: string;
+        description: string | null;
+        category: string | null;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;
@@ -287,9 +287,9 @@ export declare class TopicService {
         state: string | null;
         district: string | null;
         isActive: boolean;
-        category: string | null;
-        description: string | null;
         title: string;
+        description: string | null;
+        category: string | null;
         argumentsFor: string[];
         argumentsAgainst: string[];
         neutralSummary: string | null;

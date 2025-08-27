@@ -25,6 +25,7 @@ const elections_1 = __importDefault(require("./routes/elections"));
 const candidates_1 = __importDefault(require("./routes/candidates"));
 const candidateMessages_1 = __importDefault(require("./routes/candidateMessages"));
 const candidateAdminMessages_1 = __importDefault(require("./routes/candidateAdminMessages"));
+const unifiedMessages_1 = __importDefault(require("./routes/unifiedMessages"));
 const topics_1 = __importDefault(require("./routes/topics"));
 const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
 const photos_1 = __importDefault(require("./routes/photos"));
@@ -43,7 +44,7 @@ const trendingTopics_1 = __importDefault(require("./routes/trendingTopics"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const search_1 = __importDefault(require("./routes/search"));
 const totp_1 = __importDefault(require("./routes/totp"));
-const websocket_1 = require("./websocket");
+const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -57,8 +58,8 @@ const httpServer = http_1.default.createServer(app);
 // Prisma singleton is now imported from lib/prisma.ts to prevent connection leaks
 // Previously, 60+ files were each creating their own PrismaClient instance
 const PORT = process.env.PORT || 3001;
-// Initialize WebSocket server
-const io = (0, websocket_1.initializeWebSocket)(httpServer);
+// Initialize unified WebSocket service
+const webSocketService = new WebSocketService_1.default(httpServer);
 // Security Middleware
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -142,6 +143,7 @@ app.use('/api/elections', elections_1.default);
 app.use('/api/candidates', candidates_1.default);
 app.use('/api/candidate-messages', candidateMessages_1.default);
 app.use('/api/candidate', candidateAdminMessages_1.default);
+app.use('/api/unified-messages', unifiedMessages_1.default);
 app.use('/api/topics', topics_1.default);
 app.use('/api/topic-navigation', topicNavigation_1.default);
 app.use('/api/photos', photos_1.default);
@@ -178,6 +180,7 @@ app.get('/health', async (req, res) => {
             ...healthMetrics,
             database: 'Connected',
             websocket: 'Active',
+            onlineUsers: webSocketService.getOnlineUsersCount(),
             timestamp: new Date().toISOString(),
             version: process.env.npm_package_version || '1.2.1',
             deployedAt: deploymentTime.toISOString(),
