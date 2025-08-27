@@ -153,10 +153,18 @@ export class WebSocketService {
         timestamp: new Date()
       };
 
-      // Send to recipient (but not back to sender)
+      // Send to recipient
       if (type === MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
-        // Admin to candidate message - send to candidate's room (exclude sender)
-        socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
+        // Admin to candidate message
+        // Special case: If admin is messaging themselves (testing scenario), use io.to instead of broadcast
+        if (senderId === recipientId) {
+          // Admin messaging their own candidate profile - include sender
+          this.io.to(`user:${recipientId}`).emit('new_message', payload);
+          console.log(`Admin self-message: ${senderId} messaging own candidate profile`);
+        } else {
+          // Normal case: exclude sender to prevent duplicates
+          socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
+        }
       } else if (type === MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
         // Candidate to admin message - send to admin room (exclude sender)
         socket.broadcast.to('admin:room').emit('new_message', payload);

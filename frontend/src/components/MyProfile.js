@@ -27,14 +27,33 @@ class MyProfile {
         // Handle incoming admin-candidate messages (when admin sends to candidate)
         window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
             console.log('📨 Candidate received admin message:', messageData);
+            console.log('📊 Message details:', {
+                senderId: messageData.senderId,
+                recipientId: messageData.recipientId,
+                conversationId: messageData.conversationId,
+                content: messageData.content
+            });
             
-            // Only display messages FROM admin (not our own messages)
+            // Only display messages FROM admin (not our own messages as candidate)
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             const myUserId = currentUser?.id;
+            const myCandidateId = currentUser?.candidateProfile?.id;
             
-            // Skip if this is our own message (sent by us)
-            if (messageData.senderId === myUserId) {
-                console.log('📤 Skipping own message (will be added via MESSAGE_SENT handler)');
+            console.log('🔍 User check:', {
+                myUserId,
+                myCandidateId,
+                messageSenderId: messageData.senderId,
+                isOwnMessage: messageData.senderId === myUserId || messageData.senderId === myCandidateId
+            });
+            
+            // Skip only if this is a message we sent AS A CANDIDATE
+            // Allow admin messages even if admin is the same user account
+            // Admin messages will have senderId as the admin's user ID
+            // Candidate messages will have senderId as the candidate's user ID
+            // Since we're receiving ADMIN_CANDIDATE messages here, check the conversation direction
+            if (messageData.recipientId === 'admin' && messageData.senderId === myUserId) {
+                // This is our own message sent TO admin as a candidate
+                console.log('📤 Skipping own candidate→admin message (handled by MESSAGE_SENT)');
                 return;
             }
             
