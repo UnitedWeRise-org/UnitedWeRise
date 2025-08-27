@@ -3454,7 +3454,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                             <small style="color: #666;">Candidate ID: ${candidateId}</small>
                         </div>
                         
-                        <div id="messagesContainer" style="flex: 1; overflow-y: auto; padding: 1rem; background: #fafafa;">
+                        <div id="messagesContainer" data-user-id="${userId}" data-candidate-profile-id="${candidateId}" style="flex: 1; overflow-y: auto; padding: 1rem; background: #fafafa;">
                             ${messages.length === 0 ? '<p style="text-align: center; color: #666; font-style: italic;">No messages yet</p>' : ''}
                         </div>
                         
@@ -3717,14 +3717,18 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
             
             try {
+                // Get the user ID from the messages container dataset
+                const messagesContainer = document.getElementById('messagesContainer');
+                const recipientUserId = messagesContainer?.dataset?.userId || candidateId;
+                
                 // Use WebSocket if available, fallback to REST API
                 if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
-                    console.log('📤 Sending admin message via WebSocket');
+                    console.log('📤 Sending admin message via WebSocket to user:', recipientUserId);
                     const success = window.unifiedMessaging.sendMessage(
                         'ADMIN_CANDIDATE',
-                        candidateId,
+                        recipientUserId, // Use user ID for WebSocket
                         content,
-                        `admin_candidate_${candidateId}`
+                        `admin_candidate_${recipientUserId}`
                     );
                     
                     if (success) {

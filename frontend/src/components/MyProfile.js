@@ -28,6 +28,16 @@ class MyProfile {
         window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
             console.log('📨 Candidate received admin message:', messageData);
             
+            // Only display messages FROM admin (not our own messages)
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const myUserId = currentUser?.id;
+            
+            // Skip if this is our own message (sent by us)
+            if (messageData.senderId === myUserId) {
+                console.log('📤 Skipping own message (will be added via MESSAGE_SENT handler)');
+                return;
+            }
+            
             // Check if we're currently viewing the admin messages tab
             if (this.currentTab === 'messages') {
                 this.addMessageToDisplay(messageData);
