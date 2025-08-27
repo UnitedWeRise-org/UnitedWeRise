@@ -149,8 +149,8 @@ router.post('/send', requireAuth, async (req: AuthRequest, res) => {
     let finalConversationId = conversationId;
     if (!finalConversationId) {
       if (type === 'ADMIN_CANDIDATE') {
-        const candidateId = senderId === 'admin' ? recipientId : senderId;
-        finalConversationId = `admin_candidate_${candidateId}`;
+        const candidateUserId = senderId === 'admin' ? recipientId : senderId;
+        finalConversationId = `admin_${candidateUserId}`;
       } else if (type === 'USER_USER') {
         const sortedIds = [senderId, recipientId].sort();
         finalConversationId = `user_${sortedIds[0]}_${sortedIds[1]}`;

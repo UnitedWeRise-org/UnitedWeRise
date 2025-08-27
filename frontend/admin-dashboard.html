@@ -3578,6 +3578,12 @@ Example: adminConsole.getSuggestions('features', 'new')
             window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
                 console.log('📨 ADMIN RECEIVED admin-candidate message:', messageData);
                 
+                // Skip messages sent by admin (these should only be handled by MESSAGE_SENT handler)
+                if (messageData.senderId === 'admin') {
+                    console.log('⚠️ Skipping admin\'s own message - handled by MESSAGE_SENT');
+                    return;
+                }
+                
                 // Debug container state
                 const messagesContainer = document.getElementById('messagesContainer');
                 console.log('🔍 Container Debug:', {
@@ -3590,9 +3596,9 @@ Example: adminConsole.getSuggestions('features', 'new')
                 });
                 
                 // Check if we're currently viewing this candidate's messages
-                if (messagesContainer && messagesContainer.dataset.candidateId) {
-                    const currentCandidateId = messagesContainer.dataset.candidateId;
-                    const expectedConversationId = `admin_candidate_${currentCandidateId}`;
+                if (messagesContainer && messagesContainer.dataset.userId) {
+                    const currentUserId = messagesContainer.dataset.userId;
+                    const expectedConversationId = `admin_${currentUserId}`;
                     
                     console.log('🔍 Conversation Match Check:', {
                         expected: expectedConversationId,
@@ -3600,18 +3606,18 @@ Example: adminConsole.getSuggestions('features', 'new')
                         match: messageData.conversationId === expectedConversationId
                     });
                     
-                    // Check if this message is for the current conversation OR from current candidate
+                    // Check if this message is for the current conversation OR from current user
                     const isCurrentConversation = messageData.conversationId === expectedConversationId;
-                    const isFromCurrentCandidate = messageData.senderId === currentCandidateId;
+                    const isFromCurrentUser = messageData.senderId === currentUserId;
                     
-                    if (isCurrentConversation || isFromCurrentCandidate) {
-                        console.log('✅ Adding message to display for candidate:', currentCandidateId);
-                        addMessageToDisplay(messageData, currentCandidateId);
+                    if (isCurrentConversation || isFromCurrentUser) {
+                        console.log('✅ Adding message to display for user:', currentUserId);
+                        addMessageToDisplay(messageData, currentUserId);
                     } else {
                         console.log('⚠️ Message not for current conversation - not displaying');
                     }
                 } else {
-                    console.log('⚠️ No messages container or candidate ID not set');
+                    console.log('⚠️ No messages container or user ID not set');
                 }
                 
                 // Update any notification badges or counters
@@ -3624,18 +3630,26 @@ Example: adminConsole.getSuggestions('features', 'new')
                 
                 // Add sent message to display if we're viewing this conversation
                 const messagesContainer = document.getElementById('messagesContainer');
-                if (messagesContainer && messagesContainer.dataset.candidateId) {
-                    const currentCandidateId = messagesContainer.dataset.candidateId;
-                    const conversationId = `admin_candidate_${currentCandidateId}`;
+                if (messagesContainer && messagesContainer.dataset.userId) {
+                    const currentUserId = messagesContainer.dataset.userId;
+                    const expectedConversationId = `admin_${currentUserId}`;
                     
-                    if (messageData.conversationId === conversationId) {
+                    console.log('📨 MESSAGE_SENT: Checking conversation match:', {
+                        expected: expectedConversationId,
+                        received: messageData.conversationId,
+                        match: messageData.conversationId === expectedConversationId
+                    });
+                    
+                    if (messageData.conversationId === expectedConversationId) {
                         addMessageToDisplay({
                             id: messageData.messageId || Date.now(),
                             senderId: 'admin',
                             content: messageData.content,
                             createdAt: messageData.timestamp || new Date().toISOString(),
                             type: 'ADMIN_CANDIDATE'
-                        }, currentCandidateId);
+                        }, currentUserId);
+                    } else {
+                        console.log('⚠️ MESSAGE_SENT: Conversation ID mismatch - not displaying');
                     }
                 }
             });
@@ -3721,14 +3735,19 @@ Example: adminConsole.getSuggestions('features', 'new')
                 const messagesContainer = document.getElementById('messagesContainer');
                 const recipientUserId = messagesContainer?.dataset?.userId || candidateId;
                 
+                console.log('📤 Admin sending message:', {
+                    recipientUserId,
+                    conversationId: `admin_${recipientUserId}`
+                });
+                
                 // Use WebSocket if available, fallback to REST API
                 if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
                     console.log('📤 Sending admin message via WebSocket to user:', recipientUserId);
                     const success = window.unifiedMessaging.sendMessage(
                         'ADMIN_CANDIDATE',
-                        recipientUserId, // Use user ID for WebSocket
+                        recipientUserId, // Use user ID for WebSocket routing
                         content,
-                        `admin_candidate_${recipientUserId}`
+                        `admin_${recipientUserId}` // Simple conversation ID: admin_[userID]
                     );
                     
                     if (success) {

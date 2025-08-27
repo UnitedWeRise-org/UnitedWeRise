@@ -250,9 +250,9 @@ export class WebSocketService {
     let finalConversationId = conversationId;
     if (!finalConversationId) {
       if (type === MessageType.ADMIN_CANDIDATE) {
-        // For admin-candidate messages, use predictable conversation ID
-        const candidateId = senderId === 'admin' ? recipientId : senderId;
-        finalConversationId = `admin_candidate_${candidateId}`;
+        // For admin-candidate messages, always use candidate user ID
+        const candidateUserId = senderId === 'admin' ? recipientId : senderId;
+        finalConversationId = `admin_${candidateUserId}`;
       } else if (type === MessageType.USER_USER) {
         // For user-user messages, sort IDs for consistent conversation ID
         const sortedIds = [senderId, recipientId].sort();
