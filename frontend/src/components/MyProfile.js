@@ -75,15 +75,29 @@ class MyProfile {
      */
     addMessageToDisplay(messageData) {
         const container = document.getElementById('candidateMessagesContainer');
-        if (!container) return;
+        if (!container) {
+            console.warn('❌ candidateMessagesContainer not found');
+            return;
+        }
+        
+        console.log('📝 Adding message to display:', messageData);
+        
+        // Determine if message is from admin
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        const myUserId = currentUser?.id;
+        
+        // Check various ways the message might indicate it's from admin
+        const isFromAdmin = messageData.isFromAdmin !== undefined 
+            ? messageData.isFromAdmin 
+            : (messageData.senderId === 'admin' || (messageData.senderId && messageData.senderId !== myUserId));
         
         const messageDiv = document.createElement('div');
-        messageDiv.className = `candidate-message ${messageData.isFromAdmin ? 'from-admin' : 'from-candidate'}`;
+        messageDiv.className = `candidate-message ${isFromAdmin ? 'from-admin' : 'from-candidate'}`;
         
-        const time = new Date(messageData.createdAt).toLocaleString();
+        const time = new Date(messageData.createdAt || messageData.timestamp || Date.now()).toLocaleString();
         messageDiv.innerHTML = `
             <div class="message-header">
-                <strong>${messageData.isFromAdmin ? 'Admin' : 'You'}:</strong>
+                <strong>${isFromAdmin ? 'Admin' : 'You'}:</strong>
                 <span class="message-time">${time}</span>
             </div>
             <div class="message-content">${messageData.content}</div>
@@ -91,6 +105,7 @@ class MyProfile {
         
         container.appendChild(messageDiv);
         container.scrollTop = container.scrollHeight;
+        console.log('✅ Message added to display as', isFromAdmin ? 'from-admin' : 'from-candidate');
     }
 
     async render(containerId) {
@@ -2738,8 +2753,19 @@ class MyProfile {
                     if (success) {
                         console.log('✅ WebSocket message sent successfully');
                         messageSent = true;
-                        // Clear form immediately for WebSocket (message will appear via event handler)
+                        // Clear form
                         contentInput.value = '';
+                        
+                        // Immediately add the message to display (don't wait for WebSocket confirmation)
+                        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                        this.addMessageToDisplay({
+                            id: Date.now().toString(),
+                            senderId: currentUser?.id,
+                            content: content,
+                            createdAt: new Date().toISOString(),
+                            isFromAdmin: false
+                        });
+                        
                         this.showToast('Message sent successfully!');
                     } else {
                         console.warn('⚠️ WebSocket send returned false, falling back to REST API');
