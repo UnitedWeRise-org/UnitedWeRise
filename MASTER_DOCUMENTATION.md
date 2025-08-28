@@ -1,7 +1,39 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 27, 2025 (5:45 PM EST)  
-**Version**: 4.15.0 (Unified WebSocket Messaging - FULLY OPERATIONAL)  
+**Last Updated**: August 28, 2025 (4:45 PM EST)  
+**Version**: 4.17.0 (User-to-Candidate Messaging & Notification System - FULLY OPERATIONAL)  
 **Status**: 🟢 PRODUCTION LIVE
+
+### 🎉 MAJOR ACHIEVEMENT (August 28, 2025) - COMPREHENSIVE MESSAGING & NOTIFICATION SYSTEM COMPLETE
+
+**✅ USER-TO-CANDIDATE MESSAGING SYSTEM**: Complete messaging infrastructure allowing direct voter-candidate communication through professional inbox interface with real-time WebSocket delivery and conversation threading.
+
+**✅ COMPREHENSIVE NOTIFICATION SETTINGS**: Full opt-out system for all external notifications including browser notifications, email preferences, and candidate-specific communications with granular controls and smart defaults.
+
+**✅ CANDIDATE INBOX INTERFACE**: Professional inbox within Candidate Dashboard featuring conversation management, unread indicators, reply system, and real-time updates with mobile-responsive design.
+
+**✅ PRIVACY-FIRST IMPLEMENTATION**: All external notifications respect user preferences with hierarchical settings, permission management, and graceful fallbacks ensuring user consent is paramount.
+
+**✅ ENHANCED CANDIDATE STATUS DETECTION**: New API endpoint `/candidate-policy-platform/candidate/status` provides real-time verification of candidate status with detailed candidate information including office and election data.
+
+**🎯 SYSTEM INTEGRATION**: All candidate features now seamlessly integrated:
+- **Frontend**: Conditional UI display based on candidate verification
+- **Backend**: New GET/PUT endpoints for policy position management  
+- **Database**: Automatic version tracking with `previousVersionId` relationships
+- **Styling**: Professional dashboard interface with responsive design
+
+**📁 COMPONENT ARCHITECTURE UPDATE (August 28, 2025):**
+- **`MyProfile.js`**: General user settings (Demographics, Political, Photos, Messages, Settings) - Policy Platform removed
+- **`PolicyPlatformManager.js`**: Standalone Policy Platform component with full CRUD operations
+- **`candidate-system-integration.js`**: Candidate Dashboard integration with Policy Platform access
+- **Separation of Concerns**: Clear distinction between user profiles and candidate campaign management
+
+### 🆕 RECENT CHANGES (August 28, 2025) - Site Branding & Implementation
+
+**✅ Site Title Implementation**: Added "United [Logo] We Rise Beta" to header with proper positioning and responsive design. Beta badge positioned as superscript over the "e" in "Rise" for clear development status indication.
+
+**✅ Candidate Hub Rename**: "AI-Enhanced Candidate System" renamed to clean, simple "Candidate Hub" throughout the platform.
+
+**🛡️ Documentation Protocol Enhancement**: Added mandatory pre-implementation protocol to CLAUDE.md to prevent redundant feature creation and accidental deletions of existing functionality. Protocol includes systematic documentation review, codebase verification, and comprehensive mapping requirements.
 
 ### 🎉 MAJOR ACHIEVEMENT (August 27, 2025) - WEBSOCKET MESSAGING FULLY OPERATIONAL
 
@@ -1557,7 +1589,7 @@ POST /api/totp/regenerate-backup-codes  // Generate new backup codes
 ##### Implementation Files (Complete)
 - `backend/src/routes/totp.ts` - Complete TOTP API endpoints with token generation
 - `backend/src/middleware/totpAuth.ts` - Admin TOTP enforcement with token validation
-- `frontend/src/components/MyProfile.js` - User settings interface (v1.1.5)
+- `frontend/src/components/MyProfile.js` - User settings interface (v1.1.5) - ✅ Policy Platform removed (Aug 28)
 - `frontend/admin-dashboard.html` - Admin TOTP integration with adminApiCall()
 - `frontend/src/styles/main.css` - TOTP modal and UI styling
 
@@ -3785,6 +3817,12 @@ POST /api/elections/candidates/compare # Compare multiple candidates
 
 **Status**: ✅ **FULLY DEPLOYED & OPERATIONAL** - Production Ready August 23, 2025
 
+**IMPORTANT**: Registration is just the first step. Candidates must be:
+1. Registered with payment completed
+2. Manually verified by admin
+3. Approved and profile created
+4. ONLY THEN do they gain access to candidate-specific features like Policy Platform
+
 ### Logical Registration Flow (Updated August 22, 2025)
 The candidate registration process follows a secure **Payment → Office Selection** flow:
 
@@ -5695,7 +5733,7 @@ Election (created/found)
 - `backend/src/routes/totp.ts` - Complete TOTP API with 6 endpoints
 - `backend/src/middleware/totpAuth.ts` - Admin enforcement middleware
 - `backend/prisma/schema.prisma` - Database schema additions
-- `frontend/src/components/MyProfile.js` - User settings interface (300+ lines)
+- `frontend/src/components/MyProfile.js` - User settings interface (300+ lines) - ✅ Policy Platform removed (Aug 28)
 - `frontend/src/styles/main.css` - Complete modal and UI styling
 
 **API Endpoints Created**:
@@ -5772,7 +5810,8 @@ POST /api/totp/regenerate-backup-codes  # Generate new backup codes
 - ✅ **Logical Flow**: Payment commitment before office selection
 
 **Files Modified**: 
-- `frontend/src/integrations/candidate-system-integration.js` - Core registration flow logic
+- `frontend/src/integrations/candidate-system-integration.js` - Core registration flow logic + ✅ Policy Platform integration (Aug 28)
+- `frontend/src/components/PolicyPlatformManager.js` - ✅ NEW: Standalone Policy Platform component (Aug 28)
 - Enhanced step display, office filtering, and payment validation
 
 #### Session 1: Complete Candidate Admin Management System (Early Morning)
@@ -6215,12 +6254,144 @@ showDefaultView()
 
 ---
 
+### August 28, 2025 - User-to-Candidate Messaging & Notification System
+
+#### **COMPREHENSIVE MESSAGING SYSTEM IMPLEMENTATION** ✅ **COMPLETED**
+
+**Major Achievement**: Complete User-to-Candidate messaging system with real-time notifications and comprehensive privacy controls
+
+#### **WebSocket System Extension**
+**Problem**: Need to enable direct communication between voters and candidates through existing messaging infrastructure
+**Solution**: Extended existing WebSocket system with new `USER_CANDIDATE` message type
+
+**Technical Implementation**:
+1. **Backend WebSocket Service**: Added `USER_CANDIDATE` message type to existing enum and routing logic
+2. **Database Integration**: Extended `UnifiedMessage` and `ConversationMeta` tables with `USER_CANDIDATE` support
+3. **API Endpoints**: Added REST endpoints for candidate inbox management and conversation history
+4. **Frontend WebSocket Client**: Added convenience function `sendUserCandidateMessage()`
+
+#### **Candidate Inbox Interface**
+**Achievement**: Professional inbox interface integrated into Candidate Dashboard
+
+**Features Implemented**:
+- ✅ **Sidebar Conversations List**: Real-time conversation list with unread counts and timestamps
+- ✅ **Message Threading**: Full conversation view with sender identification and timestamps
+- ✅ **Reply System**: Integrated reply functionality with option for public responses
+- ✅ **Real-time Updates**: WebSocket listeners for live message updates
+- ✅ **Notification Integration**: Browser and in-app notifications for new messages
+
+**User Experience**:
+- **Professional Interface**: Clean, responsive design matching platform aesthetics
+- **Contextual Information**: Shows sender details, conversation history, and unread indicators
+- **Accessibility**: Proper keyboard navigation and screen reader support
+- **Mobile Responsive**: Works across all device sizes
+
+#### **Comprehensive Notification Settings System** ✅ **COMPLETED**
+**Major Achievement**: Complete opt-out system for all external notifications with granular controls
+
+**Privacy-First Implementation**:
+- ✅ **Browser Notifications**: Main toggle with sub-controls for messages, likes, comments
+- ✅ **Email Notifications**: Separate controls for important messages, weekly digests, security alerts
+- ✅ **Candidate-Specific**: Special controls for constituent messages and election reminders
+- ✅ **Hierarchical Settings**: Disabling main categories auto-disables sub-options
+- ✅ **Permission Management**: Browser permission request and status checking
+
+**Backend API Implementation**:
+- **GET /user/notification-preferences**: Fetch preferences with intelligent defaults
+- **PUT /user/notification-preferences**: Update preferences with validation
+- **Database Integration**: Uses existing `notificationPreferences` JSON field in User model
+
+**User Control Features**:
+- **Test Functionality**: "Test Notification" button to verify settings work
+- **Permission Guidance**: Clear instructions for browser permissions
+- **Smart Dependencies**: Visual feedback when settings are disabled due to parent toggles
+- **Contextual Visibility**: Candidate settings only shown to verified candidates
+
+#### **Real-time Notification System**
+**Implementation**: All notifications now check user preferences before displaying
+
+**Notification Types Covered**:
+- **Browser Notifications**: System respects user permissions and preferences
+- **In-app Toast Notifications**: Can be disabled via candidate inbox preferences  
+- **Future Email Notifications**: Infrastructure ready for email notification implementation
+- **Graceful Fallback**: If preferences can't be loaded, system defaults to no notifications
+
+#### **Files Modified**:
+**Backend Extensions**:
+- `backend/src/types/messaging.ts` - Added `USER_CANDIDATE` message type
+- `backend/src/services/WebSocketService.ts` - Extended routing and conversation logic
+- `backend/prisma/schema.prisma` - Added `USER_CANDIDATE` to UnifiedMessageType enum
+- `backend/src/routes/unifiedMessages.ts` - Added candidate inbox API endpoints
+- `backend/src/routes/users.ts` - Added notification preferences API endpoints
+
+**Frontend Implementations**:
+- `frontend/src/integrations/candidate-system-integration.js` - Complete candidate inbox interface
+- `frontend/src/components/MyProfile.js` - Comprehensive notification settings UI
+- `frontend/src/js/websocket-client.js` - Added `sendUserCandidateMessage()` function
+
+**Key Technical Decisions**:
+- **Reused Existing Infrastructure**: Leveraged existing WebSocket and messaging tables
+- **Conversation ID Pattern**: `candidate_{candidateId}_user_{userId}` for consistency
+- **Privacy-First Design**: All external notifications have opt-out controls
+- **Real-time Updates**: WebSocket integration for immediate message delivery
+- **Professional UI**: Integrated seamlessly into existing Candidate Dashboard
+
+#### **System Integration Points**:
+- **Candidate Dashboard**: Inbox accessible via "View Messages" button
+- **WebSocket Messaging**: Real-time bidirectional communication
+- **User Settings**: Notification preferences in MyProfile Settings tab
+- **Authentication**: All endpoints protected with existing auth middleware
+- **Database**: Uses existing `UnifiedMessage` and `ConversationMeta` tables
+
+**🎯 BUSINESS IMPACT**: Enables direct voter-candidate communication with professional tools for campaign management while maintaining strict privacy controls and user consent.
+
+---
+
 ## 🔮 FUTURE ROADMAP {#future-roadmap}
+
+### 🚀 IMMEDIATE PRIORITIES (August 28, 2025)
+
+#### **Candidate Hub Enhancements** ✅ **COMPLETED**
+- [x] Rename 'AI-Enhanced Candidate System' to 'Candidate Hub'
+- [x] Fix Policy Position Editing - Implement actual edit functionality
+- [x] Add version tracking for policy position updates
+- [x] Create hidden Candidate Dashboard tab within Candidate Hub (candidates only)
+- [x] Extract Policy Platform from MyProfile to standalone component
+- [x] Integrate Policy Platform into Candidate Dashboard
+- [x] Remove Policy Platform from MyProfile
+
+#### **User-to-Candidate Communication System** ✅ **CORE COMPLETED** (August 28, 2025)
+- [x] Build comprehensive User-to-Candidate messaging inbox system
+- [x] Implement real-time inquiry notifications (browser, email, badges)
+- [x] Add reply-to-topic functionality for candidate responses
+- [ ] Implement AI-summarized top issues toggle/modal for candidate inbox
+- [ ] Add public reply option that posts to candidate's public feed
+
+#### **Notification System Implementation** ✅ **COMPLETED** (August 28, 2025)
+- [x] Add comprehensive notification profile settings (opt-in/out for all external notifications)
+- [x] Implement browser notification permission management with testing
+- [x] Add email notification preferences with granular controls
+- [x] Update all notification logic to check user preferences before sending
+- [x] Extend notifications to all messaging systems platform-wide
+
+#### **Election Display Improvements**
+- [ ] Show candidate's own election status in dashboard
+- [ ] Display competitor information (other candidates in same race)
+- [ ] Add filing deadline reminders for candidates
+- [ ] Generate polling data based on sentiment around issues/candidates
+- [ ] Improve organization for displaying upcoming elections information
+
+#### **Platform Feature Development**
+- [ ] Implement News API utilization throughout platform
+- [ ] Create 'Journalist' profile flag/elevation system
+- [ ] Fix map functionality (currently flashy but useless)
+- [ ] Add beta feature notifications with intent explanations
 
 ### Phase 1: Recent Completions (August 2025)
 - [x] **TOTP/2FA Implementation**: Complete two-factor authentication system
-- [x] Admin dashboard security enhancements
-- [x] Database schema access for administrators
+- [x] **WebSocket Messaging System**: Complete bidirectional real-time messaging
+- [x] **Admin Dashboard Candidate Management**: Full candidate lifecycle management
+- [x] **Site Title with Beta Badge**: Added "United [Logo] We Rise Beta" to header
 - [ ] Fix legislative routes loading issue
 - [ ] Resolve checkbox display bug
 - [ ] Optimize trending cache system

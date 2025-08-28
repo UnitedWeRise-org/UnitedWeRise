@@ -185,8 +185,12 @@
         </div>
         
         <div class="top-bar-center">
-            <div class="logo">
-                <img src="UWR Logo on Circle.png" alt="United We Rise" class="logo-circle" onclick="window.location.href='/'" title="United We Rise - Home">
+            <div class="site-title-container" onclick="window.location.href='/'" title="United We Rise - Home">
+                <span class="site-title-left">United</span>
+                <div class="logo">
+                    <img src="UWR Logo on Circle.png" alt="United We Rise" class="logo-circle">
+                </div>
+                <span class="site-title-right">We Ris<span class="rise-e">e<span class="beta-badge">Beta</span></span></span>
             </div>
         </div>
         
@@ -507,7 +511,7 @@
                 <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
                 <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
                 <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
-                <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb" style="display: none;">🗺️ <span class="label">Map</span></div>
+                <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
                 <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
@@ -681,6 +685,7 @@
             </div>
         </div>
     </div>
+
 
     <div id="detail-panel" class="detail-panel hidden" data-offset="2">
         <div class="panel-header">
@@ -7335,6 +7340,7 @@
                 fetchNotifications().catch(console.error);
             }
         };
+
 
         // Close notifications when clicking outside
         document.addEventListener('click', (event) => {

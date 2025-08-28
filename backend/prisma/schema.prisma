@@ -324,6 +324,7 @@ model Candidate {
   photos             Photo[]
   politicalInquiries PoliticalInquiry[]
   publicQAs          PublicQA[]
+  policyPositions    PolicyPosition[]
 
   @@index([officeId])
   @@index([party])
@@ -2229,4 +2230,90 @@ model ConversationMeta {
 enum UnifiedMessageType {
   USER_USER         // Legacy sidebar messaging between users
   ADMIN_CANDIDATE   // Admin-candidate messaging system
+  USER_CANDIDATE    // User-to-candidate messaging system
+}
+
+// ===============================================================
+// CANDIDATE POLICY PLATFORM SYSTEM
+// ===============================================================
+
+model PolicyCategory {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  icon           String?
+  displayOrder   Int              @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  positions      PolicyPosition[]
+
+  @@index([displayOrder])
+  @@index([isActive])
+}
+
+model PolicyPosition {
+  id                String             @id @default(cuid())
+  candidateId       String
+  categoryId        String
+  title             String
+  summary           String             // Short summary for comparison view
+  content           String             // Full detailed position
+  stance            PolicyStance?
+  priority          Int                @default(5) // 1-10 scale
+  evidenceLinks     String[]           @default([])
+  keyPoints         String[]           @default([])
+  embedding         Float[]            @default([])
+  isPublished       Boolean            @default(false)
+  publishedAt       DateTime?
+  version           Int                @default(1)
+  previousVersionId String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  candidate         Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  category          PolicyCategory     @relation(fields: [categoryId], references: [id])
+  previousVersion   PolicyPosition?    @relation("PolicyVersions", fields: [previousVersionId], references: [id])
+  versions          PolicyPosition[]   @relation("PolicyVersions")
+  
+  comparisons1      PolicyComparison[] @relation("Position1")
+  comparisons2      PolicyComparison[] @relation("Position2")
+
+  @@index([candidateId])
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([priority])
+  @@unique([candidateId, categoryId, version])
+}
+
+model PolicyComparison {
+  id               String         @id @default(cuid())
+  position1Id      String
+  position2Id      String
+  similarityScore  Float          // 0.0 to 1.0
+  agreementLevel   AgreementLevel?
+  keyDifferences   String[]       @default([])
+  analysisNotes    String?
+  lastAnalyzed     DateTime       @default(now())
+  
+  position1        PolicyPosition @relation("Position1", fields: [position1Id], references: [id], onDelete: Cascade)
+  position2        PolicyPosition @relation("Position2", fields: [position2Id], references: [id], onDelete: Cascade)
+
+  @@index([similarityScore])
+  @@unique([position1Id, position2Id])
+}
+
+// Policy Platform Enums
+enum PolicyStance {
+  SUPPORT
+  OPPOSE
+  NEUTRAL
+  CONDITIONAL
+}
+
+enum AgreementLevel {
+  AGREE
+  DISAGREE
+  PARTIAL
+  UNCLEAR
 }

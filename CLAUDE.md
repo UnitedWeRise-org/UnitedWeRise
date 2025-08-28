@@ -50,6 +50,76 @@ THE_NEWS_API_KEY=your_thenewsapi_key_here
 
 ---
 
+## 🚨 CRITICAL: Claude Technical Limitations & Documentation Protocol
+
+### The Core Problem
+- **MASTER_DOCUMENTATION.md is ~15,000+ lines** - Claude can only read ~2,000 lines at a time
+- **Snippet-based reading leads to false assumptions** - "Not in this snippet = doesn't exist"
+- **Causes redundant implementations** - Recreating existing systems because they weren't found in limited reads
+- **Results in accidental deletions** - Removing "deprecated" code that's actually functional
+
+### 🛡️ MANDATORY PRE-IMPLEMENTATION PROTOCOL
+**BEFORE making ANY code changes, follow this exact sequence:**
+
+#### Step 1: Comprehensive Documentation Review
+```
+1. Use multiple Read tool calls to systematically review ALL sections of MASTER_DOCUMENTATION.md
+2. Search for keywords related to planned implementation using Grep tool
+3. Check cross-references using patterns: `{#[a-z-]+}`, `Related Systems:`, `Files Modified:`
+4. Map ALL existing systems that might be related to the planned change
+```
+
+#### Step 2: Codebase Verification  
+```
+1. Use Grep extensively across ALL files to find existing implementations
+2. Search for function names, component names, and feature keywords
+3. Check multiple files before concluding something doesn't exist
+4. Cross-reference findings with documentation
+```
+
+#### Step 3: Use Task Tool for Complex Searches
+```
+1. For any multi-component feature, use Task tool with general-purpose agent
+2. Have agent create comprehensive summary of existing systems
+3. Only proceed after getting complete picture from agent report
+```
+
+#### Step 4: Verify No Redundancy
+```
+1. Confirm the planned implementation doesn't duplicate existing functionality
+2. If similar functionality exists, plan integration rather than recreation
+3. Document WHY new implementation is needed vs. using existing system
+```
+
+### 🚫 NEVER PROCEED WITHOUT:
+- **Complete system map** - Understanding all components that might be affected
+- **Existing functionality verification** - Confirming what already works
+- **Cross-reference confirmation** - Checking all related systems mentioned in docs
+- **User approval for architectural changes** - Never assume reorganization is needed
+
+### ⚠️ WARNING SIGNS TO STOP:
+- Creating new sections/components without verifying none exist
+- Removing code marked as "deprecated" without testing if it's actually used
+- Making "cleanup" changes without comprehensive system understanding
+- Assuming simple solutions when documentation suggests complexity
+
+### 🚨 CRITICAL: If User Suggests Feature Already Exists
+**If user in any way suggests that a feature already exists, if unable to locate that feature, indicate the inability to find it and STOP immediately. NEVER build a new system without a direct and explicit go-ahead.**
+
+**Required Response**:
+1. "I apologize - I cannot find [feature] that should exist"
+2. Document search attempts made
+3. Request guidance: "Can you point me to where this is located?"
+4. FULL STOP - No implementation until explicitly told to proceed
+
+### 🎯 Success Criteria:
+- Can explain exactly what exists before starting work
+- Can identify all systems that will be affected by changes  
+- Can justify why new implementation is needed vs. using existing
+- Has user confirmation for any structural changes
+
+---
+
 ## Development Workflow Rules
 
 ### 🚨 STRIPE LIVE MODE DEPLOYMENT PROTOCOL

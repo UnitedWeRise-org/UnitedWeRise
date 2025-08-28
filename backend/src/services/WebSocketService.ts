@@ -168,6 +168,9 @@ export class WebSocketService {
       } else if (type === MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
         // Candidate to admin message - send to admin room (exclude sender)
         socket.broadcast.to('admin:room').emit('new_message', payload);
+      } else if (type === MessageType.USER_CANDIDATE) {
+        // User to candidate message - send to candidate (exclude sender)
+        socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
       } else if (type === MessageType.USER_USER) {
         // User to user message - send to recipient (exclude sender)
         socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
@@ -188,6 +191,8 @@ export class WebSocketService {
       this.io.to('admin:room').emit('typing_start', { senderId, senderUsername: socket.data.username });
     } else if (type === MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
       this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
+    } else if (type === MessageType.USER_CANDIDATE) {
+      this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
     } else if (type === MessageType.USER_USER) {
       this.io.to(`user:${recipientId}`).emit('typing_start', { senderId, senderUsername: socket.data.username });
     }
@@ -200,6 +205,8 @@ export class WebSocketService {
     if (type === MessageType.ADMIN_CANDIDATE && recipientId === 'admin') {
       this.io.to('admin:room').emit('typing_stop', { senderId });
     } else if (type === MessageType.ADMIN_CANDIDATE && recipientId !== 'admin') {
+      this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
+    } else if (type === MessageType.USER_CANDIDATE) {
       this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
     } else if (type === MessageType.USER_USER) {
       this.io.to(`user:${recipientId}`).emit('typing_stop', { senderId });
@@ -262,6 +269,9 @@ export class WebSocketService {
         // For admin-candidate messages, always use candidate user ID
         const candidateUserId = senderId === 'admin' ? recipientId : senderId;
         finalConversationId = `admin_${candidateUserId}`;
+      } else if (type === MessageType.USER_CANDIDATE) {
+        // For user-candidate messages, use candidate user ID with user prefix
+        finalConversationId = `candidate_${recipientId}_user_${senderId}`;
       } else if (type === MessageType.USER_USER) {
         // For user-user messages, sort IDs for consistent conversation ID
         const sortedIds = [senderId, recipientId].sort();
@@ -272,7 +282,8 @@ export class WebSocketService {
     // Create the message
     const message = await prisma.unifiedMessage.create({
       data: {
-        type: type === MessageType.USER_USER ? 'USER_USER' : 'ADMIN_CANDIDATE',
+        type: type === MessageType.USER_USER ? 'USER_USER' : 
+              type === MessageType.USER_CANDIDATE ? 'USER_CANDIDATE' : 'ADMIN_CANDIDATE',
         senderId,
         recipientId,
         content,
@@ -292,9 +303,12 @@ export class WebSocketService {
       },
       create: {
         id: finalConversationId,
-        type: type === MessageType.USER_USER ? 'USER_USER' : 'ADMIN_CANDIDATE',
+        type: type === MessageType.USER_USER ? 'USER_USER' : 
+              type === MessageType.USER_CANDIDATE ? 'USER_CANDIDATE' : 'ADMIN_CANDIDATE',
         participants: type === MessageType.ADMIN_CANDIDATE 
           ? ['admin', senderId === 'admin' ? recipientId : senderId]
+          : type === MessageType.USER_CANDIDATE
+          ? [senderId, recipientId]
           : [senderId, recipientId],
         lastMessageAt: message.createdAt,
         unreadCount: 1
@@ -342,6 +356,8 @@ export class WebSocketService {
       this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
     } else if (data.type === MessageType.ADMIN_CANDIDATE && data.recipientId === 'admin') {
       this.io.to('admin:room').emit('new_message', payload);
+    } else if (data.type === MessageType.USER_CANDIDATE) {
+      this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
     } else if (data.type === MessageType.USER_USER) {
       this.io.to(`user:${data.recipientId}`).emit('new_message', payload);
     }

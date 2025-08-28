@@ -10,6 +10,7 @@ class MyProfile {
         this.currentTab = 'posts'; // Default to posts tab
         this.userPosts = [];
         this.userProfile = null;
+        this.editingPositionId = null; // Track which position is being edited
         
         // Setup WebSocket event handlers
         this.setupWebSocketHandlers();
@@ -254,6 +255,7 @@ class MyProfile {
                         Political Profile
                     </button>
                     ${user.candidateProfile ? `
+                        <!-- Policy Platform moved to Candidate Dashboard -->
                         <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.myProfile.switchTab('messages')" id="messagesTab">
                             💬 Admin Messages
                             <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
@@ -639,6 +641,117 @@ class MyProfile {
                     </div>
 
                     <div class="settings-group">
+                        <h4>Notification Preferences</h4>
+                        <p class="setting-description">Control how you receive notifications and which types of notifications to receive.</p>
+                        
+                        <div class="notification-settings">
+                            <h5>Browser Notifications</h5>
+                            <label class="setting-item">
+                                <input type="checkbox" 
+                                       id="browserNotificationsEnabled"
+                                       ${this.getNotificationPreference('browserNotifications') ? 'checked' : ''} 
+                                       onchange="window.myProfile.updateNotificationPreference('browserNotifications', this.checked)">
+                                <span>Enable browser notifications</span>
+                            </label>
+                            
+                            <div class="sub-settings ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}">
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="browserNotifyNewMessages"
+                                           ${this.getNotificationPreference('browserNotifyNewMessages') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyNewMessages', this.checked)"
+                                           ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
+                                    <span>New messages</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="browserNotifyLikes"
+                                           ${this.getNotificationPreference('browserNotifyLikes') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyLikes', this.checked)"
+                                           ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
+                                    <span>Likes and reactions</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="browserNotifyComments"
+                                           ${this.getNotificationPreference('browserNotifyComments') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyComments', this.checked)"
+                                           ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
+                                    <span>Comments on my posts</span>
+                                </label>
+                            </div>
+                            
+                            <h5>Email Notifications</h5>
+                            <label class="setting-item">
+                                <input type="checkbox" 
+                                       id="emailNotificationsEnabled"
+                                       ${this.getNotificationPreference('emailNotifications') ? 'checked' : ''} 
+                                       onchange="window.myProfile.updateNotificationPreference('emailNotifications', this.checked)">
+                                <span>Enable email notifications</span>
+                            </label>
+                            
+                            <div class="sub-settings ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}">
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="emailNotifyImportantMessages"
+                                           ${this.getNotificationPreference('emailNotifyImportantMessages') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('emailNotifyImportantMessages', this.checked)"
+                                           ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
+                                    <span>Important messages and replies</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="emailNotifyWeeklyDigest"
+                                           ${this.getNotificationPreference('emailNotifyWeeklyDigest') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('emailNotifyWeeklyDigest', this.checked)"
+                                           ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
+                                    <span>Weekly activity digest</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="emailNotifySecurityAlerts"
+                                           ${this.getNotificationPreference('emailNotifySecurityAlerts') !== false ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('emailNotifySecurityAlerts', this.checked)"
+                                           ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
+                                    <span>Security alerts (recommended)</span>
+                                </label>
+                            </div>
+                            
+                            <h5>Candidate-Specific Notifications</h5>
+                            <div id="candidateNotificationSettings" style="display: none;">
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="candidateInboxNotifications"
+                                           ${this.getNotificationPreference('candidateInboxNotifications') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('candidateInboxNotifications', this.checked)">
+                                    <span>Constituent messages (candidate inbox)</span>
+                                </label>
+                                
+                                <label class="setting-item">
+                                    <input type="checkbox" 
+                                           id="candidateElectionReminders"
+                                           ${this.getNotificationPreference('candidateElectionReminders') ? 'checked' : ''} 
+                                           onchange="window.myProfile.updateNotificationPreference('candidateElectionReminders', this.checked)">
+                                    <span>Filing deadlines and election reminders</span>
+                                </label>
+                            </div>
+                            
+                            <div class="notification-controls">
+                                <button onclick="window.myProfile.requestNotificationPermission()" class="btn-secondary">
+                                    🔔 Grant Browser Permission
+                                </button>
+                                <button onclick="window.myProfile.testNotification()" class="btn-secondary">
+                                    📨 Test Notification
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
                         <h4>Photo Tagging Privacy</h4>
                         <div class="photo-privacy-settings">
                             <label class="setting-item">
@@ -685,6 +798,7 @@ class MyProfile {
             </div>
         `;
     }
+
 
     renderPhotosTab() {
         return `
@@ -2427,6 +2541,268 @@ class MyProfile {
                 border-radius: 4px;
                 cursor: pointer;
             }
+
+            /* Policy Platform Styles */
+            .policy-platform-section {
+                padding: 0;
+            }
+
+            .policy-platform-section .section-description {
+                color: #666;
+                font-size: 0.95rem;
+                margin-bottom: 2rem;
+                line-height: 1.5;
+            }
+
+            .policy-composer {
+                background: #f8f9fa;
+                padding: 2rem;
+                border-radius: 8px;
+                margin-bottom: 2rem;
+            }
+
+            .policy-composer .form-group {
+                margin-bottom: 1.5rem;
+            }
+
+            .policy-composer label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: #333;
+            }
+
+            .policy-composer input[type="text"],
+            .policy-composer textarea,
+            .policy-composer select {
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 0.95rem;
+                font-family: inherit;
+            }
+
+            .policy-composer textarea {
+                resize: vertical;
+            }
+
+            .policy-composer .form-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .policy-composer .publish-section {
+                padding: 1rem;
+                background: #e8f5e8;
+                border-radius: 4px;
+                border: 1px solid #c3e6c3;
+            }
+
+            .policy-composer .checkbox-label {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-weight: 500;
+                cursor: pointer;
+            }
+
+            .policy-composer .buttons {
+                display: flex;
+                gap: 1rem;
+                justify-content: flex-end;
+            }
+
+            .policy-positions-list {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .policy-position-card {
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 1.5rem;
+                transition: box-shadow 0.2s;
+            }
+
+            .policy-position-card:hover {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .position-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 1rem;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .position-category {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .category-icon {
+                font-size: 1.2rem;
+            }
+
+            .category-name {
+                font-weight: 600;
+                color: #4b5c09;
+            }
+
+            .position-meta {
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+                font-size: 0.85rem;
+            }
+
+            .position-priority {
+                color: #666;
+            }
+
+            .status-badge {
+                padding: 0.25rem 0.75rem;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .status-badge.published {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .status-badge.draft {
+                background: #fff3cd;
+                color: #856404;
+            }
+
+            .position-title {
+                color: #333;
+                margin: 0 0 0.5rem 0;
+                font-size: 1.2rem;
+                line-height: 1.3;
+            }
+
+            .position-stance {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.75rem;
+                font-weight: 600;
+            }
+
+            .position-summary {
+                color: #555;
+                line-height: 1.5;
+                margin-bottom: 1rem;
+            }
+
+            .position-details {
+                border-top: 1px solid #eee;
+                padding-top: 1rem;
+                margin-top: 1rem;
+            }
+
+            .position-details h5 {
+                margin: 0 0 0.5rem 0;
+                color: #333;
+                font-size: 0.95rem;
+            }
+
+            .position-details p {
+                color: #555;
+                line-height: 1.5;
+                margin-bottom: 1rem;
+            }
+
+            .position-details ul {
+                margin: 0 0 1rem 0;
+                padding-left: 1.5rem;
+            }
+
+            .position-details li {
+                color: #555;
+                line-height: 1.5;
+                margin-bottom: 0.25rem;
+            }
+
+            .position-details a {
+                color: #4b5c09;
+                text-decoration: none;
+            }
+
+            .position-details a:hover {
+                text-decoration: underline;
+            }
+
+            .position-actions {
+                display: flex;
+                gap: 0.5rem;
+                margin-top: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .empty-state,
+            .error-message {
+                text-align: center;
+                padding: 3rem 2rem;
+                color: #666;
+            }
+
+            .empty-icon,
+            .error-icon {
+                font-size: 4rem;
+                margin-bottom: 1rem;
+                display: block;
+            }
+
+            .empty-state h4 {
+                color: #333;
+                margin-bottom: 0.5rem;
+            }
+
+            .loading-message {
+                text-align: center;
+                padding: 2rem;
+                color: #666;
+                font-style: italic;
+            }
+
+            /* Mobile responsiveness for policy platform */
+            @media (max-width: 768px) {
+                .policy-composer {
+                    padding: 1rem;
+                }
+
+                .position-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                .position-meta {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                    align-items: flex-start;
+                }
+
+                .position-actions {
+                    flex-direction: column;
+                }
+
+                .policy-composer .buttons {
+                    flex-direction: column;
+                }
+            }
         `;
         
         document.head.appendChild(styles);
@@ -2887,6 +3263,186 @@ class MyProfile {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, duration);
+    }
+
+    // Policy Platform Management Methods
+
+    /**
+     * Set up policy position form handling
+     */
+
+    // Notification preference methods
+    getNotificationPreference(key) {
+        const prefs = this.userProfile?.notificationPreferences || {};
+        
+        // Default values for different notification types
+        const defaults = {
+            browserNotifications: true,
+            browserNotifyNewMessages: true,
+            browserNotifyLikes: false,
+            browserNotifyComments: true,
+            emailNotifications: true,
+            emailNotifyImportantMessages: true,
+            emailNotifyWeeklyDigest: false,
+            emailNotifySecurityAlerts: true,
+            candidateInboxNotifications: true,
+            candidateElectionReminders: true
+        };
+        
+        return prefs[key] !== undefined ? prefs[key] : defaults[key];
+    }
+
+    async updateNotificationPreference(key, value) {
+        try {
+            const response = await window.apiCall('/user/notification-preferences', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({
+                    [key]: value
+                })
+            });
+
+            if (response.ok && response.data?.success) {
+                // Update local user profile
+                if (!this.userProfile.notificationPreferences) {
+                    this.userProfile.notificationPreferences = {};
+                }
+                this.userProfile.notificationPreferences[key] = value;
+
+                // Handle special cases
+                if (key === 'browserNotifications' && value) {
+                    // Request permission when enabling browser notifications
+                    this.requestNotificationPermission();
+                } else if (key === 'browserNotifications' && !value) {
+                    // Disable all browser notification sub-options
+                    this.updateNotificationPreference('browserNotifyNewMessages', false);
+                    this.updateNotificationPreference('browserNotifyLikes', false);
+                    this.updateNotificationPreference('browserNotifyComments', false);
+                } else if (key === 'emailNotifications' && !value) {
+                    // Disable all email notification sub-options (except security alerts)
+                    this.updateNotificationPreference('emailNotifyImportantMessages', false);
+                    this.updateNotificationPreference('emailNotifyWeeklyDigest', false);
+                }
+
+                // Re-render the settings tab to update UI
+                this.switchTab('settings');
+
+                this.showToast('Notification preferences updated');
+            } else {
+                throw new Error(response.data?.error || 'Failed to update notification preferences');
+            }
+        } catch (error) {
+            console.error('Error updating notification preferences:', error);
+            this.showToast('Failed to update notification preferences', 5000);
+        }
+    }
+
+    async requestNotificationPermission() {
+        if (!('Notification' in window)) {
+            this.showToast('Browser notifications are not supported', 3000);
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            this.showToast('Browser notifications are already enabled', 3000);
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            this.showToast('Browser notifications are blocked. Please enable them in your browser settings.', 5000);
+            return;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                this.showToast('Browser notifications enabled!', 3000);
+                // Update the browser notifications preference
+                this.updateNotificationPreference('browserNotifications', true);
+            } else {
+                this.showToast('Browser notifications were denied', 3000);
+                // Disable browser notifications preference
+                this.updateNotificationPreference('browserNotifications', false);
+            }
+        } catch (error) {
+            console.error('Error requesting notification permission:', error);
+            this.showToast('Failed to request notification permission', 3000);
+        }
+    }
+
+    testNotification() {
+        if (!this.getNotificationPreference('browserNotifications')) {
+            this.showToast('Browser notifications are disabled. Enable them to test.', 3000);
+            return;
+        }
+
+        if (Notification.permission !== 'granted') {
+            this.showToast('Browser permission not granted. Click "Grant Browser Permission" first.', 5000);
+            return;
+        }
+
+        // Test notification
+        new Notification('United We Rise - Test Notification', {
+            body: 'This is a test notification. Your notifications are working correctly!',
+            icon: '/UWR Logo on Circle.png',
+            badge: '/UWR Logo on Circle.png'
+        });
+
+        this.showToast('Test notification sent!', 3000);
+    }
+
+    // Check if user is a candidate and show candidate-specific notification settings
+    async checkCandidateNotificationSettings() {
+        try {
+            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (response.ok && response.data?.success) {
+                // User is a candidate, show candidate notification settings
+                const candidateSettings = document.getElementById('candidateNotificationSettings');
+                if (candidateSettings) {
+                    candidateSettings.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            // User is not a candidate or error occurred, keep candidate settings hidden
+            console.log('User is not a candidate or error checking status');
+        }
+    }
+
+    // Override switchTab to check candidate status when switching to settings
+    switchTab(tabName) {
+        this.currentTab = tabName;
+        
+        // Load pending tags count when switching to settings tab
+        if (tabName === 'settings') {
+            setTimeout(() => {
+                this.updatePendingTagsCount();
+                this.checkCandidateNotificationSettings();
+            }, 100);
+        }
+        
+        const contentArea = document.querySelector('.tab-content');
+        if (contentArea) {
+            contentArea.innerHTML = this.renderTabContent();
+        }
+
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        const activeButton = document.querySelector(`[onclick*="'${tabName}'"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
     }
 }
 

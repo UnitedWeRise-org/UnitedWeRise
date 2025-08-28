@@ -43,6 +43,12 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 officialTitle: true,
                 politicalParty: true,
                 campaignWebsite: true,
+                // Preferences
+                notificationPreferences: true,
+                // Photo tagging preferences 
+                photoTaggingEnabled: true,
+                requireTagApproval: true,
+                allowTagsByFriendsOnly: true,
                 // Candidate profile relation
                 candidateProfile: {
                     select: {
@@ -677,6 +683,118 @@ router.post('/activity', requireAuth, async (req: AuthRequest, res) => {
     } catch (error) {
         console.error('Activity tracking error:', error);
         res.status(500).json({ error: 'Failed to track activity' });
+    }
+});
+
+// Get user notification preferences
+router.get('/notification-preferences', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user!.id },
+            select: {
+                notificationPreferences: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        // Return preferences or default values
+        const defaultPreferences = {
+            browserNotifications: true,
+            browserNotifyNewMessages: true,
+            browserNotifyLikes: false,
+            browserNotifyComments: true,
+            emailNotifications: true,
+            emailNotifyImportantMessages: true,
+            emailNotifyWeeklyDigest: false,
+            emailNotifySecurityAlerts: true,
+            candidateInboxNotifications: true,
+            candidateElectionReminders: true
+        };
+
+        const preferences = {
+            ...defaultPreferences,
+            ...(user.notificationPreferences as Record<string, any> || {})
+        };
+
+        res.json({
+            success: true,
+            data: preferences
+        });
+    } catch (error) {
+        console.error('Error fetching notification preferences:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch notification preferences'
+        });
+    }
+});
+
+// Update user notification preferences
+router.put('/notification-preferences', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.id;
+        const updates = req.body;
+
+        // Validate that we only update known preference keys
+        const allowedKeys = [
+            'browserNotifications',
+            'browserNotifyNewMessages',
+            'browserNotifyLikes',
+            'browserNotifyComments',
+            'emailNotifications',
+            'emailNotifyImportantMessages',
+            'emailNotifyWeeklyDigest',
+            'emailNotifySecurityAlerts',
+            'candidateInboxNotifications',
+            'candidateElectionReminders'
+        ];
+
+        const invalidKeys = Object.keys(updates).filter(key => !allowedKeys.includes(key));
+        if (invalidKeys.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `Invalid preference keys: ${invalidKeys.join(', ')}`
+            });
+        }
+
+        // Get current preferences
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { notificationPreferences: true }
+        });
+
+        const currentPreferences = (user?.notificationPreferences as Record<string, any>) || {};
+        const updatedPreferences = {
+            ...currentPreferences,
+            ...updates
+        };
+
+        // Update user preferences
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                notificationPreferences: updatedPreferences
+            }
+        });
+
+        console.log(`Updated notification preferences for user ${userId}:`, updates);
+
+        res.json({
+            success: true,
+            data: updatedPreferences
+        });
+    } catch (error) {
+        console.error('Error updating notification preferences:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update notification preferences'
+        });
     }
 });
 

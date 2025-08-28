@@ -305,6 +305,10 @@ window.sendAdminCandidateMessage = (recipientId, content, conversationId) => {
     return window.unifiedMessaging.sendMessage('ADMIN_CANDIDATE', recipientId, content, conversationId);
 };
 
+window.sendUserCandidateMessage = (candidateId, content, conversationId) => {
+    return window.unifiedMessaging.sendMessage('USER_CANDIDATE', candidateId, content, conversationId);
+};
+
 // Export for modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UnifiedMessagingClient;

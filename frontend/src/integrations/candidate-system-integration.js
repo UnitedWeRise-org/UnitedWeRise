@@ -27,6 +27,9 @@ class CandidateSystemIntegration {
             this.candidateSystem = new window.CandidateSystem();
         }
         
+        // Check candidate status for current user
+        this.checkCandidateStatus();
+        
         // Enhance existing UI elements
         this.enhanceExistingElements();
         
@@ -191,7 +194,7 @@ class CandidateSystemIntegration {
                 candidateThumb.id = 'candidatesThumb';
                 candidateThumb.className = 'thumb';
                 candidateThumb.onclick = () => this.toggleCandidatePanel();
-                candidateThumb.title = 'AI-Enhanced Candidates';
+                candidateThumb.title = 'Candidate Hub';
                 candidateThumb.innerHTML = `🤖 <span class="label">Candidates</span>`;
                 
                 // Insert after officials thumb
@@ -297,15 +300,20 @@ class CandidateSystemIntegration {
             <div class="candidate-main-view">
                 <div class="candidate-header">
                     <div class="header-content">
-                        <h1>🤖 AI-Enhanced Candidate System</h1>
+                        <h1>🤖 Candidate Hub</h1>
                         <p class="subtitle">Intelligent candidate analysis, comparison, and communication</p>
                         <div class="header-actions">
                             <button class="header-btn primary" onclick="candidateSystemIntegration.loadElections()">
                                 🗳️ Load Elections
                             </button>
-                            <button class="header-btn register" onclick="candidateSystemIntegration.showCandidateRegistration()">
-                                🏆 Register as Candidate
-                            </button>
+                            ${this.isCandidate ? 
+                                `<button class="header-btn primary dashboard" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                                    📊 Candidate Dashboard
+                                </button>` : 
+                                `<button class="header-btn register" onclick="candidateSystemIntegration.showCandidateRegistration()">
+                                    🏆 Register as Candidate
+                                </button>`
+                            }
                             <button class="header-btn secondary" onclick="candidateSystemIntegration.showAIAnalysis()">
                                 🤖 AI Capabilities
                             </button>
@@ -2494,6 +2502,224 @@ class CandidateSystemIntegration {
         }
     }
 
+    // Check if current user is a verified candidate
+    async checkCandidateStatus() {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                this.isCandidate = false;
+                return;
+            }
+
+            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (response.ok && response.data?.success) {
+                this.isCandidate = true;
+                this.candidateData = response.data.data;
+                console.log('✅ User is verified candidate:', this.candidateData);
+            } else {
+                this.isCandidate = false;
+                console.log('ℹ️ User is not a candidate');
+            }
+        } catch (error) {
+            console.error('Error checking candidate status:', error);
+            this.isCandidate = false;
+        }
+    }
+
+    // Show candidate dashboard for verified candidates
+    showCandidateDashboard() {
+        if (!this.isCandidate) {
+            console.error('Access denied: User is not a verified candidate');
+            return;
+        }
+
+        const mainContent = document.querySelector('.main-content');
+        if (!mainContent) return;
+
+        mainContent.innerHTML = `
+            <div class="candidate-dashboard">
+                <div class="dashboard-header">
+                    <div class="header-content">
+                        <h1>📊 Candidate Dashboard</h1>
+                        <p class="subtitle">Manage your campaign and connect with constituents</p>
+                        <div class="candidate-info">
+                            <span class="status-badge verified">✅ Verified Candidate</span>
+                            <span class="candidate-name">${this.candidateData?.name || 'Candidate'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="dashboard-grid">
+                        <!-- Policy Management -->
+                        <div class="dashboard-card primary">
+                            <div class="card-header">
+                                <div class="card-icon">📋</div>
+                                <h3>Policy Platform</h3>
+                            </div>
+                            <div class="card-content">
+                                <p>Create and manage your policy positions</p>
+                                <div class="card-stats">
+                                    <span class="stat">📝 Manage positions</span>
+                                    <span class="stat">🔄 Version tracking</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn primary" onclick="candidateSystemIntegration.showPolicyPlatform()">
+                                    Open Policy Platform
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Constituent Communications -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">💬</div>
+                                <h3>Constituent Messages</h3>
+                            </div>
+                            <div class="card-content">
+                                <p>View and respond to citizen inquiries</p>
+                                <div class="card-stats">
+                                    <span class="stat">📥 Inbox management</span>
+                                    <span class="stat">🤖 AI summaries</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn secondary" onclick="candidateSystemIntegration.openConstituentInbox()">
+                                    View Messages
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Campaign Status -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">🗳️</div>
+                                <h3>Election Status</h3>
+                            </div>
+                            <div class="card-content">
+                                <p>Track your campaign progress</p>
+                                <div class="card-stats">
+                                    <span class="stat">📅 Filing deadlines</span>
+                                    <span class="stat">👥 Competitors</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn secondary" onclick="this.showElectionStatus()">
+                                    View Status
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <div class="card-icon">⚡</div>
+                                <h3>Quick Actions</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="quick-actions">
+                                    <button class="quick-btn" onclick="this.backToHub()">
+                                        🏠 Back to Hub
+                                    </button>
+                                    <button class="quick-btn" onclick="toggleMyProfile()">
+                                        👤 My Profile
+                                    </button>
+                                    <button class="quick-btn" onclick="this.viewPublicProfile()">
+                                        👁️ View Public Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners for dashboard actions
+        this.setupDashboardActions();
+    }
+
+    // Setup dashboard action handlers
+    setupDashboardActions() {
+        // Back to hub
+        window.backToHub = () => {
+            this.showCandidateSystemView();
+        };
+
+        // Constituent inbox function
+        window.openConstituentInbox = () => {
+            this.openConstituentInbox();
+        };
+
+        window.showElectionStatus = () => {
+            alert('Election status dashboard coming soon! This will show filing deadlines and competitor information.');
+        };
+
+        window.viewPublicProfile = () => {
+            alert('Public profile view coming soon! This will show how voters see your candidate profile.');
+        };
+    }
+
+    // Show the main candidate hub view
+    showCandidateSystemView() {
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            this.showCandidateMainView(mainContent);
+        }
+    }
+
+    // Show the Policy Platform manager
+    showPolicyPlatform() {
+        const mainContent = document.querySelector('.main-content');
+        if (!mainContent) return;
+
+        // Load the PolicyPlatformManager script if not already loaded
+        if (!window.PolicyPlatformManager) {
+            const script = document.createElement('script');
+            script.src = '/src/components/PolicyPlatformManager.js';
+            script.onload = () => {
+                this.displayPolicyPlatform(mainContent);
+            };
+            document.head.appendChild(script);
+        } else {
+            this.displayPolicyPlatform(mainContent);
+        }
+    }
+
+    // Display the Policy Platform interface
+    displayPolicyPlatform(container) {
+        container.innerHTML = `
+            <div class="policy-platform-view">
+                <div class="platform-header">
+                    <div class="header-content">
+                        <h1>📋 Policy Platform Management</h1>
+                        <p class="subtitle">Create and manage your policy positions</p>
+                        <div class="header-actions">
+                            <button class="header-btn secondary" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                                ← Back to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="policyPlatformContainer"></div>
+            </div>
+        `;
+
+        // Initialize the Policy Platform Manager
+        const policyManager = new PolicyPlatformManager('policyPlatformContainer');
+        policyManager.init();
+        
+        // Make it globally accessible
+        window.policyPlatformManager = policyManager;
+    }
+
     // Method to programmatically trigger candidate system features
     triggerCandidateFeature(feature, data = {}) {
         if (!this.candidateSystem) {
@@ -2522,6 +2748,432 @@ class CandidateSystemIntegration {
             default:
                 console.error('Unknown candidate feature:', feature);
         }
+    }
+
+    // Open constituent inbox for candidate
+    async openConstituentInbox() {
+        if (!this.isCandidate) {
+            console.error('Access denied: User is not a verified candidate');
+            return;
+        }
+
+        const mainContent = document.querySelector('.main-content');
+        if (!mainContent) return;
+
+        mainContent.innerHTML = `
+            <div class="constituent-inbox">
+                <div class="inbox-header">
+                    <div class="header-content">
+                        <h1>💬 Constituent Messages</h1>
+                        <p class="subtitle">Engage with voters and answer their questions</p>
+                        <div class="header-actions">
+                            <button class="header-btn secondary" onclick="candidateSystemIntegration.showCandidateDashboard()">
+                                ← Back to Dashboard
+                            </button>
+                            <button class="header-btn primary" onclick="candidateSystemIntegration.toggleAISummary()">
+                                🤖 AI Summary
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inbox-content">
+                    <div class="inbox-sidebar">
+                        <div class="sidebar-header">
+                            <h3>📥 Conversations</h3>
+                            <div class="inbox-stats">
+                                <span class="stat-badge" id="unreadCount">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="conversations-list" id="conversationsList">
+                            <div class="loading-message">Loading conversations...</div>
+                        </div>
+                    </div>
+
+                    <div class="inbox-main">
+                        <div class="conversation-view" id="conversationView">
+                            <div class="empty-state">
+                                <div class="empty-icon">💬</div>
+                                <h3>Select a conversation</h3>
+                                <p>Choose a conversation from the sidebar to view messages and respond to constituents.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Load conversations
+        this.loadConstituentConversations();
+
+        // Setup WebSocket listeners for real-time updates
+        this.setupInboxWebSocketListeners();
+    }
+
+    // Load constituent conversations for candidate
+    async loadConstituentConversations() {
+        try {
+            const response = await window.apiCall('/unified-messages/candidate/user-messages', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (response.ok && response.data?.success) {
+                const { conversations, candidate } = response.data.data;
+                this.displayConversations(conversations);
+                this.updateUnreadCount(conversations);
+            } else {
+                throw new Error(response.data?.error || 'Failed to load conversations');
+            }
+        } catch (error) {
+            console.error('Error loading constituent conversations:', error);
+            const conversationsList = document.getElementById('conversationsList');
+            if (conversationsList) {
+                conversationsList.innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <p>Error loading conversations: ${error.message}</p>
+                        <button onclick="candidateSystemIntegration.loadConstituentConversations()" class="btn-secondary">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // Display conversations in sidebar
+    displayConversations(conversations) {
+        const conversationsList = document.getElementById('conversationsList');
+        if (!conversationsList) return;
+
+        if (conversations.length === 0) {
+            conversationsList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📪</div>
+                    <h4>No messages yet</h4>
+                    <p>When constituents message you, their conversations will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        conversationsList.innerHTML = conversations.map(conv => {
+            const lastMessage = conv.messages[conv.messages.length - 1];
+            const timeAgo = this.formatTimeAgo(new Date(conv.lastMessageAt));
+            const isUnread = conv.unreadCount > 0;
+
+            return `
+                <div class="conversation-item ${isUnread ? 'unread' : ''}" 
+                     onclick="candidateSystemIntegration.openConversation('${conv.id}', '${JSON.stringify(conv).replace(/'/g, '&#39;')}')">
+                    <div class="conversation-avatar">
+                        <div class="avatar-circle">
+                            ${lastMessage?.sender?.firstName?.[0] || '👤'}
+                        </div>
+                        ${isUnread ? '<div class="unread-indicator"></div>' : ''}
+                    </div>
+                    <div class="conversation-info">
+                        <div class="conversation-header">
+                            <h4 class="sender-name">
+                                ${lastMessage?.sender?.firstName || 'Unknown'} ${lastMessage?.sender?.lastName || 'Voter'}
+                            </h4>
+                            <span class="message-time">${timeAgo}</span>
+                        </div>
+                        <p class="last-message">
+                            ${this.truncateText(lastMessage?.content || '', 60)}
+                        </p>
+                        ${isUnread ? `<div class="unread-badge">${conv.unreadCount}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Update unread count display
+    updateUnreadCount(conversations) {
+        const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+        const unreadElement = document.getElementById('unreadCount');
+        if (unreadElement) {
+            unreadElement.textContent = totalUnread > 0 ? `${totalUnread} unread` : 'All caught up!';
+            unreadElement.className = `stat-badge ${totalUnread > 0 ? 'has-unread' : ''}`;
+        }
+    }
+
+    // Open a specific conversation
+    openConversation(conversationId, conversationDataStr) {
+        const conversationView = document.getElementById('conversationView');
+        if (!conversationView) return;
+
+        const conv = JSON.parse(conversationDataStr);
+        const sender = conv.messages[0]?.sender;
+
+        conversationView.innerHTML = `
+            <div class="conversation-header">
+                <div class="conversation-participant">
+                    <div class="participant-avatar">
+                        <div class="avatar-circle large">
+                            ${sender?.firstName?.[0] || '👤'}
+                        </div>
+                    </div>
+                    <div class="participant-info">
+                        <h3>${sender?.firstName || 'Unknown'} ${sender?.lastName || 'Voter'}</h3>
+                        <p class="participant-username">@${sender?.username || 'unknown'}</p>
+                    </div>
+                </div>
+                <div class="conversation-actions">
+                    <button class="btn secondary small" onclick="candidateSystemIntegration.markConversationRead('${conversationId}')">
+                        ✓ Mark Read
+                    </button>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                ${this.renderMessages(conv.messages)}
+            </div>
+
+            <div class="message-compose">
+                <div class="compose-header">
+                    <h4>💬 Reply to ${sender?.firstName || 'Voter'}</h4>
+                    <div class="reply-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="publicReply">
+                            <span>📢 Post as public response</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="compose-form">
+                    <textarea id="replyContent" placeholder="Type your response..." rows="4"></textarea>
+                    <div class="compose-actions">
+                        <button class="btn secondary" onclick="candidateSystemIntegration.clearReply()">
+                            Clear
+                        </button>
+                        <button class="btn primary" onclick="candidateSystemIntegration.sendReply('${conversationId}', '${sender?.id}')">
+                            Send Reply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Scroll to bottom of messages
+        setTimeout(() => {
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }, 100);
+    }
+
+    // Render messages in conversation
+    renderMessages(messages) {
+        if (!messages || messages.length === 0) {
+            return '<div class="no-messages">No messages in this conversation yet.</div>';
+        }
+
+        const currentUserId = localStorage.getItem('currentUserId') || 
+                             (window.currentUser ? window.currentUser.id : '');
+
+        return messages.map(msg => {
+            const isFromCandidate = msg.senderId === currentUserId;
+            const timestamp = new Date(msg.createdAt).toLocaleString();
+
+            return `
+                <div class="message ${isFromCandidate ? 'outbound' : 'inbound'}">
+                    <div class="message-content">
+                        <p>${msg.content}</p>
+                        <div class="message-meta">
+                            <span class="message-time">${timestamp}</span>
+                            ${isFromCandidate ? '<span class="message-sender">You</span>' : 
+                              `<span class="message-sender">${msg.sender?.firstName || 'Voter'}</span>`}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Setup WebSocket listeners for inbox
+    setupInboxWebSocketListeners() {
+        if (window.unifiedMessaging) {
+            // Listen for new USER_CANDIDATE messages
+            this.inboxMessageHandler = window.unifiedMessaging.onMessage('USER_CANDIDATE', (messageData) => {
+                console.log('📨 New constituent message received:', messageData);
+                
+                // Reload conversations to show new message
+                this.loadConstituentConversations();
+                
+                // Show notification
+                this.showInboxNotification('New message from constituent', messageData.content);
+            });
+        }
+    }
+
+    // Send reply to constituent
+    async sendReply(conversationId, recipientId) {
+        const replyContent = document.getElementById('replyContent');
+        const isPublicReply = document.getElementById('publicReply');
+        
+        if (!replyContent?.value.trim()) {
+            alert('Please enter a reply message.');
+            return;
+        }
+
+        try {
+            // Send via WebSocket for real-time delivery
+            const success = window.sendUserCandidateMessage(recipientId, replyContent.value.trim(), conversationId);
+            
+            if (success) {
+                // Clear the reply form
+                replyContent.value = '';
+                if (isPublicReply) isPublicReply.checked = false;
+                
+                // Refresh the conversation
+                setTimeout(() => {
+                    this.loadConstituentConversations();
+                }, 500);
+                
+                this.showToast('Reply sent successfully!');
+            } else {
+                throw new Error('Failed to send reply via WebSocket');
+            }
+        } catch (error) {
+            console.error('Error sending reply:', error);
+            this.showToast('Failed to send reply. Please try again.');
+        }
+    }
+
+    // Utility functions
+    formatTimeAgo(date) {
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        return date.toLocaleDateString();
+    }
+
+    truncateText(text, maxLength) {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+
+    // Clear reply form
+    clearReply() {
+        const replyContent = document.getElementById('replyContent');
+        const isPublicReply = document.getElementById('publicReply');
+        if (replyContent) replyContent.value = '';
+        if (isPublicReply) isPublicReply.checked = false;
+    }
+
+    // Mark conversation as read
+    async markConversationRead(conversationId) {
+        try {
+            const response = await window.apiCall('/unified-messages/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({ conversationId })
+            });
+
+            if (response.ok) {
+                // Refresh conversations to update unread counts
+                this.loadConstituentConversations();
+                this.showToast('Conversation marked as read');
+            }
+        } catch (error) {
+            console.error('Error marking conversation as read:', error);
+        }
+    }
+
+    // Show inbox notification
+    async showInboxNotification(title, content) {
+        // Check user preferences before showing notifications
+        try {
+            const response = await window.apiCall('/user/notification-preferences', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            let showBrowserNotification = true;
+            let showInboxNotification = true;
+
+            if (response.ok && response.data?.success) {
+                const prefs = response.data.data;
+                showBrowserNotification = prefs.browserNotifications && prefs.browserNotifyNewMessages;
+                showInboxNotification = prefs.candidateInboxNotifications;
+            }
+
+            // Browser notification if enabled and permission granted
+            if (showBrowserNotification && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: this.truncateText(content, 100),
+                    icon: '/UWR Logo on Circle.png'
+                });
+            }
+            
+            // In-app toast notification if candidate inbox notifications are enabled
+            if (showInboxNotification) {
+                this.showToast(`📨 ${title}: ${this.truncateText(content, 50)}`);
+            }
+        } catch (error) {
+            console.error('Error checking notification preferences:', error);
+            // Fallback to showing notifications if we can't check preferences
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: this.truncateText(content, 100),
+                    icon: '/UWR Logo on Circle.png'
+                });
+            }
+            this.showToast(`📨 ${title}: ${this.truncateText(content, 50)}`);
+        }
+    }
+
+    // Toggle AI summary modal (placeholder for future feature)
+    toggleAISummary() {
+        alert('🤖 AI Summary feature coming soon! This will provide intelligent summaries of common constituent concerns and trending topics.');
+    }
+
+    // Show toast notification
+    showToast(message, duration = 3000) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Fade in
+        setTimeout(() => toast.style.opacity = '1', 100);
+        
+        // Remove after duration
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, duration);
     }
 }
 
