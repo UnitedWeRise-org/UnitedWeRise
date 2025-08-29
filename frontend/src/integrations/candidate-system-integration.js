@@ -2539,8 +2539,14 @@ class CandidateSystemIntegration {
             return;
         }
 
-        const mainContent = document.querySelector('.main-content');
-        if (!mainContent) return;
+        const mainContent = document.querySelector('#mainContent') || 
+                           document.querySelector('.main') ||
+                           document.querySelector('main') ||
+                           document.querySelector('.main-content');
+        if (!mainContent) {
+            console.error('Could not find main content area');
+            return;
+        }
 
         mainContent.innerHTML = `
             <div class="candidate-dashboard">
@@ -2677,8 +2683,14 @@ class CandidateSystemIntegration {
 
     // Show the Policy Platform manager
     showPolicyPlatform() {
-        const mainContent = document.querySelector('.main-content');
-        if (!mainContent) return;
+        const mainContent = document.querySelector('#mainContent') || 
+                           document.querySelector('.main') ||
+                           document.querySelector('main') ||
+                           document.querySelector('.main-content');
+        if (!mainContent) {
+            console.error('Could not find main content area');
+            return;
+        }
 
         // Load the PolicyPlatformManager script if not already loaded
         if (!window.PolicyPlatformManager) {
@@ -2757,8 +2769,14 @@ class CandidateSystemIntegration {
             return;
         }
 
-        const mainContent = document.querySelector('.main-content');
-        if (!mainContent) return;
+        const mainContent = document.querySelector('#mainContent') || 
+                           document.querySelector('.main') ||
+                           document.querySelector('main') ||
+                           document.querySelector('.main-content');
+        if (!mainContent) {
+            console.error('Could not find main content area');
+            return;
+        }
 
         mainContent.innerHTML = `
             <div class="constituent-inbox">
