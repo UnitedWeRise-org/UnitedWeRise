@@ -2511,7 +2511,7 @@ class CandidateSystemIntegration {
                 return;
             }
 
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
+            const response = await window.apiCall('/api/candidate-policy-platform/candidate/status', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`

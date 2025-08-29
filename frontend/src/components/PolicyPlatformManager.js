@@ -405,8 +405,8 @@ class PolicyPlatformManager {
             const isEditing = !!this.editingPositionId;
             const method = isEditing ? 'PUT' : 'POST';
             const url = isEditing 
-                ? `/candidate-policy-platform/positions/${this.editingPositionId}`
-                : '/candidate-policy-platform/positions';
+                ? `/api/candidate-policy-platform/positions/${this.editingPositionId}`
+                : '/api/candidate-policy-platform/positions';
 
             const response = await window.apiCall(url, {
                 method: method,
@@ -446,7 +446,7 @@ class PolicyPlatformManager {
      */
     async loadPolicyPositions() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/categories', {
+            const response = await window.apiCall('/api/candidate-policy-platform/categories', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                 }
@@ -456,7 +456,7 @@ class PolicyPlatformManager {
                 const categories = response.data.data;
                 
                 // Get user's positions
-                const candidateResponse = await window.apiCall(`/candidate-policy-platform/candidate/my-positions`, {
+                const candidateResponse = await window.apiCall(`/api/candidate-policy-platform/candidate/my-positions`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                     }
@@ -542,7 +542,7 @@ class PolicyPlatformManager {
      */
     async editPosition(positionId) {
         try {
-            const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}`, {
+            const response = await window.apiCall(`/api/candidate-policy-platform/positions/${positionId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -621,7 +621,7 @@ class PolicyPlatformManager {
      */
     async togglePublish(positionId, publish) {
         try {
-            const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}/publish`, {
+            const response = await window.apiCall(`/api/candidate-policy-platform/positions/${positionId}/publish`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -651,7 +651,7 @@ class PolicyPlatformManager {
         }
 
         try {
-            const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}`, {
+            const response = await window.apiCall(`/api/candidate-policy-platform/positions/${positionId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
