@@ -74,9 +74,9 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
+            summary: string | null;
             participantCount: number;
             parentTopicId: string;
-            summary: string | null;
             commentCount: number;
         }[];
     } & {
@@ -274,9 +274,9 @@ export declare class TopicService {
             createdAt: Date;
             updatedAt: Date;
             title: string;
+            summary: string | null;
             participantCount: number;
             parentTopicId: string;
-            summary: string | null;
             commentCount: number;
         })[];
     } & {

@@ -1,6 +1,7 @@
 export declare enum MessageType {
     USER_USER = "USER_USER",// Legacy sidebar messaging between users
-    ADMIN_CANDIDATE = "ADMIN_CANDIDATE"
+    ADMIN_CANDIDATE = "ADMIN_CANDIDATE",// Admin-candidate messaging system
+    USER_CANDIDATE = "USER_CANDIDATE"
 }
 export interface UnifiedMessage {
     id: string;

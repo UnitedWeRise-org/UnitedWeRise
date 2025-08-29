@@ -1,13 +1,13 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { EmbeddingService } from '../services/EmbeddingService';
+import { EmbeddingService } from '../services/embeddingService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Check if current user is a verified candidate
-router.get('/candidate/status', requireAuth, async (req, res) => {
+router.get('/candidate/status', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
@@ -23,12 +23,6 @@ router.get('/candidate/status', requireAuth, async (req, res) => {
             title: true,
             level: true,
             district: true
-          }
-        },
-        election: {
-          select: {
-            date: true,
-            status: true
           }
         }
       },
@@ -47,8 +41,7 @@ router.get('/candidate/status', requireAuth, async (req, res) => {
         id: candidate.id,
         name: candidate.name,
         status: candidate.status,
-        office: candidate.office,
-        election: candidate.election
+        office: candidate.office
       },
     });
   } catch (error) {
@@ -61,7 +54,7 @@ router.get('/candidate/status', requireAuth, async (req, res) => {
 });
 
 // Get current candidate's policy positions
-router.get('/candidate/my-positions', requireAuth, async (req, res) => {
+router.get('/candidate/my-positions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
@@ -246,7 +239,7 @@ router.get('/race/:officeId/comparison', async (req, res) => {
 });
 
 // Create or update a policy position (requires candidate authentication)
-router.post('/positions', requireAuth, async (req, res) => {
+router.post('/positions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const {
@@ -375,7 +368,7 @@ router.post('/positions', requireAuth, async (req, res) => {
 });
 
 // Get single policy position by ID
-router.get('/positions/:positionId', requireAuth, async (req, res) => {
+router.get('/positions/:positionId', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { positionId } = req.params;
@@ -426,7 +419,7 @@ router.get('/positions/:positionId', requireAuth, async (req, res) => {
 });
 
 // Update policy position (creates new version)
-router.put('/positions/:positionId', requireAuth, async (req, res) => {
+router.put('/positions/:positionId', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { positionId } = req.params;
@@ -532,7 +525,7 @@ router.put('/positions/:positionId', requireAuth, async (req, res) => {
 });
 
 // Update policy position publish status
-router.patch('/positions/:positionId/publish', requireAuth, async (req, res) => {
+router.patch('/positions/:positionId/publish', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { positionId } = req.params;
@@ -591,7 +584,7 @@ router.patch('/positions/:positionId/publish', requireAuth, async (req, res) => 
 });
 
 // Delete policy position (soft delete by unpublishing)
-router.delete('/positions/:positionId', requireAuth, async (req, res) => {
+router.delete('/positions/:positionId', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { positionId } = req.params;

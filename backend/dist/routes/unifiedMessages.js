@@ -18,7 +18,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
                 has: userId
             }
         };
-        if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE')) {
+        if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE' || type === 'USER_CANDIDATE')) {
             whereClause.type = type;
         }
         const conversations = await prisma.conversationMeta.findMany({
@@ -111,7 +111,7 @@ router.post('/send', auth_1.requireAuth, async (req, res) => {
                 error: 'Missing required fields: type, recipientId, content'
             });
         }
-        if (type !== 'USER_USER' && type !== 'ADMIN_CANDIDATE') {
+        if (type !== 'USER_USER' && type !== 'ADMIN_CANDIDATE' && type !== 'USER_CANDIDATE') {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid message type'
@@ -134,8 +134,11 @@ router.post('/send', auth_1.requireAuth, async (req, res) => {
         let finalConversationId = conversationId;
         if (!finalConversationId) {
             if (type === 'ADMIN_CANDIDATE') {
-                const candidateId = senderId === 'admin' ? recipientId : senderId;
-                finalConversationId = `admin_candidate_${candidateId}`;
+                const candidateUserId = senderId === 'admin' ? recipientId : senderId;
+                finalConversationId = `admin_${candidateUserId}`;
+            }
+            else if (type === 'USER_CANDIDATE') {
+                finalConversationId = `candidate_${recipientId}_user_${senderId}`;
             }
             else if (type === 'USER_USER') {
                 const sortedIds = [senderId, recipientId].sort();
@@ -167,7 +170,9 @@ router.post('/send', auth_1.requireAuth, async (req, res) => {
                 type: type,
                 participants: type === 'ADMIN_CANDIDATE'
                     ? ['admin', senderId === 'admin' ? recipientId : senderId]
-                    : [senderId, recipientId],
+                    : type === 'USER_CANDIDATE'
+                        ? [senderId, recipientId]
+                        : [senderId, recipientId],
                 lastMessageAt: message.createdAt,
                 unreadCount: 1
             }
@@ -246,7 +251,7 @@ router.get('/unread-count', auth_1.requireAuth, async (req, res) => {
             recipientId: userId,
             isRead: false
         };
-        if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE')) {
+        if (type && (type === 'USER_USER' || type === 'ADMIN_CANDIDATE' || type === 'USER_CANDIDATE')) {
             whereClause.type = type;
         }
         const unreadCount = await prisma.unifiedMessage.count({
@@ -386,6 +391,90 @@ router.get('/candidate/admin-messages', auth_1.requireAuth, async (req, res) => 
         res.status(500).json({
             success: false,
             error: 'Failed to fetch messages'
+        });
+    }
+});
+// Candidate endpoint: Get user messages for current candidate
+router.get('/candidate/user-messages', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+        // Get candidate profile for this user
+        const candidate = await prisma.candidate.findUnique({
+            where: { userId },
+            select: { id: true, name: true }
+        });
+        if (!candidate) {
+            return res.status(404).json({
+                success: false,
+                error: 'Candidate profile not found'
+            });
+        }
+        // Get all conversations for this candidate (USER_CANDIDATE type)
+        const conversations = await prisma.conversationMeta.findMany({
+            where: {
+                type: 'USER_CANDIDATE',
+                participants: { has: userId }
+            },
+            orderBy: {
+                lastMessageAt: 'desc'
+            },
+            take: limit,
+            skip: offset
+        });
+        // Get messages for each conversation with sender details
+        const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
+            const messages = await prisma.unifiedMessage.findMany({
+                where: {
+                    conversationId: conv.id,
+                    type: 'USER_CANDIDATE'
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                take: 10 // Last 10 messages per conversation
+            });
+            // Get sender details for each unique sender
+            const senderIds = [...new Set(messages.map(m => m.senderId))];
+            const senders = await prisma.user.findMany({
+                where: { id: { in: senderIds } },
+                select: { id: true, username: true, firstName: true, lastName: true }
+            });
+            const sendersMap = senders.reduce((acc, sender) => {
+                acc[sender.id] = sender;
+                return acc;
+            }, {});
+            const messagesWithSenders = messages.map(msg => ({
+                ...msg,
+                sender: sendersMap[msg.senderId]
+            }));
+            return {
+                ...conv,
+                messages: messagesWithSenders.reverse(), // Chronological order
+                unreadCount: await prisma.unifiedMessage.count({
+                    where: {
+                        conversationId: conv.id,
+                        recipientId: userId,
+                        isRead: false
+                    }
+                })
+            };
+        }));
+        res.json({
+            success: true,
+            data: {
+                conversations: conversationsWithMessages,
+                candidate,
+                hasMore: conversations.length === limit
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching candidate user messages:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch user messages'
         });
     }
 });
