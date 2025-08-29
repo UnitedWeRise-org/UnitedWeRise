@@ -26,6 +26,7 @@ const candidates_1 = __importDefault(require("./routes/candidates"));
 const candidateMessages_1 = __importDefault(require("./routes/candidateMessages"));
 const candidateAdminMessages_1 = __importDefault(require("./routes/candidateAdminMessages"));
 const unifiedMessages_1 = __importDefault(require("./routes/unifiedMessages"));
+const candidatePolicyPlatform_1 = __importDefault(require("./routes/candidatePolicyPlatform"));
 const topics_1 = __importDefault(require("./routes/topics"));
 const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
 const photos_1 = __importDefault(require("./routes/photos"));
@@ -161,6 +162,7 @@ app.use('/api/trending', trendingTopics_1.default);
 app.use('/api/payments', payments_1.default);
 app.use('/api/search', search_1.default);
 app.use('/api/totp', totp_1.default);
+app.use('/api/candidate-policy-platform', candidatePolicyPlatform_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));

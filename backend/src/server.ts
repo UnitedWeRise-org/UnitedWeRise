@@ -21,6 +21,7 @@ import candidateRoutes from './routes/candidates';
 import candidateMessagesRoutes from './routes/candidateMessages';
 import candidateAdminMessagesRoutes from './routes/candidateAdminMessages';
 import unifiedMessagesRoutes from './routes/unifiedMessages';
+import candidatePolicyPlatformRoutes from './routes/candidatePolicyPlatform';
 import topicRoutes from './routes/topics';
 import topicNavigationRoutes from './routes/topicNavigation';
 import photoRoutes from './routes/photos';
@@ -172,6 +173,7 @@ app.use('/api/trending', trendingTopicsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/totp', totpRoutes);
+app.use('/api/candidate-policy-platform', candidatePolicyPlatformRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically
