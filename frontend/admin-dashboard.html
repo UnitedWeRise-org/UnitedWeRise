@@ -431,6 +431,12 @@
                     <button id="profilesTab" class="tab-button" onclick="showCandidateTab('profiles')">
                         👤 Active Profiles
                     </button>
+                    <button id="reportsTab" class="tab-button" onclick="showCandidateTab('reports')">
+                        🚨 Reports
+                    </button>
+                    <button id="verificationTab" class="tab-button" onclick="showCandidateTab('verification')">
+                        ✅ Verification
+                    </button>
                 </div>
                 
                 <!-- Registrations Tab Content -->
@@ -499,14 +505,139 @@
                         <div class="loading">Loading candidate profiles...</div>
                     </div>
                 </div>
+                
+                <!-- Reports Tab Content -->
+                <div id="reportsContent" class="tab-content">
+                    <h3>🚨 Candidate Reports</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <select id="reportStatusFilter" style="padding: 0.5rem;">
+                                <option value="PENDING">Pending Review</option>
+                                <option value="IN_REVIEW">In Review</option>
+                                <option value="RESOLVED">Resolved</option>
+                                <option value="all">All Statuses</option>
+                            </select>
+                            <select id="reportPriorityFilter" style="padding: 0.5rem;">
+                                <option value="all">All Priorities</option>
+                                <option value="URGENT">🔴 Urgent</option>
+                                <option value="HIGH">🟠 High</option>
+                                <option value="MEDIUM">🟡 Medium</option>
+                                <option value="LOW">🟢 Low</option>
+                            </select>
+                            <select id="reportReasonFilter" style="padding: 0.5rem;">
+                                <option value="all">All Reasons</option>
+                                <option value="FRAUDULENT_CANDIDACY">Fraudulent Candidacy</option>
+                                <option value="EXTREMIST_POSITIONS">Extremist Positions</option>
+                                <option value="ELECTION_FRAUD">Election Fraud</option>
+                                <option value="CAMPAIGN_VIOLATIONS">Campaign Violations</option>
+                                <option value="MISINFORMATION">Misinformation</option>
+                                <option value="HATE_SPEECH">Hate Speech</option>
+                                <option value="VIOLENCE_THREATS">Violence Threats</option>
+                                <option value="ILLEGAL_CONTENT">Illegal Content</option>
+                            </select>
+                            <button onclick="loadCandidateReports()" class="nav-button">🔍 Search</button>
+                        </div>
+                        
+                        <!-- Report Stats -->
+                        <div id="candidateReportStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+                            <!-- Stats will be populated here -->
+                        </div>
+                    </div>
+
+                    <div id="candidateReportsTable">
+                        <div class="loading">Loading candidate reports...</div>
+                    </div>
+                </div>
+                
+                <!-- Verification Tab Content -->
+                <div id="verificationContent" class="tab-content">
+                    <h3>✅ Document Verification</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <select id="verificationStatusFilter" style="padding: 0.5rem;">
+                                <option value="all">All Statuses</option>
+                                <option value="DOCUMENTS_REQUESTED">Documents Requested</option>
+                                <option value="DOCUMENTS_SUBMITTED">Documents Submitted</option>
+                                <option value="VERIFIED">Verified</option>
+                                <option value="VERIFICATION_FAILED">Verification Failed</option>
+                                <option value="PENDING_RENEWAL">Pending Renewal</option>
+                            </select>
+                            <button onclick="loadVerificationQueue()" class="nav-button">🔍 Search</button>
+                            <button onclick="showMonthlyVerificationReport()" class="nav-button">📅 Monthly Report</button>
+                        </div>
+                        
+                        <!-- Verification Stats -->
+                        <div id="verificationStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+                            <!-- Stats will be populated here -->
+                        </div>
+                    </div>
+
+                    <div id="verificationTable">
+                        <div class="loading">Loading verification queue...</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Content Section -->
             <div id="content" class="dashboard-section">
                 <h2>📝 Content Moderation</h2>
                 
-                <div id="flaggedContent">
-                    <div class="loading">Loading flagged content...</div>
+                <!-- Content Moderation Tabs -->
+                <div style="display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                    <button id="userReportsTab" class="tab-button active" onclick="showContentTab('userReports')">
+                        🚨 User Reports
+                    </button>
+                    <button id="aiFlagsTab" class="tab-button" onclick="showContentTab('aiFlags')">
+                        🤖 AI Flagged
+                    </button>
+                </div>
+                
+                <!-- User Reports Tab Content -->
+                <div id="userReportsContent" class="tab-content active">
+                    <h3>User-Submitted Reports</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <select id="reportStatusFilter" style="padding: 0.5rem;">
+                                <option value="PENDING">Pending Review</option>
+                                <option value="IN_REVIEW">In Review</option>
+                                <option value="RESOLVED">Resolved</option>
+                                <option value="all">All Statuses</option>
+                            </select>
+                            <select id="reportTargetTypeFilter" style="padding: 0.5rem;">
+                                <option value="all">All Types</option>
+                                <option value="POST">Posts</option>
+                                <option value="COMMENT">Comments</option>
+                                <option value="USER">Users</option>
+                                <option value="MESSAGE">Messages</option>
+                                <option value="CANDIDATE">Candidates</option>
+                            </select>
+                            <select id="reportPriorityFilter" style="padding: 0.5rem;">
+                                <option value="all">All Priorities</option>
+                                <option value="URGENT">🔴 Urgent</option>
+                                <option value="HIGH">🟠 High</option>
+                                <option value="MEDIUM">🟡 Medium</option>
+                                <option value="LOW">🟢 Low</option>
+                            </select>
+                            <button onclick="loadUserReports()" class="nav-button">🔍 Search</button>
+                        </div>
+                        
+                        <!-- Report Stats -->
+                        <div id="userReportStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem;">
+                            <!-- Stats will be populated here -->
+                        </div>
+                    </div>
+
+                    <div id="userReportsTable">
+                        <div class="loading">Loading user reports...</div>
+                    </div>
+                </div>
+                
+                <!-- AI Flags Tab Content -->
+                <div id="aiFlagsContent" class="tab-content">
+                    <h3>AI-Flagged Content</h3>
+                    <div id="flaggedContent">
+                        <div class="loading">Loading flagged content...</div>
+                    </div>
                 </div>
             </div>
 
@@ -988,6 +1119,465 @@ Loading deployment status...
             }
         }
 
+        // Candidate Reports Functions
+        async function loadCandidateReports() {
+            try {
+                const status = document.getElementById('reportStatusFilter').value;
+                const priority = document.getElementById('reportPriorityFilter').value;
+                const reason = document.getElementById('reportReasonFilter').value;
+                
+                let url = `${BACKEND_URL}/api/moderation/reports?targetType=CANDIDATE`;
+                const params = new URLSearchParams();
+                
+                if (status !== 'all') params.append('status', status);
+                if (priority !== 'all') params.append('priority', priority);
+                if (reason !== 'all') params.append('reason', reason);
+                params.append('limit', '50');
+                
+                const response = await adminApiCall(url + '&' + params.toString());
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCandidateReports(data.reports);
+                    displayCandidateReportStats(data.reports);
+                } else {
+                    throw new Error('Failed to load candidate reports');
+                }
+            } catch (error) {
+                console.error('Error loading candidate reports:', error);
+                document.getElementById('candidateReportsTable').innerHTML = 
+                    `<div class="error">Failed to load candidate reports: ${error.message}</div>`;
+            }
+        }
+
+        function displayCandidateReports(reports) {
+            const container = document.getElementById('candidateReportsTable');
+            
+            if (!reports || reports.length === 0) {
+                container.innerHTML = '<div class="no-data">No candidate reports found</div>';
+                return;
+            }
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Candidate</th>
+                            <th>Reporter</th>
+                            <th>Reason</th>
+                            <th>Priority</th>
+                            <th>Geographic Weight</th>
+                            <th>AI Assessment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            reports.forEach(report => {
+                const priorityColors = {
+                    'URGENT': '#dc3545',
+                    'HIGH': '#fd7e14', 
+                    'MEDIUM': '#ffc107',
+                    'LOW': '#28a745'
+                };
+                
+                const statusColors = {
+                    'PENDING': '#6c757d',
+                    'IN_REVIEW': '#17a2b8',
+                    'RESOLVED': '#28a745'
+                };
+                
+                const candidate = report.targetContent;
+                const weight = report.geographicWeight ? (report.geographicWeight * 100).toFixed(0) + '%' : 'N/A';
+                const aiScore = report.aiAssessmentScore ? report.aiAssessmentScore.toFixed(0) : 'N/A';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${candidate?.name || 'Unknown'}</strong><br>
+                            <small>${candidate?.office?.title || 'Office not found'}</small>
+                        </td>
+                        <td>
+                            <strong>${report.reporter.username}</strong><br>
+                            <small>${report.reporter.email}</small>
+                        </td>
+                        <td>
+                            <span style="font-weight: bold;">${report.reason.replace(/_/g, ' ')}</span><br>
+                            <small style="color: #666;">${report.description?.substring(0, 100) || ''}${report.description?.length > 100 ? '...' : ''}</small>
+                        </td>
+                        <td>
+                            <span style="background: ${priorityColors[report.priority]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${report.priority}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <strong style="color: ${report.geographicWeight >= 0.8 ? '#28a745' : report.geographicWeight >= 0.5 ? '#ffc107' : '#dc3545'};">
+                                ${weight}
+                            </strong><br>
+                            <small>${report.reporterDistrict || 'District unknown'}</small>
+                        </td>
+                        <td style="text-align: center;">
+                            <strong style="color: ${report.aiUrgencyLevel === 'HIGH' ? '#dc3545' : report.aiUrgencyLevel === 'MEDIUM' ? '#ffc107' : '#28a745'};">
+                                ${report.aiUrgencyLevel || 'N/A'}
+                            </strong><br>
+                            <small>Score: ${aiScore}</small>
+                        </td>
+                        <td>
+                            <span style="background: ${statusColors[report.status]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${report.status}
+                            </span>
+                        </td>
+                        <td>
+                            ${report.status === 'PENDING' ? `
+                                <button onclick="showReportActionModal('${report.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                                    Take Action
+                                </button>
+                            ` : `
+                                <button onclick="showReportDetailsModal('${report.id}')" class="btn-sm" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                                    View Details
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function displayCandidateReportStats(reports) {
+            const container = document.getElementById('candidateReportStats');
+            
+            const stats = {
+                total: reports.length,
+                pending: reports.filter(r => r.status === 'PENDING').length,
+                urgent: reports.filter(r => r.priority === 'URGENT').length,
+                highWeight: reports.filter(r => (r.geographicWeight || 0) >= 0.8).length,
+                aiHigh: reports.filter(r => r.aiUrgencyLevel === 'HIGH').length
+            };
+            
+            const statItems = [
+                { label: 'Total Reports', value: stats.total, color: '#17a2b8' },
+                { label: 'Pending Review', value: stats.pending, color: '#ffc107' },
+                { label: 'Urgent Priority', value: stats.urgent, color: '#dc3545' },
+                { label: 'High Geographic Weight', value: stats.highWeight, color: '#28a745' },
+                { label: 'AI High Urgency', value: stats.aiHigh, color: '#fd7e14' }
+            ];
+            
+            let html = '';
+            statItems.forEach(item => {
+                html += `
+                    <div class="stat-card" style="border-left: 4px solid ${item.color};">
+                        <div class="stat-value">${item.value}</div>
+                        <div class="stat-label">${item.label}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function showReportActionModal(reportId) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 600px; width: 90%;">
+                    <h3>Take Action on Report</h3>
+                    <form id="reportActionForm">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Action:</label>
+                            <select id="reportAction" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                                <option value="NO_ACTION">No Action Required</option>
+                                <option value="CONTENT_HIDDEN">Hide Content</option>
+                                <option value="CONTENT_DELETED">Delete Content</option>
+                                <option value="USER_WARNED">Issue Warning</option>
+                                <option value="USER_SUSPENDED">Suspend User</option>
+                                <option value="USER_BANNED">Ban User</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Notes:</label>
+                            <textarea id="reportNotes" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem; min-height: 100px;" placeholder="Explain your decision..."></textarea>
+                        </div>
+                        <div style="text-align: right;">
+                            <button type="button" onclick="this.closest('.modal-overlay').remove()" style="margin-right: 1rem; background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button type="submit" style="background: #4b5c09; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                                Submit Action
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            modal.querySelector('#reportActionForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const action = document.getElementById('reportAction').value;
+                const notes = document.getElementById('reportNotes').value;
+                
+                try {
+                    const response = await adminApiCall(`${BACKEND_URL}/api/moderation/reports/${reportId}/action`, {
+                        method: 'POST',
+                        body: JSON.stringify({ action, notes })
+                    });
+                    
+                    if (response.ok) {
+                        modal.remove();
+                        loadCandidateReports(); // Refresh the list
+                        alert('Action taken successfully');
+                    } else {
+                        throw new Error('Failed to take action on report');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+            
+            document.body.appendChild(modal);
+        }
+
+        // Show report details modal for resolved reports
+        function showReportDetailsModal(reportId) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 600px; width: 90%;">
+                    <h3>Report Details</h3>
+                    <p>Report ID: ${reportId}</p>
+                    <p><em>This report has already been resolved. View the moderation history for details.</em></p>
+                    <div style="text-align: right; margin-top: 1rem;">
+                        <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Verification Functions
+        async function loadVerificationQueue() {
+            try {
+                const status = document.getElementById('verificationStatusFilter').value;
+                
+                let url = `${BACKEND_URL}/api/candidate-verification/admin/due-verification`;
+                if (status !== 'all') {
+                    url += `?status=${status}`;
+                }
+                
+                const response = await adminApiCall(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayVerificationQueue(data);
+                    displayVerificationStats(data);
+                } else {
+                    throw new Error('Failed to load verification queue');
+                }
+            } catch (error) {
+                console.error('Error loading verification queue:', error);
+                document.getElementById('verificationTable').innerHTML = 
+                    `<div class="error">Failed to load verification queue: ${error.message}</div>`;
+            }
+        }
+
+        function displayVerificationQueue(data) {
+            const container = document.getElementById('verificationTable');
+            
+            // Combine all categories for display
+            const allCandidates = [
+                ...(data.neverVerified || []).map(c => ({...c, category: 'Never Verified', urgency: 'high'})),
+                ...(data.overdue || []).map(c => ({...c, category: 'Overdue', urgency: 'urgent'})),
+                ...(data.dueSoon || []).map(c => ({...c, category: 'Due Soon', urgency: 'medium'})),
+                ...(data.withinGracePeriod || []).map(c => ({...c, category: 'Grace Period', urgency: 'low'}))
+            ];
+            
+            if (allCandidates.length === 0) {
+                container.innerHTML = '<div class="no-data">No candidates requiring verification</div>';
+                return;
+            }
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Candidate</th>
+                            <th>Office</th>
+                            <th>Category</th>
+                            <th>Last Verified</th>
+                            <th>Next Due</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            const urgencyColors = {
+                'urgent': '#dc3545',
+                'high': '#fd7e14',
+                'medium': '#ffc107', 
+                'low': '#28a745'
+            };
+            
+            allCandidates.forEach(candidate => {
+                const lastVerified = candidate.lastVerificationDate 
+                    ? new Date(candidate.lastVerificationDate).toLocaleDateString()
+                    : 'Never';
+                const nextDue = candidate.nextVerificationDue
+                    ? new Date(candidate.nextVerificationDue).toLocaleDateString()
+                    : 'TBD';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${candidate.name}</strong><br>
+                            <small>${candidate.user?.email || 'No email'}</small>
+                        </td>
+                        <td>
+                            ${candidate.office.title}<br>
+                            <small>${candidate.office.state}${candidate.office.district ? ' - District ' + candidate.office.district : ''}</small>
+                        </td>
+                        <td>
+                            <span style="background: ${urgencyColors[candidate.urgency]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${candidate.category}
+                            </span>
+                        </td>
+                        <td>${lastVerified}</td>
+                        <td>${nextDue}</td>
+                        <td>
+                            <span class="status-badge">${candidate.verificationStatus || 'UNVERIFIED'}</span>
+                        </td>
+                        <td>
+                            <button onclick="showDocumentRequestModal('${candidate.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer; margin-right: 0.5rem;">
+                                Request Docs
+                            </button>
+                            <button onclick="showVerificationStatusModal('${candidate.id}')" class="btn-sm" style="background: #17a2b8; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                                Update Status
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function displayVerificationStats(data) {
+            const container = document.getElementById('verificationStats');
+            
+            const stats = [
+                { label: 'Never Verified', value: (data.neverVerified || []).length, color: '#dc3545' },
+                { label: 'Overdue', value: (data.overdue || []).length, color: '#fd7e14' },
+                { label: 'Due Soon', value: (data.dueSoon || []).length, color: '#ffc107' },
+                { label: 'Grace Period', value: (data.withinGracePeriod || []).length, color: '#28a745' }
+            ];
+            
+            let html = '';
+            stats.forEach(stat => {
+                html += `
+                    <div class="stat-card" style="border-left: 4px solid ${stat.color};">
+                        <div class="stat-value">${stat.value}</div>
+                        <div class="stat-label">${stat.label}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function showDocumentRequestModal(candidateId) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h3>Request Verification Documents</h3>
+                    <form id="documentRequestForm">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label>Required Documents:</label>
+                            <div style="margin-top: 0.5rem;">
+                                <label style="display: block; margin-bottom: 0.25rem;">
+                                    <input type="checkbox" value="GOVERNMENT_ID" style="margin-right: 0.5rem;">
+                                    Government-issued Photo ID
+                                </label>
+                                <label style="display: block; margin-bottom: 0.25rem;">
+                                    <input type="checkbox" value="PROOF_OF_RESIDENCE" style="margin-right: 0.5rem;">
+                                    Proof of Residence
+                                </label>
+                                <label style="display: block; margin-bottom: 0.25rem;">
+                                    <input type="checkbox" value="FILING_RECEIPT" style="margin-right: 0.5rem;">
+                                    Candidate Filing Receipt
+                                </label>
+                                <label style="display: block; margin-bottom: 0.25rem;">
+                                    <input type="checkbox" value="CAMPAIGN_FINANCE" style="margin-right: 0.5rem;">
+                                    Campaign Finance Report
+                                </label>
+                                <label style="display: block; margin-bottom: 0.25rem;">
+                                    <input type="checkbox" value="BALLOT_ACCESS" style="margin-right: 0.5rem;">
+                                    Ballot Access Petition
+                                </label>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button type="button" onclick="this.closest('.modal-overlay').remove()" style="margin-right: 1rem; background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button type="submit" style="background: #4b5c09; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                                Request Documents
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            modal.querySelector('#documentRequestForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+                const documentTypes = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (documentTypes.length === 0) {
+                    alert('Please select at least one document type');
+                    return;
+                }
+                
+                try {
+                    const response = await adminApiCall(`${BACKEND_URL}/api/candidate-verification/admin/request-documents`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            candidateId,
+                            documentTypes
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        modal.remove();
+                        loadVerificationQueue(); // Refresh the list
+                        alert('Document request sent successfully');
+                    } else {
+                        throw new Error('Failed to request documents');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+            
+            document.body.appendChild(modal);
+        }
+
+        function showMonthlyVerificationReport() {
+            // Show current month's verification summary
+            alert('Monthly verification report feature coming soon');
+        }
+
         // Load users data
         async function loadUsersData() {
             try {
@@ -1008,6 +1598,184 @@ Loading deployment status...
 
         // Load content data
         async function loadContentData() {
+            // Load user reports by default when content section is shown
+            loadUserReports();
+        }
+
+        // Show content tab
+        function showContentTab(tab) {
+            // Update tab buttons
+            document.getElementById('userReportsTab').classList.toggle('active', tab === 'userReports');
+            document.getElementById('aiFlagsTab').classList.toggle('active', tab === 'aiFlags');
+            
+            // Update tab content
+            document.getElementById('userReportsContent').classList.toggle('active', tab === 'userReports');
+            document.getElementById('aiFlagsContent').classList.toggle('active', tab === 'aiFlags');
+            
+            // Load data for the active tab
+            if (tab === 'userReports') {
+                loadUserReports();
+            } else if (tab === 'aiFlags') {
+                loadAIFlaggedContent();
+            }
+        }
+
+        // Load user reports
+        async function loadUserReports() {
+            try {
+                const status = document.getElementById('reportStatusFilter').value;
+                const targetType = document.getElementById('reportTargetTypeFilter').value;
+                const priority = document.getElementById('reportPriorityFilter').value;
+                
+                let url = `${BACKEND_URL}/api/moderation/reports?`;
+                const params = new URLSearchParams();
+                
+                if (status !== 'all') params.append('status', status);
+                if (targetType !== 'all') params.append('targetType', targetType);
+                if (priority !== 'all') params.append('priority', priority);
+                params.append('limit', '50');
+                
+                const response = await adminApiCall(url + params.toString());
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayUserReports(data.reports);
+                    displayUserReportStats(data.reports);
+                } else {
+                    throw new Error('Failed to load user reports');
+                }
+            } catch (error) {
+                console.error('Error loading user reports:', error);
+                document.getElementById('userReportsTable').innerHTML = 
+                    `<div class="error">Failed to load user reports: ${error.message}</div>`;
+            }
+        }
+
+        // Display user reports
+        function displayUserReports(reports) {
+            const container = document.getElementById('userReportsTable');
+            
+            if (!reports || reports.length === 0) {
+                container.innerHTML = '<div class="no-data">No user reports found</div>';
+                return;
+            }
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Target</th>
+                            <th>Reporter</th>
+                            <th>Reason</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            reports.forEach(report => {
+                const priorityColors = {
+                    'URGENT': '#dc3545',
+                    'HIGH': '#fd7e14', 
+                    'MEDIUM': '#ffc107',
+                    'LOW': '#28a745'
+                };
+                
+                const statusColors = {
+                    'PENDING': '#6c757d',
+                    'IN_REVIEW': '#17a2b8',
+                    'RESOLVED': '#28a745'
+                };
+                
+                const targetInfo = report.targetContent ? 
+                    (report.targetContent.name || report.targetContent.username || report.targetContent.content?.substring(0, 50) || 'Content') 
+                    : report.targetId;
+                
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${report.targetType}</strong><br>
+                            <small>${targetInfo}</small>
+                        </td>
+                        <td>
+                            <strong>${report.reporter?.username || 'Unknown'}</strong><br>
+                            <small>${report.reporter?.email || ''}</small>
+                        </td>
+                        <td>
+                            <span style="font-weight: bold;">${report.reason.replace(/_/g, ' ')}</span><br>
+                            <small style="color: #666;">${report.description?.substring(0, 100) || ''}${report.description?.length > 100 ? '...' : ''}</small>
+                        </td>
+                        <td>
+                            <span style="background: ${priorityColors[report.priority]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${report.priority}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="background: ${statusColors[report.status]}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${report.status}
+                            </span>
+                        </td>
+                        <td>
+                            ${new Date(report.createdAt).toLocaleDateString()}<br>
+                            <small>${new Date(report.createdAt).toLocaleTimeString()}</small>
+                        </td>
+                        <td>
+                            ${report.status === 'PENDING' ? `
+                                <button onclick="showReportActionModal('${report.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                                    Take Action
+                                </button>
+                            ` : `
+                                <button onclick="showReportDetailsModal('${report.id}')" class="btn-sm" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                                    View Details
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Display user report stats
+        function displayUserReportStats(reports) {
+            const container = document.getElementById('userReportStats');
+            
+            const stats = {
+                total: reports.length,
+                pending: reports.filter(r => r.status === 'PENDING').length,
+                inReview: reports.filter(r => r.status === 'IN_REVIEW').length,
+                resolved: reports.filter(r => r.status === 'RESOLVED').length,
+                urgent: reports.filter(r => r.priority === 'URGENT').length
+            };
+            
+            const statItems = [
+                { label: 'Total Reports', value: stats.total, color: '#17a2b8' },
+                { label: 'Pending', value: stats.pending, color: '#ffc107' },
+                { label: 'In Review', value: stats.inReview, color: '#17a2b8' },
+                { label: 'Resolved', value: stats.resolved, color: '#28a745' },
+                { label: 'Urgent', value: stats.urgent, color: '#dc3545' }
+            ];
+            
+            let html = '';
+            statItems.forEach(item => {
+                html += `
+                    <div class="stat-card" style="border-left: 4px solid ${item.color};">
+                        <div class="stat-value">${item.value}</div>
+                        <div class="stat-label">${item.label}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Load AI flagged content
+        async function loadAIFlaggedContent() {
             try {
                 const response = await adminApiCall(`${BACKEND_URL}/api/admin/content/flagged`);
 
@@ -1015,12 +1783,12 @@ Loading deployment status...
                     const data = await response.json();
                     displayFlaggedContent(data.flags);
                 } else {
-                    throw new Error('Failed to load content data');
+                    throw new Error('Failed to load AI flagged content');
                 }
             } catch (error) {
-                console.error('Error loading content:', error);
+                console.error('Error loading AI flagged content:', error);
                 document.getElementById('flaggedContent').innerHTML = 
-                    '<div class="error">Failed to load content data</div>';
+                    '<div class="error">Failed to load AI flagged content</div>';
             }
         }
 
@@ -3057,15 +3825,23 @@ Example: adminConsole.getSuggestions('features', 'new')
             // Update tab buttons
             document.getElementById('registrationsTab').classList.toggle('active', tab === 'registrations');
             document.getElementById('profilesTab').classList.toggle('active', tab === 'profiles');
+            document.getElementById('reportsTab').classList.toggle('active', tab === 'reports');
+            document.getElementById('verificationTab').classList.toggle('active', tab === 'verification');
             
             // Update tab content
             document.getElementById('registrationsContent').classList.toggle('active', tab === 'registrations');
             document.getElementById('profilesContent').classList.toggle('active', tab === 'profiles');
+            document.getElementById('reportsContent').classList.toggle('active', tab === 'reports');
+            document.getElementById('verificationContent').classList.toggle('active', tab === 'verification');
             
             // Load data for the active tab
             if (tab === 'profiles') {
                 loadCandidateProfiles();
                 // Note: No auto-refresh polling - updates triggered by message events
+            } else if (tab === 'reports') {
+                loadCandidateReports();
+            } else if (tab === 'verification') {
+                loadVerificationQueue();
             }
         }
         
