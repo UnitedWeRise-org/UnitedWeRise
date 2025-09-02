@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Verification - United We Rise</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-left: 4px solid #4b5c09;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .document-upload {
+            background: white;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .document-upload:hover {
+            border-color: #4b5c09;
+        }
+        
+        .document-upload.dragover {
+            border-color: #4b5c09;
+            background: #f8f9fa;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: #4b5c09;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .upload-btn:hover {
+            background: #3a4607;
+        }
+        
+        .document-list {
+            margin-top: 2rem;
+        }
+        
+        .document-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .document-info {
+            flex: 1;
+        }
+        
+        .document-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+        
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #b6d4d9;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Document Verification</h1>
+            <p>Upload required documents to maintain your candidate verification status</p>
+        </div>
+        
+        <div id="verificationStatus" class="loading">
+            Loading verification status...
+        </div>
+        
+        <div id="requestedDocuments" style="display: none;">
+            <h2>📋 Requested Documents</h2>
+            <div class="alert alert-info">
+                <strong>Action Required:</strong> Please upload the following documents to maintain your candidate status.
+            </div>
+            <div id="requestedDocsList"></div>
+        </div>
+        
+        <div id="documentHistory" style="display: none;">
+            <h2>📚 Document History</h2>
+            <div id="documentsTable"></div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee;">
+            <a href="index.html" class="btn-secondary">← Back to Main Site</a>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
+        
+        // Check authentication
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            alert('Please log in to access document verification');
+            window.location.href = 'index.html';
+        }
+        
+        // Load verification status on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVerificationStatus();
+        });
+        
+        async function apiCall(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                }
+            };
+            
+            const response = await fetch(url, {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...options.headers
+                }
+            });
+            
+            return response;
+        }
+        
+        async function loadVerificationStatus() {
+            try {
+                const response = await apiCall(`${BACKEND_URL}/api/candidate-verification/status`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayVerificationStatus(data);
+                    loadRequestedDocuments();
+                } else if (response.status === 403) {
+                    document.getElementById('verificationStatus').innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Access Restricted:</strong> You must be a registered candidate to access document verification.
+                            <div style="margin-top: 1rem;">
+                                <a href="candidate-registration.html" class="btn-secondary">Register as Candidate</a>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Failed to load verification status');
+                }
+            } catch (error) {
+                console.error('Error loading verification status:', error);
+                document.getElementById('verificationStatus').innerHTML = `
+                    <div class="alert alert-warning">
+                        Error loading verification status: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function displayVerificationStatus(data) {
+            const statusColors = {
+                'UNVERIFIED': '#6c757d',
+                'DOCUMENTS_REQUESTED': '#ffc107',
+                'DOCUMENTS_SUBMITTED': '#17a2b8',
+                'VERIFIED': '#28a745',
+                'VERIFICATION_FAILED': '#dc3545',
+                'PENDING_RENEWAL': '#fd7e14'
+            };
+            
+            const status = data.verificationStatus || 'UNVERIFIED';
+            const color = statusColors[status] || '#6c757d';
+            
+            const lastVerified = data.lastVerificationDate 
+                ? new Date(data.lastVerificationDate).toLocaleDateString()
+                : 'Never';
+            const nextDue = data.nextVerificationDue
+                ? new Date(data.nextVerificationDue).toLocaleDateString()
+                : 'Not scheduled';
+            
+            document.getElementById('verificationStatus').innerHTML = `
+                <div class="status-card">
+                    <h3>🎯 Current Status: <span style="color: ${color};">${status.replace(/_/g, ' ')}</span></h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div>
+                            <strong>Last Verified:</strong> ${lastVerified}
+                        </div>
+                        <div>
+                            <strong>Next Due:</strong> ${nextDue}
+                        </div>
+                    </div>
+                    ${data.thirdPartyVerification ? `
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: #d4edda; border-radius: 4px;">
+                            ✅ Third-party verification: ${data.thirdPartyVerification}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Display document history
+            if (data.documents && data.documents.length > 0) {
+                displayDocumentHistory(data.documents);
+            }
+        }
+        
+        async function loadRequestedDocuments() {
+            try {
+                const response = await apiCall(`${BACKEND_URL}/api/candidate-verification/requested-documents`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.requestedDocuments && data.requestedDocuments.length > 0) {
+                        displayRequestedDocuments(data.requestedDocuments);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading requested documents:', error);
+            }
+        }
+        
+        function displayRequestedDocuments(documents) {
+            document.getElementById('requestedDocuments').style.display = 'block';
+            
+            let html = '';
+            documents.forEach(doc => {
+                const requestedDate = new Date(doc.requestedAt).toLocaleDateString();
+                html += `
+                    <div class="document-upload" id="upload-${doc.id}">
+                        <h4>${doc.documentType.replace(/_/g, ' ')}</h4>
+                        <p>Requested on: ${requestedDate}</p>
+                        <input type="file" class="file-input" id="file-${doc.id}" accept=".pdf,.jpg,.jpeg,.png">
+                        <button class="upload-btn" onclick="document.getElementById('file-${doc.id}').click()">
+                            📄 Select File
+                        </button>
+                        <button class="upload-btn" onclick="uploadDocument('${doc.id}', '${doc.documentType}')" style="margin-left: 1rem; background: #28a745;">
+                            ⬆️ Upload
+                        </button>
+                        <div id="upload-status-${doc.id}" style="margin-top: 1rem;"></div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('requestedDocsList').innerHTML = html;
+        }
+        
+        function displayDocumentHistory(documents) {
+            document.getElementById('documentHistory').style.display = 'block';
+            
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Document Type</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Uploaded</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Status</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Verified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            documents.forEach(doc => {
+                const uploadedDate = new Date(doc.uploadedAt).toLocaleDateString();
+                const verifiedDate = doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString() : '-';
+                
+                let statusClass = 'status-pending';
+                let statusText = 'Pending Review';
+                
+                if (doc.verifiedAt) {
+                    if (doc.isValid) {
+                        statusClass = 'status-verified';
+                        statusText = 'Verified';
+                    } else {
+                        statusClass = 'status-failed';
+                        statusText = 'Verification Failed';
+                    }
+                }
+                
+                html += `
+                    <tr>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">
+                            ${doc.type.replace(/_/g, ' ')}
+                        </td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">
+                            ${uploadedDate}
+                        </td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">
+                            <span class="document-status ${statusClass}">${statusText}</span>
+                        </td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">
+                            ${verifiedDate}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('documentsTable').innerHTML = html;
+        }
+        
+        async function uploadDocument(documentId, documentType) {
+            const fileInput = document.getElementById(`file-${documentId}`);
+            const statusDiv = document.getElementById(`upload-status-${documentId}`);
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                statusDiv.innerHTML = '<div style="color: #dc3545;">Please select a file first</div>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('documentType', documentType);
+            
+            statusDiv.innerHTML = '<div style="color: #17a2b8;">Uploading...</div>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/candidate-verification/documents`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    statusDiv.innerHTML = '<div style="color: #28a745;">✅ Upload successful!</div>';
+                    
+                    // Refresh the page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                statusDiv.innerHTML = `<div style="color: #dc3545;">❌ Upload failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Setup drag and drop for file uploads
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.document-upload').forEach(upload => {
+                    upload.classList.add('dragover');
+                });
+            });
+            
+            document.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.document-upload').forEach(upload => {
+                    upload.classList.remove('dragover');
+                });
+            });
+            
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.document-upload').forEach(upload => {
+                    upload.classList.remove('dragover');
+                });
+                
+                // Find which upload area the file was dropped on
+                const target = e.target.closest('.document-upload');
+                if (target) {
+                    const fileInput = target.querySelector('.file-input');
+                    if (fileInput && e.dataTransfer.files.length > 0) {
+                        fileInput.files = e.dataTransfer.files;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

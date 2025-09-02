@@ -1,7 +1,23 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: August 28, 2025 (4:45 PM EST)  
-**Version**: 4.17.0 (User-to-Candidate Messaging & Notification System - FULLY OPERATIONAL)  
-**Status**: 🟢 PRODUCTION LIVE
+**Last Updated**: August 30, 2025  
+**Version**: 4.18.0 (Candidate Verification & Reporting System - FULLY IMPLEMENTED)  
+**Status**: 🟢 PRODUCTION READY
+
+### 🎉 MAJOR ACHIEVEMENT (August 30, 2025) - CANDIDATE VERIFICATION & REPORTING SYSTEM COMPLETE
+
+**✅ LAYERED VERIFICATION SYSTEM**: Complete replacement of ID.me mock verification with sophisticated community-based reporting and professional document verification infrastructure.
+
+**✅ GEOGRAPHIC WEIGHTING ALGORITHM**: Office-level-based weighting system ensuring reports from actual voters carry appropriate weight (Presidential nationwide, Senate statewide, House district-level, etc.).
+
+**✅ AI-POWERED URGENCY ASSESSMENT**: Azure OpenAI integration analyzing reports for election integrity threats, voter deception potential, legal violations, and extremist rhetoric with HIGH/MEDIUM/LOW categorization.
+
+**✅ ANTI-BRIGADING PROTECTION**: Algorithmic detection of suspicious reporting patterns (>10 reports/hour, >50% out-of-district) with automatic flagging for manual admin review.
+
+**✅ DOCUMENT VERIFICATION SYSTEM**: Monthly re-verification on 1st Monday with grace period, Azure Blob Storage integration, and comprehensive admin workflow for document requests and verification.
+
+**✅ ADMIN DASHBOARD INTEGRATION**: New Reports and Verification tabs in candidate management with priority visualization, geographic weight display, AI assessment indicators, and interactive modals for taking action.
+
+**🎯 SYSTEM RELIABILITY**: All verification processes include fallback mechanisms, graceful error handling, and security logging to ensure platform integrity without single points of failure.
 
 ### 🎉 MAJOR ACHIEVEMENT (August 28, 2025) - COMPREHENSIVE MESSAGING & NOTIFICATION SYSTEM COMPLETE
 
@@ -112,14 +128,15 @@ Do NOT create separate documentation files. This consolidation was created after
 17. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
 18. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
 19. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-20. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-21. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-22. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-23. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-24. [📝 DEVELOPMENT PRACTICES](#development-practices)
-25. [📜 SESSION HISTORY](#session-history)
-26. [🔮 FUTURE ROADMAP](#future-roadmap)
-27. [🆘 TROUBLESHOOTING](#troubleshooting)
+20. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+21. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+22. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+23. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+24. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+25. [📝 DEVELOPMENT PRACTICES](#development-practices)
+26. [📜 SESSION HISTORY](#session-history)
+27. [🔮 FUTURE ROADMAP](#future-roadmap)
+28. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -4367,6 +4384,230 @@ Backend: WebSocketService.ts, unifiedMessages.ts, messaging.ts types
 Frontend: websocket-client.js, messaging.css, admin-dashboard.html, MyProfile.js
 Database: UnifiedMessage schema with migration scripts
 ```
+
+---
+
+## 🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM {#candidate-verification-reporting-system}
+
+### Overview
+**COMPLETE LAYERED VERIFICATION SYSTEM** replacing ID.me mock verification with comprehensive reporting infrastructure, geographic weighting, AI-powered urgency assessment, anti-brigading protection, and document-based verification. This system ensures platform integrity through community oversight while preventing abuse through sophisticated algorithms and professional verification processes.
+
+### System Architecture
+
+#### Geographic Weighting Algorithm
+**Purpose**: Ensures reports carry appropriate weight based on voter district overlap with candidate's electoral area.
+
+**Office-Level Weighting**:
+- **Presidential**: 1.0 weight nationwide (all voters can vote for president)
+- **US Senate**: 1.0 in-state, 0.2 out-of-state
+- **US House**: 1.0 same district, 0.5 same state, 0.2 out-of-state  
+- **State Offices**: 1.0 in-state, 0.2 out-of-state
+- **Regional**: Graduated 1.0 district → 0.7 county → 0.4 state → 0.2 out-of-state
+- **Local**: Graduated 1.0 district → 0.6 county → 0.3 state → 0.1 out-of-state
+
+#### AI Urgency Assessment  
+**Azure OpenAI Integration**: Reports analyzed for urgency considering:
+- Immediate threats to election integrity
+- Potential for voter deception
+- Legal violations
+- Extremist rhetoric that could incite violence
+- Scale of potential impact
+
+**Assessment Levels**: HIGH, MEDIUM, LOW with numerical scores 0-100
+**Fallback Logic**: When AI unavailable, rule-based assessment using report categories
+
+#### Anti-Brigading Protection
+**Pattern Detection**: Automatically flags suspicious reporting when:
+- >10 reports per hour for same candidate
+- >50% of reports have low geographic weight (out-of-district)
+- Creates ContentFlag for manual admin review
+
+### Report Categories
+
+#### Standard Categories (All Content Types)
+- **SPAM**: Repetitive or promotional content
+- **HARASSMENT**: Personal attacks or abuse  
+- **MISINFORMATION**: False or misleading information
+- **HATE_SPEECH**: Discriminatory language or content
+- **VIOLENCE_THREATS**: Threats of physical harm
+- **ILLEGAL_CONTENT**: Content promoting illegal activities
+- **OTHER**: Custom reason with description
+
+#### Candidate-Specific Categories  
+- **FRAUDULENT_CANDIDACY**: False claims of candidacy or qualification
+- **EXTREMIST_POSITIONS**: Positions outside mainstream political discourse
+- **ELECTION_FRAUD**: Claims or activities related to election manipulation
+- **CAMPAIGN_VIOLATIONS**: Federal/state campaign law violations
+
+### Document Verification System
+
+#### Monthly Re-Verification Schedule
+- **Due Date**: First Monday of each month
+- **Grace Period**: Until second Monday of month  
+- **Automatic Status**: Changes from VERIFIED to PENDING_RENEWAL
+- **Admin Workflow**: Manual document requests via admin dashboard
+
+#### Document Types
+- **GOVERNMENT_ID**: Government-issued photo identification
+- **PROOF_OF_RESIDENCE**: Utility bill, lease, or official residence proof
+- **FILING_RECEIPT**: Official candidate filing receipt from election authority
+- **CAMPAIGN_FINANCE**: Campaign finance disclosure reports
+- **BALLOT_ACCESS**: Ballot access petition or qualification documentation
+
+#### Verification Workflow
+1. **Admin Request**: Admin selects candidate and document types needed
+2. **Candidate Notification**: Email notification sent (TODO: implement)
+3. **Document Upload**: Candidate uploads via secure Azure Blob Storage
+4. **Admin Review**: Manual verification of submitted documents
+5. **Status Update**: Automatic status progression based on verification results
+
+### Database Schema Extensions
+
+#### Report Model Enhancements
+```prisma
+// Geographic weighting for candidate reports
+reporterDistrict String?
+candidateDistrict String?  
+geographicWeight Float?           @default(1.0)
+
+// AI assessment fields
+aiAssessmentScore Float?
+aiUrgencyLevel    String?         // HIGH, MEDIUM, LOW
+aiAnalysisNotes   String?
+aiAssessedAt      DateTime?
+```
+
+#### New Enum Values
+```prisma
+enum ReportTargetType {
+  POST
+  COMMENT  
+  USER
+  MESSAGE
+  CANDIDATE     // NEW
+}
+
+enum ReportReason {
+  // ... existing values ...
+  FRAUDULENT_CANDIDACY    // NEW
+  EXTREMIST_POSITIONS     // NEW  
+  ELECTION_FRAUD          // NEW
+  CAMPAIGN_VIOLATIONS     // NEW
+}
+```
+
+#### Candidate Verification Fields
+```prisma
+model Candidate {
+  // ... existing fields ...
+  verificationStatus      String?         @default("UNVERIFIED")
+  lastVerificationDate    DateTime?
+  nextVerificationDue     DateTime?
+  thirdPartyVerification  String?         // Future: ID.me, Civic Alliance, etc.
+  verificationDocuments   CandidateVerificationDocument[]
+}
+```
+
+#### New Document Model
+```prisma
+model CandidateVerificationDocument {
+  id            String    @id @default(cuid())
+  candidateId   String
+  documentType  String    // GOVERNMENT_ID, PROOF_OF_RESIDENCE, etc.
+  documentUrl   String
+  documentName  String
+  uploadedAt    DateTime  @default(now())
+  verifiedAt    DateTime?
+  verifiedBy    String?   // Admin user ID
+  isValid       Boolean?
+  verificationNotes String?
+  requestedAt   DateTime?
+  requestedBy   String?   // Admin user ID who requested
+  expiresAt     DateTime?
+  
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+```
+
+### API Endpoints
+
+#### Candidate Verification Routes
+```javascript
+// Candidate Routes (requireAuth + requireCandidate)
+GET  /api/candidate-verification/status                    // Get verification status
+GET  /api/candidate-verification/requested-documents      // Get pending document requests
+POST /api/candidate-verification/documents               // Upload verification document
+
+// Admin Routes (requireAuth + requireAdmin)  
+GET  /api/candidate-verification/admin/due-verification  // Get candidates due for verification
+POST /api/candidate-verification/admin/request-documents // Request documents from candidate
+POST /api/candidate-verification/admin/verify-document  // Verify submitted document
+```
+
+#### Enhanced Moderation Routes
+```javascript
+// Extended for candidate reports with geographic weighting and AI assessment
+POST /api/moderation/reports                    // Submit report (handles targetType=CANDIDATE)
+GET  /api/moderation/reports                   // Get reports queue (supports targetType filter)
+POST /api/moderation/reports/:id/action       // Take action on report
+```
+
+### Frontend Implementation
+
+#### Admin Dashboard Integration
+**Location**: `frontend/admin-dashboard.html:434-578`
+
+**New Tabs**:
+- **🚨 Reports Tab**: Review candidate reports with geographic weight and AI assessment
+- **✅ Verification Tab**: Manage monthly verification queue and document requests
+
+**Features**:
+- Priority-based report display with color coding (urgent=red, high=orange, medium=yellow, low=green)
+- Geographic weight visualization with percentage display
+- AI urgency level indicators with numerical assessment scores
+- Interactive action modals for resolving reports
+- Document request workflow with multiple document type selection
+- Monthly verification categorization (Never Verified, Overdue, Due Soon, Grace Period)
+
+#### Candidate Document Portal
+**New File**: `frontend/candidate-verification.html`
+
+**Features**:
+- Verification status dashboard with current status and next due date
+- Requested documents interface with file upload
+- Document history table showing upload and verification dates  
+- Drag-and-drop file upload with progress indicators
+- Integration with existing authentication system
+
+### Integration Points
+
+**Related Systems**:
+- **{#candidate-registration-admin-system}**: Seamlessly extends candidate management
+- **{#security-authentication}**: Uses existing auth middleware and admin permissions  
+- **{#ai-semantic-features}**: Azure OpenAI integration for report urgency assessment
+- **{#monitoring-admin}**: Admin dashboard tabs with existing UI patterns
+- **{#social-features}**: Leverages existing reporting infrastructure
+
+**Files Implemented**:
+- `backend/src/services/candidateReportService.ts` - Core verification and reporting logic
+- `backend/src/routes/candidateVerification.ts` - Document upload and admin endpoints
+- `frontend/candidate-verification.html` - Candidate document submission portal
+- Extended: `backend/src/routes/moderation.ts`, `frontend/admin-dashboard.html`
+
+### Security Features
+
+**Document Security**: Azure Blob Storage with container-level access control
+**File Validation**: MIME type checking, 10MB size limits, allowed extensions
+**Geographic Validation**: District verification through existing AddressDistrictMapping
+**Report Deduplication**: Prevents multiple reports from same user for same candidate  
+**Admin Action Logging**: All moderation decisions logged with moderator ID and timestamps
+
+### Performance Considerations
+
+**Geographic Calculations**: Cached district mappings for efficient weight calculations
+**AI Rate Limiting**: Graceful fallback when Azure OpenAI quota exceeded
+**Report Aggregation**: Efficient queries with indexed filtering on status, priority, target type
+**Document Storage**: Direct Azure Blob integration without local file system usage
 
 ---
 

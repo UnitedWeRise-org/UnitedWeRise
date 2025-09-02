@@ -12,6 +12,7 @@ const emailService_1 = require("../services/emailService");
 const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
+const candidateReportService_1 = require("../services/candidateReportService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 const requireModerator = async (req, res, next) => {
@@ -32,6 +33,17 @@ router.post('/reports', auth_1.requireAuth, rateLimiting_1.apiLimiter, validatio
     try {
         const { targetType, targetId, reason, description } = req.body;
         const reporterId = req.user.id;
+        // Handle candidate reports specially
+        if (targetType === 'CANDIDATE') {
+            const report = await candidateReportService_1.CandidateReportService.submitCandidateReport(reporterId, targetId, reason, description);
+            metricsService_1.metricsService.trackReportSubmitted(report.id, 'CANDIDATE', reason);
+            return res.json({
+                message: 'Candidate report submitted successfully',
+                reportId: report.id,
+                geographicWeight: report.geographicWeight,
+                aiUrgencyLevel: report.aiUrgencyLevel
+            });
+        }
         // Check if user has already reported this content
         const existingReport = await prisma_1.prisma.report.findFirst({
             where: {

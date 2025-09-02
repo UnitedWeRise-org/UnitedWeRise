@@ -119,75 +119,201 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
             );
         }
 
-        // Search Officials/Representatives
+        // Search Officials/Representatives (both User model and Candidate model)
         if (includeAll || searchTypes.includes('officials')) {
             resultTypes.push('officials');
+            
+            // Combined search for both User-based and Candidate model results
             searchPromises.push(
-                prisma.user.findMany({
-                    where: {
-                        AND: [
-                            {
-                                politicalProfileType: {
-                                    in: ['ELECTED_OFFICIAL', 'CANDIDATE']
+                Promise.all([
+                    // Search User-based officials and candidates
+                    prisma.user.findMany({
+                        where: {
+                            AND: [
+                                {
+                                    politicalProfileType: {
+                                        in: ['ELECTED_OFFICIAL', 'CANDIDATE']
+                                    }
+                                },
+                                {
+                                    OR: [
+                                        {
+                                            username: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        },
+                                        {
+                                            firstName: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        },
+                                        {
+                                            lastName: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        },
+                                        {
+                                            office: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        },
+                                        {
+                                            officialTitle: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            bio: true,
+                            verified: true,
+                            politicalProfileType: true,
+                            office: true,
+                            officialTitle: true,
+                            politicalParty: true,
+                            state: true,
+                            city: true,
+                            followersCount: true
+                        },
+                        take: Math.ceil(limitNum / 2),
+                        orderBy: [
+                            { followersCount: 'desc' },
+                            { username: 'asc' }
+                        ]
+                    }),
+                    // Search Candidate model candidates
+                    prisma.candidate.findMany({
+                        where: {
+                            AND: [
+                                { status: 'ACTIVE' },
+                                { isWithdrawn: false },
+                                {
+                                    OR: [
+                                        {
+                                            name: {
+                                                contains: searchTerm,
+                                                mode: 'insensitive'
+                                            }
+                                        },
+                                        {
+                                            user: {
+                                                OR: [
+                                                    {
+                                                        username: {
+                                                            contains: searchTerm,
+                                                            mode: 'insensitive'
+                                                        }
+                                                    },
+                                                    {
+                                                        firstName: {
+                                                            contains: searchTerm,
+                                                            mode: 'insensitive'
+                                                        }
+                                                    },
+                                                    {
+                                                        lastName: {
+                                                            contains: searchTerm,
+                                                            mode: 'insensitive'
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            office: {
+                                                OR: [
+                                                    {
+                                                        title: {
+                                                            contains: searchTerm,
+                                                            mode: 'insensitive'
+                                                        }
+                                                    },
+                                                    {
+                                                        state: {
+                                                            contains: searchTerm,
+                                                            mode: 'insensitive'
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true,
+                                    bio: true,
+                                    verified: true,
+                                    followersCount: true
                                 }
                             },
-                            {
-                                OR: [
-                                    {
-                                        username: {
-                                            contains: searchTerm,
-                                            mode: 'insensitive'
-                                        }
-                                    },
-                                    {
-                                        firstName: {
-                                            contains: searchTerm,
-                                            mode: 'insensitive'
-                                        }
-                                    },
-                                    {
-                                        lastName: {
-                                            contains: searchTerm,
-                                            mode: 'insensitive'
-                                        }
-                                    },
-                                    {
-                                        office: {
-                                            contains: searchTerm,
-                                            mode: 'insensitive'
-                                        }
-                                    },
-                                    {
-                                        officialTitle: {
-                                            contains: searchTerm,
-                                            mode: 'insensitive'
-                                        }
-                                    }
-                                ]
+                            office: {
+                                select: {
+                                    title: true,
+                                    level: true,
+                                    state: true,
+                                    district: true
+                                }
                             }
+                        },
+                        take: Math.ceil(limitNum / 2),
+                        orderBy: [
+                            { createdAt: 'desc' }
                         ]
-                    },
-                    select: {
-                        id: true,
-                        username: true,
-                        firstName: true,
-                        lastName: true,
-                        avatar: true,
-                        bio: true,
-                        verified: true,
-                        politicalProfileType: true,
-                        office: true,
-                        officialTitle: true,
-                        politicalParty: true,
-                        state: true,
-                        city: true,
-                        followersCount: true
-                    },
-                    take: limitNum,
-                    orderBy: [
-                        { followersCount: 'desc' },
-                        { username: 'asc' }
-                    ]
+                    })
+                ]).then(([users, candidates]) => {
+                    // Convert Candidate model results to match User model format
+                    const convertedCandidates = candidates.map(candidate => ({
+                        id: candidate.user.id, // Use user ID for consistency
+                        username: candidate.user.username,
+                        firstName: candidate.user.firstName,
+                        lastName: candidate.user.lastName,
+                        avatar: candidate.user.avatar,
+                        bio: candidate.user.bio,
+                        verified: candidate.user.verified || candidate.isVerified,
+                        politicalProfileType: 'CANDIDATE' as const,
+                        office: candidate.office.title,
+                        officialTitle: candidate.office.title,
+                        politicalParty: candidate.party,
+                        state: candidate.office.state,
+                        city: null,
+                        followersCount: candidate.user.followersCount,
+                        candidateId: candidate.id, // Add candidate ID for reference
+                        candidateStatus: candidate.status
+                    }));
+
+                    // Combine and deduplicate by user ID
+                    const combined = [...users, ...convertedCandidates];
+                    const seen = new Set();
+                    const deduplicated = combined.filter(item => {
+                        if (seen.has(item.id)) return false;
+                        seen.add(item.id);
+                        return true;
+                    });
+
+                    // Sort by followers and return top results
+                    return deduplicated
+                        .sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0))
+                        .slice(0, limitNum);
                 })
             );
         }

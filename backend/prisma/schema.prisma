@@ -315,6 +315,29 @@ model Candidate {
   suspendedUntil     DateTime?
   appealDeadline     DateTime?
   appealNotes        String?
+  
+  // Verification tracking
+  lastVerificationDate    DateTime?
+  nextVerificationDue     DateTime?
+  verificationStatus      String?              @default("PENDING_INITIAL")
+  thirdPartyVerification  Boolean              @default(false)
+
+  // External data sourcing
+  isExternallySourced     Boolean              @default(false)
+  externalSourceId        String?              // FEC ID, Ballotpedia ID, etc.
+  dataSource              String?              // FEC, BALLOTPEDIA, STATE_FILING, GOOGLE_CIVIC, USER_REGISTERED
+  lastExternalSync        DateTime?
+  externalDataConfidence  Float?               // 0.0-1.0 data quality score
+  isClaimed               Boolean              @default(false)
+  claimedBy               String?              // User ID when claimed
+  claimedAt               DateTime?
+  googleCivicId           String?
+  fecCandidateId          String?
+  ballotpediaId           String?
+  externalPhotoUrl        String?              // Photo from external source
+  externalBiography       String?              // Bio from external source
+  externalKeyIssues       String[]             @default([])  // Issues from external source
+  
   office             Office                  @relation(fields: [officeId], references: [id], onDelete: Cascade)
   user               User?                   @relation(fields: [userId], references: [id])
   adminMessages      CandidateAdminMessage[]
@@ -325,6 +348,7 @@ model Candidate {
   politicalInquiries PoliticalInquiry[]
   publicQAs          PublicQA[]
   policyPositions    PolicyPosition[]
+  verificationDocuments CandidateVerificationDocument[]
 
   @@index([officeId])
   @@index([party])
@@ -570,6 +594,18 @@ model Report {
   moderatorId    String?
   moderatorNotes String?
   actionTaken    ModerationAction?
+  
+  // Geographic weighting for candidate reports
+  reporterDistrict String?
+  candidateDistrict String?
+  geographicWeight Float?           @default(1.0)
+  
+  // AI assessment fields
+  aiAssessmentScore Float?
+  aiUrgencyLevel    String?         // HIGH, MEDIUM, LOW
+  aiAnalysisNotes   String?
+  aiAssessedAt      DateTime?
+  
   moderator      User?             @relation("ModeratedReports", fields: [moderatorId], references: [id])
   reporter       User              @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
 
@@ -1308,6 +1344,28 @@ model PublicQAVote {
   @@index([userId])
 }
 
+model CandidateVerificationDocument {
+  id                String              @id @default(cuid())
+  candidateId       String
+  documentType      String              // GOVERNMENT_ID, PROOF_OF_RESIDENCY, CAMPAIGN_FINANCE, BALLOT_ACCESS, OTHER
+  documentUrl       String              // Azure Blob Storage URL
+  documentName      String
+  uploadedAt        DateTime            @default(now())
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  verificationNotes String?
+  isValid           Boolean             @default(false)
+  expiresAt         DateTime?
+  requestedAt       DateTime?
+  requestedBy       String?
+  
+  candidate         Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  @@index([candidateId])
+  @@index([documentType])
+  @@index([verifiedAt])
+}
+
 model CandidateRegistration {
   id                        String                      @id @default(cuid())
   userId                    String
@@ -1697,6 +1755,7 @@ enum ReportTargetType {
   COMMENT
   USER
   MESSAGE
+  CANDIDATE
 }
 
 enum ReportReason {
@@ -1711,6 +1770,11 @@ enum ReportReason {
   VIOLENCE_THREATS
   SELF_HARM
   ILLEGAL_CONTENT
+  // Candidate-specific reasons
+  FRAUDULENT_CANDIDACY
+  EXTREMIST_POSITIONS
+  ELECTION_FRAUD
+  CAMPAIGN_VIOLATIONS
   OTHER
 }
 
@@ -1745,6 +1809,7 @@ enum ContentType {
   COMMENT
   USER_PROFILE
   MESSAGE
+  CANDIDATE
 }
 
 enum FlagType {
@@ -1756,6 +1821,7 @@ enum FlagType {
   FAKE_ENGAGEMENT
   DUPLICATE_CONTENT
   SUSPICIOUS_ACTIVITY
+  POTENTIAL_BRIGADING
 }
 
 enum CandidateStatus {

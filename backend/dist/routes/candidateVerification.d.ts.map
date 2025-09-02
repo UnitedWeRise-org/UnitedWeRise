@@ -1,0 +1,1 @@
+{"version":3,"file":"candidateVerification.d.ts","sourceRoot":"","sources":["../../src/routes/candidateVerification.ts"],"names":[],"mappings":"AAQA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AAsUhC,OAAO,CAAC,MAAM,CAAC;IACb,UAAU,OAAO,CAAC;QAChB,UAAU,OAAO;YACf,SAAS,CAAC,EAAE,GAAG,CAAC;SACjB;KACF;CACF;AAED,eAAe,MAAM,CAAC"}

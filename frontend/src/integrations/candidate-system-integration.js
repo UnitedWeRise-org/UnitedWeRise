@@ -1126,28 +1126,7 @@ class CandidateSystemIntegration {
                         
                         <!-- Step 2: Verification & Payment -->
                         <div class="form-step" data-step="2">
-                            <h4>🔐 Identity Verification & Payment</h4>
-                            <div class="verification-section">
-                                <div class="verification-card">
-                                    <div class="verification-icon">🆔</div>
-                                    <h5>ID.me Identity Verification Required</h5>
-                                    <p>To ensure the integrity of our platform, all candidates must verify their identity through ID.me. This process verifies:</p>
-                                    <ul>
-                                        <li>Government-issued photo ID</li>
-                                        <li>Identity authenticity</li>
-                                        <li>Address verification</li>
-                                        <li>Background check eligibility</li>
-                                    </ul>
-                                    <div class="verification-status" id="verificationStatus">
-                                        <span class="status-badge pending">Verification Required</span>
-                                    </div>
-                                    <button type="button" class="verify-btn" id="startVerification" onclick="candidateSystemIntegration.startIdmeVerification()">
-                                        🔒 Start ID.me Verification
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <h4 style="margin-top: 1rem;">💳 Registration Payment</h4>
+                            <h4>💳 Registration Payment</h4>
                             <div class="nonprofit-message">
                                 <div class="nonprofit-badge">
                                     <span class="badge-icon">💚</span>
@@ -1226,7 +1205,7 @@ class CandidateSystemIntegration {
                                     <label class="agreement-checkbox">
                                         <input type="checkbox" id="candidateAgreement" name="candidateAgreement" required>
                                         <div class="agreement-text">
-                                            <strong>I confirm in good faith that I am running for the selected office.</strong> I acknowledge that as part of my Candidate registration, I must confirm that I continue to be eligible for this race, and will meet all filing deadlines. I acknowledge that if I fail to meet a deadline, my candidate profile may be revoked. Any revocation may be appealed in writing. I further agree to abide by all of the rules of UnitedWeRise and am in compliance with all federal, state, and local election laws and regulations.
+                                            <strong>I confirm in good faith that I am running for the selected office.</strong> I acknowledge that as part of my Candidate registration, I must confirm that I continue to be eligible for this race, and will meet all filing deadlines. I acknowledge that if I fail to meet a deadline, my candidate profile may be revoked. Any revocation may be appealed in writing. I further agree to abide by all of the rules of UnitedWeRise and am in compliance with all federal, state, and local election laws and regulations. <strong>I expressly consent to and authorize UnitedWeRise to submit my information for third-party identity verification services as deemed necessary for platform integrity and fraud prevention.</strong>
                                         </div>
                                     </label>
                                 </div>
@@ -2120,15 +2099,10 @@ class CandidateSystemIntegration {
             }
         });
         
-        // Special validation for Step 2 (Verification & Payment)
+        // Special validation for Step 2 (Payment)
         if (this.currentStep === 2) {
-            // Check ID.me verification
-            if (!this.idmeVerified) {
-                errorMessage = 'Please complete ID.me verification first';
-                isValid = false;
-            }
             // Check office level selection
-            else if (!this.selectedOfficeLevel) {
+            if (!this.selectedOfficeLevel) {
                 errorMessage = 'Please select an office level for payment';
                 isValid = false;
             }
@@ -2183,7 +2157,6 @@ class CandidateSystemIntegration {
         
         // Special validation for Step 2 (Verification & Payment)
         if (this.currentStep === 2) {
-            if (!this.idmeVerified) return false;
             if (!this.selectedOfficeLevel) return false;
             if (!document.getElementById('candidateAgreement')?.checked) return false;
         }
@@ -2351,43 +2324,12 @@ class CandidateSystemIntegration {
         paidLevelName.textContent = officeLevelNames[this.selectedOfficeLevel] || 'Office Level';
     }
     
-    startIdmeVerification() {
-        // TODO: Integrate with actual ID.me API
-        console.log('Starting ID.me verification...');
-        
-        // Simulate verification process
-        const statusBadge = document.querySelector('#verificationStatus .status-badge');
-        const verifyBtn = document.getElementById('startVerification');
-        
-        statusBadge.textContent = 'Verification in Progress...';
-        statusBadge.className = 'status-badge pending';
-        verifyBtn.disabled = true;
-        verifyBtn.textContent = 'Verifying...';
-        
-        // Simulate successful verification after 3 seconds
-        setTimeout(() => {
-            statusBadge.textContent = 'Verified ✓';
-            statusBadge.className = 'status-badge verified';
-            verifyBtn.textContent = 'Verification Complete';
-            verifyBtn.style.background = '#28a745';
-            this.idmeVerified = true;
-            this.showMessage('ID.me verification completed successfully!');
-            this.updateNextButtonState();
-        }, 3000);
-    }
-    
     async submitRegistration() {
         console.log('🔍 Submit Registration called');
         console.log('🔍 Current step:', this.currentStep);
-        console.log('🔍 ID.me verified:', this.idmeVerified);
         
         if (!this.validateCurrentStep()) {
             console.log('🔍 Submit failed: validation failed');
-            return;
-        }
-        if (!this.idmeVerified) {
-            console.log('🔍 Submit failed: ID.me not verified');
-            this.showMessage('Please complete ID.me verification first');
             return;
         }
         

@@ -60,6 +60,14 @@ export declare class AzureOpenAIService {
     private buildTopicAnalysisPrompt;
     private parseTopicSummaryText;
     private extractFromLines;
+    /**
+     * Generate general completion using Azure OpenAI
+     */
+    generateCompletion(prompt: string, options?: {
+        temperature?: number;
+        maxTokens?: number;
+        systemMessage?: string;
+    }): Promise<string>;
 }
 export declare const azureOpenAI: AzureOpenAIService;
 export {};

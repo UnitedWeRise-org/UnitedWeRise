@@ -320,6 +320,42 @@ Focus on:
     }
     return null;
   }
+
+  /**
+   * Generate general completion using Azure OpenAI
+   */
+  async generateCompletion(prompt: string, options: {
+    temperature?: number;
+    maxTokens?: number;
+    systemMessage?: string;
+  } = {}): Promise<string> {
+    if (!this.isConfigured) {
+      throw new Error('Azure OpenAI not configured');
+    }
+
+    const response = await this.client.chat.completions.create({
+      model: this.chatDeployment,
+      messages: [
+        {
+          role: "system",
+          content: options.systemMessage || "You are a helpful AI assistant."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: options.maxTokens || 200,
+      temperature: options.temperature || 0.3
+    });
+
+    const content = response.choices[0].message?.content;
+    if (!content) {
+      throw new Error('No response from AI service');
+    }
+
+    return content;
+  }
 }
 
 // Singleton instance for consistent usage
