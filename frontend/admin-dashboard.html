@@ -415,6 +415,20 @@
                     <button onclick="searchUsers()" class="nav-button">Search</button>
                 </div>
 
+                <!-- Account Merge Tool -->
+                <div style="background: #fff3cd; border: 1px solid #f0c36d; border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                    <h3 style="margin-top: 0; color: #856404;">🔧 Account Merge Tool</h3>
+                    <p style="margin: 0.5rem 0; color: #856404; font-size: 0.9rem;">
+                        Merge duplicate accounts (e.g., OAuth email variations like jeffrey@gmail.com vs jeffrey.a.benson@gmail.com)
+                    </p>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                        <input type="text" id="primaryAccountId" placeholder="Primary Account ID (keep this one)" style="flex: 1; padding: 0.5rem;">
+                        <input type="text" id="duplicateAccountId" placeholder="Duplicate Account ID (delete this one)" style="flex: 1; padding: 0.5rem;">
+                        <button onclick="mergeAccounts()" class="nav-button" style="background: #e67e22; border-color: #e67e22;">🔄 Merge</button>
+                    </div>
+                    <div id="mergeStatus" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
+                </div>
+
                 <div id="usersTable">
                     <div class="loading">Loading users...</div>
                 </div>
@@ -3219,9 +3233,131 @@ Current Status: Use deploymentStatus.check() for real-time status
             console.log('Searching for:', searchTerm);
         }
 
-        function viewUser(userId) {
-            // Implement user detail view
-            console.log('Viewing user:', userId);
+        async function viewUser(userId) {
+            try {
+                console.log('Loading user details for:', userId);
+                
+                // Fetch user details
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${getStoredAuthToken()}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user details');
+                }
+                
+                const data = await response.json();
+                const user = data.data;
+                
+                // Create modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                    background: rgba(0,0,0,0.5); z-index: 1000; 
+                    display: flex; align-items: center; justify-content: center;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="background: white; border-radius: 8px; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative;">
+                        <button onclick="this.closest('.modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                        
+                        <h2 style="margin-top: 0;">👤 User Details</h2>
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <p><strong>ID:</strong> ${user.id}</p>
+                            <p><strong>Username:</strong> @${user.username}</p>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Name:</strong> ${user.firstName || ''} ${user.lastName || ''}</p>
+                            <p><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</p>
+                            <p><strong>Status:</strong> <span style="color: ${user.isActive ? 'green' : 'red'}">${user.isActive ? 'Active' : 'Inactive'}</span></p>
+                            <p><strong>Email Verified:</strong> ${user.emailVerified ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>Role:</strong> ${user.isAdmin ? 'Admin' : 'User'}</p>
+                            <p><strong>Posts:</strong> ${user._count?.posts || 0}</p>
+                            <p><strong>Comments:</strong> ${user._count?.comments || 0}</p>
+                            <p><strong>Followers:</strong> ${user._count?.followers || 0}</p>
+                            <p><strong>Following:</strong> ${user._count?.following || 0}</p>
+                        </div>
+                        
+                        ${user.oauthProviders && user.oauthProviders.length > 0 ? `
+                            <div style="margin-bottom: 1.5rem;">
+                                <h3>🔐 OAuth Providers</h3>
+                                ${user.oauthProviders.map(provider => `
+                                    <div style="border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; margin-bottom: 0.5rem;">
+                                        <strong>${provider.provider}</strong><br>
+                                        <small>Email: ${provider.email}</small><br>
+                                        <small>Linked: ${new Date(provider.createdAt).toLocaleString()}</small>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div style="text-align: center;">
+                            <button onclick="this.closest('.modal').remove()" class="nav-button">Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                modal.className = 'modal';
+                document.body.appendChild(modal);
+                
+            } catch (error) {
+                console.error('Error viewing user:', error);
+                alert('Failed to load user details');
+            }
+        }
+
+        async function mergeAccounts() {
+            const primaryId = document.getElementById('primaryAccountId').value.trim();
+            const duplicateId = document.getElementById('duplicateAccountId').value.trim();
+            const statusDiv = document.getElementById('mergeStatus');
+            
+            if (!primaryId || !duplicateId) {
+                statusDiv.innerHTML = '<span style="color: red;">❌ Please enter both account IDs</span>';
+                return;
+            }
+            
+            if (primaryId === duplicateId) {
+                statusDiv.innerHTML = '<span style="color: red;">❌ Cannot merge account with itself</span>';
+                return;
+            }
+            
+            if (!confirm(`⚠️ Are you sure you want to merge these accounts?\n\nPrimary (keep): ${primaryId}\nDuplicate (delete): ${duplicateId}\n\nThis action cannot be undone!`)) {
+                return;
+            }
+            
+            statusDiv.innerHTML = '<span style="color: blue;">🔄 Merging accounts...</span>';
+            
+            try {
+                const response = await fetch('/api/admin/merge-accounts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getStoredAuthToken()}`
+                    },
+                    body: JSON.stringify({
+                        primaryAccountId: primaryId,
+                        duplicateAccountId: duplicateId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `<span style="color: green;">✅ ${data.message}</span>`;
+                    // Clear input fields
+                    document.getElementById('primaryAccountId').value = '';
+                    document.getElementById('duplicateAccountId').value = '';
+                    // Refresh users table
+                    loadUsers();
+                } else {
+                    statusDiv.innerHTML = `<span style="color: red;">❌ ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error('Merge accounts error:', error);
+                statusDiv.innerHTML = '<span style="color: red;">❌ Network error during merge</span>';
+            }
         }
 
         function resolveFlag(flagId) {
