@@ -14,7 +14,7 @@ import { prisma } from '../lib/prisma';
 ;
 import { EmbeddingService } from './embeddingService';
 import { QdrantService } from './qdrantService';
-import { QwenService } from './qwenService';
+// Qwen service deprecated - using Azure OpenAI instead
 import { azureOpenAI } from './azureOpenAIService';
 import { ProbabilityFeedService } from './probabilityFeedService';
 import { getSemanticConfig, isProduction } from '../config/azureConfig';
@@ -231,7 +231,7 @@ Respond with JSON only:
                     engagementInsight: `Discussion involving ${cluster.posts.length} posts`
                 });
             } else {
-                response = await QwenService.generateResponse(prompt, 400);
+                response = await azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
             }
             
             const analysisMatch = response.match(/\{[\s\S]*\}/);

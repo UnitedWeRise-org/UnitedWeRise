@@ -18,7 +18,7 @@ const prisma_1 = require("../lib/prisma");
  */
 ;
 const qdrantService_1 = require("./qdrantService");
-const qwenService_1 = require("./qwenService");
+// Qwen service deprecated - using Azure OpenAI instead
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const probabilityFeedService_1 = require("./probabilityFeedService");
 const azureConfig_1 = require("../config/azureConfig");
@@ -158,7 +158,7 @@ Respond with JSON only:
                 });
             }
             else {
-                response = await qwenService_1.QwenService.generateResponse(prompt, 400);
+                response = await azureOpenAIService_1.azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
             }
             const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {

@@ -282,14 +282,15 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
                     bio: candidate.user.bio,
                     verified: candidate.user.verified || candidate.isVerified,
                     politicalProfileType: 'CANDIDATE',
-                    office: candidate.office.title,
-                    officialTitle: candidate.office.title,
+                    office: candidate.office?.title || 'Office Unknown',
+                    officialTitle: candidate.office?.title || 'Office Unknown',
                     politicalParty: candidate.party,
-                    state: candidate.office.state,
+                    state: candidate.office?.state || 'Unknown',
                     city: null,
                     followersCount: candidate.user.followersCount,
                     candidateId: candidate.id, // Add candidate ID for reference
-                    candidateStatus: candidate.status
+                    candidateStatus: candidate.status,
+                    isExternallySourced: candidate.isExternallySourced || false
                 }));
                 // Combine and deduplicate by user ID
                 const combined = [...users, ...convertedCandidates];

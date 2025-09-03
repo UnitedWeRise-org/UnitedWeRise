@@ -1,3 +1,7 @@
+// DEPRECATED: This service is no longer in use
+// All AI functionality has been migrated to Azure OpenAI Service
+// File kept for reference only - September 2, 2025
+
 import axios from 'axios';
 import { Candidate } from '@prisma/client';
 import { prisma } from '../lib/prisma';

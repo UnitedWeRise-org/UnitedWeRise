@@ -237,7 +237,12 @@
                         <label for="loginPassword">Password</label>
                         <input type="password" id="loginPassword" required>
                     </div>
-                    <button class="btn" onclick="handleLogin()">Login</button>
+                    <div class="form-group" id="totpField" style="display: none;">
+                        <label for="loginTOTP">Two-Factor Authentication Code</label>
+                        <input type="text" id="loginTOTP" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}">
+                        <small style="color: #666; font-size: 0.8rem;">Enter the 6-digit code from your authenticator app</small>
+                    </div>
+                    <button class="btn" onclick="handleLogin()" id="loginButton">Login</button>
                     
                     <div class="oauth-divider">
                         <span>Or continue with</span>
@@ -253,21 +258,15 @@
                             </svg>
                             Google
                         </button>
+                        <!-- Microsoft and Apple OAuth temporarily disabled -->
+                        <!--
                         <button class="oauth-btn microsoft-btn" onclick="handleMicrosoftLogin()">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="#F25022" d="M1 1h10v10H1z"/>
-                                <path fill="#00A4EF" d="M13 1h10v10H13z"/>
-                                <path fill="#7FBA00" d="M1 13h10v10H1z"/>
-                                <path fill="#FFB900" d="M13 13h10v10H13z"/>
-                            </svg>
                             Microsoft
                         </button>
                         <button class="oauth-btn apple-btn" onclick="handleAppleLogin()">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                            </svg>
-                            Apple
+                            Apple  
                         </button>
+                        -->
                     </div>
                     
                     <div class="auth-switch">
@@ -335,21 +334,15 @@
                             </svg>
                             Google
                         </button>
+                        <!-- Microsoft and Apple OAuth temporarily disabled -->
+                        <!--
                         <button class="oauth-btn microsoft-btn" onclick="handleMicrosoftLogin()">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="#F25022" d="M1 1h10v10H1z"/>
-                                <path fill="#00A4EF" d="M13 1h10v10H13z"/>
-                                <path fill="#7FBA00" d="M1 13h10v10H1z"/>
-                                <path fill="#FFB900" d="M13 13h10v10H13z"/>
-                            </svg>
                             Microsoft
                         </button>
                         <button class="oauth-btn apple-btn" onclick="handleAppleLogin()">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                            </svg>
-                            Apple
+                            Apple  
                         </button>
+                        -->
                     </div>
                     
                     <div class="auth-switch">
@@ -561,6 +554,10 @@
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
                     <input type="radio" name="searchType" value="officials" onchange="updateSearchResults()">
                     🏛️ Officials
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
+                    <input type="radio" name="searchType" value="candidates" onchange="updateSearchResults()">
+                    🗳️ Candidates
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
                     <input type="radio" name="searchType" value="topics" onchange="updateSearchResults()">
@@ -1168,40 +1165,88 @@
             document.getElementById('authMessage').innerHTML = '';
             // Clear all form inputs
             document.querySelectorAll('#authModal input').forEach(input => input.value = '');
+            // Hide TOTP field and reset button text
+            const totpField = document.getElementById('totpField');
+            if (totpField) totpField.style.display = 'none';
+            const loginButton = document.getElementById('loginButton');
+            if (loginButton) loginButton.textContent = 'Login';
         }
 
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
+            const totpToken = document.getElementById('loginTOTP').value;
+            
+            // Get stored TOTP session token if available
+            const totpSessionToken = localStorage.getItem('totpSessionToken');
 
             if (!email || !password) {
                 showAuthMessage('Please fill in all fields', 'error');
                 return;
             }
 
+            // Check if TOTP field is visible and required
+            const totpField = document.getElementById('totpField');
+            if (totpField.style.display !== 'none' && !totpToken) {
+                showAuthMessage('Please enter your two-factor authentication code', 'error');
+                return;
+            }
+
             try {
+                const loginButton = document.getElementById('loginButton');
+                loginButton.disabled = true;
+                loginButton.textContent = 'Signing in...';
+
+                const requestBody = { email, password };
+                if (totpToken) requestBody.totpToken = totpToken;
+                if (totpSessionToken) requestBody.totpSessionToken = totpSessionToken;
+
                 const response = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    authToken = data.token;
-                    localStorage.setItem('authToken', authToken);
-                    setUserLoggedIn(data.user);
-                    closeAuthModal();
-                    showAuthMessage('Login successful!', 'success');
+                    if (data.requiresTOTP) {
+                        // Show TOTP field and update button
+                        totpField.style.display = 'block';
+                        loginButton.textContent = 'Verify & Login';
+                        showAuthMessage('Please enter your two-factor authentication code', 'info');
+                        document.getElementById('loginTOTP').focus();
+                    } else {
+                        // Successful login
+                        authToken = data.token;
+                        localStorage.setItem('authToken', authToken);
+                        localStorage.setItem('currentUser', JSON.stringify(data.user));
+                        
+                        // Store TOTP session token if provided
+                        if (data.totpSessionToken) {
+                            localStorage.setItem('totpSessionToken', data.totpSessionToken);
+                        }
+                        
+                        setUserLoggedIn(data.user);
+                        closeAuthModal();
+                        showAuthMessage('Login successful!', 'success');
+                    }
                 } else {
-                    showAuthMessage(data.error || 'Login failed', 'error');
+                    if (data.oauthOnly) {
+                        showAuthMessage('This account uses social login. Please sign in with Google, Microsoft, or Apple.', 'error');
+                    } else {
+                        showAuthMessage(data.error || 'Login failed', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 showAuthMessage('Network error. Please try again.', 'error');
+            } finally {
+                const loginButton = document.getElementById('loginButton');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
             }
         }
 
@@ -1446,6 +1491,7 @@
         function logout() {
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('totpSessionToken');
             
             // Use the new centralized logout function
             setUserLoggedOut();
@@ -1663,58 +1709,94 @@
 
         // OAuth SDK Loading Functions
         async function loadGoogleSignIn() {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://accounts.google.com/gsi/client';
-                script.onload = () => {
-                    google.accounts.id.initialize({
-                        client_id: 'YOUR_GOOGLE_CLIENT_ID', // This would be set from environment
-                        callback: handleGoogleCredentialResponse,
-                        auto_select: false,
-                        cancel_on_tap_outside: false
-                    });
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Fetch OAuth configuration from backend
+                    const configResponse = await fetch('/api/oauth/config');
+                    const config = await configResponse.json();
+                    
+                    if (!config.google.enabled) {
+                        throw new Error('Google OAuth is not configured');
+                    }
+                    
+                    const script = document.createElement('script');
+                    script.src = 'https://accounts.google.com/gsi/client';
+                    script.onload = () => {
+                        google.accounts.id.initialize({
+                            client_id: config.google.clientId,
+                            callback: handleGoogleCredentialResponse,
+                            auto_select: false,
+                            cancel_on_tap_outside: false
+                        });
+                        resolve();
+                    };
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 
         async function loadMicrosoftAuth() {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js';
-                script.onload = () => {
-                    const msalConfig = {
-                        auth: {
-                            clientId: 'YOUR_MICROSOFT_CLIENT_ID', // This would be set from environment
-                            authority: 'https://login.microsoftonline.com/common'
-                        }
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Fetch OAuth configuration from backend
+                    const configResponse = await fetch('/api/oauth/config');
+                    const config = await configResponse.json();
+                    
+                    if (!config.microsoft.enabled) {
+                        throw new Error('Microsoft OAuth is not configured');
+                    }
+                    
+                    const script = document.createElement('script');
+                    script.src = 'https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js';
+                    script.onload = () => {
+                        const msalConfig = {
+                            auth: {
+                                clientId: config.microsoft.clientId,
+                                authority: 'https://login.microsoftonline.com/common'
+                            }
+                        };
+                        window.msalInstance = new msal.PublicClientApplication(msalConfig);
+                        resolve();
                     };
-                    window.msalInstance = new msal.PublicClientApplication(msalConfig);
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 
         async function loadAppleSignIn() {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-                script.onload = () => {
-                    AppleID.auth.init({
-                        clientId: 'YOUR_APPLE_CLIENT_ID', // This would be set from environment
-                        scope: 'name email',
-                        redirectURI: window.location.origin + '/apple-callback',
-                        state: 'signin',
-                        usePopup: true
-                    });
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Fetch OAuth configuration from backend
+                    const configResponse = await fetch('/api/oauth/config');
+                    const config = await configResponse.json();
+                    
+                    if (!config.apple.enabled) {
+                        throw new Error('Apple OAuth is not configured');
+                    }
+                    
+                    const script = document.createElement('script');
+                    script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+                    script.onload = () => {
+                        AppleID.auth.init({
+                            clientId: config.apple.clientId,
+                            scope: 'name email',
+                            redirectURI: window.location.origin + '/apple-callback',
+                            state: 'signin',
+                            usePopup: true
+                        });
+                        resolve();
+                    };
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
 
@@ -5557,6 +5639,10 @@
                     searchPromises = [
                         apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
                     ];
+                } else if (searchType === 'candidates') {
+                    // For candidates filter, search officials but filter client-side
+                    const endpoint = `/search/unified?${searchParams.toString()}&types=officials`;
+                    searchPromises = [apiCall(endpoint)];
                 } else {
                     // Search specific type - use unified endpoint with single type
                     const endpoint = `/search/unified?${searchParams.toString()}&types=${searchType}`;
@@ -5617,7 +5703,11 @@
             const resultsContainer = document.getElementById('globalSearchResults');
             const { users, posts, officials, topics } = currentSearchResults;
             
-            const totalResults = users.length + posts.length + officials.length + topics.length;
+            // Separate candidates from officials
+            const candidates = officials ? officials.filter(o => o.politicalProfileType === 'CANDIDATE') : [];
+            const actualOfficials = officials ? officials.filter(o => o.politicalProfileType === 'ELECTED_OFFICIAL') : [];
+            
+            const totalResults = users.length + posts.length + candidates.length + actualOfficials.length + topics.length;
             
             if (totalResults === 0) {
                 resultsContainer.innerHTML = `
@@ -5640,8 +5730,11 @@
             if (users.length > 0) {
                 html += renderSearchSection('👤 Users', users, renderUserResult);
             }
-            if (officials.length > 0) {
-                html += renderSearchSection('🏛️ Officials', officials, renderOfficialResult);
+            if (candidates.length > 0) {
+                html += renderSearchSection('🗳️ Candidates', candidates, renderCandidateResult);
+            }
+            if (actualOfficials.length > 0) {
+                html += renderSearchSection('🏛️ Officials', actualOfficials, renderOfficialResult);
             }
             if (posts.length > 0) {
                 html += renderSearchSection('📝 Posts', posts, renderPostResult);
@@ -5656,13 +5749,21 @@
         // Display filtered results for a specific type
         function displayFilteredSearchResults(type) {
             const resultsContainer = document.getElementById('globalSearchResults');
-            const results = currentSearchResults[type];
+            let results = currentSearchResults[type];
+            
+            // Handle separation of candidates and officials
+            if (type === 'officials') {
+                results = currentSearchResults.officials ? currentSearchResults.officials.filter(o => o.politicalProfileType === 'ELECTED_OFFICIAL') : [];
+            } else if (type === 'candidates') {
+                results = currentSearchResults.officials ? currentSearchResults.officials.filter(o => o.politicalProfileType === 'CANDIDATE') : [];
+            }
             
             if (results.length === 0) {
                 const typeLabels = {
                     users: '👤 Users',
                     posts: '📝 Posts', 
                     officials: '🏛️ Officials',
+                    candidates: '🗳️ Candidates',
                     topics: '🏷️ Topics'
                 };
                 
@@ -5680,6 +5781,7 @@
                 users: renderUserResult,
                 posts: renderPostResult,
                 officials: renderOfficialResult,
+                candidates: renderCandidateResult,
                 topics: renderTopicResult
             };
 
@@ -5764,13 +5866,13 @@
 
         function renderOfficialResult(official) {
             return `
-                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="showOfficialDetails('${official.id}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="${official.politicalProfileType === 'CANDIDATE' ? `openUserProfile('${official.id}', '${official.username}')` : `showOfficialDetails('${official.id}')`}" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
                     <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
                         🏛️
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-weight: bold; font-size: 1rem;">${official.name}</div>
-                        <div style="color: #666; font-size: 0.9rem;">${official.office || official.title}</div>
+                        <div style="font-weight: bold; font-size: 1rem;">${official.name || (official.firstName ? `${official.firstName} ${official.lastName || ''}` : official.username || 'Unknown')}</div>
+                        <div style="color: #666; font-size: 0.9rem;">${official.office || official.officialTitle || official.title || 'Office Unknown'} ${official.politicalProfileType === 'ELECTED_OFFICIAL' ? '(Incumbent)' : ''}</div>
                         <div style="color: #666; font-size: 0.8rem;">
                             ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
                             ${official.chamber ? ` • ${official.chamber}` : ''}
@@ -5786,6 +5888,35 @@
                                 style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                                 Contact
                             </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCandidateResult(candidate) {
+            return `
+                <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${candidate.id}', '${candidate.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
+                    <div style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        🗳️
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 1rem;">${candidate.firstName ? `${candidate.firstName} ${candidate.lastName || ''}` : candidate.username}</div>
+                        <div style="color: #666; font-size: 0.9rem;">${candidate.office || candidate.officialTitle || 'Office Unknown'} Candidate</div>
+                        <div style="color: #666; font-size: 0.8rem;">
+                            ${candidate.politicalParty ? `${candidate.politicalParty} • ` : ''}${candidate.state || 'Location Unknown'}
+                            ${candidate.candidateStatus ? ` • ${candidate.candidateStatus}` : ''}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
+                        <button onclick="openUserProfile('${candidate.id}', '${candidate.username}')" 
+                            style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            View Profile
+                        </button>
+                        ${candidate.isExternallySourced ? `
+                            <span style="padding: 0.25rem 0.5rem; background: #17a2b8; color: white; border-radius: 4px; font-size: 0.7rem;">
+                                External
+                            </span>
                         ` : ''}
                     </div>
                 </div>

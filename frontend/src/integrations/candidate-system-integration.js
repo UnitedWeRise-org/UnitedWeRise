@@ -396,11 +396,23 @@ class CandidateSystemIntegration {
                             <div class="enhanced-elections-container">
                                 <div class="elections-placeholder">
                                     <div class="placeholder-icon">🗳️</div>
-                                    <h3>Ready to Load Elections</h3>
-                                    <p>Click "Load Elections" to see enhanced candidate data with AI analysis</p>
-                                    <button class="placeholder-btn" onclick="candidateSystemIntegration.loadElections()">
-                                        Load Elections Now
-                                    </button>
+                                    <h3>Find Candidates in Your Area</h3>
+                                    <p>Enter your address to discover candidates running for office in your district</p>
+                                    <div class="placeholder-address-input">
+                                        <input type="text" 
+                                               id="placeholderAddressInput" 
+                                               placeholder="Enter your address (street, city, state)"
+                                               class="address-input">
+                                        <button class="placeholder-btn" onclick="candidateSystemIntegration.searchFromPlaceholder()">
+                                            🔍 Find Candidates
+                                        </button>
+                                    </div>
+                                    <div class="placeholder-alt">
+                                        <span>or</span>
+                                        <button class="placeholder-btn secondary" onclick="candidateSystemIntegration.loadElections()">
+                                            Use My Profile Address
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -420,21 +432,511 @@ class CandidateSystemIntegration {
     }
 
     async loadElections() {
-        console.log('🗳️ Loading enhanced elections...');
+        console.log('🗳️ Loading candidates for your area...');
         
         // Show loading indicator
         const loadingIndicator = document.querySelector('#electionsLoading');
         const placeholder = document.querySelector('.elections-placeholder');
+        const container = document.querySelector('.enhanced-elections-container');
         
         if (loadingIndicator) loadingIndicator.style.display = 'flex';
         if (placeholder) placeholder.style.display = 'none';
         
         try {
-            if (this.candidateSystem) {
-                await this.candidateSystem.enhanceElectionDisplay();
+            // Call new address-based candidate endpoint
+            const response = await window.apiCall('/api/external-candidates/for-address', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (response.ok && response.data?.success) {
+                this.displayCandidateRaces(response.data.races, response.data.userAddress, container);
+            } else {
+                throw new Error(response.data?.error || 'Failed to load candidates');
+            }
+        } catch (error) {
+            console.error('Error loading elections:', error);
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-state">
+                        <div class="error-icon">❌</div>
+                        <h3>Unable to Load Candidates</h3>
+                        <p>${error.message}</p>
+                        <button class="retry-btn" onclick="candidateSystemIntegration.loadElections()">
+                            🔄 Retry
+                        </button>
+                    </div>
+                `;
             }
         } finally {
             // Hide loading indicator
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+    }
+
+    /**
+     * Display candidate races grouped by office with address controls
+     */
+    displayCandidateRaces(races, currentAddress, container) {
+        if (!container) return;
+
+        const racesHTML = races.length === 0 ? `
+            <div class="no-candidates">
+                <div class="no-candidates-icon">🗳️</div>
+                <h3>No Candidates Found</h3>
+                <p>No candidates found for this address. Try a different address or check back later as election data is updated.</p>
+            </div>
+        ` : races.map(race => {
+            const candidatesHTML = race.candidates.map(candidate => `
+                <div class="candidate-card ${candidate.isRegistered ? 'registered-candidate' : 'external-candidate'}">
+                    <div class="candidate-header">
+                        <h4 class="candidate-name">${this.escapeHtml(candidate.name)}</h4>
+                        <div class="candidate-badges">
+                            ${candidate.party ? `<span class="party-badge">${this.escapeHtml(candidate.party)}</span>` : ''}
+                            ${candidate.isRegistered ? '<span class="source-badge registered">👤 Registered</span>' : '<span class="source-badge external">🌐 External</span>'}
+                        </div>
+                    </div>
+                    ${candidate.isRegistered ? `
+                        <div class="candidate-actions">
+                            <button class="btn primary small" onclick="candidateSystemIntegration.viewCandidateProfile('${candidate.username}')">
+                                View Profile
+                            </button>
+                            <button class="btn secondary small" onclick="candidateSystemIntegration.contactCandidate('${candidate.id}')">
+                                💬 Contact
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="candidate-actions">
+                            <button class="btn outline small" onclick="candidateSystemIntegration.viewExternalCandidate('${candidate.id}')">
+                                View Details
+                            </button>
+                            ${candidate.campaignWebsite ? `
+                                <a href="${candidate.campaignWebsite}" target="_blank" class="btn secondary small">
+                                    🌐 Website
+                                </a>
+                            ` : ''}
+                        </div>
+                    `}
+                </div>
+            `).join('');
+
+            return `
+                <div class="race-group">
+                    <div class="race-header">
+                        <div class="race-info">
+                            <h3 class="race-title">${this.escapeHtml(race.office)}</h3>
+                            <div class="race-meta">
+                                <span class="election-date">📅 ${race.election.date}</span>
+                                <span class="office-level">🏛️ ${race.level}</span>
+                                ${race.district ? `<span class="district">📍 ${this.escapeHtml(race.district)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="candidate-count">${race.candidates.length} candidate${race.candidates.length === 1 ? '' : 's'}</div>
+                    </div>
+                    <div class="candidates-grid">
+                        ${candidatesHTML}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="candidate-races-display">
+                <div class="address-controls">
+                    <div class="address-header">
+                        <h3>🏠 Find Candidates for Your Area</h3>
+                    </div>
+                    <div class="address-input-group">
+                        <input type="text" 
+                               id="candidateAddressInput" 
+                               placeholder="Enter your address..."
+                               value="${currentAddress || ''}"
+                               class="address-input">
+                        <button class="btn primary" onclick="candidateSystemIntegration.searchCandidatesByAddress()">
+                            🔍 Search
+                        </button>
+                    </div>
+                    ${currentAddress ? `
+                        <div class="current-address">
+                            <span>📍 Showing candidates for: <strong>${this.escapeHtml(currentAddress)}</strong></span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="races-container">
+                    ${racesHTML}
+                </div>
+            </div>
+        `;
+
+        this.addCandidateRacesStyles();
+    }
+
+    /**
+     * Search candidates by address from input field
+     */
+    async searchCandidatesByAddress() {
+        const addressInput = document.getElementById('candidateAddressInput');
+        const address = addressInput?.value?.trim();
+        
+        if (!address) {
+            this.showToast('Please enter an address', 'error');
+            return;
+        }
+
+        try {
+            const loadingIndicator = document.querySelector('#electionsLoading');
+            if (loadingIndicator) loadingIndicator.style.display = 'flex';
+
+            const response = await window.apiCall('/api/external-candidates/for-address', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            }, `?address=${encodeURIComponent(address)}`);
+
+            if (response.ok && response.data?.success) {
+                const container = document.querySelector('.enhanced-elections-container');
+                this.displayCandidateRaces(response.data.races, response.data.userAddress, container);
+            } else {
+                throw new Error(response.data?.error || 'Failed to search candidates');
+            }
+        } catch (error) {
+            console.error('Error searching candidates:', error);
+            this.showToast('Failed to search candidates: ' + error.message, 'error');
+        } finally {
+            const loadingIndicator = document.querySelector('#electionsLoading');
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+    }
+
+    /**
+     * Add styles for candidate races display
+     */
+    addCandidateRacesStyles() {
+        if (document.getElementById('candidate-races-styles')) return;
+
+        const styles = document.createElement('style');
+        styles.id = 'candidate-races-styles';
+        styles.innerHTML = `
+            .candidate-races-display {
+                padding: 1rem;
+            }
+
+            .address-controls {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                margin-bottom: 2rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .address-header h3 {
+                margin: 0 0 1rem 0;
+                color: #333;
+            }
+
+            .address-input-group {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .address-input {
+                flex: 1;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 1rem;
+            }
+
+            .current-address {
+                color: #666;
+                font-size: 0.9rem;
+                padding: 0.5rem;
+                background: #f8f9fa;
+                border-radius: 4px;
+            }
+
+            .race-group {
+                background: white;
+                border-radius: 12px;
+                margin-bottom: 1.5rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }
+
+            .race-header {
+                padding: 1.5rem;
+                background: #f8f9fa;
+                border-bottom: 1px solid #e9ecef;
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+            }
+
+            .race-title {
+                margin: 0 0 0.5rem 0;
+                color: #333;
+                font-size: 1.3rem;
+            }
+
+            .race-meta {
+                display: flex;
+                gap: 1rem;
+                font-size: 0.9rem;
+                color: #666;
+            }
+
+            .candidate-count {
+                background: #ff6b35;
+                color: white;
+                padding: 0.5rem 1rem;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+
+            .candidates-grid {
+                padding: 1rem;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1rem;
+            }
+
+            .candidate-card {
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1rem;
+                transition: all 0.2s;
+            }
+
+            .candidate-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                transform: translateY(-2px);
+            }
+
+            .registered-candidate {
+                border-left: 4px solid #28a745;
+            }
+
+            .external-candidate {
+                border-left: 4px solid #007bff;
+            }
+
+            .candidate-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 1rem;
+            }
+
+            .candidate-name {
+                margin: 0;
+                color: #333;
+                font-size: 1.1rem;
+            }
+
+            .candidate-badges {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+                align-items: flex-end;
+            }
+
+            .party-badge {
+                background: #e9ecef;
+                color: #333;
+                padding: 0.25rem 0.5rem;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .source-badge {
+                padding: 0.25rem 0.5rem;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            .source-badge.registered {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .source-badge.external {
+                background: #cce7ff;
+                color: #0056b3;
+            }
+
+            .candidate-actions {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .btn.small {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .no-candidates, .error-state {
+                text-align: center;
+                padding: 3rem 2rem;
+                color: #666;
+            }
+
+            .no-candidates-icon, .error-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+            }
+
+            .retry-btn {
+                margin-top: 1rem;
+                padding: 0.75rem 1.5rem;
+                background: #ff6b35;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .retry-btn:hover {
+                background: #e55a30;
+            }
+
+            @media (max-width: 768px) {
+                .address-input-group {
+                    flex-direction: column;
+                }
+
+                .race-header {
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .candidates-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .candidate-header {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .candidate-badges {
+                    align-items: flex-start;
+                }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+
+    /**
+     * View candidate profile for registered candidates
+     */
+    viewCandidateProfile(username) {
+        if (username && window.openUserProfile) {
+            window.openUserProfile(null, username);
+        }
+    }
+
+    /**
+     * Contact a registered candidate
+     */
+    contactCandidate(candidateId) {
+        // TODO: Implement candidate contact system
+        this.showToast('Contact system coming soon!');
+    }
+
+    /**
+     * View external candidate details
+     */
+    viewExternalCandidate(candidateId) {
+        // TODO: Implement external candidate details view
+        this.showToast('External candidate details coming soon!');
+    }
+
+    /**
+     * Escape HTML for security
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 4000);
+    }
+
+    /**
+     * Search candidates from placeholder address input
+     */
+    async searchFromPlaceholder() {
+        const addressInput = document.getElementById('placeholderAddressInput');
+        const address = addressInput?.value?.trim();
+        
+        if (!address) {
+            this.showToast('Please enter an address', 'error');
+            addressInput?.focus();
+            return;
+        }
+
+        try {
+            const loadingIndicator = document.querySelector('#electionsLoading');
+            const placeholder = document.querySelector('.elections-placeholder');
+            
+            if (loadingIndicator) loadingIndicator.style.display = 'flex';
+            if (placeholder) placeholder.style.display = 'none';
+
+            const response = await window.apiCall('/api/external-candidates/for-address', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            }, `?address=${encodeURIComponent(address)}`);
+
+            if (response.ok && response.data?.success) {
+                const container = document.querySelector('.enhanced-elections-container');
+                this.displayCandidateRaces(response.data.races, response.data.userAddress, container);
+            } else {
+                throw new Error(response.data?.error || 'Failed to search candidates');
+            }
+        } catch (error) {
+            console.error('Error searching candidates:', error);
+            this.showToast('Failed to search candidates: ' + error.message, 'error');
+            
+            // Show placeholder again on error
+            const placeholder = document.querySelector('.elections-placeholder');
+            if (placeholder) placeholder.style.display = 'block';
+        } finally {
+            const loadingIndicator = document.querySelector('#electionsLoading');
             if (loadingIndicator) loadingIndicator.style.display = 'none';
         }
     }
@@ -702,6 +1204,41 @@ class CandidateSystemIntegration {
                 background: linear-gradient(135deg, #202e0c, #4b5c09);
                 transform: translateY(-1px);
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            }
+            .placeholder-address-input {
+                display: flex;
+                gap: 0.5rem;
+                justify-content: center;
+                margin-bottom: 1.5rem;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .placeholder-address-input .address-input {
+                flex: 1;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 1rem;
+                min-width: 200px;
+            }
+            .placeholder-alt {
+                margin-top: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 1rem;
+            }
+            .placeholder-alt span {
+                color: #999;
+                font-style: italic;
+            }
+            .placeholder-btn.secondary {
+                background: linear-gradient(135deg, #666, #888);
+                padding: 0.75rem 1.5rem;
+            }
+            .placeholder-btn.secondary:hover {
+                background: linear-gradient(135deg, #555, #777);
             }
 
             /* Responsive Design */

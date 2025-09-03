@@ -47,37 +47,8 @@ class PolicyPlatformManager {
                             <h4 class="form-title">📝 Create New Policy Position</h4>
                         </div>
                         <form id="policyPositionForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="policyCategory">Policy Category *</label>
-                                    <select id="policyCategory" name="categoryId" required>
-                                        <option value="">Select a category...</option>
-                                        <option value="cat_economy">💼 Economy & Jobs</option>
-                                        <option value="cat_healthcare">🏥 Healthcare</option>
-                                        <option value="cat_education">🎓 Education</option>
-                                        <option value="cat_infrastructure">🏗️ Infrastructure</option>
-                                        <option value="cat_environment">🌱 Environment</option>
-                                        <option value="cat_housing">🏠 Housing</option>
-                                        <option value="cat_justice">⚖️ Criminal Justice</option>
-                                        <option value="cat_immigration">🌍 Immigration</option>
-                                        <option value="cat_taxes">💰 Taxes & Budget</option>
-                                        <option value="cat_social">👥 Social Issues</option>
-                                        <option value="cat_defense">🛡️ Defense & Security</option>
-                                        <option value="cat_technology">💻 Technology & Privacy</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="policyStance">Your Stance</label>
-                                    <select id="policyStance" name="stance">
-                                        <option value="">Select stance...</option>
-                                        <option value="SUPPORT">Support</option>
-                                        <option value="OPPOSE">Oppose</option>
-                                        <option value="NEUTRAL">Neutral</option>
-                                        <option value="CONDITIONAL">Conditional</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <input type="hidden" id="policyCategory" name="categoryId" value="cat_other">
+                            <input type="hidden" id="policyStance" name="stance" value="">
 
                             <div class="form-group">
                                 <label for="policyTitle">Position Title *</label>
@@ -86,9 +57,9 @@ class PolicyPlatformManager {
                             </div>
 
                             <div class="form-group">
-                                <label for="policySummary">Brief Summary *</label>
-                                <textarea id="policySummary" name="summary" required rows="3" 
-                                          placeholder="A concise summary of your position in 1-2 sentences..."></textarea>
+                                <label for="policySummary">Brief Summary <span style="color: #666; font-size: 0.9rem;">(Optional - AI can generate if left blank)</span></label>
+                                <textarea id="policySummary" name="summary" rows="3" 
+                                          placeholder="Optionally provide a 1-2 sentence summary, or let AI generate one from your detailed position..."></textarea>
                             </div>
 
                             <div class="form-group">
@@ -336,6 +307,78 @@ class PolicyPlatformManager {
                 color: white;
             }
 
+            /* AI-Generated Content Styling */
+            .ai-generated-summary {
+                font-style: italic;
+                color: #666 !important;
+                background: #f8f9fa;
+                padding: 0.75rem;
+                border-radius: 6px;
+                border-left: 3px solid #ff6b35;
+                margin: 0.5rem 0;
+            }
+
+            .ai-generated-summary::before {
+                content: "🤖 AI Generated: ";
+                font-weight: 600;
+                color: #ff6b35;
+                font-style: normal;
+            }
+
+            .ai-keywords-section {
+                margin: 1rem 0;
+                padding: 0.75rem;
+                background: #f0f7ff;
+                border-radius: 6px;
+                border: 1px solid #e1f0ff;
+            }
+
+            .keywords-label {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 0.5rem;
+                display: block;
+            }
+
+            .keywords-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .ai-keyword {
+                background: #e1f0ff;
+                color: #0066cc;
+                padding: 0.3rem 0.6rem;
+                border-radius: 15px;
+                font-size: 0.85rem;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: 1px solid #b3d9ff;
+            }
+
+            .ai-keyword:hover {
+                background: #0066cc;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+            }
+
+            .ai-badge {
+                background: #f0f7ff;
+                color: #0066cc;
+                padding: 0.2rem 0.4rem;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                border: 1px solid #b3d9ff;
+            }
+
+            .no-summary {
+                color: #999;
+                font-style: italic;
+            }
+
             @media (max-width: 768px) {
                 .form-row {
                     grid-template-columns: 1fr;
@@ -347,6 +390,15 @@ class PolicyPlatformManager {
 
                 .position-actions {
                     flex-wrap: wrap;
+                }
+
+                .keywords-container {
+                    gap: 0.3rem;
+                }
+
+                .ai-keyword {
+                    font-size: 0.8rem;
+                    padding: 0.25rem 0.5rem;
                 }
             }
         `;
@@ -390,15 +442,16 @@ class PolicyPlatformManager {
                 evidenceText.split('\n').map(l => l.trim()).filter(l => l.length > 0 && l.startsWith('http')) : [];
 
             const requestData = {
-                categoryId: formData.get('categoryId'),
+                categoryId: formData.get('categoryId') || 'cat_other', // Default category for AI to override
                 title: formData.get('title'),
-                summary: formData.get('summary'),
+                summary: formData.get('summary') || '', // Empty summary for AI to generate
                 content: formData.get('content'),
-                stance: formData.get('stance') || null,
+                stance: formData.get('stance') || null, // Let AI determine stance
                 priority: parseInt(formData.get('priority')) || 5,
                 keyPoints: keyPoints,
                 evidenceLinks: evidenceLinks,
-                isPublished: formData.has('isPublished')
+                isPublished: formData.has('isPublished'),
+                aiEnhanced: true // Flag to trigger AI processing
             };
 
             // Determine if editing or creating
@@ -494,7 +547,7 @@ class PolicyPlatformManager {
             <div class="policy-position-card">
                 <div class="position-header">
                     <div>
-                        <div class="position-category">${position.category?.icon || ''} ${position.category?.name || position.categoryId}</div>
+                        <div class="position-category">${position.category?.icon || ''} ${position.category?.name || (position.aiExtractedCategory ? `🤖 ${position.aiExtractedCategory}` : position.categoryId)}</div>
                         <h4 class="position-title">${this.escapeHtml(position.title)}</h4>
                     </div>
                     <div class="position-status">
@@ -502,16 +555,19 @@ class PolicyPlatformManager {
                             ${position.isPublished ? '✅ Published' : '📝 Draft'}
                         </span>
                         ${position.version > 1 ? `<span class="version-badge">v${position.version}</span>` : ''}
+                        ${position.aiProcessedAt ? '<span class="ai-badge" title="Enhanced with AI analysis">🤖</span>' : ''}
                     </div>
                 </div>
                 
                 <div class="position-summary">
-                    <p>${this.escapeHtml(position.summary)}</p>
+                    ${this.renderPositionSummary(position)}
                 </div>
                 
-                ${position.stance ? `
+                ${this.renderAIKeywords(position)}
+                
+                ${position.stance || position.aiExtractedStance ? `
                     <div class="position-stance">
-                        <strong>Stance:</strong> ${this.getStanceDisplay(position.stance)}
+                        <strong>Stance:</strong> ${this.getStanceDisplay(position.stance || position.aiExtractedStance)}
                     </div>
                 ` : ''}
                 
@@ -667,6 +723,62 @@ class PolicyPlatformManager {
         } catch (error) {
             console.error('Error deleting position:', error);
             this.showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Render position summary with AI-generated styling
+     */
+    renderPositionSummary(position) {
+        const hasUserSummary = position.summary && position.summary.trim();
+        const hasAISummary = position.aiGeneratedSummary && position.aiGeneratedSummary.trim();
+        
+        if (hasUserSummary) {
+            return `<p>${this.escapeHtml(position.summary)}</p>`;
+        } else if (hasAISummary) {
+            return `<p class="ai-generated-summary">${this.escapeHtml(position.aiGeneratedSummary)}</p>`;
+        } else {
+            return `<p class="no-summary">No summary available</p>`;
+        }
+    }
+
+    /**
+     * Render AI-extracted keywords as clickable elements
+     */
+    renderAIKeywords(position) {
+        if (!position.aiExtractedKeywords || position.aiExtractedKeywords.length === 0) {
+            return '';
+        }
+
+        const keywordsHTML = position.aiExtractedKeywords.map(keyword => 
+            `<span class="ai-keyword" onclick="policyPlatformManager.searchSimilarPositions('${this.escapeHtml(keyword)}')" title="Click to find similar positions">
+                ${this.escapeHtml(keyword)}
+            </span>`
+        ).join('');
+
+        return `
+            <div class="ai-keywords-section">
+                <span class="keywords-label">🤖 AI Keywords:</span>
+                <div class="keywords-container">${keywordsHTML}</div>
+            </div>
+        `;
+    }
+
+    /**
+     * Search for positions with similar keywords
+     */
+    async searchSimilarPositions(keyword) {
+        try {
+            // For now, show a simple message - this can be enhanced later
+            this.showToast(`Searching for positions related to "${keyword}"...`);
+            
+            // TODO: Implement actual similar position search
+            // This would query the backend for positions with similar keywords/embeddings
+            console.log(`Searching for positions with keyword: ${keyword}`);
+            
+        } catch (error) {
+            console.error('Error searching similar positions:', error);
+            this.showToast('Failed to search similar positions', 'error');
         }
     }
 

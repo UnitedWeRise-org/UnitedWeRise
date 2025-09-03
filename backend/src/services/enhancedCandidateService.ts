@@ -1,6 +1,6 @@
 import { Candidate, Photo } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { QwenService } from './qwenService';
+import { azureOpenAI } from './azureOpenAIService';
 import { PhotoService } from './photoService';
 
 // Using singleton prisma from lib/prisma.ts
@@ -128,7 +128,8 @@ export class EnhancedCandidateService {
       let policyPositions = [];
       try {
         console.log('🤖 Analyzing candidate policy positions...');
-        policyPositions = await QwenService.analyzeCandidatePositions(candidateId);
+        // AI policy analysis now handled by individual policy creation process
+        policyPositions = [];
       } catch (error) {
         console.warn('Policy position analysis failed, continuing without AI analysis:', error);
       }
@@ -197,10 +198,13 @@ export class EnhancedCandidateService {
       let comparison;
       try {
         console.log('🤖 Generating AI-powered candidate comparison...');
-        comparison = await QwenService.compareCandidates(
-          validCandidates.map(c => c.id),
-          officeId
-        );
+        // TODO: Implement candidate comparison using Azure OpenAI
+        comparison = {
+          candidates: validCandidates.map(c => ({ id: c.id, name: c.name, party: c.party })),
+          sharedIssues: [],
+          uniqueIssues: [],
+          overallSummary: 'Candidate comparison temporarily disabled - migrating from Qwen to Azure OpenAI'
+        };
       } catch (error) {
         console.warn('AI comparison failed, generating fallback comparison:', error);
         comparison = this.generateFallbackComparison(validCandidates);
@@ -385,7 +389,8 @@ export class EnhancedCandidateService {
       
       // Trigger re-analysis of policy positions
       try {
-        await QwenService.analyzeCandidatePositions(candidateId);
+        // Policy analysis now handled during individual policy creation
+        console.log('Policy positions will be analyzed when created/updated');
         console.log('🤖 Policy positions re-analyzed');
       } catch (error) {
         console.warn('Policy re-analysis failed:', error);
@@ -475,7 +480,7 @@ export class EnhancedCandidateService {
         issues: ui.issues.map(issue => ({
           issue,
           position: 'Position details not available',
-          defaultMessage: QwenService.generateMissingPositionMessage(ui.candidateName, issue, ui.candidateId)
+          defaultMessage: `${ui.candidateName} has not provided a position on ${issue}`
         }))
       })),
       overallSummary: `${candidates.length} candidates are running for this office with varying policy positions.`

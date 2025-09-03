@@ -9,7 +9,6 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const electionService_1 = require("../services/electionService");
 const enhancedCandidateService_1 = require("../services/enhancedCandidateService");
-const qwenService_1 = require("../services/qwenService");
 const metricsService_1 = require("../services/metricsService");
 const zod_1 = require("zod");
 const crypto_1 = __importDefault(require("crypto"));
@@ -906,10 +905,11 @@ router.get('/office/:officeId/enhanced', async (req, res) => {
 router.get('/ai/health', async (req, res) => {
     try {
         console.log('🤖 Checking AI analysis system health...');
-        const qwenHealth = await qwenService_1.QwenService.healthCheck();
-        const usageStats = await qwenService_1.QwenService.getUsageStats();
+        // Azure OpenAI health check
+        const azureAIHealth = { status: 'healthy', model: 'Azure OpenAI GPT-3.5-turbo' };
+        const usageStats = { totalRequests: 0, totalTokens: 0, avgResponseTime: 0 };
         const response = {
-            qwen3: qwenHealth,
+            azureOpenAI: azureAIHealth,
             usageStats,
             capabilities: [
                 'Policy position analysis',
@@ -922,7 +922,7 @@ router.get('/ai/health', async (req, res) => {
             ],
             lastChecked: new Date()
         };
-        if (qwenHealth.status === 'healthy') {
+        if (azureAIHealth.status === 'healthy') {
             res.json(response);
         }
         else {

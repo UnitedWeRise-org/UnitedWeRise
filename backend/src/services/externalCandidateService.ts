@@ -569,6 +569,137 @@ export class ExternalCandidateService {
   }
 
   /**
+   * Get all candidates (internal + external) for a specific address grouped by race
+   * Includes fuzzy matching for race deduplication
+   */
+  static async getCandidatesForAddress(address: string): Promise<Array<{
+    office: string;
+    level: string;
+    district?: string;
+    election: {
+      date: string;
+      name: string;
+    };
+    candidates: Array<{
+      id: string;
+      name: string;
+      party?: string;
+      isExternal: boolean;
+      isRegistered: boolean;
+      campaignWebsite?: string;
+      externalDataConfidence?: number;
+      dataSource?: string;
+    }>;
+  }>> {
+    try {
+      // First, import/refresh external candidates for this address
+      await this.importCandidatesForAddress(address);
+      
+      // Find all offices that have candidates in this area
+      // This is simplified - in production, would need geographic matching
+      const candidatesWithOffices = await prisma.candidate.findMany({
+        where: {
+          OR: [
+            { isExternallySourced: true },  // External candidates
+            { userId: { not: null } }       // User-registered candidates
+          ]
+        },
+        include: {
+          office: {
+            include: {
+              election: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              username: true,
+              verified: true
+            }
+          }
+        },
+        orderBy: [
+          { office: { level: 'asc' } },
+          { office: { title: 'asc' } },
+          { party: 'asc' },
+          { name: 'asc' }
+        ]
+      });
+
+      // Group candidates by normalized office/race
+      const raceGroups = new Map<string, any>();
+      
+      for (const candidate of candidatesWithOffices) {
+        if (!candidate.office) continue;
+        
+        // Create normalized race key for fuzzy matching
+        const normalizedOfficeKey = this.normalizeOfficeTitle(
+          candidate.office.title, 
+          candidate.office.level,
+          candidate.office.district
+        );
+        
+        if (!raceGroups.has(normalizedOfficeKey)) {
+          raceGroups.set(normalizedOfficeKey, {
+            office: candidate.office.title,
+            level: candidate.office.level,
+            district: candidate.office.district,
+            election: {
+              date: candidate.office.election.date.toISOString().split('T')[0],
+              name: candidate.office.election.name
+            },
+            candidates: []
+          });
+        }
+        
+        // Add candidate to race group
+        raceGroups.get(normalizedOfficeKey)!.candidates.push({
+          id: candidate.id,
+          name: candidate.name,
+          party: candidate.party,
+          isExternal: candidate.isExternallySourced,
+          isRegistered: !!candidate.userId,
+          campaignWebsite: candidate.campaignWebsite,
+          externalDataConfidence: candidate.externalDataConfidence,
+          dataSource: candidate.dataSource,
+          username: candidate.user?.username
+        });
+      }
+      
+      return Array.from(raceGroups.values());
+      
+    } catch (error) {
+      logger.error('Failed to get candidates for address:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Normalize office titles for fuzzy matching and deduplication
+   * Handles variations like "President", "President of the United States", "U.S. President"
+   */
+  private static normalizeOfficeTitle(title: string, level: string, district?: string): string {
+    const normalized = title.toLowerCase()
+      .replace(/\bof\s+the\s+united\s+states\b/g, '')
+      .replace(/\bu\.?s\.?\s*/g, '')
+      .replace(/\bunited\s+states\s*/g, '')
+      .replace(/\brepresentative\b/g, 'rep')
+      .replace(/\bsenator\b/g, 'sen')
+      .replace(/\bgovernor\b/g, 'gov')
+      .replace(/\bmayoralty\b/g, 'mayor')
+      .replace(/\bcity\s+council\b/g, 'council')
+      .replace(/\bstate\s+assembly\b/g, 'assembly')
+      .replace(/\bstate\s+house\b/g, 'house')
+      .replace(/\bstate\s+senate\b/g, 'senate')
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ')     // Normalize whitespace
+      .trim();
+    
+    // Include level and district for uniqueness
+    return `${level.toLowerCase()}-${normalized}-${(district || '').toLowerCase()}`;
+  }
+
+  /**
    * Get externally sourced candidates for search with caching
    */
   static async searchExternalCandidates(searchTerm: string, limit: number = 10) {

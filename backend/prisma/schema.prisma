@@ -2337,6 +2337,13 @@ model PolicyPosition {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   
+  // AI-extracted fields (Sept 2, 2025)
+  aiExtractedKeywords String[]        @default([])
+  aiExtractedCategory String?         // AI-determined category
+  aiExtractedStance   String?         // AI-determined stance
+  aiGeneratedSummary  String?         // AI-generated summary if not provided
+  aiProcessedAt       DateTime?       // When AI processing was completed
+  
   candidate         Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   category          PolicyCategory     @relation(fields: [categoryId], references: [id])
   previousVersion   PolicyPosition?    @relation("PolicyVersions", fields: [previousVersionId], references: [id])

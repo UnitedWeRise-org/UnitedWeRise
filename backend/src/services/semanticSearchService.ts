@@ -9,7 +9,7 @@
 
 import { EmbeddingService } from './embeddingService';
 import { QdrantService } from './qdrantService';
-import { QwenService } from './qwenService';
+import { azureOpenAI } from './azureOpenAIService';
 import logger from '../utils/logger';
 
 interface SemanticSearchResult {
@@ -134,7 +134,7 @@ Respond with JSON only:
 }`;
 
         try {
-            const response = await QwenService.generateResponse(prompt, 400);
+            const response = await azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
             
             const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {

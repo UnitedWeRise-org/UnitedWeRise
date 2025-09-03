@@ -1,4 +1,7 @@
 "use strict";
+// DEPRECATED: This service is no longer in use
+// All AI functionality has been migrated to Azure OpenAI Service
+// File kept for reference only - September 2, 2025
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };

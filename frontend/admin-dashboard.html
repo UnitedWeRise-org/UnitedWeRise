@@ -329,6 +329,7 @@
                 <button class="nav-button" onclick="showSection('security')">🔒 Security</button>
                 <button class="nav-button" onclick="showSection('users')">👥 Users</button>
                 <button class="nav-button" onclick="showSection('candidates')">🗳️ Candidates</button>
+                <button class="nav-button" onclick="showSection('external-candidates')">🌐 External Candidates</button>
                 <button class="nav-button" onclick="showSection('content')">📝 Content</button>
                 <button class="nav-button" onclick="showSection('analytics')">📈 Analytics</button>
                 <button class="nav-button" onclick="showSection('errors')">🐛 Errors</button>
@@ -574,6 +575,94 @@
 
                     <div id="verificationTable">
                         <div class="loading">Loading verification queue...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- External Candidates Section -->
+            <div id="external-candidates" class="dashboard-section">
+                <h2>🌐 External Candidate Management</h2>
+                
+                <!-- External Candidates Tabs -->
+                <div style="display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                    <button id="importCandidatesTab" class="tab-button active" onclick="showExternalTab('import')">
+                        📥 Import Candidates
+                    </button>
+                    <button id="externalSearchTab" class="tab-button" onclick="showExternalTab('search')">
+                        🔍 Search External
+                    </button>
+                    <button id="externalHealthTab" class="tab-button" onclick="showExternalTab('health')">
+                        🏥 API Health
+                    </button>
+                </div>
+                
+                <!-- Import Tab Content -->
+                <div id="importContent" class="tab-content active">
+                    <h3>Import External Candidates</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <!-- Single Address Import -->
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+                            <h4>📍 Import by Address</h4>
+                            <p style="color: #666; margin-bottom: 1rem;">Import candidates for a specific address or ZIP code</p>
+                            <div class="form-group">
+                                <input type="text" id="importAddress" placeholder="Enter address or ZIP code" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <button onclick="importCandidatesByAddress()" class="nav-button" style="width: 100%;">
+                                📥 Import for Address
+                            </button>
+                            <div id="addressImportStatus" style="margin-top: 1rem;"></div>
+                        </div>
+                        
+                        <!-- Bulk Import -->
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+                            <h4>🚀 Bulk Import</h4>
+                            <p style="color: #666; margin-bottom: 1rem;">Import candidates for all user locations (may take several minutes)</p>
+                            <div style="margin-bottom: 1rem;">
+                                <div><strong>Estimated:</strong> <span id="bulkImportEstimate">Calculating...</span></div>
+                            </div>
+                            <button onclick="bulkImportCandidates()" class="nav-button" style="width: 100%; background: #dc3545;">
+                                ⚠️ Start Bulk Import
+                            </button>
+                            <div id="bulkImportStatus" style="margin-top: 1rem;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Import Results -->
+                    <div id="importResults" style="display: none;">
+                        <h4>📊 Import Results</h4>
+                        <div id="importResultsContent"></div>
+                    </div>
+                </div>
+                
+                <!-- Search Tab Content -->
+                <div id="searchContent" class="tab-content">
+                    <h3>Search External Candidates</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                            <input type="text" id="externalSearchQuery" placeholder="Search candidates..." style="flex: 1; padding: 0.75rem;">
+                            <select id="externalSearchLimit" style="padding: 0.75rem;">
+                                <option value="10">10 results</option>
+                                <option value="25">25 results</option>
+                                <option value="50">50 results</option>
+                            </select>
+                            <button onclick="searchExternalCandidates()" class="nav-button">🔍 Search</button>
+                        </div>
+                    </div>
+                    <div id="externalSearchResults">
+                        <div class="loading">Enter search terms to find external candidates</div>
+                    </div>
+                </div>
+                
+                <!-- Health Tab Content -->
+                <div id="healthContent" class="tab-content">
+                    <h3>External API Health Status</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <button onclick="checkExternalAPIHealth()" class="nav-button">🔄 Refresh Status</button>
+                        <button onclick="clearExternalCache()" class="nav-button" style="background: #dc3545;">🗑️ Clear Cache</button>
+                    </div>
+                    <div id="externalHealthStatus">
+                        <div class="loading">Loading API health status...</div>
                     </div>
                 </div>
             </div>
@@ -1034,6 +1123,9 @@ Loading deployment status...
                     break;
                 case 'candidates':
                     loadCandidatesData();
+                    break;
+                case 'external-candidates':
+                    loadExternalCandidatesData();
                     break;
                 case 'content':
                     loadContentData();
@@ -3092,6 +3184,9 @@ Current Status: Use deploymentStatus.check() for real-time status
                 case 'candidates':
                     loadCandidatesData();
                     break;
+                case 'external-candidates':
+                    loadExternalCandidatesData();
+                    break;
                 case 'content':
                     loadContentData();
                     break;
@@ -4604,6 +4699,400 @@ Example: adminConsole.getSuggestions('features', 'new')
             const modal = document.querySelector('.modal-overlay');
             if (modal) {
                 modal.remove();
+            }
+        }
+        
+        // External Candidates Management Functions
+        
+        function showExternalTab(tabName) {
+            // Hide all external tab contents
+            document.querySelectorAll('#external-candidates .tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all external tab buttons
+            document.querySelectorAll('#external-candidates .tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected content and activate button
+            const contentMap = {
+                'import': 'importContent',
+                'search': 'searchContent', 
+                'health': 'healthContent'
+            };
+            
+            const buttonMap = {
+                'import': 'importCandidatesTab',
+                'search': 'externalSearchTab',
+                'health': 'externalHealthTab'
+            };
+            
+            document.getElementById(contentMap[tabName]).classList.add('active');
+            document.getElementById(buttonMap[tabName]).classList.add('active');
+        }
+        
+        function loadExternalCandidatesData() {
+            // Load initial data for external candidates section
+            calculateBulkImportEstimate();
+            checkExternalAPIHealth();
+        }
+        
+        async function calculateBulkImportEstimate() {
+            try {
+                // Get user count to estimate bulk import scope
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users?limit=1`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const userCount = data.data?.summary?.total || 0;
+                    const uniqueZipCodes = Math.floor(userCount * 0.7); // Estimate unique ZIP codes
+                    document.getElementById('bulkImportEstimate').textContent = 
+                        `~${uniqueZipCodes} unique locations to process`;
+                }
+            } catch (error) {
+                document.getElementById('bulkImportEstimate').textContent = 'Unable to calculate';
+            }
+        }
+        
+        async function importCandidatesByAddress() {
+            const address = document.getElementById('importAddress').value.trim();
+            const statusDiv = document.getElementById('addressImportStatus');
+            
+            if (!address) {
+                statusDiv.innerHTML = '<div style="color: #dc3545;">Please enter an address or ZIP code</div>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div style="color: #17a2b8;">🔄 Importing candidates...</div>';
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/external-candidates/import-address`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    statusDiv.innerHTML = `
+                        <div style="color: #28a745;">
+                            ✅ Success! Imported ${result.imported} new candidates, updated ${result.updated} existing
+                        </div>
+                    `;
+                    
+                    // Show detailed results
+                    if (result.candidates && result.candidates.length > 0) {
+                        document.getElementById('importResults').style.display = 'block';
+                        displayImportResults(result);
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Import failed');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                statusDiv.innerHTML = `<div style="color: #dc3545;">❌ Import failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function bulkImportCandidates() {
+            const statusDiv = document.getElementById('bulkImportStatus');
+            
+            if (!confirm('This will import candidates for all user locations and may take several minutes. Continue?')) {
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div style="color: #17a2b8;">🔄 Starting bulk import... This may take several minutes</div>';
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/external-candidates/bulk-import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    statusDiv.innerHTML = `
+                        <div style="color: #28a745;">
+                            ✅ Bulk import completed!<br>
+                            Processed ${result.addressesProcessed} addresses<br>
+                            Imported ${result.totalImported} new candidates<br>
+                            Updated ${result.totalUpdated} existing candidates
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Bulk import failed');
+                }
+            } catch (error) {
+                console.error('Bulk import error:', error);
+                statusDiv.innerHTML = `<div style="color: #dc3545;">❌ Bulk import failed: ${error.message}</div>`;
+            }
+        }
+        
+        function displayImportResults(result) {
+            let html = `
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                    <strong>Import Summary:</strong> ${result.imported} imported, ${result.updated} updated
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Office</th>
+                            <th>Party</th>
+                            <th>Source</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            result.candidates.forEach(candidate => {
+                html += `
+                    <tr>
+                        <td>${candidate.name}</td>
+                        <td>${candidate.office?.title || 'Unknown Office'}</td>
+                        <td>${candidate.party || 'Unknown'}</td>
+                        <td>${candidate.dataSource || 'External'}</td>
+                        <td><span class="status-badge status-active">${candidate.isExternallySourced ? 'External' : 'Imported'}</span></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('importResultsContent').innerHTML = html;
+        }
+        
+        async function searchExternalCandidates() {
+            const query = document.getElementById('externalSearchQuery').value.trim();
+            const limit = document.getElementById('externalSearchLimit').value;
+            const resultsDiv = document.getElementById('externalSearchResults');
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<div style="color: #dc3545;">Please enter search terms</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="loading">Searching external candidates...</div>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/external-candidates/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    displayExternalSearchResults(result.candidates);
+                } else {
+                    throw new Error('Search failed');
+                }
+            } catch (error) {
+                console.error('External search error:', error);
+                resultsDiv.innerHTML = `<div style="color: #dc3545;">❌ Search failed: ${error.message}</div>`;
+            }
+        }
+        
+        function displayExternalSearchResults(candidates) {
+            const resultsDiv = document.getElementById('externalSearchResults');
+            
+            if (candidates.length === 0) {
+                resultsDiv.innerHTML = '<div>No external candidates found matching your search</div>';
+                return;
+            }
+            
+            let html = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>Found ${candidates.length} external candidates</strong>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Office</th>
+                            <th>Party</th>
+                            <th>Source</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            candidates.forEach(candidate => {
+                const statusText = candidate.isClaimed ? 'Claimed' : 'Available';
+                const statusClass = candidate.isClaimed ? 'status-active' : 'status-suspended';
+                
+                html += `
+                    <tr>
+                        <td>${candidate.name}</td>
+                        <td>${candidate.office?.title || 'Unknown Office'}</td>
+                        <td>${candidate.party || 'Unknown'}</td>
+                        <td>${candidate.dataSource || 'External'}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button onclick="viewExternalCandidate('${candidate.id}')" class="nav-button" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">
+                                👁️ View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            resultsDiv.innerHTML = html;
+        }
+        
+        async function checkExternalAPIHealth() {
+            const statusDiv = document.getElementById('externalHealthStatus');
+            statusDiv.innerHTML = '<div class="loading">Checking API health...</div>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/external-candidates/health`);
+                
+                if (response.ok) {
+                    const health = await response.json();
+                    displayAPIHealthStatus(health);
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                console.error('Health check error:', error);
+                statusDiv.innerHTML = `<div style="color: #dc3545;">❌ Health check failed: ${error.message}</div>`;
+            }
+        }
+        
+        function displayAPIHealthStatus(health) {
+            const statusDiv = document.getElementById('externalHealthStatus');
+            
+            let html = `
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 2rem;">
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${health.status === 'healthy' ? '#28a745' : '#dc3545'}">
+                            ${health.status.toUpperCase()}
+                        </div>
+                        <div class="stat-label">Overall Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${health.apis.googleCivic.status === 'healthy' ? '#28a745' : '#dc3545'}">
+                            ${health.apis.googleCivic.status.toUpperCase()}
+                        </div>
+                        <div class="stat-label">Google Civic API</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${health.apis.fec.status === 'healthy' ? '#28a745' : '#dc3545'}">
+                            ${health.apis.fec.status.toUpperCase()}
+                        </div>
+                        <div class="stat-label">FEC API</div>
+                    </div>
+                </div>
+                
+                <h4>📊 Cache Statistics</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Cache Type</th>
+                            <th>Total Entries</th>
+                            <th>Valid Entries</th>
+                            <th>Expired Entries</th>
+                            <th>Hit Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            Object.entries(health.cache).forEach(([cacheType, stats]) => {
+                if (typeof stats === 'object' && stats.total !== undefined) {
+                    html += `
+                        <tr>
+                            <td>${cacheType}</td>
+                            <td>${stats.total}</td>
+                            <td>${stats.valid}</td>
+                            <td>${stats.expired}</td>
+                            <td>${stats.hitRate ? Math.round(stats.hitRate * 100) + '%' : 'N/A'}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                    Last updated: ${new Date(health.timestamp).toLocaleString()}
+                </div>
+            `;
+            
+            statusDiv.innerHTML = html;
+        }
+        
+        async function clearExternalCache() {
+            if (!confirm('Clear all external candidate cache? This will cause temporary slower performance while cache rebuilds.')) {
+                return;
+            }
+            
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/external-candidates/cache/clear`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`✅ ${result.message}. Cleared ${result.entriesCleared} cache entries.`);
+                    checkExternalAPIHealth(); // Refresh status
+                } else {
+                    throw new Error('Failed to clear cache');
+                }
+            } catch (error) {
+                console.error('Cache clear error:', error);
+                alert(`❌ Failed to clear cache: ${error.message}`);
+            }
+        }
+        
+        async function viewExternalCandidate(candidateId) {
+            try {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/candidates/${candidateId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const candidate = data.data.candidate;
+                    
+                    showModal(`
+                        <h3>🌐 External Candidate Details</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+                            <div>
+                                <strong>Name:</strong> ${candidate.name}<br>
+                                <strong>Office:</strong> ${candidate.office?.title || 'Unknown'}<br>
+                                <strong>Party:</strong> ${candidate.party || 'Unknown'}<br>
+                                <strong>Status:</strong> ${candidate.status}<br>
+                            </div>
+                            <div>
+                                <strong>Data Source:</strong> ${candidate.dataSource || 'External'}<br>
+                                <strong>External IDs:</strong><br>
+                                ${candidate.googleCivicId ? `• Google Civic: ${candidate.googleCivicId}<br>` : ''}
+                                ${candidate.fecCandidateId ? `• FEC: ${candidate.fecCandidateId}<br>` : ''}
+                                <strong>Claimed:</strong> ${candidate.isClaimed ? 'Yes' : 'No'}<br>
+                            </div>
+                        </div>
+                        
+                        ${candidate.biography ? `
+                            <div style="margin: 1rem 0;">
+                                <strong>Biography:</strong>
+                                <p style="background: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                                    ${candidate.biography}
+                                </p>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="text-align: center; margin-top: 2rem;">
+                            <button onclick="closeModal()" class="nav-button">Close</button>
+                        </div>
+                    `);
+                } else {
+                    throw new Error('Failed to load candidate details');
+                }
+            } catch (error) {
+                console.error('Error loading candidate:', error);
+                alert('Failed to load candidate details');
             }
         }
         

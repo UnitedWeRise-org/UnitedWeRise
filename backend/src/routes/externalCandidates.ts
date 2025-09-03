@@ -69,6 +69,59 @@ router.post('/bulk-import', requireAuth, apiLimiter, async (req: AuthRequest, re
 
 // User Routes
 
+// GET /api/external-candidates/for-address - Get all candidates (internal + external) for an address
+router.get('/for-address', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { address } = req.query;
+    const userId = req.user!.id;
+    
+    // If no address provided, try to use user's profile address
+    let searchAddress = address?.toString();
+    if (!searchAddress) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+          streetAddress: true, 
+          city: true, 
+          state: true, 
+          zipCode: true 
+        }
+      });
+      
+      if (user?.streetAddress && user?.city && user?.state) {
+        searchAddress = `${user.streetAddress}, ${user.city}, ${user.state} ${user.zipCode || ''}`.trim();
+      }
+    }
+    
+    if (!searchAddress) {
+      return res.json({
+        success: true,
+        races: [],
+        userAddress: null,
+        message: 'Please provide an address or complete your profile address to find candidates'
+      });
+    }
+
+    // Import/refresh external candidates for this address
+    const importResult = await ExternalCandidateService.importCandidatesForAddress(searchAddress);
+    
+    // Get all candidates for races in this area - both internal and external
+    const raceGroups = await ExternalCandidateService.getCandidatesForAddress(searchAddress);
+    
+    res.json({
+      success: true,
+      races: raceGroups,
+      userAddress: searchAddress,
+      importStats: importResult,
+      message: `Found ${raceGroups.length} races with candidates for your area`
+    });
+
+  } catch (error) {
+    console.error('Get candidates for address error:', error);
+    res.status(500).json({ error: 'Failed to get candidates for address' });
+  }
+});
+
 // GET /api/external-candidates/claimable - Get candidates this user can claim
 router.get('/claimable', requireAuth, async (req: AuthRequest, res) => {
   try {

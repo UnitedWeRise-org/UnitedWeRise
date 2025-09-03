@@ -14,7 +14,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SemanticSearchService = void 0;
 const embeddingService_1 = require("./embeddingService");
 const qdrantService_1 = require("./qdrantService");
-const qwenService_1 = require("./qwenService");
+const azureOpenAIService_1 = require("./azureOpenAIService");
 const logger_1 = __importDefault(require("../utils/logger"));
 class SemanticSearchService {
     /**
@@ -95,7 +95,7 @@ Respond with JSON only:
     "similarityInsight": "what the similar posts reveal about this content"
 }`;
         try {
-            const response = await qwenService_1.QwenService.generateResponse(prompt, 400);
+            const response = await azureOpenAIService_1.azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
             const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in AI response');
