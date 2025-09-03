@@ -1544,33 +1544,81 @@
         // OAuth Authentication Functions
         async function handleGoogleLogin() {
             try {
+                console.log('🚀 Starting Google Sign-In process...');
+                console.log('   Domain:', window.location.origin);
+                
                 // Initialize Google Sign-In if not already done
                 if (!window.google?.accounts?.id) {
-                    await loadGoogleSignIn();
+                    console.log('📥 Google Sign-In not loaded, attempting to load...');
+                    try {
+                        await loadGoogleSignIn();
+                        console.log('✅ Google Sign-In loaded successfully');
+                    } catch (loadError) {
+                        console.error('❌ Failed to load Google Sign-In:', loadError.message);
+                        
+                        if (loadError.message.includes('domain authorization')) {
+                            showAuthMessage('Google Sign-In is still initializing. Domain authorization may be propagating. Please try again in 15-30 minutes.', 'warning');
+                            console.log('💡 Run testGoogleDomainAuth() to check status');
+                        } else {
+                            showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
+                        }
+                        return;
+                    }
                 }
 
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // Fallback to popup if prompt doesn't show
-                        google.accounts.id.renderButton(
-                            document.createElement('div'),
-                            {
-                                type: 'popup',
-                                size: 'large',
-                                callback: handleGoogleCredentialResponse
-                            }
-                        );
-                    }
+                console.log('🔧 Creating Google Sign-In button...');
+                
+                // Use the One Tap prompt with immediate fallback to button render
+                const buttonContainer = document.createElement('div');
+                buttonContainer.style.position = 'fixed';
+                buttonContainer.style.top = '50%';
+                buttonContainer.style.left = '50%';
+                buttonContainer.style.transform = 'translate(-50%, -50%)';
+                buttonContainer.style.zIndex = '10000';
+                buttonContainer.style.display = 'none';
+                document.body.appendChild(buttonContainer);
+
+                // Render the Google Sign-In button
+                google.accounts.id.renderButton(buttonContainer, {
+                    type: 'standard',
+                    size: 'large',
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left',
+                    width: 250
                 });
+
+                console.log('🖱️  Triggering Google Sign-In dialog...');
+                
+                // Click the rendered button programmatically
+                setTimeout(() => {
+                    const googleButton = buttonContainer.querySelector('[role="button"]');
+                    if (googleButton) {
+                        console.log('✅ Google Sign-In button found, clicking...');
+                        googleButton.click();
+                    } else {
+                        console.error('❌ Google Sign-In button not found in container');
+                        showAuthMessage('Google Sign-In button failed to load. Please try again.', 'error');
+                    }
+                    // Clean up
+                    setTimeout(() => {
+                        if (document.body.contains(buttonContainer)) {
+                            document.body.removeChild(buttonContainer);
+                        }
+                    }, 100);
+                }, 100);
+                
             } catch (error) {
-                console.error('Google login error:', error);
-                showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
+                console.error('❌ Google login error:', error);
+                showAuthMessage('Google Sign-In encountered an error. Please try again later.', 'error');
             }
         }
 
         async function handleGoogleCredentialResponse(response) {
             try {
-                const result = await fetch('/api/oauth/google', {
+                console.log('Google credential response received');
+                
+                const result = await fetch(`${API_BASE}/oauth/google`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1707,32 +1755,121 @@
             }
         }
 
+        // OAuth Debugging and Testing Functions
+        window.testGoogleDomainAuth = async function() {
+            console.log('🔍 Testing Google domain authorization...');
+            console.log('   Current domain:', window.location.origin);
+            console.log('   Time since domain added: ~45-60 minutes');
+            
+            try {
+                const testResponse = await fetch('https://accounts.google.com/gsi/client', {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+                console.log('✅ Google GSI client accessible (CORS allowed)');
+                console.log('   Response status:', testResponse.status);
+            } catch (corsError) {
+                console.log('❌ CORS error still present:', corsError.message);
+                console.log('💡 Domain authorization not yet propagated');
+                return false;
+            }
+            
+            // Try to load and test the library
+            try {
+                await loadGoogleSignIn();
+                console.log('🎉 Google OAuth is now ready for testing!');
+                return true;
+            } catch (loadError) {
+                console.log('❌ Library load failed:', loadError.message);
+                return false;
+            }
+        };
+
+        window.retryGoogleOAuth = async function() {
+            console.log('🔄 Retrying Google OAuth setup...');
+            
+            const isReady = await testGoogleDomainAuth();
+            if (isReady) {
+                console.log('✅ Google OAuth is ready! Try clicking the Google Sign-In button.');
+                return true;
+            } else {
+                console.log('⏳ Still waiting for Google domain authorization to propagate...');
+                console.log('💡 Try again in 15-30 minutes or run: retryGoogleOAuth()');
+                return false;
+            }
+        };
+
         // OAuth SDK Loading Functions
         async function loadGoogleSignIn() {
             return new Promise(async (resolve, reject) => {
                 try {
-                    // Fetch OAuth configuration from backend
-                    const configResponse = await fetch('/api/oauth/config');
-                    const config = await configResponse.json();
+                    // Use configured Google Client ID
+                    const googleClientId = '496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com';
+                    const currentDomain = window.location.origin;
                     
-                    if (!config.google.enabled) {
-                        throw new Error('Google OAuth is not configured');
+                    console.log('🚀 Loading Google Sign-In...');
+                    console.log('   Client ID:', googleClientId);
+                    console.log('   Current domain:', currentDomain);
+                    console.log('   Expected authorized domain: https://www.unitedwerise.org');
+                    
+                    // Check if we're on the authorized domain
+                    if (currentDomain !== 'https://www.unitedwerise.org') {
+                        console.warn('⚠️  Domain mismatch detected!');
+                        console.log('   Current:', currentDomain);
+                        console.log('   Authorized:', 'https://www.unitedwerise.org');
                     }
                     
                     const script = document.createElement('script');
                     script.src = 'https://accounts.google.com/gsi/client';
+                    script.async = true;
+                    script.defer = true;
                     script.onload = () => {
-                        google.accounts.id.initialize({
-                            client_id: config.google.clientId,
-                            callback: handleGoogleCredentialResponse,
-                            auto_select: false,
-                            cancel_on_tap_outside: false
-                        });
-                        resolve();
+                        console.log('✅ Google Sign-In script loaded successfully');
+                        
+                        // Add debugging for library availability
+                        setTimeout(() => {
+                            console.log('🔍 Checking Google library...');
+                            console.log('   window.google exists:', !!window.google);
+                            console.log('   window.google.accounts exists:', !!window.google?.accounts);
+                            console.log('   window.google.accounts.id exists:', !!window.google?.accounts?.id);
+                            
+                            if (!window.google?.accounts?.id) {
+                                console.error('❌ Google Sign-In library not available after script load');
+                                console.log('💡 This usually means:');
+                                console.log('   1. Domain authorization still propagating (wait 15-30 more minutes)');
+                                console.log('   2. CORS blocking the library (domain not authorized)');
+                                console.log('   3. Network connectivity issues');
+                                reject(new Error('Google Sign-In library failed to initialize - domain authorization may still be propagating'));
+                                return;
+                            }
+                            
+                            try {
+                                console.log('🔧 Initializing Google Sign-In...');
+                                google.accounts.id.initialize({
+                                    client_id: googleClientId,
+                                    callback: handleGoogleCredentialResponse,
+                                    auto_select: false,
+                                    cancel_on_tap_outside: false,
+                                    use_fedcm_for_prompt: false // Disable FedCM which can cause issues
+                                });
+                                console.log('✅ Google Sign-In initialized successfully');
+                                console.log('💡 You can now test Google OAuth by clicking the Google Sign-In button');
+                                resolve();
+                            } catch (initError) {
+                                console.error('❌ Error initializing Google Sign-In:', initError);
+                                reject(initError);
+                            }
+                        }, 500);
                     };
-                    script.onerror = reject;
+                    script.onerror = (error) => {
+                        console.error('❌ Failed to load Google Sign-In script:', error);
+                        console.log('💡 This usually indicates CORS blocking due to unauthorized domain');
+                        console.log('   Solution: Wait for Google domain authorization to propagate');
+                        reject(error);
+                    };
                     document.head.appendChild(script);
                 } catch (error) {
+                    console.error('❌ Error in loadGoogleSignIn:', error);
                     reject(error);
                 }
             });
