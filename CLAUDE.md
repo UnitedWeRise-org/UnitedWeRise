@@ -140,41 +140,150 @@ DELETE FROM "StripeCustomer";
 **Run**: `npx prisma db execute --file scripts/clear-stripe-customers.sql --schema prisma/schema.prisma`
 **Result**: Users will get new live Stripe customers on first live payment
 
-### 🚨 CRITICAL - Deployment Process (ALWAYS FOLLOW)
+### 🚨 COMPREHENSIVE DEPLOYMENT PROTOCOL (ALWAYS FOLLOW)
 
-#### 🎯 RECOMMENDED METHOD: Environment Variable Restart (95% Success Rate)
-**Use for**: Code changes, new routes, bug fixes, configuration updates
-**Why**: Container Apps auto-syncs with GitHub, avoids Docker build failures
+**Universal Rule**: ALWAYS commit to GitHub first, then deploy infrastructure
+
+## 📋 DEPLOYMENT DECISION MATRIX
+
+### **SCENARIO A: Frontend-Only Changes**
+**When**: HTML/CSS/JS files in `/frontend/` modified
+**Detection**: Only files under `frontend/` directory changed
 
 ```bash
-# STEP 1: Commit changes to GitHub first (MANDATORY)
+# STEP 1: Commit and push (MANDATORY FIRST)
 git add . && git commit -m "Feature description" && git push origin main
 
-# STEP 2: Force Container Apps restart with environment variable update
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" "FEATURE_NAME=deployed"
+# STEP 2: Wait for GitHub Actions (automatic)
+# Frontend auto-deploys via GitHub Actions workflow (~2-5 minutes)
+# Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+
+# STEP 3: Verify deployment
+# Hard refresh browser (Ctrl+F5) after GitHub Actions completes
+```
+
+### **SCENARIO B: Backend-Only Changes**  
+**When**: Files in `/backend/src/` modified (no schema changes)
+**Detection**: Backend code modified, no new Prisma models
+
+```bash
+# STEP 1: Commit and push (MANDATORY FIRST)  
+git add . && git commit -m "Feature description" && git push origin main
+
+# STEP 2: Force backend restart (RECOMMENDED - 95% success rate)
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)"
 
 # STEP 3: Verify deployment success (uptime should drop to <60 seconds)
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
 
-#### ❌ AVOID: Docker Build Method (30% Success Rate)
-**Common Failures**: Unicode encoding errors, Node version mismatches (needs 20+, uses 18), dependency conflicts
-**Only Use When**: New npm packages, Dockerfile changes (not for code changes)
+### **SCENARIO C: Backend + Database Schema Changes**
+**When**: Prisma schema modified AND backend code uses new models
+**Detection**: `backend/prisma/schema.prisma` changed
 
-#### 🚨 DATABASE SCHEMA CHANGES  
-**If Prisma models/enums modified**:
 ```bash
-# Run BEFORE deployment if needed
+# STEP 1: Commit and push (MANDATORY FIRST)
+git add . && git commit -m "Feature description" && git push origin main
+
+# STEP 2: Apply database migrations (BEFORE backend deployment)
 cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+
+# STEP 3: Force backend restart  
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "SCHEMA_DEPLOY=$(date -u +%Y%m%d%H%M%S)"
+
+# STEP 4: Verify deployment success
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
+
+### **SCENARIO D: Full Stack Changes (Frontend + Backend)**
+**When**: Both frontend and backend files modified
+**Detection**: Changes in both `/frontend/` AND `/backend/` directories
+
+```bash
+# STEP 1: Commit and push (MANDATORY FIRST)
+git add . && git commit -m "Feature description" && git push origin main
+
+# STEP 2A: Deploy backend (if schema changes, run migrations first)
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "FULLSTACK_DEPLOY=$(date -u +%Y%m%d%H%M%S)"
+
+# STEP 2B: Frontend auto-deploys via GitHub Actions (wait for completion)
+# Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+
+# STEP 3: Verify both deployments
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+# Hard refresh browser after GitHub Actions completes
+```
+
+### **SCENARIO E: Emergency Docker Rebuild** 
+**When**: New npm packages, Dockerfile changes, or environment variable restart fails
+**Use**: Only as last resort (30% success rate due to encoding/Node version issues)
+
+```bash
+# STEP 1: Commit and push (MANDATORY FIRST)
+git add . && git commit -m "Feature description" && git push origin main
+
+# STEP 2: Build new Docker image from GitHub
+az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+
+# STEP 3: Deploy new Docker image
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+```
+
+## ⚠️ CRITICAL FAILURE PATTERNS TO AVOID
+
+### **❌ NEVER DO**:
+- Deploy without committing to GitHub first
+- Skip GitHub push when making frontend changes  
+- Use Docker build for routine code changes
+- Apply schema migrations AFTER deploying backend code
+- Assume frontend changes auto-deploy (verify GitHub Actions)
+
+### **🔍 ALWAYS VERIFY**:
+- Git status shows clean working directory after push
+- GitHub Actions workflow starts for frontend changes
+- Backend uptime drops to <60 seconds after deployment
+- New functionality works in production environment
+
+## 🤖 AUTOMATED DEPLOYMENT DECISION LOGIC
+
+**When User Says**: "deploy", "push to production", "update live server", "get changes live"
+
+**Claude Must Execute**:
+
+```bash
+# STEP 1: Analyze changes (MANDATORY)
+git status
+
+# STEP 2: Determine deployment scenario
+# Frontend only: git diff HEAD --name-only | grep "^frontend/"
+# Backend only: git diff HEAD --name-only | grep "^backend/" 
+# Schema changes: git diff HEAD --name-only | grep "schema.prisma"
+# Full stack: Changes in both frontend/ AND backend/
+
+# STEP 3: Execute appropriate scenario from matrix above
+# STEP 4: Verify deployment success
+# STEP 5: Report status to user with specific verification steps
+```
+
+## 🎯 DEPLOYMENT SUCCESS INDICATORS
+
+### **Frontend Deployment Success**:
+- ✅ GitHub Actions workflow completes successfully  
+- ✅ Hard refresh shows new functionality
+- ✅ Browser console shows new script functions available
+- ✅ No 404 errors on new static files
+
+### **Backend Deployment Success**:
+- ✅ Backend uptime drops to <60 seconds
+- ✅ Health endpoint returns "healthy" status
+- ✅ New API endpoints return proper responses (not 404/500)
+- ✅ No compilation or runtime errors in logs
 
 **CRITICAL LESSONS LEARNED (August 25, 2025):**
 - **Schema dependency failures**: Backend code referencing non-existent database models causes 404 errors on ALL routes in that file
-- **Root cause**: CandidateAdminMessage model referenced in admin.ts but table didn't exist in production database  
-- **Time waste**: Multiple deployment cycles failed because schema wasn't updated first
-- **Solution**: ALWAYS check for new Prisma models and run migrations before deploying backend code
-
-**NEVER skip Step 1!** Backend code depending on missing schema will fail at runtime with 404 route errors.
+- **Frontend deployment missed**: Creating local files without GitHub push means frontend changes never deploy
+- **Docker build failures**: Unicode encoding errors, Node version mismatches common in Windows environments
+- **Solution**: GitHub-first workflow with environment variable restarts eliminates 90% of deployment issues
 
 ### 🚨 CRITICAL - Server Operations
 - **PROHIBITED**: Never run `npm run dev`, `npm start`, or server startup commands
@@ -205,29 +314,6 @@ cd backend && npx prisma db execute --file scripts/migration-name.sql --schema p
 - **PROHIBITED**: Complex debugging before verifying deployment status
 - **TOOLS**: Use `deploymentStatus.check()` in browser console
 
-### 🚀 Azure Container Apps Deployment Fix
-**WHEN**: Backend uptime is high but changes aren't live
-```bash
-# Quick UnitedWeRise deployment fix sequence:
-APP_NAME="unitedwerise-backend"
-RESOURCE_GROUP="unitedwerise-rg"
-
-# 1. Check status
-az containerapp revision list -n $APP_NAME -g $RESOURCE_GROUP -o table
-az containerapp ingress traffic show -n $APP_NAME -g $RESOURCE_GROUP
-
-# 2. Force traffic to latest revision
-az containerapp ingress traffic set -n $APP_NAME -g $RESOURCE_GROUP --revision-weight latest=100
-
-# 3. If needed, restart active revision
-ACTIVE_REV=$(az containerapp revision list -n $APP_NAME -g $RESOURCE_GROUP --query "[?active].name" -o tsv)
-az containerapp revision restart -n $APP_NAME -g $RESOURCE_GROUP --revision $ACTIVE_REV
-
-# 4. Force new revision if above fails
-az containerapp update -n $APP_NAME -g $RESOURCE_GROUP --set-env-vars "DEPLOY_TIMESTAMP=$(date +%s)"
-```
-**SUCCESS INDICATORS**: Backend uptime drops to minutes, console shows new debug messages
-**FULL PROTOCOL**: See `docs-archive-2025-08-15/AZURE_CONTAINER_APPS_DEPLOYMENT_PROTOCOL.md` for comprehensive troubleshooting
 
 ### 🛡️ Multi-Developer Conflict Prevention
 - **BEFORE ANY EDIT**: Check MASTER_DOCUMENTATION.md for recent updates
@@ -318,10 +404,10 @@ authToken          // Global variable should match
    - Solution: Use fixed historical dates like `new Date('2025-08-19T10:30:00.000Z')`
 
 5. **Deploy with forced revision** if Docker build encounters encoding errors
-   - Azure CLI Unicode issues: Use environment variable update to force new revision
-   - Command: `az containerapp update --name app-name --resource-group rg-name --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)"`
+   - Azure CLI Unicode issues: Use COMPREHENSIVE DEPLOYMENT PROTOCOL above
+   - Refer to Scenario B (Backend-Only) or Scenario E (Emergency Docker) as appropriate
 
-6. **Verify deployment success** by checking backend uptime
+6. **Verify deployment success** by checking backend uptime  
    - Health check: `curl https://backend-url/health | grep uptime`
    - New deployment: Uptime should be <60 seconds
    - Stale deployment: Uptime in minutes/hours indicates old revision
