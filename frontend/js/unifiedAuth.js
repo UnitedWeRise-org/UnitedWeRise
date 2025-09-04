@@ -3,7 +3,8 @@
  * Handles login for both main site and admin dashboard with TOTP support
  */
 
-const BACKEND_URL = window.BACKEND_URL || 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
+// Use existing BACKEND_URL if defined, otherwise set default
+const BACKEND_URL = typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : (window.BACKEND_URL || 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io');
 
 /**
  * Show TOTP verification modal (extracted from admin dashboard)
