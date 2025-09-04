@@ -588,6 +588,74 @@ authToken          // Global variable should match
 - Check imports: `QwenService` not `qwenService`, `EmbeddingService` not `embeddingService`
 - Database migrations: Use `npx prisma db execute --file path --schema prisma/schema.prisma`
 
+### 🔧 ADMIN-ONLY DEBUGGING SYSTEM SOP
+
+**Status**: ✅ **IMPLEMENTED** (September 4, 2025)
+
+#### **Secure Debugging Protocol**
+All debugging code MUST use the admin-only debugging system to prevent security vulnerabilities.
+
+#### **Required Usage Pattern**
+```javascript
+// ❌ NEVER DO (Security Risk)
+console.log('User data:', userData);
+
+// ✅ ALWAYS DO (Admin-Only)
+await adminDebugLog('ComponentName', 'User data loaded', userData);
+```
+
+#### **Available Admin Debug Functions**
+```javascript
+await adminDebugLog('Component', 'Message', data);      // Standard debugging
+await adminDebugError('Component', 'Error message', error); // Error debugging  
+await adminDebugWarn('Component', 'Warning message', data);  // Warning debugging
+await adminDebugTable('Component', 'Table data', tableData); // Table display
+await adminDebugSensitive('Component', 'Message', sensitiveData); // Double-verified
+await adminDebugTime('Component', 'Performance Label');    // Start timing
+await adminDebugTimeEnd('Component', 'Performance Label'); // End timing
+```
+
+#### **Security Features**
+- **Admin Verification**: Uses existing `/api/admin/dashboard` endpoint
+- **Fail Secure**: No output if admin verification fails
+- **Caching**: 5-minute verification cache to prevent API spam
+- **Double Verification**: Sensitive data requires re-verification
+- **Silent Failure**: Non-admin users see absolutely nothing
+
+#### **Integration Requirements**
+```html
+<!-- Add to HTML files that need admin debugging -->
+<script src="js/adminDebugger.js"></script>
+```
+
+#### **Mandatory Development Rules**
+1. **NEVER use `console.log()` for sensitive data** - Use `adminDebugLog()` instead
+2. **ALWAYS use admin debugging for authentication/authorization logic**
+3. **REQUIRED for TOTP, credentials, user data, system internals**
+4. **Component names should be descriptive** (e.g., 'TOTPAuth', 'UserLogin', 'AdminVerify')
+
+#### **Deployment Security**
+- **Production Safe**: Only admins see debug output even in production
+- **No Environment Gates Needed**: Security handled by admin verification
+- **Performance Optimized**: Cached verification prevents excessive API calls
+
+#### **Examples of Required Usage**
+```javascript
+// Authentication debugging
+await adminDebugLog('AuthSystem', 'Login attempt', {user: email, timestamp: Date.now()});
+
+// TOTP debugging  
+await adminDebugSensitive('TOTPAuth', 'TOTP verification', {enabled: totpEnabled, hasSecret: !!secret});
+
+// Database query debugging
+await adminDebugTable('DatabaseQuery', 'User query results', queryResults);
+
+// Error debugging
+await adminDebugError('APICall', 'Backend request failed', {endpoint, status, error});
+```
+
+**This system eliminates security vulnerabilities while maintaining full debugging capabilities for admin users.**
+
 ### 🚨 CRITICAL: Route Loading & Data Issues Debugging (August 2025)
 
 #### Schema Dependency Failures Causing 404 Route Errors (August 25, 2025)

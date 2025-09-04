@@ -953,6 +953,7 @@ Loading deployment status...
     <script src="src/js/websocket-client.js"></script>
     <script src="src/js/deployment-status.js"></script>
     <script src="js/unifiedAuth.js"></script>
+    <script src="js/adminDebugger.js"></script>
     <script>
         // Global state
         let currentUser = null;
@@ -1037,6 +1038,14 @@ Loading deployment status...
                         
                         if (adminCheckResponse.ok) {
                             console.log('Admin verified, showing dashboard');
+                            
+                            // Test admin-only debugging system
+                            await adminDebugLog('AdminLogin', 'Admin dashboard access granted', {
+                                user: result.user,
+                                timestamp: new Date().toISOString(),
+                                totpSession: !!result.totpSessionToken
+                            });
+                            
                             showDashboard();
                         } else {
                             console.log('Admin check failed:', adminCheckResponse.status);
