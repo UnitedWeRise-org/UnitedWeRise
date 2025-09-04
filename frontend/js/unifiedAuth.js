@@ -82,58 +82,10 @@ function showTOTPModal(context = 'main-site') {
                 return;
             }
             
-            try {
-                verifyBtn.textContent = 'Verifying...';
-                verifyBtn.disabled = true;
-                
-                const response = await fetch(`${BACKEND_URL}/api/totp/verify`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${window.authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ token: code })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('TOTP verify response:', result);
-                    const verificationToken = result.data?.verificationToken || result.verificationToken;
-                    
-                    if (verificationToken) {
-                        // Store context-specific TOTP tokens
-                        const storagePrefix = context === 'admin-dashboard' ? 'admin_' : 'user_';
-                        localStorage.setItem(`${storagePrefix}totp_verified`, 'true');
-                        localStorage.setItem(`${storagePrefix}totp_token`, verificationToken);
-                        
-                        modal.remove();
-                        console.log(`✅ TOTP verified for ${context} - token valid for 24 hours`);
-                        
-                        resolve(verificationToken);
-                    } else {
-                        console.error('No verification token in response:', result);
-                        alert('Verification successful but no token received. Please try again.');
-                        verifyBtn.textContent = 'Verify';
-                        verifyBtn.disabled = false;
-                    }
-                } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.error === 'INVALID_TOTP_TOKEN' 
-                        ? 'Invalid verification code. Please check your authenticator app.' 
-                        : errorData.error || 'Verification failed';
-                    
-                    alert(errorMessage);
-                    verifyBtn.textContent = 'Verify';
-                    verifyBtn.disabled = false;
-                    input.value = '';
-                    input.focus();
-                }
-            } catch (error) {
-                console.error('TOTP verification error:', error);
-                alert('Network error during verification. Please try again.');
-                verifyBtn.textContent = 'Verify';
-                verifyBtn.disabled = false;
-            }
+            // Simply return the TOTP code - verification happens in login retry
+            modal.remove();
+            console.log(`🔑 TOTP code entered for ${context} - will verify via login endpoint`);
+            resolve(code);
         };
         
         // Allow Enter key to submit
@@ -180,7 +132,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
         if (result.requiresTOTP) {
             console.log('🔑 TOTP verification required');
             
-            // Show TOTP modal and get verification token
+            // Show TOTP modal and get user's 6-digit code
             const verificationToken = await showTOTPModal(context);
             
             // Retry login with TOTP token
