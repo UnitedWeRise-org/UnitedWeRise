@@ -361,7 +361,11 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
     console.log(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
     
-    if (userData?.totpEnabled) {
+    // Use statusCheck result as authoritative since that logic works
+    const actualTotpEnabled = statusCheck?.totpEnabled || false;
+    console.log(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
+    
+    if (actualTotpEnabled && userData?.totpSecret) {
       console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
       const { totpToken, totpSessionToken } = req.body;
       
@@ -412,10 +416,12 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
       // No valid session token - require TOTP verification
       if (!totpToken) {
+        console.log(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
         return res.status(200).json({
           requiresTOTP: true,
           message: 'Two-factor authentication required',
-          userId: user.id // Temporary ID for TOTP verification
+          userId: user.id, // Temporary ID for TOTP verification
+          totpDebug: { ...totpDebug, requiresTOTP: true, reason: 'No TOTP token provided' }
         });
       }
 
