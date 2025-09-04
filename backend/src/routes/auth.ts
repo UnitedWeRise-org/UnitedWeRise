@@ -334,6 +334,13 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       }
     });
 
+    console.log(`🔍 TOTP Debug for ${user.email}:`, {
+      userId: user.id,
+      totpEnabled: userData?.totpEnabled,
+      hasSecret: !!userData?.totpSecret,
+      totpLastUsedAt: userData?.totpLastUsedAt
+    });
+
     if (userData?.totpEnabled) {
       const { totpToken, totpSessionToken } = req.body;
       
