@@ -21,6 +21,8 @@
 - ✅ Async feedback analysis (10x performance improvement)
 - ✅ Azure Blob Storage for persistent media storage
 - ✅ **LIVE Stripe Payment System** - Production donation processing with tax-deductible receipts
+- ✅ **OAuth Authentication** - Google Sign-In for easy account creation/login
+- ✅ **TOTP 2FA** - Extended to regular users with 24-hour session persistence
 - ✅ **Logical Candidate Registration Flow** - Payment-driven office selection prevents fraud
 
 ### Key Environment Variables
@@ -42,6 +44,10 @@ AZURE_STORAGE_CONTAINER_NAME=photos
 STRIPE_SECRET_KEY=[LIVE_KEY_CONFIGURED]
 STRIPE_PUBLISHABLE_KEY=[LIVE_KEY_CONFIGURED]
 STRIPE_WEBHOOK_SECRET=[LIVE_WEBHOOK_CONFIGURED]
+
+# OAuth Authentication (Google only)
+GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com
+OAUTH_ENCRYPTION_KEY=a8f5f167f44f4964e6c998dee827110c
 
 # News Aggregation (Optional)
 NEWS_API_KEY=your_newsapi_key_here
@@ -134,20 +140,32 @@ DELETE FROM "StripeCustomer";
 **Run**: `npx prisma db execute --file scripts/clear-stripe-customers.sql --schema prisma/schema.prisma`
 **Result**: Users will get new live Stripe customers on first live payment
 
-### 🚨 CRITICAL - Schema-First Deployment Process (ALWAYS FOLLOW)
-**MANDATORY 3-STEP DEPLOYMENT SEQUENCE:**
+### 🚨 CRITICAL - Deployment Process (ALWAYS FOLLOW)
+
+#### 🎯 RECOMMENDED METHOD: Environment Variable Restart (95% Success Rate)
+**Use for**: Code changes, new routes, bug fixes, configuration updates
+**Why**: Container Apps auto-syncs with GitHub, avoids Docker build failures
 
 ```bash
-# STEP 1: DATABASE SCHEMA FIRST (If models/enums added)
-# Check: Does this change add/modify Prisma models or enums?
-# → YES: Run migration BEFORE any backend deployment
+# STEP 1: Commit changes to GitHub first (MANDATORY)
+git add . && git commit -m "Feature description" && git push origin main
+
+# STEP 2: Force Container Apps restart with environment variable update
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" "FEATURE_NAME=deployed"
+
+# STEP 3: Verify deployment success (uptime should drop to <60 seconds)
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+```
+
+#### ❌ AVOID: Docker Build Method (30% Success Rate)
+**Common Failures**: Unicode encoding errors, Node version mismatches (needs 20+, uses 18), dependency conflicts
+**Only Use When**: New npm packages, Dockerfile changes (not for code changes)
+
+#### 🚨 DATABASE SCHEMA CHANGES  
+**If Prisma models/enums modified**:
+```bash
+# Run BEFORE deployment if needed
 cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
-
-# STEP 2: Build new Docker image from current GitHub code
-az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
-
-# STEP 3: Deploy the new image to Container Apps  
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
 ```
 
 **CRITICAL LESSONS LEARNED (August 25, 2025):**

@@ -1175,70 +1175,29 @@
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            const totpToken = document.getElementById('loginTOTP').value;
             
-            // Get stored TOTP session token if available
-            const totpSessionToken = localStorage.getItem('totpSessionToken');
-
             if (!email || !password) {
                 showAuthMessage('Please fill in all fields', 'error');
                 return;
             }
-
-            // Check if TOTP field is visible and required
-            const totpField = document.getElementById('totpField');
-            if (totpField.style.display !== 'none' && !totpToken) {
-                showAuthMessage('Please enter your two-factor authentication code', 'error');
-                return;
-            }
-
+            
             try {
                 const loginButton = document.getElementById('loginButton');
                 loginButton.disabled = true;
                 loginButton.textContent = 'Signing in...';
-
-                const requestBody = { email, password };
-                if (totpToken) requestBody.totpToken = totpToken;
-                if (totpSessionToken) requestBody.totpSessionToken = totpSessionToken;
-
-                const response = await fetch(`${API_BASE}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    if (data.requiresTOTP) {
-                        // Show TOTP field and update button
-                        totpField.style.display = 'block';
-                        loginButton.textContent = 'Verify & Login';
-                        showAuthMessage('Please enter your two-factor authentication code', 'info');
-                        document.getElementById('loginTOTP').focus();
-                    } else {
-                        // Successful login
-                        authToken = data.token;
-                        localStorage.setItem('authToken', authToken);
-                        localStorage.setItem('currentUser', JSON.stringify(data.user));
-                        
-                        // Store TOTP session token if provided
-                        if (data.totpSessionToken) {
-                            localStorage.setItem('totpSessionToken', data.totpSessionToken);
-                        }
-                        
-                        setUserLoggedIn(data.user);
-                        closeAuthModal();
-                        showAuthMessage('Login successful!', 'success');
-                    }
+                
+                // Use unified login function
+                const result = await unifiedLogin(email, password, 'main-site');
+                
+                if (result.success) {
+                    // Set auth token for compatibility
+                    authToken = result.token;
+                    
+                    setUserLoggedIn(result.user);
+                    closeAuthModal();
+                    showAuthMessage('Login successful!', 'success');
                 } else {
-                    if (data.oauthOnly) {
-                        showAuthMessage('This account uses social login. Please sign in with Google, Microsoft, or Apple.', 'error');
-                    } else {
-                        showAuthMessage(data.error || 'Login failed', 'error');
-                    }
+                    showAuthMessage(result.error || 'Login failed', 'error');
                 }
             } catch (error) {
                 console.error('Login error:', error);
@@ -1489,11 +1448,10 @@
         }
 
         function logout() {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('totpSessionToken');
+            // Use unified logout function
+            unifiedLogout('main-site');
             
-            // Use the new centralized logout function
+            // Additional main-site specific cleanup
             setUserLoggedOut();
             
             // Hide additional elements
@@ -9269,5 +9227,7 @@
         </div>
     </div>
 
+    <!-- Unified Authentication System -->
+    <script src="js/unifiedAuth.js"></script>
 </body>
 </html>

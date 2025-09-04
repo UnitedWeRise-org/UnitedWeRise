@@ -34,10 +34,27 @@ export interface OAuthLoginResult {
 export class OAuthService {
   
   /**
+   * Normalize email for OAuth account matching
+   * Gmail ignores dots and plus signs in email addresses
+   */
+  private static normalizeEmail(email: string): string {
+    const [localPart, domain] = email.toLowerCase().split('@');
+    
+    // For Gmail and Google Workspace domains, ignore dots and everything after +
+    if (domain === 'gmail.com' || domain === 'googlemail.com') {
+      return localPart.replace(/\./g, '').replace(/\+.*/, '') + '@' + domain;
+    }
+    
+    return email.toLowerCase();
+  }
+  
+  /**
    * Handle OAuth login/registration flow
    */
   static async handleOAuthLogin(profile: OAuthProfile): Promise<OAuthLoginResult> {
     try {
+      const normalizedEmail = this.normalizeEmail(profile.email);
+      
       // First, check if user already has this OAuth provider linked
       const existingOAuthProvider = await prisma.userOAuthProvider.findUnique({
         where: {
@@ -79,10 +96,24 @@ export class OAuthService {
         };
       }
 
-      // Check if user exists with this email
-      const existingUser = await prisma.user.findUnique({
+      // Check if user exists with this email (using normalized email for Gmail)
+      // First try exact match, then try finding by normalized Gmail
+      let existingUser = await prisma.user.findUnique({
         where: { email: profile.email }
       });
+      
+      if (!existingUser && (profile.email.includes('@gmail.com') || profile.email.includes('@googlemail.com'))) {
+        // For Gmail, also check for accounts with the normalized version
+        const allUsers = await prisma.user.findMany({
+          where: {
+            email: { contains: '@gmail.com' }
+          }
+        });
+        
+        existingUser = allUsers.find(user => 
+          this.normalizeEmail(user.email) === normalizedEmail
+        ) || null;
+      }
 
       if (existingUser) {
         // Link OAuth provider to existing user account

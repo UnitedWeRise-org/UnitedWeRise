@@ -1015,37 +1015,27 @@ Loading deployment status...
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
+            if (!email || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+            
             try {
-                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
+                // Use unified login function for admin context
+                const result = await unifiedLogin(email, password, 'admin-dashboard');
                 
-                // Debug logging
-                console.log('Login response:', data);
-                console.log('User isAdmin:', data.user?.isAdmin);
-
-                if (response.ok) {
-                    authToken = data.token;
-                    currentUser = data.user;
+                if (result.success) {
+                    authToken = result.token;
+                    currentUser = result.user;
                     
-                    // Since current backend doesn't return isAdmin, we'll check via admin API
+                    // Verify admin privileges
                     console.log('Login successful, checking admin privileges...');
                     
                     try {
                         const adminCheckResponse = await adminApiCall(`${BACKEND_URL}/api/admin/dashboard`);
                         
                         if (adminCheckResponse.ok) {
-                            // If admin dashboard API works, user is admin
-                            localStorage.setItem('authToken', authToken);
-                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                            
-                            console.log('Admin verified via dashboard API, showing dashboard');
+                            console.log('Admin verified, showing dashboard');
                             showDashboard();
                         } else {
                             console.log('Admin check failed:', adminCheckResponse.status);
@@ -1056,7 +1046,7 @@ Loading deployment status...
                         showError('Unable to verify admin privileges. Please try again.');
                     }
                 } else {
-                    showError(data.error || 'Login failed');
+                    showError(result.error || 'Login failed');
                 }
             } catch (error) {
                 console.error('Login error:', error);
@@ -1093,10 +1083,8 @@ Loading deployment status...
 
         // Logout
         function logout() {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('admin_totp_verified');
-            localStorage.removeItem('admin_totp_token');
+            // Use unified logout function
+            unifiedLogout('admin-dashboard');
             
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
@@ -1104,8 +1092,6 @@ Loading deployment status...
             
             currentUser = null;
             authToken = null;
-            
-            showLogin();
         }
 
         // Show section
@@ -5243,5 +5229,8 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         });
     </script>
+    
+    <!-- Unified Authentication System -->
+    <script src="js/unifiedAuth.js"></script>
 </body>
 </html>
