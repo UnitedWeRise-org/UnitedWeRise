@@ -1,6 +1,11 @@
 import { Response, NextFunction } from 'express';
 import type { AuthRequest } from './auth';
 /**
+ * Middleware to require TOTP verification for any user who has TOTP enabled
+ * Should be used after requireAuth middleware
+ */
+export declare const requireTOTP: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>;
+/**
  * Middleware to require TOTP verification for admin access
  * Should be used after requireAuth and requireAdmin middleware
  */

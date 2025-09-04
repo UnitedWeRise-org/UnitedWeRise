@@ -2195,5 +2195,98 @@ router.get('/messages/overview', auth_1.requireAuth, requireAdmin, totpAuth_1.re
         res.status(500).json({ error: 'Failed to retrieve messaging overview' });
     }
 });
+// Merge duplicate user accounts (for OAuth email normalization issues)
+router.post('/merge-accounts', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, [
+    (0, express_validator_1.body)('primaryAccountId').isUUID().withMessage('Primary account ID must be a valid UUID'),
+    (0, express_validator_1.body)('duplicateAccountId').isUUID().withMessage('Duplicate account ID must be a valid UUID')
+], handleValidationErrors, async (req, res) => {
+    try {
+        const { primaryAccountId, duplicateAccountId } = req.body;
+        if (primaryAccountId === duplicateAccountId) {
+            return res.status(400).json({ error: 'Cannot merge account with itself' });
+        }
+        // Get both accounts
+        const [primaryAccount, duplicateAccount] = await Promise.all([
+            prisma_1.prisma.user.findUnique({
+                where: { id: primaryAccountId },
+                include: { oauthProviders: true, posts: true, comments: true }
+            }),
+            prisma_1.prisma.user.findUnique({
+                where: { id: duplicateAccountId },
+                include: { oauthProviders: true, posts: true, comments: true }
+            })
+        ]);
+        if (!primaryAccount || !duplicateAccount) {
+            return res.status(404).json({ error: 'One or both accounts not found' });
+        }
+        console.log(`🔄 Merging accounts: ${duplicateAccount.email} → ${primaryAccount.email}`);
+        // Start transaction to merge accounts
+        await prisma_1.prisma.$transaction(async (tx) => {
+            // 1. Transfer OAuth providers
+            if (duplicateAccount.oauthProviders.length > 0) {
+                await tx.userOAuthProvider.updateMany({
+                    where: { userId: duplicateAccountId },
+                    data: { userId: primaryAccountId }
+                });
+                console.log(`✅ Transferred ${duplicateAccount.oauthProviders.length} OAuth provider(s)`);
+            }
+            // 2. Transfer posts
+            if (duplicateAccount.posts.length > 0) {
+                await tx.post.updateMany({
+                    where: { authorId: duplicateAccountId },
+                    data: { authorId: primaryAccountId }
+                });
+                console.log(`✅ Transferred ${duplicateAccount.posts.length} post(s)`);
+            }
+            // 3. Transfer comments
+            if (duplicateAccount.comments.length > 0) {
+                await tx.comment.updateMany({
+                    where: { userId: duplicateAccountId },
+                    data: { userId: primaryAccountId }
+                });
+                console.log(`✅ Transferred ${duplicateAccount.comments.length} comment(s)`);
+            }
+            // 4. Transfer other user data (followers, following, etc.)
+            await Promise.all([
+                // Update follower relationships
+                tx.follow.updateMany({
+                    where: { followerId: duplicateAccountId },
+                    data: { followerId: primaryAccountId }
+                }),
+                tx.follow.updateMany({
+                    where: { followingId: duplicateAccountId },
+                    data: { followingId: primaryAccountId }
+                }),
+                // Update friend relationships  
+                tx.friendship.updateMany({
+                    where: { requesterId: duplicateAccountId },
+                    data: { requesterId: primaryAccountId }
+                }),
+                tx.friendship.updateMany({
+                    where: { recipientId: duplicateAccountId },
+                    data: { recipientId: primaryAccountId }
+                })
+            ]);
+            // 5. Delete the duplicate account
+            await tx.user.delete({
+                where: { id: duplicateAccountId }
+            });
+            console.log(`✅ Successfully merged and deleted duplicate account ${duplicateAccountId}`);
+        });
+        res.json({
+            success: true,
+            message: `Successfully merged accounts. All data transferred from ${duplicateAccount.username} to ${primaryAccount.username}`,
+            mergedData: {
+                oauthProviders: duplicateAccount.oauthProviders.length,
+                posts: duplicateAccount.posts.length,
+                comments: duplicateAccount.comments.length
+            }
+        });
+    }
+    catch (error) {
+        console.error('Account merge error:', error);
+        res.status(500).json({ error: 'Failed to merge accounts' });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=admin.js.map

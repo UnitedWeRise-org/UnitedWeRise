@@ -102,6 +102,34 @@ export declare class ExternalCandidateService {
      */
     private static calculateNameSimilarity;
     /**
+     * Get all candidates (internal + external) for a specific address grouped by race
+     * Includes fuzzy matching for race deduplication
+     */
+    static getCandidatesForAddress(address: string): Promise<Array<{
+        office: string;
+        level: string;
+        district?: string;
+        election: {
+            date: string;
+            name: string;
+        };
+        candidates: Array<{
+            id: string;
+            name: string;
+            party?: string;
+            isExternal: boolean;
+            isRegistered: boolean;
+            campaignWebsite?: string;
+            externalDataConfidence?: number;
+            dataSource?: string;
+        }>;
+    }>>;
+    /**
+     * Normalize office titles for fuzzy matching and deduplication
+     * Handles variations like "President", "President of the United States", "U.S. President"
+     */
+    private static normalizeOfficeTitle;
+    /**
      * Get externally sourced candidates for search with caching
      */
     static searchExternalCandidates(searchTerm: string, limit?: number): Promise<any>;

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18,6 +51,7 @@ const metricsService_1 = require("../services/metricsService");
 const securityService_1 = require("../services/securityService");
 const crypto_1 = __importDefault(require("crypto"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const speakeasy = __importStar(require("speakeasy"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -297,13 +331,145 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             await securityService_1.SecurityService.handleFailedLogin(user.id, ipAddress, userAgent);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        // Successful login - handle security logging
+        // Check if user has TOTP enabled (using same query pattern as working status endpoint)
+        const userData = await prisma_1.prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                totpEnabled: true,
+                totpSecret: true,
+                totpLastUsedAt: true,
+                totpSetupAt: true,
+                totpBackupCodes: true
+            }
+        });
+        // Additional check: Try the exact same query as the working status endpoint  
+        const statusCheck = await prisma_1.prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                totpEnabled: true,
+                totpSetupAt: true,
+                totpBackupCodes: true
+            }
+        });
+        console.log(`🔍 Status endpoint style query result:`, statusCheck);
+        // Debug: Add TOTP status to response for testing
+        const totpDebug = {
+            userId: user.id,
+            userDataExists: !!userData,
+            userData: userData,
+            totpEnabled: userData?.totpEnabled,
+            hasSecret: !!userData?.totpSecret,
+            totpLastUsedAt: userData?.totpLastUsedAt
+        };
+        console.log(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
+        console.log(`🔍 Raw userData query result:`, userData);
+        console.log(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
+        // Use statusCheck result as authoritative since that logic works
+        const actualTotpEnabled = statusCheck?.totpEnabled || false;
+        console.log(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
+        if (actualTotpEnabled && userData?.totpSecret) {
+            console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
+            const { totpToken, totpSessionToken } = req.body;
+            // Check if user has a valid TOTP session token (24-hour window)
+            if (totpSessionToken && userData.totpSecret) {
+                const validSessionToken = speakeasy.totp.verify({
+                    secret: userData.totpSecret,
+                    encoding: 'base32',
+                    token: totpSessionToken,
+                    step: 86400, // 24 hours
+                    window: 1
+                });
+                if (validSessionToken) {
+                    // Valid session token - extend it by updating last used time and generating new session token
+                    const newSessionToken = speakeasy.totp({
+                        secret: userData.totpSecret,
+                        encoding: 'base32',
+                        step: 86400 // Generate new 24-hour token
+                    });
+                    await prisma_1.prisma.user.update({
+                        where: { id: user.id },
+                        data: { totpLastUsedAt: new Date() }
+                    });
+                    // Successful login with extended session
+                    await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
+                    const token = (0, auth_1.generateToken)(user.id);
+                    metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp_session: 'extended' });
+                    return res.json({
+                        message: 'Login successful',
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            username: user.username,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            isAdmin: user.isAdmin,
+                            isModerator: user.isModerator
+                        },
+                        token,
+                        totpSessionToken: newSessionToken
+                    });
+                }
+            }
+            // No valid session token - require TOTP verification
+            if (!totpToken) {
+                console.log(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
+                return res.status(200).json({
+                    requiresTOTP: true,
+                    message: 'Two-factor authentication required',
+                    userId: user.id, // Temporary ID for TOTP verification
+                    totpDebug: { ...totpDebug, requiresTOTP: true, reason: 'No TOTP token provided' }
+                });
+            }
+            // Verify TOTP token
+            if (!userData.totpSecret) {
+                return res.status(500).json({ error: 'TOTP configuration error' });
+            }
+            const validTOTP = speakeasy.totp.verify({
+                secret: userData.totpSecret,
+                encoding: 'base32',
+                token: totpToken,
+                window: 2
+            });
+            if (!validTOTP) {
+                await securityService_1.SecurityService.handleFailedLogin(user.id, ipAddress, userAgent);
+                return res.status(401).json({ error: 'Invalid TOTP token' });
+            }
+            // Generate 24-hour session token for future logins
+            const sessionToken = speakeasy.totp({
+                secret: userData.totpSecret,
+                encoding: 'base32',
+                step: 86400
+            });
+            await prisma_1.prisma.user.update({
+                where: { id: user.id },
+                data: { totpLastUsedAt: new Date() }
+            });
+            // Successful login with TOTP
+            await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
+            const token = (0, auth_1.generateToken)(user.id);
+            metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
+            return res.json({
+                message: 'Login successful',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    isAdmin: user.isAdmin,
+                    isModerator: user.isModerator
+                },
+                token,
+                totpSessionToken: sessionToken
+            });
+        }
+        // No TOTP required - regular login
         await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
         const token = (0, auth_1.generateToken)(user.id);
-        // Record metrics
         metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
         res.json({
             message: 'Login successful',
+            totpDebug: totpDebug, // Temporary debug info
             user: {
                 id: user.id,
                 email: user.email,

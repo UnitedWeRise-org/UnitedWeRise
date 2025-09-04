@@ -3,6 +3,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ExternalCandidateService } from '../services/externalCandidateService';
 import { metricsService } from '../services/metricsService';
 import { apiLimiter } from '../middleware/rateLimiting';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 

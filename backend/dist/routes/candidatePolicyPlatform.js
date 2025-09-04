@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const embeddingService_1 = require("../services/embeddingService");
+const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Check if current user is a verified candidate
@@ -307,20 +308,30 @@ router.post('/positions', auth_1.requireAuth, async (req, res) => {
                 },
             });
         }
-        // Generate embedding for semantic analysis
+        // AI Processing for published positions
         if (isPublished) {
             try {
+                // Generate embedding for semantic analysis
                 const textForEmbedding = `${title}\n${summary}\n${content}\n${keyPoints.join('\n')}`;
                 const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(textForEmbedding);
+                // AI analysis for keywords, category, stance, and summary
+                const aiAnalysis = await analyzePolicyContent(title, content, summary);
                 await prisma.policyPosition.update({
                     where: { id: newPosition.id },
-                    data: { embedding },
+                    data: {
+                        embedding,
+                        aiExtractedKeywords: aiAnalysis.keywords,
+                        aiExtractedCategory: aiAnalysis.category,
+                        aiExtractedStance: aiAnalysis.stance,
+                        aiGeneratedSummary: aiAnalysis.generatedSummary,
+                        aiProcessedAt: new Date()
+                    },
                 });
-                console.log(`Generated embedding for policy position: ${newPosition.id}`);
+                console.log(`Generated AI analysis for policy position: ${newPosition.id}`);
             }
             catch (embeddingError) {
-                console.error('Failed to generate embedding:', embeddingError);
-                // Don't fail the request if embedding fails
+                console.error('Failed to generate AI analysis:', embeddingError);
+                // Don't fail the request if AI processing fails
             }
         }
         res.json({
@@ -441,20 +452,30 @@ router.put('/positions/:positionId', auth_1.requireAuth, async (req, res) => {
                 },
             },
         });
-        // Generate embedding for semantic analysis if published
+        // AI Processing for published positions
         if (isPublished) {
             try {
+                // Generate embedding for semantic analysis
                 const textForEmbedding = `${title}\n${summary}\n${content}\n${keyPoints.join('\n')}`;
                 const embedding = await embeddingService_1.EmbeddingService.generateEmbedding(textForEmbedding);
+                // AI analysis for keywords, category, stance, and summary
+                const aiAnalysis = await analyzePolicyContent(title, content, summary);
                 await prisma.policyPosition.update({
                     where: { id: newVersion.id },
-                    data: { embedding },
+                    data: {
+                        embedding,
+                        aiExtractedKeywords: aiAnalysis.keywords,
+                        aiExtractedCategory: aiAnalysis.category,
+                        aiExtractedStance: aiAnalysis.stance,
+                        aiGeneratedSummary: aiAnalysis.generatedSummary,
+                        aiProcessedAt: new Date()
+                    },
                 });
-                console.log(`Generated embedding for updated policy position: ${newVersion.id}`);
+                console.log(`Generated AI analysis for updated policy position: ${newVersion.id}`);
             }
             catch (embeddingError) {
-                console.error('Failed to generate embedding:', embeddingError);
-                // Don't fail the request if embedding fails
+                console.error('Failed to generate AI analysis:', embeddingError);
+                // Don't fail the request if AI processing fails
             }
         }
         res.json({
@@ -563,5 +584,62 @@ router.delete('/positions/:positionId', auth_1.requireAuth, async (req, res) => 
         });
     }
 });
+/**
+ * AI Analysis for Policy Content using Azure OpenAI
+ * Extracts keywords, category, stance, and generates summary
+ */
+async function analyzePolicyContent(title, content, summary) {
+    try {
+        const analysisPrompt = `Analyze this policy position for a political candidate:
+
+TITLE: "${title}"
+CONTENT: "${content}"
+${summary ? `EXISTING_SUMMARY: "${summary}"` : ''}
+
+TASK: Extract policy information and generate analysis.
+
+Respond in JSON format:
+{
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+  "category": "healthcare|education|economy|environment|immigration|foreign_policy|criminal_justice|infrastructure|housing|labor|technology|civil_rights|budget_taxes|energy|agriculture|veterans|seniors|youth|family_values|other",
+  "stance": "SUPPORT|OPPOSE|NEUTRAL|CONDITIONAL",
+  "generatedSummary": "1-2 sentence summary of the position"
+}
+
+INSTRUCTIONS:
+- Extract 3-8 relevant policy keywords from the content
+- Determine the most appropriate policy category from the list
+- Identify the candidate's stance (SUPPORT/OPPOSE/NEUTRAL/CONDITIONAL)
+- Generate a concise summary ${summary ? 'ONLY if the existing summary is empty or inadequate' : 'since no summary was provided'}
+- Focus on actionable policy positions and specific proposals`;
+        const response = await azureOpenAIService_1.azureOpenAI.generateCompletion(analysisPrompt, {
+            temperature: 0.3,
+            maxTokens: 400,
+            systemMessage: "You are a policy analysis system for political candidates. Extract structured data from policy positions objectively and accurately."
+        });
+        // Parse JSON response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('No JSON found in AI response');
+        }
+        const analysis = JSON.parse(jsonMatch[0]);
+        return {
+            keywords: Array.isArray(analysis.keywords) ? analysis.keywords : [],
+            category: analysis.category || 'other',
+            stance: analysis.stance || 'NEUTRAL',
+            generatedSummary: (summary && summary.trim()) ? summary : (analysis.generatedSummary || '')
+        };
+    }
+    catch (error) {
+        console.error('AI policy analysis failed:', error);
+        // Fallback analysis
+        return {
+            keywords: [],
+            category: 'other',
+            stance: 'NEUTRAL',
+            generatedSummary: summary || ''
+        };
+    }
+}
 exports.default = router;
 //# sourceMappingURL=candidatePolicyPlatform.js.map

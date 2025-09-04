@@ -9,6 +9,29 @@ const auth_1 = require("../middleware/auth");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
 const router = express_1.default.Router();
+// OAuth Configuration endpoint
+router.get('/config', async (req, res) => {
+    try {
+        res.json({
+            google: {
+                clientId: process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
+                enabled: !!process.env.GOOGLE_CLIENT_ID
+            },
+            microsoft: {
+                clientId: process.env.MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID',
+                enabled: !!process.env.MICROSOFT_CLIENT_ID
+            },
+            apple: {
+                clientId: process.env.APPLE_CLIENT_ID || 'YOUR_APPLE_CLIENT_ID',
+                enabled: !!process.env.APPLE_CLIENT_ID
+            }
+        });
+    }
+    catch (error) {
+        console.error('OAuth config error:', error);
+        res.status(500).json({ error: 'Failed to get OAuth configuration' });
+    }
+});
 /**
  * @swagger
  * /api/oauth/google:

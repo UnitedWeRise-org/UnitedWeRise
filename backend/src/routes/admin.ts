@@ -2483,8 +2483,8 @@ router.post('/merge-accounts',
         // 2. Transfer posts
         if (duplicateAccount.posts.length > 0) {
           await tx.post.updateMany({
-            where: { userId: duplicateAccountId },
-            data: { userId: primaryAccountId }
+            where: { authorId: duplicateAccountId },
+            data: { authorId: primaryAccountId }
           });
           console.log(`✅ Transferred ${duplicateAccount.posts.length} post(s)`);
         }
@@ -2501,23 +2501,23 @@ router.post('/merge-accounts',
         // 4. Transfer other user data (followers, following, etc.)
         await Promise.all([
           // Update follower relationships
-          tx.userFollower.updateMany({
+          tx.follow.updateMany({
             where: { followerId: duplicateAccountId },
             data: { followerId: primaryAccountId }
           }),
-          tx.userFollower.updateMany({
+          tx.follow.updateMany({
             where: { followingId: duplicateAccountId },
             data: { followingId: primaryAccountId }
           }),
           
           // Update friend relationships  
-          tx.userFriend.updateMany({
-            where: { userId: duplicateAccountId },
-            data: { userId: primaryAccountId }
+          tx.friendship.updateMany({
+            where: { requesterId: duplicateAccountId },
+            data: { requesterId: primaryAccountId }
           }),
-          tx.userFriend.updateMany({
-            where: { friendId: duplicateAccountId },
-            data: { friendId: primaryAccountId }
+          tx.friendship.updateMany({
+            where: { recipientId: duplicateAccountId },
+            data: { recipientId: primaryAccountId }
           })
         ]);
 

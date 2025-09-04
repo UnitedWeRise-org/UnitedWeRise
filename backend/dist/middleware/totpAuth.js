@@ -33,11 +33,64 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.clearTOTPVerification = exports.markTOTPVerified = exports.requireTOTPForAdmin = void 0;
+exports.clearTOTPVerification = exports.markTOTPVerified = exports.requireTOTPForAdmin = exports.requireTOTP = void 0;
 const prisma_1 = require("../lib/prisma");
 ;
 const speakeasy = __importStar(require("speakeasy"));
 // Using singleton prisma from lib/prisma.ts
+/**
+ * Middleware to require TOTP verification for any user who has TOTP enabled
+ * Should be used after requireAuth middleware
+ */
+const requireTOTP = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        // Check if user has TOTP enabled
+        const userData = await prisma_1.prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                totpEnabled: true,
+                totpSecret: true
+            }
+        });
+        // If TOTP is not enabled, allow access
+        if (!userData?.totpEnabled || !userData?.totpSecret) {
+            return next();
+        }
+        // TOTP is enabled - verify token
+        const totpVerified = req.headers['x-totp-verified'] === 'true';
+        const totpToken = req.headers['x-totp-token'];
+        if (!totpVerified || !totpToken) {
+            return res.status(403).json({
+                error: 'TOTP_VERIFICATION_REQUIRED',
+                message: 'Please verify your TOTP token.'
+            });
+        }
+        // Verify the temporary verification token (24-hour window)
+        const isValidToken = speakeasy.totp.verify({
+            secret: userData.totpSecret,
+            encoding: 'base32',
+            token: totpToken,
+            step: 86400, // 24 hours
+            window: 1
+        });
+        if (!isValidToken) {
+            return res.status(403).json({
+                error: 'TOTP_VERIFICATION_EXPIRED',
+                message: 'Your TOTP verification has expired. Please verify again.'
+            });
+        }
+        next();
+    }
+    catch (error) {
+        console.error('TOTP verification error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+exports.requireTOTP = requireTOTP;
 /**
  * Middleware to require TOTP verification for admin access
  * Should be used after requireAuth and requireAdmin middleware
