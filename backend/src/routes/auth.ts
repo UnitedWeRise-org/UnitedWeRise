@@ -334,12 +334,14 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       }
     });
 
-    console.log(`🔍 TOTP Debug for ${user.email}:`, {
+    // Debug: Add TOTP status to response for testing
+    const totpDebug = {
       userId: user.id,
       totpEnabled: userData?.totpEnabled,
       hasSecret: !!userData?.totpSecret,
       totpLastUsedAt: userData?.totpLastUsedAt
-    });
+    };
+    console.log(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
 
     if (userData?.totpEnabled) {
       const { totpToken, totpSessionToken } = req.body;
@@ -455,6 +457,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
     res.json({
       message: 'Login successful',
+      totpDebug: totpDebug, // Temporary debug info
       user: {
         id: user.id,
         email: user.email,
