@@ -144,7 +144,7 @@ DELETE FROM "StripeCustomer";
 
 **Universal Rule**: ALWAYS commit to GitHub first, then deploy infrastructure
 
-## 📋 DEPLOYMENT DECISION MATRIX
+## 📋 PROVEN DEPLOYMENT METHODS (Fixed September 4, 2025)
 
 ### **SCENARIO A: Frontend-Only Changes**
 **When**: HTML/CSS/JS files in `/frontend/` modified
@@ -165,17 +165,61 @@ git add . && git commit -m "Feature description" && git push origin main
 ### **SCENARIO B: Backend-Only Changes**  
 **When**: Files in `/backend/src/` modified (no schema changes)
 **Detection**: Backend code modified, no new Prisma models
+**CRITICAL**: All backend code changes require Docker image rebuilds
+
+## 🔧 RELIABLE DOCKER BUILD PROCESS
+
+### **Method 1: Azure Container Registry Build (RECOMMENDED)**
+**Pros**: Builds from GitHub, handles encoding issues, most reliable
+**Cons**: Takes 2-3 minutes
 
 ```bash
 # STEP 1: Commit and push (MANDATORY FIRST)  
 git add . && git commit -m "Feature description" && git push origin main
 
-# STEP 2: Force backend restart (RECOMMENDED - 95% success rate)
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%d%H%M%S)"
+# STEP 2: Build new Docker image from GitHub with unique tag
+DOCKER_TAG="backend-$(date +%Y%m%d-%H%M)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
-# STEP 3: Verify deployment success (uptime should drop to <60 seconds)
+# STEP 3: Deploy the new Docker image  
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
+
+# STEP 4: Verify deployment success (uptime should drop to <60 seconds)
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
+
+### **Method 2: Emergency Fast Deploy (If Method 1 Fails)**
+**When**: ACR build fails due to Unicode/encoding issues
+**Pros**: Faster, bypasses encoding problems  
+**Cons**: Uses potentially stale `latest` tag
+
+```bash
+# STEP 1: Ensure latest code is pushed to GitHub
+git push origin main
+
+# STEP 2: Try updating to latest tag (may have newer code)
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+
+# STEP 3: If that fails, force restart with env var change
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "FORCE_RESTART=$(date +%Y%m%d-%H%M%S)"
+
+# STEP 4: Verify uptime reset
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+```
+
+### **🚨 DOCKER BUILD FAILURE TROUBLESHOOTING**
+
+**Common Failure**: `'charmap' codec can't encode character`
+**Cause**: Unicode characters in build output on Windows
+**Solution**: Use Method 2 (Emergency Fast Deploy)
+
+**Common Failure**: Build timeouts or manifest errors  
+**Cause**: Stale tags, network issues
+**Solution**: Use unique timestamp tags, retry with different tag name
+
+**Common Failure**: Container won't start after deploy
+**Cause**: Dependencies missing, environment variables wrong
+**Solution**: Check logs with `az containerapp logs show --name unitedwerise-backend --resource-group unitedwerise-rg`
 
 ### **SCENARIO C: Backend + Database Schema Changes**
 **When**: Prisma schema modified AND backend code uses new models
@@ -188,10 +232,13 @@ git add . && git commit -m "Feature description" && git push origin main
 # STEP 2: Apply database migrations (BEFORE backend deployment)
 cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
 
-# STEP 3: Force backend restart  
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "SCHEMA_DEPLOY=$(date -u +%Y%m%d%H%M%S)"
+# STEP 3: Build new Docker image from GitHub  
+az acr build --registry uwracr2425 --image unitedwerise-backend:$(date +%Y%m%d-%H%M) https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
-# STEP 4: Verify deployment success
+# STEP 4: Deploy the new Docker image
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:$(date +%Y%m%d-%H%M)
+
+# STEP 5: Verify deployment success
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
 
@@ -203,8 +250,9 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 # STEP 1: Commit and push (MANDATORY FIRST)
 git add . && git commit -m "Feature description" && git push origin main
 
-# STEP 2A: Deploy backend (if schema changes, run migrations first)
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --set-env-vars "FULLSTACK_DEPLOY=$(date -u +%Y%m%d%H%M%S)"
+# STEP 2A: Build and deploy backend (if schema changes, run migrations first)
+az acr build --registry uwracr2425 --image unitedwerise-backend:$(date +%Y%m%d-%H%M) https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:$(date +%Y%m%d-%H%M)
 
 # STEP 2B: Frontend auto-deploys via GitHub Actions (wait for completion)
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
@@ -214,20 +262,57 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 # Hard refresh browser after GitHub Actions completes
 ```
 
-### **SCENARIO E: Emergency Docker Rebuild** 
-**When**: New npm packages, Dockerfile changes, or environment variable restart fails
-**Use**: Only as last resort (30% success rate due to encoding/Node version issues)
+## 🚨 CRITICAL: When Docker Rebuilds Are Required
 
-```bash
-# STEP 1: Commit and push (MANDATORY FIRST)
-git add . && git commit -m "Feature description" && git push origin main
+### **Environment Variable Updates vs Code Changes**
+- **Environment Variable Changes**: Only restart existing container (old code) ✅ Use `az containerapp update --set-env-vars`
+- **Code Changes in Backend**: Require new Docker image build ⚠️ Must use `az acr build`
 
-# STEP 2: Build new Docker image from GitHub
-az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+### **WHEN DOCKER REBUILD IS MANDATORY**:
+1. **Any `.ts`, `.js`, `.json` file changes in `/backend/src/`**
+2. **Dependencies changes** (`package.json`, `package-lock.json`)
+3. **Dockerfile modifications**
+4. **Prisma schema changes** (after running migrations)
+5. **New environment variables that affect app logic** (not just config)
 
-# STEP 3: Deploy new Docker image
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+### **WHEN DOCKER REBUILD IS NOT NEEDED**:
+1. **Configuration-only environment variable changes** (API keys, URLs, etc.)
+2. **Frontend-only changes** (GitHub Actions handles deployment)
+3. **Database migrations only** (can run independently)
+
+**ROOT CAUSE OF FAILURES**: Environment variable deployments restart OLD Docker images - they DON'T pull new code from GitHub!
+
+## 🔍 DEPLOYMENT STATUS VERIFICATION
+
+### **Enhanced Deployment Status Checker**
+**Use the browser console commands to verify deployments:**
+
+```javascript
+// Check complete deployment status
+deploymentStatus.check()
+
+// Manual component checks  
+deploymentStatus.checkBackend()
+deploymentStatus.getStatus()
 ```
+
+### **Key Deployment Indicators to Check**:
+1. **Docker Image**: Verify the correct Docker image and tag are running
+2. **Build Commit**: Check if the deployed code matches your latest GitHub commit  
+3. **Backend Uptime**: Fresh deployment should show <60 seconds
+4. **GitHub Branch**: Confirm deployment is from the correct branch
+
+### **Deployment Status Response Example**:
+```
+✅ Backend:
+  uptime: 2 minutes  
+  dockerImage: uwracr2425.azurecr.io/unitedwerise-backend:backend-20250904-1015
+  dockerTag: backend-20250904-1015
+  buildCommit: 3d9b517
+  githubBranch: main
+```
+
+**CRITICAL**: If `buildCommit` doesn't match your latest commit, the Docker image is stale and needs rebuilding!
 
 ## ⚠️ CRITICAL FAILURE PATTERNS TO AVOID
 
@@ -244,7 +329,7 @@ az containerapp update --name unitedwerise-backend --resource-group unitedwerise
 - Backend uptime drops to <60 seconds after deployment
 - New functionality works in production environment
 
-## 🤖 AUTOMATED DEPLOYMENT DECISION LOGIC
+## 🤖 CORRECTED AUTOMATED DEPLOYMENT LOGIC
 
 **When User Says**: "deploy", "push to production", "update live server", "get changes live"
 
@@ -254,16 +339,18 @@ az containerapp update --name unitedwerise-backend --resource-group unitedwerise
 # STEP 1: Analyze changes (MANDATORY)
 git status
 
-# STEP 2: Determine deployment scenario
-# Frontend only: git diff HEAD --name-only | grep "^frontend/"
-# Backend only: git diff HEAD --name-only | grep "^backend/" 
-# Schema changes: git diff HEAD --name-only | grep "schema.prisma"
-# Full stack: Changes in both frontend/ AND backend/
+# STEP 2: Determine deployment method
+# Frontend only: git diff HEAD --name-only | grep "^frontend/" → Use Scenario A (GitHub Actions)
+# Backend only: git diff HEAD --name-only | grep "^backend/" → Use Scenario B (Docker Build REQUIRED)
+# Schema changes: git diff HEAD --name-only | grep "schema.prisma" → Use Scenario C (Migrations + Docker)
+# Full stack: Changes in both → Use Scenario D (Docker + GitHub Actions)
 
-# STEP 3: Execute appropriate scenario from matrix above
-# STEP 4: Verify deployment success
-# STEP 5: Report status to user with specific verification steps
+# STEP 3: For ANY backend changes - ALWAYS build Docker image from GitHub
+# STEP 4: Verify deployment success with uptime check
+# STEP 5: Report status with specific verification steps
 ```
+
+**CRITICAL CORRECTION**: Environment variable deployments are WORTHLESS for code changes - they restart old containers!
 
 ## 🎯 DEPLOYMENT SUCCESS INDICATORS
 
