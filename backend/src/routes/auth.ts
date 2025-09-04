@@ -324,15 +324,28 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check if user has TOTP enabled
+    // Check if user has TOTP enabled (using same query pattern as working status endpoint)
     const userData = await prisma.user.findUnique({
       where: { id: user.id },
       select: { 
         totpEnabled: true,
         totpSecret: true,
-        totpLastUsedAt: true
+        totpLastUsedAt: true,
+        totpSetupAt: true,
+        totpBackupCodes: true
       }
     });
+
+    // Additional check: Try the exact same query as the working status endpoint  
+    const statusCheck = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { 
+        totpEnabled: true, 
+        totpSetupAt: true,
+        totpBackupCodes: true
+      }
+    });
+    console.log(`🔍 Status endpoint style query result:`, statusCheck);
 
     // Debug: Add TOTP status to response for testing
     const totpDebug = {
@@ -346,7 +359,10 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     console.log(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
     console.log(`🔍 Raw userData query result:`, userData);
 
+    console.log(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
+    
     if (userData?.totpEnabled) {
+      console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
       const { totpToken, totpSessionToken } = req.body;
       
       // Check if user has a valid TOTP session token (24-hour window)
