@@ -109,6 +109,10 @@
                         lastRestart: data.uptime ? new Date(Date.now() - (data.uptime * 1000)) : 'Unknown',
                         version: data.version || 'Unknown',
                         environment: data.environment || 'Unknown',
+                        dockerImage: data.dockerImage || 'Unknown',
+                        dockerTag: data.dockerTag || 'Unknown',
+                        buildCommit: data.buildCommit || 'Unknown',
+                        githubBranch: data.githubBranch || 'Unknown',
                         responseTime: this.measureResponseTime(response)
                     };
                     

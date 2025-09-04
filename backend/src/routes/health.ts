@@ -31,9 +31,25 @@ function getPackageInfo() {
   }
 }
 
+// Get Docker image and GitHub info
+function getDockerImageInfo() {
+  return {
+    // Docker image info from environment or build metadata
+    dockerImage: process.env.DOCKER_IMAGE || 'uwracr2425.azurecr.io/unitedwerise-backend:latest',
+    dockerTag: process.env.DOCKER_TAG || 'latest',
+    buildCommit: process.env.BUILD_COMMIT || process.env.GITHUB_SHA || 'unknown',
+    buildTime: process.env.BUILD_TIME || 'unknown',
+    // GitHub integration info
+    githubRepo: process.env.GITHUB_REPOSITORY || 'UnitedWeRise-org/UnitedWeRise',
+    githubBranch: process.env.GITHUB_REF_NAME || 'main',
+    lastGitCommit: process.env.GIT_COMMIT || 'unknown'
+  };
+}
+
 // Get last deployment time from various sources
 function getDeploymentInfo() {
   const packageInfo = getPackageInfo();
+  const dockerInfo = getDockerImageInfo();
   const startTime = new Date(Date.now() - (process.uptime() * 1000));
   
   // Try to read deployment timestamp file if it exists
@@ -50,6 +66,7 @@ function getDeploymentInfo() {
   
   return {
     ...packageInfo,
+    ...dockerInfo,
     deploymentTime,
     startTime,
     uptime: process.uptime(),
@@ -115,16 +132,22 @@ async function getMigrationInfo() {
   };
 }
 
-// Basic health endpoint (existing)
+// Basic health endpoint (existing) - enhanced with deployment info
 router.get('/', async (req, res) => {
   try {
     await prisma.$connect();
+    const dockerInfo = getDockerImageInfo();
     
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      database: 'connected'
+      database: 'connected',
+      // Add key deployment info for debugging
+      dockerImage: dockerInfo.dockerImage,
+      dockerTag: dockerInfo.dockerTag,
+      buildCommit: dockerInfo.buildCommit,
+      githubBranch: dockerInfo.githubBranch
     });
   } catch (error) {
     res.status(500).json({
