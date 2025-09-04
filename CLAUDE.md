@@ -167,49 +167,97 @@ git add . && git commit -m "Feature description" && git push origin main
 **Detection**: Backend code modified, no new Prisma models
 **CRITICAL**: All backend code changes require Docker image rebuilds
 
+## 🚨 MANDATORY DOCKER BUILD PRE-FLIGHT CHECKLIST (Updated September 4, 2025)
+
+**BEFORE attempting ANY Docker build, follow this exact sequence to prevent 99% of build failures:**
+
+### **STEP 0: LOCAL VALIDATION (CRITICAL - NEVER SKIP)**
+```bash
+# Navigate to backend directory
+cd backend
+
+# Test TypeScript compilation locally - THIS IS THE #1 FAILURE POINT
+npm run build
+
+# ⚠️ If this fails, Docker build WILL fail
+# ⚠️ Fix ALL TypeScript errors before proceeding
+# ⚠️ Common errors: missing imports, wrong field names, model mismatches
+```
+
+**Why This Matters:** Docker builds fail silently at Step 22 (`RUN npm run build`) when TypeScript compilation errors exist. Azure CLI Unicode encoding issues on Windows prevent us from seeing the actual error, making debugging nearly impossible.
+
+### **STEP 1: GIT-FIRST WORKFLOW (MANDATORY)**
+```bash
+# Commit and push BEFORE building - Docker builds from GitHub, not local
+git add -A
+git commit -m "Fix: Description of changes"  
+git push origin main
+
+# Verify git working directory is clean
+git status  # Should show "nothing to commit, working tree clean"
+```
+
+**Why This Matters:** Docker builds from GitHub source, not local files. Local inconsistencies cause mysterious build failures that waste hours of debugging time.
+
+### **STEP 2: BUILD VERIFICATION**
+```bash
+# Check that your latest commit is actually on GitHub
+git log --oneline -1  # Note the commit hash
+
+# Verify no TypeScript errors were introduced by other developers
+git diff HEAD~1 --name-only | grep -E "\.(ts|js)$"  # Check for TS/JS changes
+```
+
 ## 🔧 RELIABLE DOCKER BUILD PROCESS
 
-### **Method 1: Azure Container Registry Build (RECOMMENDED)**
-**Pros**: Builds from GitHub, handles encoding issues, most reliable
-**Cons**: Takes 2-3 minutes
+### **Method 1: Standard Docker Build (USE AFTER PRE-FLIGHT CHECKLIST)**
+**When**: Pre-flight checklist passes, normal deployment scenario
+**Pros**: Builds from GitHub, reliable when TypeScript compiles locally
+**Cons**: Takes 2-3 minutes, may show Unicode errors on Windows (ignore them)
 
 ```bash
-# STEP 1: Commit and push (MANDATORY FIRST)  
-git add . && git commit -m "Feature description" && git push origin main
+# Only proceed if STEP 0 (npm run build) succeeded locally!
 
-# STEP 2: Build new Docker image from GitHub with unique tag
+# STEP 3: Build new Docker image from GitHub with descriptive tag
 DOCKER_TAG="backend-$(date +%Y%m%d-%H%M)"
 az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
-# STEP 3: Deploy the new Docker image  
+# STEP 4: Verify build succeeded (ignore Unicode CLI errors)
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# Status should show "Succeeded", not "Failed"
+
+# STEP 5: Deploy the new Docker image  
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
 
-# STEP 4: Verify deployment success (uptime should drop to <60 seconds)
+# STEP 6: Verify deployment success (uptime should drop to <60 seconds)
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
 
-### **Method 2: Asynchronous Build + Deploy (RECOMMENDED for Windows)**
-**When**: Method 1 fails with Unicode errors (common on Windows)
-**Pros**: Avoids CLI Unicode issues, builds from latest GitHub code
+### **Method 2: Windows-Safe Async Build (RECOMMENDED for Windows)**
+**When**: Windows CLI shows Unicode errors, or want to avoid streaming output
+**Pros**: Avoids CLI Unicode issues, builds from latest GitHub code, proven reliable
 **Cons**: Requires manual timing coordination
 
 ```bash
-# STEP 1: Ensure latest code is pushed to GitHub
-git push origin main
+# Only proceed if STEP 0 (npm run build) succeeded locally!
 
-# STEP 2: Start async build with unique tag (ignores CLI errors)
+# STEP 3: Start async build with descriptive tag (bypasses Unicode issues)
 DOCKER_TAG="backend-$(date +%Y%m%d-%H%M%S)"
 az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 echo "Build queued with tag: $DOCKER_TAG"
 
-# STEP 3: Wait for build completion (2-3 minutes typically)
-echo "Waiting for build to complete... Check Azure Portal or wait 180 seconds"
+# STEP 4: Wait for build completion (2-3 minutes typically)
+echo "Waiting for build to complete... Check build status in 3 minutes"
 sleep 180
 
-# STEP 4: Deploy the new image
+# STEP 5: Verify build succeeded before deploying
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# Status should show "Succeeded" for latest run
+
+# STEP 6: Deploy the new image
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
 
-# STEP 5: Verify deployment success
+# STEP 7: Verify deployment success
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
 ```
 
@@ -231,19 +279,37 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 # ⚠️ WARNING: This may still run old code if Docker images are stale!
 ```
 
-### **🚨 DOCKER BUILD FAILURE TROUBLESHOOTING**
+### **🚨 DOCKER BUILD FAILURE TROUBLESHOOTING (Updated Sept 4, 2025)**
 
-**Common Failure**: `'charmap' codec can't encode character`
-**Cause**: Unicode characters in build output on Windows
-**Solution**: Use Method 2 (Emergency Fast Deploy)
+**#1 MOST COMMON FAILURE**: Docker builds showing "Failed" status
+**Real Cause**: TypeScript compilation errors (NOT Docker issues)
+**Symptoms**: Build fails at Step 22 (`RUN npm run build`)
+**Solution**: 
+1. Run `cd backend && npm run build` locally first
+2. Fix ALL TypeScript errors before attempting Docker build
+3. Common errors: missing imports, wrong field/model names, schema mismatches
 
-**Common Failure**: Build timeouts or manifest errors  
-**Cause**: Stale tags, network issues
-**Solution**: Use unique timestamp tags, retry with different tag name
+**#2 WINDOWS UNICODE ERRORS**: `'charmap' codec can't encode character`
+**Cause**: Unicode characters in build output on Windows CLI
+**Reality**: This is a display issue - builds may still succeed/fail independent of Unicode errors
+**Solution**: 
+1. Ignore Unicode CLI errors - focus on build status
+2. Use `--no-wait` flag and check status with `az acr task list-runs`
+3. Use Method 2 (Windows-Safe Async Build)
 
-**Common Failure**: Container won't start after deploy
-**Cause**: Dependencies missing, environment variables wrong
-**Solution**: Check logs with `az containerapp logs show --name unitedwerise-backend --resource-group unitedwerise-rg`
+**#3 BUILD STATUS vs BUILD LOGS**: 
+**Problem**: Build logs are corrupted by Unicode issues
+**Solution**: NEVER debug using `az acr task logs` - use build status instead:
+```bash
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# Focus on Status column: "Succeeded" vs "Failed"
+```
+
+**#4 STALE CODE DEPLOYED**: Environment variable restarts use OLD Docker images
+**Cause**: `az containerapp update --set-env-vars` restarts existing containers, doesn't pull new code
+**Solution**: Always use `az acr build` for code changes, environment variables only for config
+
+**ROOT CAUSE ANALYSIS**: 99% of Docker build failures are TypeScript compilation errors, not infrastructure issues. The pre-flight checklist prevents hours of wasted debugging time.
 
 ### **SCENARIO C: Backend + Database Schema Changes**
 **When**: Prisma schema modified AND backend code uses new models
