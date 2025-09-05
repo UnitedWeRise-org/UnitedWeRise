@@ -17,6 +17,30 @@
 
 **🎯 SECURITY ENHANCEMENT**: All debugging functions require admin verification through existing `/api/admin/dashboard` endpoint with 5-minute caching to prevent API spam while maintaining security.
 
+### 🆕 RECENT ACCOMPLISHMENTS (September 5, 2025) - Volunteer System Implementation
+
+**✅ VOLUNTEER INQUIRY SYSTEM**: Complete implementation of tag-based volunteer system using existing Post model's unused `tags` field for content routing, proving concept for unified tag-based post categorization system.
+
+**Features Implemented**:
+- **Modal Interface**: Professional volunteer inquiry modal with character limits and email collection for non-logged users
+- **Tag-Based Routing**: Posts tagged with `"Volunteer"` route to admin dashboard separate from general posting area  
+- **Admin Integration**: New `/api/admin/volunteers` endpoint for viewing volunteer inquiries in admin console
+- **Smart Email Collection**: Shows/hides email field based on user authentication status
+- **Form Validation**: 800 character limit with live counter, email validation for anonymous users
+
+**Files Modified**:
+- `frontend/index.html` - Added volunteer modal, updated About UWR modal links, volunteer form handling
+- `backend/src/routes/posts.ts` - Enhanced to accept tags parameter in post creation
+- `backend/src/routes/admin.ts` - Added volunteer inquiry endpoint with tag filtering
+- About UWR modal content updated to focus on philosophy over geography-based features
+
+**Technical Implementation**:
+- Leverages existing Post model `tags: String[] @default([])` field (schema.prisma:184)
+- Uses tag filtering with Prisma `tags: { has: "Volunteer" }` query syntax
+- Maintains separation from regular posts while using unified infrastructure
+
+**Discovery**: Post model tags field exists but completely unused across application - presents opportunity for comprehensive tag-based content routing system.
+
 ### 🆕 RECENT CHANGES (September 5, 2025) - Unified TOTP & Admin Debugging Implementation
 
 **✅ Unified Authentication System**: Enhanced `unifiedAuth.js` to handle both main site and admin dashboard TOTP flows with proper error handling and session token management.
@@ -7116,6 +7140,16 @@ showDefaultView()
 ## 🔮 FUTURE ROADMAP {#future-roadmap}
 
 ### 🚀 IMMEDIATE PRIORITIES (September 5, 2025)
+
+#### **Dual Tag System Implementation** 🆕 **CRITICAL PRIORITY**
+- [ ] **Phase 1**: Implement reserved tag validation system (`"Public Post"`, `"Volunteer"`, `"Candidate"`, `"Admin"`)
+- [ ] **Phase 2**: Integrate AI keyword generation with existing topic discovery for content tagging
+- [ ] **Phase 3**: Update all post retrieval systems (feeds, search, profiles) to filter by routing tags
+- [ ] **Phase 4**: Add frontend tag input UI and management interface
+- [ ] **Phase 5**: Migration strategy for existing posts (add `"Public Post"` tag to all current posts)
+- **Goal**: Unified content routing system with AI-enhanced search and proper post categorization
+- **Risk**: High - affects core posting system across multiple components
+- **Documentation**: `DUAL_TAG_SYSTEM_PROJECT.md` for complete implementation plan
 
 #### **Message of the Day (MOTD) System** 🆕 **PRIORITY**
 - [ ] Repurpose existing Google CTA panel as MOTD announcement box

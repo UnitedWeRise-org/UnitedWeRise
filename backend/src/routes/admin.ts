@@ -2546,4 +2546,79 @@ router.post('/merge-accounts',
   }
 );
 
+// GET /api/admin/volunteers - Get volunteer inquiries
+router.get('/volunteers', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { status = 'new', limit = 20, offset = 0 } = req.query;
+    
+    const limitNum = parseInt(limit.toString());
+    const offsetNum = parseInt(offset.toString());
+
+    // Get posts tagged as "Volunteer"
+    const volunteerPosts = await prisma.post.findMany({
+      where: {
+        tags: {
+          has: "Volunteer"
+        }
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true
+          }
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limitNum,
+      skip: offsetNum
+    });
+
+    // Get total count for pagination
+    const totalCount = await prisma.post.count({
+      where: {
+        tags: {
+          has: "Volunteer"
+        }
+      }
+    });
+
+    const formattedInquiries = volunteerPosts.map(post => ({
+      id: post.id,
+      content: post.content,
+      author: post.author,
+      createdAt: post.createdAt,
+      engagement: {
+        likes: post._count.likes,
+        comments: post._count.comments
+      },
+      tags: post.tags
+    }));
+
+    res.json({
+      inquiries: formattedInquiries,
+      pagination: {
+        limit: limitNum,
+        offset: offsetNum,
+        total: totalCount,
+        hasMore: offsetNum + limitNum < totalCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Get volunteer inquiries error:', error);
+    res.status(500).json({ error: 'Failed to get volunteer inquiries' });
+  }
+});
+
 export default router;

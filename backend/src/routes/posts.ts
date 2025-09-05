@@ -16,7 +16,7 @@ const router = express.Router();
 // Create a new post
 router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {
     try {
-        const { content, imageUrl, mediaId } = req.body;
+        const { content, imageUrl, mediaId, tags } = req.body;
         const userId = req.user!.id;
 
         if (!content || content.trim().length === 0) {
@@ -85,6 +85,7 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 authorId: userId,
                 embedding,
                 authorReputation: userReputation.current,
+                tags: tags || [],
                 ...feedbackData
             },
             include: {
