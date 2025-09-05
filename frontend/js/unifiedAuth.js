@@ -150,7 +150,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             const totpResult = await totpLoginResponse.json();
             console.log('TOTP login response:', totpResult);
             
-            if (totpLoginResponse.ok) {
+            if (totpLoginResponse.ok && !totpResult.requiresTOTP) {
                 // Store auth tokens
                 window.authToken = totpResult.token;
                 localStorage.setItem('authToken', totpResult.token);
@@ -170,7 +170,12 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                     totpSessionToken: totpResult.totpSessionToken
                 };
             } else {
-                throw new Error(totpResult.error || 'TOTP login failed');
+                // Check if TOTP is still required (invalid code)
+                if (totpResult.requiresTOTP) {
+                    throw new Error('Invalid TOTP code. Please try again.');
+                } else {
+                    throw new Error(totpResult.error || 'TOTP login failed');
+                }
             }
         }
         
