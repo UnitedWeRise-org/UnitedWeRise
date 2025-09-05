@@ -10,7 +10,9 @@ class BackendIntegration {
             ? 'http://localhost:3001/api' 
             : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
         
-        console.log('🔧 Backend Integration API Base:', this.API_BASE);
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('BackendIntegration', 'Backend Integration API Base: ' + this.API_BASE);
+        }
         this.init();
     }
 

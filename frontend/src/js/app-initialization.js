@@ -230,9 +230,13 @@ class AppInitializer {
 
     // Set the UI to logged in state with batch data
     setLoggedInState(initData) {
-        console.log('🚨 SETLOGGEDINSTATE CALLED - DEBUG CHECK');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('AppInit', 'setLoggedInState called - checking user data');
+        }
         const user = initData.user;
-        console.log('🔍 User data:', user);
+        if (typeof adminDebugSensitive !== 'undefined') {
+            adminDebugSensitive('AppInit', 'User data details', user);
+        }
         AppInitializer.log('🔍 setLoggedInState called with user:', user?.firstName || user?.username || 'Unknown');
         
         // Update UI elements
@@ -266,7 +270,9 @@ class AppInitializer {
 
         // Initialize My Feed automatically on login (matching main setUserLoggedIn behavior)
         AppInitializer.log('🎯 Auto-initializing My Feed for logged in user...');
-        console.log('🔍 DEBUG: About to check showMyFeedInMain function availability');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('AppInit', 'About to check showMyFeedInMain function availability');
+        }
         setTimeout(() => {
             if (typeof window.showMyFeedInMain === 'function') {
                 window.showMyFeedInMain();
@@ -411,10 +417,18 @@ class AppInitializer {
             // Format frontend version info
             const frontendTime = new Date(buildTime).toLocaleString();
             
-            console.log('🏗️ ================ DEPLOYMENT STATUS ================');
-            console.log(`📦 Frontend Version: ${version}`);
-            console.log(`🕐 Frontend Build Time: ${frontendTime}`);
-            console.log(`📅 Frontend Last Updated: ${new Date(lastUpdated).toLocaleString()}`);
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('DeploymentStatus', '================ DEPLOYMENT STATUS ================');
+            }
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('DeploymentStatus', `Frontend Version: ${version}`);
+            }
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('DeploymentStatus', `Frontend Build Time: ${frontendTime}`);
+            }
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('DeploymentStatus', `Frontend Last Updated: ${new Date(lastUpdated).toLocaleString()}`);
+            }
             
             // Check backend version asynchronously
             this.checkBackendVersion();

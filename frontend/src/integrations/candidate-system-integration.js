@@ -17,7 +17,9 @@ class CandidateSystemIntegration {
     }
 
     setup() {
-        console.log('🎯 Initializing enhanced candidate system integration...');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('CandidateSystem', 'Initializing enhanced candidate system integration...');
+        }
         
         // Load CSS styles
         this.loadCandidateSystemStyles();
@@ -39,7 +41,9 @@ class CandidateSystemIntegration {
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
         
-        console.log('✅ Candidate system integration complete!');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('CandidateSystem', 'Candidate system integration complete!');
+        }
     }
 
     loadCandidateSystemStyles() {
@@ -200,7 +204,9 @@ class CandidateSystemIntegration {
                 // Insert after officials thumb
                 officialsThumb.parentNode.insertBefore(candidateThumb, officialsThumb.nextSibling);
                 
-                console.log('✅ Added Candidates button to sidebar');
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('CandidateSystem', 'Added Candidates button to sidebar');
+                }
             }
         }
 

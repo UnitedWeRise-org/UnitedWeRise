@@ -319,4 +319,6 @@ window.apiBatch = async (requests) => {
     return window.apiManager.batchRequest(requests);
 };
 
-console.log('🚀 Advanced API Manager initialized');
+if (typeof adminDebugLog !== 'undefined') {
+    adminDebugLog('APIManager', 'Advanced API Manager initialized');
+}

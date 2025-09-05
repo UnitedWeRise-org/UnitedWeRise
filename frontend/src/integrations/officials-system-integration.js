@@ -16,7 +16,9 @@ class OfficialsSystemIntegration {
     }
 
     setup() {
-        console.log('🏛️ Initializing enhanced officials system integration...');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('OfficialsSystem', 'Initializing enhanced officials system integration...');
+        }
         
         // Load CSS styles
         this.loadOfficialsSystemStyles();
@@ -27,7 +29,9 @@ class OfficialsSystemIntegration {
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
         
-        console.log('✅ Officials system integration complete!');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('OfficialsSystem', 'Officials system integration complete!');
+        }
     }
 
     loadOfficialsSystemStyles() {
@@ -59,7 +63,9 @@ class OfficialsSystemIntegration {
                 officialsThumb.onclick = () => this.toggleOfficialsPanel();
                 officialsThumb.title = 'Enhanced Officials View';
                 
-                console.log('✅ Enhanced Officials button in sidebar');
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('OfficialsSystem', 'Enhanced Officials button in sidebar');
+                }
             }
         }
     }

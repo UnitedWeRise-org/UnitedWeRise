@@ -16,7 +16,9 @@ class ElectionsSystemIntegration {
     }
 
     setup() {
-        console.log('📅 Initializing enhanced elections system integration...');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('ElectionsSystem', 'Initializing enhanced elections system integration...');
+        }
         
         // Load CSS styles
         this.loadElectionsSystemStyles();
@@ -27,7 +29,9 @@ class ElectionsSystemIntegration {
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
         
-        console.log('✅ Elections system integration complete!');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('ElectionsSystem', 'Elections system integration complete!');
+        }
     }
 
     loadElectionsSystemStyles() {
@@ -59,7 +63,9 @@ class ElectionsSystemIntegration {
                 upcomingThumb.onclick = () => this.toggleElectionsPanel();
                 upcomingThumb.title = 'Enhanced Elections View';
                 
-                console.log('✅ Enhanced Upcoming Elections button in sidebar');
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('ElectionsSystem', 'Enhanced Upcoming Elections button in sidebar');
+                }
             }
         }
     }

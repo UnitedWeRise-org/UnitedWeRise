@@ -16,7 +16,9 @@ class TrendingSystemIntegration {
     }
 
     setup() {
-        console.log('🔥 Initializing enhanced trending system integration...');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('TrendingSystem', 'Initializing enhanced trending system integration...');
+        }
         
         // Load CSS styles
         this.loadTrendingSystemStyles();
@@ -27,7 +29,9 @@ class TrendingSystemIntegration {
         // Setup sidebar state monitoring
         this.setupSidebarMonitoring();
         
-        console.log('✅ Trending system integration complete!');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('TrendingSystem', 'Trending system integration complete!');
+        }
     }
 
     loadTrendingSystemStyles() {
@@ -70,7 +74,9 @@ class TrendingSystemIntegration {
                 // Update title to indicate enhanced functionality
                 trendingThumb.title = 'Trending (Double-click for full view, right-click for options)';
                 
-                console.log('✅ Enhanced Trending button with multiple view options');
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('TrendingSystem', 'Enhanced Trending button with multiple view options');
+                }
             }
         }
 
