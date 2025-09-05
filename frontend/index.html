@@ -793,16 +793,12 @@
         <div id="map"></div>
     </div>
 
-    <!-- CTA Panel -->
-    <div id="google-cta-panel">
-        <button onclick="this.parentElement.style.display='none'">&times;</button>
-        <div style="text-align: left; margin: 0 10px;">
-            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">UnitedWeRise is a nonprofit platform connecting candidates directly with voters.</p>
-            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">No party machines. No corporate money. Just people sharing ideas.</p>
-            <p style="margin: 0 0 8px 0; color: #5A534A; line-height: 1.4;">Together, we can elect leaders who actually represent us, not the Elites.</p>
-            <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Join the movement to reclaim democracy, because United We Rise!</p> <br>
-            <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">United We Rise is funded by our users. If you are able, please consider donating.</p>
-            <p style="margin: 0 0 16px 0; color: #5A534A; line-height: 1.4;">Operated by People United for Peaceful Revolution, Inc. a 501(c)(3) nonprofit.</p>
+    <!-- MOTD Panel (Message of the Day) -->
+    <div id="google-cta-panel" style="display: none;">
+        <button id="motd-close-btn">&times;</button>
+        <div id="motd-content" style="text-align: left; margin: 0 10px;">
+            <div id="motd-title" style="font-weight: bold; margin-bottom: 8px; color: #5A534A;"></div>
+            <div id="motd-body" style="color: #5A534A; line-height: 1.4;"></div>
         </div>
     </div>
 
@@ -1088,10 +1084,8 @@
             // Setup sidebar map button handler
             setupSidebarMapButton();
 
-            // Show CTA panel if not dismissed
-            if (!localStorage.getItem('panelClosed')) {
-                document.getElementById('google-cta-panel').style.display = 'block';
-            }
+            // Load and show MOTD if available
+            loadMOTD();
 
             // Start trending refresh interval
             startTrendingRefresh();
@@ -2386,9 +2380,9 @@
             }
         }
 
-        // Close CTA panel permanently
-        document.getElementById('google-cta-panel').querySelector('button').addEventListener('click', function() {
-            localStorage.setItem('panelClosed', 'true');
+        // MOTD dismiss handler
+        document.getElementById('motd-close-btn').addEventListener('click', function() {
+            dismissCurrentMOTD();
         });
 
         // API Response Cache
@@ -2557,6 +2551,87 @@
 
             html += '</div>';
             mainContent.innerHTML = html;
+        }
+
+        // MOTD Functions
+        let currentMOTDData = null;
+        let dismissalToken = null;
+
+        async function loadMOTD() {
+            try {
+                // Get dismissal token for anonymous users
+                dismissalToken = localStorage.getItem('motd-dismissal-token') || generateDismissalToken();
+                
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                headers['X-Dismissal-Token'] = dismissalToken;
+
+                const response = await fetch(`${API_BASE}/motd/current`, {
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.motd) {
+                        currentMOTDData = data.data.motd;
+                        dismissalToken = data.data.dismissalToken;
+                        
+                        // Store dismissal token for future use
+                        localStorage.setItem('motd-dismissal-token', dismissalToken);
+                        
+                        displayMOTD(currentMOTDData);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load MOTD:', error);
+            }
+        }
+
+        function generateDismissalToken() {
+            return `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        function displayMOTD(motd) {
+            const panel = document.getElementById('google-cta-panel');
+            const title = document.getElementById('motd-title');
+            const body = document.getElementById('motd-body');
+            
+            if (motd.title) {
+                title.textContent = motd.title;
+                title.style.display = 'block';
+            } else {
+                title.style.display = 'none';
+            }
+            
+            body.innerHTML = motd.content;
+            panel.style.display = 'block';
+        }
+
+        async function dismissCurrentMOTD() {
+            if (!currentMOTDData) return;
+            
+            try {
+                const headers = {'X-Dismissal-Token': dismissalToken};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const response = await fetch(`${API_BASE}/motd/dismiss/${currentMOTDData.id}`, {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    document.getElementById('google-cta-panel').style.display = 'none';
+                    currentMOTDData = null;
+                }
+            } catch (error) {
+                console.error('Failed to dismiss MOTD:', error);
+                // Still hide the panel on error
+                document.getElementById('google-cta-panel').style.display = 'none';
+            }
         }
 
         // Load trending topics for the trending panel (AI-powered)

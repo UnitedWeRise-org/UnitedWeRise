@@ -331,6 +331,7 @@
                 <button class="nav-button" onclick="showSection('candidates')">🗳️ Candidates</button>
                 <button class="nav-button" onclick="showSection('external-candidates')">🌐 External Candidates</button>
                 <button class="nav-button" onclick="showSection('content')">📝 Content</button>
+                <button class="nav-button" onclick="showSection('motd')">📢 MOTD</button>
                 <button class="nav-button" onclick="showSection('analytics')">📈 Analytics</button>
                 <button class="nav-button" onclick="showSection('errors')">🐛 Errors</button>
                 <button class="nav-button" onclick="showSection('ai-insights')">🤖 AI Insights</button>
@@ -740,6 +741,72 @@
                     <h3>AI-Flagged Content</h3>
                     <div id="flaggedContent">
                         <div class="loading">Loading flagged content...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOTD Section -->
+            <div id="motd" class="dashboard-section">
+                <h2>📢 Message of the Day Management</h2>
+                
+                <!-- Create New MOTD Form -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <h3>Create New MOTD</h3>
+                    <form id="motd-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label for="motd-title" style="font-weight: bold;">Title (Optional):</label>
+                            <input type="text" id="motd-title" placeholder="Optional title for the message">
+                        </div>
+                        
+                        <div>
+                            <label for="motd-content" style="font-weight: bold;">Content *:</label>
+                            <textarea id="motd-content" rows="4" placeholder="Enter the message content. HTML is allowed." required></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <div>
+                                <label for="motd-start-date">Start Date (Optional):</label>
+                                <input type="datetime-local" id="motd-start-date">
+                            </div>
+                            <div>
+                                <label for="motd-end-date">End Date (Optional):</label>
+                                <input type="datetime-local" id="motd-end-date">
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <label>
+                                <input type="checkbox" id="motd-active" checked> Make Active Immediately
+                            </label>
+                            <label>
+                                <input type="checkbox" id="motd-show-new-users" checked> Show to New Users
+                            </label>
+                        </div>
+                        
+                        <button type="submit" style="background: #4b5c09; color: white; padding: 0.75rem; border: none; border-radius: 4px; cursor: pointer;">
+                            Create MOTD
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- MOTD List -->
+                <div class="card">
+                    <h3>Existing MOTDs</h3>
+                    <div id="motd-list">
+                        <p>Loading MOTDs...</p>
+                    </div>
+                </div>
+                
+                <!-- MOTD Analytics Modal -->
+                <div id="motd-analytics-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 8px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>MOTD Analytics</h3>
+                            <button onclick="closeMOTDAnalytics()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                        </div>
+                        <div id="motd-analytics-content">
+                            <p>Loading analytics...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5235,6 +5302,240 @@ Example: adminConsole.getSuggestions('features', 'new')
                 }, 1000);
             }
         });
+
+        // MOTD Management Functions
+        
+        async function loadMOTDList() {
+            try {
+                const response = await apiCall('/motd/admin/list');
+                if (response.ok) {
+                    displayMOTDList(response.data.motds);
+                } else {
+                    document.getElementById('motd-list').innerHTML = '<p style="color: red;">Failed to load MOTDs</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load MOTD list:', error);
+                document.getElementById('motd-list').innerHTML = '<p style="color: red;">Error loading MOTDs</p>';
+            }
+        }
+        
+        function displayMOTDList(motds) {
+            const container = document.getElementById('motd-list');
+            
+            if (motds.length === 0) {
+                container.innerHTML = '<p>No MOTDs found.</p>';
+                return;
+            }
+            
+            let html = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+            
+            motds.forEach(motd => {
+                const createdAt = new Date(motd.createdAt).toLocaleDateString();
+                const isActive = motd.isActive;
+                const viewCount = motd._count?.views || 0;
+                const dismissalCount = motd._count?.dismissals || 0;
+                
+                html += `
+                    <div class="card" style="border-left: 4px solid ${isActive ? '#4b5c09' : '#ccc'};">
+                        <div style="display: flex; justify-content: between; align-items: start; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: ${isActive ? '#4b5c09' : '#666'};">
+                                    ${motd.title || 'Untitled MOTD'}
+                                    ${isActive ? '<span style="background: #4b5c09; color: white; font-size: 0.8em; padding: 2px 6px; border-radius: 3px; margin-left: 8px;">ACTIVE</span>' : ''}
+                                </h4>
+                                <div style="color: #666; margin-bottom: 0.5rem;">
+                                    ${motd.content.length > 100 ? motd.content.substring(0, 100) + '...' : motd.content}
+                                </div>
+                                <div style="font-size: 0.9em; color: #888;">
+                                    Created: ${createdAt} by ${motd.createdBy?.username || 'Unknown'} | 
+                                    Views: ${viewCount} | Dismissals: ${dismissalCount}
+                                    ${motd.startDate ? ` | Starts: ${new Date(motd.startDate).toLocaleDateString()}` : ''}
+                                    ${motd.endDate ? ` | Ends: ${new Date(motd.endDate).toLocaleDateString()}` : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                                <button onclick="toggleMOTD('${motd.id}')" 
+                                        style="background: ${isActive ? '#dc3545' : '#4b5c09'}; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; font-size: 0.8em;">
+                                    ${isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="showMOTDAnalytics('${motd.id}')" 
+                                        style="background: #17a2b8; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; font-size: 0.8em;">
+                                    Analytics
+                                </button>
+                                <button onclick="deleteMOTD('${motd.id}')" 
+                                        style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer; font-size: 0.8em;">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Form submit handler
+        document.getElementById('motd-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('motd-title').value.trim();
+            const content = document.getElementById('motd-content').value.trim();
+            const startDate = document.getElementById('motd-start-date').value;
+            const endDate = document.getElementById('motd-end-date').value;
+            const isActive = document.getElementById('motd-active').checked;
+            const showToNewUsers = document.getElementById('motd-show-new-users').checked;
+            
+            if (!content) {
+                alert('Content is required');
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/motd/admin/create', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: title || null,
+                        content,
+                        isActive,
+                        startDate: startDate || null,
+                        endDate: endDate || null,
+                        showToNewUsers
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('MOTD created successfully');
+                    document.getElementById('motd-form').reset();
+                    document.getElementById('motd-active').checked = true;
+                    document.getElementById('motd-show-new-users').checked = true;
+                    loadMOTDList();
+                } else {
+                    alert('Failed to create MOTD: ' + (response.data?.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to create MOTD:', error);
+                alert('Failed to create MOTD');
+            }
+        });
+        
+        async function toggleMOTD(motdId) {
+            try {
+                const response = await apiCall(`/motd/admin/toggle/${motdId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const activated = response.data.activated;
+                    alert(`MOTD ${activated ? 'activated' : 'deactivated'} successfully`);
+                    loadMOTDList();
+                } else {
+                    alert('Failed to toggle MOTD: ' + (response.data?.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to toggle MOTD:', error);
+                alert('Failed to toggle MOTD');
+            }
+        }
+        
+        async function deleteMOTD(motdId) {
+            if (!confirm('Are you sure you want to delete this MOTD? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await apiCall(`/motd/admin/delete/${motdId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('MOTD deleted successfully');
+                    loadMOTDList();
+                } else {
+                    alert('Failed to delete MOTD: ' + (response.data?.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete MOTD:', error);
+                alert('Failed to delete MOTD');
+            }
+        }
+        
+        async function showMOTDAnalytics(motdId) {
+            document.getElementById('motd-analytics-modal').style.display = 'block';
+            document.getElementById('motd-analytics-content').innerHTML = '<p>Loading analytics...</p>';
+            
+            try {
+                const response = await apiCall(`/motd/admin/analytics/${motdId}`);
+                if (response.ok) {
+                    displayMOTDAnalytics(response.data.analytics, response.data.logs);
+                } else {
+                    document.getElementById('motd-analytics-content').innerHTML = '<p style="color: red;">Failed to load analytics</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load MOTD analytics:', error);
+                document.getElementById('motd-analytics-content').innerHTML = '<p style="color: red;">Error loading analytics</p>';
+            }
+        }
+        
+        function displayMOTDAnalytics(analytics, logs) {
+            const container = document.getElementById('motd-analytics-content');
+            
+            const viewCount = analytics._count?.views || 0;
+            const dismissalCount = analytics._count?.dismissals || 0;
+            const engagementRate = viewCount > 0 ? ((dismissalCount / viewCount) * 100).toFixed(1) : 0;
+            
+            let html = `
+                <div style="margin-bottom: 2rem;">
+                    <h4>${analytics.title || 'Untitled MOTD'}</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1rem 0;">
+                        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #4b5c09;">${viewCount}</div>
+                            <div style="font-size: 0.9em; color: #666;">Total Views</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #dc3545;">${dismissalCount}</div>
+                            <div style="font-size: 0.9em; color: #666;">Dismissals</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #17a2b8;">${engagementRate}%</div>
+                            <div style="font-size: 0.9em; color: #666;">Dismissal Rate</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (logs && logs.length > 0) {
+                html += '<h4>Activity Log</h4><div style="max-height: 300px; overflow-y: auto;">';
+                logs.forEach(log => {
+                    const date = new Date(log.performedAt).toLocaleString();
+                    const performer = log.performedBy?.username || 'System';
+                    html += `
+                        <div style="padding: 0.5rem; margin: 0.5rem 0; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
+                            <strong>${log.action}</strong> by ${performer} at ${date}
+                            ${log.notes ? `<br><em>${log.notes}</em>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function closeMOTDAnalytics() {
+            document.getElementById('motd-analytics-modal').style.display = 'none';
+        }
+
+        // Add MOTD section initialization
+        const originalShowSection = window.showSection;
+        window.showSection = function(sectionName) {
+            originalShowSection(sectionName);
+            if (sectionName === 'motd') {
+                loadMOTDList();
+            }
+        };
+
     </script>
     
     <!-- Unified Authentication System moved to load earlier -->

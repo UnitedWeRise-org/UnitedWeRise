@@ -85,6 +85,10 @@ model User {
   sentAdminMessages           CandidateAdminMessage[]   @relation("SentAdminMessages")
   candidateRegistrations      CandidateRegistration[]
   candidateStaffRoles         CandidateStaff[]
+  createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
+  dismissedMOTDs              MOTDDismissal[]          @relation("DismissedMOTDs")
+  viewedMOTDs                 MOTDView[]               @relation("ViewedMOTDs")
+  motdActions                 MOTDLog[]                @relation("MOTDActions")
   eventsCreated               CivicEvent[]              @relation("EventCreator")
   comments                    Comment[]
   resolvedFlags               ContentFlag[]             @relation("ResolvedFlags")
@@ -2389,4 +2393,71 @@ enum AgreementLevel {
   DISAGREE
   PARTIAL
   UNCLEAR
+}
+
+// Message of the Day (MOTD) System
+model MessageOfTheDay {
+  id              String          @id @default(cuid())
+  title           String?         // Optional title for the message
+  content         String          // Main message content (HTML allowed)
+  isActive        Boolean         @default(false)
+  startDate       DateTime?       // When message should start showing
+  endDate         DateTime?       // When message should stop showing  
+  showToNewUsers  Boolean         @default(true) // Show to users who haven't seen any MOTD
+  createdById     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  createdBy       User            @relation("CreatedMOTDs", fields: [createdById], references: [id])
+  dismissals      MOTDDismissal[]
+  views           MOTDView[]
+  
+  @@index([isActive, startDate, endDate])
+  @@index([createdAt])
+}
+
+model MOTDDismissal {
+  id          String        @id @default(cuid())
+  motdId      String
+  userId      String?       // Null for anonymous dismissals
+  dismissalToken String?    // For tracking anonymous dismissals
+  dismissedAt DateTime      @default(now())
+  
+  motd        MessageOfTheDay @relation(fields: [motdId], references: [id], onDelete: Cascade)
+  user        User?           @relation("DismissedMOTDs", fields: [userId], references: [id])
+  
+  @@unique([motdId, userId])
+  @@unique([motdId, dismissalToken])
+  @@index([userId])
+  @@index([dismissalToken])
+}
+
+model MOTDView {
+  id       String        @id @default(cuid())
+  motdId   String
+  userId   String?       // Null for anonymous views
+  viewedAt DateTime      @default(now())
+  ipAddress String?      // For tracking anonymous views
+  userAgent String?      // Browser info for analytics
+  
+  motd     MessageOfTheDay @relation(fields: [motdId], references: [id], onDelete: Cascade)
+  user     User?           @relation("ViewedMOTDs", fields: [userId], references: [id])
+  
+  @@index([motdId, viewedAt])
+  @@index([userId, viewedAt])
+}
+
+model MOTDLog {
+  id         String      @id @default(cuid())
+  motdId     String
+  action     String      // 'created', 'updated', 'activated', 'deactivated'
+  changes    Json?       // JSON object of what changed
+  performedById String
+  performedAt DateTime   @default(now())
+  notes      String?
+  
+  performedBy User       @relation("MOTDActions", fields: [performedById], references: [id])
+  
+  @@index([motdId, performedAt])
+  @@index([performedById])
 }
