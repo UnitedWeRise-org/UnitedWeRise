@@ -1,7 +1,37 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 3, 2025  
-**Version**: 4.20.0 (Address-Based Candidate Hub & AI Policy Platform - FULLY IMPLEMENTED)  
+**Last Updated**: September 5, 2025  
+**Version**: 4.21.0 (Unified TOTP Authentication & Admin Debugging System - FULLY IMPLEMENTED)  
 **Status**: 🟢 PRODUCTION READY
+
+### 🎉 MAJOR ACHIEVEMENT (September 5, 2025) - UNIFIED TOTP AUTHENTICATION & ADMIN DEBUGGING SYSTEM COMPLETE
+
+**✅ UNIFIED TOTP AUTHENTICATION**: Complete unification of TOTP authentication system across main site and admin dashboard with proper session persistence and 24-hour session tokens for seamless user experience.
+
+**✅ ADMIN-ONLY DEBUGGING SYSTEM**: Secure debugging system that only outputs debug information for verified admin users, preventing security vulnerabilities while enabling comprehensive debugging capabilities.
+
+**✅ TOTP VERIFICATION LOGIC FIX**: Corrected TOTP authentication flow to properly handle verification responses, preventing 401 errors and ensuring proper admin access after TOTP verification.
+
+**✅ CLAUDE CODE SESSION REGRESSION**: Documented and confirmed regression bug in Claude Code where session permissions no longer persist across interactions, causing development workflow friction.
+
+**🎯 SECURITY ENHANCEMENT**: All debugging functions require admin verification through existing `/api/admin/dashboard` endpoint with 5-minute caching to prevent API spam while maintaining security.
+
+### 🆕 RECENT CHANGES (September 5, 2025) - Unified TOTP & Admin Debugging Implementation
+
+**✅ Unified Authentication System**: Enhanced `unifiedAuth.js` to handle both main site and admin dashboard TOTP flows with proper error handling and session token management.
+
+**✅ Admin Debugging System**: New `adminDebugger.js` provides secure debug functions (`adminDebugLog`, `adminDebugError`, `adminDebugWarn`, `adminDebugTable`, `adminDebugSensitive`) with admin verification.
+
+**✅ TOTP Logic Correction**: Fixed unified login to check response content (`!totpResult.requiresTOTP`) not just HTTP status, preventing false success on invalid TOTP codes.
+
+**✅ JavaScript Error Resolution**: Fixed BACKEND_URL temporal dead zone and redeclaration errors in admin dashboard preventing form submission and login functionality.
+
+**✅ Session Permission Documentation**: Documented confirmed regression in Claude Code session permission retention with detailed impact analysis and mitigation strategies.
+
+**🔧 Files Modified**:
+- `frontend/js/unifiedAuth.js` - Enhanced TOTP verification logic and error handling
+- `frontend/js/adminDebugger.js` - New secure admin-only debugging system
+- `frontend/admin-dashboard.html` - Fixed script loading order and BACKEND_URL conflicts
+- `CLAUDE.md` - Added Claude Code session permission regression documentation
 
 ### 🎉 MAJOR ACHIEVEMENT (September 3, 2025) - ADDRESS-BASED CANDIDATE HUB & AI POLICY PLATFORM COMPLETE
 
