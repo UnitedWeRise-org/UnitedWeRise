@@ -1,5 +1,5 @@
-# Multi-stage build for United We Rise Backend
-FROM node:18-alpine AS builder
+# Multi-stage build for United We Rise Backend  
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -22,7 +22,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init curl
