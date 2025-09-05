@@ -7115,30 +7115,21 @@ showDefaultView()
 
 ## 🔮 FUTURE ROADMAP {#future-roadmap}
 
-### 🚀 IMMEDIATE PRIORITIES (August 28, 2025)
+### 🚀 IMMEDIATE PRIORITIES (September 5, 2025)
 
-#### **Candidate Hub Enhancements** ✅ **COMPLETED**
-- [x] Rename 'AI-Enhanced Candidate System' to 'Candidate Hub'
-- [x] Fix Policy Position Editing - Implement actual edit functionality
-- [x] Add version tracking for policy position updates
-- [x] Create hidden Candidate Dashboard tab within Candidate Hub (candidates only)
-- [x] Extract Policy Platform from MyProfile to standalone component
-- [x] Integrate Policy Platform into Candidate Dashboard
-- [x] Remove Policy Platform from MyProfile
+#### **Message of the Day (MOTD) System** 🆕 **PRIORITY**
+- [ ] Repurpose existing Google CTA panel as MOTD announcement box
+- [ ] Create database schema for MOTD storage and logging
+- [ ] Implement admin dashboard MOTD management interface
+- [ ] Add MOTD display logic with user preferences
+- [ ] Create MOTD history/log viewing in admin dashboard
+- [ ] Add scheduling capabilities for future announcements
 
-#### **User-to-Candidate Communication System** ✅ **CORE COMPLETED** (August 28, 2025)
-- [x] Build comprehensive User-to-Candidate messaging inbox system
-- [x] Implement real-time inquiry notifications (browser, email, badges)
-- [x] Add reply-to-topic functionality for candidate responses
+#### **User Experience & Communication Enhancements**
 - [ ] Implement AI-summarized top issues toggle/modal for candidate inbox
 - [ ] Add public reply option that posts to candidate's public feed
-
-#### **Notification System Implementation** ✅ **COMPLETED** (August 28, 2025)
-- [x] Add comprehensive notification profile settings (opt-in/out for all external notifications)
-- [x] Implement browser notification permission management with testing
-- [x] Add email notification preferences with granular controls
-- [x] Update all notification logic to check user preferences before sending
-- [x] Extend notifications to all messaging systems platform-wide
+- [ ] Fix map functionality (currently flashy but useless)
+- [ ] Add beta feature notifications with intent explanations
 
 #### **Election Display Improvements**
 - [ ] Show candidate's own election status in dashboard
@@ -7150,18 +7141,26 @@ showDefaultView()
 #### **Platform Feature Development**
 - [ ] Implement News API utilization throughout platform
 - [ ] Create 'Journalist' profile flag/elevation system
-- [ ] Fix map functionality (currently flashy but useless)
-- [ ] Add beta feature notifications with intent explanations
 
-### Phase 1: Recent Completions (August 2025)
+### 🏆 RECENTLY COMPLETED (September 5, 2025)
+- [x] **Unified TOTP Authentication System**: Complete authentication across main site and admin dashboard
+- [x] **Admin-Only Debugging System**: Secure debugging with admin verification (`adminDebugLog`, `adminDebugError`, etc.)
+- [x] **Console Debugging Cleanup**: Converted all console.log statements to admin-only verification
+- [x] **JavaScript Error Resolution**: Fixed BACKEND_URL conflicts and admin dashboard login issues
+- [x] **Claude Code Session Regression Documentation**: Documented development workflow regression
+
+### 🔧 DEBUGGING QUEUE (Pending Resolution)
+- [ ] **Admin-Candidate Messaging Interface**: Backend working, frontend UI needs debug analysis
+- [ ] **Legislative routes loading issue**: Route loading problems
+- [ ] **Checkbox display bug**: UI checkbox rendering issues  
+- [ ] **Optimize trending cache system**: Performance optimization needed
+- [ ] **Fix mobile z-index issues**: Mobile UI layering problems
+
+### Phase 1: Prior Completions (August 2025)
 - [x] **TOTP/2FA Implementation**: Complete two-factor authentication system
 - [x] **WebSocket Messaging System**: Complete bidirectional real-time messaging
 - [x] **Admin Dashboard Candidate Management**: Full candidate lifecycle management
 - [x] **Site Title with Beta Badge**: Added "United [Logo] We Rise Beta" to header
-- [ ] Fix legislative routes loading issue
-- [ ] Resolve checkbox display bug
-- [ ] Optimize trending cache system
-- [ ] Fix mobile z-index issues
 
 ### Phase 2: Short Term (Q4 2025)
 
@@ -7243,24 +7242,111 @@ showDefaultView()
 
 ---
 
-## 📋 CURRENT SYSTEM STATUS SUMMARY (August 26, 2025) {#current-system-status}
+## 📋 CURRENT SYSTEM STATUS SUMMARY (September 5, 2025) {#current-system-status}
 
 ### ✅ FULLY OPERATIONAL SYSTEMS
-- **Admin Dashboard Candidate Management**: All endpoints working after route conflict resolution
-- **TOTP Authentication System**: 24-hour session tokens, complete security flow  
-- **Candidate Registration & Payment Flow**: Live Stripe integration with fraud prevention
-- **My Feed Infinite Scroll**: 15-post batches with proper pagination
-- **AI Topic Discovery**: Azure OpenAI semantic analysis operational
-- **Geographic Officials Panel**: Representatives, voting records, news integration
-- **Social Media Features**: Posts, comments, likes, relationships, notifications
-- **Reputation System**: Democratic reporting with appeals process
-- **Photo Tagging System**: Azure Blob Storage with privacy controls
-- **Stripe Payment Processing**: LIVE mode with tax-deductible donation receipts
 
-### 🔧 CURRENTLY BEING DEBUGGED
-- **Admin-Candidate Messaging Interface**: Backend working, frontend UI needs debug analysis
-  - Status: Debug code deployed, awaiting console output from user testing
-  - Location: `frontend/admin-dashboard.html` lines 3357-3371
+#### **Authentication & Security**
+- **Unified TOTP Authentication**: Complete 2FA system across main site and admin dashboard
+- **Admin-Only Debugging System**: Secure debugging with admin verification functions
+- **User Authentication**: Login/logout, session management, password reset
+
+#### **Core Social Platform**
+- **My Feed Infinite Scroll**: 15-post batches with proper pagination and API optimization
+- **Social Features**: Posts, comments, likes, follows, friends, notifications system
+- **Photo Sharing**: Azure Blob Storage integration with privacy controls and tagging
+- **User Relationships**: Friend/follow system with notification preferences
+
+#### **Administrative Systems**
+- **Admin Dashboard**: Complete candidate management, user administration, system monitoring
+- **Candidate Registration Flow**: Live Stripe payment integration with fraud prevention
+- **Candidate Verification System**: Document verification, community reporting, appeals process
+- **External Candidate Integration**: Google Civic API, FEC API, candidate claiming workflow
+
+#### **AI & Analytics**
+- **AI Topic Discovery**: Azure OpenAI semantic analysis with trending topic generation
+- **Content Analysis**: Automated policy analysis, keyword extraction, categorization
+- **Geographic Officials Panel**: Representatives data, voting records, news integration
+- **Deployment Status Monitoring**: Real-time system health and performance tracking
+
+#### **Payment & Financial**
+- **Stripe Payment Processing**: LIVE mode with tax-deductible donation receipts
+- **Donation System**: Complete nonprofit donation flow with modal interface
+- **Payment-Driven Registration**: Logical candidate office selection based on payment tier
+
+#### **External Integrations**
+- **Address-Based Candidate Discovery**: Intelligent lookup with fuzzy office matching
+- **Google Civic API**: 30-day cached candidate data across all office levels
+- **FEC API Integration**: Federal candidate financial data with 7-day caching
+- **Azure Blob Storage**: Persistent media storage with CDN optimization
+
+### 🔧 DEBUGGING QUEUE (Needs Investigation)
+- **Admin-Candidate Messaging Interface**: Backend endpoints verified, frontend UI needs debug
+- **Legislative Routes**: Route loading issues affecting certain admin functions
+- **Mobile UI Issues**: Z-index conflicts and responsive design problems
+- **Cache Optimization**: Trending system cache invalidation needs improvement
+- **Checkbox Display**: UI rendering issues in certain admin forms
+
+### 🔄 PARTIALLY IMPLEMENTED (Needs Completion)
+- **AI-Summarized Issues**: Candidate inbox needs top issues modal implementation
+- **Public Reply System**: Candidate public feed reply option not yet implemented
+- **News API Integration**: API keys configured but platform integration incomplete
+- **Map Functionality**: Visual component exists but lacks functional utility
+
+---
+
+## 🗺️ SYSTEM INTEGRATION GUIDE {#system-integration-guide}
+
+### **Authentication Systems** {#auth-systems-guide}
+```javascript
+// Location: frontend/js/unifiedAuth.js
+// Functions: unifiedLogin(), showTOTPModal(), hasValidTOTPSession()
+// Admin Debug: frontend/js/adminDebugger.js
+// Usage: adminDebugLog('Component', 'Message', data)
+```
+
+### **Database Schema Reference** {#database-schema-guide}
+```prisma
+// Location: backend/prisma/schema.prisma
+// Key Models: User, Post, Candidate, CandidateRegistration, Election, Office
+// Relations: User ↔ Candidate ↔ CandidateRegistration ↔ Office ↔ Election
+// External: ExternalCandidate, GoogleCivicCache, FECCandidate
+```
+
+### **API Endpoints Reference** {#api-endpoints-guide}
+```javascript
+// Auth: /api/auth/login, /api/auth/logout, /api/auth/register
+// Admin: /api/admin/dashboard, /api/admin/candidates, /api/admin/users
+// Social: /api/feed, /api/posts, /api/comments, /api/relationships
+// External: /api/external-candidates, /api/civic-integration
+// Payments: /api/stripe/create-checkout, /api/donations
+```
+
+### **Frontend Component Locations** {#frontend-components-guide}
+```javascript
+// Main: frontend/index.html (4000+ lines)
+// Admin: frontend/admin-dashboard.html (5000+ lines) 
+// Components: frontend/src/components/*.js
+// Integrations: frontend/src/integrations/*.js
+// Services: frontend/src/js/*.js (API, WebSocket, etc.)
+```
+
+### **Azure Service Integration** {#azure-services-guide}
+```javascript
+// Storage: Azure Blob Storage (photos, documents)
+// AI: Azure OpenAI (policy analysis, topic discovery)
+// Deployment: Azure Container Apps (backend)
+// Database: Azure Database for PostgreSQL
+// CDN: Azure Front Door (static content)
+```
+
+### **Third-Party API Integration** {#third-party-apis-guide}
+```javascript
+// Google Civic API: Candidate discovery, election data
+// FEC API: Federal campaign finance data
+// Stripe API: Payment processing, donation management
+// News APIs: NewsAPI, TheNewsAPI (configured but not integrated)
+```
 
 ### 📊 ENDPOINT STATUS  
 ```javascript
