@@ -56,24 +56,31 @@ THE_NEWS_API_KEY=your_thenewsapi_key_here
 
 ---
 
-## 🚨 CRITICAL: Claude Code Session Permission Issue
+## 🚨 CRITICAL: Claude Code Session Permission Regression
 
-**UNRESOLVED BUG**: Claude Code does not retain tool authorization permissions across interactions within a session.
+**REGRESSION BUG**: Claude Code session permission retention has broken - it used to work properly.
 
-**Symptoms**:
-- User repeatedly prompted: "Allow reading from /unitedwerise-dev/backend this session" 
-- Same authorization required multiple times for identical file paths
+**Previous Behavior**: 
+- Tool authorizations persisted throughout entire session after initial approval
+- "This session" language matched actual behavior
+- Smooth development workflow without repeated interruptions
+
+**Current Broken Behavior**:
+- User repeatedly prompted: "Allow reading from /unitedwerise-dev/backend this session"
+- Same authorization required multiple times for identical file paths  
 - Creates significant friction during development workflows
-- "This session" language suggests authorization should persist but doesn't
+- "This session" language no longer matches actual behavior
 
 **Impact**: 
 - High development friction, especially during multi-step debugging/implementation
 - Interrupts workflow continuity during complex tasks
 - User frustration with repetitive authorization requests
+- Regression from previously working functionality
 
 **Current Status**: 
-- Documented as known limitation (September 5, 2025)
-- May be Claude Code design decision for security purposes
+- **REGRESSION CONFIRMED** (September 5, 2025) - this used to work correctly
+- Likely caused by recent Claude Code platform update
+- Should be reported as a bug rather than accepted as design limitation
 - No known workaround available
 
 **Mitigation Strategies**:
