@@ -49,7 +49,9 @@
     <!-- Inline Optimization Override (Backup) -->
     <script>
     // Emergency inline optimization override
-    console.log('🚨 Inline optimization override loading...');
+    if (typeof adminDebugLog !== 'undefined') {
+        adminDebugLog('InlineOptimization', 'Inline optimization override loading...');
+    }
     
     // Check if main scripts loaded
     setTimeout(() => {
@@ -173,7 +175,9 @@
             }
         };
         
-        console.log('🏆 Reputation badge system loaded (inline)');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('ReputationBadges', 'Reputation badge system loaded (inline)');
+        }
     </script>
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
@@ -1058,9 +1062,13 @@
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Use new optimized initialization system
-            console.log('🚀 Starting optimized app initialization...');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('AppInit', 'Starting optimized app initialization...');
+            }
             initializeApp().then(result => {
-                console.log('✅ App initialization complete:', result);
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('AppInit', 'App initialization complete', result);
+                }
                 
                 // Setup civic organizing sidebar monitoring
                 setupCivicOrganizingSidebarMonitoring();

@@ -5,7 +5,9 @@
 
 class DonationSystem {
     constructor() {
-        console.log('💝 DonationSystem constructor called');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('DonationSystem', 'DonationSystem constructor called');
+        }
         this.isInitialized = false;
         this.modalElement = null;
         this.presetAmounts = [10, 25, 50, 100, 250, 500];
@@ -25,20 +27,28 @@ class DonationSystem {
         this.setupEventListeners();
         
         this.isInitialized = true;
-        console.log('💝 Donation system initialized');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('DonationSystem', 'Donation system initialized');
+        }
     }
 
     addDonationButton() {
-        console.log('💝 Looking for sidebar...');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('DonationSystem', 'Looking for sidebar...');
+        }
         const sidebar = document.querySelector('.sidebar .thumbs');
         const messagesThumb = document.getElementById('messagesThumb');
         
-        console.log('💝 Sidebar found:', !!sidebar, 'Messages button found:', !!messagesThumb);
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('DonationSystem', 'Sidebar found: ' + !!sidebar + ', Messages button found: ' + !!messagesThumb);
+        }
         
         if (sidebar && messagesThumb) {
             // Check if button already exists
             if (document.getElementById('donationThumb')) {
-                console.log('💝 Donation button already exists');
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('DonationSystem', 'Donation button already exists');
+                }
                 return;
             }
             
