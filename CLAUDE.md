@@ -574,6 +574,33 @@ git status
   3. Check padding/margin on all containers in the chain
   4. Explain positioning rationale when using fixed units
 
+### 🔧 Admin-Only Debugging Standards
+- **PROHIBITED**: Using `console.log()`, `console.warn()`, `console.error()` for debugging output
+- **REQUIRED**: ALL debugging output must use admin verification functions:
+  - `adminDebugLog(component, message, data)` - Standard debugging
+  - `adminDebugWarn(component, message, data)` - Warning messages  
+  - `adminDebugError(component, message, errorData)` - Error debugging
+  - `adminDebugTable(component, message, tableData)` - Table/data display
+  - `adminDebugSensitive(component, message, sensitiveData)` - Sensitive information
+- **SECURITY**: Only verified admin users see debugging output, preventing information exposure
+- **IMPLEMENTATION**: Check `if (typeof adminDebugLog !== 'undefined')` before calling admin functions
+- **FALLBACK**: No fallback console output - debugging should only be visible to admins
+
+**Required Implementation Pattern**:
+```javascript
+// ❌ PROHIBITED - Never use console.log for debugging
+console.log('🔧 System loading...');
+console.error('❌ Login failed:', error);
+
+// ✅ REQUIRED - Always use admin verification
+if (typeof adminDebugLog !== 'undefined') {
+    adminDebugLog('AuthSystem', 'System loading...');
+}
+if (typeof adminDebugError !== 'undefined') {
+    adminDebugError('AuthSystem', 'Login failed', error);
+}
+```
+
 ### 🔄 Deployment Verification Protocol
 - **WHEN USER REPORTS**: "Feature not deployed" or similar
 - **MANDATORY FIRST STEP**: Check last restart/update times for all components
