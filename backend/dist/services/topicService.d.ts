@@ -122,6 +122,8 @@ export declare class TopicService {
                     userId: string;
                     content: string;
                     postId: string;
+                    parentId: string | null;
+                    depth: number;
                 })[];
                 likes: {
                     id: string;
@@ -166,13 +168,6 @@ export declare class TopicService {
             relevanceScore: number;
         })[];
         topicComments: ({
-            author: {
-                id: string;
-                username: string;
-                firstName: string;
-                lastName: string;
-                avatar: string;
-            };
             replies: ({
                 author: {
                     id: string;
@@ -186,10 +181,10 @@ export declare class TopicService {
                 createdAt: Date;
                 updatedAt: Date;
                 content: string;
+                parentId: string | null;
                 authorId: string;
                 topicId: string | null;
                 subTopicId: string | null;
-                parentId: string | null;
                 sentiment: number | null;
                 hostilityScore: number;
                 argumentStrength: number;
@@ -198,16 +193,23 @@ export declare class TopicService {
                 isHidden: boolean;
                 hideReason: string | null;
             })[];
+            author: {
+                id: string;
+                username: string;
+                firstName: string;
+                lastName: string;
+                avatar: string;
+            };
         } & {
             id: string;
             embedding: number[];
             createdAt: Date;
             updatedAt: Date;
             content: string;
+            parentId: string | null;
             authorId: string;
             topicId: string | null;
             subTopicId: string | null;
-            parentId: string | null;
             sentiment: number | null;
             hostilityScore: number;
             argumentStrength: number;
@@ -218,13 +220,6 @@ export declare class TopicService {
         })[];
         subTopics: ({
             comments: ({
-                author: {
-                    id: string;
-                    username: string;
-                    firstName: string;
-                    lastName: string;
-                    avatar: string;
-                };
                 replies: ({
                     author: {
                         id: string;
@@ -238,10 +233,10 @@ export declare class TopicService {
                     createdAt: Date;
                     updatedAt: Date;
                     content: string;
+                    parentId: string | null;
                     authorId: string;
                     topicId: string | null;
                     subTopicId: string | null;
-                    parentId: string | null;
                     sentiment: number | null;
                     hostilityScore: number;
                     argumentStrength: number;
@@ -250,16 +245,23 @@ export declare class TopicService {
                     isHidden: boolean;
                     hideReason: string | null;
                 })[];
+                author: {
+                    id: string;
+                    username: string;
+                    firstName: string;
+                    lastName: string;
+                    avatar: string;
+                };
             } & {
                 id: string;
                 embedding: number[];
                 createdAt: Date;
                 updatedAt: Date;
                 content: string;
+                parentId: string | null;
                 authorId: string;
                 topicId: string | null;
                 subTopicId: string | null;
-                parentId: string | null;
                 sentiment: number | null;
                 hostilityScore: number;
                 argumentStrength: number;
@@ -319,10 +321,10 @@ export declare class TopicService {
         createdAt: Date;
         updatedAt: Date;
         content: string;
+        parentId: string | null;
         authorId: string;
         topicId: string | null;
         subTopicId: string | null;
-        parentId: string | null;
         sentiment: number | null;
         hostilityScore: number;
         argumentStrength: number;

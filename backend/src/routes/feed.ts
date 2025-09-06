@@ -94,7 +94,8 @@ router.get('/trending', async (req, res) => {
       where: {
         createdAt: {
           gte: oneDayAgo
-        }
+        },
+        tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
       },
       include: {
         author: {

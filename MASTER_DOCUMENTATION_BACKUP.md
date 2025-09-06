@@ -1468,7 +1468,7 @@ GET /api/feed/?limit=15&offset=30
 
 **Commits**: `8b71ddb` (append mode), `12d6ddf` (rate limiting fix)
 
-**Related Systems**: {#api-reference}
+**Related Systems**: {#api-endpoints}, {#probability-feed-service}
 
 ### Component Library
 
@@ -2814,12 +2814,16 @@ const similar = await qdrant.search("posts", {
 
 ### Local AI Services (Development)
 
-#### AI Services (Azure OpenAI)
+#### Ollama Setup
 ```bash
-# All AI functionality uses Azure OpenAI (as of Sept 2, 2025)
-# Configuration via environment variables (see Azure AI Integration section)
-AZURE_OPENAI_ENDPOINT=https://unitedwerise-openai.openai.azure.com/
-ENABLE_SEMANTIC_TOPICS=true
+# Install Ollama
+# DEPRECATED: Qwen setup no longer required (Sept 2, 2025)
+# All AI functionality migrated to Azure OpenAI
+# ollama pull qwen2.5:7b
+# ollama serve
+
+# API endpoint
+QWEN3_API_URL=http://localhost:11434/v1
 ```
 
 #### Sentence Transformers
@@ -7635,7 +7639,12 @@ pg_ctl start
 docker run -p 6333:6333 qdrant/qdrant
 ```
 
-**AI Services**: All handled by Azure OpenAI in production
+**Ollama** (optional):
+```bash
+# DEPRECATED: Qwen no longer required (Sept 2, 2025)
+# ollama pull qwen2.5:7b
+# ollama serve
+```
 
 ### Emergency Procedures
 
@@ -7683,13 +7692,118 @@ git push origin main
 
 ---
 
-## WebSocket Messaging (Deprecated Section) {#websocket-messaging-deprecated}
+## {#websocket-messaging}
 
-**(NOTE: Duplicate section removed - see {#unified-messaging-system} above for complete WebSocket documentation)**
+## 🔥 UNIFIED WEBSOCKET MESSAGING SYSTEM - COMPLETE TECHNICAL SPECIFICATION
+
+**Implementation Date**: August 27, 2025  
+**Status**: ✅ FULLY OPERATIONAL  
+**Performance**: 99% reduction in API calls  
+**Architecture**: Unified Socket.IO-based real-time messaging
+
+### System Architecture Overview
+
+**Previous Architecture Problems**:
+- Two separate messaging systems (USER_USER and ADMIN_CANDIDATE)
+- 10-second polling causing high server load
+- Message delays and poor user experience
+- Complex dual-ID system mixing user IDs and candidate profile IDs
+- Inconsistent conversation ID formats
+
+**New Unified Architecture**:
+- Single WebSocket server handling all message types
+- Real-time bidirectional communication (Sub-second delivery)
+- Consistent user ID-based conversation routing
+- Simplified database schema with message type tagging
+- Graceful fallback to REST API when WebSocket unavailable
+
+### Database Schema
+
+#### UnifiedMessage Table
+```sql
+id             String              @id @default(cuid())
+type           UnifiedMessageType  -- 'ADMIN_CANDIDATE' or 'USER_USER'
+senderId       String              -- Universal user ID
+recipientId    String              -- Universal user ID or 'admin'
+content        String              -- Message content
+conversationId String?             -- Format: admin_${userId}
+isRead         Boolean             @default(false)
+metadata       Json?               -- Extensible metadata
+createdAt      DateTime            @default(now())
+updatedAt      DateTime            @updatedAt
+```
+
+#### ConversationMeta Table
+```sql
+id            String              @id @default(cuid())
+type          UnifiedMessageType
+participants  String[]            -- Array of user IDs
+lastMessageAt DateTime
+unreadCount   Int                 @default(0)
+createdAt     DateTime            @default(now())
+updatedAt     DateTime            @updatedAt
+```
+
+### WebSocket Server Implementation
+
+**File**: `backend/src/services/WebSocketService.ts`
+
+#### Room Management Strategy
+```javascript
+// User connection handling
+socket.join(`user:${userId}`);         // Personal room for each user
+if (socket.data.isAdmin) {
+    socket.join('admin:room');          // Admin broadcast room
+}
+```
+
+#### Message Routing Logic
+```javascript
+// Admin → Candidate
+if (type === 'ADMIN_CANDIDATE' && recipientId !== 'admin') {
+    // Route to candidate's personal room
+    socket.broadcast.to(`user:${recipientId}`).emit('new_message', payload);
+}
+
+// Candidate → Admin  
+if (type === 'ADMIN_CANDIDATE' && recipientId === 'admin') {
+    // Broadcast to all admin users
+    socket.broadcast.to('admin:room').emit('new_message', payload);
+}
+```
+
+### Success Metrics Achieved
+
+✅ **Bidirectional Messaging**: Admin ↔ Candidate real-time communication  
+✅ **Instant Delivery**: <1 second message delivery  
+✅ **Proper Display**: Sender-right/receiver-left alignment  
+✅ **Cross-Tab Sync**: Messages appear across all open tabs  
+✅ **Performance**: 99% reduction in API calls  
+✅ **User Experience**: No more 10-second delays  
+
+### Related Systems Integration
+
+**Files Modified**:
+- `backend/src/services/WebSocketService.ts` - Core WebSocket server
+- `backend/src/routes/unifiedMessages.ts` - REST API fallback
+- `backend/src/types/messaging.ts` - TypeScript definitions  
+- `frontend/src/js/websocket-client.js` - Client connection
+- `frontend/admin-dashboard.html` - Admin messaging interface
+- `frontend/src/components/MyProfile.js` - Candidate messaging interface
+
+**API Endpoints**:
+- `POST /api/unified-messages/send` - REST fallback
+- `GET /api/unified-messages/conversations` - Conversation list
+- `GET /api/admin/candidates/:id/messages` - Admin message history
+- `POST /api/unified-messages/mark-read` - Read receipts
 
 ---
 
+## 📋 APPENDIX: Migration from Fragmented Documentation
+
 ### Files Consolidated Into This Document
+
+The following 52 files have been merged into this MASTER_DOCUMENTATION.md:
 
 1. API_DOCUMENTATION.md
 2. APPROACH_ANALYSIS.md
@@ -7706,7 +7820,69 @@ git push origin main
 13. DEPLOYMENT_STATUS_DEMO.md
 14. DEVELOPMENT_PRACTICES.md
 15. DOCUMENTATION_INDEX.md
-...and 37 more files (complete list available in backup)
+16. DOCUMENTATION_REVIEW_2025-08-09.md
+17. DOMAIN_SETUP_GUIDE.md
+18. EMAIL_SETUP_GUIDE.md
+19. ENHANCED_TOPIC_TRENDING_DEPLOYMENT.md
+20. FEED_ALGORITHM_TUNING.md
+21. GOOGLE_MAPS_INTEGRATION.md
+22. GOOGLE_WORKSPACE_SMTP_FIX.md
+23. MAP_MIGRATION_STATUS.md
+24. MAP_SYSTEM_COMPLETION.md
+25. MAP_TRENDING_SYSTEM.md
+26. MONITORING_SETUP.md
+27. OAUTH_GOOGLE_IMPLEMENTATION.md
+28. ONBOARDING_GUIDE.md
+29. PRODUCTION_DEPLOYMENT_GUIDE.md
+30. PROJECT_SUMMARY_UPDATED.md
+31. QDRANT_SETUP.md
+32. QDRANT_SETUP_INSTRUCTIONS.md
+33. qdrant-install.md
+34. RELATIONSHIP_SYSTEM_DEPLOYMENT.md
+35. REPRESENTATIVE_API_SETUP.md
+36. REPUTATION_QUICK_FIX.md
+37. REPUTATION_SYSTEM_COMPLETE.md
+38. RESPONSIVE_DESIGN_SUMMARY.md
+39. SECURITY_DEPLOYMENT_CHECKLIST.md
+40. SEMANTIC_TOPIC_SETUP.md
+41. SESSION_HANDOFF.md
+42. SESSION_HANDOFF_2025-08-08.md
+43. SESSION_HANDOFF_2025-08-10.md
+44. SESSION_HANDOFF_2025-08-11-FINAL.md
+45. SESSION_UPDATE_2025-08-11.md
+46. SESSION_UPDATE_2025-08-11-PART2.md
+47. SESSION_UPDATE_2025-08-12-CONVERSATION_BUBBLES.md
+48. SESSION_UPDATE_2025-08-13-UI_NAVIGATION.md
+49. SESSION_UPDATE_2025-08-14_FEEDBACK_OPTIMIZATION.md
+50. SMS_VALIDATION_FUTURE.md
+51. TEST_FILES_TRACKER.md
+52. [Others found during consolidation]
+
+### Preserved Files
+- **CLAUDE.md** - Quick reference for current state
+- **README.md** - GitHub project introduction
+- **MASTER_DOCUMENTATION.md** - This file (everything else)
+
+### Consolidation Date
+**August 15, 2025, 2:00 PM EST**
+
+### Consolidation Reason
+After a critical incident where functional infinite scroll code was accidentally deleted due to missing cross-referenced documentation spread across 52+ files, all documentation has been consolidated into this single source of truth.
+
+---
+
+## 🔚 END OF MASTER DOCUMENTATION
+
+**Remember**: 
+- ALL updates go in THIS file
+- Do NOT create separate documentation files
+- Keep CLAUDE.md as quick reference only
+- This consolidation prevents critical information loss
+
+**Total Lines**: ~3,500
+**Total Sections**: 20
+**Files Consolidated**: 52
+**Information Preserved**: 100%
 
 ---
 

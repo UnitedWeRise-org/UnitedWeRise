@@ -395,7 +395,7 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
 router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspension, moderation_1.contentFilter, validation_1.validateComment, (0, moderation_1.moderateContent)('COMMENT'), async (req, res) => {
     try {
         const { postId } = req.params;
-        const { content } = req.body;
+        const { content, parentId } = req.body;
         const userId = req.user.id;
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Comment content is required' });
@@ -410,13 +410,31 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
+        // If parentId is provided, validate parent comment and calculate depth
+        let depth = 0;
+        if (parentId) {
+            const parentComment = await prisma_1.prisma.comment.findUnique({
+                where: { id: parentId },
+                select: { depth: true, postId: true }
+            });
+            if (!parentComment) {
+                return res.status(404).json({ error: 'Parent comment not found' });
+            }
+            if (parentComment.postId !== postId) {
+                return res.status(400).json({ error: 'Parent comment does not belong to this post' });
+            }
+            // Calculate depth - max 3 layers (0=top-level, 1-2=nested, 3=flattened)
+            depth = Math.min(parentComment.depth + 1, 3);
+        }
         // Create comment and update post comment count
         const comment = await prisma_1.prisma.$transaction(async (tx) => {
             const newComment = await tx.comment.create({
                 data: {
                     content: content.trim(),
                     userId,
-                    postId
+                    postId,
+                    parentId: parentId || null,
+                    depth
                 },
                 include: {
                     user: {
@@ -465,6 +483,7 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
+        // Get all comments for the post with nested structure
         const comments = await prisma_1.prisma.comment.findMany({
             where: { postId },
             include: {
@@ -477,18 +496,48 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
                         avatar: true,
                         verified: true
                     }
+                },
+                replies: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                verified: true
+                            }
+                        },
+                        replies: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        username: true,
+                                        firstName: true,
+                                        lastName: true,
+                                        avatar: true,
+                                        verified: true
+                                    }
+                                }
+                            },
+                            orderBy: { createdAt: 'asc' }
+                        }
+                    },
+                    orderBy: { createdAt: 'asc' }
                 }
             },
-            orderBy: { createdAt: 'asc' },
-            take: limitNum,
-            skip: offsetNum
+            orderBy: { createdAt: 'asc' }
         });
+        // Filter to only top-level comments (parentId is null)
+        const topLevelComments = comments.filter(comment => comment.parentId === null);
         res.json({
-            comments,
+            comments: topLevelComments,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: comments.length
+                count: topLevelComments.length
             }
         });
     }

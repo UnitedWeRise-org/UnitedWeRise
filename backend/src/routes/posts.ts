@@ -78,6 +78,29 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
         // Get user's current reputation for post attribution
         const userReputation = await reputationService.getUserReputation(userId);
 
+        // Validate and set tags with proper defaults and permissions
+        const requestedTags = tags || ["Public Post"];
+        
+        // Validate permissions for special tags by fetching full user record
+        const fullUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, politicalProfileType: true }
+        });
+        
+        if (!fullUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        for (const tag of requestedTags) {
+            if (tag === "Official Post" && fullUser.politicalProfileType !== 'ELECTED_OFFICIAL') {
+                return res.status(403).json({ error: "Only elected officials can create Official Posts" });
+            }
+            if (tag === "Candidate Post" && fullUser.politicalProfileType !== 'CANDIDATE') {
+                return res.status(403).json({ error: "Only registered candidates can create Candidate Posts" });
+            }
+            // "Public Post" and "Volunteer Post" are allowed for everyone
+        }
+
         const post = await prisma.post.create({
             data: {
                 content: content.trim(),
@@ -85,7 +108,7 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 authorId: userId,
                 embedding,
                 authorReputation: userReputation.current,
-                tags: tags || [],
+                tags: requestedTags,
                 ...feedbackData
             },
             include: {
@@ -411,7 +434,7 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
 router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter, validateComment, moderateContent('COMMENT'), async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
-        const { content } = req.body;
+        const { content, parentId } = req.body;
         const userId = req.user!.id;
 
         if (!content || content.trim().length === 0) {
@@ -431,13 +454,35 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
             return res.status(404).json({ error: 'Post not found' });
         }
 
+        // If parentId is provided, validate parent comment and calculate depth
+        let depth = 0;
+        if (parentId) {
+            const parentComment = await prisma.comment.findUnique({
+                where: { id: parentId },
+                select: { depth: true, postId: true }
+            });
+
+            if (!parentComment) {
+                return res.status(404).json({ error: 'Parent comment not found' });
+            }
+
+            if (parentComment.postId !== postId) {
+                return res.status(400).json({ error: 'Parent comment does not belong to this post' });
+            }
+
+            // Calculate depth - max 3 layers (0=top-level, 1-2=nested, 3=flattened)
+            depth = Math.min(parentComment.depth + 1, 3);
+        }
+
         // Create comment and update post comment count
         const comment = await prisma.$transaction(async (tx) => {
             const newComment = await tx.comment.create({
                 data: {
                     content: content.trim(),
                     userId,
-                    postId
+                    postId,
+                    parentId: parentId || null,
+                    depth
                 },
                 include: {
                     user: {
@@ -501,6 +546,7 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
             return res.status(404).json({ error: 'Post not found' });
         }
 
+        // Get all comments for the post with nested structure
         const comments = await prisma.comment.findMany({
             where: { postId },
             include: {
@@ -513,19 +559,50 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
                         avatar: true,
                         verified: true
                     }
+                },
+                replies: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                verified: true
+                            }
+                        },
+                        replies: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        username: true,
+                                        firstName: true,
+                                        lastName: true,
+                                        avatar: true,
+                                        verified: true
+                                    }
+                                }
+                            },
+                            orderBy: { createdAt: 'asc' }
+                        }
+                    },
+                    orderBy: { createdAt: 'asc' }
                 }
             },
-            orderBy: { createdAt: 'asc' },
-            take: limitNum,
-            skip: offsetNum
+            orderBy: { createdAt: 'asc' }
         });
 
+        // Filter to only top-level comments (parentId is null)
+        const topLevelComments = comments.filter(comment => comment.parentId === null);
+
         res.json({
-            comments,
+            comments: topLevelComments,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: comments.length
+                count: topLevelComments.length
             }
         });
     } catch (error) {

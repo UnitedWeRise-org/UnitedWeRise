@@ -94,7 +94,8 @@ class ProbabilityFeedService {
         return prisma_1.prisma.post.findMany({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
-                authorId: { not: userId } // Don't include user's own posts
+                authorId: { not: userId }, // Don't include user's own posts
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
             },
             include: {
                 author: {

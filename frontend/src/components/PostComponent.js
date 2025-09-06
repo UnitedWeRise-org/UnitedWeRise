@@ -250,7 +250,7 @@ class PostComponent {
     }
 
     /**
-     * Render comments list
+     * Render comments list with nested threading (3-layer system)
      */
     renderComments(postId, comments) {
         const commentsList = document.getElementById(`comments-list-${postId}`);
@@ -261,21 +261,63 @@ class PostComponent {
             return;
         }
 
-        commentsList.innerHTML = comments.map(comment => {
-            // Handle both 'author' and 'user' properties for compatibility
-            const user = comment.author || comment.user;
-            const displayName = user?.firstName || user?.username || 'Anonymous';
-            
-            return `
-                <div class="comment" data-comment-id="${comment.id}">
-                    <div class="comment-header">
-                        <span class="comment-author">${displayName}</span>
-                        <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
-                    </div>
-                    <div class="comment-content">${comment.content}</div>
+        commentsList.innerHTML = comments.map(comment => this.renderComment(comment, postId, 0)).join('');
+    }
+
+    /**
+     * Render individual comment with nested replies
+     */
+    renderComment(comment, postId, depth) {
+        // Handle both 'author' and 'user' properties for compatibility
+        const user = comment.author || comment.user;
+        const displayName = user?.firstName || user?.username || 'Anonymous';
+        const hasReplies = comment.replies && comment.replies.length > 0;
+        const replyCount = hasReplies ? comment.replies.length : 0;
+        
+        // Calculate indentation based on depth (max 3 layers)
+        const indentLevel = Math.min(depth, 2); // 0, 1, or 2 for visual indentation
+        const marginLeft = indentLevel * 20; // 0px, 20px, or 40px
+        
+        // Determine if this is a flattened comment (depth 3+)
+        const isFlattened = depth >= 3;
+        const flattenedClass = isFlattened ? ' flattened-comment' : '';
+        
+        let commentHtml = `
+            <div class="comment${flattenedClass}" data-comment-id="${comment.id}" data-depth="${depth}" style="margin-left: ${marginLeft}px;">
+                <div class="comment-header">
+                    <span class="comment-author">${displayName}</span>
+                    <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
+                    ${depth >= 3 ? '<span class="flattened-indicator">↳</span>' : ''}
                 </div>
-            `;
-        }).join('');
+                <div class="comment-content">${comment.content}</div>
+                <div class="comment-actions">
+                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                        💬 Reply
+                    </button>
+                    ${hasReplies ? `
+                        <button class="toggle-replies-btn" onclick="postComponent.toggleReplies('${comment.id}')">
+                            <span class="toggle-text">${replyCount > 1 ? `▼ ${replyCount} replies` : `▼ ${replyCount} reply`}</span>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
+                    <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
+                    <div class="reply-box-actions">
+                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
+                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                    </div>
+                </div>
+        `;
+
+        // Add nested replies if they exist
+        if (hasReplies) {
+            commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
+            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, depth + 1)).join('');
+            commentHtml += `</div>`;
+        }
+
+        commentHtml += `</div>`;
+        return commentHtml;
     }
 
     /**
@@ -328,6 +370,114 @@ class PostComponent {
             alert('Error adding comment');
         } finally {
             input.disabled = false;
+        }
+    }
+
+    /**
+     * Toggle reply box for a specific comment
+     */
+    toggleReplyBox(commentId, postId) {
+        const replyBox = document.getElementById(`reply-box-${commentId}`);
+        if (!replyBox) return;
+
+        const isVisible = replyBox.style.display !== 'none';
+        
+        // Hide all other reply boxes first
+        document.querySelectorAll('.reply-box').forEach(box => {
+            if (box.id !== `reply-box-${commentId}`) {
+                box.style.display = 'none';
+            }
+        });
+
+        if (isVisible) {
+            replyBox.style.display = 'none';
+        } else {
+            replyBox.style.display = 'block';
+            const input = document.getElementById(`reply-input-${commentId}`);
+            if (input) input.focus();
+        }
+    }
+
+    /**
+     * Submit a reply to a comment
+     */
+    async submitReply(parentId, postId) {
+        const authToken = localStorage.getItem('authToken') || window.authToken;
+        if (!authToken) {
+            alert('Please log in to reply');
+            return;
+        }
+
+        const input = document.getElementById(`reply-input-${parentId}`);
+        if (!input || !input.value.trim()) return;
+
+        const content = input.value.trim();
+        input.disabled = true;
+
+        try {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
+                method: 'POST',
+                body: JSON.stringify({ content, parentId })
+            });
+
+            if (response.ok) {
+                input.value = '';
+                this.toggleReplyBox(parentId, postId); // Hide reply box
+                
+                console.log('Reply added successfully, reloading comments...');
+                setTimeout(async () => {
+                    await this.loadComments(postId);
+                }, 200);
+                
+                // Update comment count
+                const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
+                if (commentBtn) {
+                    const currentCount = parseInt(commentBtn.textContent) || 0;
+                    commentBtn.textContent = currentCount + 1;
+                }
+                
+                this.showToast('Reply added successfully!');
+            } else {
+                console.error('Reply submission failed:', response);
+                const errorMsg = response.error || response.message || 'Failed to add reply';
+                alert(`Failed to add reply: ${errorMsg}`);
+            }
+        } catch (error) {
+            console.error('Error adding reply:', error);
+            alert('Error adding reply');
+        } finally {
+            input.disabled = false;
+        }
+    }
+
+    /**
+     * Cancel reply and hide reply box
+     */
+    cancelReply(commentId) {
+        const replyBox = document.getElementById(`reply-box-${commentId}`);
+        const input = document.getElementById(`reply-input-${commentId}`);
+        
+        if (input) input.value = '';
+        if (replyBox) replyBox.style.display = 'none';
+    }
+
+    /**
+     * Toggle visibility of replies for a comment thread
+     */
+    toggleReplies(commentId) {
+        const repliesContainer = document.getElementById(`replies-${commentId}`);
+        const toggleBtn = document.querySelector(`[onclick*="toggleReplies('${commentId}')"] .toggle-text`);
+        
+        if (!repliesContainer || !toggleBtn) return;
+
+        const isVisible = repliesContainer.style.display !== 'none';
+        
+        if (isVisible) {
+            repliesContainer.style.display = 'none';
+            toggleBtn.textContent = toggleBtn.textContent.replace('▼', '▶');
+        } else {
+            repliesContainer.style.display = 'block';
+            toggleBtn.textContent = toggleBtn.textContent.replace('▶', '▼');
         }
     }
 
