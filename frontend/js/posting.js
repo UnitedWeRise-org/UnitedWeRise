@@ -23,7 +23,7 @@ async function createPostWithTag(content, tags, options = {}) {
         };
 
         // Make API call using existing apiCall function
-        const response = await apiCall('/api/posts', 'POST', requestBody);
+        const response = await apiCall('/posts', 'POST', requestBody);
 
         if (response.ok && response.data.success) {
             return {

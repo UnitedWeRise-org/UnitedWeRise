@@ -4314,8 +4314,8 @@
                             <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                             <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
                                 <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
-                                <div id="continueInCommentHint" style="display: none; font-size: 0.8rem; color: #1da1f2; margin-top: 0.25rem;">
-                                    💡 Your post is long - use "Continue in Comment" to thread it
+                                <div id="threadHint" style="display: none; font-size: 0.8rem; color: #1da1f2; margin-top: 0.25rem;">
+                                    💡 Getting long? Use "+" to break into multiple posts
                                 </div>
                             </div>
                             <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -4327,7 +4327,7 @@
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
                                 <div>
-                                    <button id="continueInCommentBtn" onclick="createPostWithContinuation()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem;">Continue in Comment</button>
+                                    <button id="addThreadBreakBtn" onclick="addThreadBreak()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem; font-size: 1.2rem; padding: 0.375rem 0.75rem;">+</button>
                                     <button onclick="createPostFromFeed()" class="btn">Post</button>
                                 </div>
                             </div>
@@ -4369,8 +4369,8 @@
             // Setup character counter for post creation
             const feedPostTextarea = document.getElementById('feedPostContent');
             const feedCharCount = document.getElementById('feedPostCharCount');
-            const continueBtn = document.getElementById('continueInCommentBtn');
-            const continueHint = document.getElementById('continueInCommentHint');
+            const addThreadBtn = document.getElementById('addThreadBreakBtn');
+            const threadHint = document.getElementById('threadHint');
             
             if (feedPostTextarea && feedCharCount) {
                 // Initial count
@@ -4383,20 +4383,20 @@
                     
                     feedCharCount.textContent = `${currentLength}/${maxLength}`;
                     
-                    // Show/hide continue in comment option
+                    // Show + button and hint at 450 characters (when text turns yellow)
                     if (currentLength > maxLength) {
-                        continueBtn.style.display = 'inline-block';
-                        continueHint.style.display = 'block';
+                        addThreadBtn.style.display = 'inline-block';
+                        threadHint.style.display = 'block';
                         feedCharCount.style.color = '#dc3545'; // Red
                         feedCharCount.style.fontWeight = 'bold';
-                    } else if (currentLength > maxLength * 0.9) { // 90% of limit
-                        continueBtn.style.display = 'none';
-                        continueHint.style.display = 'none';
+                    } else if (currentLength >= 450) { // Show + button at 450 chars
+                        addThreadBtn.style.display = 'inline-block';
+                        threadHint.style.display = 'block';
                         feedCharCount.style.color = '#ffc107'; // Orange/yellow
                         feedCharCount.style.fontWeight = 'bold';
                     } else {
-                        continueBtn.style.display = 'none';
-                        continueHint.style.display = 'none';
+                        addThreadBtn.style.display = 'none';
+                        threadHint.style.display = 'none';
                         feedCharCount.style.color = '#6c757d'; // Default gray
                         feedCharCount.style.fontWeight = 'normal';
                     }
@@ -4830,6 +4830,12 @@
             const content = textarea.value.trim();
             if (!content) return false;
 
+            // Check if content contains thread breaks
+            const threadBreakSeparator = '--- Thread Break ---';
+            if (content.includes(threadBreakSeparator)) {
+                return await createThreadedPosts(content);
+            }
+
             // Get media attachment if any
             const mediaId = window.currentMediaId || null;
             const imageUrl = null; // Handled by mediaId
@@ -4866,7 +4872,105 @@
                 return false;
             }
         }
+
+        // Create threaded posts from content with thread breaks
+        async function createThreadedPosts(content) {
+            const textarea = document.getElementById('feedPostContent');
+            const threadBreakSeparator = '--- Thread Break ---';
+            
+            // Split content by thread breaks
+            const sections = content.split(threadBreakSeparator)
+                .map(section => section.trim())
+                .filter(section => section.length > 0);
+
+            if (sections.length === 0) return false;
+
+            // Get media attachment (only applies to first post)
+            const mediaId = window.currentMediaId || null;
+
+            try {
+                let previousPostId = null;
+                
+                for (let i = 0; i < sections.length; i++) {
+                    const sectionContent = sections[i];
+                    if (!sectionContent) continue;
+
+                    if (i === 0) {
+                        // First section: create main post
+                        const result = await createPostPublic(sectionContent, { 
+                            mediaId,
+                            refreshFeed: false // Don't refresh until we're done
+                        });
+
+                        if (result.success) {
+                            previousPostId = result.post.id;
+                            // Track this as a truncated post for "continue to thread" link
+                            if (!window.truncatedPosts) window.truncatedPosts = new Set();
+                            window.truncatedPosts.add(previousPostId);
+                        } else {
+                            throw new Error('Failed to create main post: ' + result.error);
+                        }
+                    } else {
+                        // Subsequent sections: create as comments on the main post
+                        if (!previousPostId) throw new Error('No main post to attach comment to');
+
+                        const response = await apiCall(`/posts/${previousPostId}/comments`, {
+                            method: 'POST',
+                            body: JSON.stringify({ content: sectionContent })
+                        });
+
+                        if (!response.ok || !response.data.success) {
+                            throw new Error('Failed to create thread comment');
+                        }
+                    }
+                }
+
+                // Success - clear the textarea and refresh
+                textarea.value = '';
+                
+                // Clear media attachment
+                if (window.currentMediaId) {
+                    window.currentMediaId = null;
+                    const mediaPreview = document.getElementById('media-preview');
+                    if (mediaPreview) mediaPreview.style.display = 'none';
+                }
+                
+                // Refresh feed to show the new threaded post
+                if (typeof showMyFeedInMain === 'function') {
+                    showMyFeedInMain();
+                }
+                
+                return true;
+
+            } catch (error) {
+                console.error('Threaded post creation error:', error);
+                alert('Error creating threaded post: ' + error.message);
+                return false;
+            }
+        }
         
+        // Add thread break separator to textarea
+        function addThreadBreak() {
+            const textarea = document.getElementById('feedPostContent');
+            if (!textarea) return;
+            
+            const cursorPos = textarea.selectionStart;
+            const textBefore = textarea.value.substring(0, cursorPos);
+            const textAfter = textarea.value.substring(cursorPos);
+            
+            // Insert thread break separator
+            const separator = '\n\n--- Thread Break ---\n\n';
+            textarea.value = textBefore + separator + textAfter;
+            
+            // Position cursor after the separator
+            const newCursorPos = cursorPos + separator.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            textarea.focus();
+            
+            // Trigger input event to update character counter
+            textarea.dispatchEvent(new Event('input'));
+        }
+
         // Create post with continuation - splits long posts into main post + comment
         async function createPostWithContinuation() {
             const textarea = document.getElementById('feedPostContent');
