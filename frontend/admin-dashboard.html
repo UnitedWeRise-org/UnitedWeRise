@@ -5345,9 +5345,12 @@ Example: adminConsole.getSuggestions('features', 'new')
         async function loadMOTDList() {
             try {
                 const response = await apiCall('/motd/admin/list');
-                if (response.ok) {
-                    displayMOTDList(response.data.motds);
+                console.log('MOTD list response:', response); // Debug log
+                
+                if (response.ok && response.data.success) {
+                    displayMOTDList(response.data.data.motds);
                 } else {
+                    console.error('MOTD list error:', response.data);
                     document.getElementById('motd-list').innerHTML = '<p style="color: red;">Failed to load MOTDs</p>';
                 }
             } catch (error) {
@@ -5358,6 +5361,12 @@ Example: adminConsole.getSuggestions('features', 'new')
         
         function displayMOTDList(motds) {
             const container = document.getElementById('motd-list');
+            
+            if (!motds || !Array.isArray(motds)) {
+                console.error('Invalid MOTD data:', motds);
+                container.innerHTML = '<p style="color: red;">Invalid MOTD data received</p>';
+                return;
+            }
             
             if (motds.length === 0) {
                 container.innerHTML = '<p>No MOTDs found.</p>';
