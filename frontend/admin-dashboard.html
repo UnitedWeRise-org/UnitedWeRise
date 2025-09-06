@@ -5303,6 +5303,43 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         });
 
+        // API Call Helper Function for MOTD System
+        async function apiCall(endpoint, options = {}) {
+            const token = localStorage.getItem('authToken');
+            const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}/api${endpoint}`;
+            
+            const fetchOptions = {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    ...(options.headers || {})
+                }
+            };
+            
+            if (options.body && typeof options.body === 'object') {
+                fetchOptions.body = JSON.stringify(options.body);
+            }
+            
+            try {
+                const response = await fetch(url, fetchOptions);
+                const data = await response.json();
+                
+                return {
+                    ok: response.ok,
+                    status: response.status,
+                    data: data
+                };
+            } catch (error) {
+                console.error('API call failed:', error);
+                return {
+                    ok: false,
+                    status: 0,
+                    data: { error: error.message }
+                };
+            }
+        }
+
         // MOTD Management Functions
         
         async function loadMOTDList() {
@@ -5395,14 +5432,14 @@ Example: adminConsole.getSuggestions('features', 'new')
             try {
                 const response = await apiCall('/motd/admin/create', {
                     method: 'POST',
-                    body: JSON.stringify({
+                    body: {
                         title: title || null,
                         content,
                         isActive,
                         startDate: startDate || null,
                         endDate: endDate || null,
                         showToNewUsers
-                    })
+                    }
                 });
                 
                 if (response.ok) {
