@@ -4311,11 +4311,16 @@
                 <div class="my-feed">
                     <div class="sticky-composer-wrapper">
                         <div class="quick-post-composer">
-                            <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                            <div style="position: relative;">
+                                <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                                <div id="threadBreakIndicator" style="display: none; position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #1da1f2 10%, #1da1f2 90%, transparent); pointer-events: none; z-index: 10;">
+                                    <span style="position: absolute; right: 10px; top: -8px; background: white; padding: 0 5px; color: #1da1f2; font-size: 0.75rem; font-weight: bold;">500</span>
+                                </div>
+                            </div>
                             <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
                                 <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
                                 <div id="threadHint" style="display: none; font-size: 0.8rem; color: #1da1f2; margin-top: 0.25rem;">
-                                    💡 Getting long? Use "+" to break into multiple posts
+                                    💡 Text after the line will become a comment thread
                                 </div>
                             </div>
                             <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -4327,7 +4332,9 @@
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
                                 <div>
-                                    <button id="addThreadBreakBtn" onclick="addThreadBreak()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem; font-size: 1.2rem; padding: 0.375rem 0.75rem;">+</button>
+                                    <button id="addThreadBreakBtn" onclick="confirmThreadedPost()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem;" title="Create as threaded post">
+                                        🧵 Thread
+                                    </button>
                                     <button onclick="createPostFromFeed()" class="btn">Post</button>
                                 </div>
                             </div>
@@ -4371,10 +4378,42 @@
             const feedCharCount = document.getElementById('feedPostCharCount');
             const addThreadBtn = document.getElementById('addThreadBreakBtn');
             const threadHint = document.getElementById('threadHint');
+            const threadBreakIndicator = document.getElementById('threadBreakIndicator');
             
             if (feedPostTextarea && feedCharCount) {
                 // Initial count
                 feedCharCount.textContent = `${feedPostTextarea.value.length}/500`;
+                
+                // Function to calculate position of 500th character
+                function updateThreadBreakPosition() {
+                    const text = feedPostTextarea.value;
+                    if (text.length > 500) {
+                        // Create a temporary element to measure text
+                        const temp = document.createElement('div');
+                        temp.style.cssText = window.getComputedStyle(feedPostTextarea).cssText;
+                        temp.style.position = 'absolute';
+                        temp.style.visibility = 'hidden';
+                        temp.style.height = 'auto';
+                        temp.style.width = feedPostTextarea.offsetWidth + 'px';
+                        temp.style.whiteSpace = 'pre-wrap';
+                        temp.style.wordWrap = 'break-word';
+                        temp.innerHTML = text.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        document.body.appendChild(temp);
+                        
+                        // Calculate position
+                        const lineHeight = parseInt(window.getComputedStyle(feedPostTextarea).lineHeight);
+                        const lines = Math.ceil(temp.scrollHeight / lineHeight);
+                        const topPosition = (lines - 1) * lineHeight + parseInt(window.getComputedStyle(feedPostTextarea).paddingTop);
+                        
+                        document.body.removeChild(temp);
+                        
+                        // Position the indicator
+                        threadBreakIndicator.style.top = topPosition + 'px';
+                        threadBreakIndicator.style.display = 'block';
+                    } else {
+                        threadBreakIndicator.style.display = 'none';
+                    }
+                }
                 
                 // Update counter on input
                 feedPostTextarea.addEventListener('input', function() {
@@ -4383,22 +4422,32 @@
                     
                     feedCharCount.textContent = `${currentLength}/${maxLength}`;
                     
-                    // Show + button and hint at 450 characters (when text turns yellow)
+                    // Show visual break indicator and + button when text exceeds 500
                     if (currentLength > maxLength) {
                         addThreadBtn.style.display = 'inline-block';
                         threadHint.style.display = 'block';
                         feedCharCount.style.color = '#dc3545'; // Red
                         feedCharCount.style.fontWeight = 'bold';
-                    } else if (currentLength >= 450) { // Show + button at 450 chars
-                        addThreadBtn.style.display = 'inline-block';
-                        threadHint.style.display = 'block';
+                        updateThreadBreakPosition();
+                    } else if (currentLength >= 450) { // Warning zone
+                        addThreadBtn.style.display = 'none';
+                        threadHint.style.display = 'none';
                         feedCharCount.style.color = '#ffc107'; // Orange/yellow
                         feedCharCount.style.fontWeight = 'bold';
+                        threadBreakIndicator.style.display = 'none';
                     } else {
                         addThreadBtn.style.display = 'none';
                         threadHint.style.display = 'none';
                         feedCharCount.style.color = '#6c757d'; // Default gray
                         feedCharCount.style.fontWeight = 'normal';
+                        threadBreakIndicator.style.display = 'none';
+                    }
+                });
+                
+                // Update position on resize
+                window.addEventListener('resize', function() {
+                    if (feedPostTextarea.value.length > 500) {
+                        updateThreadBreakPosition();
                     }
                 });
             }
@@ -4830,9 +4879,8 @@
             const content = textarea.value.trim();
             if (!content) return false;
 
-            // Check if content contains thread breaks
-            const threadBreakSeparator = '--- Thread Break ---';
-            if (content.includes(threadBreakSeparator)) {
+            // Check if content exceeds 500 characters (auto-thread)
+            if (content.length > 500) {
                 return await createThreadedPosts(content);
             }
 
@@ -4873,15 +4921,30 @@
             }
         }
 
-        // Create threaded posts from content with thread breaks
+        // Create threaded posts from content exceeding 500 characters
         async function createThreadedPosts(content) {
             const textarea = document.getElementById('feedPostContent');
-            const threadBreakSeparator = '--- Thread Break ---';
             
-            // Split content by thread breaks
-            const sections = content.split(threadBreakSeparator)
-                .map(section => section.trim())
-                .filter(section => section.length > 0);
+            // Split content at 500 character mark
+            const sections = [];
+            let remainingContent = content;
+            
+            while (remainingContent.length > 0) {
+                if (remainingContent.length <= 500) {
+                    sections.push(remainingContent.trim());
+                    break;
+                } else {
+                    // Find a good break point near 500 chars (prefer word boundary)
+                    let splitIndex = 500;
+                    const lastSpaceIndex = remainingContent.lastIndexOf(' ', 500);
+                    if (lastSpaceIndex > 400) { // Don't go too far back
+                        splitIndex = lastSpaceIndex;
+                    }
+                    
+                    sections.push(remainingContent.substring(0, splitIndex).trim());
+                    remainingContent = remainingContent.substring(splitIndex).trim();
+                }
+            }
 
             if (sections.length === 0) return false;
 
@@ -4949,26 +5012,23 @@
             }
         }
         
-        // Add thread break separator to textarea
-        function addThreadBreak() {
+        // Confirm and create threaded post
+        function confirmThreadedPost() {
             const textarea = document.getElementById('feedPostContent');
             if (!textarea) return;
             
-            const cursorPos = textarea.selectionStart;
-            const textBefore = textarea.value.substring(0, cursorPos);
-            const textAfter = textarea.value.substring(cursorPos);
+            const content = textarea.value.trim();
+            if (content.length <= 500) {
+                alert('Post is short enough to be posted as a single post.');
+                return;
+            }
             
-            // Insert thread break separator
-            const separator = '\n\n--- Thread Break ---\n\n';
-            textarea.value = textBefore + separator + textAfter;
+            // Calculate how many parts
+            let parts = Math.ceil(content.length / 500);
             
-            // Position cursor after the separator
-            const newCursorPos = cursorPos + separator.length;
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-            textarea.focus();
-            
-            // Trigger input event to update character counter
-            textarea.dispatchEvent(new Event('input'));
+            if (confirm(`This will create a threaded post with ${parts} parts. The first 500 characters will be the main post, and the rest will be comments. Continue?`)) {
+                createPostFromFeed();
+            }
         }
 
         // Create post with continuation - splits long posts into main post + comment
