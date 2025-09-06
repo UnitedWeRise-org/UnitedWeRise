@@ -4381,7 +4381,7 @@
                     
                     if (window.threadBreakPosition !== null) {
                         // We have a thread break
-                        const separator = '\n\n--- Continue in comment ---\n\n';
+                        const separator = '\n\n--- Continue ---\n\n';
                         const breakIndex = text.indexOf(separator);
                         
                         if (breakIndex !== -1) {
@@ -4464,8 +4464,76 @@
                 // Initial count
                 updateCharCounter();
                 
+                // Handle separator as atomic unit
+                let previousValue = feedPostTextarea.value;
+                
+                feedPostTextarea.addEventListener('beforeinput', function(e) {
+                    const separator = '--- Continue ---';
+                    const fullSeparator = '\n\n--- Continue ---\n\n';
+                    const currentValue = this.value;
+                    
+                    // Check if separator exists
+                    if (currentValue.includes(separator)) {
+                        const start = this.selectionStart;
+                        const end = this.selectionEnd;
+                        
+                        // Find separator boundaries
+                        const sepStart = currentValue.indexOf(fullSeparator);
+                        const sepEnd = sepStart + fullSeparator.length;
+                        
+                        // Check if user is trying to edit within the separator
+                        if (sepStart !== -1) {
+                            const isEditingSeparator = (
+                                (start > sepStart && start < sepEnd) || 
+                                (end > sepStart && end < sepEnd) ||
+                                (start <= sepStart && end >= sepEnd)
+                            );
+                            
+                            if (isEditingSeparator) {
+                                // Check if it's a delete operation
+                                if (e.inputType && e.inputType.includes('delete')) {
+                                    // Delete the entire separator
+                                    e.preventDefault();
+                                    this.value = currentValue.substring(0, sepStart) + currentValue.substring(sepEnd);
+                                    window.threadBreakPosition = null;
+                                    this.setSelectionRange(sepStart, sepStart);
+                                    updateCharCounter();
+                                } else {
+                                    // Prevent any other edits to the separator
+                                    e.preventDefault();
+                                }
+                            }
+                        }
+                    }
+                });
+                
                 // Update on input
-                feedPostTextarea.addEventListener('input', updateCharCounter);
+                feedPostTextarea.addEventListener('input', function() {
+                    const separator = '--- Continue ---';
+                    const currentValue = this.value;
+                    
+                    // Check if separator was partially modified
+                    if (previousValue.includes(separator) && !currentValue.includes(separator)) {
+                        // Separator was damaged, remove any remnants
+                        const patterns = [
+                            /\n*-*\s*Continue\s*-*\n*/gi,
+                            /\n*-+\s*\n*/g
+                        ];
+                        
+                        let cleanedValue = currentValue;
+                        for (const pattern of patterns) {
+                            cleanedValue = cleanedValue.replace(pattern, '\n');
+                        }
+                        
+                        if (cleanedValue !== currentValue) {
+                            this.value = cleanedValue.replace(/\n{3,}/g, '\n\n'); // Clean up excess newlines
+                            window.threadBreakPosition = null;
+                        }
+                    }
+                    
+                    previousValue = this.value;
+                    updateCharCounter();
+                });
                 
                 // Update on cursor position change (click or arrow keys)
                 feedPostTextarea.addEventListener('click', updateCharCounter);
@@ -4905,7 +4973,7 @@
             if (!content) return false;
 
             // Check if content contains manual thread break
-            const separator = '--- Continue in comment ---';
+            const separator = '--- Continue ---';
             if (content.includes(separator)) {
                 return await createThreadedPost(content);
             }
@@ -4956,7 +5024,7 @@
         // Create threaded post with manual separator
         async function createThreadedPost(content) {
             const textarea = document.getElementById('feedPostContent');
-            const separator = '--- Continue in comment ---';
+            const separator = '--- Continue ---';
             
             // Split content by separator
             const parts = content.split(separator);
@@ -5058,7 +5126,7 @@
             const textAfter = textarea.value.substring(cursorPos);
             
             // Insert separator
-            const separator = '\n\n--- Continue in comment ---\n\n';
+            const separator = '\n\n--- Continue ---\n\n';
             textarea.value = textBefore + separator + textAfter;
             
             // Store break position
