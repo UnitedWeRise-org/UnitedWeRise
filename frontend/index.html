@@ -4314,6 +4314,9 @@
                             <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                             <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
                                 <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
+                                <div id="continueInCommentHint" style="display: none; font-size: 0.8rem; color: #1da1f2; margin-top: 0.25rem;">
+                                    💡 Your post is long - use "Continue in Comment" to thread it
+                                </div>
                             </div>
                             <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -4323,7 +4326,10 @@
                                     </label>
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
-                                <button onclick="createPostFromFeed()" class="btn">Post</button>
+                                <div>
+                                    <button id="continueInCommentBtn" onclick="createPostWithContinuation()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem;">Continue in Comment</button>
+                                    <button onclick="createPostFromFeed()" class="btn">Post</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4363,6 +4369,8 @@
             // Setup character counter for post creation
             const feedPostTextarea = document.getElementById('feedPostContent');
             const feedCharCount = document.getElementById('feedPostCharCount');
+            const continueBtn = document.getElementById('continueInCommentBtn');
+            const continueHint = document.getElementById('continueInCommentHint');
             
             if (feedPostTextarea && feedCharCount) {
                 // Initial count
@@ -4375,14 +4383,20 @@
                     
                     feedCharCount.textContent = `${currentLength}/${maxLength}`;
                     
-                    // Color coding: green for safe, orange for warning, red for over limit
+                    // Show/hide continue in comment option
                     if (currentLength > maxLength) {
+                        continueBtn.style.display = 'inline-block';
+                        continueHint.style.display = 'block';
                         feedCharCount.style.color = '#dc3545'; // Red
                         feedCharCount.style.fontWeight = 'bold';
                     } else if (currentLength > maxLength * 0.9) { // 90% of limit
+                        continueBtn.style.display = 'none';
+                        continueHint.style.display = 'none';
                         feedCharCount.style.color = '#ffc107'; // Orange/yellow
                         feedCharCount.style.fontWeight = 'bold';
                     } else {
+                        continueBtn.style.display = 'none';
+                        continueHint.style.display = 'none';
                         feedCharCount.style.color = '#6c757d'; // Default gray
                         feedCharCount.style.fontWeight = 'normal';
                     }
@@ -4850,6 +4864,96 @@
                 console.error('Feed post creation error:', error);
                 alert('Error creating post');
                 return false;
+            }
+        }
+        
+        // Create post with continuation - splits long posts into main post + comment
+        async function createPostWithContinuation() {
+            const textarea = document.getElementById('feedPostContent');
+            if (!textarea) return false;
+
+            const fullContent = textarea.value.trim();
+            if (!fullContent) return false;
+            
+            // Split content at 500 characters, finding the last space before the limit
+            let splitIndex = 500;
+            if (fullContent.length > 500) {
+                // Find the last space before 500 characters to avoid breaking words
+                const lastSpaceIndex = fullContent.lastIndexOf(' ', 500);
+                if (lastSpaceIndex > 400) { // Don't go too far back
+                    splitIndex = lastSpaceIndex;
+                }
+            }
+            
+            const mainContent = fullContent.substring(0, splitIndex).trim();
+            const continuationContent = fullContent.substring(splitIndex).trim();
+            
+            // Get media attachment if any (only apply to main post)
+            const mediaId = window.currentMediaId || null;
+            
+            try {
+                // Create the main post
+                const result = await createPostPublic(mainContent, { 
+                    mediaId,
+                    refreshFeed: false // Don't refresh yet, we need to add comment first
+                });
+
+                if (result && result.success) {
+                    const postId = result.post.id;
+                    
+                    // Clear the form
+                    textarea.value = '';
+                    const charCount = document.getElementById('feedPostCharCount');
+                    if (charCount) charCount.textContent = '0/500';
+                    
+                    // Hide continue button and hint
+                    const continueBtn = document.getElementById('continueInCommentBtn');
+                    const continueHint = document.getElementById('continueInCommentHint');
+                    if (continueBtn) continueBtn.style.display = 'none';
+                    if (continueHint) continueHint.style.display = 'none';
+                    
+                    // Clear media
+                    window.currentMediaId = null;
+                    const mediaPreview = document.getElementById('feedMediaPreview');
+                    if (mediaPreview) mediaPreview.style.display = 'none';
+                    
+                    // Add the continuation as a comment
+                    if (continuationContent) {
+                        await addCommentToPost(postId, continuationContent);
+                    }
+                    
+                    // Refresh feed
+                    if (typeof loadMoreMyFeedPosts === 'function') {
+                        showMyFeedInMain();
+                    }
+                    
+                    return true;
+                } else {
+                    alert('Error creating post: ' + (result.error || 'Unknown error'));
+                    return false;
+                }
+            } catch (error) {
+                console.error('Post continuation creation error:', error);
+                alert('Error creating post with continuation');
+                return false;
+            }
+        }
+        
+        // Helper function to add comment to a post
+        async function addCommentToPost(postId, content) {
+            try {
+                const response = await apiCall(`/posts/${postId}/comments`, {
+                    method: 'POST',
+                    body: { content }
+                });
+                
+                if (!response.ok) {
+                    console.error('Error adding continuation comment:', response.data);
+                    // Don't show alert for comment error - main post was successful
+                }
+            } catch (error) {
+                console.error('Error adding continuation comment:', error);
+                // Don't show alert for comment error - main post was successful
             }
         }
 
