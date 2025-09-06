@@ -19,7 +19,7 @@ const router = express_1.default.Router();
 // Create a new post
 router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimiting_1.postLimiter, moderation_1.contentFilter, validation_1.validatePost, (0, moderation_1.moderateContent)('POST'), async (req, res) => {
     try {
-        const { content, imageUrl, mediaId } = req.body;
+        const { content, imageUrl, mediaId, tags } = req.body;
         const userId = req.user.id;
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
@@ -70,6 +70,25 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         };
         // Get user's current reputation for post attribution
         const userReputation = await reputationService_1.reputationService.getUserReputation(userId);
+        // Validate and set tags with proper defaults and permissions
+        const requestedTags = tags || ["Public Post"];
+        // Validate permissions for special tags by fetching full user record
+        const fullUser = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, politicalProfileType: true }
+        });
+        if (!fullUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        for (const tag of requestedTags) {
+            if (tag === "Official Post" && fullUser.politicalProfileType !== 'ELECTED_OFFICIAL') {
+                return res.status(403).json({ error: "Only elected officials can create Official Posts" });
+            }
+            if (tag === "Candidate Post" && fullUser.politicalProfileType !== 'CANDIDATE') {
+                return res.status(403).json({ error: "Only registered candidates can create Candidate Posts" });
+            }
+            // "Public Post" and "Volunteer Post" are allowed for everyone
+        }
         const post = await prisma_1.prisma.post.create({
             data: {
                 content: content.trim(),
@@ -77,6 +96,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 authorId: userId,
                 embedding,
                 authorReputation: userReputation.current,
+                tags: requestedTags,
                 ...feedbackData
             },
             include: {

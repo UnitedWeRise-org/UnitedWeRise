@@ -85,7 +85,8 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
                     content: {
                         contains: searchTerm,
                         mode: 'insensitive'
-                    }
+                    },
+                    tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
                 },
                 include: {
                     author: {
@@ -315,7 +316,8 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
                     content: {
                         contains: searchTerm,
                         mode: 'insensitive'
-                    }
+                    },
+                    tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
                 },
                 select: {
                     topics: true,
@@ -462,7 +464,8 @@ router.get('/posts', auth_1.requireAuth, async (req, res) => {
                 content: {
                     contains: searchTerm,
                     mode: 'insensitive'
-                }
+                },
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
             },
             include: {
                 author: {
@@ -590,7 +593,8 @@ router.get('/topics', auth_1.requireAuth, async (req, res) => {
                 content: {
                     contains: searchTerm,
                     mode: 'insensitive'
-                }
+                },
+                tags: { hasSome: ["Public Post", "Candidate Post", "Official Post"] }
             },
             select: {
                 topics: true,

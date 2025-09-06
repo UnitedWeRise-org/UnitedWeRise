@@ -1,17 +1,19 @@
-import express from 'express';
-import { prisma } from '../lib/prisma';
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
-
-const router = express.Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const prisma_1 = require("../lib/prisma");
+const auth_1 = require("../middleware/auth");
+const router = express_1.default.Router();
 // Get current active MOTD for display
 router.get('/current', async (req, res) => {
     try {
-        const userId = (req as any).user?.id;
-        const dismissalToken = req.headers['x-dismissal-token'] as string;
-        
+        const userId = req.user?.id;
+        const dismissalToken = req.headers['x-dismissal-token'];
         // Find active MOTDs that haven't been dismissed by this user/token
-        const currentMOTD = await prisma.messageOfTheDay.findFirst({
+        const currentMOTD = await prisma_1.prisma.messageOfTheDay.findFirst({
             where: {
                 isActive: true,
                 AND: [
@@ -46,13 +48,11 @@ router.get('/current', async (req, res) => {
                 createdAt: true
             }
         });
-
         if (!currentMOTD) {
             return res.json({ success: true, data: { motd: null } });
         }
-
         // Record view
-        await prisma.mOTDView.create({
+        await prisma_1.prisma.mOTDView.create({
             data: {
                 motdId: currentMOTD.id,
                 userId: userId || null,
@@ -60,42 +60,39 @@ router.get('/current', async (req, res) => {
                 userAgent: req.get('User-Agent') || null
             }
         });
-
-        res.json({ 
-            success: true, 
-            data: { 
+        res.json({
+            success: true,
+            data: {
                 motd: currentMOTD,
                 dismissalToken: dismissalToken || `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             }
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Get current MOTD error:', error);
         res.status(500).json({ success: false, error: 'Failed to get current MOTD' });
     }
 });
-
 // Dismiss MOTD
 router.post('/dismiss/:id', async (req, res) => {
     try {
         const motdId = req.params.id;
-        const userId = (req as any).user?.id;
-        const dismissalToken = req.headers['x-dismissal-token'] as string;
-        
+        const userId = req.user?.id;
+        const dismissalToken = req.headers['x-dismissal-token'];
         if (!userId && !dismissalToken) {
             return res.status(400).json({ success: false, error: 'User authentication or dismissal token required' });
         }
-
         // Create dismissal record
-        await prisma.mOTDDismissal.create({
+        await prisma_1.prisma.mOTDDismissal.create({
             data: {
                 motdId,
                 userId: userId || null,
                 dismissalToken: dismissalToken || null
             }
         });
-
         res.json({ success: true, data: { dismissed: true } });
-    } catch (error: any) {
+    }
+    catch (error) {
         if (error.code === 'P2002') {
             // Already dismissed
             return res.json({ success: true, data: { dismissed: true } });
@@ -104,13 +101,11 @@ router.post('/dismiss/:id', async (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to dismiss MOTD' });
     }
 });
-
 // Admin routes - require authentication and admin privileges
-
 // Get all MOTDs for admin management
-router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/admin/list', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const motds = await prisma.messageOfTheDay.findMany({
+        const motds = await prisma_1.prisma.messageOfTheDay.findMany({
             include: {
                 createdBy: {
                     select: { id: true, username: true, firstName: true, lastName: true }
@@ -124,33 +119,29 @@ router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, re
             },
             orderBy: { createdAt: 'desc' }
         });
-
         res.json({ success: true, data: { motds } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Get MOTDs admin error:', error);
         res.status(500).json({ success: false, error: 'Failed to get MOTDs' });
     }
 });
-
 // Create new MOTD
-router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { title, content, isActive = false, startDate, endDate, showToNewUsers = true } = req.body;
         const userId = req.user.id;
-
         if (!content) {
             return res.status(400).json({ success: false, error: 'Content is required' });
         }
-
         // If setting as active, deactivate other active MOTDs
         if (isActive) {
-            await prisma.messageOfTheDay.updateMany({
+            await prisma_1.prisma.messageOfTheDay.updateMany({
                 where: { isActive: true },
                 data: { isActive: false }
             });
         }
-
-        const motd = await prisma.messageOfTheDay.create({
+        const motd = await prisma_1.prisma.messageOfTheDay.create({
             data: {
                 title,
                 content,
@@ -166,9 +157,8 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
                 }
             }
         });
-
         // Log the action
-        await prisma.mOTDLog.create({
+        await prisma_1.prisma.mOTDLog.create({
             data: {
                 motdId: motd.id,
                 action: 'created',
@@ -176,39 +166,34 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
                 notes: `Created MOTD: ${title || 'Untitled'}`
             }
         });
-
         res.json({ success: true, data: { motd } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Create MOTD error:', error);
         res.status(500).json({ success: false, error: 'Failed to create MOTD' });
     }
 });
-
 // Update MOTD
-router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const { title, content, isActive, startDate, endDate, showToNewUsers } = req.body;
         const userId = req.user.id;
-
         // Get current MOTD for comparison
-        const currentMOTD = await prisma.messageOfTheDay.findUnique({
+        const currentMOTD = await prisma_1.prisma.messageOfTheDay.findUnique({
             where: { id: motdId }
         });
-
         if (!currentMOTD) {
             return res.status(404).json({ success: false, error: 'MOTD not found' });
         }
-
         // If setting as active, deactivate other active MOTDs
         if (isActive && !currentMOTD.isActive) {
-            await prisma.messageOfTheDay.updateMany({
+            await prisma_1.prisma.messageOfTheDay.updateMany({
                 where: { isActive: true, id: { not: motdId } },
                 data: { isActive: false }
             });
         }
-
-        const updatedMOTD = await prisma.messageOfTheDay.update({
+        const updatedMOTD = await prisma_1.prisma.messageOfTheDay.update({
             where: { id: motdId },
             data: {
                 title,
@@ -224,14 +209,15 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
                 }
             }
         });
-
         // Log the action with changes
-        const changes: any = {};
-        if (title !== currentMOTD.title) changes.title = { from: currentMOTD.title, to: title };
-        if (content !== currentMOTD.content) changes.content = { changed: true };
-        if (isActive !== currentMOTD.isActive) changes.isActive = { from: currentMOTD.isActive, to: isActive };
-
-        await prisma.mOTDLog.create({
+        const changes = {};
+        if (title !== currentMOTD.title)
+            changes.title = { from: currentMOTD.title, to: title };
+        if (content !== currentMOTD.content)
+            changes.content = { changed: true };
+        if (isActive !== currentMOTD.isActive)
+            changes.isActive = { from: currentMOTD.isActive, to: isActive };
+        await prisma_1.prisma.mOTDLog.create({
             data: {
                 motdId,
                 action: 'updated',
@@ -240,45 +226,38 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
                 notes: `Updated MOTD: ${title || currentMOTD.title || 'Untitled'}`
             }
         });
-
         res.json({ success: true, data: { motd: updatedMOTD } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Update MOTD error:', error);
         res.status(500).json({ success: false, error: 'Failed to update MOTD' });
     }
 });
-
 // Activate/Deactivate MOTD
-router.post('/admin/toggle/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/toggle/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
-
-        const motd = await prisma.messageOfTheDay.findUnique({
+        const motd = await prisma_1.prisma.messageOfTheDay.findUnique({
             where: { id: motdId }
         });
-
         if (!motd) {
             return res.status(404).json({ success: false, error: 'MOTD not found' });
         }
-
         const newActiveState = !motd.isActive;
-
         // If activating, deactivate other active MOTDs
         if (newActiveState) {
-            await prisma.messageOfTheDay.updateMany({
+            await prisma_1.prisma.messageOfTheDay.updateMany({
                 where: { isActive: true, id: { not: motdId } },
                 data: { isActive: false }
             });
         }
-
-        const updatedMOTD = await prisma.messageOfTheDay.update({
+        const updatedMOTD = await prisma_1.prisma.messageOfTheDay.update({
             where: { id: motdId },
             data: { isActive: newActiveState }
         });
-
         // Log the action
-        await prisma.mOTDLog.create({
+        await prisma_1.prisma.mOTDLog.create({
             data: {
                 motdId,
                 action: newActiveState ? 'activated' : 'deactivated',
@@ -286,48 +265,41 @@ router.post('/admin/toggle/:id', requireAuth, requireAdmin, async (req: AuthRequ
                 notes: `${newActiveState ? 'Activated' : 'Deactivated'} MOTD`
             }
         });
-
         res.json({ success: true, data: { motd: updatedMOTD, activated: newActiveState } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Toggle MOTD error:', error);
         res.status(500).json({ success: false, error: 'Failed to toggle MOTD' });
     }
 });
-
 // Delete MOTD
-router.delete('/admin/delete/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.delete('/admin/delete/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
-
-        const motd = await prisma.messageOfTheDay.findUnique({
+        const motd = await prisma_1.prisma.messageOfTheDay.findUnique({
             where: { id: motdId }
         });
-
         if (!motd) {
             return res.status(404).json({ success: false, error: 'MOTD not found' });
         }
-
-        await prisma.messageOfTheDay.delete({
+        await prisma_1.prisma.messageOfTheDay.delete({
             where: { id: motdId }
         });
-
         // Log the action (log will be deleted with cascade, so we need to create it elsewhere if needed)
         // For now, we'll just return success
-
         res.json({ success: true, data: { deleted: true } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Delete MOTD error:', error);
         res.status(500).json({ success: false, error: 'Failed to delete MOTD' });
     }
 });
-
 // Get MOTD analytics and logs
-router.get('/admin/analytics/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/admin/analytics/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
-
-        const analytics = await prisma.messageOfTheDay.findUnique({
+        const analytics = await prisma_1.prisma.messageOfTheDay.findUnique({
             where: { id: motdId },
             include: {
                 views: {
@@ -356,12 +328,10 @@ router.get('/admin/analytics/:id', requireAuth, requireAdmin, async (req: AuthRe
                 }
             }
         });
-
         if (!analytics) {
             return res.status(404).json({ success: false, error: 'MOTD not found' });
         }
-
-        const logs = await prisma.mOTDLog.findMany({
+        const logs = await prisma_1.prisma.mOTDLog.findMany({
             where: { motdId },
             include: {
                 performedBy: {
@@ -370,12 +340,12 @@ router.get('/admin/analytics/:id', requireAuth, requireAdmin, async (req: AuthRe
             },
             orderBy: { performedAt: 'desc' }
         });
-
         res.json({ success: true, data: { analytics, logs } });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Get MOTD analytics error:', error);
         res.status(500).json({ success: false, error: 'Failed to get MOTD analytics' });
     }
 });
-
-export default router;
+exports.default = router;
+//# sourceMappingURL=motd.js.map
