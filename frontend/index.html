@@ -4901,6 +4901,12 @@
                 if (result && result.success) {
                     const postId = result.post.id;
                     
+                    // Mark this post as truncated for UI display
+                    if (!window.truncatedPosts) {
+                        window.truncatedPosts = new Set();
+                    }
+                    window.truncatedPosts.add(postId);
+                    
                     // Clear the form
                     textarea.value = '';
                     const charCount = document.getElementById('feedPostCharCount');

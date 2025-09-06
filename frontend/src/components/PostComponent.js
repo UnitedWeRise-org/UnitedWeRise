@@ -48,7 +48,7 @@ class PostComponent {
                 ` : ''}
                 
                 <div class="post-content">
-                    ${this.formatPostContent(post.content)}
+                    ${this.formatPostContent(post.content, post)}
                 </div>
                 
                 ${post.imageUrl ? `
@@ -366,7 +366,7 @@ class PostComponent {
     /**
      * Format post content (handle mentions, hashtags, links)
      */
-    formatPostContent(content) {
+    formatPostContent(content, post = null) {
         if (!content) return '';
         
         // Convert URLs to links
@@ -389,6 +389,11 @@ class PostComponent {
         
         // Convert line breaks
         content = content.replace(/\n/g, '<br>');
+        
+        // Add "continue to thread" link for posts that were truncated using the continuation feature
+        if (post && window.truncatedPosts && window.truncatedPosts.has(post.id)) {
+            content += ` <span class="continue-thread-link" onclick="postComponent.toggleComments('${post.id}')" style="color: #1da1f2; cursor: pointer; font-size: 0.9em;">... (continue to thread)</span>`;
+        }
         
         return content;
     }
