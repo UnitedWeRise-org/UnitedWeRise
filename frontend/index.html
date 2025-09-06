@@ -4311,7 +4311,10 @@
                 <div class="my-feed">
                     <div class="sticky-composer-wrapper">
                         <div class="quick-post-composer">
-                            <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                            <textarea id="feedPostContent" placeholder="What's on your mind?" maxlength="500" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                            <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
+                                <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
+                            </div>
                             <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <label for="feedMediaUpload" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem;">
@@ -4355,6 +4358,35 @@
                 }
             } catch (error) {
                 console.error('❌ Error setting up infinite scroll:', error);
+            }
+            
+            // Setup character counter for post creation
+            const feedPostTextarea = document.getElementById('feedPostContent');
+            const feedCharCount = document.getElementById('feedPostCharCount');
+            
+            if (feedPostTextarea && feedCharCount) {
+                // Initial count
+                feedCharCount.textContent = `${feedPostTextarea.value.length}/500`;
+                
+                // Update counter on input
+                feedPostTextarea.addEventListener('input', function() {
+                    const currentLength = this.value.length;
+                    const maxLength = 500;
+                    
+                    feedCharCount.textContent = `${currentLength}/${maxLength}`;
+                    
+                    // Color coding: green for safe, orange for warning, red for over limit
+                    if (currentLength > maxLength) {
+                        feedCharCount.style.color = '#dc3545'; // Red
+                        feedCharCount.style.fontWeight = 'bold';
+                    } else if (currentLength > maxLength * 0.9) { // 90% of limit
+                        feedCharCount.style.color = '#ffc107'; // Orange/yellow
+                        feedCharCount.style.fontWeight = 'bold';
+                    } else {
+                        feedCharCount.style.color = '#6c757d'; // Default gray
+                        feedCharCount.style.fontWeight = 'normal';
+                    }
+                });
             }
             
             // Apply background if user has one
