@@ -4311,17 +4311,10 @@
                 <div class="my-feed">
                     <div class="sticky-composer-wrapper">
                         <div class="quick-post-composer">
-                            <div style="position: relative;">
-                                <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-                                <div id="threadBreakIndicator" style="display: none; position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #1da1f2 10%, #1da1f2 90%, transparent); pointer-events: none; z-index: 10;">
-                                    <span style="position: absolute; right: 10px; top: -8px; background: white; padding: 0 5px; color: #1da1f2; font-size: 0.75rem; font-weight: bold;">500</span>
-                                </div>
-                            </div>
+                            <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                             <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
                                 <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
-                                <div id="threadHint" style="display: none; font-size: 0.8rem; color: #1da1f2; margin-top: 0.25rem;">
-                                    💡 Text after the line will become a comment thread
-                                </div>
+                                <span id="sectionIndicator" style="display: none; margin-left: 10px; font-size: 0.85rem; color: #1da1f2;">Section 1</span>
                             </div>
                             <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -4332,9 +4325,7 @@
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
                                 <div>
-                                    <button id="addThreadBreakBtn" onclick="confirmThreadedPost()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem;" title="Create as threaded post">
-                                        🧵 Thread
-                                    </button>
+                                    <button id="addThreadBreakBtn" onclick="addThreadBreak()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem; font-size: 1.2rem; padding: 0.375rem 0.75rem;" title="Add continuation">+</button>
                                     <button onclick="createPostFromFeed()" class="btn">Post</button>
                                 </div>
                             </div>
@@ -4373,81 +4364,115 @@
                 console.error('❌ Error setting up infinite scroll:', error);
             }
             
-            // Setup character counter for post creation
+            // Setup character counter for post creation with sections
             const feedPostTextarea = document.getElementById('feedPostContent');
             const feedCharCount = document.getElementById('feedPostCharCount');
             const addThreadBtn = document.getElementById('addThreadBreakBtn');
-            const threadHint = document.getElementById('threadHint');
-            const threadBreakIndicator = document.getElementById('threadBreakIndicator');
+            const sectionIndicator = document.getElementById('sectionIndicator');
+            
+            // Track thread break position
+            window.threadBreakPosition = null;
             
             if (feedPostTextarea && feedCharCount) {
-                // Initial count
-                feedCharCount.textContent = `${feedPostTextarea.value.length}/500`;
-                
-                // Function to calculate position of 500th character
-                function updateThreadBreakPosition() {
+                // Function to update character count based on current section
+                function updateCharCounter() {
                     const text = feedPostTextarea.value;
-                    if (text.length > 500) {
-                        // Create a temporary element to measure text
-                        const temp = document.createElement('div');
-                        temp.style.cssText = window.getComputedStyle(feedPostTextarea).cssText;
-                        temp.style.position = 'absolute';
-                        temp.style.visibility = 'hidden';
-                        temp.style.height = 'auto';
-                        temp.style.width = feedPostTextarea.offsetWidth + 'px';
-                        temp.style.whiteSpace = 'pre-wrap';
-                        temp.style.wordWrap = 'break-word';
-                        temp.innerHTML = text.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        document.body.appendChild(temp);
+                    const cursorPos = feedPostTextarea.selectionStart;
+                    
+                    if (window.threadBreakPosition !== null) {
+                        // We have a thread break
+                        const separator = '\n\n--- Continue in comment ---\n\n';
+                        const breakIndex = text.indexOf(separator);
                         
-                        // Calculate position
-                        const lineHeight = parseInt(window.getComputedStyle(feedPostTextarea).lineHeight);
-                        const lines = Math.ceil(temp.scrollHeight / lineHeight);
-                        const topPosition = (lines - 1) * lineHeight + parseInt(window.getComputedStyle(feedPostTextarea).paddingTop);
-                        
-                        document.body.removeChild(temp);
-                        
-                        // Position the indicator
-                        threadBreakIndicator.style.top = topPosition + 'px';
-                        threadBreakIndicator.style.display = 'block';
+                        if (breakIndex !== -1) {
+                            // Determine which section cursor is in
+                            const inFirstSection = cursorPos <= breakIndex;
+                            
+                            if (inFirstSection) {
+                                // Counting first section (main post)
+                                const sectionText = text.substring(0, breakIndex);
+                                const charCount = sectionText.length;
+                                feedCharCount.textContent = `${charCount}/500`;
+                                sectionIndicator.textContent = 'Post';
+                                sectionIndicator.style.display = 'inline';
+                                
+                                // Color coding
+                                if (charCount > 500) {
+                                    feedCharCount.style.color = '#dc3545'; // Red
+                                    feedCharCount.style.fontWeight = 'bold';
+                                } else if (charCount >= 450) {
+                                    feedCharCount.style.color = '#ffc107'; // Orange
+                                    feedCharCount.style.fontWeight = 'bold';
+                                } else {
+                                    feedCharCount.style.color = '#6c757d'; // Gray
+                                    feedCharCount.style.fontWeight = 'normal';
+                                }
+                                
+                                // Hide + button in first section if already has break
+                                addThreadBtn.style.display = 'none';
+                            } else {
+                                // Counting second section (continuation comment)
+                                const sectionText = text.substring(breakIndex + separator.length);
+                                const charCount = sectionText.length;
+                                feedCharCount.textContent = `${charCount}/5000`;
+                                sectionIndicator.textContent = 'Continuation';
+                                sectionIndicator.style.display = 'inline';
+                                
+                                // Color coding for continuation (5000 char limit)
+                                if (charCount > 5000) {
+                                    feedCharCount.style.color = '#dc3545'; // Red
+                                    feedCharCount.style.fontWeight = 'bold';
+                                } else if (charCount >= 4500) {
+                                    feedCharCount.style.color = '#ffc107'; // Orange
+                                    feedCharCount.style.fontWeight = 'bold';
+                                } else {
+                                    feedCharCount.style.color = '#6c757d'; // Gray
+                                    feedCharCount.style.fontWeight = 'normal';
+                                }
+                                
+                                // No additional breaks in continuation
+                                addThreadBtn.style.display = 'none';
+                            }
+                        } else {
+                            // Break was removed somehow, reset
+                            window.threadBreakPosition = null;
+                            updateCharCounter();
+                        }
                     } else {
-                        threadBreakIndicator.style.display = 'none';
+                        // No thread break yet - single section
+                        const charCount = text.length;
+                        feedCharCount.textContent = `${charCount}/500`;
+                        sectionIndicator.style.display = 'none';
+                        
+                        // Show + button at 450 characters
+                        if (charCount >= 450 && charCount <= 500) {
+                            addThreadBtn.style.display = 'inline-block';
+                            feedCharCount.style.color = '#ffc107'; // Orange
+                            feedCharCount.style.fontWeight = 'bold';
+                        } else if (charCount > 500) {
+                            addThreadBtn.style.display = 'inline-block';
+                            feedCharCount.style.color = '#dc3545'; // Red
+                            feedCharCount.style.fontWeight = 'bold';
+                        } else {
+                            addThreadBtn.style.display = 'none';
+                            feedCharCount.style.color = '#6c757d'; // Gray
+                            feedCharCount.style.fontWeight = 'normal';
+                        }
                     }
                 }
                 
-                // Update counter on input
-                feedPostTextarea.addEventListener('input', function() {
-                    const currentLength = this.value.length;
-                    const maxLength = 500;
-                    
-                    feedCharCount.textContent = `${currentLength}/${maxLength}`;
-                    
-                    // Show visual break indicator and + button when text exceeds 500
-                    if (currentLength > maxLength) {
-                        addThreadBtn.style.display = 'inline-block';
-                        threadHint.style.display = 'block';
-                        feedCharCount.style.color = '#dc3545'; // Red
-                        feedCharCount.style.fontWeight = 'bold';
-                        updateThreadBreakPosition();
-                    } else if (currentLength >= 450) { // Warning zone
-                        addThreadBtn.style.display = 'none';
-                        threadHint.style.display = 'none';
-                        feedCharCount.style.color = '#ffc107'; // Orange/yellow
-                        feedCharCount.style.fontWeight = 'bold';
-                        threadBreakIndicator.style.display = 'none';
-                    } else {
-                        addThreadBtn.style.display = 'none';
-                        threadHint.style.display = 'none';
-                        feedCharCount.style.color = '#6c757d'; // Default gray
-                        feedCharCount.style.fontWeight = 'normal';
-                        threadBreakIndicator.style.display = 'none';
-                    }
-                });
+                // Initial count
+                updateCharCounter();
                 
-                // Update position on resize
-                window.addEventListener('resize', function() {
-                    if (feedPostTextarea.value.length > 500) {
-                        updateThreadBreakPosition();
+                // Update on input
+                feedPostTextarea.addEventListener('input', updateCharCounter);
+                
+                // Update on cursor position change (click or arrow keys)
+                feedPostTextarea.addEventListener('click', updateCharCounter);
+                feedPostTextarea.addEventListener('keyup', function(e) {
+                    // Arrow keys, Home, End, Page Up/Down
+                    if ([33, 34, 35, 36, 37, 38, 39, 40].includes(e.keyCode)) {
+                        updateCharCounter();
                     }
                 });
             }
@@ -4879,9 +4904,16 @@
             const content = textarea.value.trim();
             if (!content) return false;
 
-            // Check if content exceeds 500 characters (auto-thread)
+            // Check if content contains manual thread break
+            const separator = '--- Continue in comment ---';
+            if (content.includes(separator)) {
+                return await createThreadedPost(content);
+            }
+            
+            // Check if any section exceeds limits
             if (content.length > 500) {
-                return await createThreadedPosts(content);
+                alert('Post exceeds 500 characters. Please use the + button to create a continuation.');
+                return false;
             }
 
             // Get media attachment if any
@@ -4921,75 +4953,73 @@
             }
         }
 
-        // Create threaded posts from content exceeding 500 characters
-        async function createThreadedPosts(content) {
+        // Create threaded post with manual separator
+        async function createThreadedPost(content) {
             const textarea = document.getElementById('feedPostContent');
+            const separator = '--- Continue in comment ---';
             
-            // Split content at 500 character mark
-            const sections = [];
-            let remainingContent = content;
-            
-            while (remainingContent.length > 0) {
-                if (remainingContent.length <= 500) {
-                    sections.push(remainingContent.trim());
-                    break;
-                } else {
-                    // Find a good break point near 500 chars (prefer word boundary)
-                    let splitIndex = 500;
-                    const lastSpaceIndex = remainingContent.lastIndexOf(' ', 500);
-                    if (lastSpaceIndex > 400) { // Don't go too far back
-                        splitIndex = lastSpaceIndex;
-                    }
-                    
-                    sections.push(remainingContent.substring(0, splitIndex).trim());
-                    remainingContent = remainingContent.substring(splitIndex).trim();
-                }
+            // Split content by separator
+            const parts = content.split(separator);
+            if (parts.length !== 2) {
+                alert('Invalid thread structure');
+                return false;
             }
-
-            if (sections.length === 0) return false;
+            
+            const mainContent = parts[0].trim();
+            const continuationContent = parts[1].trim();
+            
+            // Validate lengths
+            if (mainContent.length > 500) {
+                alert('First section exceeds 500 characters. Please shorten it.');
+                return false;
+            }
+            
+            if (continuationContent.length > 5000) {
+                alert('Continuation exceeds 5000 characters. Please shorten it.');
+                return false;
+            }
+            
+            if (mainContent.length === 0 || continuationContent.length === 0) {
+                alert('Both sections must contain content.');
+                return false;
+            }
 
             // Get media attachment (only applies to first post)
             const mediaId = window.currentMediaId || null;
 
             try {
-                let previousPostId = null;
-                
-                for (let i = 0; i < sections.length; i++) {
-                    const sectionContent = sections[i];
-                    if (!sectionContent) continue;
+                // Create main post
+                const result = await createPostPublic(mainContent, { 
+                    mediaId,
+                    refreshFeed: false // Don't refresh until we're done
+                });
 
-                    if (i === 0) {
-                        // First section: create main post
-                        const result = await createPostPublic(sectionContent, { 
-                            mediaId,
-                            refreshFeed: false // Don't refresh until we're done
-                        });
-
-                        if (result.success) {
-                            previousPostId = result.post.id;
-                            // Track this as a truncated post for "continue to thread" link
-                            if (!window.truncatedPosts) window.truncatedPosts = new Set();
-                            window.truncatedPosts.add(previousPostId);
-                        } else {
-                            throw new Error('Failed to create main post: ' + result.error);
-                        }
-                    } else {
-                        // Subsequent sections: create as comments on the main post
-                        if (!previousPostId) throw new Error('No main post to attach comment to');
-
-                        const response = await apiCall(`/posts/${previousPostId}/comments`, {
-                            method: 'POST',
-                            body: JSON.stringify({ content: sectionContent })
-                        });
-
-                        if (!response.ok || !response.data.success) {
-                            throw new Error('Failed to create thread comment');
-                        }
-                    }
+                if (!result.success) {
+                    throw new Error('Failed to create main post: ' + result.error);
                 }
 
-                // Success - clear the textarea and refresh
+                const postId = result.post.id;
+                
+                // Track this as a post with continuation
+                if (!window.postsWithContinuation) window.postsWithContinuation = new Set();
+                window.postsWithContinuation.add(postId);
+                
+                // Create continuation comment (NOT nested - parentId: null)
+                const response = await apiCall(`/posts/${postId}/comments`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        content: continuationContent,
+                        parentId: null // Keep at layer 0
+                    })
+                });
+
+                if (!response.ok || !response.data.success) {
+                    throw new Error('Failed to create continuation comment');
+                }
+
+                // Success - clear the textarea and reset state
                 textarea.value = '';
+                window.threadBreakPosition = null;
                 
                 // Clear media attachment
                 if (window.currentMediaId) {
@@ -4998,7 +5028,7 @@
                     if (mediaPreview) mediaPreview.style.display = 'none';
                 }
                 
-                // Refresh feed to show the new threaded post
+                // Refresh feed to show the new post
                 if (typeof showMyFeedInMain === 'function') {
                     showMyFeedInMain();
                 }
@@ -5012,23 +5042,36 @@
             }
         }
         
-        // Confirm and create threaded post
-        function confirmThreadedPost() {
+        // Add thread break separator
+        function addThreadBreak() {
             const textarea = document.getElementById('feedPostContent');
             if (!textarea) return;
             
-            const content = textarea.value.trim();
-            if (content.length <= 500) {
-                alert('Post is short enough to be posted as a single post.');
+            // Check if we already have a break
+            if (window.threadBreakPosition !== null) {
+                alert('You can only have one continuation. The continuation can be up to 5000 characters.');
                 return;
             }
             
-            // Calculate how many parts
-            let parts = Math.ceil(content.length / 500);
+            const cursorPos = textarea.selectionStart;
+            const textBefore = textarea.value.substring(0, cursorPos);
+            const textAfter = textarea.value.substring(cursorPos);
             
-            if (confirm(`This will create a threaded post with ${parts} parts. The first 500 characters will be the main post, and the rest will be comments. Continue?`)) {
-                createPostFromFeed();
-            }
+            // Insert separator
+            const separator = '\n\n--- Continue in comment ---\n\n';
+            textarea.value = textBefore + separator + textAfter;
+            
+            // Store break position
+            window.threadBreakPosition = cursorPos;
+            
+            // Position cursor after separator
+            const newCursorPos = cursorPos + separator.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            textarea.focus();
+            
+            // Trigger character counter update
+            textarea.dispatchEvent(new Event('input'));
+            textarea.dispatchEvent(new Event('click'));
         }
 
         // Create post with continuation - splits long posts into main post + comment

@@ -400,15 +400,21 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Comment content is required' });
         }
-        if (content.length > 300) {
-            return res.status(400).json({ error: 'Comment must be 300 characters or less' });
-        }
         // Check if post exists
         const post = await prisma_1.prisma.post.findUnique({
-            where: { id: postId }
+            where: { id: postId },
+            select: { id: true, authorId: true }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
+        }
+        // Different character limits based on context
+        const isAuthorContinuation = post.authorId === userId && !parentId; // Author's direct reply to own post
+        const maxLength = isAuthorContinuation ? 5000 : 2000;
+        if (content.length > maxLength) {
+            return res.status(400).json({
+                error: `Comment must be ${maxLength} characters or less`
+            });
         }
         // If parentId is provided, validate parent comment and calculate depth
         let depth = 0;

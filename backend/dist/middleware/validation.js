@@ -102,12 +102,12 @@ exports.validatePost = [
         .withMessage('Image URL must be valid'),
     exports.handleValidationErrors
 ];
-// Comment creation validation
+// Comment creation validation (max 5000 for author continuations, validated in route)
 exports.validateComment = [
     (0, express_validator_1.body)('content')
-        .isLength({ min: 1, max: 500 })
+        .isLength({ min: 1, max: 5000 })
         .trim()
-        .withMessage('Comment must be 1-500 characters'),
+        .withMessage('Comment must be 1-5000 characters'),
     exports.handleValidationErrors
 ];
 // Profile update validation
