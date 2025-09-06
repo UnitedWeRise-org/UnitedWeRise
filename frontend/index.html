@@ -45,6 +45,7 @@
     <script src="src/js/websocket-client.js"></script>
     <script src="src/js/app-initialization.js"></script>
     <script src="src/js/force-optimization.js"></script>
+    <script src="js/posting.js"></script>
     
     <!-- Inline Optimization Override (Backup) -->
     <script>
@@ -519,14 +520,14 @@
                     <form id="volunteerForm" style="margin-bottom: 1.5rem;">
                         <div id="emailSection" style="margin-bottom: 1.5rem; display: none;">
                             <label for="volunteerEmail" style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #2c3e50;">Email Address:</label>
-                            <input type="email" id="volunteerEmail" required 
+                            <input type="email" id="volunteerEmail" name="volunteerEmail" required 
                                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                                    placeholder="your.email@example.com">
                         </div>
 
                         <div style="margin-bottom: 1.5rem;">
                             <label for="volunteerMessage" style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #2c3e50;">Tell us about your skills and how you'd like to help:</label>
-                            <textarea id="volunteerMessage" required maxlength="800" rows="6"
+                            <textarea id="volunteerMessage" name="volunteerMessage" required maxlength="800" rows="6"
                                      style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; resize: vertical;"
                                      placeholder="I'm a [your expertise] and I'd like to help with [specific area]. My background includes..."></textarea>
                             <div style="text-align: right; margin-top: 0.5rem; font-size: 0.9rem; color: #6c757d;">
@@ -1557,10 +1558,13 @@
             const emailSection = document.getElementById('emailSection');
             
             // Show email field if user is not logged in
+            const emailInput = document.getElementById('volunteerEmail');
             if (!window.authToken || !localStorage.getItem('currentUser')) {
                 emailSection.style.display = 'block';
+                emailInput.required = true;
             } else {
                 emailSection.style.display = 'none';
+                emailInput.required = false; // Remove required attribute for logged-in users
             }
             
             modal.style.display = 'block';
@@ -1621,19 +1625,14 @@
                             return;
                         }
 
-                        // Create post with "Volunteer" tag
-                        const postContent = isLoggedIn ? message : `Contact: ${email}\n\n${message}`;
-                        
-                        const response = await apiCall('/api/posts', 'POST', {
-                            content: postContent,
-                            tags: ["Volunteer"]
-                        });
+                        // Create post using unified volunteer system
+                        const result = await createPostVolunteer(message, email);
 
-                        if (response.ok) {
+                        if (result.success) {
                             alert('Thank you! Your volunteer inquiry has been submitted. We\'ll review it and get back to you soon.');
                             closeVolunteerModal();
                         } else {
-                            throw new Error(response.data?.error || 'Failed to submit inquiry');
+                            throw new Error(result.error || 'Failed to submit inquiry');
                         }
 
                     } catch (error) {
@@ -4689,7 +4688,7 @@
         // REUSABLE POSTING BOX FUNCTION - Use this for any posting box on the site
         // ============================================================================
         /**
-         * Creates a post from any posting box on the site
+         * Creates a post from any posting box on the site (UNIFIED SYSTEM)
          * @param {string} textareaId - The ID of the textarea containing the post content
          * @param {Function} onSuccess - Optional callback function to run after successful post creation
          * @param {Object} options - Optional configuration (e.g., { refreshFeed: true, clearMedia: true })
@@ -4737,18 +4736,10 @@
                     console.log('✅ Media uploaded successfully:', mediaId);
                 }
 
-                // Create the post
-                const postData = { content };
-                if (mediaId) {
-                    postData.mediaId = mediaId;
-                }
+                // Create the post using unified system (defaults to Public Post)
+                const result = await createPostPublic(content, { mediaId });
 
-                const response = await apiCall('/posts', {
-                    method: 'POST',
-                    body: JSON.stringify(postData)
-                });
-
-                if (response.ok) {
+                if (result.success) {
                     // Clear the textarea
                     textarea.value = '';
                     
@@ -4761,7 +4752,7 @@
                     
                     // Call the success callback if provided
                     if (onSuccess && typeof onSuccess === 'function') {
-                        onSuccess(response.data.post);
+                        onSuccess(result.post);
                     }
                     
                     // Refresh feed if option is set
@@ -4775,8 +4766,7 @@
                     
                     return true;
                 } else {
-                    const errorMsg = response.data?.error || 'Failed to create post. Please try again.';
-                    alert(errorMsg);
+                    alert(result.error || 'Failed to create post. Please try again.');
                     return false;
                 }
             } catch (error) {
@@ -4786,9 +4776,49 @@
             }
         }
 
-        // Wrapper function for My Feed posting box (uses the reusable function)
+        // Wrapper function for My Feed posting box (uses unified posting system)
         async function createPostFromFeed() {
-            return createPostFromTextarea('feedPostContent', null, { refreshFeed: true, clearMedia: true });
+            const textarea = document.getElementById('feedPostContent');
+            if (!textarea) return false;
+
+            const content = textarea.value.trim();
+            if (!content) return false;
+
+            // Get media attachment if any
+            const mediaId = window.currentMediaId || null;
+            const imageUrl = null; // Handled by mediaId
+
+            try {
+                const result = await createPostPublic(content, { 
+                    mediaId,
+                    imageUrl
+                });
+
+                if (result.success) {
+                    textarea.value = '';
+                    // Clear media attachment
+                    if (window.currentMediaId) {
+                        window.currentMediaId = null;
+                        // Clear media preview if exists
+                        const mediaPreview = document.getElementById('media-preview');
+                        if (mediaPreview) mediaPreview.style.display = 'none';
+                    }
+                    
+                    // Refresh feed
+                    if (typeof loadMoreMyFeedPosts === 'function') {
+                        showMyFeedInMain();
+                    }
+                    
+                    return true;
+                } else {
+                    alert('Error creating post: ' + (result.error || 'Unknown error'));
+                    return false;
+                }
+            } catch (error) {
+                console.error('Feed post creation error:', error);
+                alert('Error creating post');
+                return false;
+            }
         }
 
         async function loadUserProfile() {
