@@ -23,15 +23,19 @@ async function createPostWithTag(content, tags, options = {}) {
         };
 
         // Make API call using existing apiCall function
-        const response = await apiCall('/posts', 'POST', requestBody);
+        const response = await apiCall('/posts', {
+            method: 'POST',
+            body: JSON.stringify(requestBody)
+        });
 
-        if (response.ok && response.data.success) {
+        if (response.ok && response.data && response.data.post) {
             return {
                 success: true,
                 post: response.data.post
             };
         } else {
-            throw new Error(response.data.error || 'Failed to create post');
+            const errorMsg = response.data?.error || response.data?.message || 'Failed to create post';
+            throw new Error(errorMsg);
         }
     } catch (error) {
         console.error('Post creation error:', error);
