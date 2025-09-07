@@ -315,7 +315,8 @@ class PostComponent {
         // Add nested replies if they exist
         if (hasReplies) {
             commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
-            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : depth + 1)).join('');
+            // Always use backend-provided depth, cap at 2 for safety if missing
+            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : Math.min(depth + 1, 2))).join('');
             commentHtml += `</div>`;
         }
 

@@ -500,9 +500,9 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
                 depth = 0; // Keep at layer 0 (same as continuation)
                 console.log('✅ Keeping reply to author continuation at depth 0');
             } else {
-                // Calculate depth - flatten after 2 layers (0=top-level, 1=nested, 2+=flattened)
-                // Frontend displays depth >= 2 as flattened, so cap at depth 1 for proper flattening
-                depth = Math.min(parentComment.depth + 1, 1);
+                // Calculate depth - allow 3 visual layers (0=top-level, 1=nested, 2=flattened)
+                // Frontend displays depth >= 2 as flattened, so cap at depth 2
+                depth = Math.min(parentComment.depth + 1, 2);
                 console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
             }
         }
