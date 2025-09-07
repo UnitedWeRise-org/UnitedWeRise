@@ -486,8 +486,9 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
             if (isParentAuthorContinuation) {
                 depth = 0; // Keep at layer 0 (same as continuation)
             } else {
-                // Calculate depth - max 3 layers (0=top-level, 1-2=nested, 3=flattened)
-                depth = Math.min(parentComment.depth + 1, 3);
+                // Calculate depth - flatten after 2 layers (0=top-level, 1-2=nested, 2+=flattened)
+                // Frontend displays depth >= 3 as flattened, so cap at depth 2 for proper flattening
+                depth = Math.min(parentComment.depth + 1, 2);
             }
         }
 
