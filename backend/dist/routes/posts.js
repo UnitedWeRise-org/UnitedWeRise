@@ -434,13 +434,27 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             const isParentAuthorContinuation = parentComment.userId === post.authorId &&
                 parentComment.parentId === null &&
                 parentComment.depth === 0;
+            console.log('🔍 Threading Debug:', {
+                parentComment: {
+                    userId: parentComment.userId,
+                    parentId: parentComment.parentId,
+                    depth: parentComment.depth
+                },
+                post: {
+                    authorId: post.authorId
+                },
+                isParentAuthorContinuation,
+                currentUser: userId
+            });
             if (isParentAuthorContinuation) {
                 depth = 0; // Keep at layer 0 (same as continuation)
+                console.log('✅ Keeping reply to author continuation at depth 0');
             }
             else {
                 // Calculate depth - flatten after 2 layers (0=top-level, 1-2=nested, 2+=flattened)
                 // Frontend displays depth >= 3 as flattened, so cap at depth 2 for proper flattening
                 depth = Math.min(parentComment.depth + 1, 2);
+                console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
             }
         }
         // Create comment and update post comment count
