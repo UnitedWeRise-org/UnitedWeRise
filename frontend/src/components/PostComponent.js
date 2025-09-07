@@ -362,7 +362,18 @@ class PostComponent {
                 this.showToast('Comment added successfully!');
             } else {
                 console.error('Comment submission failed:', response);
-                const errorMsg = response.error || response.message || 'Failed to add comment';
+                console.error('Full response data:', response.data);
+                // Check for error in different possible locations
+                let errorMsg = 'Failed to add comment';
+                if (response.data?.error) {
+                    errorMsg = response.data.error;
+                } else if (response.data?.message) {
+                    errorMsg = response.data.message;
+                } else if (response.data?.errors) {
+                    // Handle validation errors array
+                    errorMsg = response.data.errors.map(e => e.msg || e.message).join(', ');
+                }
+                console.error('Error details:', errorMsg);
                 alert(`Failed to add comment: ${errorMsg}`);
             }
         } catch (error) {
