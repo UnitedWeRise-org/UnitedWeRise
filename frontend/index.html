@@ -5081,8 +5081,9 @@
                     })
                 });
 
-                if (!response.ok || !response.data.success) {
-                    throw new Error('Failed to create continuation comment');
+                if (!response.ok || !response.data.comment) {
+                    const errorMsg = response.data?.error || response.data?.message || 'Failed to create continuation comment';
+                    throw new Error(errorMsg);
                 }
 
                 // Success - clear the textarea and reset state
