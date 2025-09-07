@@ -368,7 +368,7 @@
     
     // Add console helper
     if (typeof adminDebugLog !== 'undefined') {
-        await adminDebugLog('DeploymentStatus', '💡 Deployment Status Commands Available', {
+        adminDebugLog('DeploymentStatus', '💡 Deployment Status Commands Available', {
             commands: [
                 'deploymentStatus.check() - Manual status check',
                 'deploymentStatus.getStatus() - Get last status'

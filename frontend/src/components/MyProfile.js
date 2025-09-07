@@ -1398,7 +1398,7 @@ class MyProfile {
         }
         // Only show TOTP secrets to admin users for security
         if (typeof adminDebugSensitive !== 'undefined') {
-            await adminDebugSensitive('TOTPSetup', 'TOTP configuration data', {
+            adminDebugSensitive('TOTPSetup', 'TOTP configuration data', {
                 hasQrCode: !!setupData?.qrCode,
                 hasSecret: !!setupData?.secret,
                 secretLength: setupData?.secret?.length || 0
