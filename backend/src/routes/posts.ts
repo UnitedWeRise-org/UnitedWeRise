@@ -466,7 +466,7 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
         if (parentId) {
             const parentComment = await prisma.comment.findUnique({
                 where: { id: parentId },
-                select: { depth: true, postId: true }
+                select: { depth: true, postId: true, userId: true, parentId: true }
             });
 
             if (!parentComment) {
@@ -477,8 +477,18 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
                 return res.status(400).json({ error: 'Parent comment does not belong to this post' });
             }
 
-            // Calculate depth - max 3 layers (0=top-level, 1-2=nested, 3=flattened)
-            depth = Math.min(parentComment.depth + 1, 3);
+            // Special case: If parent is an author continuation (author's direct comment on own post),
+            // keep replies at layer 0 to treat them as same level as the continuation
+            const isParentAuthorContinuation = parentComment.userId === post.authorId && 
+                                             parentComment.parentId === null && 
+                                             parentComment.depth === 0;
+
+            if (isParentAuthorContinuation) {
+                depth = 0; // Keep at layer 0 (same as continuation)
+            } else {
+                // Calculate depth - max 3 layers (0=top-level, 1-2=nested, 3=flattened)
+                depth = Math.min(parentComment.depth + 1, 3);
+            }
         }
 
         // Create comment and update post comment count
