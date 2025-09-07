@@ -445,20 +445,46 @@ class AppInitializer {
             const healthData = await response.json();
             
             if (healthData.uptime) {
-                console.log(`🖥️ Backend Version: ${healthData.version || 'Unknown'}`);
-                console.log(`🕐 Backend Uptime: ${healthData.uptime}s`);
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('BackendHealth', 'Backend version info', {
+                        version: healthData.version || 'Unknown'
+                    });
+                }
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('BackendHealth', 'Backend uptime info', {
+                        uptimeSeconds: healthData.uptime,
+                        uptimeFormatted: `${Math.floor(healthData.uptime / 60)} minutes`
+                    });
+                }
                 
                 // Use deployedAt from backend if available, otherwise calculate
                 if (healthData.deployedAt) {
-                    console.log(`🚀 Backend Deployed: ${new Date(healthData.deployedAt).toLocaleString()}`);
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('BackendHealth', 'Backend deployment time', {
+                            deployedAt: healthData.deployedAt,
+                            deployedTime: new Date(healthData.deployedAt).toLocaleString()
+                        });
+                    }
                 } else {
                     const uptimeMs = parseFloat(healthData.uptime) * 1000;
                     const deploymentTime = new Date(Date.now() - uptimeMs);
-                    console.log(`🚀 Backend Deployed: ${deploymentTime.toLocaleString()}`);
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('BackendHealth', 'Backend calculated deployment time', {
+                            deploymentTime: deploymentTime.toLocaleString()
+                        });
+                    }
                 }
                 
-                console.log(`💚 Backend Status: ${healthData.status || 'Healthy'}`);
-                console.log(`🗃️ Database: ${healthData.database}`);
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('BackendHealth', 'Backend status info', {
+                        status: healthData.status || 'Healthy'
+                    });
+                }
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('BackendHealth', 'Database connection info', {
+                        database: healthData.database
+                    });
+                }
             }
             
             console.log('🏗️ ================================================');

@@ -35,8 +35,9 @@
         }
         
         async initialize() {
-            console.log('%c🚀 Deployment Status Checker Initialized', 'color: #2196F3; font-weight: bold; font-size: 14px');
-            console.log('%c────────────────────────────────────────', 'color: #2196F3');
+            if (typeof adminDebugLog !== 'undefined') {
+                await adminDebugLog('DeploymentStatus', '🚀 Deployment Status Checker Initialized');
+            }
             
             // Show initial status after page loads
             setTimeout(() => {
@@ -53,9 +54,12 @@
             this.checkCount++;
             const now = new Date();
             
-            console.log(`%c📊 Deployment Status Check #${this.checkCount} - ${now.toLocaleTimeString()}`, 
-                       'color: #4CAF50; font-weight: bold');
-            console.log('%c────────────────────────────────────────', 'color: #4CAF50');
+            if (typeof adminDebugLog !== 'undefined') {
+                await adminDebugLog('DeploymentStatus', `📊 Deployment Status Check #${this.checkCount}`, {
+                    timestamp: now.toLocaleTimeString(),
+                    checkNumber: this.checkCount
+                });
+            }
             
             // Check all components
             await Promise.all([
@@ -66,8 +70,7 @@
                 this.checkReputationSystem()
             ]);
             
-            console.log('%c────────────────────────────────────────', 'color: #4CAF50');
-            console.log(''); // Empty line for readability
+ // Empty line for readability
         }
         
         checkFrontend() {
@@ -215,19 +218,29 @@
         
         logComponentStatus(status) {
             const emoji = this.getStatusEmoji(status);
-            console.log(`${emoji} ${status.component}:`);
             
-            Object.entries(status).forEach(([key, value]) => {
-                if (key !== 'component') {
-                    const formattedKey = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-                    const formattedValue = this.formatValue(value);
-                    console.log(`  ${formattedKey}: ${formattedValue}`);
-                }
-            });
+            // Only show deployment details to admin users for security
+            if (typeof adminDebugLog !== 'undefined') {
+                // Use non-async call since this is called synchronously
+                adminDebugLog('DeploymentStatus', `${emoji} ${status.component}:`, {
+                    component: status.component,
+                    details: Object.fromEntries(
+                        Object.entries(status).filter(([key]) => key !== 'component')
+                    )
+                }).catch(err => {
+                    // Silent failure for non-admin users
+                });
+            }
         }
         
-        logComponentError(componentName, error) {
-            console.log(`❌ ${componentName}: ERROR - ${error.message}`);
+        async logComponentError(componentName, error) {
+            if (typeof adminDebugError !== 'undefined') {
+                await adminDebugError('DeploymentStatus', `${componentName} error`, {
+                    component: componentName,
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
         }
         
         getStatusEmoji(status) {
@@ -318,7 +331,9 @@
         
         // Public method to manually trigger check
         forceCheck() {
-            console.log('%c🔄 Manual deployment status check triggered', 'color: #FF9800; font-weight: bold');
+            if (typeof adminDebugLog !== 'undefined') {
+                await adminDebugLog('DeploymentStatus', '🔄 Manual deployment status check triggered');
+            }
             this.checkAllComponents();
         }
         
@@ -352,9 +367,13 @@
     };
     
     // Add console helper
-    console.log('%c💡 Deployment Status Commands:', 'color: #9C27B0; font-weight: bold');
-    console.log('%cdeploymentStatus.check() - Manual status check', 'color: #9C27B0');
-    console.log('%cdeploymentStatus.getStatus() - Get last status', 'color: #9C27B0');
-    console.log('%c────────────────────────────────────────', 'color: #9C27B0');
+    if (typeof adminDebugLog !== 'undefined') {
+        await adminDebugLog('DeploymentStatus', '💡 Deployment Status Commands Available', {
+            commands: [
+                'deploymentStatus.check() - Manual status check',
+                'deploymentStatus.getStatus() - Get last status'
+            ]
+        });
+    }
     
 })();

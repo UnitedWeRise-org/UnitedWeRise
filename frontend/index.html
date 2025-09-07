@@ -180,6 +180,7 @@
             adminDebugLog('ReputationBadges', 'Reputation badge system loaded (inline)');
         }
     </script>
+    <script src="js/adminDebugger.js"></script>
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
 </head>
@@ -1145,7 +1146,9 @@
         // Authentication Functions
         async function verifyAndSetUser() {
             try {
-                console.log('Verifying token with /auth/me...');
+                if (typeof adminDebugLog !== 'undefined') {
+                    await adminDebugLog('Authentication', 'Verifying token with /auth/me');
+                }
                 const response = await fetch(`${API_BASE}/auth/me`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -1156,7 +1159,12 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('Auth verification successful:', data.user);
+                    if (typeof adminDebugLog !== 'undefined') {
+                        await adminDebugLog('Authentication', 'Auth verification successful', {
+                            userId: data.user?.id,
+                            username: data.user?.username
+                        });
+                    }
                     
                     // Only set user logged in if we actually have user data
                     if (data.user && data.user.id) {

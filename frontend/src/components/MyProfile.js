@@ -1390,10 +1390,20 @@ class MyProfile {
     }
 
     showTOTPSetupModal(setupData) {
-        console.log('🔒 Starting TOTP setup... [MyProfile.js v1.1.3]');
-        console.log('🔒 Creating TOTP setup modal with data:', setupData);
-        console.log('🔒 QR Code URL:', setupData?.qrCode);
-        console.log('🔒 Secret:', setupData?.secret);
+        if (typeof adminDebugLog !== 'undefined') {
+            await adminDebugLog('TOTPSetup', 'Starting TOTP setup modal', {
+                version: 'MyProfile.js v1.1.3',
+                hasSetupData: !!setupData
+            });
+        }
+        // Only show TOTP secrets to admin users for security
+        if (typeof adminDebugSensitive !== 'undefined') {
+            await adminDebugSensitive('TOTPSetup', 'TOTP configuration data', {
+                hasQrCode: !!setupData?.qrCode,
+                hasSecret: !!setupData?.secret,
+                secretLength: setupData?.secret?.length || 0
+            });
+        }
         
         // Remove any existing modals first
         const existingModals = document.querySelectorAll('.modal-overlay, .totp-modal-simple');

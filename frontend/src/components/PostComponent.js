@@ -274,20 +274,23 @@ class PostComponent {
         const hasReplies = comment.replies && comment.replies.length > 0;
         const replyCount = hasReplies ? comment.replies.length : 0;
         
+        // Use the depth from the backend if available, otherwise fall back to calculated depth
+        const actualDepth = comment.depth !== undefined ? comment.depth : depth;
+        
         // Calculate indentation based on depth (max 3 layers)
-        const indentLevel = Math.min(depth, 2); // 0, 1, or 2 for visual indentation
+        const indentLevel = Math.min(actualDepth, 2); // 0, 1, or 2 for visual indentation
         const marginLeft = indentLevel * 20; // 0px, 20px, or 40px
         
         // Determine if this is a flattened comment (depth 3+)
-        const isFlattened = depth >= 3;
+        const isFlattened = actualDepth >= 2;
         const flattenedClass = isFlattened ? ' flattened-comment' : '';
         
         let commentHtml = `
-            <div class="comment${flattenedClass}" data-comment-id="${comment.id}" data-depth="${depth}" style="margin-left: ${marginLeft}px;">
+            <div class="comment${flattenedClass}" data-comment-id="${comment.id}" data-depth="${actualDepth}" style="margin-left: ${marginLeft}px;">
                 <div class="comment-header">
                     <span class="comment-author">${displayName}</span>
                     <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
-                    ${depth >= 3 ? '<span class="flattened-indicator">↳</span>' : ''}
+                    ${actualDepth >= 2 ? '<span class="flattened-indicator">↳</span>' : ''}
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
@@ -312,7 +315,7 @@ class PostComponent {
         // Add nested replies if they exist
         if (hasReplies) {
             commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
-            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, depth + 1)).join('');
+            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : depth + 1)).join('');
             commentHtml += `</div>`;
         }
 
