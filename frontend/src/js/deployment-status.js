@@ -332,7 +332,7 @@
         // Public method to manually trigger check
         forceCheck() {
             if (typeof adminDebugLog !== 'undefined') {
-                await adminDebugLog('DeploymentStatus', '🔄 Manual deployment status check triggered');
+                adminDebugLog('DeploymentStatus', '🔄 Manual deployment status check triggered');
             }
             this.checkAllComponents();
         }

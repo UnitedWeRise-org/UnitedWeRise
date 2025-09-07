@@ -451,9 +451,9 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
                 console.log('✅ Keeping reply to author continuation at depth 0');
             }
             else {
-                // Calculate depth - flatten after 2 layers (0=top-level, 1-2=nested, 2+=flattened)
-                // Frontend displays depth >= 3 as flattened, so cap at depth 2 for proper flattening
-                depth = Math.min(parentComment.depth + 1, 2);
+                // Calculate depth - flatten after 2 layers (0=top-level, 1=nested, 2+=flattened)
+                // Frontend displays depth >= 2 as flattened, so cap at depth 1 for proper flattening
+                depth = Math.min(parentComment.depth + 1, 1);
                 console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
             }
         }

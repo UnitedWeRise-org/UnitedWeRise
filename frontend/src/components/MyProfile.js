@@ -1391,7 +1391,7 @@ class MyProfile {
 
     showTOTPSetupModal(setupData) {
         if (typeof adminDebugLog !== 'undefined') {
-            await adminDebugLog('TOTPSetup', 'Starting TOTP setup modal', {
+            adminDebugLog('TOTPSetup', 'Starting TOTP setup modal', {
                 version: 'MyProfile.js v1.1.3',
                 hasSetupData: !!setupData
             });
