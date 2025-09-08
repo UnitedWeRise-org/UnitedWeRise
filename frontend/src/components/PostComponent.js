@@ -314,10 +314,17 @@ class PostComponent {
 
         // Add nested replies if they exist
         if (hasReplies) {
-            commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
-            // Always use backend-provided depth, cap at 2 for safety if missing
-            commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : Math.min(depth + 1, 2))).join('');
-            commentHtml += `</div>`;
+            // For flattened comments (depth >= 2), don't create a nested container
+            // Instead, render replies at the same level to maintain flat display
+            if (actualDepth >= 2) {
+                // All depth 2+ comments should render flat - no nesting container
+                commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, Math.max(reply.depth !== undefined ? reply.depth : 2, 2))).join('');
+            } else {
+                // Normal nested reply structure for depth 0 and 1 comments
+                commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
+                commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : Math.min(depth + 1, 2))).join('');
+                commentHtml += `</div>`;
+            }
         }
 
         commentHtml += `</div>`;
