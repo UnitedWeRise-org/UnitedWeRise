@@ -312,21 +312,20 @@ class PostComponent {
                 </div>
         `;
 
-        // Add nested replies if they exist - SIMPLE FRONTEND-ONLY SOLUTION
+        // Add nested replies if they exist - ULTRA-SIMPLE FLATTENING
         if (hasReplies) {
-            // For visual depth 2 comments, render replies flat (no container div)
-            // For visual depth 0-1 comments, use normal nesting
+            // ALWAYS render replies without nesting if parent is at visual depth 2
+            // This ensures NO comment can visually appear deeper than level 2
             if (visualDepth >= 2) {
-                // Flat rendering: just append replies without container div
-                // All replies will also be capped at visual depth 2
+                // Completely flat: no container, all replies appear at same level
                 commentHtml += comment.replies.map(reply => 
-                    this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : actualDepth + 1)
+                    this.renderComment(reply, postId, reply.depth || actualDepth + 1)
                 ).join('');
             } else {
-                // Normal nested rendering with container div
+                // Normal nesting with container ONLY for depth 0 and 1 parents
                 commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
                 commentHtml += comment.replies.map(reply => 
-                    this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : actualDepth + 1)
+                    this.renderComment(reply, postId, reply.depth || actualDepth + 1)
                 ).join('');
                 commentHtml += `</div>`;
             }
