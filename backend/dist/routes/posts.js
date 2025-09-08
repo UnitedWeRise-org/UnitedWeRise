@@ -458,6 +458,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             }
         }
         // Create comment and update post comment count
+        console.log(`🏗️ Creating comment with depth: ${depth}, parentId: ${parentId || 'null'}`);
         const comment = await prisma_1.prisma.$transaction(async (tx) => {
             const newComment = await tx.comment.create({
                 data: {
@@ -486,6 +487,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             });
             return newComment;
         });
+        console.log(`✅ Comment created successfully: ID=${comment.id}, depth=${comment.depth}, parentId=${comment.parentId}`);
         // Create notification if not commenting on own post
         if (post.authorId !== userId) {
             await (0, notifications_1.createNotification)('COMMENT', userId, post.authorId, `${req.user.username} commented on your post`, postId, comment.id);
