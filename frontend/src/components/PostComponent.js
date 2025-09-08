@@ -277,12 +277,12 @@ class PostComponent {
         // Use the depth from the backend if available, otherwise fall back to calculated depth
         const actualDepth = comment.depth !== undefined ? comment.depth : depth;
         
-        // Calculate indentation based on depth (max 3 layers)
-        const indentLevel = Math.min(actualDepth, 2); // 0, 1, or 2 for visual indentation
-        const marginLeft = indentLevel * 20; // 0px, 20px, or 40px
+        // SIMPLE FRONTEND-ONLY SOLUTION: Cap visual depth at 2
+        const visualDepth = Math.min(actualDepth, 2); // Never show more than 3 visual layers (0, 1, 2)
+        const marginLeft = visualDepth * 20; // 0px, 20px, or 40px max
         
-        // Determine if this is a flattened comment (depth 3+)
-        const isFlattened = actualDepth >= 2;
+        // Show flattened indicator for any comment at visual depth 2 (which includes all actual depths 2+)
+        const isFlattened = visualDepth >= 2;
         const flattenedClass = isFlattened ? ' flattened-comment' : '';
         
         let commentHtml = `
@@ -290,7 +290,7 @@ class PostComponent {
                 <div class="comment-header">
                     <span class="comment-author">${displayName}</span>
                     <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
-                    ${actualDepth >= 2 ? '<span class="flattened-indicator">↳</span>' : ''}
+                    ${isFlattened ? '<span class="flattened-indicator">↳</span>' : ''}
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
@@ -312,17 +312,22 @@ class PostComponent {
                 </div>
         `;
 
-        // Add nested replies if they exist
+        // Add nested replies if they exist - SIMPLE FRONTEND-ONLY SOLUTION
         if (hasReplies) {
-            // For flattened comments (depth >= 2), don't create a nested container
-            // Instead, render replies at the same level to maintain flat display
-            if (actualDepth >= 2) {
-                // All depth 2+ comments should render flat - no nesting container
-                commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, Math.max(reply.depth !== undefined ? reply.depth : 2, 2))).join('');
+            // For visual depth 2 comments, render replies flat (no container div)
+            // For visual depth 0-1 comments, use normal nesting
+            if (visualDepth >= 2) {
+                // Flat rendering: just append replies without container div
+                // All replies will also be capped at visual depth 2
+                commentHtml += comment.replies.map(reply => 
+                    this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : actualDepth + 1)
+                ).join('');
             } else {
-                // Normal nested reply structure for depth 0 and 1 comments
+                // Normal nested rendering with container div
                 commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
-                commentHtml += comment.replies.map(reply => this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : Math.min(depth + 1, 2))).join('');
+                commentHtml += comment.replies.map(reply => 
+                    this.renderComment(reply, postId, reply.depth !== undefined ? reply.depth : actualDepth + 1)
+                ).join('');
                 commentHtml += `</div>`;
             }
         }
