@@ -261,7 +261,19 @@ class PostComponent {
             return;
         }
 
-        commentsList.innerHTML = comments.map(comment => this.renderComment(comment, postId, 0)).join('');
+        // NEW APPROACH: Collect flattened comments separately
+        this.flattenedComments = [];
+        
+        // Render the tree structure, collecting flattened comments
+        const treeHtml = comments.map(comment => this.renderComment(comment, postId, 0)).join('');
+        
+        // Append any collected flattened comments at the root level
+        const flattenedHtml = this.flattenedComments.join('');
+        
+        commentsList.innerHTML = treeHtml + flattenedHtml;
+        
+        // Clean up
+        this.flattenedComments = [];
     }
 
     /**
@@ -317,27 +329,29 @@ class PostComponent {
                 </div>
         `;
 
-        // Add nested replies if they exist - ULTRA-SIMPLE FLATTENING
+        // Add nested replies if they exist - TRUE FLATTENING
         if (hasReplies) {
             console.log(`   📦 Has ${replyCount} replies, visualDepth=${visualDepth}`);
             
-            // ALWAYS render replies without nesting if parent is at visual depth 2
-            // This ensures NO comment can visually appear deeper than level 2
             if (visualDepth >= 2) {
-                console.log(`   🔸 FLAT rendering (no container) for depth 2+ parent`);
-                // Completely flat: no container, all replies appear at same level
-                commentHtml += comment.replies.map(reply => {
+                console.log(`   🔸 COLLECTING flattened comments for root-level display`);
+                // Collect flattened comments instead of nesting them
+                comment.replies.forEach(reply => {
                     const replyDepth = reply.depth || actualDepth + 1;
-                    console.log(`      → Rendering reply with depth=${replyDepth}`);
-                    return this.renderComment(reply, postId, replyDepth);
-                }).join('');
+                    console.log(`      → Collecting flattened reply with depth=${replyDepth}`);
+                    
+                    // Add to flattened collection instead of nesting
+                    if (this.flattenedComments) {
+                        this.flattenedComments.push(this.renderComment(reply, postId, replyDepth));
+                    }
+                });
             } else {
                 console.log(`   📦 NESTED rendering (with container) for depth ${visualDepth} parent`);
                 // Normal nesting with container ONLY for depth 0 and 1 parents
                 commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
                 commentHtml += comment.replies.map(reply => {
                     const replyDepth = reply.depth || actualDepth + 1;
-                    console.log(`      → Rendering reply with depth=${replyDepth}`);
+                    console.log(`      → Rendering nested reply with depth=${replyDepth}`);
                     return this.renderComment(reply, postId, replyDepth);
                 }).join('');
                 commentHtml += `</div>`;
