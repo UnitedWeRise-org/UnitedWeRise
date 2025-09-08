@@ -277,6 +277,9 @@ class PostComponent {
         // Use the depth from the backend if available, otherwise fall back to calculated depth
         const actualDepth = comment.depth !== undefined ? comment.depth : depth;
         
+        // DEBUG: Log what depths we're working with
+        console.log(`🔍 Comment ${comment.id.slice(-4)}: backend depth=${comment.depth}, passed depth=${depth}, actualDepth=${actualDepth}`);
+        
         // SIMPLE FRONTEND-ONLY SOLUTION: Cap visual depth at 2
         const visualDepth = Math.min(actualDepth, 2); // Never show more than 3 visual layers (0, 1, 2)
         const marginLeft = visualDepth * 20; // 0px, 20px, or 40px max
@@ -284,6 +287,8 @@ class PostComponent {
         // Show flattened indicator for any comment at visual depth 2 (which includes all actual depths 2+)
         const isFlattened = visualDepth >= 2;
         const flattenedClass = isFlattened ? ' flattened-comment' : '';
+        
+        console.log(`   → visualDepth=${visualDepth}, marginLeft=${marginLeft}px, flattened=${isFlattened}`);
         
         let commentHtml = `
             <div class="comment${flattenedClass}" data-comment-id="${comment.id}" data-depth="${actualDepth}" style="margin-left: ${marginLeft}px;">
@@ -314,19 +319,27 @@ class PostComponent {
 
         // Add nested replies if they exist - ULTRA-SIMPLE FLATTENING
         if (hasReplies) {
+            console.log(`   📦 Has ${replyCount} replies, visualDepth=${visualDepth}`);
+            
             // ALWAYS render replies without nesting if parent is at visual depth 2
             // This ensures NO comment can visually appear deeper than level 2
             if (visualDepth >= 2) {
+                console.log(`   🔸 FLAT rendering (no container) for depth 2+ parent`);
                 // Completely flat: no container, all replies appear at same level
-                commentHtml += comment.replies.map(reply => 
-                    this.renderComment(reply, postId, reply.depth || actualDepth + 1)
-                ).join('');
+                commentHtml += comment.replies.map(reply => {
+                    const replyDepth = reply.depth || actualDepth + 1;
+                    console.log(`      → Rendering reply with depth=${replyDepth}`);
+                    return this.renderComment(reply, postId, replyDepth);
+                }).join('');
             } else {
+                console.log(`   📦 NESTED rendering (with container) for depth ${visualDepth} parent`);
                 // Normal nesting with container ONLY for depth 0 and 1 parents
                 commentHtml += `<div class="replies-container" id="replies-${comment.id}">`;
-                commentHtml += comment.replies.map(reply => 
-                    this.renderComment(reply, postId, reply.depth || actualDepth + 1)
-                ).join('');
+                commentHtml += comment.replies.map(reply => {
+                    const replyDepth = reply.depth || actualDepth + 1;
+                    console.log(`      → Rendering reply with depth=${replyDepth}`);
+                    return this.renderComment(reply, postId, replyDepth);
+                }).join('');
                 commentHtml += `</div>`;
             }
         }
