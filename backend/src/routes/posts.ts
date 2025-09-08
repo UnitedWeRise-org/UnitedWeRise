@@ -620,6 +620,23 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
                                         avatar: true,
                                         verified: true
                                     }
+                                },
+                                // Add one more level to capture depth 3+ comments
+                                // These will all be flattened on frontend anyway
+                                replies: {
+                                    include: {
+                                        user: {
+                                            select: {
+                                                id: true,
+                                                username: true,
+                                                firstName: true,
+                                                lastName: true,
+                                                avatar: true,
+                                                verified: true
+                                            }
+                                        }
+                                    },
+                                    orderBy: { createdAt: 'asc' }
                                 }
                             },
                             orderBy: { createdAt: 'asc' }
