@@ -448,23 +448,19 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             });
             if (isParentAuthorContinuation) {
                 depth = 0; // Keep at layer 0 (same as continuation)
-                console.log('✅ Keeping reply to author continuation at depth 0');
             }
             else {
                 // Calculate depth - allow 3 visual layers (0=top-level, 1=nested, 2=flattened)
                 // If parent is already at flattened level (depth 2+), keep replies at depth 2
                 if (parentComment.depth >= 2) {
                     depth = 2; // Keep all flattened replies at depth 2
-                    console.log(`📊 Flattened threading: parent depth ${parentComment.depth} → keeping at depth 2`);
                 }
                 else {
                     depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2
-                    console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
                 }
             }
         }
         // Create comment and update post comment count
-        console.log(`🏗️ Creating comment with depth: ${depth}, parentId: ${parentId || 'null'}`);
         const comment = await prisma_1.prisma.$transaction(async (tx) => {
             const newComment = await tx.comment.create({
                 data: {

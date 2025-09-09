@@ -133,6 +133,26 @@ class UnifiedMessagingClient {
             }
         });
 
+        // Handle real-time notifications
+        this.socket.on('new_notification', (notification) => {
+            console.log('🔔 New notification received:', notification);
+            
+            // Update notification UI
+            if (typeof updateNotificationUI === 'function') {
+                updateNotificationUI(notification);
+            }
+            
+            // Update notification badge
+            if (typeof updateNotificationBadge === 'function') {
+                updateNotificationBadge();
+            }
+            
+            // Show notification popup/toast if implemented
+            if (typeof showNotificationToast === 'function') {
+                showNotificationToast(notification);
+            }
+        });
+
         // Handle errors
         this.socket.on('message_error', (error) => {
             console.error('❌ Message error:', error);

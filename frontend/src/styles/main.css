@@ -2004,3 +2004,18 @@ details {
 .background-remove-btn:hover {
     background: #c82333;
 }
+
+/* ========================================
+   NOTIFICATION ANIMATIONS
+======================================== */
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

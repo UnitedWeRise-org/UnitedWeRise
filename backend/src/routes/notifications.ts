@@ -1,9 +1,22 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
-;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
+
+// Import webSocketService for real-time notifications
+let webSocketService: any = null;
+const getWebSocketService = async () => {
+  if (!webSocketService) {
+    try {
+      const serverModule = await import('../server');
+      webSocketService = serverModule.webSocketService;
+    } catch (error) {
+      console.warn('WebSocket service not available:', error);
+    }
+  }
+  return webSocketService;
+};
 // Using singleton prisma from lib/prisma.ts
 
 // Get user's notifications
@@ -167,7 +180,8 @@ export const createNotification = async (
   commentId?: string
 ) => {
   try {
-    await prisma.notification.create({
+    // Create notification in database
+    const notification = await prisma.notification.create({
       data: {
         type,
         senderId,
@@ -175,8 +189,37 @@ export const createNotification = async (
         message,
         postId,
         commentId
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            verified: true
+          }
+        }
       }
     });
+
+    // Emit real-time notification via WebSocket
+    const wsService = await getWebSocketService();
+    if (wsService) {
+      wsService.emitNotification(receiverId, {
+        id: notification.id,
+        type: notification.type,
+        message: notification.message,
+        sender: notification.sender,
+        createdAt: notification.createdAt,
+        read: false,
+        postId: notification.postId,
+        commentId: notification.commentId
+      });
+    }
+
+    return notification;
   } catch (error) {
     console.error('Create notification error:', error);
   }

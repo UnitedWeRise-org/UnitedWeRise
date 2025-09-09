@@ -8214,6 +8214,63 @@
             }
         }
 
+        // Update notification UI with new real-time notification
+        function updateNotificationUI(notification) {
+            console.log('🔔 Updating notification UI with:', notification);
+            
+            // Add new notification to cache at the beginning (most recent first)
+            if (!notificationsCache.find(n => n.id === notification.id)) {
+                notificationsCache.unshift(notification);
+            }
+            
+            // If notifications dropdown is open, refresh it
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown && dropdown.style.display !== 'none') {
+                displayNotifications();
+            }
+            
+            // Update badge count
+            updateNotificationBadge();
+        }
+
+        // Show notification toast/popup (optional enhancement)
+        function showNotificationToast(notification) {
+            // Create simple toast notification
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: #4b5c09;
+                color: white;
+                padding: 1rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 300px;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">🔔</span>
+                    <div>
+                        <div style="font-weight: bold; font-size: 0.9rem;">${notification.type}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.9;">${notification.message}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Remove toast after 4 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 4000);
+        }
+
         // Initialize notifications when user logs in
         function initializeNotifications() {
             if (authToken) {

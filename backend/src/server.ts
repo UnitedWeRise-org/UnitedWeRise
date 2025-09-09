@@ -67,6 +67,9 @@ const PORT = process.env.PORT || 3001;
 // Initialize unified WebSocket service
 const webSocketService = new WebSocketService(httpServer);
 
+// Export webSocketService for global access (notifications, etc.)
+export { webSocketService };
+
 // Security Middleware
 app.use(helmet({
   contentSecurityPolicy: {
