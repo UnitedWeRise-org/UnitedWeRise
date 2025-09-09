@@ -501,9 +501,14 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
                 console.log('✅ Keeping reply to author continuation at depth 0');
             } else {
                 // Calculate depth - allow 3 visual layers (0=top-level, 1=nested, 2=flattened)
-                // Frontend displays depth >= 2 as flattened, so cap at depth 2
-                depth = Math.min(parentComment.depth + 1, 2);
-                console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
+                // If parent is already at flattened level (depth 2+), keep replies at depth 2
+                if (parentComment.depth >= 2) {
+                    depth = 2; // Keep all flattened replies at depth 2
+                    console.log(`📊 Flattened threading: parent depth ${parentComment.depth} → keeping at depth 2`);
+                } else {
+                    depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2
+                    console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
+                }
             }
         }
 
