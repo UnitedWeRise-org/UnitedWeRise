@@ -1,7 +1,34 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 5, 2025  
-**Version**: 4.21.0 (Unified TOTP Authentication & Admin Debugging System - FULLY IMPLEMENTED)  
+**Last Updated**: September 9, 2025  
+**Version**: 4.22.0 (Comment Threading System Fixed & Documented)  
 **Status**: 🟢 PRODUCTION READY
+
+### 🎉 MAJOR ACHIEVEMENT (September 9, 2025) - COMMENT THREADING SYSTEM COMPLETE
+
+**✅ UNLIMITED DEPTH COMMENT THREADING**: Fixed critical API limitation that prevented comments deeper than 3 levels from being retrieved, implementing industry-standard flat query with dynamic tree building for unlimited comment depth support.
+
+**✅ VISUAL FLATTENING SYSTEM**: Reddit-style three-layer visual hierarchy (0px, 20px, 40px indentation) with clear flattened indicator (↳) for comments at depth 2+, maintaining readability while supporting unlimited depth.
+
+**✅ BACKEND DEPTH CAPPING**: Intelligent depth management that caps storage at depth 2 while preserving full conversation threading - replies to flattened comments remain at depth 2 instead of incrementing infinitely.
+
+**✅ PERFORMANCE OPTIMIZATION**: Replaced O(depth) nested Prisma includes with O(1) flat query, significantly improving performance for posts with many comments.
+
+**🎯 USER EXPERIENCE**: Comments no longer "disappear into layer 5" - all comments are now visible and properly threaded regardless of conversation depth.
+
+### 🆕 RECENT CHANGES (September 9, 2025) - Comment Threading System Implementation
+
+**✅ API Depth Fix**: Replaced hardcoded 3-level nested Prisma includes with flat query that retrieves ALL comments regardless of depth, then builds tree structure dynamically in JavaScript.
+
+**✅ Frontend Flattening**: Implemented `flattenCommentTree()` and `renderSimpleComment()` methods that flatten nested comment structure into linear array with visual depth capping at 40px maximum indent.
+
+**✅ Backend Depth Logic**: Enhanced comment creation to properly cap depth at 2 for storage while maintaining threading relationships - `if (parentComment.depth >= 2) depth = 2`.
+
+**✅ Documentation**: Added comprehensive industry-standard documentation for comment threading system including schema, endpoints, implementation details, bug fix history, and performance considerations.
+
+**🔧 Files Modified**:
+- `backend/src/routes/posts.ts` - Flat query implementation for GET /api/posts/:postId/comments endpoint
+- `frontend/src/components/PostComponent.js` - Tree flattening and linear rendering implementation
+- `MASTER_DOCUMENTATION.md` - Comprehensive comment threading system documentation
 
 ### 🎉 MAJOR ACHIEVEMENT (September 5, 2025) - UNIFIED TOTP AUTHENTICATION & ADMIN DEBUGGING SYSTEM COMPLETE
 
@@ -879,6 +906,7 @@ Response:
 #### GET /api/posts/:postId
 Get single post with details
 - **Response**: Post with author, likes, comments
+- **Related**: See {#comment-threading} for comment endpoints
 
 #### GET /api/feed/
 Get personalized feed using probability-based algorithm
@@ -3095,6 +3123,274 @@ Response:
   canTag: true
 }
 ```
+
+### Comment Threading System {#comment-threading}
+
+#### System Overview
+**Implementation Date**: September 9, 2025  
+**Architecture**: Reddit-style nested threading with visual flattening at depth 2  
+**Status**: ✅ PRODUCTION - Fully functional with unlimited depth support
+
+#### Technical Architecture
+
+##### Database Schema
+```prisma
+model Comment {
+  id          String    @id @default(cuid())
+  content     String
+  postId      String
+  userId      String
+  parentId    String?   // NULL for top-level, commentId for replies
+  depth       Int       @default(0)  // 0=top-level, 1=nested, 2=flattened
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  post        Post      @relation(fields: [postId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+}
+```
+
+##### Depth Management Strategy
+**Three-Layer Visual System**:
+1. **Layer 0 (Depth 0)**: Top-level comments - no indentation
+2. **Layer 1 (Depth 1)**: First-level replies - 20px indent
+3. **Layer 2 (Depth 2+)**: All deeper replies - 40px indent with ↳ indicator
+
+**Backend Depth Capping** (posts.ts:505-511):
+```typescript
+// If parent is already at flattened level (depth 2+), keep replies at depth 2
+if (parentComment.depth >= 2) {
+    depth = 2; // Keep all flattened replies at depth 2
+} else {
+    depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2
+}
+```
+
+#### API Endpoints
+
+##### POST /api/posts/:postId/comments
+**Purpose**: Create new comment or reply  
+**Authentication**: Required (`requireAuth` middleware)  
+**Request Body**:
+```javascript
+{
+  content: string,       // Required, non-empty
+  parentId?: string      // Optional, comment ID for replies
+}
+```
+**Response**: Created comment with author details  
+**Depth Calculation**:
+- Top-level: `depth = 0`
+- Reply to depth 0: `depth = 1`
+- Reply to depth 1: `depth = 2`
+- Reply to depth 2+: `depth = 2` (capped)
+
+##### GET /api/posts/:postId/comments
+**Purpose**: Retrieve all comments for a post  
+**Authentication**: Optional  
+**Query Parameters**:
+```javascript
+{
+  limit?: number,  // Default: 20 (unused after fix)
+  offset?: number  // Default: 0 (unused after fix)
+}
+```
+**Response Structure**:
+```javascript
+{
+  comments: Comment[], // Tree structure of comments
+  pagination: {
+    limit: number,
+    offset: number,
+    count: number
+  }
+}
+```
+
+**Critical Implementation Detail** (posts.ts:591-629):
+```typescript
+// Get ALL comments for the post (flat query - no depth limits)
+const allComments = await prisma.comment.findMany({
+    where: { postId },
+    include: { user: {...} },
+    orderBy: { createdAt: 'asc' }
+});
+
+// Build comment tree structure from flat array
+const commentMap = new Map();
+const topLevelComments = [];
+
+// First pass: create map of all comments
+allComments.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, replies: [] });
+});
+
+// Second pass: build parent-child relationships
+allComments.forEach(comment => {
+    const commentWithReplies = commentMap.get(comment.id);
+    if (comment.parentId) {
+        const parent = commentMap.get(comment.parentId);
+        if (parent) {
+            parent.replies.push(commentWithReplies);
+        }
+    } else {
+        topLevelComments.push(commentWithReplies);
+    }
+});
+```
+
+#### Frontend Implementation
+
+##### Component: PostComponent.js
+**Location**: `frontend/src/components/PostComponent.js`
+
+**Key Methods**:
+
+1. **flattenCommentTree()** (lines 276-291):
+```javascript
+flattenCommentTree(comments, depth = 0) {
+    let result = [];
+    comments.forEach(comment => {
+        result.push({ ...comment, depth });
+        if (comment.replies && comment.replies.length > 0) {
+            const childComments = this.flattenCommentTree(comment.replies, depth + 1);
+            result = result.concat(childComments);
+        }
+    });
+    return result;
+}
+```
+
+2. **renderSimpleComment()** (lines 296-327):
+```javascript
+renderSimpleComment(comment, postId) {
+    const visualDepth = Math.min(comment.depth, 2); // Cap at 2
+    const marginLeft = visualDepth * 20; // 0px, 20px, or 40px
+    const isFlattened = comment.depth >= 2;
+    
+    return `
+        <div class="comment ${isFlattened ? 'flattened-comment' : ''}" 
+             data-comment-id="${comment.id}" 
+             data-depth="${visualDepth}" 
+             style="margin-left: ${marginLeft}px;">
+            ${isFlattened ? '<span class="flattened-indicator">↳</span>' : ''}
+            <!-- comment content -->
+        </div>
+    `;
+}
+```
+
+3. **renderComments()** (lines 255-271):
+```javascript
+renderComments(postId, comments) {
+    // Flatten all comments into single array
+    const allComments = this.flattenCommentTree(comments);
+    // Render with visual depth capping
+    const commentsHtml = allComments.map(comment => 
+        this.renderSimpleComment(comment, postId)
+    ).join('');
+    commentsList.innerHTML = commentsHtml;
+}
+```
+
+##### Visual Styling
+```css
+.comment {
+    padding: 10px;
+    border-left: 2px solid #ddd;
+    margin-bottom: 10px;
+}
+
+.flattened-comment {
+    border-left-color: #888;  /* Visual distinction */
+}
+
+.flattened-indicator {
+    color: #666;
+    margin-left: 5px;
+}
+```
+
+#### Critical Bug Fix History
+
+##### September 9, 2025: API Depth Limitation
+**Problem**: Comments deeper than 3 levels disappeared  
+**Root Cause**: Hardcoded 3-level nested Prisma includes in GET endpoint:
+```typescript
+// OLD BROKEN CODE - Limited to 3 levels
+include: {
+    replies: {
+        include: {
+            replies: {
+                include: {
+                    replies: { /* STOPPED HERE */ }
+                }
+            }
+        }
+    }
+}
+```
+**Solution**: Flat query retrieves ALL comments, builds tree dynamically  
+**Impact**: Unlimited comment depth now supported  
+**Files Modified**: `backend/src/routes/posts.ts`
+
+##### September 8, 2025: Frontend Cascade Issue
+**Problem**: Comments nested in HTML containers caused visual cascade  
+**Solution**: Flatten to single array, render linearly with CSS indentation  
+**Files Modified**: `frontend/src/components/PostComponent.js`
+
+#### Performance Considerations
+
+1. **Database Queries**: Single flat query vs nested includes = O(1) vs O(depth)
+2. **Memory Usage**: All comments loaded at once (acceptable for <1000 comments)
+3. **Rendering**: Linear rendering faster than recursive DOM nesting
+4. **Future Optimization**: Pagination for posts with >100 comments
+
+#### Testing Scenarios
+
+1. **Deep Threading Test**:
+   - Create 10+ level deep comment thread
+   - Verify all display at depth 2 visually
+   - Confirm all stored with correct depth in DB
+
+2. **Author Continuation Test**:
+   - Author replies to own comment
+   - Should maintain parent's depth (special case)
+
+3. **Load Test**:
+   - Create post with 100+ comments
+   - Verify performance remains acceptable
+
+#### Monitoring & Debugging
+
+**Backend Logging** (when enabled):
+```
+📊 Normal threading: parent depth 0 → new depth 1
+📊 Normal threading: parent depth 1 → new depth 2  
+📊 Flattened threading: parent depth 2 → keeping at depth 2
+```
+
+**Frontend Logging** (when enabled):
+```
+🔸 Flattened 1 root comments into 5 total comments
+```
+
+#### Future Enhancements
+
+1. **Pagination**: Implement for posts with >100 comments
+2. **Lazy Loading**: Load deep threads on demand
+3. **Collapsing**: Allow collapsing comment threads
+4. **Sorting**: Add sort options (newest, oldest, most liked)
+5. **Real-time Updates**: WebSocket integration for live comments
+
+#### Related Systems
+- **Post Display**: {#post-display}
+- **Notification System**: {#notification-system}
+- **Feed Algorithm**: {#feed-algorithm}
+- **Moderation System**: {#moderation-system}
 
 #### Reusable UI Components
 ```javascript
