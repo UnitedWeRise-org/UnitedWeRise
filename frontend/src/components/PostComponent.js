@@ -335,16 +335,8 @@ class PostComponent {
             
             if (visualDepth >= 2) {
                 console.log(`   🔸 COLLECTING flattened comments for root-level display`);
-                // Collect flattened comments instead of nesting them
-                comment.replies.forEach(reply => {
-                    const replyDepth = reply.depth || actualDepth + 1;
-                    console.log(`      → Collecting flattened reply with depth=${replyDepth}`);
-                    
-                    // Add to flattened collection instead of nesting
-                    if (this.flattenedComments) {
-                        this.flattenedComments.push(this.renderComment(reply, postId, replyDepth));
-                    }
-                });
+                // Collect ALL replies recursively but render them flat
+                this.collectFlattenedReplies(comment.replies, postId);
             } else {
                 console.log(`   📦 NESTED rendering (with container) for depth ${visualDepth} parent`);
                 // Normal nesting with container ONLY for depth 0 and 1 parents
@@ -360,6 +352,61 @@ class PostComponent {
 
         commentHtml += `</div>`;
         return commentHtml;
+    }
+
+    /**
+     * Recursively collect all replies for flattening at root level
+     */
+    collectFlattenedReplies(replies, postId) {
+        replies.forEach(reply => {
+            console.log(`      → Collecting flattened reply: ${reply.id.slice(-4)} (depth ${reply.depth})`);
+            
+            // Render this reply as a flat comment (force depth 2 for consistent display)
+            if (this.flattenedComments) {
+                this.flattenedComments.push(this.renderFlatComment(reply, postId));
+            }
+            
+            // If this reply has replies, collect those too (all flat)
+            if (reply.replies && reply.replies.length > 0) {
+                this.collectFlattenedReplies(reply.replies, postId);
+            }
+        });
+    }
+
+    /**
+     * Render a comment as flat (no recursive reply processing)
+     */
+    renderFlatComment(comment, postId) {
+        const user = comment.author || comment.user;
+        const displayName = user?.firstName || user?.username || 'Anonymous';
+        
+        // All flattened comments display at depth 2 (40px indent)
+        const marginLeft = 40;
+        
+        console.log(`         → Rendering flat comment: ${comment.id.slice(-4)} at 40px indent`);
+        
+        return `
+            <div class="comment flattened-comment" data-comment-id="${comment.id}" data-depth="2" style="margin-left: ${marginLeft}px;">
+                <div class="comment-header">
+                    <span class="comment-author">${displayName}</span>
+                    <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
+                    <span class="flattened-indicator">↳</span>
+                </div>
+                <div class="comment-content">${comment.content}</div>
+                <div class="comment-actions">
+                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                        💬 Reply
+                    </button>
+                </div>
+                <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
+                    <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
+                    <div class="reply-box-actions">
+                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
+                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     /**
