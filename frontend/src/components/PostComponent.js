@@ -261,23 +261,73 @@ class PostComponent {
             return;
         }
 
-        // NEW APPROACH: Collect flattened comments separately
-        this.flattenedComments = [];
+        // SIMPLE APPROACH: Flatten all comments into one array
+        const allComments = this.flattenCommentTree(comments);
+        console.log(`🔸 Flattened ${comments.length} root comments into ${allComments.length} total comments`);
         
-        // Render the tree structure, collecting flattened comments
-        const treeHtml = comments.map(comment => this.renderComment(comment, postId, 0)).join('');
-        
-        // Append any collected flattened comments at the root level
-        const flattenedHtml = this.flattenedComments.join('');
-        
-        commentsList.innerHTML = treeHtml + flattenedHtml;
-        
-        // Clean up
-        this.flattenedComments = [];
+        // Render all comments with visual depth capping
+        const commentsHtml = allComments.map(comment => this.renderSimpleComment(comment, postId)).join('');
+        commentsList.innerHTML = commentsHtml;
     }
 
     /**
-     * Render individual comment with nested replies
+     * Flatten comment tree into single array with depth tracking
+     */
+    flattenCommentTree(comments, depth = 0) {
+        let result = [];
+        
+        comments.forEach(comment => {
+            // Add this comment with its current depth
+            result.push({ ...comment, depth });
+            
+            // If it has replies, flatten those too
+            if (comment.replies && comment.replies.length > 0) {
+                const childComments = this.flattenCommentTree(comment.replies, depth + 1);
+                result = result.concat(childComments);
+            }
+        });
+        
+        return result;
+    }
+
+    /**
+     * Render simple comment with visual depth capping
+     */
+    renderSimpleComment(comment, postId) {
+        const user = comment.author || comment.user;
+        const displayName = user?.firstName || user?.username || 'Anonymous';
+        
+        // Cap visual depth at 2 (40px indent maximum)
+        const visualDepth = Math.min(comment.depth, 2);
+        const marginLeft = visualDepth * 20;
+        const isFlattened = comment.depth >= 2;
+        
+        return `
+            <div class="comment ${isFlattened ? 'flattened-comment' : ''}" data-comment-id="${comment.id}" data-depth="${visualDepth}" style="margin-left: ${marginLeft}px;">
+                <div class="comment-header">
+                    <span class="comment-author">${displayName}</span>
+                    <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
+                    ${isFlattened ? '<span class="flattened-indicator">↳</span>' : ''}
+                </div>
+                <div class="comment-content">${comment.content}</div>
+                <div class="comment-actions">
+                    <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
+                        💬 Reply
+                    </button>
+                </div>
+                <div class="reply-box" id="reply-box-${comment.id}" style="display: none; margin-top: 10px;">
+                    <textarea class="reply-input" id="reply-input-${comment.id}" placeholder="Write a reply..." rows="2"></textarea>
+                    <div class="reply-box-actions">
+                        <button class="submit-reply-btn" onclick="postComponent.submitReply('${comment.id}', '${postId}')">Post Reply</button>
+                        <button class="cancel-reply-btn" onclick="postComponent.cancelReply('${comment.id}')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render individual comment with nested replies (OLD COMPLEX APPROACH - REPLACED)
      */
     renderComment(comment, postId, depth) {
         // Handle both 'author' and 'user' properties for compatibility
