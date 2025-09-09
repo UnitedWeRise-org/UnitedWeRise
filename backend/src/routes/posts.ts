@@ -588,8 +588,8 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
             return res.status(404).json({ error: 'Post not found' });
         }
 
-        // Get all comments for the post with nested structure
-        const comments = await prisma.comment.findMany({
+        // Get ALL comments for the post (flat query - no depth limits)
+        const allComments = await prisma.comment.findMany({
             where: { postId },
             include: {
                 user: {
@@ -601,60 +601,32 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
                         avatar: true,
                         verified: true
                     }
-                },
-                replies: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                username: true,
-                                firstName: true,
-                                lastName: true,
-                                avatar: true,
-                                verified: true
-                            }
-                        },
-                        replies: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        username: true,
-                                        firstName: true,
-                                        lastName: true,
-                                        avatar: true,
-                                        verified: true
-                                    }
-                                },
-                                // Add one more level to capture depth 3+ comments
-                                // These will all be flattened on frontend anyway
-                                replies: {
-                                    include: {
-                                        user: {
-                                            select: {
-                                                id: true,
-                                                username: true,
-                                                firstName: true,
-                                                lastName: true,
-                                                avatar: true,
-                                                verified: true
-                                            }
-                                        }
-                                    },
-                                    orderBy: { createdAt: 'asc' }
-                                }
-                            },
-                            orderBy: { createdAt: 'asc' }
-                        }
-                    },
-                    orderBy: { createdAt: 'asc' }
                 }
             },
             orderBy: { createdAt: 'asc' }
         });
 
-        // Filter to only top-level comments (parentId is null)
-        const topLevelComments = comments.filter(comment => comment.parentId === null);
+        // Build comment tree structure from flat array
+        const commentMap = new Map();
+        const topLevelComments = [];
+
+        // First pass: create map of all comments
+        allComments.forEach(comment => {
+            commentMap.set(comment.id, { ...comment, replies: [] });
+        });
+
+        // Second pass: build parent-child relationships
+        allComments.forEach(comment => {
+            const commentWithReplies = commentMap.get(comment.id);
+            if (comment.parentId) {
+                const parent = commentMap.get(comment.parentId);
+                if (parent) {
+                    parent.replies.push(commentWithReplies);
+                }
+            } else {
+                topLevelComments.push(commentWithReplies);
+            }
+        });
 
         res.json({
             comments: topLevelComments,
