@@ -263,7 +263,6 @@ class PostComponent {
 
         // SIMPLE APPROACH: Flatten all comments into one array
         const allComments = this.flattenCommentTree(comments);
-        console.log(`🔸 Flattened ${comments.length} root comments into ${allComments.length} total comments`);
         
         // Render all comments with visual depth capping
         const commentsHtml = allComments.map(comment => this.renderSimpleComment(comment, postId)).join('');

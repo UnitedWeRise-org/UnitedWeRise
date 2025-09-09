@@ -452,9 +452,15 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             }
             else {
                 // Calculate depth - allow 3 visual layers (0=top-level, 1=nested, 2=flattened)
-                // Frontend displays depth >= 2 as flattened, so cap at depth 2
-                depth = Math.min(parentComment.depth + 1, 2);
-                console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
+                // If parent is already at flattened level (depth 2+), keep replies at depth 2
+                if (parentComment.depth >= 2) {
+                    depth = 2; // Keep all flattened replies at depth 2
+                    console.log(`📊 Flattened threading: parent depth ${parentComment.depth} → keeping at depth 2`);
+                }
+                else {
+                    depth = parentComment.depth + 1; // Normal increment for depth 0→1, 1→2
+                    console.log(`📊 Normal threading: parent depth ${parentComment.depth} → new depth ${depth}`);
+                }
             }
         }
         // Create comment and update post comment count
@@ -516,8 +522,8 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        // Get all comments for the post with nested structure
-        const comments = await prisma_1.prisma.comment.findMany({
+        // Get ALL comments for the post (flat query - no depth limits)
+        const allComments = await prisma_1.prisma.comment.findMany({
             where: { postId },
             include: {
                 user: {
@@ -529,42 +535,30 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
                         avatar: true,
                         verified: true
                     }
-                },
-                replies: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                username: true,
-                                firstName: true,
-                                lastName: true,
-                                avatar: true,
-                                verified: true
-                            }
-                        },
-                        replies: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        username: true,
-                                        firstName: true,
-                                        lastName: true,
-                                        avatar: true,
-                                        verified: true
-                                    }
-                                }
-                            },
-                            orderBy: { createdAt: 'asc' }
-                        }
-                    },
-                    orderBy: { createdAt: 'asc' }
                 }
             },
             orderBy: { createdAt: 'asc' }
         });
-        // Filter to only top-level comments (parentId is null)
-        const topLevelComments = comments.filter(comment => comment.parentId === null);
+        // Build comment tree structure from flat array
+        const commentMap = new Map();
+        const topLevelComments = [];
+        // First pass: create map of all comments
+        allComments.forEach(comment => {
+            commentMap.set(comment.id, { ...comment, replies: [] });
+        });
+        // Second pass: build parent-child relationships
+        allComments.forEach(comment => {
+            const commentWithReplies = commentMap.get(comment.id);
+            if (comment.parentId) {
+                const parent = commentMap.get(comment.parentId);
+                if (parent) {
+                    parent.replies.push(commentWithReplies);
+                }
+            }
+            else {
+                topLevelComments.push(commentWithReplies);
+            }
+        });
         res.json({
             comments: topLevelComments,
             pagination: {
