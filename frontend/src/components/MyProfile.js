@@ -274,6 +274,19 @@ class MyProfile {
         `;
 
         this.addStyles();
+        
+        // Load data for the initial tab if needed
+        if (this.currentTab === 'photos') {
+            console.log('📸 Initial render with photos tab, loading galleries...');
+            setTimeout(() => this.loadPhotoGalleries(), 100);
+        } else if (this.currentTab === 'messages') {
+            setTimeout(() => {
+                this.loadCandidateMessages();
+                this.setupMessageForm();
+            }, 100);
+        } else if (this.currentTab === 'settings') {
+            setTimeout(() => this.updatePendingTagsCount(), 100);
+        }
     }
 
     renderTabContent() {
@@ -867,7 +880,11 @@ class MyProfile {
 
         // Load data for specific tabs
         if (tabName === 'photos') {
-            setTimeout(() => this.loadPhotoGalleries(), 100);
+            console.log('📸 Photos tab selected, loading galleries...');
+            setTimeout(() => {
+                console.log('📸 Calling loadPhotoGalleries...');
+                this.loadPhotoGalleries();
+            }, 100);
         } else if (tabName === 'messages') {
             setTimeout(() => {
                 this.loadCandidateMessages();
@@ -1642,8 +1659,13 @@ class MyProfile {
     // Photo Gallery Methods
     
     async loadPhotoGalleries(bypassCache = false) {
-        if (this.currentTab !== 'photos') return;
+        console.log('📸 loadPhotoGalleries called, currentTab:', this.currentTab);
+        if (this.currentTab !== 'photos') {
+            console.log('📸 Not on photos tab, returning early');
+            return;
+        }
         
+        console.log('📸 Making API call to /photos/galleries...');
         try {
             const response = await window.apiCall('/photos/galleries', { bypassCache });
             

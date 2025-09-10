@@ -86,7 +86,7 @@ export declare class PhotoService {
     static getUserGalleries(userId: string): Promise<{
         galleries: Array<{
             name: string;
-            photos: Photo[];
+            photos: any[];
             totalSize: number;
             photoCount: number;
         }>;
