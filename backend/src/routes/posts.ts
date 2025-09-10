@@ -726,7 +726,7 @@ router.post('/:postId/comments/summarize', requireAuth, async (req: AuthRequest,
         const comments = await prisma.comment.findMany({
             where: { postId },
             include: {
-                author: {
+                user: {
                     select: {
                         username: true
                     }
@@ -758,7 +758,7 @@ router.post('/:postId/comments/summarize', requireAuth, async (req: AuthRequest,
 
         // Create content for AI summarization
         const commentContent = comments.map((comment, index) => 
-            `Comment ${index + 1} by ${comment.author.username}: ${comment.content}`
+            `Comment ${index + 1} by ${comment.user.username}: ${comment.content}`
         ).join('\n\n');
 
         try {
