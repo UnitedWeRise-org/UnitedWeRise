@@ -44,6 +44,26 @@
 - ✅ **Security patterns**: Authentication and authorization details
 - ✅ **Known issues**: Current bugs and workarounds
 
+**Quick Navigation Guide (28 Major Sections):**
+```
+Core Systems: {#executive-summary} {#system-architecture} {#database-schema} {#api-reference}
+Security: {#security-authentication} {#deployment-infrastructure} {#monitoring-admin}
+Features: {#social-features} {#reputation-system} {#media-photos} {#enhanced-search-system}
+Civic: {#map-civic-features} {#civic-organizing-system} {#election-tracking-system}
+Candidate: {#candidate-registration-admin-system} {#candidate-verification-reporting-system}
+Advanced: {#ai-semantic-features} {#ai-trending-topics-system} {#relationship-system}
+Operations: {#stripe-nonprofit-payment-system} {#performance-optimizations}
+Development: {#known-issues-bugs} {#development-practices} {#troubleshooting}
+Planning: {#session-history} {#future-roadmap}
+```
+
+**Priority Sections for Common Tasks:**
+- **Adding Features**: Check {#api-reference}, {#database-schema}, {#system-architecture}
+- **Authentication Issues**: Check {#security-authentication}, {#troubleshooting}
+- **UI/Frontend Work**: Check {#ui-ux-components}, {#social-features}, {#media-photos}
+- **Deployment**: Check {#deployment-infrastructure}, Recent Changes sections
+- **Bug Fixes**: Check {#known-issues-bugs}, {#troubleshooting}, Recently Fixed sections
+
 **How to search effectively:**
 ```bash
 # Use Task Tool for complex searches
