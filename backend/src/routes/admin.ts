@@ -440,15 +440,21 @@ router.post('/users/:userId/role',
         }
       }
 
-      const updates: any = {
-        isModerator: false,
-        isAdmin: false
-      };
+      // SAFER: Build updates based on desired role, preserving existing privileges where appropriate
+      const updates: any = {};
 
-      if (role === 'moderator') updates.isModerator = true;
-      if (role === 'admin') {
+      // Set moderator status
+      if (role === 'user') {
+        updates.isModerator = false;
+      } else if (role === 'moderator' || role === 'admin') {
         updates.isModerator = true;
+      }
+
+      // Set admin status (only modify if needed)
+      if (role === 'admin' && !user.isAdmin) {
         updates.isAdmin = true;
+      } else if (role !== 'admin' && user.isAdmin) {
+        updates.isAdmin = false;
       }
 
       await prisma.user.update({
