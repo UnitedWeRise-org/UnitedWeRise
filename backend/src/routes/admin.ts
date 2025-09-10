@@ -430,6 +430,16 @@ router.post('/users/:userId/role',
         return res.status(404).json({ error: 'User not found' });
       }
 
+      // Safety check: Prevent removing admin privileges if this is the last admin
+      if (user.isAdmin && role !== 'admin') {
+        const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+        if (adminCount <= 1) {
+          return res.status(400).json({ 
+            error: 'Cannot remove admin privileges from the last admin user' 
+          });
+        }
+      }
+
       const updates: any = {
         isModerator: false,
         isAdmin: false
