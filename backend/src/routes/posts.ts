@@ -39,11 +39,39 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             }
         }
 
+        // Handle content length - split into content and extendedContent if needed
+        let mainContent = content.trim();
+        let extendedContent = null;
+        
         if (content.length > 500) {
-            return res.status(400).json({ error: 'Post content must be 500 characters or less' });
+            // Find a good break point near 500 characters (prefer sentence or word boundaries)
+            let breakPoint = 500;
+            
+            // Look for sentence endings near 500 chars
+            for (let i = 450; i < Math.min(500, content.length); i++) {
+                if (content[i] === '.' || content[i] === '!' || content[i] === '?') {
+                    if (i + 1 < content.length && content[i + 1] === ' ') {
+                        breakPoint = i + 1;
+                        break;
+                    }
+                }
+            }
+            
+            // If no sentence break found, look for word boundaries
+            if (breakPoint === 500) {
+                for (let i = 480; i < Math.min(500, content.length); i++) {
+                    if (content[i] === ' ') {
+                        breakPoint = i;
+                        break;
+                    }
+                }
+            }
+            
+            mainContent = content.substring(0, breakPoint).trim();
+            extendedContent = content.substring(breakPoint).trim();
         }
 
-        // Generate embedding for AI topic clustering using Azure OpenAI
+        // Generate embedding for AI topic clustering using Azure OpenAI (use full original content)
         let embedding: number[] = [];
         try {
             const embeddingResult = await azureOpenAI.generateEmbedding(content.trim());
@@ -103,7 +131,8 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
 
         const post = await prisma.post.create({
             data: {
-                content: content.trim(),
+                content: mainContent,
+                extendedContent,
                 imageUrl,
                 authorId: userId,
                 embedding,

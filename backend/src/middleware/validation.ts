@@ -94,12 +94,12 @@ export const validateLogin = [
   handleValidationErrors
 ];
 
-// Post creation validation
+// Post creation validation - increased limit for content that gets split automatically
 export const validatePost = [
   body('content')
-    .isLength({ min: 1, max: 2000 })
+    .isLength({ min: 1, max: 5000 })
     .trim()
-    .withMessage('Post content must be 1-2000 characters'),
+    .withMessage('Post content must be 1-5000 characters'),
   body('imageUrl')
     .optional()
     .isURL()
