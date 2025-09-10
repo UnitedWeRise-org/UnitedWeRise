@@ -860,38 +860,6 @@ class MyProfile {
         `;
     }
 
-    switchTab(tabName) {
-        this.currentTab = tabName;
-        
-        // Load pending tags count when switching to settings tab
-        if (tabName === 'settings') {
-            setTimeout(() => this.updatePendingTagsCount(), 100);
-        }
-        const contentArea = document.querySelector('.tab-content');
-        if (contentArea) {
-            contentArea.innerHTML = this.renderTabContent();
-        }
-
-        // Update tab buttons
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[onclick="window.myProfile.switchTab('${tabName}')"]`).classList.add('active');
-
-        // Load data for specific tabs
-        if (tabName === 'photos') {
-            console.log('📸 Photos tab selected, loading galleries...');
-            setTimeout(() => {
-                console.log('📸 Calling loadPhotoGalleries...');
-                this.loadPhotoGalleries();
-            }, 100);
-        } else if (tabName === 'messages') {
-            setTimeout(() => {
-                this.loadCandidateMessages();
-                this.setupMessageForm();
-            }, 100);
-        }
-    }
 
     async uploadProfilePicture(input) {
         const file = input.files[0];
@@ -3449,15 +3417,26 @@ class MyProfile {
         }
     }
 
-    // Override switchTab to check candidate status when switching to settings
+    // Enhanced switchTab with photo gallery support and candidate settings
     switchTab(tabName) {
         this.currentTab = tabName;
         
-        // Load pending tags count when switching to settings tab
+        // Load data for specific tabs
         if (tabName === 'settings') {
             setTimeout(() => {
                 this.updatePendingTagsCount();
                 this.checkCandidateNotificationSettings();
+            }, 100);
+        } else if (tabName === 'photos') {
+            console.log('📸 Photos tab selected, loading galleries...');
+            setTimeout(() => {
+                console.log('📸 Calling loadPhotoGalleries...');
+                this.loadPhotoGalleries();
+            }, 100);
+        } else if (tabName === 'messages') {
+            setTimeout(() => {
+                this.loadCandidateMessages();
+                this.setupMessageForm();
             }, 100);
         }
         
