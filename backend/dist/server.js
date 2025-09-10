@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.webSocketService = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -64,6 +65,7 @@ const httpServer = http_1.default.createServer(app);
 const PORT = process.env.PORT || 3001;
 // Initialize unified WebSocket service
 const webSocketService = new WebSocketService_1.default(httpServer);
+exports.webSocketService = webSocketService;
 // Security Middleware
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {

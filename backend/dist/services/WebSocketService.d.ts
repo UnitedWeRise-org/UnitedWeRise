@@ -20,6 +20,7 @@ export declare class WebSocketService {
     }): Promise<UnifiedMessage>;
     isUserOnline(userId: string): boolean;
     getOnlineUsersCount(): number;
+    emitNotification(receiverId: string, notification: any): void;
 }
 export default WebSocketService;
 //# sourceMappingURL=WebSocketService.d.ts.map

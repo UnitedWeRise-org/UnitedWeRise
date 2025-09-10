@@ -564,7 +564,12 @@ router.post('/:photoId/approve', requireAuth, async (req: AuthRequest, res) => {
 router.get('/galleries', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { user } = req;
+    console.log(`📸 Fetching galleries for user: ${user!.id}`);
+    
     const galleries = await PhotoService.getUserGalleries(user!.id);
+    
+    console.log(`📸 Returning ${galleries.galleries.length} galleries with total ${galleries.totalStorageUsed} bytes used`);
+    
     res.json(galleries);
   } catch (error) {
     console.error('Failed to retrieve galleries:', error);

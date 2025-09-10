@@ -332,6 +332,16 @@ class WebSocketService {
     getOnlineUsersCount() {
         return this.userSockets.size;
     }
+    // Emit notification to user
+    emitNotification(receiverId, notification) {
+        try {
+            this.io.to(`user:${receiverId}`).emit('new_notification', notification);
+            console.log(`Notification emitted to user ${receiverId}:`, notification.type);
+        }
+        catch (error) {
+            console.error('Error emitting notification:', error);
+        }
+    }
 }
 exports.WebSocketService = WebSocketService;
 exports.default = WebSocketService;

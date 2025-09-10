@@ -635,7 +635,7 @@ export class PhotoService {
   static async getUserGalleries(userId: string): Promise<{
     galleries: Array<{
       name: string;
-      photos: Photo[];
+      photos: any[];
       totalSize: number;
       photoCount: number;
     }>;
@@ -646,7 +646,8 @@ export class PhotoService {
       where: {
         userId,
         isActive: true,
-        isApproved: true,
+        // Temporarily remove isApproved filter to debug
+        // isApproved: true,
         photoType: { not: 'POST_MEDIA' } // Exclude post media from galleries
       },
       orderBy: { createdAt: 'desc' },
@@ -657,16 +658,44 @@ export class PhotoService {
       }
     });
 
-    // Group photos by gallery
-    const galleryMap = new Map<string, Photo[]>();
+    console.log(`📸 Found ${userPhotos.length} photos for user ${userId}`);
+
+    // Get the backend URL for constructing absolute URLs
+    const backendUrl = process.env.NODE_ENV === 'production'
+      ? 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'
+      : `http://localhost:${process.env.PORT || 3001}`;
+
+    // Group photos by gallery and transform URLs
+    const galleryMap = new Map<string, any[]>();
     let totalSize = 0;
 
     userPhotos.forEach(photo => {
       const galleryName = photo.gallery || 'My Photos';
+      
+      // Debug logging
+      if (userPhotos.indexOf(photo) === 0) {
+        console.log('📸 Sample photo URL from DB:', photo.url);
+        console.log('📸 Sample thumbnail URL from DB:', photo.thumbnailUrl);
+      }
+      
+      // Transform relative URLs to absolute URLs
+      const transformedPhoto = {
+        ...photo,
+        url: photo.url.startsWith('http') ? photo.url : `${backendUrl}${photo.url}`,
+        thumbnailUrl: photo.thumbnailUrl 
+          ? (photo.thumbnailUrl.startsWith('http') ? photo.thumbnailUrl : `${backendUrl}${photo.thumbnailUrl}`)
+          : null
+      };
+
+      if (userPhotos.indexOf(photo) === 0) {
+        console.log('📸 Transformed photo URL:', transformedPhoto.url);
+        console.log('📸 Transformed thumbnail URL:', transformedPhoto.thumbnailUrl);
+      }
+
       if (!galleryMap.has(galleryName)) {
         galleryMap.set(galleryName, []);
       }
-      galleryMap.get(galleryName)!.push(photo);
+      galleryMap.get(galleryName)!.push(transformedPhoto);
       totalSize += photo.compressedSize;
     });
 
