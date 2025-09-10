@@ -175,6 +175,7 @@ model Friendship {
 model Post {
   id                 String            @id @default(cuid())
   content            String
+  extendedContent    String?           // Extended content for posts exceeding 500 chars
   imageUrl           String?
   authorId           String
   embedding          Float[]           @default([])

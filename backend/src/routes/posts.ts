@@ -717,4 +717,81 @@ router.get('/user/:userId', async (req, res) => {
     }
 });
 
+// Comment summarization endpoint for Post Focus View
+router.post('/:postId/comments/summarize', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { postId } = req.params;
+        
+        // Get all comments for the post
+        const comments = await prisma.comment.findMany({
+            where: { postId },
+            include: {
+                author: {
+                    select: {
+                        username: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        if (comments.length === 0) {
+            return res.json({ 
+                summary: null,
+                totalCharacters: 0,
+                totalComments: 0 
+            });
+        }
+
+        // Calculate total character count
+        const totalCharacters = comments.reduce((sum, comment) => sum + comment.content.length, 0);
+        
+        // Only summarize if over threshold (10,000 characters)
+        if (totalCharacters < 10000) {
+            return res.json({ 
+                summary: null,
+                totalCharacters,
+                totalComments: comments.length,
+                belowThreshold: true
+            });
+        }
+
+        // Create content for AI summarization
+        const commentContent = comments.map((comment, index) => 
+            `Comment ${index + 1} by ${comment.author.username}: ${comment.content}`
+        ).join('\n\n');
+
+        try {
+            const summary = await azureOpenAI.generateCompletion(
+                `Summarize this comment thread about a political post. Focus on the main points of discussion, key agreements/disagreements, and overall sentiment. Keep it concise but comprehensive:\n\n${commentContent}`,
+                {
+                    temperature: 0.3,
+                    maxTokens: 300,
+                    systemMessage: "You are a helpful AI assistant that summarizes political discussion threads objectively, highlighting key points and diverse viewpoints without taking sides."
+                }
+            );
+
+            res.json({
+                summary,
+                totalCharacters,
+                totalComments: comments.length,
+                belowThreshold: false
+            });
+
+        } catch (aiError) {
+            console.error('AI summarization failed:', aiError);
+            res.json({ 
+                summary: null,
+                totalCharacters,
+                totalComments: comments.length,
+                aiError: 'AI summarization temporarily unavailable'
+            });
+        }
+
+    } catch (error) {
+        console.error('Comment summarization error:', error);
+        res.status(500).json({ error: 'Failed to summarize comments' });
+    }
+});
+
 export default router;

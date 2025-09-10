@@ -47,7 +47,7 @@ class PostComponent {
                     </div>
                 ` : ''}
                 
-                <div class="post-content">
+                <div class="post-content" onclick="postComponent.openPostFocus('${post.id}')" style="cursor: pointer;">
                     ${this.formatPostContent(post.content, post)}
                 </div>
                 
@@ -176,15 +176,22 @@ class PostComponent {
     }
 
     /**
-     * Toggle comments section visibility
+     * Toggle comments section visibility and show extended content inline
      */
     async toggleComments(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
         if (!commentsSection) return;
 
         if (commentsSection.style.display === 'none') {
+            // Show comments section
             commentsSection.style.display = 'block';
+            
+            // Load extended content if it exists and show it inline
+            await this.showExtendedContentInline(postId);
+            
+            // Load comments
             await this.loadComments(postId);
+            
             // Auto-scroll to make comment box visible
             setTimeout(() => {
                 commentsSection.scrollIntoView({ 
@@ -193,8 +200,67 @@ class PostComponent {
                 });
             }, 100);
         } else {
+            // Hide comments section and extended content
             commentsSection.style.display = 'none';
+            this.hideExtendedContentInline(postId);
         }
+    }
+
+    /**
+     * Show extended content inline when comments are expanded
+     */
+    async showExtendedContentInline(postId) {
+        try {
+            // Get the post data to check for extended content
+            const postResponse = await window.apiCall(`/posts/${postId}`);
+            if (!postResponse.ok || !postResponse.data.extendedContent) {
+                return; // No extended content to show
+            }
+
+            const post = postResponse.data;
+            const postContentDiv = document.querySelector(`[data-post-id="${postId}"] .post-content`);
+            if (!postContentDiv) return;
+
+            // Check if extended content is already shown
+            const existingExtended = postContentDiv.querySelector('.inline-extended-content');
+            if (existingExtended) return;
+
+            // Add extended content after main content
+            const extendedContentDiv = document.createElement('div');
+            extendedContentDiv.className = 'inline-extended-content';
+            extendedContentDiv.innerHTML = `
+                <div class="read-more-divider" style="color: #657786; font-size: 0.9em; margin: 0.5rem 0;">
+                    ...
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    ${this.formatPostContent(post.extendedContent, post)}
+                </div>
+            `;
+
+            // Keep the post content clickable for Post Focus View
+            // The cursor stays as pointer and onclick remains active
+            
+            postContentDiv.appendChild(extendedContentDiv);
+
+        } catch (error) {
+            console.error('Error showing extended content inline:', error);
+        }
+    }
+
+    /**
+     * Hide extended content inline when comments are collapsed
+     */
+    hideExtendedContentInline(postId) {
+        const postContentDiv = document.querySelector(`[data-post-id="${postId}"] .post-content`);
+        if (!postContentDiv) return;
+
+        // Remove extended content
+        const existingExtended = postContentDiv.querySelector('.inline-extended-content');
+        if (existingExtended) {
+            existingExtended.remove();
+        }
+
+        // Post content onclick remains active - no need to restore
     }
 
     /**
@@ -977,6 +1043,344 @@ class PostComponent {
         }
 
         container.innerHTML = posts.map(post => this.renderPost(post, options)).join('');
+    }
+
+    /**
+     * Open Post Focus View modal for detailed post viewing with comments
+     * @param {string} postId - ID of the post to focus on
+     */
+    async openPostFocus(postId) {
+        try {
+            // Fetch full post details
+            const response = await window.apiCall(`/posts/${postId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load post details');
+            }
+            
+            const post = response.data.post;
+            
+            // Fetch comments for the post
+            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`);
+            const comments = commentsResponse.ok ? commentsResponse.data.comments : [];
+            
+            // Calculate total comment character count for AI summary threshold
+            const totalCommentChars = this.calculateTotalCommentChars(comments);
+            
+            // Get AI summary if threshold met (10,000+ characters)
+            let aiSummary = null;
+            if (totalCommentChars >= 10000) {
+                aiSummary = await this.generateCommentSummary(post, comments);
+            }
+            
+            // Create and show modal
+            this.showPostFocusModal(post, comments, aiSummary);
+            
+        } catch (error) {
+            console.error('Failed to open post focus:', error);
+            alert('Failed to load post details. Please try again.');
+        }
+    }
+
+    /**
+     * Calculate total character count from all comments and replies
+     * @param {Array} comments - Array of comments
+     * @returns {number} - Total character count
+     */
+    calculateTotalCommentChars(comments) {
+        let total = 0;
+        
+        const countComment = (comment) => {
+            total += comment.content.length;
+            if (comment.replies && comment.replies.length > 0) {
+                comment.replies.forEach(countComment);
+            }
+        };
+        
+        comments.forEach(countComment);
+        return total;
+    }
+
+    /**
+     * Generate AI summary of comment thread using existing Azure OpenAI infrastructure
+     * @param {Object} post - The original post
+     * @param {Array} comments - Array of comments
+     * @returns {Promise<string|null>} - AI generated summary or null
+     */
+    async generateCommentSummary(post, comments) {
+        try {
+            // Use new public comment summarization endpoint
+            const summaryResponse = await window.apiCall(`/posts/${post.id}/comments/summarize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (summaryResponse.ok && summaryResponse.data) {
+                if (summaryResponse.data.summary) {
+                    return summaryResponse.data.summary;
+                }
+                
+                // Handle below threshold case - no summary needed
+                if (summaryResponse.data.belowThreshold) {
+                    return null;
+                }
+                
+                // Handle AI error case
+                if (summaryResponse.data.aiError) {
+                    console.warn('AI summarization unavailable:', summaryResponse.data.aiError);
+                    return null;
+                }
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.error('Failed to generate comment summary:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Show the Post Focus modal with post details and comments
+     * @param {Object} post - Post object
+     * @param {Array} comments - Comments array  
+     * @param {string|null} aiSummary - AI generated summary or null
+     */
+    showPostFocusModal(post, comments, aiSummary) {
+        // Remove existing modal if present
+        const existingModal = document.querySelector('.post-focus-modal');
+        if (existingModal) existingModal.remove();
+        
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay post-focus-modal';
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+        
+        // Format full post content (including extended content)
+        let fullPostContent = this.formatPostContent(post.content, post);
+        if (post.extendedContent) {
+            fullPostContent += '<div class="extended-content">' + 
+                             this.formatPostContent(post.extendedContent, post) + 
+                             '</div>';
+        }
+        
+        const timeAgo = this.getTimeAgo(new Date(post.createdAt));
+        const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
+        const authorInitial = authorName[0].toUpperCase();
+        
+        modal.innerHTML = `
+            <div class="modal post-focus-content">
+                <div class="modal-header">
+                    <h3>Post Details</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Original Post -->
+                    <div class="post-component focused-post">
+                        <div class="post-header">
+                            <div class="post-avatar">${authorInitial}</div>
+                            <div class="post-author-info">
+                                <div class="post-author-name">
+                                    ${authorName}
+                                    ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
+                                </div>
+                                <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="post-content focused-post-content">
+                            ${fullPostContent}
+                        </div>
+                        
+                        ${this.renderPostMedia(post.photos)}
+                        
+                        <div class="post-actions" data-post-id="${post.id}">
+                            <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
+                                    onclick="postComponent.toggleLike('${post.id}')">
+                                <span class="action-icon">${post.isLiked ? '❤️' : '🤍'}</span>
+                                <span class="action-count">${post.likesCount || 0}</span>
+                            </button>
+                            
+                            <button class="post-action-btn comment-btn">
+                                <span class="action-icon">💬</span>
+                                <span class="action-count">${comments.length}</span>
+                            </button>
+                            
+                            <button class="post-action-btn share-btn" onclick="postComponent.sharePost('${post.id}')">
+                                <span class="action-icon">🔄</span>
+                                <span class="action-count">${post.sharesCount || 0}</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${aiSummary ? `
+                        <div class="ai-comment-summary">
+                            <h4>💡 Discussion Summary</h4>
+                            <p>${aiSummary}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Comments Section -->
+                    <div class="post-focus-comments">
+                        <h4>Comments (${comments.length})</h4>
+                        
+                        <!-- Comment Input -->
+                        <div class="comment-input-section">
+                            <textarea class="comment-input" id="focus-comment-input-${post.id}" 
+                                      placeholder="Write a comment..." rows="3"></textarea>
+                            <button class="btn btn-primary" onclick="postComponent.addCommentFromFocus('${post.id}')">
+                                Post Comment
+                            </button>
+                        </div>
+                        
+                        <!-- Comments List -->
+                        <div class="comments-list" id="comments-container-${post.id}">
+                            <!-- Comments will be rendered here by existing renderComments method -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Render comments using existing system
+        if (comments.length > 0) {
+            this.renderComments(post.id, comments);
+        }
+        
+        // Add CSS for the modal if not already present
+        this.ensurePostFocusStyles();
+    }
+
+    /**
+     * Add comment from Post Focus modal
+     * @param {string} postId - Post ID
+     */
+    async addCommentFromFocus(postId) {
+        const textarea = document.getElementById(`focus-comment-input-${postId}`);
+        const content = textarea.value.trim();
+        
+        if (!content) {
+            alert('Please enter a comment');
+            return;
+        }
+        
+        try {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            
+            if (response.ok) {
+                // Clear textarea
+                textarea.value = '';
+                
+                // Refresh the modal with updated comments
+                this.openPostFocus(postId);
+            } else {
+                throw new Error('Failed to post comment');
+            }
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            alert('Failed to post comment. Please try again.');
+        }
+    }
+
+    /**
+     * Ensure Post Focus modal styles are loaded
+     */
+    ensurePostFocusStyles() {
+        if (document.querySelector('#post-focus-styles')) return;
+        
+        const styles = document.createElement('style');
+        styles.id = 'post-focus-styles';
+        styles.textContent = `
+            .post-focus-modal .modal {
+                max-width: 700px;
+                max-height: 90vh;
+                width: 90vw;
+                overflow-y: auto;
+            }
+            
+            .focused-post {
+                border-bottom: 2px solid #e1e5e9;
+                padding-bottom: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .focused-post-content {
+                font-size: 1.1rem;
+                line-height: 1.5;
+                cursor: default !important;
+            }
+            
+            .extended-content {
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid #e1e5e9;
+                color: #666;
+            }
+            
+            .ai-comment-summary {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+            }
+            
+            .ai-comment-summary h4 {
+                margin: 0 0 0.5rem 0;
+                color: #495057;
+                font-size: 1rem;
+            }
+            
+            .ai-comment-summary p {
+                margin: 0;
+                font-style: italic;
+                color: #6c757d;
+            }
+            
+            .post-focus-comments h4 {
+                margin: 1.5rem 0 1rem 0;
+                color: #495057;
+            }
+            
+            .comment-input-section {
+                margin-bottom: 1.5rem;
+            }
+            
+            .comment-input-section .comment-input {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                padding: 0.75rem;
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                resize: vertical;
+            }
+            
+            .comments-list {
+                max-height: 400px;
+                overflow-y: auto;
+            }
+            
+            @media (max-width: 768px) {
+                .post-focus-modal .modal {
+                    width: 95vw;
+                    max-height: 95vh;
+                }
+                
+                .focused-post-content {
+                    font-size: 1rem;
+                }
+            }
+        `;
+        
+        document.head.appendChild(styles);
     }
 }
 
