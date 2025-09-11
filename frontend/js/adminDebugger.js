@@ -39,7 +39,7 @@ class AdminDebugger {
             }
 
             // Try a simple admin endpoint that doesn't require TOTP - check users with limit 1
-            const response = await window.apiCall('/api/admin/users?limit=1');
+            const response = await window.apiCall('/admin/users?limit=1');
             this.adminVerified = response.ok;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
             
