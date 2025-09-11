@@ -5,8 +5,14 @@ import { Request, Response, NextFunction } from 'express';
 export const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('🚨 Validation errors:', JSON.stringify(errors.array(), null, 2));
+    
+    // Extract the first error message for user-friendly display
+    const firstError = errors.array()[0];
+    const userFriendlyMessage = firstError ? firstError.msg : 'Validation failed';
+    
     return res.status(400).json({
-      error: 'Validation failed',
+      error: userFriendlyMessage,
       details: errors.array()
     });
   }
