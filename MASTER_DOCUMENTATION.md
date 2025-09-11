@@ -3651,6 +3651,8 @@ include: {
 4. **Real-time Updates**: WebSocket integration for live comments
 5. **Thread Bookmarking**: Save/bookmark specific comment threads
 
+**Note**: Basic thread collapsing and expansion functionality completed September 11, 2025.
+
 #### Related Systems
 - **Post Display**: {#post-display}
 - **Notification System**: {#notification-system}
@@ -6440,11 +6442,12 @@ try {
 ### Future Enhancements
 
 #### Planned Features
-- **Live Stripe Keys**: Transition from test to production environment
 - **Enhanced Campaigns**: Advanced fundraising campaign management
 - **Donor Analytics**: Comprehensive donation tracking and reporting
 - **Recurring Management**: User dashboard for subscription management
 - **Advanced Receipts**: PDF generation and email delivery automation
+
+**Note**: Live Stripe Keys are already operational since August 22, 2025.
 
 #### Integration Opportunities
 - **{#civic-organizing-system}**: Fundraising for civic events and causes
@@ -7733,7 +7736,12 @@ showDefaultView()
 - [ ] Implement News API utilization throughout platform
 - [ ] Create 'Journalist' profile flag/elevation system
 
-### 🏆 RECENTLY COMPLETED (September 5, 2025)
+### 🏆 RECENTLY COMPLETED (September 11, 2025)
+- [x] **Collapsed Comment Threads**: Complete threading system with expand/collapse, recursive reply counting, and smooth animations
+- [x] **Focused Comment View Improvements**: Fixed modal display issues and scrolling problems
+- [x] **AdminDebugger Enhancements**: Fixed API endpoint construction and auth token validation
+
+### 🏆 COMPLETED (September 5, 2025)
 - [x] **Unified TOTP Authentication System**: Complete authentication across main site and admin dashboard
 - [x] **Admin-Only Debugging System**: Secure debugging with admin verification (`adminDebugLog`, `adminDebugError`, etc.)
 - [x] **Console Debugging Cleanup**: Converted all console.log statements to admin-only verification
@@ -7752,17 +7760,11 @@ showDefaultView()
 - [x] **WebSocket Messaging System**: Complete bidirectional real-time messaging
 - [x] **Admin Dashboard Candidate Management**: Full candidate lifecycle management
 - [x] **Site Title with Beta Badge**: Added "United [Logo] We Rise Beta" to header
+- [x] **Live Stripe Payment System**: Production payment processing with live keys (August 22, 2025)
+- [x] **OAuth Integration**: Complete Google, Microsoft, and Apple social authentication
+- [x] **Google Civic API Integration**: External candidate discovery and pre-population system
 
 ### Phase 2: Short Term (Q4 2025)
-
-#### OAuth Integration
-```javascript
-// Planned providers
-- Google Sign-In
-- Microsoft Account
-- Apple ID
-- Twitter/X (maybe)
-```
 
 #### SMS Verification
 ```javascript
