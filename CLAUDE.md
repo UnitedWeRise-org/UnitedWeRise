@@ -36,6 +36,16 @@
 3. **Codebase Verification**: Use Grep across ALL files to confirm findings
 4. **User Approval**: Never assume reorganization is needed without explicit confirmation
 
+### Pre-Deployment Requirements (MANDATORY)
+**Before ANY deployment attempt:**
+
+1. **Git Status Check**: `git status` - MUST show changes or "working tree clean" means nothing to deploy
+2. **GitHub Verification**: `git log -1` - Confirm your changes are in the latest commit  
+3. **TypeScript Build**: `cd backend && npm run build` - MUST pass before Docker build
+4. **Push Confirmation**: Ensure all changes are pushed to GitHub (Docker builds from GitHub, not local!)
+
+**🚨 NEVER attempt deployment if `git status` shows uncommitted changes!**
+
 ### MASTER_DOCUMENTATION.md Usage Guidelines
 **When to consult MASTER_DOCUMENTATION.md:**
 - ✅ **API endpoints**: Complete endpoint documentation with examples
@@ -167,8 +177,29 @@ refactor: Clean up deprecated Ollama references
 
 ### Deployment Scenarios
 
+### 🚨 **MANDATORY PRE-DEPLOYMENT CHECKLIST**
+**NEVER SKIP THESE STEPS - They prevent 99% of deployment failures:**
+
+```bash
+# Step 1: VERIFY CHANGES EXIST (CRITICAL - ALWAYS RUN FIRST)
+git status  # Must show your changes, if "working tree clean" = NO CHANGES TO DEPLOY!
+
+# Step 2: VERIFY TYPESCRIPT COMPILATION (for backend changes)
+cd backend && npm run build  # MUST pass or Docker build will fail
+
+# Step 3: VERIFY GITHUB HAS YOUR CHANGES
+git log -1 --oneline  # Should show your recent commit
+# If your changes aren't in the last commit, STOP - you haven't committed yet!
+```
+
+**⚠️ COMMON FAILURE PATTERN TO AVOID:**
+- Making changes locally → Running Docker build → Wondering why changes don't deploy
+- **REASON**: Docker builds from GitHub, not your local files!
+- **SOLUTION**: Always run pre-deployment checklist above
+
 #### Frontend-Only Changes (`frontend/` files)
 ```bash
+# MANDATORY: Run pre-deployment checklist first (see above)
 git add . && git commit -m "Description" && git push origin main
 # GitHub Actions auto-deploys (~2-5 minutes)
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
@@ -176,10 +207,13 @@ git add . && git commit -m "Description" && git push origin main
 
 #### Backend Changes (`.ts/.js` in `backend/src/`)
 ```bash
-# CRITICAL: Pre-flight check (prevents 99% of failures)
-cd backend && npm run build  # MUST pass before Docker build
+# MANDATORY: Run pre-deployment checklist first (see above)
 
+# Commit and push (REQUIRED - Docker builds from GitHub, not local!)
 git add . && git commit -m "Description" && git push origin main
+
+# VERIFY push succeeded before proceeding
+git status  # Should show "Your branch is up to date with 'origin/main'"
 
 # Method 1: Standard Build (if Unicode issues aren't problematic)
 DOCKER_TAG="backend-$(date +%Y%m%d-%H%M)"
@@ -237,7 +271,24 @@ cd backend && npx prisma db execute --file scripts/migration-name.sql --schema p
 
 ## 🛡️ Docker Build Troubleshooting
 
-#### #1 Most Common Failure: TypeScript Compilation Errors
+#### #0 MOST CRITICAL: Uncommitted Changes (Causes 50% of "mysterious" failures)
+- **Symptoms**: Changes don't appear in production despite "successful" deployments
+- **Real Cause**: Docker builds from GitHub, your changes are only local
+- **Diagnosis**: 
+  ```bash
+  git status  # Shows modified/untracked files = CHANGES NOT IN GITHUB!
+  git diff HEAD  # Shows exact changes not yet committed
+  ```
+- **Solution**: Commit and push ALL changes before Docker build:
+  ```bash
+  git add .
+  git commit -m "Your changes description"
+  git push origin main
+  git status  # MUST show "working tree clean" before proceeding
+  ```
+- **Prevention**: ALWAYS run pre-deployment checklist (see above)
+
+#### #1 Second Most Common: TypeScript Compilation Errors
 - **Real Cause**: TypeScript compilation errors (NOT Docker infrastructure issues)
 - **Symptoms**: Build fails at Step 22 (`RUN npm run build`) 
 - **Solution**: Run `cd backend && npm run build` locally first - MUST pass before Docker build
@@ -261,6 +312,28 @@ az acr task list-runs --registry uwracr2425 --output table | head -3
 - **Result**: May appear to "deploy" but actually runs outdated code
 - **Solution**: Always use `az acr build` for backend code changes
 - **Environment Variables**: Only for configuration changes, never backend code changes
+
+### 🔍 Quick Deployment Failure Diagnosis
+**When your changes don't appear in production:**
+
+```bash
+# 1. CHECK: Are changes committed?
+git status  # If not "working tree clean" = PROBLEM FOUND!
+
+# 2. CHECK: Are changes pushed to GitHub?
+git log origin/main..HEAD  # If shows commits = NOT PUSHED!
+
+# 3. CHECK: Did TypeScript compile?
+cd backend && npm run build  # If fails = FIX ERRORS FIRST!
+
+# 4. CHECK: Is new container running?
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+# If uptime > 300 seconds = OLD CONTAINER STILL RUNNING!
+
+# 5. CHECK: Did Docker build succeed?
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# If Status shows "Failed" = BUILD FAILED!
+```
 
 ### Emergency Recovery Procedures
 **When**: System-wide failures, database corruption, critical production issues
