@@ -1252,6 +1252,19 @@ class PostComponent {
         if (commentsList) {
             const computedStyle = window.getComputedStyle(commentsList);
             console.log('🎯 Comments list CSS - max-height:', computedStyle.maxHeight, 'overflow-y:', computedStyle.overflowY);
+            
+            // Force CSS application directly via JavaScript as fallback
+            console.log('🎯 Applying CSS directly to comments list...');
+            commentsList.style.maxHeight = 'none';
+            commentsList.style.overflowY = 'visible';
+            commentsList.style.overflow = 'visible';
+            commentsList.style.height = 'auto';
+            
+            // Check again after direct application
+            setTimeout(() => {
+                const newComputedStyle = window.getComputedStyle(commentsList);
+                console.log('🎯 After direct CSS - max-height:', newComputedStyle.maxHeight, 'overflow-y:', newComputedStyle.overflowY);
+            }, 100);
         }
         
         // Render comments using existing system
@@ -1409,9 +1422,13 @@ class PostComponent {
                 overflow-y: visible !important;
             }
             
-            .post-focus-view .comments-list {
-                /* Ensure focused view comments can scroll naturally */
+            .post-focus-view .comments-list,
+            .post-focus-view div.comments-list,
+            div.post-focus-view .comments-list,
+            div.post-focus-view div.comments-list {
+                /* Ultra-specific CSS to override any other rules */
                 max-height: none !important;
+                overflow-y: visible !important;
                 overflow: visible !important;
                 height: auto !important;
             }
