@@ -1271,6 +1271,15 @@ class PostComponent {
                 console.log('🎯 Body overflow:', bodyStyle.overflow, bodyStyle.overflowY);
                 console.log('🎯 Main content overflow:', mainContentStyle.overflow, mainContentStyle.overflowY);
                 console.log('🎯 Page scroll height vs client height:', document.body.scrollHeight, 'vs', document.body.clientHeight);
+                
+                // FIX: Enable scrolling on body and main content for focused view
+                console.log('🎯 FIXING: Enabling page scrolling for focused view...');
+                document.body.style.overflow = 'auto';
+                document.body.style.overflowY = 'auto';
+                mainContent.style.overflow = 'auto';
+                mainContent.style.overflowY = 'auto';
+                
+                console.log('🎯 Scrolling should now work!');
             }, 100);
         }
         
@@ -1297,6 +1306,13 @@ class PostComponent {
                 window.toggleMyFeed();
             }
         }
+        
+        // Restore original overflow settings when returning to feed
+        console.log('🎯 Restoring original overflow settings...');
+        document.body.style.overflow = '';
+        document.body.style.overflowY = '';
+        mainContent.style.overflow = '';
+        mainContent.style.overflowY = '';
     }
 
     /**
