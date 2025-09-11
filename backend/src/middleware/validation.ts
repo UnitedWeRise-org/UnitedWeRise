@@ -107,7 +107,7 @@ export const validatePost = [
     .trim()
     .withMessage('Post content must be 1-5000 characters'),
   body('imageUrl')
-    .optional()
+    .optional({ checkFalsy: true }) // Treat empty strings as undefined
     .isURL()
     .withMessage('Image URL must be valid'),
   handleValidationErrors
