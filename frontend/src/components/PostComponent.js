@@ -1050,6 +1050,7 @@ class PostComponent {
      * @param {string} postId - ID of the post to focus on
      */
     async openPostFocus(postId) {
+        console.log('🎯 PostComponent: Opening focused view for post:', postId);
         try {
             // Fetch full post details
             const response = await window.apiCall(`/posts/${postId}`);
@@ -1073,6 +1074,7 @@ class PostComponent {
             }
             
             // Create and show modal
+            console.log('🎯 PostComponent: Displaying focused view with', comments.length, 'comments');
             this.showPostFocusModal(post, comments, aiSummary);
             
         } catch (error) {
@@ -1146,6 +1148,7 @@ class PostComponent {
      * @param {string|null} aiSummary - AI generated summary or null
      */
     showPostFocusModal(post, comments, aiSummary) {
+        console.log('🎯 showPostFocusModal: Starting focused view setup');
         // Save current content for back navigation
         const mainContent = document.getElementById('mainContent');
         if (!mainContent.dataset.originalContent) {
