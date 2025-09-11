@@ -1244,6 +1244,16 @@ class PostComponent {
             </div>
         `;
         
+        console.log('🎯 showPostFocusModal: Main content HTML set, checking elements...');
+        const focusView = mainContent.querySelector('.post-focus-view');
+        const commentsList = mainContent.querySelector('.comments-list');
+        console.log('🎯 Post focus view element:', focusView ? 'Found' : 'Not found');
+        console.log('🎯 Comments list element:', commentsList ? 'Found' : 'Not found');
+        if (commentsList) {
+            const computedStyle = window.getComputedStyle(commentsList);
+            console.log('🎯 Comments list CSS - max-height:', computedStyle.maxHeight, 'overflow-y:', computedStyle.overflowY);
+        }
+        
         // Render comments using existing system
         if (comments.length > 0) {
             this.renderComments(post.id, comments);
@@ -1395,6 +1405,15 @@ class PostComponent {
             
             .comments-list {
                 /* Remove height restriction for focused view - let page scroll naturally */
+                max-height: none !important;
+                overflow-y: visible !important;
+            }
+            
+            .post-focus-view .comments-list {
+                /* Ensure focused view comments can scroll naturally */
+                max-height: none !important;
+                overflow: visible !important;
+                height: auto !important;
             }
             
             .post-focus-comments {
