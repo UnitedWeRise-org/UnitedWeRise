@@ -36,15 +36,6 @@
 3. **Codebase Verification**: Use Grep across ALL files to confirm findings
 4. **User Approval**: Never assume reorganization is needed without explicit confirmation
 
-### Pre-Deployment Requirements (MANDATORY)
-**Before ANY deployment attempt:**
-
-1. **Git Status Check**: `git status` - MUST show changes or "working tree clean" means nothing to deploy
-2. **GitHub Verification**: `git log -1` - Confirm your changes are in the latest commit  
-3. **TypeScript Build**: `cd backend && npm run build` - MUST pass before Docker build
-4. **Push Confirmation**: Ensure all changes are pushed to GitHub (Docker builds from GitHub, not local!)
-
-**🚨 NEVER attempt deployment if `git status` shows uncommitted changes!**
 
 ### MASTER_DOCUMENTATION.md Usage Guidelines
 **When to consult MASTER_DOCUMENTATION.md:**
@@ -153,203 +144,191 @@ If ANY answer is uncertain, STOP and clarify with user.
 
 ---
 
-## 🚀 DEPLOYMENT PROTOCOL
+## 🚀 COMPREHENSIVE DEPLOYMENT GUIDE
 
-### Universal Rule: GitHub First, Then Deploy
-**ALWAYS**: Commit to GitHub → Then deploy infrastructure
+### 📍 Deployment Endpoints
+- **Backend**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Frontend**: https://www.unitedwerise.org
+- **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 
-### Git Workflow Standards
-**Branch Strategy:**
+---
+
+### 🚨 MANDATORY PRE-DEPLOYMENT CHECKLIST
+**NEVER SKIP - Prevents 99% of deployment failures:**
+
 ```bash
-main           # Production code
-├── feature/*  # New features (feature/user-profiles)
-├── fix/*      # Bug fixes (fix/auth-timeout)  
-└── hotfix/*   # Emergency fixes (hotfix/security-patch)
+# 1. VERIFY CHANGES EXIST (CRITICAL - ALWAYS RUN FIRST)
+git status  
+# ✅ Should show modified files OR "working tree clean" if already committed
+# ❌ If "working tree clean" but you made changes = CHANGES NOT SAVED!
+
+# 2. VERIFY TYPESCRIPT COMPILATION (for backend changes only)
+cd backend && npm run build  
+# ✅ Must compile without errors
+# ❌ If fails = Fix TypeScript errors BEFORE proceeding
+
+# 3. VERIFY GITHUB HAS YOUR CHANGES
+git log -1 --oneline  
+# ✅ Should show your recent commit with your changes
+# ❌ If doesn't show your changes = NOT COMMITTED YET!
+
+# 4. VERIFY ALL CHANGES PUSHED
+git log origin/main..HEAD
+# ✅ Should show nothing (all commits pushed)
+# ❌ If shows commits = NOT PUSHED TO GITHUB!
 ```
 
-**Commit Message Format:**
+**⚠️ CRITICAL UNDERSTANDING:**
+- Docker builds from GitHub repository, NOT your local files
+- Uncommitted changes will NEVER deploy
+- This is the #1 cause of "mysterious" deployment failures
+
+---
+
+### 📋 DEPLOYMENT PROCEDURES
+
+#### 1️⃣ Frontend Deployment (`frontend/` files)
 ```bash
-feat: Add photo tagging system
-fix: Restore infinite scroll functionality  
-docs: Update API documentation
-refactor: Clean up deprecated Ollama references
-```
+# Simple 3-step process
+git add .
+git commit -m "feat/fix/docs: Description of changes"
+git push origin main
 
-### Deployment Scenarios
-
-### 🚨 **MANDATORY PRE-DEPLOYMENT CHECKLIST**
-**NEVER SKIP THESE STEPS - They prevent 99% of deployment failures:**
-
-```bash
-# Step 1: VERIFY CHANGES EXIST (CRITICAL - ALWAYS RUN FIRST)
-git status  # Must show your changes, if "working tree clean" = NO CHANGES TO DEPLOY!
-
-# Step 2: VERIFY TYPESCRIPT COMPILATION (for backend changes)
-cd backend && npm run build  # MUST pass or Docker build will fail
-
-# Step 3: VERIFY GITHUB HAS YOUR CHANGES
-git log -1 --oneline  # Should show your recent commit
-# If your changes aren't in the last commit, STOP - you haven't committed yet!
-```
-
-**⚠️ COMMON FAILURE PATTERN TO AVOID:**
-- Making changes locally → Running Docker build → Wondering why changes don't deploy
-- **REASON**: Docker builds from GitHub, not your local files!
-- **SOLUTION**: Always run pre-deployment checklist above
-
-#### Frontend-Only Changes (`frontend/` files)
-```bash
-# MANDATORY: Run pre-deployment checklist first (see above)
-git add . && git commit -m "Description" && git push origin main
-# GitHub Actions auto-deploys (~2-5 minutes)
+# GitHub Actions auto-deploys in ~2-5 minutes
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 
-#### Backend Changes (`.ts/.js` in `backend/src/`)
+#### 2️⃣ Backend Deployment (`backend/src/` files)
 ```bash
-# MANDATORY: Run pre-deployment checklist first (see above)
+# Step 1: Run pre-deployment checklist (see above)
 
-# Commit and push (REQUIRED - Docker builds from GitHub, not local!)
-git add . && git commit -m "Description" && git push origin main
+# Step 2: Commit and push to GitHub
+git add .
+git commit -m "feat/fix/refactor: Description of changes"
+git push origin main
 
-# VERIFY push succeeded before proceeding
-git status  # Should show "Your branch is up to date with 'origin/main'"
+# Step 3: Verify push succeeded
+git status  # Must show "Your branch is up to date with 'origin/main'"
 
-# Method 1: Standard Build (if Unicode issues aren't problematic)
-DOCKER_TAG="backend-$(date +%Y%m%d-%H%M)"
-az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
-
-# Method 2: Windows-Safe Build (RECOMMENDED - avoids Unicode display issues)
+# Step 4: Build Docker image (Windows-Safe Method RECOMMENDED)
 DOCKER_TAG="backend-$(date +%Y%m%d-%H%M%S)"
 az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 echo "Build queued with tag: $DOCKER_TAG"
-sleep 180  # Wait 3 minutes for build completion
 
-# Verify build succeeded (MANDATORY before deploying)
+# Step 5: Wait for build (typically 2-3 minutes)
+sleep 180
+
+# Step 6: Verify build succeeded
 az acr task list-runs --registry uwracr2425 --output table | head -3
-# Status should show "Succeeded", not "Failed"
+# Status column MUST show "Succeeded"
 
-# Deploy new image
+# Step 7: Deploy new image
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
 
-# Verify deployment (uptime should be <60 seconds)
+# Step 8: Verify deployment
 curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+# Uptime should be <60 seconds for fresh deployment
 ```
 
-#### Schema Changes (`prisma/schema.prisma` modified)
+#### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
+```bash
+# Step 1: Commit schema changes
+git add .
+git commit -m "schema: Description of changes"
+git push origin main
+
+# Step 2: Generate Prisma client locally
+cd backend && npx prisma generate
+
+# Step 3: Apply migrations to production database
+npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+
+# Step 4: Follow Backend Deployment steps above
+```
+
+---
+
+### 🔍 QUICK FAILURE DIAGNOSIS
+
+**When changes don't appear in production, check in order:**
+
+```bash
+# 1. Are changes committed?
+git status  # If shows modified files = NOT COMMITTED
+
+# 2. Are changes pushed?
+git log origin/main..HEAD  # If shows commits = NOT PUSHED
+
+# 3. Did TypeScript compile?
+cd backend && npm run build  # If errors = FIX FIRST
+
+# 4. Did Docker build succeed?
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# If Status = "Failed" = BUILD FAILED
+
+# 5. Is new container running?
+curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+# If uptime > 300 seconds = OLD CONTAINER
+```
+
+---
+
+### ⚠️ WHEN DOCKER REBUILD IS REQUIRED
+
+**MUST Rebuild For:**
+- ✅ Backend source code changes (`.ts`, `.js` files in `/backend/src/`)
+- ✅ Package dependencies (`package.json`, `package-lock.json`)
+- ✅ Dockerfile modifications
+- ✅ Prisma schema changes (after migrations)
+- ✅ New environment variables affecting app logic
+
+**NO Rebuild Needed For:**
+- ❌ Frontend changes (GitHub Actions handles)
+- ❌ Config-only environment variables (API keys, URLs)
+- ❌ Database migrations alone
+
+---
+
+### 🛠️ COMMON DEPLOYMENT ISSUES
+
+#### Issue #1: Uncommitted Changes (50% of failures)
+**Symptom**: Changes don't deploy despite "successful" builds  
+**Cause**: Docker builds from GitHub, not local files  
+**Fix**: 
 ```bash
 git add . && git commit -m "Description" && git push origin main
-
-# Apply migrations BEFORE backend deployment
-cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
-
-# Then follow Backend deployment steps above
 ```
+
+#### Issue #2: TypeScript Compilation Errors
+**Symptom**: Docker build fails at `RUN npm run build`  
+**Cause**: TypeScript errors in code  
+**Fix**: Run `cd backend && npm run build` locally first
+
+#### Issue #3: Windows Unicode Display Errors
+**Symptom**: `'charmap' codec can't encode character` errors  
+**Reality**: Display issue only - build may still succeed  
+**Fix**: Use `--no-wait` flag and check status separately
+
+#### Issue #4: Stale Container Running
+**Symptom**: Old code still running after deployment  
+**Cause**: Environment variable update instead of image rebuild  
+**Fix**: Always use `az acr build` for code changes
 
 ---
 
-## 🚨 CRITICAL: When Docker Rebuilds Are Required
-
-### **Docker Rebuild MANDATORY For:**
-1. **Backend code changes** in `/backend/src/` (`.ts`, `.js`, `.json` files)
-2. **Dependencies changes** (`package.json`, `package-lock.json`)
-3. **Dockerfile modifications**
-4. **Prisma schema changes** (after running migrations)
-5. **New environment variables that affect backend app logic**
-
-### **Docker Rebuild NOT NEEDED For:**
-- **Frontend changes** (GitHub Actions handles deployment)
-- **Configuration-only environment variables** (API keys, URLs, timeouts)
-- **Database migrations only** (can run independently)
-
-### **CRITICAL DISTINCTION:**
-- **Environment Variable Updates**: Restart existing containers with old code ❌ For backend code changes
-- **Docker Image Rebuilds**: Deploy new containers with latest GitHub code ✅ For backend code changes
-- **GitHub Actions**: Handles frontend deployment automatically ✅ For frontend changes
-
----
-
-## 🛡️ Docker Build Troubleshooting
-
-#### #0 MOST CRITICAL: Uncommitted Changes (Causes 50% of "mysterious" failures)
-- **Symptoms**: Changes don't appear in production despite "successful" deployments
-- **Real Cause**: Docker builds from GitHub, your changes are only local
-- **Diagnosis**: 
-  ```bash
-  git status  # Shows modified/untracked files = CHANGES NOT IN GITHUB!
-  git diff HEAD  # Shows exact changes not yet committed
-  ```
-- **Solution**: Commit and push ALL changes before Docker build:
-  ```bash
-  git add .
-  git commit -m "Your changes description"
-  git push origin main
-  git status  # MUST show "working tree clean" before proceeding
-  ```
-- **Prevention**: ALWAYS run pre-deployment checklist (see above)
-
-#### #1 Second Most Common: TypeScript Compilation Errors
-- **Real Cause**: TypeScript compilation errors (NOT Docker infrastructure issues)
-- **Symptoms**: Build fails at Step 22 (`RUN npm run build`) 
-- **Solution**: Run `cd backend && npm run build` locally first - MUST pass before Docker build
-- **Common Errors**: Missing imports, wrong field/model names, Prisma schema mismatches
-- **Prevention**: Pre-flight checklist prevents 99% of Docker build failures
-
-#### #2 Windows Unicode Display Issues
-- **Problem**: `'charmap' codec can't encode character` CLI errors
-- **Reality**: Display issue only - builds may still succeed/fail independently
-- **Solution**: Use Method 2 (--no-wait) and check build status separately
-- **Never Debug With**: `az acr task logs` - logs corrupted by Unicode issues
-- **Always Use**: Build status verification:
-```bash
-az acr task list-runs --registry uwracr2425 --output table | head -3
-# Focus on Status column: "Succeeded" vs "Failed"
-```
-
-#### #3 Stale Code Deployment (Critical Understanding)
-- **Problem**: Environment variable restarts use OLD Docker images
-- **Cause**: `az containerapp update --set-env-vars` restarts existing containers, doesn't pull new code
-- **Result**: May appear to "deploy" but actually runs outdated code
-- **Solution**: Always use `az acr build` for backend code changes
-- **Environment Variables**: Only for configuration changes, never backend code changes
-
-### 🔍 Quick Deployment Failure Diagnosis
-**When your changes don't appear in production:**
+### 🚑 EMERGENCY PROCEDURES
 
 ```bash
-# 1. CHECK: Are changes committed?
-git status  # If not "working tree clean" = PROBLEM FOUND!
-
-# 2. CHECK: Are changes pushed to GitHub?
-git log origin/main..HEAD  # If shows commits = NOT PUSHED!
-
-# 3. CHECK: Did TypeScript compile?
-cd backend && npm run build  # If fails = FIX ERRORS FIRST!
-
-# 4. CHECK: Is new container running?
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
-# If uptime > 300 seconds = OLD CONTAINER STILL RUNNING!
-
-# 5. CHECK: Did Docker build succeed?
-az acr task list-runs --registry uwracr2425 --output table | head -3
-# If Status shows "Failed" = BUILD FAILED!
-```
-
-### Emergency Recovery Procedures
-**When**: System-wide failures, database corruption, critical production issues
-
-```bash
-# Backend crash recovery with clean restart
+# Backend emergency restart
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
   --revision-suffix emergency-$(date +%m%d-%H%M)
 
-# Frontend emergency rollback (if bad deployment)
-git revert HEAD
-git push origin main  # GitHub Actions auto-deploys rollback
+# Frontend rollback
+git revert HEAD && git push origin main
 
-# Database point-in-time restore (last resort)
+# Database restore (last resort)
 az postgres flexible-server restore \
   --resource-group unitedwerise-rg \
   --name unitedwerise-db-restored \
@@ -357,7 +336,42 @@ az postgres flexible-server restore \
   --restore-time "2025-MM-DDTHH:MM:00Z"
 ```
 
-**Verification**: Always check `deploymentStatus.check()` after emergency procedures
+---
+
+### ✅ POST-DEPLOYMENT VERIFICATION
+
+```javascript
+// Browser console check:
+deploymentStatus.check()  
+// Should show: uptime < 60 seconds for fresh deployment
+```
+
+**Always Verify:**
+- Git status clean after push
+- Backend uptime < 60 seconds after deployment
+- New functionality works in production
+- No TypeScript compilation errors locally
+
+---
+
+### 📝 Git Workflow Standards
+
+**Branch Strategy:**
+```
+main           # Production code
+├── feature/*  # New features (feature/user-profiles)
+├── fix/*      # Bug fixes (fix/auth-timeout)
+└── hotfix/*   # Emergency fixes (hotfix/security-patch)
+```
+
+**Commit Message Format:**
+```
+feat: Add new feature
+fix: Fix specific bug
+docs: Update documentation
+refactor: Code cleanup
+schema: Database changes
+```
 
 ---
 
