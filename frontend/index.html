@@ -4333,7 +4333,6 @@
                                     <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                                 </div>
                                 <div>
-                                    <button id="addThreadBreakBtn" onclick="addThreadBreak()" class="btn" style="display: none; background: #1da1f2; margin-right: 0.5rem; font-size: 1.2rem; padding: 0.375rem 0.75rem;" title="Add continuation">+</button>
                                     <button onclick="createPostFromFeed()" class="btn">Post</button>
                                 </div>
                             </div>
@@ -4372,185 +4371,49 @@
                 console.error('❌ Error setting up infinite scroll:', error);
             }
             
-            // Setup character counter for post creation with sections
+            // Simple character counter for post creation (up to 5000 chars, auto-split on backend)
             const feedPostTextarea = document.getElementById('feedPostContent');
             const feedCharCount = document.getElementById('feedPostCharCount');
-            const addThreadBtn = document.getElementById('addThreadBreakBtn');
             const sectionIndicator = document.getElementById('sectionIndicator');
             
-            // Track thread break position
-            window.threadBreakPosition = null;
-            
             if (feedPostTextarea && feedCharCount) {
-                // Function to update character count based on current section
+                // Function to update character count
                 function updateCharCounter() {
                     const text = feedPostTextarea.value;
-                    const cursorPos = feedPostTextarea.selectionStart;
+                    const charCount = text.length;
                     
-                    if (window.threadBreakPosition !== null) {
-                        // We have a thread break
-                        const separator = '\n\n--- Continue ---\n\n';
-                        const breakIndex = text.indexOf(separator);
-                        
-                        if (breakIndex !== -1) {
-                            // Determine which section cursor is in
-                            const inFirstSection = cursorPos <= breakIndex;
-                            
-                            if (inFirstSection) {
-                                // Counting first section (main post)
-                                const sectionText = text.substring(0, breakIndex);
-                                const charCount = sectionText.length;
-                                feedCharCount.textContent = `${charCount}/500`;
-                                sectionIndicator.textContent = 'Post';
-                                sectionIndicator.style.display = 'inline';
-                                
-                                // Color coding
-                                if (charCount > 500) {
-                                    feedCharCount.style.color = '#dc3545'; // Red
-                                    feedCharCount.style.fontWeight = 'bold';
-                                } else if (charCount >= 450) {
-                                    feedCharCount.style.color = '#ffc107'; // Orange
-                                    feedCharCount.style.fontWeight = 'bold';
-                                } else {
-                                    feedCharCount.style.color = '#6c757d'; // Gray
-                                    feedCharCount.style.fontWeight = 'normal';
-                                }
-                                
-                                // Hide + button in first section if already has break
-                                addThreadBtn.style.display = 'none';
-                            } else {
-                                // Counting second section (continuation comment)
-                                const sectionText = text.substring(breakIndex + separator.length);
-                                const charCount = sectionText.length;
-                                feedCharCount.textContent = `${charCount}/5000`;
-                                sectionIndicator.textContent = 'Continuation';
-                                sectionIndicator.style.display = 'inline';
-                                
-                                // Color coding for continuation (5000 char limit)
-                                if (charCount > 5000) {
-                                    feedCharCount.style.color = '#dc3545'; // Red
-                                    feedCharCount.style.fontWeight = 'bold';
-                                } else if (charCount >= 4500) {
-                                    feedCharCount.style.color = '#ffc107'; // Orange
-                                    feedCharCount.style.fontWeight = 'bold';
-                                } else {
-                                    feedCharCount.style.color = '#6c757d'; // Gray
-                                    feedCharCount.style.fontWeight = 'normal';
-                                }
-                                
-                                // No additional breaks in continuation
-                                addThreadBtn.style.display = 'none';
-                            }
-                        } else {
-                            // Break was removed somehow, reset
-                            window.threadBreakPosition = null;
-                            updateCharCounter();
-                        }
-                    } else {
-                        // No thread break yet - single section
-                        const charCount = text.length;
-                        feedCharCount.textContent = `${charCount}/500`;
+                    // Display character count
+                    feedCharCount.textContent = `${charCount}/5000`;
+                    
+                    // Hide section indicator (no longer needed)
+                    if (sectionIndicator) {
                         sectionIndicator.style.display = 'none';
-                        
-                        // Show + button at 450 characters
-                        if (charCount >= 450 && charCount <= 500) {
-                            addThreadBtn.style.display = 'inline-block';
-                            feedCharCount.style.color = '#ffc107'; // Orange
-                            feedCharCount.style.fontWeight = 'bold';
-                        } else if (charCount > 500) {
-                            addThreadBtn.style.display = 'inline-block';
-                            feedCharCount.style.color = '#dc3545'; // Red
-                            feedCharCount.style.fontWeight = 'bold';
-                        } else {
-                            addThreadBtn.style.display = 'none';
-                            feedCharCount.style.color = '#6c757d'; // Gray
-                            feedCharCount.style.fontWeight = 'normal';
-                        }
+                    }
+                    
+                    // Color coding
+                    if (charCount > 5000) {
+                        feedCharCount.style.color = '#dc3545'; // Red
+                        feedCharCount.style.fontWeight = 'bold';
+                    } else if (charCount >= 4500) {
+                        feedCharCount.style.color = '#ffc107'; // Orange
+                        feedCharCount.style.fontWeight = 'bold';
+                    } else if (charCount >= 500) {
+                        // Show info that post will be auto-split
+                        feedCharCount.style.color = '#17a2b8'; // Blue
+                        feedCharCount.style.fontWeight = 'normal';
+                        feedCharCount.title = 'Post will be automatically split for display';
+                    } else {
+                        feedCharCount.style.color = '#6c757d'; // Gray
+                        feedCharCount.style.fontWeight = 'normal';
+                        feedCharCount.title = '';
                     }
                 }
                 
                 // Initial count
                 updateCharCounter();
                 
-                // Handle separator as atomic unit
-                let previousValue = feedPostTextarea.value;
-                
-                feedPostTextarea.addEventListener('beforeinput', function(e) {
-                    const separator = '--- Continue ---';
-                    const fullSeparator = '\n\n--- Continue ---\n\n';
-                    const currentValue = this.value;
-                    
-                    // Check if separator exists
-                    if (currentValue.includes(separator)) {
-                        const start = this.selectionStart;
-                        const end = this.selectionEnd;
-                        
-                        // Find separator boundaries
-                        const sepStart = currentValue.indexOf(fullSeparator);
-                        const sepEnd = sepStart + fullSeparator.length;
-                        
-                        // Check if user is trying to edit within the separator
-                        if (sepStart !== -1) {
-                            const isEditingSeparator = (
-                                (start > sepStart && start < sepEnd) || 
-                                (end > sepStart && end < sepEnd) ||
-                                (start <= sepStart && end >= sepEnd)
-                            );
-                            
-                            if (isEditingSeparator) {
-                                // Check if it's a delete operation
-                                if (e.inputType && e.inputType.includes('delete')) {
-                                    // Delete the entire separator
-                                    e.preventDefault();
-                                    this.value = currentValue.substring(0, sepStart) + currentValue.substring(sepEnd);
-                                    window.threadBreakPosition = null;
-                                    this.setSelectionRange(sepStart, sepStart);
-                                    updateCharCounter();
-                                } else {
-                                    // Prevent any other edits to the separator
-                                    e.preventDefault();
-                                }
-                            }
-                        }
-                    }
-                });
-                
                 // Update on input
-                feedPostTextarea.addEventListener('input', function() {
-                    const separator = '--- Continue ---';
-                    const currentValue = this.value;
-                    
-                    // Check if separator was partially modified
-                    if (previousValue.includes(separator) && !currentValue.includes(separator)) {
-                        // Separator was damaged, remove any remnants
-                        const patterns = [
-                            /\n*-*\s*Continue\s*-*\n*/gi,
-                            /\n*-+\s*\n*/g
-                        ];
-                        
-                        let cleanedValue = currentValue;
-                        for (const pattern of patterns) {
-                            cleanedValue = cleanedValue.replace(pattern, '\n');
-                        }
-                        
-                        if (cleanedValue !== currentValue) {
-                            this.value = cleanedValue.replace(/\n{3,}/g, '\n\n'); // Clean up excess newlines
-                            window.threadBreakPosition = null;
-                        }
-                    }
-                    
-                    previousValue = this.value;
-                    updateCharCounter();
-                });
-                
-                // Update on cursor position change (click or arrow keys)
-                feedPostTextarea.addEventListener('click', updateCharCounter);
-                feedPostTextarea.addEventListener('keyup', function(e) {
-                    // Arrow keys, Home, End, Page Up/Down
-                    if ([33, 34, 35, 36, 37, 38, 39, 40].includes(e.keyCode)) {
-                        updateCharCounter();
-                    }
-                });
+                feedPostTextarea.addEventListener('input', updateCharCounter);
             }
             
             // Apply background if user has one
@@ -4980,15 +4843,9 @@
             const content = textarea.value.trim();
             if (!content) return false;
 
-            // Check if content contains manual thread break
-            const separator = '--- Continue ---';
-            if (content.includes(separator)) {
-                return await createThreadedPost(content);
-            }
-            
-            // Check if any section exceeds limits
-            if (content.length > 500) {
-                alert('Post exceeds 500 characters. Please use the + button to create a continuation.');
+            // Check if content exceeds maximum limit (5000 chars)
+            if (content.length > 5000) {
+                alert('Post exceeds 5000 characters. Please shorten your post.');
                 return false;
             }
 
@@ -5012,6 +4869,10 @@
                         if (mediaPreview) mediaPreview.style.display = 'none';
                     }
                     
+                    // Update character counter
+                    const charCount = document.getElementById('feedPostCharCount');
+                    if (charCount) charCount.textContent = '0/5000';
+                    
                     // Refresh feed
                     if (typeof loadMoreMyFeedPosts === 'function') {
                         showMyFeedInMain();
@@ -5029,8 +4890,11 @@
             }
         }
 
-        // Create threaded post with manual separator
-        async function createThreadedPost(content) {
+        // REMOVED: createThreadedPost function - no longer needed with automatic splitting
+        // The backend now handles splitting content >500 chars into content + extendedContent
+        
+        // REMOVED: Old threaded post function
+        /* async function createThreadedPost(content) {
             const textarea = document.getElementById('feedPostContent');
             const separator = '--- Continue ---';
             
@@ -5117,10 +4981,10 @@
                 alert('Error creating threaded post: ' + error.message);
                 return false;
             }
-        }
+        } */
         
-        // Add thread break separator
-        function addThreadBreak() {
+        // REMOVED: addThreadBreak function - no longer needed
+        /* function addThreadBreak() {
             const textarea = document.getElementById('feedPostContent');
             if (!textarea) return;
             
@@ -5149,10 +5013,10 @@
             // Trigger character counter update
             textarea.dispatchEvent(new Event('input'));
             textarea.dispatchEvent(new Event('click'));
-        }
+        } */
 
-        // Create post with continuation - splits long posts into main post + comment
-        async function createPostWithContinuation() {
+        // REMOVED: createPostWithContinuation function - replaced by automatic backend splitting
+        /* async function createPostWithContinuation() {
             const textarea = document.getElementById('feedPostContent');
             if (!textarea) return false;
 
@@ -5227,10 +5091,10 @@
                 alert('Error creating post with continuation');
                 return false;
             }
-        }
+        } */
         
-        // Helper function to add comment to a post
-        async function addCommentToPost(postId, content) {
+        // REMOVED: addCommentToPost helper - no longer needed for continuations
+        /* async function addCommentToPost(postId, content) {
             try {
                 const response = await apiCall(`/posts/${postId}/comments`, {
                     method: 'POST',
@@ -5245,7 +5109,7 @@
                 console.error('Error adding continuation comment:', error);
                 // Don't show alert for comment error - main post was successful
             }
-        }
+        } */
 
         async function loadUserProfile() {
             if (!authToken) {
