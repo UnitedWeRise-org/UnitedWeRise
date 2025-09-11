@@ -2694,10 +2694,7 @@ Response Structure:
 - **UI Components**: Responsive metric cards, geographic charts, breakdown lists
 
 #### Future Enhancements
-- **📈 Chart Integration**: Add Chart.js for visual trend analysis
-- **🎯 Predictive Analytics**: ML-powered growth and engagement forecasting
-- **📊 Export Capabilities**: CSV/PDF report generation for stakeholder sharing
-- **🔄 Real-time Streaming**: Live-updating dashboard with WebSocket integration
+See **Analytics & Reporting Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 ### Deployment Status System
 
@@ -2878,10 +2875,7 @@ await adminDebugTimeEnd('ComponentName', 'expensive-operation');
 - **Security Compliance**: Zero risk of exposing debug data to regular users
 
 #### Future Enhancement Opportunities
-- **Log Export**: Admin-only function to export debug logs
-- **Debug Levels**: Configurable verbosity levels (info/warn/error only)
-- **Component Filtering**: Show/hide debug output by component name
-- **Remote Logging**: Send debug output to admin-only logging service
+See **Developer & Admin Tools** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 #### Cross-Referenced Systems
 - **{#admin-console-system}**: Integrates with existing admin verification
@@ -3644,12 +3638,7 @@ include: {
 - `frontend/src/styles/post-component.css` - Button styling and animations
 
 #### Future Enhancements
-
-1. **Pagination**: Implement for posts with >100 comments
-2. **Lazy Loading**: Load deep threads on demand
-3. **Sorting**: Add sort options (newest, oldest, most liked)
-4. **Real-time Updates**: WebSocket integration for live comments
-5. **Thread Bookmarking**: Save/bookmark specific comment threads
+See **Comment & Discussion Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 **Note**: Basic thread collapsing and expansion functionality completed September 11, 2025.
 
@@ -4962,16 +4951,7 @@ GET  /api/candidate/admin-messages/unread-count     // Get notification badge co
 - **Status Indicators**: Visual feedback for message delivery and admin reading status
 
 #### Future Enhancements (Planned)
-
-**Delegation System**:
-- **Candidate Liaisons**: Assign specific admin staff to candidate communications
-- **Regional Management**: Territory-based message routing for geographic coverage
-- **Escalation Workflows**: Priority-based message routing and response requirements
-
-**AI Integration**:
-- **Priority Assessment**: Automated message priority assignment based on content analysis
-- **Response Templates**: AI-suggested responses for common inquiries
-- **Sentiment Analysis**: Emotional tone detection for improved response prioritization
+See **Admin & Messaging Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 #### Integration Points
 
@@ -5124,11 +5104,7 @@ curl -s backend-url/api/admin/candidates/profiles # Should return 401, not 404
 - **Testing**: End-to-end candidate workflow verified and operational
 
 ### Future Enhancements
-- **Email Notifications**: Automated approval/rejection notifications
-- **Bulk Operations**: Multi-candidate approval/rejection capabilities
-- **Advanced Analytics**: Candidate registration trends and statistics
-- **Document Upload**: Fee waiver documentation attachment system
-- **Candidate Onboarding**: Automated candidate profile setup and training
+See **Candidate Management Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 ---
 
@@ -6090,13 +6066,7 @@ User switches to Local View → Shows Bay Area environmental initiatives
 - **Anti-Gaming**: Resistant to artificial topic manipulation
 
 ### Future Enhancements (Roadmap)
-
-#### Planned Improvements
-- **Topic Bookmarking**: Save interesting topics for later viewing
-- **Stance Filtering**: View only supporting or opposing posts for a topic
-- **Historical Topics**: Track how topics and stances evolve over time
-- **Personalized Topics**: AI-curated topics based on user interests
-- **Cross-Platform Sync**: Topic preferences across devices
+See **AI & Topic Discovery Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 #### Technical Optimizations
 - **Real-Time Clustering**: Live topic updates as new posts arrive
@@ -6440,12 +6410,7 @@ try {
 - ✅ **Mobile Responsive**: Optimized for all device sizes
 
 ### Future Enhancements
-
-#### Planned Features
-- **Enhanced Campaigns**: Advanced fundraising campaign management
-- **Donor Analytics**: Comprehensive donation tracking and reporting
-- **Recurring Management**: User dashboard for subscription management
-- **Advanced Receipts**: PDF generation and email delivery automation
+See **Payment & Financial Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap) section for all planned enhancements to this system.
 
 **Note**: Live Stripe Keys are already operational since August 22, 2025.
 
@@ -7832,6 +7797,55 @@ showDefaultView()
 - Campaign tools
 - Petition platform
 - Community organizing
+
+### 🔧 SYSTEM-SPECIFIC FUTURE ENHANCEMENTS
+
+#### **Analytics & Reporting Systems**
+- **📈 Chart Integration**: Add Chart.js for visual trend analysis
+- **🎯 Predictive Analytics**: ML-powered growth and engagement forecasting  
+- **📊 Export Capabilities**: CSV/PDF report generation for stakeholder sharing
+- **🔄 Real-time Streaming**: Live-updating dashboard with WebSocket integration
+- **📈 Advanced Analytics**: Candidate registration trends and statistics
+- **💰 Donor Analytics**: Comprehensive donation tracking and reporting
+
+#### **Comment & Discussion Systems**
+- **📄 Pagination**: Implement for posts with >100 comments
+- **⚡ Lazy Loading**: Load deep threads on demand  
+- **🔀 Sorting Options**: Add sort options (newest, oldest, most liked)
+- **🔄 Real-time Updates**: WebSocket integration for live comments
+- **🔖 Thread Bookmarking**: Save/bookmark specific comment threads
+
+#### **AI & Topic Discovery Systems**
+- **🔖 Topic Bookmarking**: Save interesting topics for later viewing
+- **🎯 Stance Filtering**: View only supporting or opposing posts for a topic
+- **📈 Historical Topics**: Track how topics and stances evolve over time
+- **🤖 Personalized Topics**: AI-curated topics based on user interests
+- **🔄 Cross-Platform Sync**: Topic preferences across devices
+
+#### **Admin & Messaging Systems**
+- **👥 Candidate Liaisons**: Assign specific admin staff to candidate communications
+- **🗺️ Regional Management**: Territory-based message routing for geographic coverage
+- **⚡ Escalation Workflows**: Priority-based message routing and response requirements
+- **🤖 Priority Assessment**: Automated message priority assignment based on content analysis
+- **📝 Response Templates**: AI-suggested responses for common inquiries
+- **💭 Sentiment Analysis**: Emotional tone detection for improved response prioritization
+
+#### **Payment & Financial Systems**
+- **🎯 Enhanced Campaigns**: Advanced fundraising campaign management
+- **🔄 Recurring Management**: User dashboard for subscription management
+- **📄 Advanced Receipts**: PDF generation and email delivery automation
+
+#### **Candidate Management Systems**
+- **📧 Email Notifications**: Automated approval/rejection notifications
+- **⚡ Bulk Operations**: Multi-candidate approval/rejection capabilities
+- **📎 Document Upload**: Fee waiver documentation attachment system
+- **🎓 Candidate Onboarding**: Automated candidate profile setup and training
+
+#### **Developer & Admin Tools**
+- **📋 Log Export**: Admin-only function to export debug logs
+- **🔧 Debug Levels**: Configurable verbosity levels (info/warn/error only)
+- **🎯 Component Filtering**: Show/hide debug output by component name
+- **☁️ Remote Logging**: Send debug output to admin-only logging service
 
 ---
 
