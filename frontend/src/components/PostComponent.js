@@ -340,16 +340,26 @@ class PostComponent {
     /**
      * Flatten comment tree into single array with depth tracking
      */
-    flattenCommentTree(comments, depth = 0) {
+    flattenCommentTree(comments, depth = 0, parentId = null) {
         let result = [];
         
         comments.forEach(comment => {
-            // Add this comment with its current depth
-            result.push({ ...comment, depth });
+            // Check if this comment has replies and count them
+            const hasReplies = comment.replies && comment.replies.length > 0;
+            const replyCount = hasReplies ? comment.replies.length : 0;
+            
+            // Add this comment with its current depth and parent info
+            result.push({ 
+                ...comment, 
+                depth, 
+                parentId,
+                hasReplies,
+                replyCount
+            });
             
             // If it has replies, flatten those too
-            if (comment.replies && comment.replies.length > 0) {
-                const childComments = this.flattenCommentTree(comment.replies, depth + 1);
+            if (hasReplies) {
+                const childComments = this.flattenCommentTree(comment.replies, depth + 1, comment.id);
                 result = result.concat(childComments);
             }
         });
@@ -369,8 +379,19 @@ class PostComponent {
         const marginLeft = visualDepth * 20;
         const isFlattened = comment.depth >= 2;
         
+        // Check if this comment has replies (children at next depth level)
+        const hasReplies = comment.hasReplies || false;
+        
+        // Start collapsed for all non-top-level comments
+        const isCollapsed = comment.depth > 0;
+        const displayStyle = isCollapsed ? 'display: none;' : '';
+        
         return `
-            <div class="comment ${isFlattened ? 'flattened-comment' : ''}" data-comment-id="${comment.id}" data-depth="${visualDepth}" style="margin-left: ${marginLeft}px;">
+            <div class="comment ${isFlattened ? 'flattened-comment' : ''} ${isCollapsed ? 'collapsed-thread' : ''}" 
+                 data-comment-id="${comment.id}" 
+                 data-depth="${visualDepth}" 
+                 data-parent-id="${comment.parentId || ''}"
+                 style="margin-left: ${marginLeft}px; ${displayStyle}">
                 <div class="comment-header">
                     <span class="comment-author">${displayName}</span>
                     <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
@@ -378,6 +399,11 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${hasReplies ? `
+                        <button class="expand-thread-btn" onclick="postComponent.toggleThread('${comment.id}')">
+                            <span class="expand-icon">▶</span> <span class="replies-count">${comment.replyCount || ''} replies</span>
+                        </button>
+                    ` : ''}
                     <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
                         💬 Reply
                     </button>
@@ -587,6 +613,58 @@ class PostComponent {
             alert('Error adding comment');
         } finally {
             input.disabled = false;
+        }
+    }
+
+    /**
+     * Toggle thread expansion/collapse
+     */
+    toggleThread(commentId) {
+        console.log('🔄 Toggling thread for comment:', commentId);
+        
+        // Find all child comments of this comment
+        const allComments = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
+        const expandBtn = document.querySelector(`.comment[data-comment-id="${commentId}"] .expand-thread-btn`);
+        const expandIcon = document.querySelector(`.comment[data-comment-id="${commentId}"] .expand-thread-btn .expand-icon`);
+        
+        if (allComments.length === 0) {
+            console.log('No child comments found');
+            return;
+        }
+        
+        // Check if currently expanded or collapsed
+        const isExpanded = allComments[0].style.display !== 'none';
+        
+        // Toggle all direct children
+        allComments.forEach(comment => {
+            comment.style.display = isExpanded ? 'none' : 'block';
+            
+            // If collapsing, also collapse all nested children
+            if (isExpanded) {
+                const nestedChildren = document.querySelectorAll(`.comment[data-parent-id="${comment.dataset.commentId}"]`);
+                nestedChildren.forEach(nested => {
+                    nested.style.display = 'none';
+                });
+                
+                // Reset any expanded icons in nested threads
+                const nestedExpandBtns = comment.querySelectorAll('.expand-thread-btn');
+                nestedExpandBtns.forEach(btn => {
+                    btn.classList.remove('expanded');
+                    const icon = btn.querySelector('.expand-icon');
+                    if (icon) icon.textContent = '▶';
+                });
+            }
+        });
+        
+        // Update expand/collapse icon and class
+        if (expandBtn && expandIcon) {
+            if (isExpanded) {
+                expandBtn.classList.remove('expanded');
+                expandIcon.textContent = '▶';
+            } else {
+                expandBtn.classList.add('expanded');
+                expandIcon.textContent = '▼';
+            }
         }
     }
 
