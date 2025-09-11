@@ -4371,7 +4371,7 @@
                 console.error('❌ Error setting up infinite scroll:', error);
             }
             
-            // Simple character counter for post creation (up to 5000 chars, auto-split on backend)
+            // Character counter - only shows when approaching max limit
             const feedPostTextarea = document.getElementById('feedPostContent');
             const feedCharCount = document.getElementById('feedPostCharCount');
             const sectionIndicator = document.getElementById('sectionIndicator');
@@ -4382,30 +4382,26 @@
                     const text = feedPostTextarea.value;
                     const charCount = text.length;
                     
-                    // Display character count
-                    feedCharCount.textContent = `${charCount}/5000`;
-                    
                     // Hide section indicator (no longer needed)
                     if (sectionIndicator) {
                         sectionIndicator.style.display = 'none';
                     }
                     
-                    // Color coding
-                    if (charCount > 5000) {
-                        feedCharCount.style.color = '#dc3545'; // Red
-                        feedCharCount.style.fontWeight = 'bold';
-                    } else if (charCount >= 4500) {
-                        feedCharCount.style.color = '#ffc107'; // Orange
-                        feedCharCount.style.fontWeight = 'bold';
-                    } else if (charCount >= 500) {
-                        // Show info that post will be auto-split
-                        feedCharCount.style.color = '#17a2b8'; // Blue
-                        feedCharCount.style.fontWeight = 'normal';
-                        feedCharCount.title = 'Post will be automatically split for display';
+                    // Only show counter when approaching 5000 char limit
+                    if (charCount >= 4900) {
+                        feedCharCount.style.display = 'inline';
+                        feedCharCount.textContent = `${charCount}/5000`;
+                        
+                        if (charCount > 5000) {
+                            feedCharCount.style.color = '#dc3545'; // Red
+                            feedCharCount.style.fontWeight = 'bold';
+                        } else {
+                            feedCharCount.style.color = '#ffc107'; // Orange warning
+                            feedCharCount.style.fontWeight = 'bold';
+                        }
                     } else {
-                        feedCharCount.style.color = '#6c757d'; // Gray
-                        feedCharCount.style.fontWeight = 'normal';
-                        feedCharCount.title = '';
+                        // Hide counter when under 4900
+                        feedCharCount.style.display = 'none';
                     }
                 }
                 
