@@ -213,11 +213,11 @@ class PostComponent {
         try {
             // Get the post data to check for extended content
             const postResponse = await window.apiCall(`/posts/${postId}`);
-            if (!postResponse.ok || !postResponse.data.extendedContent) {
+            if (!postResponse.ok || !postResponse.data.post || !postResponse.data.post.extendedContent) {
                 return; // No extended content to show
             }
 
-            const post = postResponse.data;
+            const post = postResponse.data.post;
             const postContentDiv = document.querySelector(`[data-post-id="${postId}"] .post-content`);
             if (!postContentDiv) return;
 
@@ -319,7 +319,9 @@ class PostComponent {
      * Render comments list with nested threading (3-layer system)
      */
     renderComments(postId, comments) {
-        const commentsList = document.getElementById(`comments-list-${postId}`);
+        // Try both naming conventions - focused view uses different ID
+        const commentsList = document.getElementById(`comments-list-${postId}`) || 
+                            document.getElementById(`comments-container-${postId}`);
         if (!commentsList) return;
 
         if (comments.length === 0) {
@@ -1144,16 +1146,11 @@ class PostComponent {
      * @param {string|null} aiSummary - AI generated summary or null
      */
     showPostFocusModal(post, comments, aiSummary) {
-        // Remove existing modal if present
-        const existingModal = document.querySelector('.post-focus-modal');
-        if (existingModal) existingModal.remove();
-        
-        // Create modal overlay
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay post-focus-modal';
-        modal.onclick = (e) => {
-            if (e.target === modal) modal.remove();
-        };
+        // Save current content for back navigation
+        const mainContent = document.getElementById('mainContent');
+        if (!mainContent.dataset.originalContent) {
+            mainContent.dataset.originalContent = mainContent.innerHTML;
+        }
         
         // Format full post content (including extended content)
         let fullPostContent = this.formatPostContent(post.content, post);
@@ -1167,90 +1164,106 @@ class PostComponent {
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
         
-        modal.innerHTML = `
-            <div class="modal post-focus-content">
-                <div class="modal-header">
-                    <h3>Post Details</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        // Display focused post in main content area
+        mainContent.innerHTML = `
+            <div class="post-focus-view">
+                <div class="post-focus-header">
+                    <button class="btn btn-secondary" onclick="postComponent.returnToFeed()" style="margin-bottom: 1rem;">
+                        ← Back to Feed
+                    </button>
+                    <h2>Post Details</h2>
                 </div>
                 
-                <div class="modal-body">
-                    <!-- Original Post -->
-                    <div class="post-component focused-post">
-                        <div class="post-header">
-                            <div class="post-avatar">${authorInitial}</div>
-                            <div class="post-author-info">
-                                <div class="post-author-name">
-                                    ${authorName}
-                                    ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
-                                </div>
-                                <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
+                <!-- Original Post -->
+                <div class="post-component focused-post" style="margin-bottom: 2rem;">
+                    <div class="post-header">
+                        <div class="post-avatar">${authorInitial}</div>
+                        <div class="post-author-info">
+                            <div class="post-author-name">
+                                ${authorName}
+                                ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
                             </div>
-                        </div>
-                        
-                        <div class="post-content focused-post-content">
-                            ${fullPostContent}
-                        </div>
-                        
-                        ${this.renderPostMedia(post.photos)}
-                        
-                        <div class="post-actions" data-post-id="${post.id}">
-                            <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
-                                    onclick="postComponent.toggleLike('${post.id}')">
-                                <span class="action-icon">${post.isLiked ? '❤️' : '🤍'}</span>
-                                <span class="action-count">${post.likesCount || 0}</span>
-                            </button>
-                            
-                            <button class="post-action-btn comment-btn">
-                                <span class="action-icon">💬</span>
-                                <span class="action-count">${comments.length}</span>
-                            </button>
-                            
-                            <button class="post-action-btn share-btn" onclick="postComponent.sharePost('${post.id}')">
-                                <span class="action-icon">🔄</span>
-                                <span class="action-count">${post.sharesCount || 0}</span>
-                            </button>
+                            <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
                         </div>
                     </div>
                     
-                    ${aiSummary ? `
-                        <div class="ai-comment-summary">
-                            <h4>💡 Discussion Summary</h4>
-                            <p>${aiSummary}</p>
-                        </div>
-                    ` : ''}
+                    <div class="post-content focused-post-content">
+                        ${fullPostContent}
+                    </div>
                     
-                    <!-- Comments Section -->
-                    <div class="post-focus-comments">
-                        <h4>Comments (${comments.length})</h4>
+                    ${this.renderPostMedia(post.photos)}
+                    
+                    <div class="post-actions" data-post-id="${post.id}">
+                        <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
+                                onclick="postComponent.toggleLike('${post.id}')">
+                            <span class="action-icon">${post.isLiked ? '❤️' : '🤍'}</span>
+                            <span class="action-count">${post.likesCount || 0}</span>
+                        </button>
                         
-                        <!-- Comment Input -->
-                        <div class="comment-input-section">
-                            <textarea class="comment-input" id="focus-comment-input-${post.id}" 
-                                      placeholder="Write a comment..." rows="3"></textarea>
-                            <button class="btn btn-primary" onclick="postComponent.addCommentFromFocus('${post.id}')">
-                                Post Comment
-                            </button>
-                        </div>
+                        <button class="post-action-btn comment-btn">
+                            <span class="action-icon">💬</span>
+                            <span class="action-count">${comments.length}</span>
+                        </button>
                         
-                        <!-- Comments List -->
-                        <div class="comments-list" id="comments-container-${post.id}">
-                            <!-- Comments will be rendered here by existing renderComments method -->
-                        </div>
+                        <button class="post-action-btn share-btn" onclick="postComponent.sharePost('${post.id}')">
+                            <span class="action-icon">🔄</span>
+                            <span class="action-count">${post.sharesCount || 0}</span>
+                        </button>
+                    </div>
+                </div>
+                
+                ${aiSummary ? `
+                    <div class="ai-comment-summary" style="margin-bottom: 2rem;">
+                        <h4>💡 Discussion Summary</h4>
+                        <p>${aiSummary}</p>
+                    </div>
+                ` : ''}
+                
+                <!-- Comments Section -->
+                <div class="post-focus-comments">
+                    <h3>Comments (${comments.length})</h3>
+                    
+                    <!-- Comment Input -->
+                    <div class="comment-input-section" style="margin: 1.5rem 0;">
+                        <textarea class="comment-input" id="focus-comment-input-${post.id}" 
+                                  placeholder="Write a comment..." rows="3" 
+                                  style="width: 100%; margin-bottom: 0.5rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                        <button class="btn btn-primary" onclick="postComponent.addCommentFromFocus('${post.id}')">
+                            Post Comment
+                        </button>
+                    </div>
+                    
+                    <!-- Comments List -->
+                    <div class="comments-list" id="comments-container-${post.id}">
+                        <!-- Comments will be rendered here by existing renderComments method -->
                     </div>
                 </div>
             </div>
         `;
-        
-        document.body.appendChild(modal);
         
         // Render comments using existing system
         if (comments.length > 0) {
             this.renderComments(post.id, comments);
         }
         
-        // Add CSS for the modal if not already present
+        // Add CSS for the focused view if not already present
         this.ensurePostFocusStyles();
+    }
+
+    /**
+     * Return to feed from focused post view
+     */
+    returnToFeed() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent.dataset.originalContent) {
+            mainContent.innerHTML = mainContent.dataset.originalContent;
+            delete mainContent.dataset.originalContent;
+        } else {
+            // Fallback to toggle feed if original content not saved
+            if (typeof window.toggleMyFeed === 'function') {
+                window.toggleMyFeed();
+            }
+        }
     }
 
     /**
@@ -1302,6 +1315,22 @@ class PostComponent {
                 max-height: 90vh;
                 width: 90vw;
                 overflow-y: auto;
+            }
+            
+            .post-focus-view {
+                max-width: 700px;
+                margin: 0 auto;
+                padding: 1rem;
+            }
+            
+            .post-focus-header {
+                margin-bottom: 2rem;
+            }
+            
+            .post-focus-header h2 {
+                margin: 0;
+                color: #1a1a1a;
+                font-size: 1.5rem;
             }
             
             .focused-post {

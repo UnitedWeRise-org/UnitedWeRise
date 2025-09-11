@@ -47,6 +47,7 @@ export declare class TopicService {
                 updatedAt: Date;
                 content: string;
                 imageUrl: string | null;
+                extendedContent: string | null;
                 authorId: string;
                 isPolitical: boolean;
                 tags: string[];
@@ -146,6 +147,7 @@ export declare class TopicService {
                 updatedAt: Date;
                 content: string;
                 imageUrl: string | null;
+                extendedContent: string | null;
                 authorId: string;
                 isPolitical: boolean;
                 tags: string[];

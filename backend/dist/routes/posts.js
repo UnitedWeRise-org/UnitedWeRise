@@ -37,10 +37,34 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 return res.status(400).json({ error: 'Only POST_MEDIA type photos can be attached to posts' });
             }
         }
+        // Handle content length - split into content and extendedContent if needed
+        let mainContent = content.trim();
+        let extendedContent = null;
         if (content.length > 500) {
-            return res.status(400).json({ error: 'Post content must be 500 characters or less' });
+            // Find a good break point near 500 characters (prefer sentence or word boundaries)
+            let breakPoint = 500;
+            // Look for sentence endings near 500 chars
+            for (let i = 450; i < Math.min(500, content.length); i++) {
+                if (content[i] === '.' || content[i] === '!' || content[i] === '?') {
+                    if (i + 1 < content.length && content[i + 1] === ' ') {
+                        breakPoint = i + 1;
+                        break;
+                    }
+                }
+            }
+            // If no sentence break found, look for word boundaries
+            if (breakPoint === 500) {
+                for (let i = 480; i < Math.min(500, content.length); i++) {
+                    if (content[i] === ' ') {
+                        breakPoint = i;
+                        break;
+                    }
+                }
+            }
+            mainContent = content.substring(0, breakPoint).trim();
+            extendedContent = content.substring(breakPoint).trim();
         }
-        // Generate embedding for AI topic clustering using Azure OpenAI
+        // Generate embedding for AI topic clustering using Azure OpenAI (use full original content)
         let embedding = [];
         try {
             const embeddingResult = await azureOpenAIService_1.azureOpenAI.generateEmbedding(content.trim());
@@ -91,7 +115,8 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         }
         const post = await prisma_1.prisma.post.create({
             data: {
-                content: content.trim(),
+                content: mainContent,
+                extendedContent,
                 imageUrl,
                 authorId: userId,
                 embedding,
@@ -640,6 +665,70 @@ router.get('/user/:userId', async (req, res) => {
     catch (error) {
         console.error('Get user posts error:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Comment summarization endpoint for Post Focus View
+router.post('/:postId/comments/summarize', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        // Get all comments for the post
+        const comments = await prisma_1.prisma.comment.findMany({
+            where: { postId },
+            include: {
+                user: {
+                    select: {
+                        username: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'asc' }
+        });
+        if (comments.length === 0) {
+            return res.json({
+                summary: null,
+                totalCharacters: 0,
+                totalComments: 0
+            });
+        }
+        // Calculate total character count
+        const totalCharacters = comments.reduce((sum, comment) => sum + comment.content.length, 0);
+        // Only summarize if over threshold (10,000 characters)
+        if (totalCharacters < 10000) {
+            return res.json({
+                summary: null,
+                totalCharacters,
+                totalComments: comments.length,
+                belowThreshold: true
+            });
+        }
+        // Create content for AI summarization
+        const commentContent = comments.map((comment, index) => `Comment ${index + 1} by ${comment.user.username}: ${comment.content}`).join('\n\n');
+        try {
+            const summary = await azureOpenAIService_1.azureOpenAI.generateCompletion(`Summarize this comment thread about a political post. Focus on the main points of discussion, key agreements/disagreements, and overall sentiment. Keep it concise but comprehensive:\n\n${commentContent}`, {
+                temperature: 0.3,
+                maxTokens: 300,
+                systemMessage: "You are a helpful AI assistant that summarizes political discussion threads objectively, highlighting key points and diverse viewpoints without taking sides."
+            });
+            res.json({
+                summary,
+                totalCharacters,
+                totalComments: comments.length,
+                belowThreshold: false
+            });
+        }
+        catch (aiError) {
+            console.error('AI summarization failed:', aiError);
+            res.json({
+                summary: null,
+                totalCharacters,
+                totalComments: comments.length,
+                aiError: 'AI summarization temporarily unavailable'
+            });
+        }
+    }
+    catch (error) {
+        console.error('Comment summarization error:', error);
+        res.status(500).json({ error: 'Failed to summarize comments' });
     }
 });
 exports.default = router;

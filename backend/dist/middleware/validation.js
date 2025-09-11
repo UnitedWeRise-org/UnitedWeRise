@@ -6,8 +6,12 @@ const express_validator_1 = require("express-validator");
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
+        console.log('🚨 Validation errors:', JSON.stringify(errors.array(), null, 2));
+        // Extract the first error message for user-friendly display
+        const firstError = errors.array()[0];
+        const userFriendlyMessage = firstError ? firstError.msg : 'Validation failed';
         return res.status(400).json({
-            error: 'Validation failed',
+            error: userFriendlyMessage,
             details: errors.array()
         });
     }
@@ -90,14 +94,14 @@ exports.validateLogin = [
         .withMessage('Password is required'),
     exports.handleValidationErrors
 ];
-// Post creation validation
+// Post creation validation - increased limit for content that gets split automatically
 exports.validatePost = [
     (0, express_validator_1.body)('content')
-        .isLength({ min: 1, max: 2000 })
+        .isLength({ min: 1, max: 5000 })
         .trim()
-        .withMessage('Post content must be 1-2000 characters'),
+        .withMessage('Post content must be 1-5000 characters'),
     (0, express_validator_1.body)('imageUrl')
-        .optional()
+        .optional({ checkFalsy: true }) // Treat empty strings as undefined
         .isURL()
         .withMessage('Image URL must be valid'),
     exports.handleValidationErrors

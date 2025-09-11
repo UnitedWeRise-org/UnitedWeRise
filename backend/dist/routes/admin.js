@@ -389,15 +389,30 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const updates = {
-            isModerator: false,
-            isAdmin: false
-        };
-        if (role === 'moderator')
+        // Safety check: Prevent removing admin privileges if this is the last admin
+        if (user.isAdmin && role !== 'admin') {
+            const adminCount = await prisma_1.prisma.user.count({ where: { isAdmin: true } });
+            if (adminCount <= 1) {
+                return res.status(400).json({
+                    error: 'Cannot remove admin privileges from the last admin user'
+                });
+            }
+        }
+        // SAFER: Build updates based on desired role, preserving existing privileges where appropriate
+        const updates = {};
+        // Set moderator status
+        if (role === 'user') {
+            updates.isModerator = false;
+        }
+        else if (role === 'moderator' || role === 'admin') {
             updates.isModerator = true;
-        if (role === 'admin') {
-            updates.isModerator = true;
+        }
+        // Set admin status (only modify if needed)
+        if (role === 'admin' && !user.isAdmin) {
             updates.isAdmin = true;
+        }
+        else if (role !== 'admin' && user.isAdmin) {
+            updates.isAdmin = false;
         }
         await prisma_1.prisma.user.update({
             where: { id: userId },
