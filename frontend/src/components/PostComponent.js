@@ -338,15 +338,33 @@ class PostComponent {
     }
 
     /**
+     * Calculate total reply count recursively (all nested replies)
+     */
+    calculateTotalReplies(comment) {
+        if (!comment.replies || comment.replies.length === 0) {
+            return 0;
+        }
+        
+        let totalCount = comment.replies.length; // Direct replies
+        
+        // Add all nested replies recursively
+        comment.replies.forEach(reply => {
+            totalCount += this.calculateTotalReplies(reply);
+        });
+        
+        return totalCount;
+    }
+
+    /**
      * Flatten comment tree into single array with depth tracking
      */
     flattenCommentTree(comments, depth = 0, parentId = null) {
         let result = [];
         
         comments.forEach(comment => {
-            // Check if this comment has replies and count them
+            // Check if this comment has replies and count them recursively
             const hasReplies = comment.replies && comment.replies.length > 0;
-            const replyCount = hasReplies ? comment.replies.length : 0;
+            const replyCount = this.calculateTotalReplies(comment);
             
             // Add this comment with its current depth and parent info
             result.push({ 
@@ -617,44 +635,64 @@ class PostComponent {
     }
 
     /**
+     * Recursively collapse all descendants of a comment
+     */
+    collapseAllDescendants(commentId) {
+        const directChildren = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
+        
+        directChildren.forEach(child => {
+            // Hide the child comment
+            child.style.display = 'none';
+            
+            // Reset any expand button in this child
+            const childExpandBtn = child.querySelector('.expand-thread-btn');
+            if (childExpandBtn) {
+                childExpandBtn.classList.remove('expanded');
+                const icon = childExpandBtn.querySelector('.expand-icon');
+                if (icon) icon.textContent = '▶';
+            }
+            
+            // Recursively collapse this child's descendants
+            const childId = child.dataset.commentId;
+            if (childId) {
+                this.collapseAllDescendants(childId);
+            }
+        });
+    }
+
+    /**
      * Toggle thread expansion/collapse
      */
     toggleThread(commentId) {
         console.log('🔄 Toggling thread for comment:', commentId);
         
-        // Find all child comments of this comment
-        const allComments = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
+        // Find all direct child comments of this comment
+        const directChildren = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
         const expandBtn = document.querySelector(`.comment[data-comment-id="${commentId}"] .expand-thread-btn`);
         const expandIcon = document.querySelector(`.comment[data-comment-id="${commentId}"] .expand-thread-btn .expand-icon`);
         
-        if (allComments.length === 0) {
+        if (directChildren.length === 0) {
             console.log('No child comments found');
             return;
         }
         
         // Check if currently expanded or collapsed
-        const isExpanded = allComments[0].style.display !== 'none';
+        const isExpanded = directChildren[0].style.display !== 'none';
         
         // Toggle all direct children
-        allComments.forEach(comment => {
+        directChildren.forEach(comment => {
             comment.style.display = isExpanded ? 'none' : 'block';
-            
-            // If collapsing, also collapse all nested children
-            if (isExpanded) {
-                const nestedChildren = document.querySelectorAll(`.comment[data-parent-id="${comment.dataset.commentId}"]`);
-                nestedChildren.forEach(nested => {
-                    nested.style.display = 'none';
-                });
-                
-                // Reset any expanded icons in nested threads
-                const nestedExpandBtns = comment.querySelectorAll('.expand-thread-btn');
-                nestedExpandBtns.forEach(btn => {
-                    btn.classList.remove('expanded');
-                    const icon = btn.querySelector('.expand-icon');
-                    if (icon) icon.textContent = '▶';
-                });
-            }
         });
+        
+        // If collapsing, recursively collapse ALL descendants
+        if (isExpanded) {
+            directChildren.forEach(child => {
+                const childId = child.dataset.commentId;
+                if (childId) {
+                    this.collapseAllDescendants(childId);
+                }
+            });
+        }
         
         // Update expand/collapse icon and class
         if (expandBtn && expandIcon) {
