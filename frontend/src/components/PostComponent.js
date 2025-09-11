@@ -1391,11 +1391,24 @@ class PostComponent {
             }
             
             .comments-list {
-                max-height: 400px;
-                overflow-y: auto;
+                /* Remove height restriction for focused view - let page scroll naturally */
+            }
+            
+            .post-focus-comments {
+                margin-top: 2rem;
+            }
+            
+            .post-focus-comments h3 {
+                margin-bottom: 1rem;
+                color: #1a1a1a;
+                font-size: 1.25rem;
             }
             
             @media (max-width: 768px) {
+                .post-focus-view {
+                    padding: 0.5rem;
+                }
+                
                 .post-focus-modal .modal {
                     width: 95vw;
                     max-height: 95vh;

@@ -30,18 +30,22 @@ class AdminDebugger {
         }
 
         try {
-            // Check if we have the required functions (admin dashboard context)
-            if (typeof adminApiCall !== 'function') {
-                console.warn('🔧 AdminDebugger: adminApiCall not available, assuming non-admin context');
+            // Use regular apiCall function available on main site
+            if (typeof window.apiCall !== 'function') {
+                console.warn('🔧 AdminDebugger: apiCall not available');
                 this.adminVerified = false;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
                 return false;
             }
 
-            // Use existing admin verification endpoint
-            const response = await adminApiCall('/api/admin/dashboard');
+            // Try a simple admin endpoint that doesn't require TOTP - check users with limit 1
+            const response = await window.apiCall('/api/admin/users?limit=1');
             this.adminVerified = response.ok;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+            
+            if (!this.adminVerified && response.status === 403) {
+                console.log('🔧 AdminDebugger: Access denied - not admin or TOTP required');
+            }
             
             return this.adminVerified;
         } catch (error) {
