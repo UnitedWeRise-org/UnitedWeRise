@@ -3436,14 +3436,28 @@ allComments.forEach(comment => {
 
 **Key Methods**:
 
-1. **flattenCommentTree()** (lines 276-291):
+1. **calculateTotalReplies()** (lines 343-356):
 ```javascript
-flattenCommentTree(comments, depth = 0) {
+calculateTotalReplies(comment) {
+    if (!comment.replies || comment.replies.length === 0) return 0;
+    let totalCount = comment.replies.length; // Direct replies
+    comment.replies.forEach(reply => {
+        totalCount += this.calculateTotalReplies(reply); // Recursive count
+    });
+    return totalCount;
+}
+```
+
+2. **flattenCommentTree()** (lines 361-386):
+```javascript
+flattenCommentTree(comments, depth = 0, parentId = null) {
     let result = [];
     comments.forEach(comment => {
-        result.push({ ...comment, depth });
-        if (comment.replies && comment.replies.length > 0) {
-            const childComments = this.flattenCommentTree(comment.replies, depth + 1);
+        const hasReplies = comment.replies && comment.replies.length > 0;
+        const replyCount = this.calculateTotalReplies(comment); // Recursive count
+        result.push({ ...comment, depth, parentId, hasReplies, replyCount });
+        if (hasReplies) {
+            const childComments = this.flattenCommentTree(comment.replies, depth + 1, comment.id);
             result = result.concat(childComments);
         }
     });
@@ -3451,35 +3465,53 @@ flattenCommentTree(comments, depth = 0) {
 }
 ```
 
-2. **renderSimpleComment()** (lines 296-327):
+3. **renderSimpleComment()** (lines 391-420):
 ```javascript
 renderSimpleComment(comment, postId) {
-    const visualDepth = Math.min(comment.depth, 2); // Cap at 2
-    const marginLeft = visualDepth * 20; // 0px, 20px, or 40px
+    const visualDepth = Math.min(comment.depth, 2);
+    const marginLeft = visualDepth * 20;
     const isFlattened = comment.depth >= 2;
+    const isCollapsed = comment.depth > 0; // Start collapsed for non-top-level
     
     return `
-        <div class="comment ${isFlattened ? 'flattened-comment' : ''}" 
-             data-comment-id="${comment.id}" 
-             data-depth="${visualDepth}" 
-             style="margin-left: ${marginLeft}px;">
-            ${isFlattened ? '<span class="flattened-indicator">↳</span>' : ''}
-            <!-- comment content -->
+        <div class="comment ${isFlattened ? 'flattened-comment' : ''} ${isCollapsed ? 'collapsed-thread' : ''}" 
+             style="margin-left: ${marginLeft}px; ${isCollapsed ? 'display: none;' : ''}">
+            <!-- Comment content with expand/collapse button -->
         </div>
     `;
 }
 ```
 
-3. **renderComments()** (lines 255-271):
+4. **toggleThread()** (lines 666-707):
 ```javascript
-renderComments(postId, comments) {
-    // Flatten all comments into single array
-    const allComments = this.flattenCommentTree(comments);
-    // Render with visual depth capping
-    const commentsHtml = allComments.map(comment => 
-        this.renderSimpleComment(comment, postId)
-    ).join('');
-    commentsList.innerHTML = commentsHtml;
+toggleThread(commentId) {
+    const directChildren = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
+    const isExpanded = directChildren[0].style.display !== 'none';
+    
+    directChildren.forEach(comment => {
+        comment.style.display = isExpanded ? 'none' : 'block';
+    });
+    
+    // If collapsing, recursively collapse ALL descendants
+    if (isExpanded) {
+        directChildren.forEach(child => {
+            const childId = child.dataset.commentId;
+            if (childId) this.collapseAllDescendants(childId);
+        });
+    }
+}
+```
+
+5. **collapseAllDescendants()** (lines 640-661):
+```javascript
+collapseAllDescendants(commentId) {
+    const directChildren = document.querySelectorAll(`.comment[data-parent-id="${commentId}"]`);
+    directChildren.forEach(child => {
+        child.style.display = 'none'; // Hide child
+        // Reset expand button and recursively collapse descendants
+        const childId = child.dataset.commentId;
+        if (childId) this.collapseAllDescendants(childId);
+    });
 }
 ```
 
@@ -3565,13 +3597,59 @@ include: {
 🔸 Flattened 1 root comments into 5 total comments
 ```
 
+#### ✅ Collapsed Comment Threads {#collapsed-threads}
+
+**Status**: ✅ Completed (2025-01-11)  
+**Default Behavior**: All comment threads (depth > 0) begin collapsed by default
+
+##### Features
+- **Recursive Reply Counting**: Shows total count of ALL nested replies (not just direct)
+- **Expand/Collapse Controls**: Styled buttons with smooth animations
+- **Deep Nesting Support**: Properly handles threads at any depth level
+- **Icon Animation**: Arrow rotates from ▶ to ▼ when expanding
+- **Complete Thread Collapse**: All descendants collapse when parent is collapsed
+
+##### UI/UX Design
+```javascript
+// Expand button example: "▶ 15 replies" (shows total recursive count)
+<button class="expand-thread-btn" onclick="postComponent.toggleThread('commentId')">
+    <span class="expand-icon">▶</span> 
+    <span class="replies-count">15 replies</span>
+</button>
+```
+
+##### Implementation Details
+**Key Methods Added to PostComponent.js**:
+
+1. **calculateTotalReplies()** - Recursively counts all nested replies
+2. **collapseAllDescendants()** - Recursively collapses all child threads
+3. **Enhanced toggleThread()** - Uses recursive collapse logic
+
+**CSS Styling** (`frontend/src/styles/post-component.css:570-603`):
+```css
+.expand-thread-btn {
+    color: #1da1f2;
+    transition: all 0.2s ease;
+}
+.expand-thread-btn .expand-icon {
+    transition: transform 0.2s ease;
+}
+.expand-thread-btn.expanded .expand-icon {
+    transform: rotate(90deg);
+}
+```
+
+**Files Modified**:
+- `frontend/src/components/PostComponent.js` - Core collapse logic
+- `frontend/src/styles/post-component.css` - Button styling and animations
+
 #### Future Enhancements
 
 1. **Pagination**: Implement for posts with >100 comments
 2. **Lazy Loading**: Load deep threads on demand
-3. **Collapsing**: Allow collapsing comment threads
-4. **Sorting**: Add sort options (newest, oldest, most liked)
-5. **Real-time Updates**: WebSocket integration for live comments
+3. **Sorting**: Add sort options (newest, oldest, most liked)
+4. **Real-time Updates**: WebSocket integration for live comments
+5. **Thread Bookmarking**: Save/bookmark specific comment threads
 
 #### Related Systems
 - **Post Display**: {#post-display}
