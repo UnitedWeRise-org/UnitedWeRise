@@ -1264,6 +1264,13 @@ class PostComponent {
             setTimeout(() => {
                 const newComputedStyle = window.getComputedStyle(commentsList);
                 console.log('🎯 After direct CSS - max-height:', newComputedStyle.maxHeight, 'overflow-y:', newComputedStyle.overflowY);
+                
+                // Also check the body and main content scrolling
+                const bodyStyle = window.getComputedStyle(document.body);
+                const mainContentStyle = window.getComputedStyle(mainContent);
+                console.log('🎯 Body overflow:', bodyStyle.overflow, bodyStyle.overflowY);
+                console.log('🎯 Main content overflow:', mainContentStyle.overflow, mainContentStyle.overflowY);
+                console.log('🎯 Page scroll height vs client height:', document.body.scrollHeight, 'vs', document.body.clientHeight);
             }, 100);
         }
         
