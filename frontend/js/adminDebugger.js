@@ -38,6 +38,14 @@ class AdminDebugger {
                 return false;
             }
 
+            // Check if user is logged in first
+            if (!window.authToken) {
+                // User not logged in - can't be admin
+                this.adminVerified = false;
+                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+                return false;
+            }
+
             // Try a simple admin endpoint that doesn't require TOTP - check users with limit 1
             const response = await window.apiCall('/admin/users?limit=1');
             this.adminVerified = response.ok;
@@ -45,6 +53,8 @@ class AdminDebugger {
             
             if (!this.adminVerified && response.status === 403) {
                 console.log('🔧 AdminDebugger: Access denied - not admin or TOTP required');
+            } else if (!this.adminVerified && response.status === 401) {
+                console.log('🔧 AdminDebugger: Unauthorized - auth token invalid or expired');
             }
             
             return this.adminVerified;
