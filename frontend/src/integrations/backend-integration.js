@@ -1,5 +1,6 @@
 // Backend integration script for United We Rise Frontend
 // This script enhances the existing frontend with new backend features
+// 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
 class BackendIntegration {
     constructor() {
@@ -67,7 +68,7 @@ class BackendIntegration {
                     try {
                         deviceData = await window.deviceFingerprinting.getFingerprintData();
                     } catch (e) {
-                        console.warn('Device fingerprinting failed:', e);
+                        await adminDebugWarn('BackendIntegration', 'Device fingerprinting failed', e);
                     }
                 }
 
@@ -91,8 +92,9 @@ class BackendIntegration {
                 const data = await response.json();
 
                 if (response.ok) {
-                    authToken = data.token;
-                    localStorage.setItem('authToken', authToken);
+                    // Store CSRF token and user data (auth token now in httpOnly cookie)
+                    window.csrfToken = data.csrfToken;
+                    authToken = data.token || 'cookie-based-auth'; // Keep for compatibility
                     
                     // Show verification modal instead of immediately logging in
                     if (data.user.requiresEmailVerification || data.user.requiresPhoneVerification) {
@@ -110,7 +112,7 @@ class BackendIntegration {
                     this.resetHCaptcha();
                 }
             } catch (error) {
-                console.error('Registration error:', error);
+                await adminDebugError('BackendIntegration', 'Registration error', error);
                 showAuthMessage('Network error. Please try again.', 'error');
                 this.resetHCaptcha();
             }
@@ -188,9 +190,7 @@ class BackendIntegration {
     async checkVerificationNeeded(user) {
         try {
             const response = await fetch(`${this.API_BASE}/verification/status`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include' // Use cookies for auth
             });
             
             if (response.ok) {
@@ -202,7 +202,7 @@ class BackendIntegration {
                 }
             }
         } catch (error) {
-            console.error('Failed to check verification status:', error);
+            await adminDebugError('BackendIntegration', 'Failed to check verification status', error);
         }
     }
 
@@ -245,15 +245,15 @@ class BackendIntegration {
                 
                 return response;
             } catch (error) {
-                console.error('Network error:', error);
+                await adminDebugError('BackendIntegration', 'Network error', error);
                 throw error;
             }
         };
     }
 
     handleAuthError() {
-        // Clear invalid token and redirect to login
-        localStorage.removeItem('authToken');
+        // Clear invalid session data
+        window.csrfToken = null;
         authToken = null;
         
         if (window.setUserLoggedOut) {
@@ -319,7 +319,7 @@ class BackendIntegration {
                         return window.hcaptcha.getResponse();
                     }
                 } catch (error) {
-                    console.log('hCaptcha not ready yet:', error.message);
+                    await adminDebugLog('BackendIntegration', 'hCaptcha not ready yet', error.message);
                     return null;
                 }
             }
@@ -342,7 +342,7 @@ class BackendIntegration {
                         window.hcaptcha.reset();
                     }
                 } catch (error) {
-                    console.log('Could not reset hCaptcha:', error.message);
+                    await adminDebugLog('BackendIntegration', 'Could not reset hCaptcha', error.message);
                 }
             }
         }

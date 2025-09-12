@@ -57,7 +57,7 @@
     // Check if main scripts loaded
     setTimeout(() => {
         if (!window.apiManager || !window.appInitializer) {
-            console.log('❌ Main optimization scripts failed to load, using emergency override');
+            await adminDebugError('LoadingSystem', 'Main optimization scripts failed to load, using emergency override');
             
             // Create minimal API manager
             window.apiCall = async (endpoint, options = {}) => {
@@ -69,14 +69,21 @@
                     ...options.headers
                 };
                 
+                // Add CSRF token for state-changing requests
+                if (window.csrfToken && options.method && options.method !== 'GET') {
+                    headers['X-CSRF-Token'] = window.csrfToken;
+                }
+                
+                // FALLBACK: Add auth token if available (for transition period)
                 if (window.authToken) {
                     headers['Authorization'] = `Bearer ${window.authToken}`;
                 }
                 
-                console.log('🌐 Emergency API Request:', endpoint);
+                await adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
                 const response = await fetch(url, {
                     method: options.method || 'GET',
                     headers,
+                    credentials: 'include', // Include cookies
                     body: options.body ? JSON.stringify(options.body) : undefined
                 });
                 
@@ -88,11 +95,11 @@
             };
             
             // initializeApp will be provided by app-initialization.js
-            console.log('🔧 Deferring to app-initialization.js for auth logic');
+            await adminDebugLog('LoadingSystem', 'Deferring to app-initialization.js for auth logic');
             
-            console.log('✅ Emergency optimization override ready');
+            await adminDebugLog('LoadingSystem', 'Emergency optimization override ready');
         } else {
-            console.log('✅ Main optimization scripts loaded successfully');
+            await adminDebugLog('LoadingSystem', 'Main optimization scripts loaded successfully');
         }
     }, 500);
     </script>
@@ -868,7 +875,7 @@
         
         // Utility function to fix auth-related localStorage issues without clearing everything
         function fixAuthStorageIssues() {
-            console.log('🔧 Fixing auth storage issues...');
+            await adminDebugLog('AuthSystem', 'Fixing auth storage issues');
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             authToken = null;
@@ -879,7 +886,7 @@
             document.getElementById('userSection').style.display = 'none';
             document.getElementById('userGreeting').textContent = '';
             
-            console.log('✅ Auth storage cleared. Please log in again.');
+            await adminDebugLog('AuthSystem', 'Auth storage cleared. Please log in again.');
             return 'Auth storage cleared. Please refresh the page and log in again.';
         }
         
@@ -888,15 +895,15 @@
 
         // Setup collapse button handler function
         function setupCollapseButton() {
-            console.log('🔧 Setting up collapse button handler...');
+            await adminDebugLog('UISystem', 'Setting up collapse button handler');
             
             // Wait for DOM elements to be available
             setTimeout(() => {
                 const mapContainer = document.getElementById('mapContainer');
                 const toggleBtn = document.getElementById('mapToggleBtn');
                 
-                console.log('🔍 mapContainer found:', !!mapContainer);
-                console.log('🔍 toggleBtn found:', !!toggleBtn);
+                await adminDebugLog('UISystem', 'mapContainer found', !!mapContainer);
+                await adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
                 
                 if (toggleBtn && mapContainer) {
                     // Remove any existing listeners
@@ -908,7 +915,7 @@
                         event.preventDefault();
                         event.stopPropagation();
                         
-                        console.log('🔥 COLLAPSE BUTTON CLICKED!');
+                        await adminDebugLog('UISystem', 'COLLAPSE BUTTON CLICKED');
                         
                         // Debug current state
                         const isCollapsed = mapContainer.classList.contains('collapsed');
@@ -954,16 +961,16 @@
                         }
                     }, false);
                     
-                    console.log('✅ Collapse button handler attached successfully');
+                    await adminDebugLog('UISystem', 'Collapse button handler attached successfully');
                 } else {
-                    console.error('❌ Could not find button or container elements');
+                    await adminDebugError('UISystem', 'Could not find button or container elements');
                 }
             }, 2000); // Wait 2 seconds for map to fully load
         }
 
         // Setup close button handler function
         function setupCloseButton() {
-            console.log('🔧 Setting up close button handler...');
+            await adminDebugLog('UISystem', 'Setting up close button handler');
             
             setTimeout(() => {
                 const closeBtn = document.querySelector('.map-action-btn.close-btn');
@@ -1144,15 +1151,19 @@
         });
 
         // Authentication Functions
+        // 🔐 SECURITY MIGRATION STATUS: Core auth infrastructure migrated to httpOnly cookies
+        // - Primary auth now uses cookies + CSRF tokens (XSS protected)
+        // - apiCall() and adminApiCall() functions fully support cookies
+        // - OAuth flows updated to cookie-based auth
+        // - Legacy authToken variables maintained for transition compatibility
+        // - Individual component functions may still reference authToken but will work via updated API layer
         async function verifyAndSetUser() {
             try {
                 if (typeof adminDebugLog !== 'undefined') {
-                    await adminDebugLog('Authentication', 'Verifying token with /auth/me');
+                    await adminDebugLog('Authentication', 'Verifying user with /auth/me');
                 }
                 const response = await fetch(`${API_BASE}/auth/me`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    credentials: 'include' // Use cookies for auth
                 });
 
                 console.log('Auth verification response status:', response.status);
@@ -1171,23 +1182,23 @@
                         setUserLoggedIn(data.user);
                     } else {
                         console.warn('Invalid user data received:', data);
-                        // Clear invalid session
-                        localStorage.removeItem('authToken');
+                        // Clear invalid session - cookies will be cleared by logout endpoint
+                        window.csrfToken = null;
                         authToken = null;
                         // Ensure UI shows logged out state
                         setUserLoggedOut();
                     }
                 } else {
-                    // Token is invalid
-                    console.log('Token invalid, removing from storage');
-                    localStorage.removeItem('authToken');
+                    // Token is invalid - cookies will be cleared by logout endpoint
+                    console.log('Token invalid, clearing session');
+                    window.csrfToken = null;
                     authToken = null;
                     // Ensure UI shows logged out state
                     setUserLoggedOut();
                 }
             } catch (error) {
                 console.error('Auth verification failed:', error);
-                localStorage.removeItem('authToken');
+                window.csrfToken = null;
                 authToken = null;
                 // Ensure UI shows logged out state
                 setUserLoggedOut();
@@ -1736,6 +1747,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include', // Include cookies
                     body: JSON.stringify({
                         idToken: response.credential
                     })
@@ -1744,11 +1756,11 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Store auth data
-                    localStorage.setItem('authToken', data.token);
+                    // Store user data and CSRF token (auth token now in httpOnly cookie)
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    window.authToken = data.token;
-                    authToken = data.token;
+                    window.csrfToken = data.csrfToken;
+                    // Keep authToken for transition compatibility
+                    authToken = data.token || 'cookie-based-auth';
 
                     // Close auth modal and set logged in state
                     closeAuthModal();

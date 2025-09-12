@@ -29,7 +29,7 @@ class APIRequestManager {
         
         // Check if request is already pending
         if (this.pendingRequests.has(key)) {
-            console.log(`🔄 Deduplicating request: ${endpoint}`);
+            await adminDebugLog('APIManager', `Deduplicating request: ${endpoint}`);
             return this.pendingRequests.get(key);
         }
         
@@ -37,7 +37,7 @@ class APIRequestManager {
         if (!options.bypassCache) {
             const cached = this.getFromCache(key);
             if (cached) {
-                console.log(`💾 Cache hit: ${endpoint}`);
+                await adminDebugLog('APIManager', `Cache hit: ${endpoint}`);
                 return cached;
             }
         }
@@ -63,7 +63,7 @@ class APIRequestManager {
 
     // Batch multiple requests together
     async batchRequest(requests) {
-        console.log(`📦 Batching ${requests.length} requests`);
+        await adminDebugLog('APIManager', `Batching ${requests.length} requests`);
         
         const batchKey = `batch_${Date.now()}`;
         
@@ -83,7 +83,7 @@ class APIRequestManager {
         
         // If all requests were cached, return immediately
         if (uncachedRequests.length === 0) {
-            console.log(`💾 All batch requests cached`);
+            await adminDebugLog('APIManager', 'All batch requests cached');
             return results;
         }
         
@@ -102,14 +102,14 @@ class APIRequestManager {
                     this.setCache(key, result.value, req.options?.cacheTimeout);
                     results.set(req.id || req.endpoint, result.value);
                 } else {
-                    console.error(`❌ Batch request failed: ${req.endpoint}`, result.reason);
+                    await adminDebugError('APIManager', `Batch request failed: ${req.endpoint}`, result.reason);
                     results.set(req.id || req.endpoint, { error: result.reason });
                 }
             });
             
             return results;
         } catch (error) {
-            console.error('❌ Batch request failed:', error);
+            await adminDebugError('APIManager', 'Batch request failed', error);
             throw error;
         }
     }
@@ -122,7 +122,7 @@ class APIRequestManager {
         let lastError;
         for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
             try {
-                console.log(`🌐 API Request (attempt ${attempt + 1}): ${endpoint}`);
+                await adminDebugLog('APIManager', `API Request (attempt ${attempt + 1}): ${endpoint}`);
                 
                 const response = await fetch(url, fetchOptions);
                 
@@ -130,7 +130,7 @@ class APIRequestManager {
                     // Handle rate limiting with exponential backoff
                     if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After')) || 60;
-                        console.warn(`⏰ Rate limited, backing off for ${retryAfter}s`);
+                        await adminDebugWarn('APIManager', `Rate limited, backing off for ${retryAfter}s`);
                         
                         if (attempt < this.config.maxRetries) {
                             await this.delay(retryAfter * 1000);
@@ -143,12 +143,12 @@ class APIRequestManager {
                 }
                 
                 const data = await response.json();
-                console.log(`✅ API Success: ${endpoint}`);
+                await adminDebugLog('APIManager', `API Success: ${endpoint}`);
                 return data;
                 
             } catch (error) {
                 lastError = error;
-                console.warn(`⚠️ API Request failed (attempt ${attempt + 1}): ${endpoint}`, error.message);
+                await adminDebugWarn('APIManager', `API Request failed (attempt ${attempt + 1}): ${endpoint}`, error.message);
                 
                 if (attempt < this.config.maxRetries) {
                     await this.delay(this.config.retryDelay * Math.pow(2, attempt));
@@ -185,7 +185,7 @@ class APIRequestManager {
         
         // Log potential excessive usage
         if (this.burstTracker.count > 20) {
-            console.warn(`🚨 High request frequency detected: ${this.burstTracker.count} requests in 1 minute`);
+            await adminDebugWarn('APIManager', `High request frequency detected: ${this.burstTracker.count} requests in 1 minute`);
         }
     }
 
@@ -251,7 +251,13 @@ class APIRequestManager {
             headers['Content-Type'] = 'application/json';
         }
         
-        // Add auth token if available
+        // NEW: Add CSRF token for state-changing requests
+        const csrfToken = this.getCSRFToken();
+        if (csrfToken && options.method && options.method !== 'GET') {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        
+        // FALLBACK: Add auth token if available (for transition period)
         if (window.authToken) {
             headers['Authorization'] = `Bearer ${window.authToken}`;
         }
@@ -259,10 +265,21 @@ class APIRequestManager {
         return {
             method: options.method || 'GET',
             headers,
+            credentials: 'include', // CRITICAL: Include cookies
             body: options.body instanceof FormData ? options.body : 
                   (options.body ? JSON.stringify(options.body) : undefined),
             ...options
         };
+    }
+
+    // Get CSRF token from memory or cookie
+    getCSRFToken() {
+        // Try memory first
+        if (window.csrfToken) return window.csrfToken;
+        
+        // Try cookie (non-httpOnly)
+        const match = document.cookie.match(/csrf-token=([^;]+)/);
+        return match ? match[1] : null;
     }
 
     delay(ms) {
@@ -302,7 +319,7 @@ class APIRequestManager {
             windowStart: Date.now(),
             windowSize: 60000
         };
-        console.log('🔄 API Manager reset');
+        await adminDebugLog('APIManager', 'API Manager reset');
     }
 }
 

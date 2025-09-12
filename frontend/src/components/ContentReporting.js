@@ -420,7 +420,7 @@ class ContentReporting {
                 this.showReportMessage(data.error || 'Failed to submit report', 'error');
             }
         } catch (error) {
-            console.error('Report submission error:', error);
+            await adminDebugError('Report submission error:', error);
             this.showReportMessage('Network error. Please try again.', 'error');
         }
     }
@@ -466,7 +466,7 @@ class ContentReporting {
                 }
             }
         } catch (error) {
-            console.error('Failed to check moderation status:', error);
+            await adminDebugError('Failed to check moderation status:', error);
         }
     }
 

@@ -3948,10 +3948,14 @@ Example: adminConsole.getSuggestions('features', 'new')
         // Enhanced API call function with TOTP support
         async function adminApiCall(url, options = {}) {
             const headers = {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
                 ...options.headers
             };
+            
+            // Add CSRF token for state-changing requests
+            if (window.csrfToken && options.method && options.method !== 'GET') {
+                headers['X-CSRF-Token'] = window.csrfToken;
+            }
             
             // Add TOTP verification header if verified
             if (totpVerified && totpToken) {
@@ -3959,10 +3963,16 @@ Example: adminConsole.getSuggestions('features', 'new')
                 headers['x-totp-token'] = totpToken;
             }
             
+            // FALLBACK: Add auth token if still available (for transition period)
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            
             try {
                 const response = await fetch(url, {
                     ...options,
-                    headers
+                    headers,
+                    credentials: 'include' // Include cookies
                 });
                 
                 // Handle TOTP verification required
@@ -3982,6 +3992,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                         localStorage.removeItem('currentUser');
                         localStorage.removeItem('admin_totp_verified');
                         localStorage.removeItem('admin_totp_token');
+                        window.csrfToken = null;
                         
                         // Redirect to login
                         window.location.href = '/admin-dashboard.html';

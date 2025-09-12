@@ -1,5 +1,6 @@
 // Candidate System Integration for United We Rise Frontend
 // This script integrates the enhanced candidate system with the existing frontend
+// 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
 class CandidateSystemIntegration {
     constructor() {
@@ -253,7 +254,7 @@ class CandidateSystemIntegration {
     }
 
     toggleCandidatePanel() {
-        console.log('🤖 Opening Candidates in main content area...');
+        await adminDebugLog('🤖 Opening Candidates in main content area...');
         
         // Hide other detail panels
         document.querySelectorAll('.detail-panel').forEach(panel => {
@@ -287,7 +288,7 @@ class CandidateSystemIntegration {
                            document.querySelector('main');
         
         if (!mainContent) {
-            console.error('Main content area not found');
+            await adminDebugError('Main content area not found');
             return;
         }
 
@@ -438,7 +439,7 @@ class CandidateSystemIntegration {
     }
 
     async loadElections() {
-        console.log('🗳️ Loading candidates for your area...');
+        await adminDebugLog('🗳️ Loading candidates for your area...');
         
         // Show loading indicator
         const loadingIndicator = document.querySelector('#electionsLoading');
@@ -463,7 +464,7 @@ class CandidateSystemIntegration {
                 throw new Error(response.data?.error || 'Failed to load candidates');
             }
         } catch (error) {
-            console.error('Error loading elections:', error);
+            await adminDebugError('Error loading elections:', error);
             if (container) {
                 container.innerHTML = `
                     <div class="error-state">
@@ -610,7 +611,7 @@ class CandidateSystemIntegration {
                 throw new Error(response.data?.error || 'Failed to search candidates');
             }
         } catch (error) {
-            console.error('Error searching candidates:', error);
+            await adminDebugError('Error searching candidates:', error);
             this.showToast('Failed to search candidates: ' + error.message, 'error');
         } finally {
             const loadingIndicator = document.querySelector('#electionsLoading');
@@ -935,7 +936,7 @@ class CandidateSystemIntegration {
                 throw new Error(response.data?.error || 'Failed to search candidates');
             }
         } catch (error) {
-            console.error('Error searching candidates:', error);
+            await adminDebugError('Error searching candidates:', error);
             this.showToast('Failed to search candidates: ' + error.message, 'error');
             
             // Show placeholder again on error
@@ -1374,7 +1375,7 @@ class CandidateSystemIntegration {
                 }
             }
             
-            console.log('✅ Restored main content');
+            await adminDebugLog('✅ Restored main content');
         }
     }
 
@@ -1583,7 +1584,7 @@ class CandidateSystemIntegration {
     }
 
     showCandidateRegistration() {
-        console.log('🏆 Opening candidate registration flow...');
+        await adminDebugLog('🏆 Opening candidate registration flow...');
         this.showCandidateRegistrationModal();
     }
     
@@ -2391,7 +2392,7 @@ class CandidateSystemIntegration {
         
         if (hardshipWaiver) {
             // Skip payment and proceed to next step
-            console.log('💡 Hardship waiver selected, skipping payment');
+            await adminDebugLog('💡 Hardship waiver selected, skipping payment');
             this.currentStep++;
             this.updateStepDisplay();
             return;
@@ -2407,7 +2408,7 @@ class CandidateSystemIntegration {
         const amount = officeLevelFees[this.selectedOfficeLevel] || 1500;
         const officeName = this.getOfficeLevelDisplayName(this.selectedOfficeLevel);
         
-        console.log(`💳 Processing payment: $${amount} for ${officeName} level`);
+        await adminDebugLog(`💳 Processing payment: $${amount} for ${officeName} level`);
         
         try {
             // Show loading state
@@ -2441,7 +2442,7 @@ class CandidateSystemIntegration {
                     // For now, we'll assume payment is successful after user returns
                     setTimeout(() => {
                         if (checkoutWindow.closed) {
-                            console.log('✅ Payment window closed, assuming payment completed');
+                            await adminDebugLog('✅ Payment window closed, assuming payment completed');
                             this.currentStep++;
                             this.updateStepDisplay();
                         } else {
@@ -2457,7 +2458,7 @@ class CandidateSystemIntegration {
             }
             
         } catch (error) {
-            console.error('💸 Payment processing error:', error);
+            await adminDebugError('💸 Payment processing error:', error);
             alert(`Payment processing failed: ${error.message}. Please try again.`);
             
             // Restore button state
@@ -2487,7 +2488,7 @@ class CandidateSystemIntegration {
             
             // Debug: Log step activation
             if (this.currentStep === 3) {
-                console.log(`🔍 Step ${index + 1} (data-step=${step.getAttribute('data-step')}) active: ${isActive}`);
+                await adminDebugLog(`🔍 Step ${index + 1} (data-step=${step.getAttribute('data-step')}) active: ${isActive}`);
             }
         });
         
@@ -2508,7 +2509,7 @@ class CandidateSystemIntegration {
         // Special handling for Step 3 (Campaign Info)
         if (this.currentStep === 3) {
             // Instead of trying to fix CSS, completely rebuild Step 3 content
-            console.log('🔄 Rebuilding Step 3 content from scratch...');
+            await adminDebugLog('🔄 Rebuilding Step 3 content from scratch...');
             const step3Container = document.querySelector('.form-step[data-step="3"]');
             if (step3Container) {
                 // Clear existing content and rebuild
@@ -2589,7 +2590,7 @@ class CandidateSystemIntegration {
                     z-index: 10 !important;
                 `;
                 
-                console.log('✅ Step 3 rebuilt with inline styles and forced visibility');
+                await adminDebugLog('✅ Step 3 rebuilt with inline styles and forced visibility');
             }
             
             // Update paid level display
@@ -2621,7 +2622,7 @@ class CandidateSystemIntegration {
             // Double-check the field is actually in the current step
             const fieldStep = field.closest('.form-step')?.getAttribute('data-step');
             if (fieldStep != this.currentStep) {
-                console.log('🔍 Skipping validation for field from different step:', field.id, 'from step', fieldStep);
+                await adminDebugLog('🔍 Skipping validation for field from different step:', field.id, 'from step', fieldStep);
                 return; // Skip this field
             }
             
@@ -2660,10 +2661,10 @@ class CandidateSystemIntegration {
         }
         
         if (!isValid) {
-            console.log('🔍 Click validation failed:', errorMessage);
+            await adminDebugLog('🔍 Click validation failed:', errorMessage);
             this.showMessage(errorMessage);
         } else {
-            console.log('🔍 Click validation passed for step', this.currentStep);
+            await adminDebugLog('🔍 Click validation passed for step', this.currentStep);
         }
         
         return isValid;
@@ -2677,7 +2678,7 @@ class CandidateSystemIntegration {
         const requiredFields = currentStepElement ? currentStepElement.querySelectorAll('input[required], select[required], textarea[required]') : [];
         
         // Debug: Only log when debugging is needed
-        // console.log('🔍 Required fields in Step', this.currentStep, ':', Array.from(requiredFields).length);
+        // await adminDebugLog('🔍 Required fields in Step', this.currentStep, ':', Array.from(requiredFields).length);
         
         // Check standard required fields only within current step
         for (let field of requiredFields) {
@@ -2714,7 +2715,7 @@ class CandidateSystemIntegration {
         const isValid = this.isCurrentStepValid();
         
         // Debug logging for Step 2 (only when needed)
-        // console.log('🔍 Button state:', isValid ? 'enabled' : 'disabled');
+        // await adminDebugLog('🔍 Button state:', isValid ? 'enabled' : 'disabled');
         
         if (isValid) {
             nextBtn.style.background = '#ff6b35';
@@ -2868,15 +2869,15 @@ class CandidateSystemIntegration {
     }
     
     async submitRegistration() {
-        console.log('🔍 Submit Registration called');
-        console.log('🔍 Current step:', this.currentStep);
+        await adminDebugLog('🔍 Submit Registration called');
+        await adminDebugLog('🔍 Current step:', this.currentStep);
         
         if (!this.validateCurrentStep()) {
-            console.log('🔍 Submit failed: validation failed');
+            await adminDebugLog('🔍 Submit failed: validation failed');
             return;
         }
         
-        console.log('🔍 Submit validation passed, proceeding...');
+        await adminDebugLog('🔍 Submit validation passed, proceeding...');
         
         const form = document.getElementById('candidateRegistrationForm');
         const formData = new FormData(form);
@@ -2913,13 +2914,13 @@ class CandidateSystemIntegration {
         
         try {
             // Make actual API call to register candidate
-            console.log('Submitting candidate registration:', registrationData);
+            await adminDebugLog('Submitting candidate registration:', registrationData);
         
         // Debug: Check if Step 3 container is visible and force fix if needed
         const step3Element = document.querySelector('.form-step[data-step="3"]');
         if (step3Element) {
             const step3Rect = step3Element.getBoundingClientRect();
-            console.log('🔍 Step 3 container position (before fix):', {
+            await adminDebugLog('🔍 Step 3 container position (before fix):', {
                 top: step3Rect.top,
                 left: step3Rect.left,
                 width: step3Rect.width,
@@ -2931,7 +2932,7 @@ class CandidateSystemIntegration {
             
             // Force fix Step 3 dimensions if they're zero
             if (step3Rect.width === 0 || step3Rect.height === 0) {
-                console.log('🔍 Forcing Step 3 dimensions...');
+                await adminDebugLog('🔍 Forcing Step 3 dimensions...');
                 step3Element.style.cssText += `
                     min-height: 400px !important;
                     width: 100% !important;
@@ -2941,7 +2942,7 @@ class CandidateSystemIntegration {
                 
                 // Check again after fix
                 const step3RectAfter = step3Element.getBoundingClientRect();
-                console.log('🔍 Step 3 container position (after fix):', {
+                await adminDebugLog('🔍 Step 3 container position (after fix):', {
                     top: step3RectAfter.top,
                     left: step3RectAfter.left,
                     width: step3RectAfter.width,
@@ -2964,25 +2965,25 @@ class CandidateSystemIntegration {
             
             if (response.ok && result.success) {
                 this.showMessage('Registration submitted successfully! You will receive confirmation via email.');
-                console.log('✅ Candidate registration successful:', result);
+                await adminDebugLog('✅ Candidate registration successful:', result);
                 
                 // Close modal after successful submission
                 setTimeout(() => {
                     document.querySelector('.candidate-registration-modal').remove();
                 }, 2000);
             } else {
-                console.log('🔍 Registration failed - Response:', {
+                await adminDebugLog('🔍 Registration failed - Response:', {
                     ok: response.ok,
                     status: response.status,
                     statusText: response.statusText,
                     result: result
                 });
-                console.log('🔍 Backend error details:', JSON.stringify(result, null, 2));
+                await adminDebugLog('🔍 Backend error details:', JSON.stringify(result, null, 2));
                 throw new Error(result.message || result.error || 'Registration failed');
             }
             
         } catch (error) {
-            console.error('Registration failed:', error);
+            await adminDebugError('Registration failed:', error);
             this.showMessage(`Registration failed: ${error.message}`);
         }
     }
@@ -3006,13 +3007,13 @@ class CandidateSystemIntegration {
             if (response.ok && response.data?.success) {
                 this.isCandidate = true;
                 this.candidateData = response.data.data;
-                console.log('✅ User is verified candidate:', this.candidateData);
+                await adminDebugLog('✅ User is verified candidate:', this.candidateData);
             } else {
                 this.isCandidate = false;
-                console.log('ℹ️ User is not a candidate');
+                await adminDebugLog('ℹ️ User is not a candidate');
             }
         } catch (error) {
-            console.error('Error checking candidate status:', error);
+            await adminDebugError('Error checking candidate status:', error);
             this.isCandidate = false;
         }
     }
@@ -3020,7 +3021,7 @@ class CandidateSystemIntegration {
     // Show candidate dashboard for verified candidates
     showCandidateDashboard() {
         if (!this.isCandidate) {
-            console.error('Access denied: User is not a verified candidate');
+            await adminDebugError('Access denied: User is not a verified candidate');
             return;
         }
 
@@ -3029,7 +3030,7 @@ class CandidateSystemIntegration {
                            document.querySelector('main') ||
                            document.querySelector('.main-content');
         if (!mainContent) {
-            console.error('Could not find main content area');
+            await adminDebugError('Could not find main content area');
             return;
         }
 
@@ -3173,7 +3174,7 @@ class CandidateSystemIntegration {
                            document.querySelector('main') ||
                            document.querySelector('.main-content');
         if (!mainContent) {
-            console.error('Could not find main content area');
+            await adminDebugError('Could not find main content area');
             return;
         }
 
@@ -3220,7 +3221,7 @@ class CandidateSystemIntegration {
     // Method to programmatically trigger candidate system features
     triggerCandidateFeature(feature, data = {}) {
         if (!this.candidateSystem) {
-            console.error('Candidate system not initialized');
+            await adminDebugError('Candidate system not initialized');
             return;
         }
 
@@ -3243,14 +3244,14 @@ class CandidateSystemIntegration {
                 }
                 break;
             default:
-                console.error('Unknown candidate feature:', feature);
+                await adminDebugError('Unknown candidate feature:', feature);
         }
     }
 
     // Open constituent inbox for candidate
     async openConstituentInbox() {
         if (!this.isCandidate) {
-            console.error('Access denied: User is not a verified candidate');
+            await adminDebugError('Access denied: User is not a verified candidate');
             return;
         }
 
@@ -3259,7 +3260,7 @@ class CandidateSystemIntegration {
                            document.querySelector('main') ||
                            document.querySelector('.main-content');
         if (!mainContent) {
-            console.error('Could not find main content area');
+            await adminDebugError('Could not find main content area');
             return;
         }
 
@@ -3330,7 +3331,7 @@ class CandidateSystemIntegration {
                 throw new Error(response.data?.error || 'Failed to load conversations');
             }
         } catch (error) {
-            console.error('Error loading constituent conversations:', error);
+            await adminDebugError('Error loading constituent conversations:', error);
             const conversationsList = document.getElementById('conversationsList');
             if (conversationsList) {
                 conversationsList.innerHTML = `
@@ -3501,7 +3502,7 @@ class CandidateSystemIntegration {
         if (window.unifiedMessaging) {
             // Listen for new USER_CANDIDATE messages
             this.inboxMessageHandler = window.unifiedMessaging.onMessage('USER_CANDIDATE', (messageData) => {
-                console.log('📨 New constituent message received:', messageData);
+                await adminDebugLog('📨 New constituent message received:', messageData);
                 
                 // Reload conversations to show new message
                 this.loadConstituentConversations();
@@ -3541,7 +3542,7 @@ class CandidateSystemIntegration {
                 throw new Error('Failed to send reply via WebSocket');
             }
         } catch (error) {
-            console.error('Error sending reply:', error);
+            await adminDebugError('Error sending reply:', error);
             this.showToast('Failed to send reply. Please try again.');
         }
     }
@@ -3592,7 +3593,7 @@ class CandidateSystemIntegration {
                 this.showToast('Conversation marked as read');
             }
         } catch (error) {
-            console.error('Error marking conversation as read:', error);
+            await adminDebugError('Error marking conversation as read:', error);
         }
     }
 
@@ -3628,7 +3629,7 @@ class CandidateSystemIntegration {
                 this.showToast(`📨 ${title}: ${this.truncateText(content, 50)}`);
             }
         } catch (error) {
-            console.error('Error checking notification preferences:', error);
+            await adminDebugError('Error checking notification preferences:', error);
             // Fallback to showing notifications if we can't check preferences
             if (Notification.permission === 'granted') {
                 new Notification(title, {

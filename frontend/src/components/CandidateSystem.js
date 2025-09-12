@@ -62,7 +62,7 @@ class CandidateSystem {
 
     async enhanceElectionDisplay() {
         try {
-            console.log('🗳️ Loading enhanced election data...');
+            await adminDebugLog('🗳️ Loading enhanced election data...');
             
             // Use multi-tier election system
             const response = await fetch(`${this.API_BASE}/elections?state=${this.getUserState()}`);
@@ -80,7 +80,7 @@ class CandidateSystem {
             this.addDataSourceIndicator(data.source, data.message);
 
         } catch (error) {
-            console.error('Failed to load elections:', error);
+            await adminDebugError('Failed to load elections:', error);
             this.showError('Failed to load election data. Please try again.');
         }
     }
@@ -207,7 +207,7 @@ class CandidateSystem {
 
     async showCandidateComparison(officeId) {
         try {
-            console.log('🤖 Loading AI candidate comparison...');
+            await adminDebugLog('🤖 Loading AI candidate comparison...');
             
             // Get candidates for office
             const candidatesResponse = await fetch(`${this.API_BASE}/candidates/office/${officeId}/enhanced`);
@@ -237,7 +237,7 @@ class CandidateSystem {
             this.showModal('🤖 AI Candidate Comparison', this.renderComparisonResults(comparisonData));
 
         } catch (error) {
-            console.error('Comparison failed:', error);
+            await adminDebugError('Comparison failed:', error);
             this.showError('Failed to generate candidate comparison. The AI service may be unavailable.');
         }
     }
@@ -367,7 +367,7 @@ class CandidateSystem {
             this.showModal(`Contact ${data.candidate.name}`, this.renderContactForm(data.candidate));
             
         } catch (error) {
-            console.error('Failed to load candidate info:', error);
+            await adminDebugError('Failed to load candidate info:', error);
             this.showError('Failed to load candidate information.');
         }
     }
@@ -459,7 +459,7 @@ class CandidateSystem {
             this.showModal(`${candidate.name} - Public Q&A`, this.renderPublicQA(data, candidate));
             
         } catch (error) {
-            console.error('Failed to load public Q&A:', error);
+            await adminDebugError('Failed to load public Q&A:', error);
             this.showError('Failed to load public Q&A.');
         }
     }
@@ -667,7 +667,7 @@ class CandidateSystem {
             }
 
         } catch (error) {
-            console.error('Inquiry submission failed:', error);
+            await adminDebugError('Inquiry submission failed:', error);
             this.showError('Failed to send inquiry. Please try again.');
         }
     }
@@ -702,7 +702,7 @@ class CandidateSystem {
             }
 
         } catch (error) {
-            console.error('Vote failed:', error);
+            await adminDebugError('Vote failed:', error);
             this.showError('Failed to record vote');
         }
     }

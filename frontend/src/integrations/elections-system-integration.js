@@ -71,7 +71,7 @@ class ElectionsSystemIntegration {
     }
 
     toggleElectionsPanel() {
-        console.log('📅 Opening Elections in main content area...');
+        await adminDebugLog('📅 Opening Elections in main content area...');
         
         // Hide other detail panels
         document.querySelectorAll('.detail-panel').forEach(panel => {
@@ -105,7 +105,7 @@ class ElectionsSystemIntegration {
                            document.querySelector('main');
         
         if (!mainContent) {
-            console.error('Main content area not found');
+            await adminDebugError('Main content area not found');
             return;
         }
 
@@ -226,7 +226,7 @@ class ElectionsSystemIntegration {
     }
 
     async loadElections() {
-        console.log('🔄 Loading enhanced elections from backend API...');
+        await adminDebugLog('🔄 Loading enhanced elections from backend API...');
         
         // Show loading indicator
         const loadingIndicator = document.querySelector('#electionsLoading');
@@ -256,10 +256,10 @@ class ElectionsSystemIntegration {
             this.displayElectionsData(data.data.elections);
             
         } catch (error) {
-            console.error('Failed to load elections:', error);
+            await adminDebugError('Failed to load elections:', error);
             
             // Fallback to mock data if API fails
-            console.log('🔄 Falling back to mock data...');
+            await adminDebugLog('🔄 Falling back to mock data...');
             const originalPanel = document.querySelector('#panel-upcoming');
             
             if (originalPanel) {
@@ -290,7 +290,7 @@ class ElectionsSystemIntegration {
                 const location = JSON.parse(userLocation);
                 return location.state;
             } catch (e) {
-                console.log('Could not parse user location');
+                await adminDebugLog('Could not parse user location');
             }
         }
         
@@ -301,7 +301,7 @@ class ElectionsSystemIntegration {
         const container = document.querySelector('#enhancedElectionsContainer');
         
         if (!container) {
-            console.error('Elections container not found');
+            await adminDebugError('Elections container not found');
             return;
         }
         
@@ -441,7 +441,7 @@ class ElectionsSystemIntegration {
         `;
         
         container.innerHTML = summaryHTML + enhancedHTML;
-        console.log(`✅ Displayed ${totalElections} real elections from backend API`);
+        await adminDebugLog(`✅ Displayed ${totalElections} real elections from backend API`);
     }
 
     getElectionIcon(electionType) {
@@ -477,7 +477,7 @@ class ElectionsSystemIntegration {
 
     // Election detail methods
     async viewElectionDetails(electionId) {
-        console.log(`📊 Viewing details for election: ${electionId}`);
+        await adminDebugLog(`📊 Viewing details for election: ${electionId}`);
         
         try {
             const response = await fetch(`/api/elections/${electionId}`);
@@ -485,15 +485,15 @@ class ElectionsSystemIntegration {
                 const data = await response.json();
                 this.showElectionModal(data);
             } else {
-                console.error('Failed to fetch election details');
+                await adminDebugError('Failed to fetch election details');
             }
         } catch (error) {
-            console.error('Error fetching election details:', error);
+            await adminDebugError('Error fetching election details:', error);
         }
     }
 
     async viewCandidates(electionId) {
-        console.log(`👥 Viewing candidates for election: ${electionId}`);
+        await adminDebugLog(`👥 Viewing candidates for election: ${electionId}`);
         
         try {
             const response = await fetch(`/api/elections/${electionId}/candidates`);
@@ -501,15 +501,15 @@ class ElectionsSystemIntegration {
                 const data = await response.json();
                 this.showCandidatesModal(data);
             } else {
-                console.error('Failed to fetch candidates');
+                await adminDebugError('Failed to fetch candidates');
             }
         } catch (error) {
-            console.error('Error fetching candidates:', error);
+            await adminDebugError('Error fetching candidates:', error);
         }
     }
 
     async viewBallotMeasures(electionId) {
-        console.log(`📋 Viewing ballot measures for election: ${electionId}`);
+        await adminDebugLog(`📋 Viewing ballot measures for election: ${electionId}`);
         
         // For now, show a simple alert - could be expanded to a modal
         alert('Ballot measures details coming soon!');
@@ -578,7 +578,7 @@ class ElectionsSystemIntegration {
         const container = document.querySelector('#enhancedElectionsContainer');
         
         if (!container || !originalPanel) {
-            console.log('Elections containers not found');
+            await adminDebugLog('Elections containers not found');
             return;
         }
 
@@ -1345,22 +1345,22 @@ class ElectionsSystemIntegration {
                 }
             }
             
-            console.log('✅ Restored main content');
+            await adminDebugLog('✅ Restored main content');
         }
     }
 
     viewCandidates(contestName) {
-        console.log(`👥 Viewing candidates for ${contestName}`);
+        await adminDebugLog(`👥 Viewing candidates for ${contestName}`);
         this.showMessage(`Candidate information for ${contestName} would be displayed here.`);
     }
 
     getVotingInfo(contestName) {
-        console.log(`ℹ️ Getting voting info for ${contestName}`);
+        await adminDebugLog(`ℹ️ Getting voting info for ${contestName}`);
         this.showMessage(`Voting information for ${contestName} would be shown here.`);
     }
 
     async showVotingInfo() {
-        console.log('🗳️ Loading voter guide from backend API...');
+        await adminDebugLog('🗳️ Loading voter guide from backend API...');
         
         try {
             const userState = this.getUserState() || 'CA';
@@ -1377,7 +1377,7 @@ class ElectionsSystemIntegration {
                 throw new Error(`Voter guide API returned ${response.status}`);
             }
         } catch (error) {
-            console.error('Failed to load voter guide:', error);
+            await adminDebugError('Failed to load voter guide:', error);
             // Fallback to static voting info
             this.showVotingInfoModal();
         }

@@ -20,7 +20,13 @@ export interface AuthRequest extends Request {
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Get token from cookie first, fallback to header for transition period
+    let token = req.cookies?.authToken;
+    
+    // Fallback for migration period
+    if (!token) {
+      token = req.header('Authorization')?.replace('Bearer ', '');
+    }
     
     if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });

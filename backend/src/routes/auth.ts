@@ -397,6 +397,25 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           const token = generateToken(user.id);
           metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp_session: 'extended' });
 
+          // Set httpOnly cookie for auth token
+          res.cookie('authToken', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/'
+          });
+          
+          // Generate and set CSRF token
+          const csrfToken = require('crypto').randomBytes(32).toString('hex');
+          res.cookie('csrf-token', csrfToken, {
+            httpOnly: false, // Needs to be readable by JS
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            path: '/'
+          });
+
           return res.json({
             message: 'Login successful',
             user: {
@@ -408,7 +427,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
               isAdmin: user.isAdmin,
               isModerator: user.isModerator
             },
-            token,
+            csrfToken,
             totpSessionToken: newSessionToken
           });
         }
@@ -459,6 +478,25 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       const token = generateToken(user.id);
       metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
 
+      // Set httpOnly cookie for auth token
+      res.cookie('authToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/'
+      });
+      
+      // Generate and set CSRF token
+      const csrfToken = require('crypto').randomBytes(32).toString('hex');
+      res.cookie('csrf-token', csrfToken, {
+        httpOnly: false, // Needs to be readable by JS
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/'
+      });
+
       return res.json({
         message: 'Login successful',
         user: {
@@ -470,7 +508,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           isAdmin: user.isAdmin,
           isModerator: user.isModerator
         },
-        token,
+        csrfToken,
         totpSessionToken: sessionToken
       });
     }
@@ -479,6 +517,25 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
     const token = generateToken(user.id);
     metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
+
+    // Set httpOnly cookie for auth token
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
+    });
+    
+    // Generate and set CSRF token
+    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+    res.cookie('csrf-token', csrfToken, {
+      httpOnly: false, // Needs to be readable by JS
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/'
+    });
 
     res.json({
       message: 'Login successful',
@@ -492,7 +549,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         isAdmin: user.isAdmin,
         isModerator: user.isModerator
       },
-      token
+      csrfToken
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -601,7 +658,12 @@ router.post('/reset-password', async (req, res) => {
 // Logout user (blacklist token)
 router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Get token from cookie first, fallback to header for transition period
+    let token = req.cookies?.authToken;
+    if (!token) {
+      token = req.header('Authorization')?.replace('Bearer ', '');
+    }
+    
     const sessionId = req.header('X-Session-ID');
     
     if (token) {
@@ -621,10 +683,73 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
       await sessionManager.revokeUserSession(sessionId);
     }
     
+    // Clear cookies
+    res.clearCookie('authToken');
+    res.clearCookie('csrf-token');
+    
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Token refresh endpoint
+router.post('/refresh', async (req, res) => {
+  try {
+    const token = req.cookies?.authToken;
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    try {
+      const decoded = verifyToken(token);
+      if (!decoded || !decoded.userId) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+      
+      // Verify user still exists
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId }
+      });
+      
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      // Generate new token
+      const newToken = generateToken(decoded.userId);
+      
+      // Set new httpOnly cookie
+      res.cookie('authToken', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/'
+      });
+      
+      // Generate new CSRF token
+      const csrfToken = require('crypto').randomBytes(32).toString('hex');
+      res.cookie('csrf-token', csrfToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/'
+      });
+      
+      res.json({ 
+        success: true,
+        csrfToken
+      });
+    } catch (tokenError) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

@@ -123,7 +123,8 @@ class AdminDebugger {
         if (await this.verifyAdminStatus()) {
             // Double-check admin status for sensitive data
             try {
-                const recheck = await adminApiCall('/api/admin/dashboard');
+                // Use window.apiCall instead of undefined adminApiCall function
+                const recheck = await window.apiCall('/admin/dashboard');
                 if (recheck.ok) {
                     const timestamp = new Date().toLocaleTimeString();
                     console.log(`🔒 [${timestamp}] [${component}] SENSITIVE: ${message}`, sensitiveData);
