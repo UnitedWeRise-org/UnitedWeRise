@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.warnCsrf = exports.verifyCsrf = void 0;
+const metricsService_1 = require("../services/metricsService");
 /**
  * CSRF Protection Middleware
  * Implements double-submit cookie pattern for CSRF protection
@@ -21,12 +22,14 @@ const verifyCsrf = (req, res, next) => {
     const cookie = req.cookies['csrf-token'];
     // Verify both tokens exist
     if (!token) {
+        metricsService_1.metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_token' });
         return res.status(403).json({
             error: 'CSRF token missing in request',
             code: 'CSRF_TOKEN_MISSING'
         });
     }
     if (!cookie) {
+        metricsService_1.metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_cookie' });
         return res.status(403).json({
             error: 'CSRF token missing in cookies',
             code: 'CSRF_COOKIE_MISSING'
@@ -34,12 +37,14 @@ const verifyCsrf = (req, res, next) => {
     }
     // Verify tokens match (double-submit cookie pattern)
     if (token !== cookie) {
+        metricsService_1.metricsService.incrementCounter('csrf_failures_total', { reason: 'token_mismatch' });
         return res.status(403).json({
             error: 'Invalid CSRF token',
             code: 'CSRF_TOKEN_MISMATCH'
         });
     }
     // CSRF validation passed
+    metricsService_1.metricsService.incrementCounter('csrf_validations_total', { status: 'success' });
     next();
 };
 exports.verifyCsrf = verifyCsrf;

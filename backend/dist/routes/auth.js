@@ -369,7 +369,10 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         console.log(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
         if (actualTotpEnabled && userData?.totpSecret) {
             console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
-            const { totpToken, totpSessionToken } = req.body;
+            const { totpToken } = req.body;
+            // Check for TOTP session token in httpOnly cookies (secure)
+            const totpSessionToken = req.cookies?.totpSessionToken;
+            const totpVerified = req.cookies?.totpVerified === 'true';
             // Check if user has a valid TOTP session token (24-hour window)
             if (totpSessionToken && userData.totpSecret) {
                 const validSessionToken = speakeasy.totp.verify({
@@ -394,6 +397,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
                     const token = (0, auth_1.generateToken)(user.id);
                     metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp_session: 'extended' });
+                    metricsService_1.metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_extended' });
                     // Set httpOnly cookie for auth token
                     res.cookie('authToken', token, {
                         httpOnly: true,
@@ -411,6 +415,22 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                         maxAge: 30 * 24 * 60 * 60 * 1000,
                         path: '/'
                     });
+                    // Set TOTP session token as httpOnly cookie
+                    res.cookie('totpSessionToken', newSessionToken, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: 'strict',
+                        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+                        path: '/'
+                    });
+                    // Set TOTP verified flag as httpOnly cookie
+                    res.cookie('totpVerified', 'true', {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: 'strict',
+                        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+                        path: '/'
+                    });
                     return res.json({
                         message: 'Login successful',
                         user: {
@@ -423,7 +443,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                             isModerator: user.isModerator
                         },
                         csrfToken,
-                        totpSessionToken: newSessionToken
+                        totpVerified: true // Simple flag for frontend
                     });
                 }
             }
@@ -465,6 +485,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
             const token = (0, auth_1.generateToken)(user.id);
             metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
+            metricsService_1.metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_verified' });
             // Set httpOnly cookie for auth token
             res.cookie('authToken', token, {
                 httpOnly: true,
@@ -482,6 +503,22 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 path: '/'
             });
+            // Set TOTP session token as httpOnly cookie
+            res.cookie('totpSessionToken', sessionToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 24 * 60 * 60 * 1000, // 24 hours
+                path: '/'
+            });
+            // Set TOTP verified flag as httpOnly cookie
+            res.cookie('totpVerified', 'true', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 24 * 60 * 60 * 1000, // 24 hours
+                path: '/'
+            });
             return res.json({
                 message: 'Login successful',
                 user: {
@@ -494,13 +531,14 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     isModerator: user.isModerator
                 },
                 csrfToken,
-                totpSessionToken: sessionToken
+                totpVerified: true // Simple flag for frontend
             });
         }
         // No TOTP required - regular login
         await securityService_1.SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
         const token = (0, auth_1.generateToken)(user.id);
         metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
+        metricsService_1.metricsService.incrementCounter('cookie_auth_success_total', { method: 'regular' });
         // Set httpOnly cookie for auth token
         res.cookie('authToken', token, {
             httpOnly: true,
@@ -643,9 +681,11 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
         if (sessionId) {
             await sessionManager_1.sessionManager.revokeUserSession(sessionId);
         }
-        // Clear cookies
+        // Clear all authentication cookies
         res.clearCookie('authToken');
         res.clearCookie('csrf-token');
+        res.clearCookie('totpSessionToken');
+        res.clearCookie('totpVerified');
         res.json({ message: 'Logged out successfully' });
     }
     catch (error) {

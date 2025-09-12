@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
 ;
 import { sessionManager } from '../services/sessionManager';
+import { metricsService } from '../services/metricsService';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -29,11 +30,13 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
     
     if (!token) {
+      metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
+      metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
       return res.status(401).json({ error: 'Invalid token.' });
     }
 
@@ -53,6 +56,11 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     req.user = user;
+    
+    // Record successful authentication
+    metricsService.incrementCounter('auth_middleware_success_total', { 
+      method: req.cookies?.authToken ? 'cookie' : 'header' 
+    });
     
     // Update user's lastSeenAt, but only if it's been more than 5 minutes since last update to avoid database spam
     const now = new Date();

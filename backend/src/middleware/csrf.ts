@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { metricsService } from '../services/metricsService';
 
 /**
  * CSRF Protection Middleware
@@ -24,6 +25,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   
   // Verify both tokens exist
   if (!token) {
+    metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_token' });
     return res.status(403).json({ 
       error: 'CSRF token missing in request',
       code: 'CSRF_TOKEN_MISSING'
@@ -31,6 +33,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
   
   if (!cookie) {
+    metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_cookie' });
     return res.status(403).json({ 
       error: 'CSRF token missing in cookies',
       code: 'CSRF_COOKIE_MISSING'
@@ -39,6 +42,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   
   // Verify tokens match (double-submit cookie pattern)
   if (token !== cookie) {
+    metricsService.incrementCounter('csrf_failures_total', { reason: 'token_mismatch' });
     return res.status(403).json({ 
       error: 'Invalid CSRF token',
       code: 'CSRF_TOKEN_MISMATCH'
@@ -46,6 +50,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
   
   // CSRF validation passed
+  metricsService.incrementCounter('csrf_validations_total', { status: 'success' });
   next();
 };
 

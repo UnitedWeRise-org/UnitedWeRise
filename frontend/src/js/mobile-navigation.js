@@ -242,9 +242,9 @@ function toggleBodyScroll(disable) {
     }
 }
 
-// Check if user is logged in (looks for authToken)
+// Check if user is logged in (using current user data)
 function isUserLoggedIn() {
-    return localStorage.getItem('authToken') !== null || window.authToken !== null;
+    return window.currentUser !== null && window.currentUser !== undefined;
 }
 
 // Show/hide mobile navigation based on login status

@@ -119,9 +119,9 @@ const requireTOTPForAdmin = async (req, res, next) => {
                 message: 'Two-factor authentication is required for admin access. Please enable TOTP in your settings.'
             });
         }
-        // Check if TOTP verification is present in headers
-        const totpVerified = req.headers['x-totp-verified'] === 'true';
-        const totpToken = req.headers['x-totp-token'];
+        // Check if TOTP verification is present in secure httpOnly cookies
+        const totpVerified = req.cookies?.totpVerified === 'true';
+        const totpToken = req.cookies?.totpSessionToken;
         if (!totpVerified || !totpToken) {
             return res.status(403).json({
                 error: 'TOTP_VERIFICATION_REQUIRED',

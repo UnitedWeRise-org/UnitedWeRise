@@ -25,12 +25,11 @@ class UnifiedMessagingClient {
             return;
         }
 
-        // Check if user is authenticated (either token or user data exists)
-        const authToken = localStorage.getItem('authToken'); // Fallback for transition
+        // Check if user is authenticated (user data exists)
         const currentUser = localStorage.getItem('currentUser');
         
-        if (!authToken && !currentUser) {
-            await adminDebugWarn('WebSocket', 'No authentication available for WebSocket connection');
+        if (!currentUser) {
+            await adminDebugWarn('WebSocket', 'No user authentication available for WebSocket connection');
             return;
         }
 

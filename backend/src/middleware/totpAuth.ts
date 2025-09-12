@@ -99,9 +99,9 @@ export const requireTOTPForAdmin = async (req: AuthRequest, res: Response, next:
       });
     }
 
-    // Check if TOTP verification is present in headers
-    const totpVerified = req.headers['x-totp-verified'] === 'true';
-    const totpToken = req.headers['x-totp-token'] as string;
+    // Check if TOTP verification is present in secure httpOnly cookies
+    const totpVerified = req.cookies?.totpVerified === 'true';
+    const totpToken = req.cookies?.totpSessionToken;
 
     if (!totpVerified || !totpToken) {
       return res.status(403).json({ 

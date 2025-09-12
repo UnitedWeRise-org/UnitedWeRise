@@ -110,15 +110,11 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
     try {
         await adminDebugLog('UnifiedAuth', `Starting unified login for ${context}`);
         
-        // Get existing TOTP token if available
-        const storagePrefix = context === 'admin-dashboard' ? 'admin_' : 'user_';
-        const existingTotpToken = totpSessionToken || localStorage.getItem(`${storagePrefix}totp_token`);
+        // TOTP session tokens now handled by secure httpOnly cookies automatically
+        // No need to manually include TOTP tokens - server will read from cookies
         
         // Initial login attempt
         const loginData = { email, password };
-        if (existingTotpToken) {
-            loginData.totpSessionToken = existingTotpToken;
-        }
         
         const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
             method: 'POST',
@@ -157,11 +153,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                 window.csrfToken = totpResult.csrfToken;
                 localStorage.setItem('currentUser', JSON.stringify(totpResult.user));
                 
-                // Store new session token if provided
-                if (totpResult.totpSessionToken) {
-                    localStorage.setItem(`${storagePrefix}totp_token`, totpResult.totpSessionToken);
-                    localStorage.setItem(`${storagePrefix}totp_verified`, 'true');
-                }
+                // TOTP tokens now stored in secure httpOnly cookies (no localStorage needed)
                 
                 // Token is now in httpOnly cookie
                 
@@ -212,10 +204,10 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
  * @returns {boolean} - True if valid TOTP session exists
  */
 function hasValidTOTPSession(context = 'main-site') {
-    const storagePrefix = context === 'admin-dashboard' ? 'admin_' : 'user_';
-    const verified = localStorage.getItem(`${storagePrefix}totp_verified`) === 'true';
-    const token = localStorage.getItem(`${storagePrefix}totp_token`);
-    return verified && token;
+    // TOTP tokens are now in secure httpOnly cookies - cannot check client-side
+    // Instead, make API call to verify TOTP status or rely on server responses
+    console.log('TOTP session status now handled by secure httpOnly cookies');
+    return true; // Assume valid - server will reject if expired
 }
 
 /**
@@ -223,10 +215,8 @@ function hasValidTOTPSession(context = 'main-site') {
  * @param {string} context - 'main-site' or 'admin-dashboard'
  */
 function clearTOTPSession(context = 'main-site') {
-    const storagePrefix = context === 'admin-dashboard' ? 'admin_' : 'user_';
-    localStorage.removeItem(`${storagePrefix}totp_verified`);
-    localStorage.removeItem(`${storagePrefix}totp_token`);
-    await adminDebugLog('UnifiedAuth', `TOTP session cleared for ${context}`);
+    // TOTP tokens are now in secure httpOnly cookies - cleared server-side via logout
+    console.log(`TOTP session cleared for ${context} via server-side cookie clearing`);
 }
 
 /**

@@ -14,9 +14,12 @@ function getApiBase() {
         : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
 }
 
-// Get auth token
+// Get auth token - legacy function for backwards compatibility
+// NOTE: Authentication now handled by httpOnly cookies via apiCall()
 function getAuthToken() {
-    return localStorage.getItem('token') || window.authToken;
+    // This function is deprecated but kept for legacy compatibility
+    // New code should use apiCall() which handles cookie authentication
+    return null; // Force use of cookie-based auth
 }
 
 /**

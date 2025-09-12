@@ -484,8 +484,8 @@ class DonationSystem {
     openDonationModal() {
         if (!this.modalElement) return;
         
-        // Check if user is logged in
-        if (!localStorage.getItem('authToken')) {
+        // Check if user is logged in (using current user data)
+        if (!window.currentUser) {
             alert('Please log in to make a donation');
             return;
         }
@@ -583,21 +583,16 @@ class DonationSystem {
                 isRecurring: this.donationType !== 'ONE_TIME'
             };
             
-            // Call API to create Stripe checkout session
-            const response = await fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/payments/donation', {
+            // Call API to create Stripe checkout session using apiCall for cookie auth
+            const response = await window.apiCall('/payments/donation', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify(donationData)
+                body: donationData
             });
             
-            const result = await response.json();
-            
-            if (response.ok && result.success) {
+            // Handle response from apiCall (already parsed)
+            if (response.ok && response.data && response.data.success) {
                 // Store checkout URL for fallback
-                const checkoutUrl = result.data.checkoutUrl;
+                const checkoutUrl = response.data.data.checkoutUrl;
                 console.log('💳 Redirecting to Stripe Checkout:', checkoutUrl);
                 
                 // Update loading message

@@ -38,27 +38,17 @@ class AppInitializer {
         AppInitializer.log('🚀 Starting optimized app initialization...');
 
         try {
-            // Step 1: Check if we have a stored auth token
-            const storedToken = localStorage.getItem('authToken');
+            // Step 1: Check for existing user data (httpOnly cookies handle authentication automatically)
             const storedUser = localStorage.getItem('currentUser');
 
-            if (!storedToken) {
-                AppInitializer.log('📝 No auth token found - user not logged in');
-                this.setLoggedOutState();
-                return { authenticated: false };
-            }
-
-            // Step 2: Set the global auth token (both window and global scope)
-            window.authToken = storedToken;
-            if (typeof authToken !== 'undefined') {
-                authToken = storedToken;
-            }
+            // Step 2: Authentication is now handled via httpOnly cookies
+            // No localStorage token needed - proceed directly to API call
 
             // Step 3: Try batch initialization first, fall back to individual calls
             AppInitializer.log('🔄 Fetching initialization data...');
             
             try {
-                AppInitializer.log('🔄 About to call /batch/initialize with token:', window.authToken ? `EXISTS (${window.authToken.slice(0,10)}...)` : 'MISSING');
+                AppInitializer.log('🔄 About to call /batch/initialize with cookie authentication...');
                 const initData = await window.apiCall('/batch/initialize', {
                     cacheTimeout: 60000, // Cache for 1 minute
                     retries: 1 // Only retry once to avoid cascading failures
@@ -300,10 +290,7 @@ class AppInitializer {
     // Set the UI to logged out state
     setLoggedOutState() {
         window.currentUser = null;
-        window.authToken = null;
-        if (typeof authToken !== 'undefined') {
-            authToken = null;
-        }
+        // httpOnly cookies are cleared server-side via logout endpoint
         
         // Update UI elements
         document.getElementById('authSection').style.display = 'flex';
@@ -325,9 +312,9 @@ class AppInitializer {
         AppInitializer.log('📤 Logged out state set');
     }
 
-    // Clear auth tokens and set logged out state
+    // Clear auth data and set logged out state
     clearAuthAndSetLoggedOut() {
-        localStorage.removeItem('authToken');
+        // Only clear user data - httpOnly cookies cleared server-side via logout endpoint
         localStorage.removeItem('currentUser');
         this.setLoggedOutState();
         
@@ -368,7 +355,7 @@ class AppInitializer {
 
     // Method to refresh user data without full reinitialization
     async refreshUserData() {
-        if (!window.authToken) return null;
+        // Authentication handled by httpOnly cookies automatically
 
         try {
             const userData = await window.apiCall('/batch/auth-status', {

@@ -1094,13 +1094,10 @@ Loading deployment status...
                     authToken = result.token;
                     currentUser = result.user;
                     
-                    // Set TOTP session from unified auth if present
-                    if (result.totpSessionToken) {
+                    // Set TOTP status from secure cookie-based authentication
+                    if (result.totpVerified) {
                         totpVerified = true;
-                        totpToken = result.totpSessionToken;
-                        localStorage.setItem('admin_totp_verified', 'true');
-                        localStorage.setItem('admin_totp_token', result.totpSessionToken);
-                        console.log('🔐 TOTP session established from unified auth');
+                        console.log('🔐 TOTP session established from secure httpOnly cookies');
                     }
                     
                     // Verify admin privileges
@@ -3941,9 +3938,9 @@ Example: adminConsole.getSuggestions('features', 'new')
             }
         };
 
-        // TOTP Verification System for Admin Dashboard
-        let totpVerified = localStorage.getItem('admin_totp_verified') === 'true';
-        let totpToken = localStorage.getItem('admin_totp_token');
+        // TOTP Verification System for Admin Dashboard - Now using secure httpOnly cookies
+        let totpVerified = false; // Will be determined by API calls
+        // TOTP tokens are now stored in secure httpOnly cookies - not accessible to JavaScript
         
         // Enhanced API call function with TOTP support
         async function adminApiCall(url, options = {}) {
@@ -3987,11 +3984,9 @@ Example: adminConsole.getSuggestions('features', 'new')
                         console.error('🔒 TOTP verification expired - redirecting to login');
                         alert('Your security session has expired. Please log in again.');
                         
-                        // Clear all auth data
+                        // Clear all auth data (httpOnly cookies cleared server-side)
                         localStorage.removeItem('authToken');
                         localStorage.removeItem('currentUser');
-                        localStorage.removeItem('admin_totp_verified');
-                        localStorage.removeItem('admin_totp_token');
                         window.csrfToken = null;
                         
                         // Redirect to login

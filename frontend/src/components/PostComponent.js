@@ -574,9 +574,8 @@ class PostComponent {
      * Add a comment to a post
      */
     async addComment(postId) {
-        // Check authentication using the same pattern as the main app
-        const authToken = localStorage.getItem('authToken') || window.authToken;
-        if (!authToken) {
+        // Check authentication using current user data
+        if (!window.currentUser) {
             alert('Please log in to comment');
             return;
         }
@@ -735,8 +734,7 @@ class PostComponent {
      * Submit a reply to a comment
      */
     async submitReply(parentId, postId) {
-        const authToken = localStorage.getItem('authToken') || window.authToken;
-        if (!authToken) {
+        if (!window.currentUser) {
             alert('Please log in to reply');
             return;
         }

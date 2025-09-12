@@ -5,6 +5,7 @@ const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
 ;
 const sessionManager_1 = require("../services/sessionManager");
+const metricsService_1 = require("../services/metricsService");
 const requireAuth = async (req, res, next) => {
     try {
         // Get token from cookie first, fallback to header for transition period
@@ -14,10 +15,12 @@ const requireAuth = async (req, res, next) => {
             token = req.header('Authorization')?.replace('Bearer ', '');
         }
         if (!token) {
+            metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
             return res.status(401).json({ error: 'Access denied. No token provided.' });
         }
         const decoded = (0, auth_1.verifyToken)(token);
         if (!decoded) {
+            metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
             return res.status(401).json({ error: 'Invalid token.' });
         }
         // Check if token is blacklisted
@@ -33,6 +36,10 @@ const requireAuth = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found.' });
         }
         req.user = user;
+        // Record successful authentication
+        metricsService_1.metricsService.incrementCounter('auth_middleware_success_total', {
+            method: req.cookies?.authToken ? 'cookie' : 'header'
+        });
         // Update user's lastSeenAt, but only if it's been more than 5 minutes since last update to avoid database spam
         const now = new Date();
         const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);

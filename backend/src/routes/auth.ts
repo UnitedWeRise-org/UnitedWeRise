@@ -367,7 +367,11 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     
     if (actualTotpEnabled && userData?.totpSecret) {
       console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
-      const { totpToken, totpSessionToken } = req.body;
+      const { totpToken } = req.body;
+      
+      // Check for TOTP session token in httpOnly cookies (secure)
+      const totpSessionToken = req.cookies?.totpSessionToken;
+      const totpVerified = req.cookies?.totpVerified === 'true';
       
       // Check if user has a valid TOTP session token (24-hour window)
       if (totpSessionToken && userData.totpSecret) {
@@ -396,6 +400,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
           const token = generateToken(user.id);
           metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp_session: 'extended' });
+          metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_extended' });
 
           // Set httpOnly cookie for auth token
           res.cookie('authToken', token, {
@@ -416,6 +421,24 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             path: '/'
           });
 
+          // Set TOTP session token as httpOnly cookie
+          res.cookie('totpSessionToken', newSessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/'
+          });
+          
+          // Set TOTP verified flag as httpOnly cookie
+          res.cookie('totpVerified', 'true', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            path: '/'
+          });
+
           return res.json({
             message: 'Login successful',
             user: {
@@ -428,7 +451,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
               isModerator: user.isModerator
             },
             csrfToken,
-            totpSessionToken: newSessionToken
+            totpVerified: true // Simple flag for frontend
           });
         }
       }
@@ -477,6 +500,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
       const token = generateToken(user.id);
       metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
+      metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_verified' });
 
       // Set httpOnly cookie for auth token
       res.cookie('authToken', token, {
@@ -497,6 +521,24 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         path: '/'
       });
 
+      // Set TOTP session token as httpOnly cookie
+      res.cookie('totpSessionToken', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        path: '/'
+      });
+      
+      // Set TOTP verified flag as httpOnly cookie
+      res.cookie('totpVerified', 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        path: '/'
+      });
+
       return res.json({
         message: 'Login successful',
         user: {
@@ -509,7 +551,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           isModerator: user.isModerator
         },
         csrfToken,
-        totpSessionToken: sessionToken
+        totpVerified: true // Simple flag for frontend
       });
     }
 
@@ -517,6 +559,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
     const token = generateToken(user.id);
     metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
+    metricsService.incrementCounter('cookie_auth_success_total', { method: 'regular' });
 
     // Set httpOnly cookie for auth token
     res.cookie('authToken', token, {
@@ -683,9 +726,11 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
       await sessionManager.revokeUserSession(sessionId);
     }
     
-    // Clear cookies
+    // Clear all authentication cookies
     res.clearCookie('authToken');
     res.clearCookie('csrf-token');
+    res.clearCookie('totpSessionToken');
+    res.clearCookie('totpVerified');
     
     res.json({ message: 'Logged out successfully' });
   } catch (error) {

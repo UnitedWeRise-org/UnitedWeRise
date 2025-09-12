@@ -15,35 +15,29 @@ class CandidateRegistrationPayment {
      * @param {string} description - Description of the registration fee
      */
     async processCandidateRegistrationFee(candidateRegistrationId, description = 'Candidate Registration Fee') {
-        if (!localStorage.getItem('authToken')) {
+        if (!window.currentUser) {
             throw new Error('Please log in to complete registration');
         }
 
         try {
-            // Call the fee payment endpoint (non-tax-deductible)
-            const response = await fetch(`${this.API_BASE}/payments/fee`, {
+            // Call the fee payment endpoint using apiCall for cookie authentication
+            const response = await window.apiCall('/payments/fee', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify({
+                body: {
                     amount: this.registrationFee,
                     feeType: 'CANDIDATE_REGISTRATION',
                     candidateRegistrationId: candidateRegistrationId,
                     description: description
-                })
+                }
             });
 
-            const result = await response.json();
-
-            if (response.ok && result.success) {
+            if (response.ok && response.data && response.data.success) {
                 // Open Stripe Checkout in new tab for registration fee
-                console.log('💳 Opening candidate registration payment in new tab:', result.data.checkoutUrl);
-                window.open(result.data.checkoutUrl, '_blank');
-                return result.data;
+                console.log('💳 Opening candidate registration payment in new tab:', response.data.data.checkoutUrl);
+                window.open(response.data.data.checkoutUrl, '_blank');
+                return response.data.data;
             } else {
-                throw new Error(result.error || 'Failed to create registration payment');
+                throw new Error(response.data?.error || 'Failed to create registration payment');
             }
 
         } catch (error) {

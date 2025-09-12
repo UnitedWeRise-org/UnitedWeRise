@@ -71,18 +71,47 @@ const webSocketService = new WebSocketService(httpServer);
 // Export webSocketService for global access (notifications, etc.)
 export { webSocketService };
 
-// Security Middleware
+// Enhanced Security Middleware - Enterprise Grade
 app.use(helmet({
+  // Content Security Policy - Prevent XSS and injection attacks
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://js.stripe.com"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", // Required for inline scripts - TODO: remove with nonce implementation
+        "https://unpkg.com",
+        "https://js.stripe.com/v3/", // Stripe payment processing
+        "https://www.googletagmanager.com", // Analytics (if used)
+      ],
+      imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
+      connectSrc: [
+        "'self'", 
+        "ws:", "wss:", // WebSocket connections
+        "https://js.stripe.com", // Stripe API
+        "*.azurecontainerapps.io", // Azure backend
+      ],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"], // Block dangerous plugins
+      mediaSrc: ["'self'", "https:"],
+      frameSrc: ["'self'", "https://js.stripe.com"], // Stripe checkout frames
+      upgradeInsecureRequests: [], // Force HTTPS in production
     },
   },
-  crossOriginEmbedderPolicy: false
+  // Additional security headers
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  frameguard: { action: 'deny' }, // Prevent clickjacking
+  noSniff: true, // Prevent MIME type sniffing
+  xssFilter: true, // XSS protection
+  referrerPolicy: { policy: 'same-origin' }, // Control referrer info
+  crossOriginEmbedderPolicy: false, // Keep false for compatibility
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // Apply burst limiter first (shorter window, catches rapid requests)
@@ -236,6 +265,44 @@ app.get('/metrics', (req, res) => {
 // JSON metrics endpoint for custom dashboards
 app.get('/api/metrics', (req, res) => {
   res.json(metricsService.getJSONMetrics());
+});
+
+// Security-focused metrics endpoint
+app.get('/api/security-metrics', (req, res) => {
+  const metrics = metricsService.getJSONMetrics();
+  
+  // Extract security-relevant metrics
+  const securityMetrics = {
+    timestamp: metrics.timestamp,
+    authentication: {
+      total_attempts: metrics.counters.auth_attempts_total || 0,
+      total_failures: metrics.counters.auth_failures_total || 0,
+      middleware_success: metrics.counters.auth_middleware_success_total || 0,
+      middleware_failures: metrics.counters.auth_middleware_failures_total || 0,
+      cookie_auth_success: metrics.counters.cookie_auth_success_total || 0,
+      success_rate: metrics.counters.auth_attempts_total ? 
+        ((metrics.counters.auth_attempts_total - metrics.counters.auth_failures_total) / metrics.counters.auth_attempts_total * 100).toFixed(2) + '%' : 'N/A'
+    },
+    csrf_protection: {
+      validations_success: metrics.counters.csrf_validations_total || 0,
+      failures_total: metrics.counters.csrf_failures_total || 0,
+      protection_rate: metrics.counters.csrf_validations_total ? 
+        (metrics.counters.csrf_validations_total / (metrics.counters.csrf_validations_total + (metrics.counters.csrf_failures_total || 0)) * 100).toFixed(2) + '%' : 'N/A'
+    },
+    system: {
+      uptime_seconds: metrics.gauges.uptime_seconds,
+      active_users: metrics.gauges.active_users,
+      total_users: metrics.gauges.total_users,
+      suspended_users: metrics.gauges.suspended_users || 0
+    },
+    deployment: {
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      security_migration: 'httpOnly cookies + CSRF protection active'
+    }
+  };
+  
+  res.json(securityMetrics);
 });
 
 // Detailed health check with more information
