@@ -21,7 +21,7 @@ class UnifiedMessagingClient {
     // Connect to WebSocket server
     connect() {
         if (this.disabled) {
-            await adminDebugWarn('WebSocket', 'WebSocket disabled due to repeated failures');
+            adminDebugWarn('WebSocket', 'WebSocket disabled due to repeated failures');
             return;
         }
 
@@ -29,7 +29,7 @@ class UnifiedMessagingClient {
         const currentUser = localStorage.getItem('currentUser');
         
         if (!currentUser) {
-            await adminDebugWarn('WebSocket', 'No user authentication available for WebSocket connection');
+            adminDebugWarn('WebSocket', 'No user authentication available for WebSocket connection');
             return;
         }
 
@@ -52,7 +52,7 @@ class UnifiedMessagingClient {
 
             this.setupEventHandlers();
         } catch (error) {
-            await adminDebugError('WebSocket', 'Failed to create socket connection', error);
+            adminDebugError('WebSocket', 'Failed to create socket connection', error);
             this.scheduleReconnect();
         }
     }
@@ -62,7 +62,7 @@ class UnifiedMessagingClient {
         if (!this.socket) return;
 
         this.socket.on('connect', () => {
-            await adminDebugLog('WebSocket', 'WebSocket connected, authenticating...');
+            adminDebugLog('WebSocket', 'WebSocket connected, authenticating...');
             
             // Authenticate after connection using CSRF token or fallback
             const authData = {};
@@ -75,20 +75,20 @@ class UnifiedMessagingClient {
         });
         
         this.socket.on('authenticated', () => {
-            await adminDebugLog('WebSocket', '✅ WebSocket authenticated successfully');
+            adminDebugLog('WebSocket', '✅ WebSocket authenticated successfully');
             this.isConnected = true;
             this.reconnectAttempts = 0;
             this.connectionHandlers.forEach(handler => handler(true));
         });
         
         this.socket.on('authentication_error', (error) => {
-            await adminDebugError('WebSocket', 'WebSocket authentication failed', error);
+            adminDebugError('WebSocket', 'WebSocket authentication failed', error);
             this.isConnected = false;
             this.socket.disconnect();
         });
 
         this.socket.on('disconnect', (reason) => {
-            await adminDebugLog('WebSocket', 'WebSocket disconnected', reason);
+            adminDebugLog('WebSocket', 'WebSocket disconnected', reason);
             this.isConnected = false;
             this.connectionHandlers.forEach(handler => handler(false));
             
@@ -101,14 +101,14 @@ class UnifiedMessagingClient {
         });
 
         this.socket.on('connect_error', (error) => {
-            await adminDebugError('WebSocket', 'WebSocket connection error', error);
+            adminDebugError('WebSocket', 'WebSocket connection error', error);
             this.isConnected = false;
             this.scheduleReconnect();
         });
 
         // Handle incoming messages
         this.socket.on('new_message', (payload) => {
-            await adminDebugSensitive('WebSocket', 'New message received', payload);
+            adminDebugSensitive('WebSocket', 'New message received', payload);
             const { messageType, data } = payload;
             
             if (this.messageHandlers.has(messageType)) {
@@ -116,7 +116,7 @@ class UnifiedMessagingClient {
                     try {
                         handler(data);
                     } catch (error) {
-                        await adminDebugError('WebSocket', 'Error in message handler', error);
+                        adminDebugError('WebSocket', 'Error in message handler', error);
                     }
                 });
             }
@@ -124,7 +124,7 @@ class UnifiedMessagingClient {
 
         // Handle message sent confirmations
         this.socket.on('message_sent', (data) => {
-            await adminDebugLog('WebSocket', 'Message sent confirmation', data);
+            adminDebugLog('WebSocket', 'Message sent confirmation', data);
             // Trigger any UI updates for sent message
             if (this.messageHandlers.has('MESSAGE_SENT')) {
                 this.messageHandlers.get('MESSAGE_SENT').forEach(handler => {
@@ -148,7 +148,7 @@ class UnifiedMessagingClient {
 
         // Handle read receipts
         this.socket.on('messages_marked_read', (data) => {
-            await adminDebugLog('WebSocket', 'Messages marked as read', data);
+            adminDebugLog('WebSocket', 'Messages marked as read', data);
             if (this.messageHandlers.has('MESSAGES_READ')) {
                 this.messageHandlers.get('MESSAGES_READ').forEach(handler => handler(data));
             }
@@ -156,7 +156,7 @@ class UnifiedMessagingClient {
 
         // Handle real-time notifications
         this.socket.on('new_notification', (notification) => {
-            await adminDebugSensitive('WebSocket', 'New notification received', notification);
+            adminDebugSensitive('WebSocket', 'New notification received', notification);
             
             // Update notification UI
             if (typeof updateNotificationUI === 'function') {
@@ -176,19 +176,19 @@ class UnifiedMessagingClient {
 
         // Handle errors
         this.socket.on('message_error', (error) => {
-            await adminDebugError('WebSocket', 'Message error', error);
+            adminDebugError('WebSocket', 'Message error', error);
             alert('Failed to send message: ' + error.error);
         });
 
         this.socket.on('mark_read_error', (error) => {
-            await adminDebugError('WebSocket', 'Mark read error', error);
+            adminDebugError('WebSocket', 'Mark read error', error);
         });
     }
 
     // Schedule reconnection attempt
     scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            await adminDebugWarn('WebSocket', 'Max WebSocket reconnection attempts reached. WebSocket permanently disabled, using REST API fallback only.');
+            adminDebugWarn('WebSocket', 'Max WebSocket reconnection attempts reached. WebSocket permanently disabled, using REST API fallback only.');
             // Permanently disable WebSocket
             this.disabled = true;
             // Clear any existing socket to prevent further attempts
@@ -203,11 +203,11 @@ class UnifiedMessagingClient {
         this.reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
         
-        await adminDebugLog('WebSocket', `Scheduling WebSocket reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+        adminDebugLog('WebSocket', `Scheduling WebSocket reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
         
         setTimeout(() => {
             if (!this.isConnected && this.reconnectAttempts <= this.maxReconnectAttempts) {
-                await adminDebugLog('WebSocket', `Attempting WebSocket reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+                adminDebugLog('WebSocket', `Attempting WebSocket reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
                 this.connect();
             }
         }, delay);
@@ -216,12 +216,12 @@ class UnifiedMessagingClient {
     // Send a message
     sendMessage(messageType, recipientId, content, conversationId = null) {
         if (!this.isConnected || !this.socket) {
-            await adminDebugError('WebSocket', 'WebSocket not connected, cannot send message');
+            adminDebugError('WebSocket', 'WebSocket not connected, cannot send message');
             return false;
         }
 
         if (!messageType || !recipientId || !content.trim()) {
-            await adminDebugError('WebSocket', 'Invalid message parameters');
+            adminDebugError('WebSocket', 'Invalid message parameters');
             return false;
         }
 
@@ -232,7 +232,7 @@ class UnifiedMessagingClient {
             conversationId
         };
 
-        await adminDebugSensitive('WebSocket', 'Sending message', messageData);
+        adminDebugSensitive('WebSocket', 'Sending message', messageData);
         this.socket.emit('send_message', messageData);
         return true;
     }

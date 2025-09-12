@@ -76,7 +76,9 @@ function createAddressForm(options = {}) {
 
     const container = document.getElementById(containerId);
     if (!container) {
-        await adminDebugError(`Container element with ID '${containerId}' not found`);
+        if (typeof adminDebugError !== 'undefined') {
+            adminDebugError('AddressForm', `Container element with ID '${containerId}' not found`);
+        }
         return null;
     }
 

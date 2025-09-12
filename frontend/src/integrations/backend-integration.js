@@ -68,7 +68,9 @@ class BackendIntegration {
                     try {
                         deviceData = await window.deviceFingerprinting.getFingerprintData();
                     } catch (e) {
-                        await adminDebugWarn('BackendIntegration', 'Device fingerprinting failed', e);
+                        if (typeof adminDebugWarn !== 'undefined') {
+                            adminDebugWarn('BackendIntegration', 'Device fingerprinting failed', e);
+                        }
                     }
                 }
 
@@ -112,7 +114,9 @@ class BackendIntegration {
                     this.resetHCaptcha();
                 }
             } catch (error) {
-                await adminDebugError('BackendIntegration', 'Registration error', error);
+                if (typeof adminDebugError !== 'undefined') {
+                    adminDebugError('BackendIntegration', 'Registration error', error);
+                }
                 showAuthMessage('Network error. Please try again.', 'error');
                 this.resetHCaptcha();
             }
@@ -202,7 +206,9 @@ class BackendIntegration {
                 }
             }
         } catch (error) {
-            await adminDebugError('BackendIntegration', 'Failed to check verification status', error);
+            if (typeof adminDebugError !== 'undefined') {
+                adminDebugError('BackendIntegration', 'Failed to check verification status', error);
+            }
         }
     }
 
@@ -245,7 +251,9 @@ class BackendIntegration {
                 
                 return response;
             } catch (error) {
-                await adminDebugError('BackendIntegration', 'Network error', error);
+                if (typeof adminDebugError !== 'undefined') {
+                    adminDebugError('BackendIntegration', 'Network error', error);
+                }
                 throw error;
             }
         };
@@ -319,7 +327,9 @@ class BackendIntegration {
                         return window.hcaptcha.getResponse();
                     }
                 } catch (error) {
-                    await adminDebugLog('BackendIntegration', 'hCaptcha not ready yet', error.message);
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('BackendIntegration', 'hCaptcha not ready yet', error.message);
+                    }
                     return null;
                 }
             }
@@ -342,7 +352,9 @@ class BackendIntegration {
                         window.hcaptcha.reset();
                     }
                 } catch (error) {
-                    await adminDebugLog('BackendIntegration', 'Could not reset hCaptcha', error.message);
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('BackendIntegration', 'Could not reset hCaptcha', error.message);
+                    }
                 }
             }
         }

@@ -71,7 +71,7 @@ class OfficialsSystemIntegration {
     }
 
     toggleOfficialsPanel() {
-        await adminDebugLog('🏛️ Opening Officials in main content area...');
+        adminDebugLog('🏛️ Opening Officials in main content area...');
         
         // Hide other detail panels
         document.querySelectorAll('.detail-panel').forEach(panel => {
@@ -105,7 +105,7 @@ class OfficialsSystemIntegration {
                            document.querySelector('main');
         
         if (!mainContent) {
-            await adminDebugError('Main content area not found');
+            adminDebugError('Main content area not found');
             return;
         }
 
@@ -226,7 +226,7 @@ class OfficialsSystemIntegration {
     }
 
     async loadOfficials() {
-        await adminDebugLog('🔄 Loading enhanced officials...');
+        adminDebugLog('🔄 Loading enhanced officials...');
         
         // Show loading indicator
         const loadingIndicator = document.querySelector('#officialsLoading');
@@ -254,7 +254,7 @@ class OfficialsSystemIntegration {
                 this.showOfficialsError('Officials loading function not available.');
             }
         } catch (error) {
-            await adminDebugError('Failed to load officials:', error);
+            adminDebugError('Failed to load officials:', error);
             this.showOfficialsError('Failed to load officials data. Please try again.');
         } finally {
             // Hide loading indicator
@@ -267,7 +267,7 @@ class OfficialsSystemIntegration {
         const originalOfficialsContent = document.querySelector('#officialsContent');
         
         if (!container || !originalOfficialsContent) {
-            await adminDebugLog('Officials containers not found');
+            adminDebugLog('Officials containers not found');
             return;
         }
 
@@ -932,18 +932,18 @@ class OfficialsSystemIntegration {
                 }
             }
             
-            await adminDebugLog('✅ Restored main content');
+            adminDebugLog('✅ Restored main content');
         }
     }
 
     contactOfficial(officialName) {
         // This would integrate with the messaging system
-        await adminDebugLog(`📧 Opening contact form for ${officialName}`);
+        adminDebugLog(`📧 Opening contact form for ${officialName}`);
         this.showMessage(`Contact form for ${officialName} would open here.`);
     }
 
     viewOfficialDetails(officialName) {
-        await adminDebugLog(`📊 Viewing details for ${officialName}`);
+        adminDebugLog(`📊 Viewing details for ${officialName}`);
         this.showMessage(`Detailed information for ${officialName} would open here.`);
     }
 
@@ -1083,7 +1083,7 @@ class OfficialsSystemIntegration {
 
     openProfileSettings() {
         // This would open the profile settings
-        await adminDebugLog('Opening profile settings...');
+        adminDebugLog('Opening profile settings...');
         if (typeof window.showProfile === 'function') {
             window.showProfile();
         } else {

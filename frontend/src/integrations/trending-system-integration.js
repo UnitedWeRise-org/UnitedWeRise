@@ -193,7 +193,7 @@ class TrendingSystemIntegration {
     }
 
     toggleTrendingMainView() {
-        await adminDebugLog('🔥 Opening Trending in main content area...');
+        adminDebugLog('🔥 Opening Trending in main content area...');
         
         // Hide other detail panels
         document.querySelectorAll('.detail-panel').forEach(panel => {
@@ -217,7 +217,7 @@ class TrendingSystemIntegration {
                            document.querySelector('main');
         
         if (!mainContent) {
-            await adminDebugError('Main content area not found');
+            adminDebugError('Main content area not found');
             return;
         }
 
@@ -374,7 +374,7 @@ class TrendingSystemIntegration {
                 }
             }
         } catch (error) {
-            await adminDebugError('Failed to load trending content:', error);
+            adminDebugError('Failed to load trending content:', error);
             // Fallback to demo data on error
             this.loadDemoTrendingContent();
         }
@@ -654,7 +654,7 @@ class TrendingSystemIntegration {
 
     // Interface methods
     filterByCategory(category) {
-        await adminDebugLog(`Filtering by category: ${category}`);
+        adminDebugLog(`Filtering by category: ${category}`);
         
         // Update active button
         document.querySelectorAll('.category-btn').forEach(btn => {
@@ -667,7 +667,7 @@ class TrendingSystemIntegration {
     }
 
     switchView(view) {
-        await adminDebugLog(`Switching to view: ${view}`);
+        adminDebugLog(`Switching to view: ${view}`);
         
         // Update active button
         document.querySelectorAll('.toggle-btn').forEach(btn => {
@@ -759,14 +759,14 @@ class TrendingSystemIntegration {
     }
 
     changeSortOrder(order) {
-        await adminDebugLog(`Changing sort order to: ${order}`);
+        adminDebugLog(`Changing sort order to: ${order}`);
         this.showMessage(`Sorted by ${order}`);
         // Reload content with new sort order
         setTimeout(() => this.loadTrendingContent(), 300);
     }
 
     refreshTrending() {
-        await adminDebugLog('Refreshing trending content...');
+        adminDebugLog('Refreshing trending content...');
         const loadingEl = document.querySelector('#trendingFeedContent');
         if (loadingEl) {
             loadingEl.innerHTML = `
@@ -784,7 +784,7 @@ class TrendingSystemIntegration {
     }
 
     loadMoreTrending() {
-        await adminDebugLog('Loading more trending posts...');
+        adminDebugLog('Loading more trending posts...');
         this.showMessage('Loading more posts...');
         // Simulate loading more content
     }
@@ -1564,7 +1564,7 @@ class TrendingSystemIntegration {
                 }
             }
             
-            await adminDebugLog('✅ Restored main content');
+            adminDebugLog('✅ Restored main content');
         }
     }
 
@@ -1638,7 +1638,7 @@ class TrendingSystemIntegration {
                 this.showMessage('Failed to enter topic mode');
             }
         } catch (error) {
-            await adminDebugError('Failed to enter topic mode:', error);
+            adminDebugError('Failed to enter topic mode:', error);
             this.showMessage('Error entering topic mode');
         }
     }
@@ -1660,7 +1660,7 @@ class TrendingSystemIntegration {
                 this.showMessage('Returned to main feed');
             }
         } catch (error) {
-            await adminDebugError('Failed to exit topic mode:', error);
+            adminDebugError('Failed to exit topic mode:', error);
             this.showMessage('Error exiting topic mode');
         }
     }
@@ -1751,7 +1751,7 @@ class TrendingSystemIntegration {
                 this.showTopicPreviewModal(data.posts, data.topic);
             }
         } catch (error) {
-            await adminDebugError('Failed to load topic preview:', error);
+            adminDebugError('Failed to load topic preview:', error);
         }
     }
 

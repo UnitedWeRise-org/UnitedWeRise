@@ -85,7 +85,7 @@ function showTOTPModal(context = 'main-site') {
             
             // Simply return the TOTP code - verification happens in login retry
             modal.remove();
-            await adminDebugLog('UnifiedAuth', `TOTP code entered for ${context} - will verify via login endpoint`);
+            adminDebugLog('UnifiedAuth', `TOTP code entered for ${context} - will verify via login endpoint`);
             resolve(code);
         };
         
@@ -108,7 +108,7 @@ function showTOTPModal(context = 'main-site') {
  */
 async function unifiedLogin(email, password, context = 'main-site', totpSessionToken = null) {
     try {
-        await adminDebugLog('UnifiedAuth', `Starting unified login for ${context}`);
+        adminDebugLog('UnifiedAuth', `Starting unified login for ${context}`);
         
         // TOTP session tokens now handled by secure httpOnly cookies automatically
         // No need to manually include TOTP tokens - server will read from cookies
@@ -124,11 +124,11 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
         });
         
         const result = await response.json();
-        await adminDebugSensitive('UnifiedAuth', 'Login response', result);
+        adminDebugSensitive('UnifiedAuth', 'Login response', result);
         
         // If TOTP is required
         if (result.requiresTOTP) {
-            await adminDebugLog('UnifiedAuth', 'TOTP verification required');
+            adminDebugLog('UnifiedAuth', 'TOTP verification required');
             
             // Show TOTP modal and get user's 6-digit code
             const verificationToken = await showTOTPModal(context);
@@ -146,7 +146,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             });
             
             const totpResult = await totpLoginResponse.json();
-            await adminDebugSensitive('UnifiedAuth', 'TOTP login response', totpResult);
+            adminDebugSensitive('UnifiedAuth', 'TOTP login response', totpResult);
             
             if (totpLoginResponse.ok && !totpResult.requiresTOTP) {
                 // NEW: Store CSRF token and user data only
@@ -157,7 +157,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                 
                 // Token is now in httpOnly cookie
                 
-                await adminDebugLog('UnifiedAuth', `Unified login successful for ${context} with TOTP`);
+                adminDebugLog('UnifiedAuth', `Unified login successful for ${context} with TOTP`);
                 return {
                     success: true,
                     user: totpResult.user,
@@ -180,7 +180,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             localStorage.setItem('currentUser', JSON.stringify(result.user));
             
             // Token is now in httpOnly cookie
-            await adminDebugLog('UnifiedAuth', `Unified login successful for ${context} (no TOTP)`);
+            adminDebugLog('UnifiedAuth', `Unified login successful for ${context} (no TOTP)`);
             return {
                 success: true,
                 user: result.user
@@ -190,7 +190,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
         }
         
     } catch (error) {
-        await adminDebugError('UnifiedAuth', 'Unified login error', error);
+        adminDebugError('UnifiedAuth', 'Unified login error', error);
         return {
             success: false,
             error: error.message || 'Login failed'
@@ -243,7 +243,7 @@ function unifiedLogout(context = 'main-site') {
     clearTOTPSession('main-site');
     clearTOTPSession('admin-dashboard');
     
-    await adminDebugLog('UnifiedAuth', `Unified logout completed for ${context}`);
+    adminDebugLog('UnifiedAuth', `Unified logout completed for ${context}`);
     
     // Redirect based on context
     if (context === 'admin-dashboard') {

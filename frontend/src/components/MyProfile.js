@@ -21,14 +21,14 @@ class MyProfile {
      */
     setupWebSocketHandlers() {
         if (!window.unifiedMessaging) {
-            await adminDebugWarn('MyProfile', 'WebSocket client not available');
+            adminDebugWarn('MyProfile', 'WebSocket client not available');
             return;
         }
         
         // Handle incoming admin-candidate messages (when admin sends to candidate)
         window.unifiedMessaging.onMessage('ADMIN_CANDIDATE', (messageData) => {
-            await adminDebugSensitive('MyProfile', 'Candidate received admin message', messageData);
-            await adminDebugSensitive('MyProfile', 'Message details', {
+            adminDebugSensitive('MyProfile', 'Candidate received admin message', messageData);
+            adminDebugSensitive('MyProfile', 'Message details', {
                 senderId: messageData.senderId,
                 recipientId: messageData.recipientId,
                 conversationId: messageData.conversationId,
@@ -40,7 +40,7 @@ class MyProfile {
             const myUserId = currentUser?.id;
             const myCandidateId = currentUser?.candidateProfile?.id;
             
-            await adminDebugLog('MyProfile', 'User check', {
+            adminDebugLog('MyProfile', 'User check', {
                 myUserId,
                 myCandidateId,
                 messageSenderId: messageData.senderId,
@@ -54,7 +54,7 @@ class MyProfile {
             // Since we're receiving ADMIN_CANDIDATE messages here, check the conversation direction
             if (messageData.recipientId === 'admin' && messageData.senderId === myUserId) {
                 // This is our own message sent TO admin as a candidate
-                await adminDebugLog('📤 Skipping own candidate→admin message (handled by MESSAGE_SENT)');
+                adminDebugLog('📤 Skipping own candidate→admin message (handled by MESSAGE_SENT)');
                 return;
             }
             
@@ -69,7 +69,7 @@ class MyProfile {
         
         // Handle message sent confirmations (when candidate sends to admin)
         window.unifiedMessaging.onMessage('MESSAGE_SENT', (messageData) => {
-            await adminDebugLog('✅ Candidate message sent confirmation:', messageData);
+            adminDebugLog('✅ Candidate message sent confirmation:', messageData);
             
             // Add sent message to display if we're viewing messages tab
             if (this.currentTab === 'messages' && messageData.type === 'ADMIN_CANDIDATE') {
@@ -96,11 +96,11 @@ class MyProfile {
     addMessageToDisplay(messageData) {
         const container = document.getElementById('candidateMessagesContainer');
         if (!container) {
-            await adminDebugWarn('❌ candidateMessagesContainer not found');
+            adminDebugWarn('❌ candidateMessagesContainer not found');
             return;
         }
         
-        await adminDebugLog('📝 Adding message to display:', messageData);
+        adminDebugLog('📝 Adding message to display:', messageData);
         
         // Determine if message is from admin
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -125,7 +125,7 @@ class MyProfile {
         
         container.appendChild(messageDiv);
         container.scrollTop = container.scrollHeight;
-        await adminDebugLog('✅ Message added to display as', isFromAdmin ? 'from-admin' : 'from-candidate');
+        adminDebugLog('✅ Message added to display as', isFromAdmin ? 'from-admin' : 'from-candidate');
     }
 
     async render(containerId) {
@@ -149,15 +149,15 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
-                await adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
-                await adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
+                adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
+                adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
                 this.renderError(container, 'Unable to load your profile');
             }
         } catch (error) {
-            await adminDebugError('Error loading profile:', error);
+            adminDebugError('Error loading profile:', error);
             this.renderError(container, 'Network error loading profile');
         }
     }
@@ -184,15 +184,15 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
-                await adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
-                await adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
+                adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
+                adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
                 this.renderError(container, 'Unable to refresh your profile');
             }
         } catch (error) {
-            await adminDebugError('Error refreshing profile:', error);
+            adminDebugError('Error refreshing profile:', error);
             this.renderError(container, 'Network error refreshing profile');
         }
     }
@@ -277,7 +277,7 @@ class MyProfile {
         
         // Load data for the initial tab if needed
         if (this.currentTab === 'photos') {
-            await adminDebugLog('📸 Initial render with photos tab, loading galleries...');
+            adminDebugLog('📸 Initial render with photos tab, loading galleries...');
             setTimeout(() => this.loadPhotoGalleries(), 100);
         } else if (this.currentTab === 'messages') {
             setTimeout(() => {
@@ -891,7 +891,7 @@ class MyProfile {
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 // Profile picture uploaded successfully, reload profile with fresh data
-                await adminDebugLog('✅ Profile picture uploaded:', response.data.photos[0].url);
+                adminDebugLog('✅ Profile picture uploaded:', response.data.photos[0].url);
                 
                 // Force fresh profile data by bypassing cache
                 this.refreshProfile('mainContent');
@@ -900,7 +900,7 @@ class MyProfile {
                 alert(errorMsg);
             }
         } catch (error) {
-            await adminDebugError('Upload error:', error);
+            adminDebugError('Upload error:', error);
             alert('Error uploading profile picture. Please try again.');
         }
     }
@@ -919,7 +919,7 @@ class MyProfile {
             }, { refreshFeed: false, clearMedia: true });
             
             if (!success) {
-                await adminDebugLog('Post creation was not successful');
+                adminDebugLog('Post creation was not successful');
             }
         } else {
             // Fallback to old method if reusable function not available
@@ -949,12 +949,12 @@ class MyProfile {
                     // Smooth insertion without full re-render
                     this.insertNewPostSmoothly(newPost);
                 } else {
-                    await adminDebugError('Post creation failed:', response);
+                    adminDebugError('Post creation failed:', response);
                     const errorMsg = response.error || response.message || 'Failed to create post';
                     alert(`Failed to create post: ${errorMsg}. Please try again.`);
                 }
             } catch (error) {
-                await adminDebugError('Post creation error:', error);
+                adminDebugError('Post creation error:', error);
                 if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
                     alert('Network error: Cannot connect to server. Please check if the backend server is running on localhost:3001');
                 } else {
@@ -1096,14 +1096,14 @@ class MyProfile {
                     // Use the updated global autocomplete function
                     if (window.initAutocomplete) {
                         await window.initAutocomplete('editStreetAddress', 'profileAddress');
-                        await adminDebugLog('✅ Profile address autocomplete initialized using new PlaceAutocompleteElement');
+                        adminDebugLog('✅ Profile address autocomplete initialized using new PlaceAutocompleteElement');
                     } else {
                         // Fallback to legacy if global function not available
-                        await adminDebugLog('⚠️ Global initAutocomplete not found, using legacy implementation');
+                        adminDebugLog('⚠️ Global initAutocomplete not found, using legacy implementation');
                         this.initLegacyProfileAutocomplete();
                     }
                 } catch (error) {
-                    await adminDebugError('Error initializing profile autocomplete:', error);
+                    adminDebugError('Error initializing profile autocomplete:', error);
                     this.initLegacyProfileAutocomplete();
                 }
             }, 100);
@@ -1139,7 +1139,7 @@ class MyProfile {
             }
         });
         
-        await adminDebugLog('✅ Legacy profile autocomplete initialized');
+        adminDebugLog('✅ Legacy profile autocomplete initialized');
     }
     
     async saveAddress() {
@@ -1180,7 +1180,7 @@ class MyProfile {
                 alert('Failed to save address. Please try again.');
             }
         } catch (error) {
-            await adminDebugError('Error saving address:', error);
+            adminDebugError('Error saving address:', error);
             alert('Error saving address. Please try again.');
         }
     }
@@ -1212,7 +1212,7 @@ class MyProfile {
                 alert('Failed to send verification email. Please try again.');
             }
         } catch (error) {
-            await adminDebugError('Email verification error:', error);
+            adminDebugError('Email verification error:', error);
             alert('Error sending verification email.');
         }
     }
@@ -1243,20 +1243,20 @@ class MyProfile {
     // TOTP (Two-Factor Authentication) Methods
     async loadTOTPStatus() {
         try {
-            await adminDebugLog('🔒 Loading TOTP status...');
+            adminDebugLog('🔒 Loading TOTP status...');
             const response = await window.apiCall('/totp/status');
-            await adminDebugLog('🔒 TOTP status API response:', response);
+            adminDebugLog('🔒 TOTP status API response:', response);
             if (response.ok) {
                 // Extract nested data like other endpoints
                 const statusData = response.data?.data || response.data;
-                await adminDebugLog('🔒 Extracted TOTP status:', statusData);
+                adminDebugLog('🔒 Extracted TOTP status:', statusData);
                 this.renderTOTPControls(statusData);
             } else {
-                await adminDebugError('🔒 TOTP status failed:', response);
+                adminDebugError('🔒 TOTP status failed:', response);
                 this.renderTOTPError('Failed to load 2FA status');
             }
         } catch (error) {
-            await adminDebugError('Error loading TOTP status:', error);
+            adminDebugError('Error loading TOTP status:', error);
             this.renderTOTPError('Network error loading 2FA status');
         }
     }
@@ -1326,31 +1326,31 @@ class MyProfile {
     }
 
     async setupTOTP() {
-        await adminDebugLog('🔒 Starting TOTP setup... [MyProfile.js v1.3.1]');
+        adminDebugLog('🔒 Starting TOTP setup... [MyProfile.js v1.3.1]');
         try {
             const response = await window.apiCall('/totp/setup', { method: 'POST' });
-            await adminDebugLog('🔒 TOTP setup API response:', response);
+            adminDebugLog('🔒 TOTP setup API response:', response);
             if (response.ok) {
-                await adminDebugLog('🔒 API success, showing modal with data:', response.data);
+                adminDebugLog('🔒 API success, showing modal with data:', response.data);
                 // Extract the actual data from the nested response
                 const totpData = response.data?.data || response.data;
-                await adminDebugLog('🔒 Extracted TOTP data:', totpData);
+                adminDebugLog('🔒 Extracted TOTP data:', totpData);
                 this.showTOTPSetupModal(totpData);
             } else {
-                await adminDebugError('🔒 TOTP setup failed:', response);
-                await adminDebugError('🔒 Setup error details:', response.data);
+                adminDebugError('🔒 TOTP setup failed:', response);
+                adminDebugError('🔒 Setup error details:', response.data);
                 const errorMsg = response.data?.error || response.data?.message || 'Failed to setup 2FA. Please try again.';
                 alert(`Setup failed: ${errorMsg}`);
             }
         } catch (error) {
-            await adminDebugError('Error setting up TOTP:', error);
+            adminDebugError('Error setting up TOTP:', error);
             alert('Network error setting up 2FA. Please try again.');
         }
     }
 
     // Test function to create a simple visible modal
     testModal() {
-        await adminDebugLog('🧪 Creating test modal...');
+        adminDebugLog('🧪 Creating test modal...');
         const testModal = document.createElement('div');
         testModal.style.cssText = `
             position: fixed !important;
@@ -1370,7 +1370,7 @@ class MyProfile {
         testModal.innerHTML = 'TEST MODAL - Click to close';
         testModal.onclick = () => testModal.remove();
         document.body.appendChild(testModal);
-        await adminDebugLog('🧪 Test modal added');
+        adminDebugLog('🧪 Test modal added');
         return testModal;
     }
 
@@ -1398,7 +1398,7 @@ class MyProfile {
         const modal = document.createElement('div');
         modal.className = 'totp-modal-simple';
         modal.id = 'totp-setup-modal';
-        await adminDebugLog('🔒 Modal element created, using simplified approach...');
+        adminDebugLog('🔒 Modal element created, using simplified approach...');
         
         // Use inline styles like the working test modal
         modal.style.cssText = `
@@ -1455,14 +1455,14 @@ class MyProfile {
         
         document.body.appendChild(modal);
         
-        await adminDebugLog('🔒 Simple modal added to DOM');
+        adminDebugLog('🔒 Simple modal added to DOM');
         
         // Focus input after a brief delay
         setTimeout(() => {
             const input = document.getElementById('totpVerificationCode');
             if (input) {
                 input.focus();
-                await adminDebugLog('🔒 Input focused');
+                adminDebugLog('🔒 Input focused');
             }
         }, 100);
     }
@@ -1483,22 +1483,22 @@ class MyProfile {
             if (response.ok) {
                 // Extract nested response data, same as setup
                 const verifyData = response.data?.data || response.data;
-                await adminDebugLog('🔒 TOTP verify response data:', verifyData);
+                adminDebugLog('🔒 TOTP verify response data:', verifyData);
                 this.showBackupCodesModal(verifyData?.backupCodes);
                 document.querySelector('.totp-modal-simple').remove(); // Use correct selector
                 this.loadTOTPStatus(); // Refresh status
             } else {
-                await adminDebugError('🔒 TOTP verify failed:', response);
+                adminDebugError('🔒 TOTP verify failed:', response);
                 alert(response.data?.error || 'Invalid verification code. Please try again.');
             }
         } catch (error) {
-            await adminDebugError('Error verifying TOTP setup:', error);
+            adminDebugError('Error verifying TOTP setup:', error);
             alert('Network error. Please try again.');
         }
     }
 
     showBackupCodesModal(backupCodes) {
-        await adminDebugLog('🔒 Showing backup codes modal with:', backupCodes);
+        adminDebugLog('🔒 Showing backup codes modal with:', backupCodes);
         
         // Handle undefined or empty backup codes
         if (!backupCodes || !Array.isArray(backupCodes) || backupCodes.length === 0) {
@@ -1593,7 +1593,7 @@ class MyProfile {
                 alert(response.data?.error || 'Failed to regenerate backup codes');
             }
         } catch (error) {
-            await adminDebugError('Error regenerating backup codes:', error);
+            adminDebugError('Error regenerating backup codes:', error);
             alert('Network error. Please try again.');
         }
     }
@@ -1619,7 +1619,7 @@ class MyProfile {
                 alert(response.data?.error || 'Failed to disable 2FA');
             }
         } catch (error) {
-            await adminDebugError('Error disabling TOTP:', error);
+            adminDebugError('Error disabling TOTP:', error);
             alert('Network error. Please try again.');
         }
     }
@@ -1627,20 +1627,20 @@ class MyProfile {
     // Photo Gallery Methods
     
     async loadPhotoGalleries(bypassCache = false) {
-        await adminDebugLog('📸 loadPhotoGalleries called, currentTab:', this.currentTab);
+        adminDebugLog('📸 loadPhotoGalleries called, currentTab:', this.currentTab);
         if (this.currentTab !== 'photos') {
-            await adminDebugLog('📸 Not on photos tab, returning early');
+            adminDebugLog('📸 Not on photos tab, returning early');
             return;
         }
         
-        await adminDebugLog('📸 Making API call to /photos/galleries...');
+        adminDebugLog('📸 Making API call to /photos/galleries...');
         try {
             const response = await window.apiCall('/photos/galleries', { bypassCache });
             
-            await adminDebugLog('📡 Raw galleries API response:', response);
+            adminDebugLog('📡 Raw galleries API response:', response);
             
             if (response.ok && response.data) {
-                await adminDebugLog('📡 Galleries API data:', response.data);
+                adminDebugLog('📡 Galleries API data:', response.data);
                 this.updateStorageDisplay(response.data);
                 this.updateGalleriesDisplay(response.data.galleries);
             } else {
@@ -1648,7 +1648,7 @@ class MyProfile {
                     '<div class="error-message">Failed to load photo galleries</div>';
             }
         } catch (error) {
-            await adminDebugError('Error loading galleries:', error);
+            adminDebugError('Error loading galleries:', error);
             document.getElementById('photoGalleries').innerHTML = 
                 '<div class="error-message">Error loading photo galleries</div>';
         }
@@ -1675,10 +1675,10 @@ class MyProfile {
         if (!container) return;
 
         // Debug logging to see what gallery data we're getting
-        await adminDebugLog('🖼️ Gallery data received:', galleries);
+        adminDebugLog('🖼️ Gallery data received:', galleries);
         if (galleries && galleries.length > 0) {
-            await adminDebugLog('🖼️ First gallery photos:', galleries[0].photos);
-            await adminDebugLog('🖼️ Sample photo URLs:', galleries[0].photos?.[0]?.url, galleries[0].photos?.[0]?.thumbnailUrl);
+            adminDebugLog('🖼️ First gallery photos:', galleries[0].photos);
+            adminDebugLog('🖼️ Sample photo URLs:', galleries[0].photos?.[0]?.url, galleries[0].photos?.[0]?.thumbnailUrl);
         }
 
         if (!galleries || galleries.length === 0) {
@@ -1772,7 +1772,7 @@ class MyProfile {
                 alert(`Upload failed: ${errorMsg}`);
             }
         } catch (error) {
-            await adminDebugError('Bulk upload error:', error);
+            adminDebugError('Bulk upload error:', error);
             alert('Error uploading photos. Please try again.');
         }
         
@@ -1793,7 +1793,7 @@ class MyProfile {
                 alert('Failed to set profile picture');
             }
         } catch (error) {
-            await adminDebugError('Error setting profile picture:', error);
+            adminDebugError('Error setting profile picture:', error);
             alert('Error updating profile picture');
         }
     }
@@ -1814,7 +1814,7 @@ class MyProfile {
                 alert('Failed to move photo');
             }
         } catch (error) {
-            await adminDebugError('Error moving photo:', error);
+            adminDebugError('Error moving photo:', error);
             alert('Error moving photo');
         }
     }
@@ -1835,7 +1835,7 @@ class MyProfile {
                 alert('Failed to delete photo');
             }
         } catch (error) {
-            await adminDebugError('Error deleting photo:', error);
+            adminDebugError('Error deleting photo:', error);
             alert('Error deleting photo');
         }
     }
@@ -2849,7 +2849,7 @@ class MyProfile {
                 throw new Error(response.error || 'Failed to update preference');
             }
         } catch (error) {
-            await adminDebugError('Error updating tagging preference:', error);
+            adminDebugError('Error updating tagging preference:', error);
             alert('Failed to update preference. Please try again.');
             
             // Revert checkbox state
@@ -2871,7 +2871,7 @@ class MyProfile {
                 alert('Failed to load pending tags');
             }
         } catch (error) {
-            await adminDebugError('Error loading pending tags:', error);
+            adminDebugError('Error loading pending tags:', error);
             alert('Error loading pending tags. Please try again.');
         }
     }
@@ -2967,7 +2967,7 @@ class MyProfile {
                 throw new Error(response.error || 'Failed to respond to tag');
             }
         } catch (error) {
-            await adminDebugError('Error responding to tag:', error);
+            adminDebugError('Error responding to tag:', error);
             alert('Failed to respond to tag. Please try again.');
         }
     }
@@ -2987,7 +2987,7 @@ class MyProfile {
                 }
             }
         } catch (error) {
-            await adminDebugError('Error updating pending tags count:', error);
+            adminDebugError('Error updating pending tags count:', error);
         }
     }
 
@@ -3001,7 +3001,7 @@ class MyProfile {
             if (response.ok && response.data) {
                 // Handle the API response structure: { success: true, data: { candidate, messages, unreadAdminCount } }
                 const responseData = response.data.data || response.data;
-                await adminDebugLog('Candidate messages API response:', responseData);
+                adminDebugLog('Candidate messages API response:', responseData);
                 
                 // Extract messages array from nested structure
                 let messages = [];
@@ -3020,7 +3020,7 @@ class MyProfile {
                 throw new Error(response.message || 'Failed to load messages');
             }
         } catch (error) {
-            await adminDebugError('Error loading candidate messages:', error);
+            adminDebugError('Error loading candidate messages:', error);
             const container = document.getElementById('candidateMessagesContainer');
             if (container) {
                 container.innerHTML = `
@@ -3043,7 +3043,7 @@ class MyProfile {
 
         // Ensure messages is an array
         if (!Array.isArray(messages)) {
-            await adminDebugError('Messages is not an array:', messages);
+            adminDebugError('Messages is not an array:', messages);
             messages = [];
         }
 
@@ -3130,14 +3130,14 @@ class MyProfile {
             let messageSent = false;
             
             // Debug WebSocket availability
-            await adminDebugLog('🔍 WebSocket Debug Info:');
-            await adminDebugLog('  - window.unifiedMessaging exists:', !!window.unifiedMessaging);
-            await adminDebugLog('  - isWebSocketConnected:', window.unifiedMessaging?.isWebSocketConnected?.());
-            await adminDebugLog('  - isConnected:', window.unifiedMessaging?.isConnected);
+            adminDebugLog('🔍 WebSocket Debug Info:');
+            adminDebugLog('  - window.unifiedMessaging exists:', !!window.unifiedMessaging);
+            adminDebugLog('  - isWebSocketConnected:', window.unifiedMessaging?.isWebSocketConnected?.());
+            adminDebugLog('  - isConnected:', window.unifiedMessaging?.isConnected);
             
             // Try WebSocket first if available and connected
             if (window.unifiedMessaging && window.unifiedMessaging.isWebSocketConnected()) {
-                await adminDebugLog('📤 Attempting to send candidate message via WebSocket');
+                adminDebugLog('📤 Attempting to send candidate message via WebSocket');
                 try {
                     const success = window.unifiedMessaging.sendMessage(
                         'ADMIN_CANDIDATE',
@@ -3146,7 +3146,7 @@ class MyProfile {
                     );
                     
                     if (success) {
-                        await adminDebugLog('✅ WebSocket message sent successfully');
+                        adminDebugLog('✅ WebSocket message sent successfully');
                         messageSent = true;
                         // Clear form
                         contentInput.value = '';
@@ -3163,19 +3163,19 @@ class MyProfile {
                         
                         this.showToast('Message sent successfully!');
                     } else {
-                        await adminDebugWarn('⚠️ WebSocket send returned false, falling back to REST API');
+                        adminDebugWarn('⚠️ WebSocket send returned false, falling back to REST API');
                     }
                 } catch (wsError) {
-                    await adminDebugError('❌ WebSocket send error:', wsError);
-                    await adminDebugLog('🔄 Falling back to REST API due to WebSocket error');
+                    adminDebugError('❌ WebSocket send error:', wsError);
+                    adminDebugLog('🔄 Falling back to REST API due to WebSocket error');
                 }
             } else {
-                await adminDebugLog('🔌 WebSocket not available or not connected, using REST API');
+                adminDebugLog('🔌 WebSocket not available or not connected, using REST API');
             }
             
             // Use REST API if WebSocket failed or unavailable
             if (!messageSent) {
-                await adminDebugLog('📤 Sending candidate message via REST API');
+                adminDebugLog('📤 Sending candidate message via REST API');
                 const response = await window.apiCall('/unified-messages/send', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -3186,7 +3186,7 @@ class MyProfile {
                 });
 
                 if (response.ok) {
-                    await adminDebugLog('✅ REST API message sent successfully');
+                    adminDebugLog('✅ REST API message sent successfully');
                     // Clear form
                     contentInput.value = '';
                     
@@ -3204,7 +3204,7 @@ class MyProfile {
                 throw new Error('Failed to send message via both WebSocket and REST API');
             }
         } catch (error) {
-            await adminDebugError('Error sending message:', error);
+            adminDebugError('Error sending message:', error);
             alert('Error sending message: ' + error.message);
         } finally {
             // Re-enable form
@@ -3242,7 +3242,7 @@ class MyProfile {
                 }
             }
         } catch (error) {
-            await adminDebugError('Error updating unread badge:', error);
+            adminDebugError('Error updating unread badge:', error);
         }
     }
 
@@ -3335,7 +3335,7 @@ class MyProfile {
                 throw new Error(response.data?.error || 'Failed to update notification preferences');
             }
         } catch (error) {
-            await adminDebugError('Error updating notification preferences:', error);
+            adminDebugError('Error updating notification preferences:', error);
             this.showToast('Failed to update notification preferences', 5000);
         }
     }
@@ -3369,7 +3369,7 @@ class MyProfile {
                 this.updateNotificationPreference('browserNotifications', false);
             }
         } catch (error) {
-            await adminDebugError('Error requesting notification permission:', error);
+            adminDebugError('Error requesting notification permission:', error);
             this.showToast('Failed to request notification permission', 3000);
         }
     }
@@ -3413,7 +3413,7 @@ class MyProfile {
             }
         } catch (error) {
             // User is not a candidate or error occurred, keep candidate settings hidden
-            await adminDebugLog('User is not a candidate or error checking status');
+            adminDebugLog('User is not a candidate or error checking status');
         }
     }
 
@@ -3428,9 +3428,9 @@ class MyProfile {
                 this.checkCandidateNotificationSettings();
             }, 100);
         } else if (tabName === 'photos') {
-            await adminDebugLog('📸 Photos tab selected, loading galleries...');
+            adminDebugLog('📸 Photos tab selected, loading galleries...');
             setTimeout(() => {
-                await adminDebugLog('📸 Calling loadPhotoGalleries...');
+                adminDebugLog('📸 Calling loadPhotoGalleries...');
                 this.loadPhotoGalleries();
             }, 100);
         } else if (tabName === 'messages') {

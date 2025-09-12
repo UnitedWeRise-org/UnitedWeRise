@@ -102,14 +102,14 @@ class APIRequestManager {
                     this.setCache(key, result.value, req.options?.cacheTimeout);
                     results.set(req.id || req.endpoint, result.value);
                 } else {
-                    await adminDebugError('APIManager', `Batch request failed: ${req.endpoint}`, result.reason);
+                    adminDebugError('APIManager', `Batch request failed: ${req.endpoint}`, result.reason);
                     results.set(req.id || req.endpoint, { error: result.reason });
                 }
             });
             
             return results;
         } catch (error) {
-            await adminDebugError('APIManager', 'Batch request failed', error);
+            adminDebugError('APIManager', 'Batch request failed', error);
             throw error;
         }
     }

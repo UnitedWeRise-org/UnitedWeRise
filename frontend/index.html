@@ -57,7 +57,9 @@
     // Check if main scripts loaded
     setTimeout(() => {
         if (!window.apiManager || !window.appInitializer) {
-            await adminDebugError('LoadingSystem', 'Main optimization scripts failed to load, using emergency override');
+            if (typeof adminDebugError !== 'undefined') {
+                adminDebugError('LoadingSystem', 'Main optimization scripts failed to load, using emergency override');
+            }
             
             // Create minimal API manager
             window.apiCall = async (endpoint, options = {}) => {
@@ -79,7 +81,9 @@
                     headers['Authorization'] = `Bearer ${window.authToken}`;
                 }
                 
-                await adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
+                }
                 const response = await fetch(url, {
                     method: options.method || 'GET',
                     headers,
@@ -95,11 +99,14 @@
             };
             
             // initializeApp will be provided by app-initialization.js
-            await adminDebugLog('LoadingSystem', 'Deferring to app-initialization.js for auth logic');
-            
-            await adminDebugLog('LoadingSystem', 'Emergency optimization override ready');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('LoadingSystem', 'Deferring to app-initialization.js for auth logic');
+                adminDebugLog('LoadingSystem', 'Emergency optimization override ready');
+            }
         } else {
-            await adminDebugLog('LoadingSystem', 'Main optimization scripts loaded successfully');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('LoadingSystem', 'Main optimization scripts loaded successfully');
+            }
         }
     }, 500);
     </script>
@@ -875,7 +882,9 @@
         
         // Utility function to fix auth-related localStorage issues without clearing everything
         function fixAuthStorageIssues() {
-            await adminDebugLog('AuthSystem', 'Fixing auth storage issues');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('AuthSystem', 'Fixing auth storage issues');
+            }
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             authToken = null;
@@ -886,7 +895,9 @@
             document.getElementById('userSection').style.display = 'none';
             document.getElementById('userGreeting').textContent = '';
             
-            await adminDebugLog('AuthSystem', 'Auth storage cleared. Please log in again.');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('AuthSystem', 'Auth storage cleared. Please log in again.');
+            }
             return 'Auth storage cleared. Please refresh the page and log in again.';
         }
         
@@ -895,15 +906,19 @@
 
         // Setup collapse button handler function
         function setupCollapseButton() {
-            await adminDebugLog('UISystem', 'Setting up collapse button handler');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('UISystem', 'Setting up collapse button handler');
+            }
             
             // Wait for DOM elements to be available
             setTimeout(() => {
                 const mapContainer = document.getElementById('mapContainer');
                 const toggleBtn = document.getElementById('mapToggleBtn');
                 
-                await adminDebugLog('UISystem', 'mapContainer found', !!mapContainer);
-                await adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('UISystem', 'mapContainer found', !!mapContainer);
+                    adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
+                }
                 
                 if (toggleBtn && mapContainer) {
                     // Remove any existing listeners
@@ -915,7 +930,9 @@
                         event.preventDefault();
                         event.stopPropagation();
                         
-                        await adminDebugLog('UISystem', 'COLLAPSE BUTTON CLICKED');
+                        if (typeof adminDebugLog !== 'undefined') {
+                            adminDebugLog('UISystem', 'COLLAPSE BUTTON CLICKED');
+                        }
                         
                         // Debug current state
                         const isCollapsed = mapContainer.classList.contains('collapsed');
@@ -961,16 +978,22 @@
                         }
                     }, false);
                     
-                    await adminDebugLog('UISystem', 'Collapse button handler attached successfully');
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('UISystem', 'Collapse button handler attached successfully');
+                    }
                 } else {
-                    await adminDebugError('UISystem', 'Could not find button or container elements');
+                    if (typeof adminDebugError !== 'undefined') {
+                        adminDebugError('UISystem', 'Could not find button or container elements');
+                    }
                 }
             }, 2000); // Wait 2 seconds for map to fully load
         }
 
         // Setup close button handler function
         function setupCloseButton() {
-            await adminDebugLog('UISystem', 'Setting up close button handler');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('UISystem', 'Setting up close button handler');
+            }
             
             setTimeout(() => {
                 const closeBtn = document.querySelector('.map-action-btn.close-btn');
@@ -1160,7 +1183,7 @@
         async function verifyAndSetUser() {
             try {
                 if (typeof adminDebugLog !== 'undefined') {
-                    await adminDebugLog('Authentication', 'Verifying user with /auth/me');
+                    adminDebugLog('Authentication', 'Verifying user with /auth/me');
                 }
                 const response = await fetch(`${API_BASE}/auth/me`, {
                     credentials: 'include' // Use cookies for auth
@@ -1171,7 +1194,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (typeof adminDebugLog !== 'undefined') {
-                        await adminDebugLog('Authentication', 'Auth verification successful', {
+                        adminDebugLog('Authentication', 'Auth verification successful', {
                             userId: data.user?.id,
                             username: data.user?.username
                         });
