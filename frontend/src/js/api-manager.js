@@ -185,7 +185,9 @@ class APIRequestManager {
         
         // Log potential excessive usage
         if (this.burstTracker.count > 20) {
-            await adminDebugWarn('APIManager', `High request frequency detected: ${this.burstTracker.count} requests in 1 minute`);
+            if (typeof adminDebugWarn !== 'undefined') {
+                adminDebugWarn('APIManager', `High request frequency detected: ${this.burstTracker.count} requests in 1 minute`);
+            }
         }
     }
 
