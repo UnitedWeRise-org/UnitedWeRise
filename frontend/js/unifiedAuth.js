@@ -5,6 +5,8 @@
 
 // Use existing BACKEND_URL if defined, otherwise set default
 const BACKEND_URL = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace('/api', '') : 'https://api.unitedwerise.org';
+console.log('UnifiedAuth BACKEND_URL:', BACKEND_URL);
+console.log('API_CONFIG:', window.API_CONFIG);
 
 /**
  * Show TOTP verification modal (extracted from admin dashboard)
@@ -116,7 +118,10 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
         // Initial login attempt
         const loginData = { email, password };
         
-        const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        const loginURL = `${BACKEND_URL}/api/auth/login`;
+        console.log('UnifiedAuth attempting login to:', loginURL);
+        
+        const response = await fetch(loginURL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include', // CRITICAL: Include cookies
