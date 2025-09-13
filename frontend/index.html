@@ -877,6 +877,19 @@
         let currentUser = null;
         let addressForm = null;
         
+        // Initialize currentUser from localStorage if available (for page refresh persistence)
+        try {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                window.currentUser = currentUser; // Ensure global access
+                console.log('✅ Restored user from localStorage:', currentUser.firstName || currentUser.email);
+            }
+        } catch (error) {
+            console.warn('⚠️ Failed to restore user from localStorage:', error);
+            localStorage.removeItem('currentUser'); // Clear corrupted data
+        }
+        
         // Utility function to fix auth-related localStorage issues without clearing everything
         function fixAuthStorageIssues() {
             if (typeof adminDebugLog !== 'undefined') {
@@ -885,6 +898,7 @@
             localStorage.removeItem('authToken'); // Clear any legacy tokens
             localStorage.removeItem('currentUser');
             currentUser = null;
+            window.currentUser = null;
             
             // Reset UI to logged out state
             document.getElementById('authSection').style.display = 'flex';
@@ -1427,6 +1441,7 @@
             // Refresh user data if needed
             const refreshedUser = await refreshUserDataIfNeeded(user);
             currentUser = refreshedUser;
+            window.currentUser = refreshedUser;
             
             // Store user data in localStorage for persistence
             localStorage.setItem('currentUser', JSON.stringify(refreshedUser));
@@ -1472,6 +1487,7 @@
         
         function setUserLoggedOut() {
             currentUser = null;
+            window.currentUser = null;
             
             // Reset UI to logged out state
             document.getElementById('authSection').style.display = 'flex';
@@ -2084,6 +2100,7 @@
                             }
                         }
                         currentUser = mergedUser;
+                        window.currentUser = mergedUser;
                         console.log('User profile data merged into currentUser:', currentUser);
                         
                         // Re-update the greeting if it got cleared
@@ -2161,9 +2178,16 @@
                             
                             if (districtNumber && stateAbbr) {
                                 // Store district info for boundary loading
-                                if (!currentUser) currentUser = {};
+                                if (!currentUser) {
+                                    currentUser = {};
+                                    window.currentUser = {};
+                                }
                                 currentUser.district = districtNumber;
                                 currentUser.state = stateAbbr;
+                                if (window.currentUser) {
+                                    window.currentUser.district = districtNumber;
+                                    window.currentUser.state = stateAbbr;
+                                }
                                 
                                 console.log(`District info extracted: ${currentUser.state}-${currentUser.district}`);
                                 
