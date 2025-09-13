@@ -729,7 +729,7 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
     // Clear all authentication cookies with the same options they were set with
     const cookieOptions = {
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as const,
+      sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
       path: '/'
     };
     
