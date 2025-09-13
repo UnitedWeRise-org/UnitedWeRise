@@ -35,7 +35,7 @@ class UnifiedMessagingClient {
 
         // Connect to backend WebSocket server
         const backendUrl = window.API_CONFIG 
-            ? window.API_CONFIG.BASE_URL.replace('/api', '') // Use centralized config
+            ? window.API_CONFIG.BASE_URL.replace(/\/api$/, '') // Use centralized config - only remove trailing /api
             : (window.location.hostname === 'localhost' 
                 ? 'http://localhost:3001'  // Local development fallback
                 : 'https://api.unitedwerise.org'); // Production fallback

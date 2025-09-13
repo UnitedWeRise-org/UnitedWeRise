@@ -428,7 +428,7 @@ class AppInitializer {
     // Check backend version and display
     async checkBackendVersion() {
         try {
-            const backendUrl = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace('/api', '') : 'https://api.unitedwerise.org';
+            const backendUrl = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace(/\/api$/, '') : 'https://api.unitedwerise.org';
             const response = await fetch(`${backendUrl}/health`);
             const healthData = await response.json();
             
