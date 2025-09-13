@@ -4327,10 +4327,9 @@
                 candidatesView.style.display = 'none';
             }
             
-            // Sync all auth token variables
-            const token = window.authToken || authToken || localStorage.getItem('authToken');
-            if (!token) {
-                console.log('❌ No auth token found, showing login prompt');
+            // Check if user is authenticated (using currentUser since tokens are httpOnly)
+            if (!currentUser) {
+                console.log('❌ No authenticated user, showing login prompt');
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Please log in to view your feed</h2>
@@ -4340,9 +4339,7 @@
                 return;
             }
             
-            // Ensure all auth variables are synced
-            window.authToken = authToken = token;
-            console.log('✅ Auth token synced for My Feed');
+            console.log('✅ Authenticated user found for My Feed:', currentUser.username);
 
             // Hide other content
             closeAllPanels();
@@ -4462,9 +4459,9 @@
         async function loadMyFeedPosts() {
             console.log('🔄 Loading My Feed posts...');
             
-            // Ensure auth token is available
-            if (!window.authToken && !localStorage.getItem('authToken')) {
-                console.error('❌ No auth token available for My Feed');
+            // Ensure user is authenticated (using currentUser since tokens are httpOnly)
+            if (!currentUser) {
+                console.error('❌ No authenticated user for My Feed');
                 document.getElementById('myFeedPosts').innerHTML = `
                     <div style="text-align: center; padding: 2rem;">
                         <p>Please log in to view your feed.</p>
@@ -4472,12 +4469,6 @@
                     </div>
                 `;
                 return;
-            }
-            
-            // Sync auth token if needed
-            if (!window.authToken && localStorage.getItem('authToken')) {
-                window.authToken = localStorage.getItem('authToken');
-                console.log('🔧 Synced auth token from localStorage');
             }
             
             try {
