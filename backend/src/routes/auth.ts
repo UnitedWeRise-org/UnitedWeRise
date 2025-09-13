@@ -409,7 +409,6 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             path: '/',
-            domain: '.unitedwerise.org',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
           });
           
