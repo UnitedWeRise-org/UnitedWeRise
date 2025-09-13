@@ -414,7 +414,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 30 * 24 * 60 * 60 * 1000,
-                        path: '/'
+                        path: '/',
+                        domain: '.unitedwerise.org'
                     });
                     // Set TOTP session token as httpOnly cookie
                     res.cookie('totpSessionToken', newSessionToken, {
@@ -422,7 +423,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-                        path: '/'
+                        path: '/',
+                        domain: '.unitedwerise.org'
                     });
                     // Set TOTP verified flag as httpOnly cookie
                     res.cookie('totpVerified', 'true', {
@@ -430,7 +432,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-                        path: '/'
+                        path: '/',
+                        domain: '.unitedwerise.org'
                     });
                     return res.json({
                         message: 'Login successful',

@@ -131,17 +131,23 @@ async function getMigrationInfo() {
 router.get('/', async (req, res) => {
     try {
         await prisma_1.prisma.$connect();
-        const dockerInfo = getDockerImageInfo();
+        // Set no-cache headers to avoid deployment verification confusion
+        res.set({
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
         res.json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             database: 'connected',
-            // Add key deployment info for debugging
-            dockerImage: dockerInfo.dockerImage,
-            dockerTag: dockerInfo.dockerTag,
-            buildCommit: dockerInfo.buildCommit,
-            githubBranch: dockerInfo.githubBranch
+            // Runtime release info (not misleading build-time metadata)
+            releaseSha: process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown',
+            releaseDigest: process.env.RELEASE_DIGEST || 'unknown',
+            revision: process.env.CONTAINER_APP_REVISION || 'unknown',
+            deployedTag: process.env.DOCKER_TAG || 'unknown',
+            githubBranch: process.env.GITHUB_REF_NAME || 'main'
         });
     }
     catch (error) {
@@ -152,6 +158,19 @@ router.get('/', async (req, res) => {
             error: error.message
         });
     }
+});
+// Simple version endpoint for quick deployment verification
+router.get('/version', async (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Release': process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown'
+    });
+    res.json({
+        releaseSha: process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown',
+        releaseDigest: process.env.RELEASE_DIGEST || 'unknown',
+        deployedTag: process.env.DOCKER_TAG || 'unknown',
+        timestamp: new Date().toISOString()
+    });
 });
 // Detailed deployment status endpoint
 router.get('/deployment', async (req, res) => {
