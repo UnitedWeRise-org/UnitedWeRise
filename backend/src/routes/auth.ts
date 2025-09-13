@@ -408,8 +408,9 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-            path: '/'
-            // Domain not set - cookies will be scoped to api.unitedwerise.org only
+            path: '/',
+            domain: '.unitedwerise.org',
+            domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
           });
           
           // Generate and set CSRF token
@@ -419,7 +420,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000,
-            path: '/'
+            path: '/',
+            domain: '.unitedwerise.org'
           });
 
           // Set TOTP session token as httpOnly cookie
@@ -428,7 +430,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
+            path: '/',
+            domain: '.unitedwerise.org'
           });
           
           // Set TOTP verified flag as httpOnly cookie
@@ -437,7 +440,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/'
+            path: '/',
+            domain: '.unitedwerise.org'
           });
 
           return res.json({

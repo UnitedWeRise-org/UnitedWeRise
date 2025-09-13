@@ -404,8 +404,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                        path: '/'
-                        // Domain not set - cookies will be scoped to api.unitedwerise.org only
+                        path: '/',
+                        domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
                     });
                     // Generate and set CSRF token
                     const csrfToken = require('crypto').randomBytes(32).toString('hex');
