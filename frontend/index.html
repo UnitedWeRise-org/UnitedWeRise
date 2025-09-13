@@ -1380,8 +1380,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    authToken = data.token;
-                    localStorage.setItem('authToken', authToken);
+                    // Note: authToken now comes from httpOnly cookies, not localStorage
                     setUserLoggedIn(data.user);
                     closeAuthModal();
                     showAuthMessage('Registration successful!', 'success');
@@ -1602,7 +1601,7 @@
             
             // Show email field if user is not logged in
             const emailInput = document.getElementById('volunteerEmail');
-            if (!window.authToken || !localStorage.getItem('currentUser')) {
+            if (!currentUser) {
                 emailSection.style.display = 'block';
                 emailInput.required = true;
             } else {
@@ -1660,10 +1659,8 @@
                         }
 
                         // Check if user is logged in
-                        const isLoggedIn = window.authToken && localStorage.getItem('currentUser');
-                        
                         // For non-logged in users, require email
-                        if (!isLoggedIn && !email) {
+                        if (!currentUser && !email) {
                             alert('Please enter your email address.');
                             return;
                         }
@@ -1783,8 +1780,7 @@
                     // Store user data and CSRF token (auth token now in httpOnly cookie)
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
                     window.csrfToken = data.csrfToken;
-                    // Keep authToken for transition compatibility
-                    authToken = data.token || 'cookie-based-auth';
+                    // Note: authToken now comes from httpOnly cookies automatically
 
                     // Close auth modal and set logged in state
                     closeAuthModal();
@@ -1831,11 +1827,8 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Store auth data
-                    localStorage.setItem('authToken', data.token);
+                    // Note: Authentication now handled via httpOnly cookies
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    window.authToken = data.token;
-                    authToken = data.token;
 
                     // Close auth modal and set logged in state
                     closeAuthModal();
@@ -1879,11 +1872,8 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Store auth data
-                    localStorage.setItem('authToken', data.token);
+                    // Note: Authentication now handled via httpOnly cookies
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    window.authToken = data.token;
-                    authToken = data.token;
 
                     // Close auth modal and set logged in state
                     closeAuthModal();
