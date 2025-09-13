@@ -878,7 +878,6 @@
                 ? 'http://localhost:3001/api' 
                 : 'https://api.unitedwerise.org/api';
         let currentUser = null;
-        let authToken = null;
         let addressForm = null;
         
         // Utility function to fix auth-related localStorage issues without clearing everything
@@ -886,9 +885,8 @@
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('AuthSystem', 'Fixing auth storage issues');
             }
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('authToken'); // Clear any legacy tokens
             localStorage.removeItem('currentUser');
-            authToken = null;
             currentUser = null;
             
             // Reset UI to logged out state
@@ -1208,7 +1206,6 @@
                         console.warn('Invalid user data received:', data);
                         // Clear invalid session - cookies will be cleared by logout endpoint
                         window.csrfToken = null;
-                        authToken = null;
                         // Ensure UI shows logged out state
                         setUserLoggedOut();
                     }
@@ -1216,14 +1213,12 @@
                     // Token is invalid - cookies will be cleared by logout endpoint
                     console.log('Token invalid, clearing session');
                     window.csrfToken = null;
-                    authToken = null;
                     // Ensure UI shows logged out state
                     setUserLoggedOut();
                 }
             } catch (error) {
                 console.error('Auth verification failed:', error);
                 window.csrfToken = null;
-                authToken = null;
                 // Ensure UI shows logged out state
                 setUserLoggedOut();
             }
@@ -1286,9 +1281,7 @@
                 const result = await unifiedLogin(email, password, 'main-site');
                 
                 if (result.success) {
-                    // Set auth token for compatibility
-                    authToken = result.token;
-                    
+                    // Authentication handled by httpOnly cookies
                     setUserLoggedIn(result.user);
                     closeAuthModal();
                     showAuthMessage('Login successful!', 'success');
@@ -1380,7 +1373,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Note: authToken now comes from httpOnly cookies, not localStorage
+                    // Authentication now handled entirely by httpOnly cookies
                     setUserLoggedIn(data.user);
                     closeAuthModal();
                     showAuthMessage('Registration successful!', 'success');
@@ -1484,7 +1477,6 @@
         
         function setUserLoggedOut() {
             currentUser = null;
-            authToken = null;
             
             // Reset UI to logged out state
             document.getElementById('authSection').style.display = 'flex';
@@ -1777,10 +1769,9 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Store user data and CSRF token (auth token now in httpOnly cookie)
+                    // Store user data and CSRF token (authentication handled by httpOnly cookies)
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
                     window.csrfToken = data.csrfToken;
-                    // Note: authToken now comes from httpOnly cookies automatically
 
                     // Close auth modal and set logged in state
                     closeAuthModal();
@@ -1827,7 +1818,7 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Note: Authentication now handled via httpOnly cookies
+                    // Store user data for UI display (authentication handled by httpOnly cookies)
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
 
                     // Close auth modal and set logged in state
@@ -1872,7 +1863,7 @@
                 const data = await result.json();
 
                 if (result.ok) {
-                    // Note: Authentication now handled via httpOnly cookies
+                    // Store user data for UI display (authentication handled by httpOnly cookies)
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
 
                     // Close auth modal and set logged in state
@@ -8167,7 +8158,7 @@
                 loadCandidateProfiles();
             }
             // Refresh notifications
-            if (authToken && typeof fetchNotifications === 'function') {
+            if (currentUser && typeof fetchNotifications === 'function') {
                 fetchNotifications().catch(console.error);
             }
         };
@@ -8181,7 +8172,7 @@
                 window.myProfile.loadCandidateMessages();
             }
             // Refresh notifications
-            if (authToken && typeof fetchNotifications === 'function') {
+            if (currentUser && typeof fetchNotifications === 'function') {
                 fetchNotifications().catch(console.error);
             }
         };
