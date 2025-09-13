@@ -877,13 +877,13 @@ Request:
 Response:
 {
   success: true,
-  token: string,
   user: User
 }
+// Note: Authentication token is set as httpOnly cookie, not returned in response
 ```
 
 #### POST /api/auth/login
-Authenticate user and receive JWT token
+Authenticate user via httpOnly cookies
 ```javascript
 Request:
 {
@@ -894,9 +894,9 @@ Request:
 Response:
 {
   success: true,
-  token: string,
   user: User
 }
+// Note: Authentication token is set as httpOnly cookie, not returned in response
 ```
 
 #### POST /api/auth/verify-email
@@ -914,11 +914,25 @@ Response:
 }
 ```
 
+### Authenticated API Calls
+All authenticated endpoints require httpOnly cookies. Include `credentials: 'include'` in fetch requests:
+
+```javascript
+// Example authenticated API call
+const response = await fetch('https://api.unitedwerise.org/api/users/profile', {
+  method: 'GET',
+  credentials: 'include', // REQUIRED: Include httpOnly cookies
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+```
+
 ### User Management Endpoints
 
 #### GET /api/users/profile
 Get current user's complete profile
-- **Auth Required**: Yes
+- **Auth Required**: Yes (via httpOnly cookies)
 - **Response**: Full user object with all fields
 
 #### PUT /api/users/profile
@@ -1888,6 +1902,30 @@ fetch('/api/endpoint', {
   headers: { 'X-CSRF-Token': getCsrfToken() }
 });
 ```
+
+#### **🚀 COOKIE AUTHENTICATION MIGRATION (January 13, 2025)**
+
+**COMPLETE MIGRATION**: Successfully migrated from localStorage tokens to pure httpOnly cookie authentication across:
+- ✅ Main application (index.html)
+- ✅ Admin dashboard (admin-dashboard.html)  
+- ✅ All frontend components and modules
+- ✅ Custom domain implementation (api.unitedwerise.org)
+
+**Key Changes:**
+```javascript
+// ❌ OLD: localStorage token system (removed)
+localStorage.setItem('authToken', token);
+headers['Authorization'] = `Bearer ${authToken}`;
+
+// ✅ NEW: Pure httpOnly cookie authentication
+credentials: 'include' // All API calls include this
+// No token handling in JavaScript - complete XSS immunity
+```
+
+**Frontend State Management:**
+- `currentUser` object stored in localStorage for UI state only
+- Authentication verified via httpOnly cookies on every request
+- No sensitive tokens accessible via JavaScript
 
 #### **🔐 JWT Token Management (httpOnly Cookies)**
 ```javascript
@@ -8147,24 +8185,30 @@ console.log('Rate limit headers:',
 // Solution: Returns default values instead of crashing
 // Test endpoint:
 fetch('/api/users/friend-status/test123', {
-  headers: { 'Authorization': 'Bearer invalid' }
+  credentials: 'include' // Include httpOnly cookies
 }).then(r => r.json()).then(console.log);
 // Should return: {isFriend: false, isPending: false, status: 'none'}
 ```
 
 #### Authentication Problems
 
-**Issue**: "Invalid token" error
+**Issue**: "Not authenticated" or "Please log in" errors
 ```javascript
-// Solution 1: Clear and refresh
-localStorage.removeItem('authToken');
-window.authToken = null;
-// Re-login
+// Solution 1: Verify cookies are being sent
+// Check authentication status:
+fetch('https://api.unitedwerise.org/api/auth/me', {
+  credentials: 'include' // REQUIRED for cookie authentication
+}).then(r => r.json()).then(console.log);
 
-// Solution 2: Check token expiry
-const token = localStorage.getItem('authToken');
-const decoded = JSON.parse(atob(token.split('.')[1]));
-console.log('Expires:', new Date(decoded.exp * 1000));
+// Solution 2: Clear corrupted localStorage and re-authenticate
+localStorage.removeItem('currentUser');
+window.currentUser = null;
+// Re-login through the UI
+
+// Solution 3: Check if cookies are enabled
+if (!navigator.cookieEnabled) {
+  console.error('Cookies are disabled - authentication will not work');
+}
 ```
 
 **Issue**: Can't log in
