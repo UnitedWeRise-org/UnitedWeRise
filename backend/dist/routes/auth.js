@@ -402,17 +402,17 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('authToken', token, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                        path: '/',
-                        // Don't set domain for cross-origin cookies - let browser handle it
+                        path: '/'
+                        // Domain not set - cookies will be scoped to api.unitedwerise.org only
                     });
                     // Generate and set CSRF token
                     const csrfToken = require('crypto').randomBytes(32).toString('hex');
                     res.cookie('csrf-token', csrfToken, {
                         httpOnly: false, // Needs to be readable by JS
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 30 * 24 * 60 * 60 * 1000,
                         path: '/'
                     });
@@ -420,7 +420,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('totpSessionToken', newSessionToken, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
                         path: '/'
                     });
@@ -428,7 +428,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('totpVerified', 'true', {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
                         path: '/'
                     });
@@ -491,7 +491,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('authToken', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 path: '/'
             });
@@ -500,7 +500,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('csrf-token', csrfToken, {
                 httpOnly: false, // Needs to be readable by JS
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 path: '/'
             });
@@ -508,7 +508,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('totpSessionToken', sessionToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 path: '/'
             });
@@ -516,7 +516,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('totpVerified', 'true', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 path: '/'
             });
@@ -685,7 +685,7 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
         // Clear all authentication cookies with the same options they were set with
         const cookieOptions = {
             secure: process.env.NODE_ENV === 'production',
-            sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
+            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             path: '/'
         };
         res.clearCookie('authToken', cookieOptions);
@@ -724,7 +724,7 @@ router.post('/refresh', async (req, res) => {
             res.cookie('authToken', newToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 path: '/'
             });
@@ -733,7 +733,7 @@ router.post('/refresh', async (req, res) => {
             res.cookie('csrf-token', csrfToken, {
                 httpOnly: false,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 path: '/'
             });
