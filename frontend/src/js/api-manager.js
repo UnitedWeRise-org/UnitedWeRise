@@ -259,10 +259,7 @@ class APIRequestManager {
             headers['X-CSRF-Token'] = csrfToken;
         }
         
-        // FALLBACK: Add auth token if available (for transition period)
-        if (window.authToken) {
-            headers['Authorization'] = `Bearer ${window.authToken}`;
-        }
+        // Authentication handled by httpOnly cookies automatically
         
         
         return {

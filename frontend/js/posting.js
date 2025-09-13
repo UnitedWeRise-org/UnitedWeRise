@@ -58,7 +58,7 @@ async function createPostPublic(content, options = {}) {
  */
 async function createPostVolunteer(content, email, options = {}) {
     // Handle both logged-in and anonymous volunteer submissions
-    const postContent = window.authToken && localStorage.getItem('currentUser') 
+    const postContent = window.currentUser 
         ? content 
         : `Contact: ${email}\n\n${content}`;
         

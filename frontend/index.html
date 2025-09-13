@@ -76,10 +76,7 @@
                     headers['X-CSRF-Token'] = window.csrfToken;
                 }
                 
-                // FALLBACK: Add auth token if available (for transition period)
-                if (window.authToken) {
-                    headers['Authorization'] = `Bearer ${window.authToken}`;
-                }
+                // Authentication handled by httpOnly cookies automatically
                 
                 
                 if (typeof adminDebugLog !== 'undefined') {
@@ -1396,13 +1393,11 @@
 
         async function refreshUserDataIfNeeded(user) {
             // If user data is missing firstName, refresh it from the backend
-            if (!user.firstName && authToken) {
+            if (!user.firstName && currentUser) {
                 console.log('User data missing firstName, refreshing...');
                 try {
                     const response = await fetch(`${API_BASE}/auth/me`, {
-                        headers: {
-                            'Authorization': `Bearer ${authToken}`
-                        }
+                        credentials: 'include' // Include cookies for authentication
                     });
                     
                     if (response.ok) {
@@ -2567,7 +2562,7 @@
             const bypassCache = options.bypassCache;
             
             if (isGet && !bypassCache) {
-                const cacheKey = `${endpoint}${authToken ? `_${authToken.substring(0, 10)}` : ''}`;
+                const cacheKey = `${endpoint}${currentUser ? `_${currentUser.id.substring(0, 10)}` : ''}`;
                 const cached = apiCache.get(cacheKey);
                 
                 // Use longer cache duration for representatives data
@@ -2582,8 +2577,9 @@
             }
             
             const config = {
+                credentials: 'include', // Include cookies for authentication
                 headers: {
-                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                    // Authentication handled by httpOnly cookies automatically
                 },
                 ...options
             };
@@ -2621,7 +2617,7 @@
                 
                 // Cache GET responses
                 if (isGet && !bypassCache && result.ok) {
-                    const cacheKey = `${endpoint}${authToken ? `_${authToken.substring(0, 10)}` : ''}`;
+                    const cacheKey = `${endpoint}${currentUser ? `_${currentUser.id.toString().substring(0, 10)}` : ''}`;
                     apiCache.set(cacheKey, {
                         timestamp: Date.now(),
                         data: result
@@ -2732,13 +2728,12 @@
                 // Get dismissal token for anonymous users
                 dismissalToken = localStorage.getItem('motd-dismissal-token') || generateDismissalToken();
                 
-                const headers = {};
-                if (authToken) {
-                    headers['Authorization'] = `Bearer ${authToken}`;
-                }
-                headers['X-Dismissal-Token'] = dismissalToken;
+                const headers = {
+                    'X-Dismissal-Token': dismissalToken
+                };
 
                 const response = await fetch(`${API_BASE}/motd/current`, {
+                    credentials: 'include', // Include cookies for authentication
                     headers: headers
                 });
 
@@ -2784,12 +2779,10 @@
             
             try {
                 const headers = {'X-Dismissal-Token': dismissalToken};
-                if (authToken) {
-                    headers['Authorization'] = `Bearer ${authToken}`;
-                }
 
                 const response = await fetch(`${API_BASE}/motd/dismiss/${currentMOTDData.id}`, {
                     method: 'POST',
+                    credentials: 'include', // Include cookies for authentication
                     headers: headers
                 });
 
@@ -3930,7 +3923,7 @@
         }
 
         async function loadConversations() {
-            if (!authToken) return;
+            if (!currentUser) return;
 
             try {
                 const response = await apiCall('/messages/conversations');
@@ -3949,7 +3942,7 @@
         async function displayConversations(conversations) {
             const body = document.getElementById('messagesBody');
             
-            if (!authToken) {
+            if (!currentUser) {
                 body.innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <p>Please log in to view messages</p>
@@ -4167,7 +4160,7 @@
 
         // New function to show My Profile in main content area
         function showMyProfile() {
-            if (!authToken) {
+            if (!currentUser) {
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Please log in to view your profile</h2>
@@ -4185,7 +4178,7 @@
 
         // New function to toggle My Profile - shows/hides profile window
         function toggleMyProfile() {
-            if (!authToken) {
+            if (!currentUser) {
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Please log in to view your profile</h2>
@@ -4237,7 +4230,7 @@
             closeAllPanels();
             
             // Show My Feed in main content area as default, or map if user is not logged in
-            if (authToken) {
+            if (currentUser) {
                 showMyFeedInMain();
             } else {
                 // For logged-out users, show the map or welcome screen
@@ -4260,7 +4253,7 @@
 
         // Toggle function for My Feed - shows/hides feed window in main content area
         function toggleMyFeed() {
-            if (!authToken) {
+            if (!currentUser) {
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
                         <h2>Please log in to view your feed</h2>
@@ -5116,7 +5109,7 @@
         } */
 
         async function loadUserProfile() {
-            if (!authToken) {
+            if (!currentUser) {
                 document.getElementById('profileBody').innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <p>Please log in to view your profile</p>
@@ -5532,7 +5525,7 @@
 
         // Trending-specific like and comment functions
         async function likeTrendingPost(postId) {
-            if (!authToken) {
+            if (!currentUser) {
                 alert('Please log in to like posts');
                 return;
             }
@@ -5564,7 +5557,7 @@
         }
 
         function showTrendingCommentBox(postId) {
-            if (!authToken) {
+            if (!currentUser) {
                 alert('Please log in to comment');
                 return;
             }
@@ -5687,7 +5680,7 @@
         }
 
         async function loadUserPosts() {
-            if (!authToken) return;
+            if (!currentUser) return;
 
             try {
                 const response = await apiCall('/posts/me');
@@ -5805,7 +5798,7 @@
         }
 
         async function likePost(postId, event) {
-            if (!authToken) {
+            if (!currentUser) {
                 alert('Please log in to like posts');
                 return;
             }
@@ -5922,7 +5915,7 @@
             }
 
             // Add comment form if user is logged in
-            if (authToken) {
+            if (currentUser) {
                 html += `
                     <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
                         <textarea id="inline-comment-input-${postId}" placeholder="Add a comment..." style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
@@ -6253,7 +6246,7 @@
 
         // Enhanced search execution with multiple content types
         async function executeEnhancedSearch(query) {
-            if (!authToken) {
+            if (!currentUser) {
                 document.getElementById('globalSearchResults').innerHTML = `
                     <div style="text-align: center; color: #666; padding: 2rem;">
                         Please log in to search
@@ -7786,7 +7779,7 @@
 
         // Toggle notifications dropdown
         async function toggleNotifications() {
-            if (!authToken) {
+            if (!currentUser) {
                 alert('Please log in to view notifications');
                 return;
             }
@@ -8141,7 +8134,7 @@
 
         // Initialize notifications when user logs in
         function initializeNotifications() {
-            if (authToken) {
+            if (currentUser) {
                 fetchNotifications().catch(console.error);
                 
                 // Note: No polling - notifications refresh triggered by events
@@ -8826,7 +8819,7 @@
 
         // Update user activity (call this when user is active)
         async function updateUserActivity() {
-            if (!window.authToken || !window.currentUser) return;
+            if (!window.currentUser) return;
             
             try {
                 await window.apiCall('/users/activity', {
@@ -8903,7 +8896,7 @@
 
         // Start activity tracking when user logs in
         window.addEventListener('load', () => {
-            if (window.currentUser || window.authToken) {
+            if (window.currentUser) {
                 setTimeout(startActivityTracking, 2000);
             }
         });
@@ -8915,7 +8908,7 @@
 
         // Core organizing functions
         function openCivicOrganizing() {
-            if (!authToken) {
+            if (!currentUser) {
                 showToast('Please log in to access organizing tools');
                 return;
             }

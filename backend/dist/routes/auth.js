@@ -496,7 +496,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
             });
             // Generate and set CSRF token
             const csrfToken = require('crypto').randomBytes(32).toString('hex');
@@ -505,7 +506,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000,
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
             });
             // Set TOTP session token as httpOnly cookie
             res.cookie('totpSessionToken', sessionToken, {
@@ -547,18 +549,20 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         res.cookie('authToken', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-            path: '/'
+            path: '/',
+            domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
         });
         // Generate and set CSRF token
         const csrfToken = require('crypto').randomBytes(32).toString('hex');
         res.cookie('csrf-token', csrfToken, {
             httpOnly: false, // Needs to be readable by JS
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000,
-            path: '/'
+            path: '/',
+            domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
         });
         res.json({
             message: 'Login successful',
@@ -729,7 +733,8 @@ router.post('/refresh', async (req, res) => {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
             });
             // Generate new CSRF token
             const csrfToken = require('crypto').randomBytes(32).toString('hex');
@@ -738,7 +743,8 @@ router.post('/refresh', async (req, res) => {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
                 maxAge: 30 * 24 * 60 * 60 * 1000,
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
             });
             res.json({
                 success: true,

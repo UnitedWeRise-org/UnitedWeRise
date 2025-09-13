@@ -39,7 +39,7 @@ class AdminDebugger {
             }
 
             // Check if user is logged in first
-            if (!window.authToken) {
+            if (!window.currentUser) {
                 // User not logged in - can't be admin (silently fail)
                 this.adminVerified = false;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
