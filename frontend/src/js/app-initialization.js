@@ -40,11 +40,24 @@ class AppInitializer {
         try {
             // Step 1: Check for existing user data (httpOnly cookies handle authentication automatically)
             const storedUser = localStorage.getItem('currentUser');
+            
+            // If we have a stored user, restore it to window.currentUser for UI state
+            if (storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    window.currentUser = parsedUser;
+                    this.userData = parsedUser;
+                    AppInitializer.log('📱 Restored user from localStorage for UI state');
+                } catch (e) {
+                    AppInitializer.log('⚠️ Failed to parse stored user data', e);
+                    localStorage.removeItem('currentUser');
+                }
+            }
 
             // Step 2: Authentication is now handled via httpOnly cookies
             // No localStorage token needed - proceed directly to API call
 
-            // Step 3: Try batch initialization first, fall back to individual calls
+            // Step 3: Try batch initialization to verify authentication and get fresh data
             AppInitializer.log('🔄 Fetching initialization data...');
             
             try {
@@ -115,11 +128,15 @@ class AppInitializer {
                     type: typeof batchError
                 }, 'warn');
                 
-                // If it's a 401, clear invalid token and set logged out state
+                // If it's a 401, this might be normal (user not logged in)
                 if (batchError.message?.includes('401') || batchError.status === 401) {
-                    AppInitializer.log('🔒 Authentication failed, clearing invalid token');
-                    this.clearAuthAndSetLoggedOut();
-                    return { authenticated: false, reason: 'invalid_token' };
+                    AppInitializer.log('🔒 No authentication cookies found - user not logged in');
+                    // Only clear auth state if we expected to be authenticated (had stored user data)
+                    if (storedUser) {
+                        AppInitializer.log('⚠️ Had stored user but no valid session - clearing stale data');
+                        this.clearAuthAndSetLoggedOut();
+                    }
+                    return { authenticated: false, reason: 'not_authenticated' };
                 }
                 
                 // For other errors (network, 500, etc), try limited fallback
