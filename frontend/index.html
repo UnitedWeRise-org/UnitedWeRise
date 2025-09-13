@@ -63,7 +63,7 @@
             
             // Create minimal API manager
             window.apiCall = async (endpoint, options = {}) => {
-                const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+                const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
                 const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
                 
                 const headers = {
@@ -876,7 +876,7 @@
                window.location.hostname === '127.0.0.1' || 
                window.location.protocol === 'file:')
                 ? 'http://localhost:3001/api' 
-                : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+                : 'https://api.unitedwerise.org/api';
         let currentUser = null;
         let authToken = null;
         let addressForm = null;

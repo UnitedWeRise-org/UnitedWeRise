@@ -428,7 +428,8 @@ class AppInitializer {
     // Check backend version and display
     async checkBackendVersion() {
         try {
-            const response = await fetch(`${window.BACKEND_URL || 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'}/health`);
+            const backendUrl = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace('/api', '') : 'https://api.unitedwerise.org';
+            const response = await fetch(`${backendUrl}/health`);
             const healthData = await response.json();
             
             if (healthData.uptime) {

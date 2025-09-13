@@ -4,7 +4,7 @@
  */
 
 // Use existing BACKEND_URL if defined, otherwise set default
-const BACKEND_URL = window.BACKEND_URL || 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
+const BACKEND_URL = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace('/api', '') : 'https://api.unitedwerise.org';
 
 /**
  * Show TOTP verification modal (extracted from admin dashboard)

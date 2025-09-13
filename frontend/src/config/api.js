@@ -10,16 +10,16 @@ function getBackendURL() {
         hostname.includes('development') || 
         hostname.includes('dev') ||
         hostname.includes('delightful-smoke-097b2fa0f')) {
-        return 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        return 'https://api.unitedwerise.org/api';
     }
     
     // Local development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        return 'http://localhost:3001/api'; // Use local backend for development
     }
     
     // Production (default)
-    return 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+    return 'https://api.unitedwerise.org/api';
 }
 
 const API_CONFIG = {

@@ -2952,7 +2952,7 @@ class CandidateSystemIntegration {
             }
         }
             
-            const response = await fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/candidates/register', {
+            const response = await fetch('https://api.unitedwerise.org/api/candidates/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

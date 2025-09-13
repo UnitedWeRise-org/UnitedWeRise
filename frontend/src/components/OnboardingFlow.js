@@ -904,7 +904,7 @@ class OnboardingFlow {
         }
         
         try {
-            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const API_BASE = 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/steps`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -926,7 +926,7 @@ class OnboardingFlow {
 
     async loadInterests() {
         try {
-            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const API_BASE = 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/interests`);
             if (response.ok) {
                 const data = await response.json();
@@ -989,7 +989,7 @@ class OnboardingFlow {
         btn.textContent = 'Finding representatives...';
 
         try {
-            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const API_BASE = 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/location/validate`, {
                 method: 'POST',
                 headers: {
@@ -1211,7 +1211,7 @@ class OnboardingFlow {
         }
 
         try {
-            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const API_BASE = 'https://api.unitedwerise.org/api';
             await fetch(`${API_BASE}/onboarding/skip-step`, {
                 method: 'POST',
                 headers: {
@@ -1283,7 +1283,7 @@ class OnboardingFlow {
         const stepData = this.stepData[step.id] || this.stepData[step.id.replace('step-', '')];
         const token = localStorage.getItem('authToken');
         
-        const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        const API_BASE = 'https://api.unitedwerise.org/api';
         const response = await fetch(`${API_BASE}/onboarding/complete-step`, {
             method: 'POST',
             headers: {
@@ -1360,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('authToken');
     if (token) {
         try {
-            const API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            const API_BASE = 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/progress`, {
                 headers: {
                     'Authorization': `Bearer ${token}`

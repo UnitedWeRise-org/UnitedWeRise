@@ -16,10 +16,10 @@
         
         // Component endpoints (using full backend URLs)
         ENDPOINTS: {
-            backend: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health',
-            database: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health/database',
-            batch: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/batch/health-check',
-            reputation: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/reputation/health'
+            backend: 'https://api.unitedwerise.org/health',
+            database: 'https://api.unitedwerise.org/health/database',
+            batch: 'https://api.unitedwerise.org/api/batch/health-check',
+            reputation: 'https://api.unitedwerise.org/api/reputation/health'
         },
         
         // Local component info

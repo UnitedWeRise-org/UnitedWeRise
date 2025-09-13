@@ -191,7 +191,7 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io';
+        const BACKEND_URL = window.API_CONFIG ? window.API_CONFIG.BASE_URL.replace('/api', '') : 'https://api.unitedwerise.org';
         
         // Check authentication
         const authToken = localStorage.getItem('authToken');

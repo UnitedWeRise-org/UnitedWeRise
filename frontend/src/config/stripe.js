@@ -5,13 +5,13 @@ const STRIPE_CONFIG = {
     // Development/Staging
     development: {
         publishableKey: 'pk_test_[YOUR_TEST_PUBLISHABLE_KEY]',
-        backendUrl: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api'
+        backendUrl: 'https://api.unitedwerise.org/api'
     },
     
     // Production
     production: {
         publishableKey: 'pk_live_51Rv6pdI45l290VNEaZeT1tEHp0roeCyAVrQWNxpfjzaR1k3zxfWxp4Q6yrzbtriTPVohY9MiAXOjyrxasVevuJmX00Mwl1BcP1', // Live key
-        backendUrl: 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api' // Production backend URL
+        backendUrl: 'https://api.unitedwerise.org/api' // Production backend URL
     }
 };
 

@@ -34,9 +34,11 @@ class UnifiedMessagingClient {
         }
 
         // Connect to backend WebSocket server
-        const backendUrl = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3001'  // Local development
-            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'; // Production
+        const backendUrl = window.API_CONFIG 
+            ? window.API_CONFIG.BASE_URL.replace('/api', '') // Use centralized config
+            : (window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001'  // Local development fallback
+                : 'https://api.unitedwerise.org'); // Production fallback
         
         const socketUrl = backendUrl;
         

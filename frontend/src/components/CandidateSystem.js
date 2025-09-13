@@ -3,7 +3,7 @@
 
 class CandidateSystem {
     constructor() {
-        this.API_BASE = 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+        this.API_BASE = 'https://api.unitedwerise.org/api';
         this.currentUser = this.getCurrentUser();
         this.init();
     }

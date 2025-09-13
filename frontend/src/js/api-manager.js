@@ -238,7 +238,7 @@ class APIRequestManager {
                          window.location.hostname === '127.0.0.1' || 
                          window.location.protocol === 'file:')
             ? 'http://localhost:3001/api' 
-            : 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
+            : 'https://api.unitedwerise.org/api';
         
         return endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
     }
