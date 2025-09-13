@@ -1024,7 +1024,18 @@ Loading deployment status...
     <script>
         // Global state
         let currentUser = null;
-        let authToken = null;
+        
+        // Initialize currentUser from localStorage if available (for page refresh persistence)
+        try {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                console.log('✅ Admin Dashboard: Restored user from localStorage:', currentUser.firstName || currentUser.email);
+            }
+        } catch (error) {
+            console.warn('⚠️ Admin Dashboard: Failed to restore user from localStorage:', error);
+            localStorage.removeItem('currentUser'); // Clear corrupted data
+        }
         let autoRefreshInterval = null;
         let sessionStartTime = Date.now();
         
@@ -1048,28 +1059,51 @@ Loading deployment status...
             document.getElementById('adminLoginForm').addEventListener('submit', handleLogin);
         });
 
-        // Check if user is already logged in
-        function checkAuthStatus() {
-            const token = localStorage.getItem('authToken');
-            const user = localStorage.getItem('currentUser');
+        // Check if user is already logged in via cookie authentication
+        async function checkAuthStatus() {
+            if (currentUser) {
+                // User already loaded from localStorage
+                if (currentUser.isAdmin) {
+                    showDashboard();
+                    return;
+                } else {
+                    showError('Admin access required. Please log in with an admin account.');
+                    showLogin();
+                    return;
+                }
+            }
             
-            if (token && user) {
-                try {
-                    authToken = token;
-                    currentUser = JSON.parse(user);
-                    
-                    // Check if user is admin
-                    if (currentUser.isAdmin) {
-                        showDashboard();
+            // No user in localStorage, try to authenticate via cookies
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include', // Include httpOnly cookies
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.success && userData.data) {
+                        currentUser = userData.data;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        if (currentUser.isAdmin) {
+                            showDashboard();
+                        } else {
+                            showError('Admin access required. Please log in with an admin account.');
+                            showLogin();
+                        }
                     } else {
-                        showError('Admin access required. Please log in with an admin account.');
                         showLogin();
                     }
-                } catch (error) {
-                    console.error('Auth check error:', error);
+                } else {
+                    // Not authenticated via cookies
                     showLogin();
                 }
-            } else {
+            } catch (error) {
+                console.error('Auth check error:', error);
                 showLogin();
             }
         }
@@ -1091,8 +1125,8 @@ Loading deployment status...
                 const result = await unifiedLogin(email, password, 'admin-dashboard');
                 
                 if (result.success) {
-                    authToken = result.token;
                     currentUser = result.user;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // Set TOTP status from secure cookie-based authentication
                     if (result.totpVerified) {
@@ -1171,7 +1205,7 @@ Loading deployment status...
             }
             
             currentUser = null;
-            authToken = null;
+            localStorage.removeItem('currentUser');
         }
 
         // Show section
@@ -2625,12 +2659,12 @@ Current Status: Use deploymentStatus.check() for real-time status
                             return;
                         }
 
-                        // Verify password and get recent auth token
+                        // Verify password using cookie authentication
                         const authResponse = await fetch(`${BACKEND_URL}/api/auth/verify-password`, {
                             method: 'POST',
+                            credentials: 'include', // Include httpOnly cookies for authentication
                             headers: { 
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({ password })
                         });
@@ -3819,8 +3853,8 @@ Current Status: Use deploymentStatus.check() for real-time status
                 return false;
             }
             
-            if (!authToken) {
-                console.log('🔐 No admin authentication token found.');
+            if (!currentUser) {
+                console.log('🔐 No admin user found.');
                 return false;
             }
             
@@ -3960,10 +3994,7 @@ Example: adminConsole.getSuggestions('features', 'new')
                 headers['x-totp-token'] = totpToken;
             }
             
-            // FALLBACK: Add auth token if still available (for transition period)
-            if (authToken) {
-                headers['Authorization'] = `Bearer ${authToken}`;
-            }
+            // Authentication handled by httpOnly cookies automatically
             
             try {
                 const response = await fetch(url, {
@@ -5206,14 +5237,13 @@ Example: adminConsole.getSuggestions('features', 'new')
 
         // API Call Helper Function for MOTD System
         async function apiCall(endpoint, options = {}) {
-            const token = localStorage.getItem('authToken');
             const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}/api${endpoint}`;
             
             const fetchOptions = {
                 ...options,
+                credentials: 'include', // Include httpOnly cookies for authentication
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : '',
                     ...(options.headers || {})
                 }
             };
