@@ -406,7 +406,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           res.cookie('authToken', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             path: '/'
           });
@@ -416,7 +416,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           res.cookie('csrf-token', csrfToken, {
             httpOnly: false, // Needs to be readable by JS
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
             maxAge: 30 * 24 * 60 * 60 * 1000,
             path: '/'
           });
@@ -425,7 +425,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           res.cookie('totpSessionToken', newSessionToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
           });
@@ -434,7 +434,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           res.cookie('totpVerified', 'true', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/'
           });
@@ -506,7 +506,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       res.cookie('authToken', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         path: '/'
       });
@@ -516,7 +516,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       res.cookie('csrf-token', csrfToken, {
         httpOnly: false, // Needs to be readable by JS
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/'
       });
@@ -525,7 +525,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       res.cookie('totpSessionToken', sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/'
       });
@@ -534,7 +534,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       res.cookie('totpVerified', 'true', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/'
       });
@@ -565,7 +565,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     res.cookie('authToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/'
     });
@@ -575,7 +575,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     res.cookie('csrf-token', csrfToken, {
       httpOnly: false, // Needs to be readable by JS
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/'
     });
@@ -726,11 +726,17 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
       await sessionManager.revokeUserSession(sessionId);
     }
     
-    // Clear all authentication cookies
-    res.clearCookie('authToken');
-    res.clearCookie('csrf-token');
-    res.clearCookie('totpSessionToken');
-    res.clearCookie('totpVerified');
+    // Clear all authentication cookies with the same options they were set with
+    const cookieOptions = {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as const,
+      path: '/'
+    };
+    
+    res.clearCookie('authToken', cookieOptions);
+    res.clearCookie('csrf-token', cookieOptions);
+    res.clearCookie('totpSessionToken', cookieOptions);
+    res.clearCookie('totpVerified', cookieOptions);
     
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
@@ -770,7 +776,7 @@ router.post('/refresh', async (req, res) => {
       res.cookie('authToken', newToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         path: '/'
       });
@@ -780,7 +786,7 @@ router.post('/refresh', async (req, res) => {
       res.cookie('csrf-token', csrfToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/'
       });

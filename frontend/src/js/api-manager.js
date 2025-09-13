@@ -321,7 +321,9 @@ class APIRequestManager {
             windowStart: Date.now(),
             windowSize: 60000
         };
-        await adminDebugLog('APIManager', 'API Manager reset');
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('APIManager', 'API Manager reset');
+        }
     }
 }
 
