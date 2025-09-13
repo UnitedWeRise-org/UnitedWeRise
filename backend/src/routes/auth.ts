@@ -408,7 +408,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-            path: '/'
+            path: '/',
+            // Don't set domain for cross-origin cookies - let browser handle it
           });
           
           // Generate and set CSRF token

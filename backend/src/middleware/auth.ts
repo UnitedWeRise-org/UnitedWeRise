@@ -29,6 +29,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
     
+    
     if (!token) {
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
       return res.status(401).json({ error: 'Access denied. No token provided.' });

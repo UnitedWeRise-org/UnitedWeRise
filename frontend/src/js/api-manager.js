@@ -264,6 +264,7 @@ class APIRequestManager {
             headers['Authorization'] = `Bearer ${window.authToken}`;
         }
         
+        
         return {
             method: options.method || 'GET',
             headers,
