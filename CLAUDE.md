@@ -3,7 +3,7 @@
 ## 🤖 Production Status & Environment
 
 ### Deployment URLs
-- **Backend**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 
@@ -147,7 +147,7 @@ If ANY answer is uncertain, STOP and clarify with user.
 ## 🚀 COMPREHENSIVE DEPLOYMENT GUIDE
 
 ### 📍 Deployment Endpoints
-- **Backend**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 
@@ -226,7 +226,7 @@ az acr task list-runs --registry uwracr2425 --output table | head -3
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
 
 # Step 8: Verify deployment
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+curl "https://api.unitedwerise.org/health" | grep uptime
 # Uptime should be <60 seconds for fresh deployment
 ```
 
@@ -267,7 +267,7 @@ az acr task list-runs --registry uwracr2425 --output table | head -3
 # If Status = "Failed" = BUILD FAILED
 
 # 5. Is new container running?
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health" | grep uptime
+curl "https://api.unitedwerise.org/health" | grep uptime
 # If uptime > 300 seconds = OLD CONTAINER
 ```
 

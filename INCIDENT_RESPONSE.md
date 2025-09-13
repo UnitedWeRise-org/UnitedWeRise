@@ -86,16 +86,16 @@
 #### **Initial Assessment Checklist**
 ```bash
 # 1. Check system health immediately
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health"
+curl "https://api.unitedwerise.org/health"
 
 # 2. Check security metrics for anomalies
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/security-metrics"
+curl "https://api.unitedwerise.org/api/security-metrics"
 
 # 3. Check recent deployment status
 az containerapp show --name unitedwerise-backend --resource-group unitedwerise-rg --query "properties.latestRevisionName"
 
 # 4. Verify database connectivity
-curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/health/detailed"
+curl "https://api.unitedwerise.org/api/health/detailed"
 ```
 
 ### Phase 2: Containment (15-60 minutes)
@@ -103,13 +103,13 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 #### **Account Security Containment**
 ```bash
 # Emergency user account suspension
-curl -X POST "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/admin/users/suspend" \
+curl -X POST "https://api.unitedwerise.org/api/admin/users/suspend" \
   -H "Authorization: Bearer [ADMIN_TOKEN]" \
   -H "X-CSRF-Token: [CSRF_TOKEN]" \
   -d '{"userId": "[COMPROMISED_USER_ID]", "reason": "Security incident response"}'
 
 # Mass token revocation (if needed)
-curl -X POST "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/auth/revoke-all" \
+curl -X POST "https://api.unitedwerise.org/api/auth/revoke-all" \
   -H "Authorization: Bearer [ADMIN_TOKEN]" \
   -H "X-CSRF-Token: [CSRF_TOKEN]"
 ```
@@ -199,7 +199,7 @@ az postgres flexible-server restore \
 ### System Integrity Verification
 ```bash
 # 1. Verify all security headers active
-curl -I "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api/auth/me"
+curl -I "https://api.unitedwerise.org/api/auth/me"
 # Check for: X-Frame-Options, X-Content-Type-Options, etc.
 
 # 2. Test CSRF protection

@@ -662,7 +662,7 @@ export class PhotoService {
 
     // Get the backend URL for constructing absolute URLs
     const backendUrl = process.env.NODE_ENV === 'production'
-      ? 'https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io'
+      ? 'https://api.unitedwerise.org'
       : `http://localhost:${process.env.PORT || 3001}`;
 
     // Group photos by gallery and transform URLs

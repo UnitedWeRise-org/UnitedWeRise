@@ -46,6 +46,28 @@
 
 **🎯 USER EXPERIENCE**: Comments no longer "disappear into layer 5" - all comments are now visible and properly threaded regardless of conversation depth.
 
+### 🆕 RECENT CHANGES (September 13, 2025) - Custom Domain Migration & Authentication Security Enhancement
+
+**✅ Custom Domain Configuration**: Migrated backend API from Azure Container Apps URL to custom domain `api.unitedwerise.org` for improved security and authentication persistence.
+
+**🔒 SECURITY ENHANCEMENTS**:
+- **Same-Site Authentication**: Eliminated cross-origin cookie issues by moving API to same-site subdomain
+- **Cookie Persistence Fixed**: Resolved authentication requiring TOTP re-entry on every page refresh
+- **Third-Party Cookie Bypass**: Circumvented Chrome's cookie blocking by using same-site domain architecture
+- **XSS Protection Maintained**: Kept httpOnly cookies with CSRF double-submit pattern
+
+**🏗️ INFRASTRUCTURE UPDATES**:
+- **DNS Configuration**: Added CNAME record pointing `api.unitedwerise.org` to Azure Container App
+- **SSL Certificate**: Auto-provisioned SSL certificate for secure HTTPS communication
+- **Frontend Migration**: Updated all API endpoints to use centralized configuration
+- **Documentation Updates**: Synchronized all documentation with new custom domain
+
+**📊 IMPACT**:
+- Authentication now persists across page refreshes without TOTP re-entry
+- Improved user experience with seamless session management
+- Enhanced security posture with same-site cookie protections
+- Better branding and easier-to-remember API endpoint
+
 ### 🆕 RECENT CHANGES (September 10, 2025) - Real-Time Notification System & Photo Gallery Implementation
 
 **✅ WebSocket Notification Integration**: Fixed non-functional notification system by adding missing WebSocket emission in `createNotification` function, enabling real-time notification delivery across entire platform.
@@ -393,7 +415,7 @@ Discovery → Awareness → Connection → Action → Content → Community
 
 ### Current State
 - **Production URL**: https://www.unitedwerise.org
-- **Backend API**: https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Backend API**: https://api.unitedwerise.org
 - **Status**: ✅ Fully operational with 50+ features deployed
 - **Users**: Growing organically
 - **Performance**: <200ms API response, <3s page load
@@ -406,7 +428,7 @@ Discovery → Awareness → Connection → Action → Content → Community
 | Component | Status | URL/Details |
 |-----------|--------|------------|
 | Frontend | ✅ LIVE | https://www.unitedwerise.org |
-| Backend API | ✅ LIVE | https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io |
+| Backend API | ✅ LIVE | https://api.unitedwerise.org |
 | Database | ✅ LIVE | Azure PostgreSQL Flexible Server |
 | Azure OpenAI | ✅ LIVE | Reputation system, topic analysis |
 | Blob Storage | ✅ LIVE | Photo/media storage |
@@ -2393,7 +2415,7 @@ jobs:
 **Overview**: Complete staging environment for safe testing of changes before production deployment.
 
 **Infrastructure Created**: August 15, 2025
-- **Staging Backend**: `unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io` ✅
+- **Staging Backend**: `staging.api.unitedwerise.org` (pending configuration) ⏳
 - **Staging Frontend**: Auto-deployed from `development` branch
 - **Staging Database**: Shares production database (careful with migrations)
 - **Cost**: ~$15-20/month additional
@@ -8105,7 +8127,7 @@ curl backend-url/api/admin/candidates/profiles
 // FIXED: Backend CORS configuration now includes all required origins
 // Solution: Rate limiting adjusted from 30→80 requests/min
 // Check if resolved:
-fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health')
+fetch('https://api.unitedwerise.org/health')
   .then(r => console.log('Status:', r.status, 'CORS:', r.headers.get('access-control-allow-origin')));
 ```
 
@@ -8148,7 +8170,7 @@ console.log('Expires:', new Date(decoded.exp * 1000));
 **Issue**: Can't log in
 ```javascript
 // Check backend health
-fetch('https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/health')
+fetch('https://api.unitedwerise.org/health')
   .then(r => r.json())
   .then(console.log);
 
