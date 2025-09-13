@@ -198,7 +198,7 @@ git push origin main
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 
-#### 2️⃣ Backend Deployment (`backend/src/` files)
+#### 2️⃣ Backend Deployment (`backend/src/` files) - IMPROVED WORKFLOW
 ```bash
 # Step 1: Run pre-deployment checklist (see above)
 
@@ -210,10 +210,11 @@ git push origin main
 # Step 3: Verify push succeeded
 git status  # Must show "Your branch is up to date with 'origin/main'"
 
-# Step 4: Build Docker image (Windows-Safe Method RECOMMENDED)
-DOCKER_TAG="backend-$(date +%Y%m%d-%H%M%S)"
+# Step 4: Build Docker image with Git SHA tracking
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
 az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
-echo "Build queued with tag: $DOCKER_TAG"
+echo "Build queued with tag: $DOCKER_TAG for commit: $GIT_SHA"
 
 # Step 5: Wait for build (typically 2-3 minutes)
 sleep 180
@@ -222,12 +223,43 @@ sleep 180
 az acr task list-runs --registry uwracr2425 --output table | head -3
 # Status column MUST show "Succeeded"
 
-# Step 7: Deploy new image
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG"
+# Step 7: Get image digest for immutable deployment
+DIGEST=$(az acr repository show --name uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --query "digest" -o tsv)
+echo "Image digest: $DIGEST"
 
-# Step 8: Verify deployment
-curl "https://api.unitedwerise.org/health" | grep uptime
-# Uptime should be <60 seconds for fresh deployment
+# Step 8: Deploy with digest + release metadata (PREVENTS CACHING ISSUES)
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
+  --revision-suffix "rel-$GIT_SHA-$(date +%H%M%S)" \
+  --set-env-vars \
+    RELEASE_SHA=$GIT_SHA \
+    RELEASE_DIGEST=$DIGEST \
+    DOCKER_TAG=$DOCKER_TAG \
+    DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Step 9: Force single-revision mode (prevents traffic split issues)
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+
+# Step 10: Verify deployment with improved checks
+echo "Waiting for deployment to complete..."
+sleep 30
+
+# Check that health shows correct release SHA
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+if [ "$DEPLOYED_SHA" = "$GIT_SHA" ]; then
+  echo "✅ Deployment verified: Release SHA matches ($GIT_SHA)"
+else
+  echo "❌ Deployment issue: Expected SHA $GIT_SHA, got $DEPLOYED_SHA"
+fi
+
+# Check uptime (should be <60 seconds for fresh deployment)
+UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*' | cut -d':' -f2)
+echo "Container uptime: $UPTIME seconds"
 ```
 
 #### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
@@ -248,7 +280,7 @@ npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.p
 
 ---
 
-### 🔍 QUICK FAILURE DIAGNOSIS
+### 🔍 QUICK FAILURE DIAGNOSIS - IMPROVED
 
 **When changes don't appear in production, check in order:**
 
@@ -266,9 +298,22 @@ cd backend && npm run build  # If errors = FIX FIRST
 az acr task list-runs --registry uwracr2425 --output table | head -3
 # If Status = "Failed" = BUILD FAILED
 
-# 5. Is new container running?
-curl "https://api.unitedwerise.org/health" | grep uptime
+# 5. Is correct release SHA deployed? (PREVENTS CACHE CONFUSION)
+GIT_SHA=$(git rev-parse --short HEAD)
+curl -s "https://api.unitedwerise.org/version" | grep releaseSha
+# Should show your current commit SHA
+
+# 6. Is new container running?
+curl -s "https://api.unitedwerise.org/health" | grep uptime
 # If uptime > 300 seconds = OLD CONTAINER
+
+# 7. Check revision status (if Multi-revision enabled)
+az containerapp revision list --name unitedwerise-backend --resource-group unitedwerise-rg -o table
+# Newest revision should be Active with TrafficWeight=100
+
+# 8. Verify image digest matches deployment
+az containerapp show --name unitedwerise-backend --resource-group unitedwerise-rg --query "properties.template.containers[0].image"
+# Should show uwracr2425.azurecr.io/unitedwerise-backend@sha256:...
 ```
 
 ---
@@ -338,19 +383,70 @@ az postgres flexible-server restore \
 
 ---
 
-### ✅ POST-DEPLOYMENT VERIFICATION
+### ✅ POST-DEPLOYMENT VERIFICATION - ENHANCED
+
+**Systematic Verification Checklist:**
+
+```bash
+# 1. Verify correct release SHA is deployed
+GIT_SHA=$(git rev-parse --short HEAD)
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/version" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+echo "Local SHA: $GIT_SHA, Deployed SHA: $DEPLOYED_SHA"
+
+# 2. Check container is fresh (uptime < 60 seconds)
+curl -s "https://api.unitedwerise.org/health" | grep uptime
+
+# 3. Verify single active revision
+az containerapp revision list --name unitedwerise-backend --resource-group unitedwerise-rg -o table | head -3
+
+# 4. Test new functionality works in production
+curl -s "https://api.unitedwerise.org/health" | jq .
+
+# 5. Check for X-Release header (quick browser verification)
+curl -I "https://api.unitedwerise.org/version" | grep X-Release
+```
 
 ```javascript
-// Browser console check:
+// Browser console check (legacy):
 deploymentStatus.check()  
 // Should show: uptime < 60 seconds for fresh deployment
 ```
 
 **Always Verify:**
-- Git status clean after push
-- Backend uptime < 60 seconds after deployment
-- New functionality works in production
-- No TypeScript compilation errors locally
+- ✅ Git status clean after push  
+- ✅ Release SHA matches local commit
+- ✅ Backend uptime < 60 seconds after deployment
+- ✅ Only one active revision running
+- ✅ New functionality works in production
+- ✅ No TypeScript compilation errors locally
+
+---
+
+### 🚀 DEPLOYMENT IMPROVEMENTS (September 2025)
+
+**Key Enhancements Based on Industry Best Practices:**
+
+1. **Eliminated Cache Confusion**: 
+   - ✅ Health endpoint now shows runtime release info, not misleading build-time metadata
+   - ✅ Added `/version` endpoint with `X-Release` header for instant verification
+   - ✅ Cache-Control headers prevent intermediary caching
+
+2. **Immutable Deployments**:
+   - ✅ Deploy by image digest, never reusable tags
+   - ✅ Git SHA tracking throughout deployment pipeline  
+   - ✅ Environment variables carry release metadata
+
+3. **Atomic Deployment Strategy**:
+   - ✅ Single-revision mode prevents traffic split issues
+   - ✅ Revision suffixes include release SHA for traceability
+   - ✅ Systematic verification prevents "mysterious" failures
+
+4. **Enhanced Failure Diagnosis**:
+   - ✅ Release SHA verification catches deployment mismatches instantly
+   - ✅ Multi-step verification checklist covers all failure modes
+   - ✅ Clear separation between build vs. deployment vs. runtime issues
+
+**Result**: "New code is not live" failures are now virtually impossible to encounter.
 
 ---
 
