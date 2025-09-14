@@ -1235,6 +1235,14 @@
                 
                 // Setup civic organizing sidebar monitoring
                 setupCivicOrganizingSidebarMonitoring();
+                
+                // Initialize mobile navigation system
+                if (typeof initMobileNavigation !== 'undefined') {
+                    initMobileNavigation();
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('Mobile', 'Mobile navigation initialized');
+                    }
+                }
             }).catch(error => {
                 console.error('💥 App initialization failed:', error);
             });
@@ -9874,7 +9882,7 @@
 
     </script>
     <!-- Mobile Navigation -->
-    <nav class="mobile-nav" style="display: none;">
+    <nav class="mobile-nav">
         <a href="#" class="mobile-nav-item mobile-nav-feed active" onclick="showMobileFeed()">
             <div class="mobile-nav-icon">🏠</div>
             <div>Feed</div>

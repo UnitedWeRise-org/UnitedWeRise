@@ -8,6 +8,20 @@
 ======================================== */
 
 /* ========================================
+   DEFAULT MOBILE ELEMENT VISIBILITY
+======================================== */
+
+/* Hide mobile navigation by default (desktop) */
+.mobile-nav {
+    display: none;
+}
+
+/* Mobile search button - hidden by default */
+.mobile-search-btn {
+    display: none;
+}
+
+/* ========================================
    TABLET ADJUSTMENTS (768px - 1024px)
 ======================================== */
 
