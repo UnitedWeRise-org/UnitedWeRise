@@ -3,9 +3,15 @@
 ## 🤖 Production Status & Environment
 
 ### Deployment URLs
+**Production:**
 - **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
+
+**Staging (Development Branch):**
+- **Frontend**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
+- **Backend**: https://api.unitedwerise.org (shared with production)
+- **Admin Dashboard**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net/admin-dashboard.html
 
 ### Platform Status: ✅ Complete Social Media Platform
 - ✅ My Feed infinite scroll (15-post batches)
@@ -23,6 +29,58 @@
 ---
 
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS
+
+### 🔥 MANDATORY DEVELOPMENT BRANCH WORKFLOW (NEVER WORK ON MAIN)
+**ABSOLUTE REQUIREMENT - ALL development work MUST be done on development branch:**
+
+#### Step 1: Always Start on Development Branch
+```bash
+# REQUIRED at start of every development session
+git checkout development
+git pull origin development
+```
+
+#### Step 2: Create Feature Branch from Development (Optional)
+```bash
+# For complex features, create feature branch from development
+git checkout -b feature/feature-name development
+
+# When feature is complete, merge back to development:
+# git checkout development
+# git pull origin development
+# git merge feature/feature-name
+# git push origin development
+# git branch -d feature/feature-name
+```
+
+#### Step 3: Development and Testing on Development Branch
+```bash
+# Make changes, commit to development branch
+git add .
+git commit -m "feat/fix: Description of changes"
+git push origin development  # Deploys to staging automatically
+```
+
+#### Step 4: Verify on Staging Before Main Merge
+- **Staging URL**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
+- **MANDATORY**: Test ALL functionality on staging
+- **REQUIRED**: User approval that staging deployment works correctly
+
+#### Step 5: Merge to Main ONLY Upon Explicit User Approval
+```bash
+# ONLY when user explicitly says "deploy to production" or "merge to main"
+git checkout main
+git pull origin main
+git merge development
+git push origin main  # Deploys to production
+```
+
+**🚨 CRITICAL RULES:**
+- ❌ **NEVER** work directly on main branch
+- ❌ **NEVER** push to main without explicit user approval
+- ❌ **NEVER** merge to main "while we're at it"
+- ✅ **ALWAYS** test on staging (development branch) first
+- ✅ **ALWAYS** get user approval before production deployment
 
 ### Pre-Implementation Requirements (MANDATORY)
 **Before ANY code changes:**
@@ -128,6 +186,42 @@ grep -n "{#security-" MASTER_DOCUMENTATION.md
 - "For consistency, I'll update..."
 - "Let me fix this other issue I found..."
 
+### 🚨 BANNED SOLUTION APPROACHES (ZERO TOLERANCE):
+- "Let me create a workaround for..."
+- "I'll add a temporary fix..."
+- "For now, I'll implement a quick solution..."
+- "I can patch this by..."
+- "Let me bypass this issue by..."
+- "I'll put in a band-aid solution..."
+- "This is a temporary implementation..."
+- "I'll hardcode this for now..."
+
+### ⚡ THE FUNDAMENTAL PRINCIPLE: NO WORKAROUNDS EVER
+
+**ONLY TWO ACCEPTABLE RESPONSES TO ANY PROBLEM:**
+
+1. **"This is the wrong approach"** - Stop and reassess the entire strategy
+2. **"Fix it the right way"** - Implement the correct, permanent, industry-standard solution
+
+**ZERO TOLERANCE POLICY:**
+- ❌ **NEVER** implement workarounds, patches, or temporary fixes
+- ❌ **NEVER** bypass proper error handling or validation
+- ❌ **NEVER** hardcode values to "make it work for now"
+- ❌ **NEVER** skip proper testing because "it's temporary"
+- ❌ **NEVER** compromise architecture for quick fixes
+
+**REQUIRED MINDSET:**
+- ✅ **"What is the industry-standard way to solve this?"**
+- ✅ **"How would a senior engineer implement this properly?"**
+- ✅ **"Is this solution maintainable and scalable?"**
+- ✅ **"Does this follow established patterns in the codebase?"**
+
+**WHEN STUCK:**
+- ✅ Research proper implementation patterns
+- ✅ Ask user for guidance on the correct approach
+- ✅ Propose stopping current approach if it's fundamentally flawed
+- ❌ Create a "quick fix" to move forward
+
 ### ✅ ALLOWED APPROACH:
 - "I will change exactly these 2 endpoints to solve the specific problem"
 - "This change only affects the reported behavior"
@@ -172,9 +266,9 @@ git log -1 --oneline
 # ✅ Should show your recent commit with your changes
 # ❌ If doesn't show your changes = NOT COMMITTED YET!
 
-# 4. VERIFY ALL CHANGES PUSHED
-git log origin/main..HEAD
-# ✅ Should show nothing (all commits pushed)
+# 4. VERIFY ALL CHANGES PUSHED (development branch)
+git log origin/development..HEAD
+# ✅ Should show nothing (all commits pushed to development)
 # ❌ If shows commits = NOT PUSHED TO GITHUB!
 ```
 
@@ -185,49 +279,75 @@ git log origin/main..HEAD
 
 ---
 
-### 📋 DEPLOYMENT PROCEDURES
+### 📋 DEVELOPMENT BRANCH DEPLOYMENT PROCEDURES
 
-#### 1️⃣ Frontend Deployment (`frontend/` files)
+#### 🔥 MANDATORY WORKFLOW: Development → Staging → Production
+
+#### 1️⃣ Frontend Development Deployment (STAGING)
 ```bash
-# Simple 3-step process
+# ALWAYS work on development branch
+git checkout development
+git pull origin development
+
+# Make changes and commit to development
 git add .
 git commit -m "feat/fix/docs: Description of changes"
-git push origin main
+git push origin development
 
-# GitHub Actions auto-deploys in ~2-5 minutes
+# GitHub Actions auto-deploys to STAGING in ~2-5 minutes
+# Staging URL: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 
-#### 2️⃣ Backend Deployment (`backend/src/` files) - IMPROVED WORKFLOW
+#### 1️⃣-B Frontend Production Deployment (ONLY WITH USER APPROVAL)
+```bash
+# ONLY when user explicitly approves production deployment
+# REQUIRED: User must confirm staging deployment works
+
+git checkout main
+git pull origin main
+git merge development
+git push origin main
+
+# GitHub Actions auto-deploys to PRODUCTION in ~2-5 minutes
+# Production URL: https://www.unitedwerise.org
+# Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+```
+
+#### 2️⃣ Backend Development Deployment (STAGING FIRST)
 ```bash
 # Step 1: Run pre-deployment checklist (see above)
 
-# Step 2: Commit and push to GitHub
+# Step 2: ALWAYS work on development branch
+git checkout development
+git pull origin development
+
+# Step 3: Commit and push to development (STAGING)
 git add .
 git commit -m "feat/fix/refactor: Description of changes"
-git push origin main
+git push origin development
 
-# Step 3: Verify push succeeded
-git status  # Must show "Your branch is up to date with 'origin/main'"
+# Step 4: Verify push succeeded
+git status  # Must show "Your branch is up to date with 'origin/development'"
 
-# Step 4: Build Docker image with Git SHA tracking
+# Step 5: Build Docker image with Git SHA tracking FROM DEVELOPMENT BRANCH
 GIT_SHA=$(git rev-parse --short HEAD)
-DOCKER_TAG="backend-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
-az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
-echo "Build queued with tag: $DOCKER_TAG for commit: $GIT_SHA"
+DOCKER_TAG="backend-dev-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#development:backend
+echo "STAGING build queued with tag: $DOCKER_TAG for commit: $GIT_SHA"
 
-# Step 5: Wait for build (typically 2-3 minutes)
+# Step 6: Wait for build (typically 2-3 minutes)
 sleep 180
 
-# Step 6: Verify build succeeded
+# Step 7: Verify build succeeded
 az acr task list-runs --registry uwracr2425 --output table | head -3
 # Status column MUST show "Succeeded"
 
-# Step 7: Get image digest for immutable deployment
+# Step 8: Get image digest for immutable deployment
 DIGEST=$(az acr repository show --name uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --query "digest" -o tsv)
 echo "Image digest: $DIGEST"
 
-# Step 8: Deploy with digest + release metadata (PREVENTS CACHING ISSUES)
+# Step 9: Deploy with digest + release metadata (PREVENTS CACHING ISSUES)
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
@@ -239,13 +359,13 @@ az containerapp update \
     DOCKER_TAG=$DOCKER_TAG \
     DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Step 9: Force single-revision mode (prevents traffic split issues)
+# Step 10: Force single-revision mode (prevents traffic split issues)
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
   --revision-mode Single
 
-# Step 10: Verify deployment with improved checks
+# Step 11: Verify deployment with improved checks
 echo "Waiting for deployment to complete..."
 sleep 30
 
@@ -262,12 +382,76 @@ UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*
 echo "Container uptime: $UPTIME seconds"
 ```
 
+#### 2️⃣-B Backend Production Deployment (ONLY WITH USER APPROVAL)
+```bash
+# ONLY when user explicitly approves production deployment
+# REQUIRED: User must confirm staging deployment works
+
+# Step 1: Merge development to main
+git checkout main
+git pull origin main
+git merge development
+git push origin main
+
+# Step 2: Build production Docker image from main branch
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+echo "PRODUCTION build queued with tag: $DOCKER_TAG for commit: $GIT_SHA"
+
+# Step 3: Wait for build (typically 2-3 minutes)
+sleep 180
+
+# Step 4: Verify build succeeded
+az acr task list-runs --registry uwracr2425 --output table | head -3
+# Status column MUST show "Succeeded"
+
+# Step 5: Get image digest for immutable deployment
+DIGEST=$(az acr repository show --name uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --query "digest" -o tsv)
+echo "Image digest: $DIGEST"
+
+# Step 6: Deploy to PRODUCTION with digest + release metadata
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
+  --revision-suffix "prod-$GIT_SHA-$(date +%H%M%S)" \
+  --set-env-vars \
+    RELEASE_SHA=$GIT_SHA \
+    RELEASE_DIGEST=$DIGEST \
+    DOCKER_TAG=$DOCKER_TAG \
+    DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Step 7: Force single-revision mode (prevents traffic split issues)
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+
+# Step 8: Verify PRODUCTION deployment
+echo "Waiting for deployment to complete..."
+sleep 30
+
+# Check that health shows correct release SHA
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+if [ "$DEPLOYED_SHA" = "$GIT_SHA" ]; then
+  echo "✅ PRODUCTION deployment verified: Release SHA matches ($GIT_SHA)"
+else
+  echo "❌ PRODUCTION deployment issue: Expected SHA $GIT_SHA, got $DEPLOYED_SHA"
+fi
+
+# Check uptime (should be <60 seconds for fresh deployment)
+UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*' | cut -d':' -f2)
+echo "Container uptime: $UPTIME seconds"
+```
+
 #### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
 ```bash
-# Step 1: Commit schema changes
+# Step 1: Commit schema changes to development branch
+git checkout development
 git add .
 git commit -m "schema: Description of changes"
-git push origin main
+git push origin development
 
 # Step 2: Generate Prisma client locally
 cd backend && npx prisma generate
@@ -288,8 +472,8 @@ npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.p
 # 1. Are changes committed?
 git status  # If shows modified files = NOT COMMITTED
 
-# 2. Are changes pushed?
-git log origin/main..HEAD  # If shows commits = NOT PUSHED
+# 2. Are changes pushed to development?
+git log origin/development..HEAD  # If shows commits = NOT PUSHED TO DEVELOPMENT
 
 # 3. Did TypeScript compile?
 cd backend && npm run build  # If errors = FIX FIRST
@@ -341,7 +525,12 @@ az containerapp show --name unitedwerise-backend --resource-group unitedwerise-r
 **Cause**: Docker builds from GitHub, not local files  
 **Fix**: 
 ```bash
-git add . && git commit -m "Description" && git push origin main
+# Push to development branch first (staging)
+git checkout development
+git add . && git commit -m "Description" && git push origin development
+
+# Only push to main with explicit user approval (production)
+# git checkout main && git merge development && git push origin main
 ```
 
 #### Issue #2: TypeScript Compilation Errors
@@ -370,8 +559,10 @@ az containerapp update \
   --resource-group unitedwerise-rg \
   --revision-suffix emergency-$(date +%m%d-%H%M)
 
-# Frontend rollback
-git revert HEAD && git push origin main
+# Frontend rollback (staging first)
+git checkout development && git revert HEAD && git push origin development
+# Frontend rollback (production - only with user approval)
+# git checkout main && git revert HEAD && git push origin main
 
 # Database restore (last resort)
 az postgres flexible-server restore \
@@ -450,14 +641,28 @@ deploymentStatus.check()
 
 ---
 
-### 📝 Git Workflow Standards
+### 📝 Git Workflow Standards - DEVELOPMENT BRANCH MANDATORY
 
 **Branch Strategy:**
 ```
-main           # Production code
-├── feature/*  # New features (feature/user-profiles)
-├── fix/*      # Bug fixes (fix/auth-timeout)
-└── hotfix/*   # Emergency fixes (hotfix/security-patch)
+main           # Production code (ONLY merge from development with user approval)
+development    # Staging code (ALL development work happens here)
+├── feature/*  # New features (feature/user-profiles) - branch from development
+├── fix/*      # Bug fixes (fix/auth-timeout) - branch from development  
+└── hotfix/*   # Emergency fixes (hotfix/security-patch) - branch from development
+```
+
+**🚨 CRITICAL BRANCH RULES:**
+- ❌ **NEVER** work directly on main branch
+- ❌ **NEVER** push to main without explicit user approval
+- ✅ **ALWAYS** start work on development branch
+- ✅ **ALWAYS** test on staging before requesting production merge
+- ✅ **ALWAYS** get user approval: "Ready to deploy to production?"
+
+**Deployment Mapping:**
+```
+development branch → STAGING (https://delightful-smoke-097b2fa0f.3.azurestaticapps.net)
+main branch       → PRODUCTION (https://www.unitedwerise.org)
 ```
 
 **Commit Message Format:**
