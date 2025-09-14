@@ -583,11 +583,20 @@ class DonationSystem {
                 isRecurring: this.donationType !== 'ONE_TIME'
             };
             
+            // Add recurring interval if it's a recurring donation
+            if (donationData.isRecurring) {
+                donationData.recurringInterval = 'MONTHLY'; // Default to monthly
+            }
+            
+            console.log('💳 Sending donation request:', donationData);
+            
             // Call API to create Stripe checkout session using apiCall for cookie auth
             const response = await window.apiCall('/payments/donation', {
                 method: 'POST',
                 body: donationData
             });
+            
+            console.log('💳 Donation API response:', response);
             
             // Handle response from apiCall (already parsed)
             if (response.ok && response.data && response.data.success) {
@@ -630,7 +639,33 @@ class DonationSystem {
                 }, 3000);
                 
             } else {
-                throw new Error(response.data?.error || 'Failed to create donation');
+                // Better error handling for various response structures
+                let errorMessage = 'Failed to create donation';
+                
+                if (response.data) {
+                    if (typeof response.data === 'string') {
+                        errorMessage = response.data;
+                    } else if (response.data.errors && Array.isArray(response.data.errors)) {
+                        // Handle validation errors from express-validator
+                        errorMessage = response.data.errors.map(e => e.msg || e.message).join(', ');
+                    } else if (response.data.error) {
+                        errorMessage = response.data.error;
+                    } else if (response.data.message) {
+                        errorMessage = response.data.message;
+                    } else if (response.data.success === false && response.data.data) {
+                        // Handle nested error structure
+                        errorMessage = response.data.data.error || response.data.data.message || errorMessage;
+                    } else if (response.data.success !== undefined) {
+                        // If we just have success: false/true with no error message
+                        errorMessage = 'Payment processing failed. Please try again.';
+                    }
+                }
+                
+                // Log the full response for debugging
+                console.error('Donation API error response:', response);
+                console.error('Response data:', response.data);
+                
+                throw new Error(errorMessage);
             }
             
         } catch (error) {

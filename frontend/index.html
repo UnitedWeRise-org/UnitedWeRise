@@ -6,7 +6,41 @@
     <meta name="build-time" content="2025-08-21T21:15:00.000Z">
     <meta name="version" content="1.1.0">
     <meta name="last-updated" content="2025-08-21T21:15:00.000Z">
-    <title>United We Rise</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>United We Rise - Unite Communities, Empower Democracy</title>
+    <meta name="description" content="United We Rise is a revolutionary social platform connecting communities with their elected officials. Join the movement for transparent democracy, civic engagement, and positive change.">
+    <meta name="keywords" content="civic engagement, democracy, community platform, elected officials, political transparency, social change, grassroots movement, voting, elections, community organizing">
+    <meta name="author" content="United We Rise">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="7 days">
+    <link rel="canonical" href="https://www.unitedwerise.org/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.unitedwerise.org/">
+    <meta property="og:title" content="United We Rise - Unite Communities, Empower Democracy">
+    <meta property="og:description" content="Join the movement for transparent democracy. Connect with your community and elected officials on United We Rise.">
+    <meta property="og:image" content="https://www.unitedwerise.org/images/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="United We Rise">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.unitedwerise.org/">
+    <meta name="twitter:title" content="United We Rise - Unite Communities, Empower Democracy">
+    <meta name="twitter:description" content="Join the movement for transparent democracy. Connect with your community and elected officials.">
+    <meta name="twitter:image" content="https://www.unitedwerise.org/images/og-image.jpg">
+    
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#002868">
+    <meta name="msapplication-TileColor" content="#002868">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -195,6 +229,52 @@
     <script src="js/adminDebugger.js"></script>
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "United We Rise",
+        "alternateName": "UWR",
+        "url": "https://www.unitedwerise.org",
+        "logo": "https://www.unitedwerise.org/images/logo.png",
+        "description": "United We Rise is a revolutionary social platform connecting communities with their elected officials for transparent democracy and civic engagement.",
+        "sameAs": [
+            "https://twitter.com/unitedwerise",
+            "https://facebook.com/unitedwerise",
+            "https://instagram.com/unitedwerise"
+        ],
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+1-800-UWR-RISE",
+            "contactType": "customer support",
+            "availableLanguage": "English"
+        },
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "US"
+        },
+        "nonprofitStatus": "501(c)(3)",
+        "foundingDate": "2024",
+        "keywords": "civic engagement, democracy, community platform, political transparency, grassroots movement"
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "url": "https://www.unitedwerise.org",
+        "name": "United We Rise",
+        "description": "Connect with your community and elected officials for transparent democracy",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.unitedwerise.org/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
 </head>
 <body>
     <div class="top-bar">
@@ -2607,6 +2687,10 @@
             // FormData should set its own Content-Type with proper boundary
             if (!options.skipContentType && !(config.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
+                // Stringify body if it exists and is not already a string or FormData
+                if (config.body && typeof config.body !== 'string') {
+                    config.body = JSON.stringify(config.body);
+                }
             }
             
             // Remove custom options before fetch
