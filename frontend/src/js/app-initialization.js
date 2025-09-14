@@ -36,10 +36,12 @@ class AppInitializer {
         this.displayVersionInfo();
         
         AppInitializer.log('🚀 Starting optimized app initialization...');
+        
+        // Declare storedUser at function scope to avoid scoping issues
+        const storedUser = localStorage.getItem('currentUser');
 
         try {
             // Step 1: Check for existing user data (httpOnly cookies handle authentication automatically)
-            const storedUser = localStorage.getItem('currentUser');
             
             // If we have a stored user, restore it to window.currentUser for UI state
             if (storedUser) {
@@ -196,7 +198,6 @@ class AppInitializer {
                 }
                 
                 // If we get here, all API calls failed - try cached data
-                const storedUser = localStorage.getItem('currentUser');
                 if (storedUser) {
                     AppInitializer.log('📱 Using cached user data as final fallback', 'warn');
                     try {
@@ -215,7 +216,6 @@ class AppInitializer {
             console.error('💥 Outer initialization error:', error);
             
             // DON'T log out user for network/server errors - just use cached data
-            const storedUser = localStorage.getItem('currentUser');
             if (storedUser) {
                 AppInitializer.log('💾 Using cached user data due to server issues', 'warn');
                 try {

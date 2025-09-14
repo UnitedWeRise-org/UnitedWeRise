@@ -4378,12 +4378,15 @@
                 await loadMyFeedPosts();
             } catch (error) {
                 console.error('❌ Error loading My Feed posts:', error);
-                document.getElementById('myFeedPosts').innerHTML = `
-                    <div style="text-align: center; padding: 2rem;">
-                        <p>Error loading feed. Please refresh the page.</p>
-                        <button onclick="showMyFeedInMain()" class="btn">Retry</button>
-                    </div>
-                `;
+                const feedContainer = document.getElementById('myFeedPosts');
+                if (feedContainer) {
+                    feedContainer.innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <p>Error loading feed. Please refresh the page.</p>
+                            <button onclick="showMyFeedInMain()" class="btn">Retry</button>
+                        </div>
+                    `;
+                }
             }
             
             // Setup infinite scroll for My Feed (with safety check)
@@ -4493,22 +4496,28 @@
                     displayMyFeedPosts(posts);
                 } else {
                     console.log('📝 No posts found in My Feed');
-                    document.getElementById('myFeedPosts').innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: #666;">
-                            <p>No posts in your feed yet. Follow some users to see their posts here!</p>
-                            <p><small>Start by exploring trending topics or searching for users to follow.</small></p>
-                        </div>
-                    `;
+                    const feedContainer = document.getElementById('myFeedPosts');
+                    if (feedContainer) {
+                        feedContainer.innerHTML = `
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <p>No posts in your feed yet. Follow some users to see their posts here!</p>
+                                <p><small>Start by exploring trending topics or searching for users to follow.</small></p>
+                            </div>
+                        `;
+                    }
                 }
             } catch (error) {
                 console.error('❌ Feed loading error:', error);
-                document.getElementById('myFeedPosts').innerHTML = `
-                    <div style="text-align: center; padding: 2rem;">
-                        <p>Unable to load your feed. Please try again.</p>
-                        <p><small>Error: ${error.message}</small></p>
-                        <button onclick="loadMyFeedPosts()" class="btn">Retry</button>
-                    </div>
-                `;
+                const feedContainer = document.getElementById('myFeedPosts');
+                if (feedContainer) {
+                    feedContainer.innerHTML = `
+                        <div style="text-align: center; padding: 2rem;">
+                            <p>Unable to load your feed. Please try again.</p>
+                            <p><small>Error: ${error.message}</small></p>
+                            <button onclick="loadMyFeedPosts()" class="btn">Retry</button>
+                        </div>
+                    `;
+                }
             }
         }
 
