@@ -2612,6 +2612,10 @@
             // FormData should set its own Content-Type with proper boundary
             if (!options.skipContentType && !(config.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
+                // Stringify body if it exists and is not already a string or FormData
+                if (config.body && typeof config.body !== 'string') {
+                    config.body = JSON.stringify(config.body);
+                }
             }
             
             // Remove custom options before fetch
