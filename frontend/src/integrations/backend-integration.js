@@ -4,12 +4,8 @@
 
 class BackendIntegration {
     constructor() {
-        // Use same environment detection as main app
-        this.API_BASE = (window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' || 
-                        window.location.protocol === 'file:')
-            ? 'http://localhost:3001/api' 
-            : 'https://api.unitedwerise.org/api';
+        // Use centralized API configuration for environment detection
+        this.API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
         
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('BackendIntegration', 'Backend Integration API Base: ' + this.API_BASE);
@@ -262,7 +258,9 @@ class BackendIntegration {
     handleAuthError() {
         // Clear invalid session data
         window.csrfToken = null;
-        authToken = null;
+        if (typeof window.authToken !== 'undefined') {
+            window.authToken = null;
+        }
         
         if (window.setUserLoggedOut) {
             setUserLoggedOut();

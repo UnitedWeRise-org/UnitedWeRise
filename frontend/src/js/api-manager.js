@@ -234,11 +234,7 @@ class APIRequestManager {
 
     // Helper methods
     buildURL(endpoint) {
-        const API_BASE = (window.location.hostname === 'localhost' || 
-                         window.location.hostname === '127.0.0.1' || 
-                         window.location.protocol === 'file:')
-            ? 'http://localhost:3001/api' 
-            : 'https://api.unitedwerise.org/api';
+        const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
         
         return endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
     }
