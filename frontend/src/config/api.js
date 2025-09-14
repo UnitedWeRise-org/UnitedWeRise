@@ -7,7 +7,7 @@ function getBackendURL() {
     
     // Professional staging domain detection
     if (hostname === 'dev.unitedwerise.org') {
-        return 'https://dev-api.unitedwerise.org/api';
+        return 'https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
     }
     
     // Fallback staging detection for Azure direct URLs (during DNS transition)
@@ -15,7 +15,7 @@ function getBackendURL() {
         hostname.includes('development') || 
         hostname.includes('dev') ||
         hostname.includes('delightful-smoke-097b2fa0f')) {
-        return 'https://dev-api.unitedwerise.org/api';
+        return 'https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io/api';
     }
     
     // Local development
