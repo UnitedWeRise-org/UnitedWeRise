@@ -583,11 +583,15 @@ class DonationSystem {
                 isRecurring: this.donationType !== 'ONE_TIME'
             };
             
+            console.log('💳 Sending donation request:', donationData);
+            
             // Call API to create Stripe checkout session using apiCall for cookie auth
             const response = await window.apiCall('/payments/donation', {
                 method: 'POST',
                 body: donationData
             });
+            
+            console.log('💳 Donation API response:', response);
             
             // Handle response from apiCall (already parsed)
             if (response.ok && response.data && response.data.success) {
@@ -630,7 +634,26 @@ class DonationSystem {
                 }, 3000);
                 
             } else {
-                throw new Error(response.data?.error || 'Failed to create donation');
+                // Better error handling for various response structures
+                let errorMessage = 'Failed to create donation';
+                
+                if (response.data) {
+                    if (typeof response.data === 'string') {
+                        errorMessage = response.data;
+                    } else if (response.data.error) {
+                        errorMessage = response.data.error;
+                    } else if (response.data.message) {
+                        errorMessage = response.data.message;
+                    } else if (response.data.success === false && response.data.data) {
+                        // Handle nested error structure
+                        errorMessage = response.data.data.error || response.data.data.message || errorMessage;
+                    }
+                }
+                
+                // Log the full response for debugging
+                console.error('Donation API error response:', response);
+                
+                throw new Error(errorMessage);
             }
             
         } catch (error) {
