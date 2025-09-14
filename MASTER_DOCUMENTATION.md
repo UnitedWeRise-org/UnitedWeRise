@@ -2290,37 +2290,53 @@ if (riskScore > 70) {
 
 ## ☁️ DEPLOYMENT & INFRASTRUCTURE {#deployment-infrastructure}
 
-### 🎯 **COMPLETE DEPLOYMENT ARCHITECTURE** {#deployment-architecture}
+### 🎯 **GOLD STANDARD STAGING ARCHITECTURE** {#deployment-architecture}
 
-#### Component Overview & Deployment Targets
-| Component | Technology | Deployment Target | Automation Level |
-|-----------|------------|-------------------|------------------|
-| **Frontend** | HTML/CSS/JS | Azure Static Web Apps | ✅ **Automatic** via GitHub |
-| **Backend** | Node.js/Express | Azure Container Apps | ⚠️ **Manual** via Azure CLI |
-| **Database** | PostgreSQL | Azure PostgreSQL Flexible | Manual migrations |
-| **Blob Storage** | Azure Storage | Always available | N/A |
+**🏆 IMPLEMENTATION COMPLETE**: September 2025 - Professional staging environment with environment-aware code
+
+#### Dual-Environment Architecture Overview
+| Environment | Frontend URL | Backend URL | Access Control | Purpose |
+|-------------|-------------|-------------|----------------|---------|
+| **🏭 Production** | https://www.unitedwerise.org | https://api.unitedwerise.org | All registered users | Public application |
+| **🧪 Staging** | https://dev.unitedwerise.org | https://dev-api.unitedwerise.org | **Admin-only** | Safe development testing |
+
+**Key Innovation**: Same codebase deployed to both environments with **environment-aware access control**
+
+#### Component Deployment Matrix
+| Component | Technology | Production Target | Staging Target | Automation |
+|-----------|------------|-------------------|----------------|------------|
+| **Frontend** | HTML/CSS/JS | Azure Static Web Apps (main) | Azure Static Web Apps (dev) | ✅ **Auto via GitHub** |
+| **Backend** | Node.js/Express | Container App (production) | Container App (staging) | ⚠️ **Manual via Azure CLI** |
+| **Database** | PostgreSQL | Azure PostgreSQL Flexible | **Shared with Production** | Manual migrations |
+| **Storage** | Azure Blob | Always available | **Shared with Production** | N/A |
 
 #### GitHub Workflows & Automation
-##### Frontend Deployment (Fully Automated)
-- **Main Branch**: `azure-static-web-apps-yellow-mud-043d1ca0f.yml`
+##### Frontend Deployment (Fully Automated) 
+- **🏭 Production Branch**: `azure-static-web-apps-yellow-mud-043d1ca0f.yml`
   - **Triggers**: Every push to `main` branch
   - **Deploys To**: https://www.unitedwerise.org
   - **Time to Live**: 3-5 minutes
   - **Includes**: admin-dashboard.html, all frontend assets
+  - **CNAME**: `www.unitedwerise.org` → Azure Static Web App
   
-- **Development Branch**: `azure-static-web-apps-staging.yml`
+- **🧪 Staging Branch**: `azure-static-web-apps-staging.yml`  
   - **Triggers**: Every push to `development` branch  
-  - **Deploys To**: https://delightful-smoke-097b2fa0f.1.azurestaticapps.net
+  - **Deploys To**: https://dev.unitedwerise.org
   - **Time to Live**: 3-5 minutes
+  - **CNAME**: `dev.unitedwerise.org` → `delightful-smoke-097b2fa0f.3.azurestaticapps.net`
   
-##### Backend Deployment (Manual Only)
-- **Test Workflow**: `deploy-backend-simple.yml` (development branch)
-  - **Purpose**: Build verification and Docker testing only
-  - **Does NOT deploy** - testing only
+##### Backend Deployment (Manual, Dual-Container)
+- **🏭 Production Container**: `unitedwerise-backend`
+  - **URL**: https://api.unitedwerise.org
+  - **Environment**: `NODE_ENV=production`
+  - **Access**: Open to all registered users
+  - **Deployment**: Manual via Azure CLI from `main` branch
   
-- **Staging Workflow**: `deploy-backend-staging.yml` (DISABLED)
-  - **Status**: Currently disabled for debugging
-  - **Manual Trigger**: workflow_dispatch only
+- **🧪 Staging Container**: `unitedwerise-backend-staging`
+  - **URL**: https://dev-api.unitedwerise.org  
+  - **Environment**: `NODE_ENV=staging` + `STAGING_ENVIRONMENT=true`
+  - **Access**: **Admin-only for all protected routes**
+  - **Deployment**: Manual via Azure CLI from `development` branch
 
 #### Critical Deployment Gap
 **⚠️ IMPORTANT**: Backend changes (like admin routes) do NOT auto-deploy!
@@ -2337,41 +2353,72 @@ if (riskScore > 70) {
 | Azure CLI backend update | Backend API server | 2-5 minutes | Manual trigger |
 | Prisma migration | Database schema | ~30 seconds | Manual via npm scripts |
 
-### 🚨 **CRITICAL: Backend Deployment Process**
+### 🚀 **GOLD STANDARD: Dual-Container Backend Deployment**
 
-**Backend deployment is a TWO-STEP process that must ALWAYS be followed in order:**
+**🎯 NEW ARCHITECTURE**: Two separate backend containers with environment-aware behavior
 
+#### Staging Deployment (Development Branch)
 ```bash
-# STEP 1: Build new Docker image from current GitHub code (MANDATORY - NEVER SKIP)
-az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+# STEP 1: Build from development branch
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-staging-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#development:backend
 
-# STEP 2: Deploy the new image to Container Apps (ONLY AFTER STEP 1 COMPLETES)
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+# STEP 2: Deploy to staging container with staging environment variables
+az containerapp update --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG" \
+  --set-env-vars NODE_ENV=staging STAGING_ENVIRONMENT=true
 ```
 
-**⚠️ COMMON MISTAKE TO AVOID:**
-- Running only `az containerapp update` without building new image = **Old code restarts**
-- Environment variable updates alone = **Configuration change, NOT code deployment**
-- These are NOT optional steps - both are REQUIRED for backend deployment
+#### Production Deployment (Main Branch - USER APPROVAL REQUIRED)
+```bash  
+# STEP 1: Build from main branch (ONLY after staging approval)
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+
+# STEP 2: Deploy to production container
+az containerapp update --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG" \
+  --set-env-vars NODE_ENV=production
+```
+
+**✅ BENEFITS OF DUAL-CONTAINER ARCHITECTURE:**
+- **True Isolation**: Staging backend changes never affect production users
+- **Same Codebase**: No code duplication, just different environment variables
+- **Safe Testing**: Admin-only staging environment for secure development testing
+- **Professional URLs**: `dev.unitedwerise.org` and `dev-api.unitedwerise.org`
 
 ### Azure Infrastructure
 
-#### Resource Group Structure
+#### Updated Resource Group Structure (Gold Standard)
 ```
 unitedwerise-rg/
 ├── Container Apps
-│   └── unitedwerise-backend
-├── Static Web Apps
-│   └── yellow-mud-043d1ca0f
+│   ├── unitedwerise-backend (Production)
+│   └── unitedwerise-backend-staging (Staging) 🆕
+├── Static Web Apps  
+│   ├── yellow-mud-043d1ca0f (Production)
+│   └── delightful-smoke-097b2fa0f (Staging)
 ├── PostgreSQL Flexible Server
-│   └── unitedwerise-db
+│   └── unitedwerise-db (Shared)
 ├── Storage Account
-│   └── unitedwerisestorage
+│   └── uwrstorage2425 (Shared)
 ├── Container Registry
-│   └── unitedweriseregistry
+│   └── uwracr2425 (Shared)
 └── OpenAI Service
-    └── unitedwerise-openai
+    └── unitedwerise-openai (Shared)
 ```
+
+**🎯 Key Architecture Decisions:**
+- **Dual Container Apps**: Separate staging and production backend containers
+- **Shared Resources**: Database, storage, and AI services shared for cost efficiency
+- **Environment Isolation**: Same codebase with environment-aware behavior
+- **Professional Domains**: Custom CNAME records for branded URLs
 
 #### Backend Deployment (Container Apps)
 
@@ -2448,34 +2495,70 @@ jobs:
 - SSL: Automatic via Azure
 - CDN: Global edge locations
 
-#### Staging Environment Setup
+#### 🏆 Gold Standard Staging Environment
 
-**Overview**: Complete staging environment for safe testing of changes before production deployment.
+**✅ IMPLEMENTATION COMPLETE**: September 13, 2025 - Professional staging environment with environment-aware access control
 
-**Infrastructure Created**: August 15, 2025
-- **Staging Backend**: `staging.api.unitedwerise.org` (pending configuration) ⏳
-- **Staging Frontend**: Auto-deployed from `development` branch
-- **Staging Database**: Shares production database (careful with migrations)
-- **Cost**: ~$15-20/month additional
+**🎯 Architecture**: Dual-container deployment with same codebase, different behavior based on environment variables
 
-**Branch Strategy**:
+**Infrastructure Overview**:
+- **🧪 Staging Backend**: https://dev-api.unitedwerise.org (Container: `unitedwerise-backend-staging`)
+- **🧪 Staging Frontend**: https://dev.unitedwerise.org (Auto-deployed from `development` branch)  
+- **🏭 Production Backend**: https://api.unitedwerise.org (Container: `unitedwerise-backend`)
+- **🏭 Production Frontend**: https://www.unitedwerise.org (Auto-deployed from `main` branch)
+- **Database & Storage**: Shared between environments for cost efficiency
+
+**🔒 Access Control Innovation**:
+- **Production**: Open to all registered users (standard authentication)
+- **Staging**: **Admin-only access** for all protected routes (enhanced security)
+- **Same Codebase**: Environment detection in middleware controls behavior
+
+**Branch Strategy (Gold Standard)**:
 ```
-production-backup-2025-08-15  ← Backup/restore point
-main                         ← Production (auto-deploy)  
-development                  ← Staging (safe testing)
+main                         ← Production (manual deploy only)  
+development                  ← Staging (safe testing, admin-only)
+├── feature/*               ← Feature branches (merge to development)
+├── fix/*                   ← Bug fixes (merge to development)
+└── hotfix/*                ← Emergency fixes (merge to development)
 ```
 
-**Environment Auto-Detection**: 
-Frontend automatically routes to correct backend based on hostname:
-- **Staging/Dev URLs** → `unitedwerise-backend-staging.*`
-- **Localhost** → `unitedwerise-backend-staging.*` (for testing)
-- **Production** → `unitedwerise-backend.*` (default)
+**🚀 Professional Deployment Flow**:
+1. **Development**: Push to `development` branch
+2. **Auto-Deploy**: Staging environment automatically updated
+3. **Admin Testing**: Only admins can access protected staging routes
+4. **User Approval**: Explicit confirmation required for production
+5. **Production Deploy**: Manual merge to `main` with user permission
 
-**Deployment Workflow**:
-1. Make changes in `development` branch
-2. Test on staging environment automatically created
-3. Verify functionality works correctly
-4. Merge to `main` only when confirmed working
+**Environment Auto-Detection (Enhanced)**:
+```javascript
+// Frontend automatically routes based on professional domains
+if (hostname.includes('dev.unitedwerise.org')) {
+  return 'https://dev-api.unitedwerise.org/api';  // Staging backend
+}
+return 'https://api.unitedwerise.org/api';        // Production backend
+```
+
+**Backend Environment-Aware Authentication**:
+```javascript
+// Same code, different behavior based on NODE_ENV
+export const requireStagingAuth = async (req, res, next) => {
+  if (process.env.NODE_ENV === 'staging') {
+    // Require admin access in staging
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ 
+        error: 'This is a staging environment - admin access required.',
+        environment: 'staging'
+      });
+    }
+  }
+  next();
+};
+```
+
+**DNS Configuration**:
+- `dev.unitedwerise.org` → CNAME → `delightful-smoke-097b2fa0f.3.azurestaticapps.net`
+- `dev-api.unitedwerise.org` → CNAME → `unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io`
+- `asuid.dev-api.unitedwerise.org` → TXT → `841DFED2F63BC552F6C5E8C58A7343CBD909255779A606733B63035D480DB4A2`
 5. Production deploys automatically from `main`
 
 **Configuration Files**:

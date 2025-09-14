@@ -9,9 +9,13 @@
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 
 **Staging (Development Branch):**
-- **Frontend**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
-- **Backend**: https://api.unitedwerise.org (shared with production)
-- **Admin Dashboard**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net/admin-dashboard.html
+- **Frontend**: https://dev.unitedwerise.org
+- **Backend**: https://dev-api.unitedwerise.org
+- **Admin Dashboard**: https://dev.unitedwerise.org/admin-dashboard.html
+
+**Azure Direct URLs (for reference):**
+- **Staging Frontend**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
+- **Staging Backend**: https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
 
 ### Platform Status: ✅ Complete Social Media Platform
 - ✅ My Feed infinite scroll (15-post batches)
@@ -62,8 +66,10 @@ git push origin development  # Deploys to staging automatically
 ```
 
 #### Step 4: Verify on Staging Before Main Merge
-- **Staging URL**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
-- **MANDATORY**: Test ALL functionality on staging
+- **Staging URL**: https://dev.unitedwerise.org
+- **Backend API**: https://dev-api.unitedwerise.org
+- **MANDATORY**: Test ALL functionality on staging environment
+- **STAGING BEHAVIOR**: Requires admin login for all protected routes
 - **REQUIRED**: User approval that staging deployment works correctly
 
 #### Step 5: Merge to Main ONLY Upon Explicit User Approval
@@ -241,9 +247,24 @@ If ANY answer is uncertain, STOP and clarify with user.
 ## 🚀 COMPREHENSIVE DEPLOYMENT GUIDE
 
 ### 📍 Deployment Endpoints
+
+**🎯 GOLD STANDARD STAGING ARCHITECTURE:**
+- **Development Branch** → **Staging Environment** → **User Testing** → **Production Deployment**
+- **Same Codebase, Different Behavior**: Environment-aware access control ensures staging safety
+- **True Isolation**: Staging backend deployment doesn't affect production users
+
+**Production Environment:**
 - **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
+- **Access**: Open to all registered users
+
+**Staging Environment (Admin-Only):**
+- **Backend**: https://dev-api.unitedwerise.org  
+- **Frontend**: https://dev.unitedwerise.org
+- **Admin Dashboard**: https://dev.unitedwerise.org/admin-dashboard.html
+- **Access**: Requires admin login for all protected routes
+- **Purpose**: Safe testing of development branch changes
 
 ---
 
@@ -295,7 +316,7 @@ git commit -m "feat/fix/docs: Description of changes"
 git push origin development
 
 # GitHub Actions auto-deploys to STAGING in ~2-5 minutes
-# Staging URL: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
+# Staging URL: https://dev.unitedwerise.org
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 
@@ -347,21 +368,23 @@ az acr task list-runs --registry uwracr2425 --output table | head -3
 DIGEST=$(az acr repository show --name uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --query "digest" -o tsv)
 echo "Image digest: $DIGEST"
 
-# Step 9: Deploy with digest + release metadata (PREVENTS CACHING ISSUES)
+# Step 9: Deploy to STAGING backend with digest + release metadata
 az containerapp update \
-  --name unitedwerise-backend \
+  --name unitedwerise-backend-staging \
   --resource-group unitedwerise-rg \
   --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
-  --revision-suffix "rel-$GIT_SHA-$(date +%H%M%S)" \
+  --revision-suffix "stg-$GIT_SHA-$(date +%H%M%S)" \
   --set-env-vars \
+    NODE_ENV=staging \
+    STAGING_ENVIRONMENT=true \
     RELEASE_SHA=$GIT_SHA \
     RELEASE_DIGEST=$DIGEST \
     DOCKER_TAG=$DOCKER_TAG \
     DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Step 10: Force single-revision mode (prevents traffic split issues)
+# Step 10: Force single-revision mode for STAGING (prevents traffic split issues)
 az containerapp update \
-  --name unitedwerise-backend \
+  --name unitedwerise-backend-staging \
   --resource-group unitedwerise-rg \
   --revision-mode Single
 
@@ -369,17 +392,17 @@ az containerapp update \
 echo "Waiting for deployment to complete..."
 sleep 30
 
-# Check that health shows correct release SHA
-DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+# Check that STAGING health shows correct release SHA
+DEPLOYED_SHA=$(curl -s "https://dev-api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
 if [ "$DEPLOYED_SHA" = "$GIT_SHA" ]; then
-  echo "✅ Deployment verified: Release SHA matches ($GIT_SHA)"
+  echo "✅ STAGING deployment verified: Release SHA matches ($GIT_SHA)"
 else
-  echo "❌ Deployment issue: Expected SHA $GIT_SHA, got $DEPLOYED_SHA"
+  echo "❌ STAGING deployment issue: Expected SHA $GIT_SHA, got $DEPLOYED_SHA"
 fi
 
 # Check uptime (should be <60 seconds for fresh deployment)
-UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*' | cut -d':' -f2)
-echo "Container uptime: $UPTIME seconds"
+UPTIME=$(curl -s "https://dev-api.unitedwerise.org/health" | grep -o '"uptime":[^,]*' | cut -d':' -f2)
+echo "STAGING container uptime: $UPTIME seconds"
 ```
 
 #### 2️⃣-B Backend Production Deployment (ONLY WITH USER APPROVAL)
@@ -410,13 +433,14 @@ az acr task list-runs --registry uwracr2425 --output table | head -3
 DIGEST=$(az acr repository show --name uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --query "digest" -o tsv)
 echo "Image digest: $DIGEST"
 
-# Step 6: Deploy to PRODUCTION with digest + release metadata
+# Step 6: Deploy to PRODUCTION backend with digest + release metadata
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
   --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
   --revision-suffix "prod-$GIT_SHA-$(date +%H%M%S)" \
   --set-env-vars \
+    NODE_ENV=production \
     RELEASE_SHA=$GIT_SHA \
     RELEASE_DIGEST=$DIGEST \
     DOCKER_TAG=$DOCKER_TAG \
@@ -661,8 +685,15 @@ development    # Staging code (ALL development work happens here)
 
 **Deployment Mapping:**
 ```
-development branch → STAGING (https://delightful-smoke-097b2fa0f.3.azurestaticapps.net)
-main branch       → PRODUCTION (https://www.unitedwerise.org)
+development branch → STAGING 
+  - Frontend: https://dev.unitedwerise.org
+  - Backend:  https://dev-api.unitedwerise.org
+  - Access:   Admin-only for protected routes
+
+main branch → PRODUCTION
+  - Frontend: https://www.unitedwerise.org
+  - Backend:  https://api.unitedwerise.org  
+  - Access:   Open to all registered users
 ```
 
 **Commit Message Format:**
@@ -673,6 +704,88 @@ docs: Update documentation
 refactor: Code cleanup
 schema: Database changes
 ```
+
+---
+
+## 🎯 GOLD STANDARD STAGING ENVIRONMENT
+
+### 🏗️ Architecture Overview
+Our staging environment implements industry best practices with **environment-aware code** that behaves differently based on deployment context while maintaining a **single codebase**.
+
+**Key Innovation**: Same Docker image deployed to both environments with different environment variables controlling behavior.
+
+### 🔒 Security & Access Control
+
+**Production Environment:**
+- **Access**: Open to all registered users
+- **Authentication**: Standard user login system
+- **Purpose**: Public-facing application
+
+**Staging Environment:**
+- **Access**: Admin-only for all protected routes  
+- **Authentication**: Requires admin privileges after login
+- **Purpose**: Safe testing of development changes
+- **Protection**: Prevents non-admin users from affecting development testing
+
+### 🚀 Deployment Flow
+```
+Development Branch Changes
+        ↓
+    Automatic Deploy
+        ↓
+   Staging Environment (dev.unitedwerise.org)
+        ↓  
+    Admin Testing & Approval
+        ↓
+   Manual Merge to Main
+        ↓
+  Production Environment (www.unitedwerise.org)
+```
+
+### 🛠️ Technical Implementation
+
+**Frontend Environment Detection:**
+```javascript
+// Automatically routes API calls based on hostname
+if (hostname.includes('dev.unitedwerise.org')) {
+  return 'https://dev-api.unitedwerise.org/api';
+}
+```
+
+**Backend Environment-Aware Authentication:**
+```javascript
+// Same code, different behavior based on NODE_ENV
+if (process.env.NODE_ENV === 'staging') {
+  // Require admin access for all protected routes
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ 
+      error: 'This is a staging environment - admin access required.',
+      environment: 'staging'
+    });
+  }
+}
+```
+
+**Container Configuration:**
+- **Staging**: `NODE_ENV=staging` + `STAGING_ENVIRONMENT=true`
+- **Production**: `NODE_ENV=production`
+- **Same Docker Image**: Deployed to both with different environment variables
+
+### ✅ Benefits Achieved
+
+1. **True Isolation**: Development changes never impact production users
+2. **Zero Code Duplication**: Single codebase with conditional behavior
+3. **Professional URLs**: `dev.unitedwerise.org` vs Azure's auto-generated names
+4. **Cookie Domain Sharing**: Same `.unitedwerise.org` domain improves authentication
+5. **Industry Standard**: Standard staging → production deployment pipeline
+
+### 🧪 Testing Workflow
+
+1. **Deploy to Staging**: Push to development branch
+2. **Admin Testing**: Only admins can access protected staging routes
+3. **Verify Functionality**: Test all changes in isolated environment
+4. **User Approval**: Confirm staging deployment works correctly  
+5. **Production Deploy**: Merge to main only with explicit user permission
 
 ---
 

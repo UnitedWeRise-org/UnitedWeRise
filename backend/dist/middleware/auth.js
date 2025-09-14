@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireAdmin = exports.requireAuth = void 0;
+exports.requireStagingAuth = exports.requireAdmin = exports.requireAuth = void 0;
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
 ;
@@ -74,4 +74,26 @@ const requireAdmin = async (req, res, next) => {
     next();
 };
 exports.requireAdmin = requireAdmin;
+// Environment-aware authentication for staging
+const requireStagingAuth = async (req, res, next) => {
+    // If not in staging environment, proceed with normal auth
+    if (process.env.NODE_ENV !== 'staging' && !process.env.STAGING_ENVIRONMENT) {
+        return (0, exports.requireAuth)(req, res, next);
+    }
+    // In staging environment, require admin access for all protected routes
+    await (0, exports.requireAuth)(req, res, async (authError) => {
+        if (authError) {
+            return next(authError);
+        }
+        // After successful auth, check for admin status in staging
+        if (!req.user?.isAdmin) {
+            return res.status(403).json({
+                error: 'This is a staging environment - admin access required.',
+                environment: 'staging'
+            });
+        }
+        next();
+    });
+};
+exports.requireStagingAuth = requireStagingAuth;
 //# sourceMappingURL=auth.js.map

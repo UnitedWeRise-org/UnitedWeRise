@@ -12,4 +12,5 @@ export interface AuthRequest extends Request {
 }
 export declare const requireAuth: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 export declare const requireAdmin: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export declare const requireStagingAuth: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 //# sourceMappingURL=auth.d.ts.map
