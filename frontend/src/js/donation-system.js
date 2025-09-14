@@ -630,7 +630,7 @@ class DonationSystem {
                 }, 3000);
                 
             } else {
-                throw new Error(result.error || 'Failed to create donation');
+                throw new Error(response.data?.error || 'Failed to create donation');
             }
             
         } catch (error) {
