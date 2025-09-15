@@ -369,6 +369,11 @@
         margin-left: 200px;
     }
     
+    /* Disable map container on mobile */
+    #mapContainer {
+        display: none !important;
+    }
+    
     /* Hide donation widget on mobile */
     .donation-widget {
         display: none !important;

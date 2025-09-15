@@ -10,6 +10,13 @@ function initMobileNavigation() {
     if (window.innerWidth <= 767) {
         setupMobileInterface();
         setupMobileSidebarEvents();
+        
+        // Override map functions to prevent map from showing on mobile
+        if (window.map) {
+            window.map.showMap = function() {
+                console.log('Map disabled on mobile');
+            };
+        }
     }
     
     // Listen for window resize to handle orientation changes
@@ -27,6 +34,12 @@ function handleMobileResize() {
 function setupMobileInterface() {
     // Remove any existing mobile interface
     removeMobileInterface();
+    
+    // Hide map container on mobile
+    const mapContainer = document.getElementById('mapContainer');
+    if (mapContainer) {
+        mapContainer.style.display = 'none';
+    }
     
     // Create mobile top bar
     const mobileTopBar = document.createElement('div');
