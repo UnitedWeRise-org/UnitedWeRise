@@ -132,7 +132,7 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 55px; /* Reduced from 60px to 55px */
+        height: 50px; /* Further reduced to match sidebar better */
         background: #202e0c;
         display: flex;
         align-items: center;
@@ -170,10 +170,10 @@
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px; /* Increased gap */
         color: white;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 16px; /* Increased from 14px */
     }
     
     .mobile-logo-container .logo {
@@ -183,8 +183,8 @@
     }
     
     .mobile-logo-container .logo-circle {
-        width: 30px;
-        height: 30px;
+        width: 35px; /* Increased from 30px */
+        height: 35px; /* Increased from 30px */
         border-radius: 50%;
     }
     
@@ -192,6 +192,7 @@
     .mobile-logo-container .site-title-right {
         color: white;
         font-weight: bold;
+        font-size: 16px; /* Explicit larger size */
     }
     
     .mobile-logo-container .beta-badge {
@@ -199,7 +200,7 @@
         color: #002868;
         padding: 1px 4px;
         border-radius: 3px;
-        font-size: 8px;
+        font-size: 8px; /* Keep beta small */
         margin-left: 2px;
         font-weight: bold;
     }
@@ -208,7 +209,7 @@
     .mobile-sidebar {
         position: fixed;
         left: 0;
-        top: 55px; /* Below top bar - reduced from 60px */
+        top: 50px; /* Below top bar - matches new height */
         bottom: 0;
         background: #4b5c09;
         transition: width 0.3s ease;
@@ -258,7 +259,7 @@
     /* Mobile MOTD - Full Screen */
     #google-cta-panel {
         position: fixed !important;
-        top: 55px !important; /* Below mobile top bar - reduced from 60px */
+        top: 50px !important; /* Below mobile top bar - matches new height */
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
@@ -369,14 +370,14 @@
     
     /* Main content adjustment for mobile sidebar */
     .mobile-content-wrapper {
-        margin-top: 55px; /* Space for top bar */
+        margin-top: 50px; /* Space for top bar */
         margin-left: 30px; /* Default: collapsed sidebar */
         transition: margin-left 0.3s ease;
         padding: 0; /* Remove padding to prevent overflow */
         overflow-x: hidden; /* Prevent horizontal scrolling */
         max-width: calc(100vw - 30px); /* Ensure content doesn't overflow */
         box-sizing: border-box;
-        height: calc(100vh - 55px);
+        height: calc(100vh - 50px);
     }
     
     .mobile-sidebar.icons-only ~ .mobile-content-wrapper {
@@ -413,8 +414,8 @@
         z-index: 100;
         background: white;
         border-bottom: 1px solid #eee;
-        margin: 0 -0.5rem 1rem -0.5rem; /* Extend to edges */
-        padding: 0.75rem;
+        margin: 0 -0.5rem 0.5rem -0.5rem; /* Reduced bottom margin */
+        padding: 0.5rem; /* Reduced padding */
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     

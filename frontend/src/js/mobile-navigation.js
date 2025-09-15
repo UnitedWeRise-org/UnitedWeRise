@@ -105,6 +105,9 @@ function setupMobileInterface() {
     // Wrap main content for proper spacing
     wrapMainContent();
     
+    // Update top bar height reference in JavaScript
+    document.documentElement.style.setProperty('--mobile-top-bar-height', '50px');
+    
     // Set initial view based on login status
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
