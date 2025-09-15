@@ -34,6 +34,34 @@
 
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS
 
+### 🗣️ COLLABORATIVE LANGUAGE PROTOCOL
+**CRITICAL**: When the user uses collaborative words, they indicate a desire for DISCUSSION ONLY, not implementation:
+
+**Collaborative Keywords That Mean "DISCUSS ONLY":**
+- "Let's discuss..." = Present options and analysis, DO NOT implement
+- "Let's plan..." = Create strategy and approach, DO NOT execute
+- "Let's brainstorm..." = Generate ideas and possibilities, DO NOT build
+- "Let's figure out..." = Analyze and evaluate options, DO NOT code
+- "Let's strategize..." = Develop approach and timeline, DO NOT start work
+- "Can we talk about..." = Discussion mode only
+- "What do you think about..." = Opinion and analysis requested
+- "How should we approach..." = Strategy discussion, not action
+
+**REQUIRED BEHAVIOR**: When these words appear, ALWAYS:
+1. Present analysis, options, and recommendations
+2. Ask clarifying questions
+3. Wait for explicit implementation approval
+4. NEVER jump to coding or making changes
+
+**Implementation Only Begins With**:
+- "Implement this..."
+- "Make these changes..."
+- "Fix this..."
+- "Add this feature..."
+- "Go ahead and..."
+- "Start building..."
+- Explicit approval after discussion
+
 ### 🔥 MANDATORY DEVELOPMENT BRANCH WORKFLOW (NEVER WORK ON MAIN)
 **ABSOLUTE REQUIREMENT - ALL development work MUST be done on development branch:**
 
