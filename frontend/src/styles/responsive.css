@@ -116,19 +116,19 @@
         box-sizing: border-box !important;
     }
     
-    /* Hide desktop elements that don't work on mobile */
-    .sidebar {
-        display: none;
-    }
-    
-    /* Hide sidebar toggle button on mobile */
-    .sidebar-toggle-edge {
-        display: none;
-    }
-    
-    /* Hide desktop top bar on mobile - we use mobile-top-bar instead */
-    .top-bar {
+    /* Hide desktop elements IMMEDIATELY on mobile to prevent flicker */
+    .sidebar,
+    .sidebar-toggle-edge,
+    .top-bar,
+    .desktop-nav,
+    .desktop-search,
+    .container > .main {
         display: none !important;
+    }
+    
+    /* Show mobile content wrapper */
+    .mobile-content-wrapper {
+        display: block !important;
     }
     
     /* Mobile Top Bar - Match main site */
@@ -178,7 +178,7 @@
         gap: 10px; /* Increased gap */
         color: white;
         font-weight: bold;
-        font-size: 16px; /* Increased from 14px */
+        font-size: 18px; /* Increased by ~10% from 16px */
     }
     
     .mobile-logo-container .logo {
@@ -188,8 +188,8 @@
     }
     
     .mobile-logo-container .logo-circle {
-        width: 35px; /* Increased from 30px */
-        height: 35px; /* Increased from 30px */
+        width: 42px; /* Increased by 20% from 35px */
+        height: 42px; /* Increased by 20% from 35px */
         border-radius: 50%;
     }
     
@@ -197,7 +197,7 @@
     .mobile-logo-container .site-title-right {
         color: white;
         font-weight: bold;
-        font-size: 16px; /* Explicit larger size */
+        font-size: 18px; /* Increased by ~10% */
     }
     
     .mobile-logo-container .beta-badge {
