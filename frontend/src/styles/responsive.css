@@ -209,7 +209,7 @@
     .mobile-sidebar {
         position: fixed;
         left: 0;
-        top: 50px; /* Below top bar - matches new height */
+        top: 51px; /* Below top bar - starts after 50px top bar */
         bottom: 0;
         background: #4b5c09;
         transition: width 0.3s ease;
@@ -259,7 +259,7 @@
     /* Mobile MOTD - Full Screen */
     #google-cta-panel {
         position: fixed !important;
-        top: 50px !important; /* Below mobile top bar - matches new height */
+        top: 51px !important; /* Below mobile top bar - starts after top bar */
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
@@ -370,14 +370,14 @@
     
     /* Main content adjustment for mobile sidebar */
     .mobile-content-wrapper {
-        margin-top: 50px; /* Space for top bar */
+        margin-top: 45px; /* Reduced to move posting box higher on screen */
         margin-left: 30px; /* Default: collapsed sidebar */
         transition: margin-left 0.3s ease;
         padding: 0; /* Remove padding to prevent overflow */
         overflow-x: hidden; /* Prevent horizontal scrolling */
         max-width: calc(100vw - 30px); /* Ensure content doesn't overflow */
         box-sizing: border-box;
-        height: calc(100vh - 50px);
+        height: calc(100vh - 45px); /* Adjust for new positioning */
     }
     
     .mobile-sidebar.icons-only ~ .mobile-content-wrapper {
