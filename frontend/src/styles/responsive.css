@@ -214,7 +214,7 @@
     .mobile-sidebar {
         position: fixed;
         left: 0;
-        top: 51px; /* Below top bar - starts after 50px top bar */
+        top: 50px; /* Flush with bottom of 50px top bar */
         bottom: 0;
         background: #4b5c09;
         transition: width 0.3s ease;
@@ -375,23 +375,25 @@
     
     /* Main content adjustment for mobile sidebar */
     .mobile-content-wrapper {
-        margin-top: 45px; /* Reduced to move posting box higher on screen */
-        margin-left: 30px; /* Default: collapsed sidebar */
-        transition: margin-left 0.3s ease;
+        position: fixed; /* Fix the wrapper itself */
+        top: 50px; /* Start right after top bar */
+        left: 30px; /* Default: collapsed sidebar */
+        transition: left 0.3s ease; /* Animate left instead of margin-left */
         padding: 0; /* Remove padding to prevent overflow */
-        overflow-x: hidden; /* Prevent horizontal scrolling */
+        overflow: hidden; /* Prevent all scrolling - only inner feed scrolls */
         max-width: calc(100vw - 30px); /* Ensure content doesn't overflow */
         box-sizing: border-box;
-        height: calc(100vh - 45px); /* Adjust for new positioning */
+        height: calc(100vh - 50px); /* Full height minus top bar */
+        right: 0; /* Extend to right edge */
     }
     
     .mobile-sidebar.icons-only ~ .mobile-content-wrapper {
-        margin-left: 60px;
+        left: 60px; /* Use left instead of margin-left for fixed positioning */
         max-width: calc(100vw - 60px); /* Adjust for icons sidebar */
     }
     
     .mobile-sidebar.expanded ~ .mobile-content-wrapper {
-        margin-left: 200px;
+        left: 200px; /* Use left instead of margin-left for fixed positioning */
         max-width: calc(100vw - 200px); /* Adjust for expanded sidebar */
     }
     
@@ -402,26 +404,28 @@
         max-width: 100%;
         margin: 0;
         padding: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Container doesn't scroll */
     }
     
     .mobile-content-wrapper .posts-feed {
-        height: 100%;
-        overflow-y: auto;
+        flex: 1; /* Take remaining space after posting box */
+        overflow-y: auto; /* Only feed content scrolls */
         overflow-x: hidden;
         padding: 0.5rem;
         box-sizing: border-box;
     }
     
-    /* Mobile posting composer - higher and sticky */
+    /* Mobile posting composer - fixed at top, no scrolling */
     .mobile-content-wrapper .sticky-composer-wrapper {
-        position: sticky;
-        top: 0;
-        z-index: 100;
+        flex-shrink: 0; /* Don't shrink when space is tight */
         background: white;
         border-bottom: 1px solid #eee;
-        margin: 0 -0.5rem 0.5rem -0.5rem; /* Reduced bottom margin */
+        margin: 0; /* No margins to maximize space */
         padding: 0.5rem; /* Reduced padding */
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        z-index: 100;
     }
     
     .mobile-content-wrapper .quick-post-composer {
