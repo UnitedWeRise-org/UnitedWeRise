@@ -126,6 +126,11 @@
         display: none;
     }
     
+    /* Hide desktop top bar on mobile - we use mobile-top-bar instead */
+    .top-bar {
+        display: none !important;
+    }
+    
     /* Mobile Top Bar - Match main site */
     .mobile-top-bar {
         position: fixed;
@@ -450,38 +455,7 @@
         display: block !important;
     }
     
-    /* Adjust top bar for mobile */
-    .top-bar {
-        height: 60px;
-        padding: 0.5rem;
-    }
-    
-    .top-bar-left {
-        flex: 0;
-    }
-    
-    .logo {
-        font-size: 1rem;
-    }
-    
-    .logo-circle {
-        height: 45px;
-        width: 45px;
-    }
-    
-    .desktop-nav {
-        gap: 0.5rem;
-    }
-    
-    .nav-link {
-        font-size: 0.9rem;
-        padding: 0.25rem 0.5rem;
-    }
-    
-    .login-btn {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.75rem;
-    }
+    /* Desktop top bar adjustments removed - we hide desktop top bar on mobile */
     
     /* Main container adjustments */
     .container {
@@ -679,9 +653,7 @@
         height: calc(100vh - 110px);
     }
     
-    .top-bar {
-        height: 50px;
-    }
+    /* Removed .top-bar adjustment - desktop top bar is hidden on mobile */
     
     .container {
         margin-top: 50px;
