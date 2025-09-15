@@ -113,14 +113,14 @@
         display: none;
     }
     
-    /* Mobile Top Bar */
+    /* Mobile Top Bar - Match main site */
     .mobile-top-bar {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         height: 60px;
-        background: linear-gradient(135deg, #002868 0%, #bf0a30 100%);
+        background: #202e0c;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -149,18 +149,44 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
+    }
+    
+    /* Mobile title styling - copy from main site */
+    .mobile-logo-container .site-title-container {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         color: white;
         font-weight: bold;
-        font-size: 16px;
+        font-size: 14px;
+    }
+    
+    .mobile-logo-container .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mobile-logo-container .logo-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+    }
+    
+    .mobile-logo-container .site-title-left,
+    .mobile-logo-container .site-title-right {
+        color: white;
+        font-weight: bold;
     }
     
     .mobile-logo-container .beta-badge {
         background: #ffd700;
         color: #002868;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-        margin-left: 5px;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8px;
+        margin-left: 2px;
         font-weight: bold;
     }
     
@@ -170,7 +196,7 @@
         left: 0;
         top: 60px; /* Below top bar */
         bottom: 0;
-        background: #002868;
+        background: #4b5c09;
         transition: width 0.3s ease;
         z-index: 1500;
         box-shadow: 2px 0 10px rgba(0,0,0,0.2);
@@ -213,6 +239,58 @@
     /* Hide old mobile nav */
     .mobile-nav {
         display: none !important;
+    }
+    
+    /* Mobile MOTD - Full Screen */
+    #google-cta-panel {
+        position: fixed !important;
+        top: 60px !important; /* Below mobile top bar */
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        background: rgba(255, 255, 255, 0.98) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        z-index: 3000 !important;
+        padding: 20px !important;
+        overflow-y: auto !important;
+    }
+    
+    #motd-close-btn {
+        position: absolute !important;
+        top: 15px !important;
+        right: 15px !important;
+        font-size: 24px !important;
+        background: rgba(0, 0, 0, 0.1) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 30px !important;
+        height: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+    
+    #motd-content {
+        margin-top: 40px !important;
+        padding: 0 10px !important;
+    }
+    
+    #motd-title {
+        font-size: 18px !important;
+        font-weight: bold !important;
+        margin-bottom: 15px !important;
+        color: #2c3e50 !important;
+    }
+    
+    #motd-body {
+        font-size: 16px !important;
+        line-height: 1.6 !important;
+        color: #495057 !important;
     }
     
     /* Mobile Sidebar Navigation Items */

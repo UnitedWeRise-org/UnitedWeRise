@@ -36,8 +36,13 @@ function setupMobileInterface() {
             <input type="text" class="mobile-search-input" placeholder="Search..." />
         </div>
         <div class="mobile-logo-container">
-            <span>United 🗽 We Rise</span>
-            <span class="beta-badge">BETA</span>
+            <div class="site-title-container" onclick="window.location.href='/'" title="United We Rise - Home">
+                <span class="site-title-left">United</span>
+                <div class="logo">
+                    <img src="UWR Logo on Circle.png" alt="United We Rise" class="logo-circle">
+                </div>
+                <span class="site-title-right">We Ris<span class="rise-e">e<span class="beta-badge">Beta</span></span></span>
+            </div>
         </div>
     `;
     
@@ -301,13 +306,8 @@ function showMobileCivic() {
 }
 
 function showMobileMap() {
-    const mapContainer = document.getElementById('mapContainer');
-    if (mapContainer) {
-        mapContainer.classList.add('mobile-active');
-        mapContainer.style.display = 'block';
-    } else {
-        showTemporaryView('Map', 'Interactive map will appear here.');
-    }
+    // Don't show map by default - it's not functional yet
+    showTemporaryView('Map', 'Interactive map feature coming soon. This feature is currently in development.');
 }
 
 function showMobileDonate() {
