@@ -113,41 +113,182 @@
         display: none;
     }
     
-    /* Create mobile navigation */
-    .mobile-nav {
+    /* Mobile Top Bar */
+    .mobile-top-bar {
         position: fixed;
-        bottom: 0;
+        top: 0;
         left: 0;
         right: 0;
-        background: #4b5c09;
         height: 60px;
+        background: linear-gradient(135deg, #002868 0%, #bf0a30 100%);
         display: flex;
-        justify-content: space-around;
         align-items: center;
-        z-index: 1000;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        justify-content: space-between;
+        padding: 0 10px;
+        z-index: 2000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     
-    .mobile-nav-item {
+    .mobile-search-container {
+        flex: 0 0 auto;
+        margin-right: 10px;
+    }
+    
+    .mobile-search-input {
+        width: 120px;
+        height: 35px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.9);
+        font-size: 14px;
+    }
+    
+    .mobile-logo-container {
+        flex: 1;
         display: flex;
-        flex-direction: column;
         align-items: center;
+        justify-content: flex-end;
         color: white;
-        font-size: 0.7rem;
-        text-decoration: none;
-        padding: 0.25rem;
-        border-radius: 4px;
-        transition: background 0.2s;
+        font-weight: bold;
+        font-size: 16px;
     }
     
-    .mobile-nav-item:hover,
-    .mobile-nav-item.active {
+    .mobile-logo-container .beta-badge {
+        background: #ffd700;
+        color: #002868;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        margin-left: 5px;
+        font-weight: bold;
+    }
+    
+    /* Mobile Sidebar - 3 states: collapsed, icons, expanded */
+    .mobile-sidebar {
+        position: fixed;
+        left: 0;
+        top: 60px; /* Below top bar */
+        bottom: 0;
+        background: #002868;
+        transition: width 0.3s ease;
+        z-index: 1500;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        overflow: hidden;
+    }
+    
+    /* State 1: Fully Collapsed */
+    .mobile-sidebar.collapsed {
+        width: 30px;
+    }
+    
+    /* State 2: Icons Only */
+    .mobile-sidebar.icons-only {
+        width: 60px;
+    }
+    
+    /* State 3: Expanded */
+    .mobile-sidebar.expanded {
+        width: 200px;
+    }
+    
+    /* Sidebar Toggle Button */
+    .mobile-sidebar-toggle {
+        position: absolute;
+        right: 5px;
+        top: 10px;
+        width: 20px;
+        height: 20px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 4px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+    }
+    
+    /* Hide old mobile nav */
+    .mobile-nav {
+        display: none !important;
+    }
+    
+    /* Mobile Sidebar Navigation Items */
+    .mobile-sidebar-nav {
+        padding-top: 40px; /* Space for toggle button */
+    }
+    
+    .mobile-sidebar-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        color: white;
+        text-decoration: none;
+        transition: background 0.2s;
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+    }
+    
+    .mobile-sidebar-item:hover,
+    .mobile-sidebar-item.active {
         background: rgba(255,255,255,0.1);
     }
     
-    .mobile-nav-icon {
-        font-size: 1.5rem;
-        margin-bottom: 0.25rem;
+    .mobile-sidebar-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #ffd700;
+    }
+    
+    .mobile-sidebar-icon {
+        font-size: 24px;
+        min-width: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mobile-sidebar-label {
+        margin-left: 15px;
+        font-size: 16px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .mobile-sidebar.expanded .mobile-sidebar-label {
+        opacity: 1;
+    }
+    
+    /* Adjust icon size based on sidebar state */
+    .mobile-sidebar.collapsed .mobile-sidebar-icon {
+        display: none;
+    }
+    
+    .mobile-sidebar.icons-only .mobile-sidebar-icon {
+        font-size: 20px;
+    }
+    
+    /* Main content adjustment for mobile sidebar */
+    .mobile-content-wrapper {
+        margin-top: 60px; /* Space for top bar */
+        margin-left: 30px; /* Default: collapsed sidebar */
+        transition: margin-left 0.3s ease;
+        padding: 10px;
+    }
+    
+    .mobile-sidebar.icons-only ~ .mobile-content-wrapper {
+        margin-left: 60px;
+    }
+    
+    .mobile-sidebar.expanded ~ .mobile-content-wrapper {
+        margin-left: 200px;
     }
     
     /* Hide donation widget on mobile */

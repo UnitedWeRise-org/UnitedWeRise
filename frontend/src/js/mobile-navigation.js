@@ -1,13 +1,15 @@
 /* United We Rise - Mobile Navigation System */
 
-// Mobile navigation state management
+// Mobile sidebar state management
+let mobileSidebarState = 'icons-only'; // 'collapsed', 'icons-only', 'expanded'
 let currentMobileView = 'feed';
 
 // Initialize mobile navigation
 function initMobileNavigation() {
     // Only initialize on mobile screens
     if (window.innerWidth <= 767) {
-        setupMobileView();
+        setupMobileInterface();
+        setupMobileSidebarEvents();
     }
     
     // Listen for window resize to handle orientation changes
@@ -16,354 +18,378 @@ function initMobileNavigation() {
 
 function handleMobileResize() {
     if (window.innerWidth <= 767) {
-        setupMobileView();
+        setupMobileInterface();
     } else {
-        resetDesktopView();
+        removeMobileInterface();
     }
 }
 
-function setupMobileView() {
-    // Hide all desktop panels and search by default
-    hideAllDesktopElements();
+function setupMobileInterface() {
+    // Remove any existing mobile interface
+    removeMobileInterface();
     
-    // Show the current mobile view
-    showMobileView(currentMobileView);
-}
-
-function resetDesktopView() {
-    // Show desktop elements
-    const sidebar = document.querySelector('.sidebar');
-    const searchContainer = document.querySelector('.search-container');
-    const mapContainer = document.getElementById('mapContainer');
+    // Create mobile top bar
+    const mobileTopBar = document.createElement('div');
+    mobileTopBar.className = 'mobile-top-bar';
+    mobileTopBar.innerHTML = `
+        <div class="mobile-search-container">
+            <input type="text" class="mobile-search-input" placeholder="Search..." />
+        </div>
+        <div class="mobile-logo-container">
+            <span>United 🗽 We Rise</span>
+            <span class="beta-badge">BETA</span>
+        </div>
+    `;
     
-    if (sidebar) sidebar.style.display = 'flex';
-    if (searchContainer) searchContainer.style.display = 'none'; // Keep hidden until search is opened
-    if (mapContainer) {
-        mapContainer.classList.remove('mobile-active');
-        mapContainer.style.display = 'block';
+    // Create mobile sidebar
+    const mobileSidebar = document.createElement('div');
+    mobileSidebar.className = `mobile-sidebar ${mobileSidebarState}`;
+    mobileSidebar.innerHTML = `
+        <button class="mobile-sidebar-toggle" onclick="toggleMobileSidebar()">
+            <span id="sidebar-toggle-icon">›</span>
+        </button>
+        <nav class="mobile-sidebar-nav">
+            <a href="#" class="mobile-sidebar-item active" onclick="switchMobileView('feed')">
+                <div class="mobile-sidebar-icon">📰</div>
+                <div class="mobile-sidebar-label">Feed</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('trending')">
+                <div class="mobile-sidebar-icon">📈</div>
+                <div class="mobile-sidebar-label">Trending</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('messages')">
+                <div class="mobile-sidebar-icon">💬</div>
+                <div class="mobile-sidebar-label">Messages</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('civic')">
+                <div class="mobile-sidebar-icon">🏛️</div>
+                <div class="mobile-sidebar-label">Civic</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('map')">
+                <div class="mobile-sidebar-icon">🗺️</div>
+                <div class="mobile-sidebar-label">Map</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('donate')">
+                <div class="mobile-sidebar-icon">💰</div>
+                <div class="mobile-sidebar-label">Donate</div>
+            </a>
+            <a href="#" class="mobile-sidebar-item" onclick="switchMobileView('profile')">
+                <div class="mobile-sidebar-icon">👤</div>
+                <div class="mobile-sidebar-label">Profile</div>
+            </a>
+        </nav>
+    `;
+    
+    // Add mobile interface to body
+    document.body.appendChild(mobileTopBar);
+    document.body.appendChild(mobileSidebar);
+    
+    // Wrap main content for proper spacing
+    wrapMainContent();
+    
+    // Set initial view based on login status
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        // Show login if not authenticated
+        showMobileLogin();
+    } else {
+        // Show feed if authenticated
+        switchMobileView('feed');
     }
 }
 
-function hideAllDesktopElements() {
-    const searchContainer = document.querySelector('.search-container');
-    const profilePanel = document.querySelector('.profile-panel');
-    const messagesContainer = document.querySelector('.messages-container');
-    const mapContainer = document.getElementById('mapContainer');
+function removeMobileInterface() {
+    // Remove mobile top bar
+    const topBar = document.querySelector('.mobile-top-bar');
+    if (topBar) topBar.remove();
     
-    if (searchContainer) searchContainer.style.display = 'none';
-    if (profilePanel) profilePanel.style.display = 'none';
-    if (messagesContainer) messagesContainer.style.display = 'none';
-    if (mapContainer) mapContainer.classList.remove('mobile-active');
+    // Remove mobile sidebar
+    const sidebar = document.querySelector('.mobile-sidebar');
+    if (sidebar) sidebar.remove();
+    
+    // Unwrap main content
+    unwrapMainContent();
 }
 
-function showMobileView(view) {
-    // Hide all views first
+function wrapMainContent() {
+    // Check if already wrapped
+    if (document.querySelector('.mobile-content-wrapper')) return;
+    
+    // Get main content areas
+    const mainContent = document.querySelector('.main');
+    if (!mainContent) return;
+    
+    // Create wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mobile-content-wrapper';
+    
+    // Wrap the main content
+    mainContent.parentNode.insertBefore(wrapper, mainContent);
+    wrapper.appendChild(mainContent);
+}
+
+function unwrapMainContent() {
+    const wrapper = document.querySelector('.mobile-content-wrapper');
+    if (!wrapper) return;
+    
+    const mainContent = wrapper.querySelector('.main');
+    if (mainContent) {
+        wrapper.parentNode.insertBefore(mainContent, wrapper);
+    }
+    wrapper.remove();
+}
+
+function setupMobileSidebarEvents() {
+    // Add swipe gesture support for sidebar
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, false);
+    
+    document.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipeGesture();
+    }, false);
+    
+    function handleSwipeGesture() {
+        const swipeThreshold = 50;
+        const swipeDistance = touchEndX - touchStartX;
+        
+        if (Math.abs(swipeDistance) > swipeThreshold) {
+            if (swipeDistance > 0 && touchStartX < 50) {
+                // Swipe right from left edge - expand sidebar
+                if (mobileSidebarState === 'collapsed') {
+                    setMobileSidebarState('icons-only');
+                } else if (mobileSidebarState === 'icons-only') {
+                    setMobileSidebarState('expanded');
+                }
+            } else if (swipeDistance < 0) {
+                // Swipe left - collapse sidebar
+                if (mobileSidebarState === 'expanded') {
+                    setMobileSidebarState('icons-only');
+                } else if (mobileSidebarState === 'icons-only') {
+                    setMobileSidebarState('collapsed');
+                }
+            }
+        }
+    }
+}
+
+// Toggle mobile sidebar state
+window.toggleMobileSidebar = function() {
+    if (mobileSidebarState === 'collapsed') {
+        setMobileSidebarState('icons-only');
+    } else if (mobileSidebarState === 'icons-only') {
+        setMobileSidebarState('expanded');
+    } else {
+        setMobileSidebarState('collapsed');
+    }
+};
+
+function setMobileSidebarState(state) {
+    mobileSidebarState = state;
+    const sidebar = document.querySelector('.mobile-sidebar');
+    if (!sidebar) return;
+    
+    // Remove all state classes
+    sidebar.classList.remove('collapsed', 'icons-only', 'expanded');
+    // Add new state class
+    sidebar.classList.add(state);
+    
+    // Update toggle icon
+    const toggleIcon = document.getElementById('sidebar-toggle-icon');
+    if (toggleIcon) {
+        if (state === 'collapsed') {
+            toggleIcon.textContent = '›';
+        } else if (state === 'icons-only') {
+            toggleIcon.textContent = '‹›';
+        } else {
+            toggleIcon.textContent = '‹';
+        }
+    }
+    
+    // Save preference
+    localStorage.setItem('mobileSidebarState', state);
+}
+
+// Switch between mobile views
+window.switchMobileView = function(view) {
+    currentMobileView = view;
+    
+    // Update active state
+    document.querySelectorAll('.mobile-sidebar-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Find and activate the correct item
+    document.querySelectorAll('.mobile-sidebar-item').forEach(item => {
+        const label = item.querySelector('.mobile-sidebar-label');
+        if (label && label.textContent.toLowerCase() === view) {
+            item.classList.add('active');
+        }
+    });
+    
+    // Hide all desktop panels
     hideAllDesktopElements();
     
-    // Update navigation active state
-    updateMobileNavActive(view);
-    
-    // Show the requested view
+    // Show the appropriate view
     switch (view) {
         case 'feed':
             showMobileFeed();
             break;
-        case 'search':
-            showMobileSearch();
-            break;
-        case 'map':
-            showMobileMap();
-            break;
-        case 'profile':
-            showMobileProfile();
+        case 'trending':
+            showMobileTrending();
             break;
         case 'messages':
             showMobileMessages();
             break;
+        case 'civic':
+            showMobileCivic();
+            break;
+        case 'map':
+            showMobileMap();
+            break;
+        case 'donate':
+            showMobileDonate();
+            break;
+        case 'profile':
+            showMobileProfile();
+            break;
     }
     
-    currentMobileView = view;
-}
-
-function updateMobileNavActive(activeView) {
-    // Remove active class from all nav items
-    const navItems = document.querySelectorAll('.mobile-nav-item');
-    navItems.forEach(item => item.classList.remove('active'));
-    
-    // Add active class to current view
-    const viewMap = {
-        'feed': 0,
-        'search': 1,
-        'map': 2,
-        'profile': 3,
-        'messages': 4
-    };
-    
-    if (navItems[viewMap[activeView]]) {
-        navItems[viewMap[activeView]].classList.add('active');
+    // Auto-collapse sidebar after selection on very small screens
+    if (window.innerWidth < 400 && mobileSidebarState === 'expanded') {
+        setMobileSidebarState('icons-only');
     }
-}
+};
 
-// Mobile view functions (expose globally for HTML onclick handlers)
-window.showMobileFeed = function showMobileFeed() {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    hideAllDesktopElements();
-    
-    // Show posts container (should be visible by default in mobile layout)
+// Individual view functions
+function showMobileFeed() {
     const postsContainer = document.querySelector('.posts-container');
     if (postsContainer) {
-        postsContainer.style.display = 'flex';
-    }
-    
-    updateMobileNavActive('feed');
-    currentMobileView = 'feed';
-};
-
-window.showMobileSearch = function showMobileSearch() {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    hideAllDesktopElements();
-    
-    // Show search container
-    const searchContainer = document.querySelector('.search-container');
-    if (searchContainer) {
-        searchContainer.style.display = 'flex';
-        // Focus on search input
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            setTimeout(() => searchInput.focus(), 100);
+        postsContainer.style.display = 'block';
+        // Trigger feed loading if needed
+        if (typeof loadMyFeedPosts === 'function') {
+            loadMyFeedPosts();
         }
     }
-    
-    updateMobileNavActive('search');
-    currentMobileView = 'search';
-};
+}
 
-window.showMobileMap = function showMobileMap() {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    hideAllDesktopElements();
-    
-    // Show map container as full screen
-    const mapContainer = document.getElementById('mapContainer');
-    if (mapContainer) {
-        mapContainer.classList.add('mobile-active');
-        mapContainer.style.display = 'block';
-        
-        // Trigger map resize after showing
-        setTimeout(() => {
-            if (window.map) {
-                window.map.invalidateSize();
-            }
-        }, 100);
+function showMobileTrending() {
+    const trendingContainer = document.querySelector('.trending-updates');
+    if (trendingContainer) {
+        trendingContainer.style.display = 'block';
     }
-    
-    updateMobileNavActive('map');
-    currentMobileView = 'map';
-};
+    // Create temporary trending view if container doesn't exist
+    showTemporaryView('Trending', 'Trending topics and discussions will appear here.');
+}
 
-window.hideMobileMap = function hideMobileMap() {
-    const mapContainer = document.getElementById('mapContainer');
-    if (mapContainer) {
-        mapContainer.classList.remove('mobile-active');
-    }
-    
-    // Return to feed view
-    showMobileFeed();
-};
-
-window.showMobileProfile = function showMobileProfile() {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    hideAllDesktopElements();
-    
-    // Show profile panel
-    const profilePanel = document.querySelector('.profile-panel');
-    if (profilePanel) {
-        profilePanel.style.display = 'block';
-    } else {
-        // If profile panel doesn't exist, use the desktop profile function
-        if (typeof showMyProfile === 'function') {
-            showMyProfile();
-        }
-    }
-    
-    updateMobileNavActive('profile');
-    currentMobileView = 'profile';
-};
-
-window.showMobileMessages = function showMobileMessages() {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    hideAllDesktopElements();
-    
-    // Show messages container
+function showMobileMessages() {
     const messagesContainer = document.querySelector('.messages-container');
     if (messagesContainer) {
         messagesContainer.style.display = 'block';
     } else {
-        // If messages container doesn't exist, load conversations
-        if (typeof loadConversations === 'function') {
-            loadConversations();
-        }
+        showTemporaryView('Messages', 'Your messages will appear here.');
     }
-    
-    updateMobileNavActive('messages');
-    currentMobileView = 'messages';
 }
 
-// Close mobile panels when clicking outside (for search, profile, messages)
-document.addEventListener('click', function(event) {
-    if (window.innerWidth > 767) return; // Only on mobile
-    
-    // If clicking on mobile nav, don't close anything
-    if (event.target.closest('.mobile-nav')) return;
-    
-    // Close modals and overlays when clicking outside
-    const target = event.target;
-    if (!target.closest('.search-container') && 
-        !target.closest('.profile-panel') && 
-        !target.closest('.messages-container')) {
-        
-        // Only close if we're not in feed view
-        if (currentMobileView !== 'feed') {
-            showMobileFeed();
-        }
-    }
-});
+function showMobileCivic() {
+    // Show civic engagement features
+    showTemporaryView('Civic Engagement', 'Elections, officials, and civic tools will appear here.');
+}
 
-// Prevent body scrolling when mobile map is active
-function toggleBodyScroll(disable) {
-    if (disable) {
-        document.body.style.overflow = 'hidden';
+function showMobileMap() {
+    const mapContainer = document.getElementById('mapContainer');
+    if (mapContainer) {
+        mapContainer.classList.add('mobile-active');
+        mapContainer.style.display = 'block';
     } else {
-        document.body.style.overflow = '';
+        showTemporaryView('Map', 'Interactive map will appear here.');
     }
 }
 
-// Check if user is logged in (using current user data)
-function isUserLoggedIn() {
-    return window.currentUser !== null && window.currentUser !== undefined;
-}
-
-// Show/hide mobile navigation based on login status
-function updateMobileNavVisibility() {
-    const mobileNav = document.querySelector('.mobile-nav');
-    if (!mobileNav) return;
-    
-    if (window.innerWidth <= 767) {
-        if (isUserLoggedIn()) {
-            mobileNav.style.display = 'flex';
-        } else {
-            mobileNav.style.display = 'none';
-            // Show only search and map for logged-out mobile users
-            showLoggedOutMobileView();
-        }
+function showMobileDonate() {
+    // Trigger donation modal
+    if (typeof openDonationModal === 'function') {
+        openDonationModal();
     } else {
-        mobileNav.style.display = 'none'; // Hide on desktop
+        showTemporaryView('Donate', 'Support civic causes and candidates.');
     }
 }
 
-// Show limited mobile view for logged-out users
-function showLoggedOutMobileView() {
-    if (window.innerWidth > 767) return;
-    
-    // Hide authenticated features
-    const postsContainer = document.querySelector('.posts-container');
-    const profilePanel = document.querySelector('.profile-panel');
-    const messagesContainer = document.querySelector('.messages-container');
-    
-    if (postsContainer) postsContainer.style.display = 'none';
-    if (profilePanel) profilePanel.style.display = 'none';
-    if (messagesContainer) messagesContainer.style.display = 'none';
-    
-    // Show search by default for logged-out users
-    const searchContainer = document.querySelector('.search-container');
-    if (searchContainer) {
-        searchContainer.style.display = 'flex';
+function showMobileProfile() {
+    if (typeof showMyProfile === 'function') {
+        showMyProfile();
+    } else {
+        showTemporaryView('Profile', 'Your profile will appear here.');
     }
 }
 
-// Initialize when DOM is loaded
+function showMobileLogin() {
+    // Open login modal
+    if (typeof openLoginModal === 'function') {
+        openLoginModal();
+    } else {
+        showTemporaryView('Login', 'Please log in to continue.');
+    }
+}
+
+function hideAllDesktopElements() {
+    // Hide all major containers
+    const elements = [
+        '.posts-container',
+        '.search-container',
+        '.profile-panel',
+        '.messages-container',
+        '.trending-updates',
+        '#mapContainer'
+    ];
+    
+    elements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.style.display = 'none';
+            element.classList.remove('mobile-active');
+        }
+    });
+    
+    // Remove any temporary views
+    const tempView = document.querySelector('.mobile-temp-view');
+    if (tempView) tempView.remove();
+}
+
+function showTemporaryView(title, message) {
+    // Remove any existing temp view
+    const existing = document.querySelector('.mobile-temp-view');
+    if (existing) existing.remove();
+    
+    // Create temporary view
+    const tempView = document.createElement('div');
+    tempView.className = 'mobile-temp-view';
+    tempView.style.cssText = `
+        padding: 20px;
+        text-align: center;
+        margin-top: 100px;
+    `;
+    tempView.innerHTML = `
+        <h2>${title}</h2>
+        <p style="margin-top: 20px; color: #666;">${message}</p>
+    `;
+    
+    const wrapper = document.querySelector('.mobile-content-wrapper');
+    if (wrapper) {
+        wrapper.appendChild(tempView);
+    } else {
+        document.body.appendChild(tempView);
+    }
+}
+
+// Load saved sidebar state
 document.addEventListener('DOMContentLoaded', function() {
-    initMobileNavigation();
-    updateMobileNavVisibility();
-    
-    // Listen for auth changes
-    window.addEventListener('authStateChanged', updateMobileNavVisibility);
-});
-
-// Handle back button on mobile
-window.addEventListener('popstate', function(event) {
-    if (window.innerWidth <= 767) {
-        if (currentMobileView !== 'feed') {
-            showMobileFeed();
-        }
-    }
-});
-
-// Mobile search toggle function
-function toggleMobileSearch() {
-    if (window.innerWidth <= 767) {
-        showMobileSearch();
-    }
-}
-
-// Notification functions
-function toggleNotifications() {
-    // TODO: Implement notification panel
-    console.log('Notifications clicked - to be implemented');
-}
-
-// Update authentication UI elements
-function updateAuthenticationUI(isLoggedIn, user = null) {
-    const authSection = document.getElementById('authSection');
-    const userSection = document.getElementById('userSection');
-    const notificationSection = document.getElementById('notificationSection');
-    const logoutThumb = document.getElementById('logoutThumb');
-    
-    if (isLoggedIn && user) {
-        // Show authenticated UI
-        if (authSection) authSection.style.display = 'none';
-        if (userSection) {
-            userSection.style.display = 'flex';
-            const userGreeting = document.getElementById('userGreeting');
-            if (userGreeting) {
-                userGreeting.textContent = `Hello, ${user.firstName || user.username}!`;
-            }
-        }
-        if (notificationSection) notificationSection.style.display = 'block';
-        if (logoutThumb) logoutThumb.style.display = 'block';
-        
-        // Update mobile nav visibility
-        updateMobileNavVisibility();
-        
-    } else {
-        // Show logged-out UI  
-        if (authSection) authSection.style.display = 'block';
-        if (userSection) userSection.style.display = 'none';
-        if (notificationSection) notificationSection.style.display = 'none';
-        if (logoutThumb) logoutThumb.style.display = 'none';
-        
-        // Update mobile nav visibility
-        updateMobileNavVisibility();
-    }
-}
-
-// Listen for auth state changes and update UI
-window.addEventListener('load', function() {
-    // Check initial auth state
-    const isLoggedIn = isUserLoggedIn();
-    if (isLoggedIn) {
-        // Get user data from storage - fixed to use correct key 'currentUser'
-        const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        // Only update UI if we have valid user data with firstName
-        if (userData && userData.id && userData.firstName) {
-            updateAuthenticationUI(true, userData);
-        }
-        // Otherwise let the main auth flow handle it - don't interfere
-    } else {
-        updateAuthenticationUI(false);
+    const savedState = localStorage.getItem('mobileSidebarState');
+    if (savedState) {
+        mobileSidebarState = savedState;
     }
 });
