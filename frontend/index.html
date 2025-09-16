@@ -2694,8 +2694,8 @@
 
         // API Helper Functions - Wrapper for legacy caching
         async function apiCall(endpoint, options = {}) {
-            // Check if window.apiCall is available from api-manager.js
-            if (typeof window.apiCall !== 'function') {
+            // Check if api-manager.js is loaded
+            if (!window.apiManager || typeof window.apiManager.request !== 'function') {
                 console.error('API Manager not loaded yet. Please ensure api-manager.js is loaded.');
                 throw new Error('API Manager not initialized');
             }
@@ -2721,7 +2721,7 @@
 
             try {
                 // DELEGATE TO UNIFIED API CLIENT from api-manager.js
-                const response = await window.apiCall(endpoint, options);
+                const response = await window.apiManager.request(endpoint, options);
                 
                 // The apiClient already returns a structured response with parsed data
                 // Transform it to match the legacy apiCall format for backward compatibility

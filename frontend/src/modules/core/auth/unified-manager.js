@@ -117,7 +117,7 @@ class UnifiedAuthManager {
         };
         
         // SYNCHRONIZE ALL SYSTEMS
-        this._syncAllSystems(user, csrfToken);
+        await this._syncAllSystems(user, csrfToken);
         
         // Notify all subscribers
         this._notifySubscribers();
@@ -131,7 +131,7 @@ class UnifiedAuthManager {
     /**
      * Synchronize authentication state across ALL systems
      */
-    _syncAllSystems(user, csrfToken) {
+    async _syncAllSystems(user, csrfToken) {
         console.log('🔧 Synchronizing all authentication systems...');
         
         // 1. Update user state module
