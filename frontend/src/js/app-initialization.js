@@ -64,7 +64,7 @@ class AppInitializer {
             
             try {
                 AppInitializer.log('🔄 About to call /batch/initialize with cookie authentication...');
-                const initData = await window.apiCall('/batch/initialize', {
+                const initData = await window.apiClient.call('/batch/initialize', {
                     cacheTimeout: 60000, // Cache for 1 minute
                     retries: 1 // Only retry once to avoid cascading failures
                 });
@@ -146,7 +146,7 @@ class AppInitializer {
                 
                 try {
                     // First try auth/me for authentication check
-                    const authData = await window.apiCall('/auth/me');
+                    const authData = await window.apiClient.call('/auth/me');
                     
                     if (authData && authData.user) {
                         AppInitializer.log('✅ Auth/me fallback successful');
@@ -171,7 +171,7 @@ class AppInitializer {
                     
                     try {
                         // Get user profile data as final fallback
-                        const userProfile = await window.apiCall('/users/profile');
+                        const userProfile = await window.apiClient.call('/users/profile');
                         
                         if (userProfile) {
                             AppInitializer.log('✅ Users/profile fallback successful');
@@ -375,7 +375,7 @@ class AppInitializer {
         // Authentication handled by httpOnly cookies automatically
 
         try {
-            const userData = await window.apiCall('/batch/auth-status', {
+            const userData = await window.apiClient.call('/batch/auth-status', {
                 cacheTimeout: 10000 // Short cache for user data updates
             });
 
