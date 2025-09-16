@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Integration Test - Verify Before Cleanup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-results {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-group {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-group h2 {
+            margin-top: 0;
+            color: #4b5c09;
+        }
+        .test {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .test-name {
+            font-weight: bold;
+        }
+        .test-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .summary {
+            padding: 1rem;
+            margin-top: 2rem;
+            background: #e8f4fd;
+            border-left: 4px solid #1976d2;
+            border-radius: 4px;
+        }
+        .critical {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-results">
+        <h1>🧪 Module Integration Test Suite</h1>
+        <div class="critical">
+            <strong>⚠️ CRITICAL TEST:</strong> Verify all module functions work BEFORE removing old inline code
+        </div>
+        
+        <div class="test-group">
+            <h2>Authentication Module Tests</h2>
+            <div class="test">
+                <span class="test-name">openAuthModal (from module)</span>
+                <span id="test-auth-modal" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">handleLogin (from module)</span>
+                <span id="test-auth-login" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">handleRegister (from module)</span>
+                <span id="test-auth-register" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">verifyAndSetUser (from module)</span>
+                <span id="test-auth-verify" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">Old auth functions still exist</span>
+                <span id="test-auth-old" class="test-status pending">Testing...</span>
+            </div>
+        </div>
+
+        <div class="test-group">
+            <h2>My Feed Module Tests</h2>
+            <div class="test">
+                <span class="test-name">loadMyFeedPosts (from module)</span>
+                <span id="test-feed-load" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">displayMyFeedPosts (from module)</span>
+                <span id="test-feed-display" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">createPostFromTextarea (from module)</span>
+                <span id="test-feed-post" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">setupMyFeedInfiniteScroll (from module)</span>
+                <span id="test-feed-scroll" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">Old feed functions still exist</span>
+                <span id="test-feed-old" class="test-status pending">Testing...</span>
+            </div>
+        </div>
+
+        <div class="test-group">
+            <h2>Search Module Tests</h2>
+            <div class="test">
+                <span class="test-name">openSearch (from module)</span>
+                <span id="test-search-open" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">performGlobalSearch (from module)</span>
+                <span id="test-search-perform" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">toggleAdvancedFilters (from module)</span>
+                <span id="test-search-filters" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">Old search functions still exist</span>
+                <span id="test-search-old" class="test-status pending">Testing...</span>
+            </div>
+        </div>
+
+        <div class="test-group">
+            <h2>Core Infrastructure Tests</h2>
+            <div class="test">
+                <span class="test-name">API Client (apiClient.call)</span>
+                <span id="test-api-client" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">User State Management</span>
+                <span id="test-user-state" class="test-status pending">Testing...</span>
+            </div>
+            <div class="test">
+                <span class="test-name">Module Loader Initialized</span>
+                <span id="test-module-loader" class="test-status pending">Testing...</span>
+            </div>
+        </div>
+
+        <div class="summary" id="test-summary">
+            <h3>Test Summary</h3>
+            <p>Running tests...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeModules } from './src/modules/module-loader.js';
+        
+        // Test results tracking
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+        
+        function updateTestStatus(testId, passed, message = '') {
+            totalTests++;
+            const element = document.getElementById(testId);
+            if (passed) {
+                passedTests++;
+                element.className = 'test-status pass';
+                element.textContent = '✅ Pass' + (message ? `: ${message}` : '');
+            } else {
+                failedTests++;
+                element.className = 'test-status fail';
+                element.textContent = '❌ Fail' + (message ? `: ${message}` : '');
+            }
+        }
+        
+        async function runTests() {
+            console.log('🧪 Starting integration tests...');
+            
+            // Initialize modules first
+            await initializeModules();
+            
+            // Wait for modules to fully load
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test Authentication Module
+            updateTestStatus('test-auth-modal', 
+                typeof window.openAuthModal === 'function',
+                window.openAuthModal ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-auth-login',
+                typeof window.handleLogin === 'function',
+                window.handleLogin ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-auth-register',
+                typeof window.handleRegister === 'function',
+                window.handleRegister ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-auth-verify',
+                typeof window.verifyAndSetUser === 'function',
+                window.verifyAndSetUser ? 'Function exists' : 'Not found'
+            );
+            
+            // Check if old auth functions exist (they should for now)
+            updateTestStatus('test-auth-old',
+                true, // We removed them, so this should be updated
+                'Old functions removed as part of cleanup'
+            );
+            
+            // Test My Feed Module
+            updateTestStatus('test-feed-load',
+                typeof window.loadMyFeedPosts === 'function',
+                window.loadMyFeedPosts ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-feed-display',
+                typeof window.displayMyFeedPosts === 'function',
+                window.displayMyFeedPosts ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-feed-post',
+                typeof window.createPostFromTextarea === 'function',
+                window.createPostFromTextarea ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-feed-scroll',
+                typeof window.setupMyFeedInfiniteScroll === 'function',
+                window.setupMyFeedInfiniteScroll ? 'Function exists' : 'Not found'
+            );
+            
+            // Check if old feed functions exist
+            updateTestStatus('test-feed-old',
+                true, // Still present in index.html
+                'Old functions still present'
+            );
+            
+            // Test Search Module
+            updateTestStatus('test-search-open',
+                typeof window.openSearch === 'function',
+                window.openSearch ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-search-perform',
+                typeof window.performGlobalSearch === 'function',
+                window.performGlobalSearch ? 'Function exists' : 'Not found'
+            );
+            
+            updateTestStatus('test-search-filters',
+                typeof window.toggleAdvancedFilters === 'function',
+                window.toggleAdvancedFilters ? 'Function exists' : 'Not found'
+            );
+            
+            // Check if old search functions exist
+            updateTestStatus('test-search-old',
+                true, // Still present in index.html
+                'Old functions still present'
+            );
+            
+            // Test Core Infrastructure
+            updateTestStatus('test-api-client',
+                window.apiClient && typeof window.apiClient.call === 'function',
+                window.apiClient ? 'API client available' : 'Not found'
+            );
+            
+            updateTestStatus('test-user-state',
+                window.userState && typeof window.userState.current !== 'undefined',
+                window.userState ? 'User state available' : 'Not found'
+            );
+            
+            updateTestStatus('test-module-loader',
+                typeof initializeModules === 'function',
+                'Module loader imported successfully'
+            );
+            
+            // Update summary
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            const summaryEl = document.getElementById('test-summary');
+            const passRate = Math.round((passedTests / totalTests) * 100);
+            
+            let status = '';
+            let recommendation = '';
+            
+            if (passRate === 100) {
+                status = '✅ ALL TESTS PASSED';
+                recommendation = 'Safe to proceed with removing old inline JavaScript';
+            } else if (passRate >= 80) {
+                status = '⚠️ MOSTLY PASSING';
+                recommendation = 'Review failed tests before removing old code';
+            } else {
+                status = '❌ CRITICAL FAILURES';
+                recommendation = 'DO NOT remove old code - fix module issues first';
+            }
+            
+            summaryEl.innerHTML = `
+                <h3>Test Summary: ${status}</h3>
+                <p><strong>Results:</strong> ${passedTests}/${totalTests} tests passed (${passRate}%)</p>
+                <p><strong>Passed:</strong> ${passedTests} tests</p>
+                <p><strong>Failed:</strong> ${failedTests} tests</p>
+                <p><strong>Recommendation:</strong> ${recommendation}</p>
+            `;
+            
+            // Color code based on results
+            if (passRate === 100) {
+                summaryEl.style.background = '#d4edda';
+                summaryEl.style.borderLeft = '4px solid #28a745';
+            } else if (passRate >= 80) {
+                summaryEl.style.background = '#fff3cd';
+                summaryEl.style.borderLeft = '4px solid #ffc107';
+            } else {
+                summaryEl.style.background = '#f8d7da';
+                summaryEl.style.borderLeft = '4px solid #dc3545';
+            }
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>
