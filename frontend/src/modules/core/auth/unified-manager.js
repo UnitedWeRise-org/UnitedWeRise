@@ -81,7 +81,7 @@ class UnifiedAuthManager {
                 // Use the existing unifiedLogin for TOTP handling
                 const result = await window.unifiedLogin(email, password, 'main-site');
                 if (result.success) {
-                    this._setAuthenticatedState(result.user, result.csrfToken || window.csrfToken);
+                    await this._setAuthenticatedState(result.user, result.csrfToken || window.csrfToken);
                     return { success: true, user: result.user };
                 } else {
                     return { success: false, error: result.error || 'TOTP authentication failed' };
@@ -90,7 +90,7 @@ class UnifiedAuthManager {
             
             // Handle successful login
             if ((response.success || response.message === 'Login successful') && response.user) {
-                this._setAuthenticatedState(response.user, response.csrfToken);
+                await this._setAuthenticatedState(response.user, response.csrfToken);
                 return { success: true, user: response.user };
             } else {
                 return { success: false, error: response.message || 'Login failed' };
@@ -105,7 +105,7 @@ class UnifiedAuthManager {
     /**
      * Set authenticated state and sync ALL systems
      */
-    _setAuthenticatedState(user, csrfToken) {
+    async _setAuthenticatedState(user, csrfToken) {
         console.log('🔄 Setting authenticated state across ALL systems...');
         
         // Update internal state
