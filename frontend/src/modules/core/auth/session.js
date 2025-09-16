@@ -10,43 +10,36 @@
 
 import { apiClient } from '../api/client.js';
 import { userState } from '../state/user.js';
+import { unifiedAuthManager } from './unified-manager.js';
 
 /**
  * Verify current user session and set user state
- * Extracted from index.html line 1279
+ * Now uses unified authentication manager for perfect synchronization
  */
 export async function verifyAndSetUser() {
     try {
         if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('Authentication', 'Verifying user with /auth/me');
+            adminDebugLog('Authentication', 'Verifying user with unified auth manager');
         }
         
-        const response = await apiClient.call('/auth/me');
+        // Use unified auth manager for session verification
+        const result = await unifiedAuthManager.verifySession();
         
-        if (response.success && response.user?.id) {
+        if (result.success && result.user?.id) {
             if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('Authentication', 'Auth verification successful', {
-                    userId: response.user.id,
-                    username: response.user.username
+                adminDebugLog('Authentication', 'Auth verification successful via unified manager', {
+                    userId: result.user.id,
+                    username: result.user.username
                 });
             }
             
-            // Set user state
-            userState.current = response.user;
-            setUserLoggedIn(response.user);
-            
-            return response.user;
+            return result.user;
         } else {
-            console.warn('Invalid user data received:', response);
-            // Clear invalid session
-            userState.current = null;
-            setUserLoggedOut();
+            console.warn('Session verification failed:', result.error);
             return null;
         }
     } catch (error) {
         console.error('Auth verification failed:', error);
-        userState.current = null;
-        setUserLoggedOut();
         return null;
     }
 }
@@ -156,23 +149,25 @@ function updateRadioButtonAvailability() {
 
 /**
  * Logout user and clear session
- * Extracted from index.html logout function
+ * Now uses unified authentication manager for perfect synchronization
  */
 export async function logout() {
     try {
-        // Call logout endpoint to clear server session
-        await apiClient.call('/auth/logout', { method: 'POST' });
+        console.log('🔐 Using unified auth manager for logout');
         
-        console.log('✅ Logout successful');
+        // Use unified auth manager for logout
+        const result = await unifiedAuthManager.logout();
+        
+        if (result.success) {
+            console.log('✅ Logout successful via unified manager');
+            // Redirect to home page
+            window.location.href = '/';
+        } else {
+            console.error('Logout failed:', result.error);
+        }
     } catch (error) {
-        console.error('Logout request failed:', error);
-        // Continue with client-side logout even if server fails
-    } finally {
-        // Clear client-side state regardless of server response
-        userState.current = null;
-        setUserLoggedOut();
-        
-        // Redirect to home page
+        console.error('Logout error:', error);
+        // Redirect anyway for safety
         window.location.href = '/';
     }
 }

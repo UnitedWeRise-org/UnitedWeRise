@@ -14,6 +14,7 @@ import { userState } from './core/state/user.js';
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
 import { verifyAndSetUser, setUserLoggedIn, setUserLoggedOut, logout } from './core/auth/session.js';
+import { unifiedAuthManager } from './core/auth/unified-manager.js';
 
 // Import feed modules
 import { 
@@ -50,6 +51,7 @@ function initializeModules() {
     
     // Initialize authentication system
     console.log('✅ Authentication modules loaded');
+    console.log('🔧 Unified auth manager available:', typeof unifiedAuthManager !== 'undefined');
     
     // Initialize feed system
     console.log('✅ My Feed modules loaded');

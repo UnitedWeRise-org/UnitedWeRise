@@ -488,9 +488,52 @@ export async function createPostFromFeed() {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupMyFeedInfiniteScroll);
+    document.addEventListener('DOMContentLoaded', () => {
+        setupMyFeedInfiniteScroll();
+        setupUnifiedAuthListener();
+    });
 } else {
     setupMyFeedInfiniteScroll();
+    setupUnifiedAuthListener();
+}
+
+/**
+ * Setup listener for unified auth manager changes
+ */
+function setupUnifiedAuthListener() {
+    // Listen for authentication state changes to automatically refresh feed
+    if (window.unifiedAuthManager) {
+        window.unifiedAuthManager.subscribe((authState) => {
+            console.log('🎯 My Feed: Auth state changed:', authState.isAuthenticated);
+            
+            if (authState.isAuthenticated && authState.user) {
+                // User just logged in - refresh feed
+                console.log('🔄 My Feed: User logged in, auto-loading feed...');
+                setTimeout(() => {
+                    if (typeof window.showMyFeedInMain === 'function') {
+                        window.showMyFeedInMain();
+                    } else {
+                        loadMyFeedPosts();
+                    }
+                }, 200);
+            }
+        });
+        console.log('✅ My Feed: Listening to unified auth manager');
+    } else {
+        console.log('⚠️ My Feed: Unified auth manager not available, using fallback listeners');
+        
+        // Fallback to custom events
+        window.addEventListener('userLoggedIn', () => {
+            console.log('🔄 My Feed: User logged in event received');
+            setTimeout(() => {
+                if (typeof window.showMyFeedInMain === 'function') {
+                    window.showMyFeedInMain();
+                } else {
+                    loadMyFeedPosts();
+                }
+            }, 200);
+        });
+    }
 }
 
 // Maintain backward compatibility by exposing functions globally

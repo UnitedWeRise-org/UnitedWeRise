@@ -1,5 +1,6 @@
 // Optimized Application Initialization for United We Rise
 // Reduces API calls on page load and implements smart caching
+// Now integrated with unified authentication manager for perfect sync
 
 class AppInitializer {
     // Production logging helper - only shows important messages
@@ -18,6 +19,20 @@ class AppInitializer {
         this.initializationPromise = null;
         this.isInitialized = false;
         this.userData = null;
+        this.unifiedAuthManager = null;
+        
+        // Import unified auth manager dynamically to avoid circular dependencies
+        this.initUnifiedAuthManager();
+    }
+    
+    async initUnifiedAuthManager() {
+        try {
+            const { unifiedAuthManager } = await import('../src/modules/core/auth/unified-manager.js');
+            this.unifiedAuthManager = unifiedAuthManager;
+            AppInitializer.log('🔧 AppInitializer: Connected to unified auth manager');
+        } catch (error) {
+            console.error('Failed to load unified auth manager:', error);
+        }
     }
 
     // Main initialization method - called once on page load
@@ -81,8 +96,16 @@ class AppInitializer {
                     
                     // Store fresh user data
                     this.userData = initData.data.data.user;
-                    localStorage.setItem('currentUser', JSON.stringify(this.userData));
-                    window.currentUser = this.userData;
+                    
+                    // Use unified auth manager to set user data if available
+                    if (this.unifiedAuthManager) {
+                        AppInitializer.log('🔧 Setting user via unified auth manager');
+                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.data.csrfToken);
+                    } else {
+                        // Fallback to direct setting
+                        localStorage.setItem('currentUser', JSON.stringify(this.userData));
+                        window.currentUser = this.userData;
+                    }
 
                     // CACHE RELATIONSHIPS FOR ENTIRE SESSION - NO MORE INDIVIDUAL API CALLS!
                     if (initData.data.data.relationships) {
