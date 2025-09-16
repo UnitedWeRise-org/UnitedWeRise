@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Modules Test - United We Rise</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #4b5c09;
+        }
+        .btn {
+            background: #4b5c09;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .btn:hover {
+            background: #6b7f1a;
+        }
+        .btn-secondary {
+            background: #666;
+        }
+        .btn-secondary:hover {
+            background: #888;
+        }
+        #console-output {
+            background: #000;
+            color: #0f0;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            min-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .status {
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        /* Mock UI elements for testing */
+        .mock-ui {
+            display: none;
+        }
+        
+        #authModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+        
+        #searchContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            z-index: 1000;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        
+        #globalSearchResults {
+            background: white;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: 2px solid #4b5c09;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        
+        #myFeedPosts {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            min-height: 200px;
+            padding: 1rem;
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 JavaScript Modules Test</h1>
+        <p>This page tests the extracted JavaScript modules independently of the main application.</p>
+        
+        <div id="test-status" class="status info">
+            <strong>Status:</strong> Initializing modules...
+        </div>
+        
+        <!-- Authentication Module Test -->
+        <div class="test-section">
+            <h3>🔐 Authentication Module</h3>
+            <p>Test authentication modal and session management.</p>
+            <button class="btn" onclick="testAuthModal()">Open Auth Modal</button>
+            <button class="btn" onclick="testSessionVerification()">Test Session</button>
+            <button class="btn btn-secondary" onclick="testLogout()">Test Logout</button>
+        </div>
+        
+        <!-- Feed Module Test -->
+        <div class="test-section">
+            <h3>📰 My Feed Module</h3>
+            <p>Test feed loading and posting functionality.</p>
+            <button class="btn" onclick="testFeedLoad()">Load Feed</button>
+            <button class="btn" onclick="testCreatePost()">Test Post Creation</button>
+            <button class="btn btn-secondary" onclick="clearFeed()">Clear Feed</button>
+            <div id="myFeedPosts" style="margin-top: 1rem;">
+                Feed content will appear here...
+            </div>
+        </div>
+        
+        <!-- Search Module Test -->
+        <div class="test-section">
+            <h3>🔍 Search Module</h3>
+            <p>Test global search functionality.</p>
+            <button class="btn" onclick="testSearchOpen()">Open Search</button>
+            <button class="btn" onclick="testSearchQuery()">Test Search Query</button>
+            <button class="btn btn-secondary" onclick="testSearchClose()">Close Search</button>
+        </div>
+        
+        <!-- API Client Test -->
+        <div class="test-section">
+            <h3>🌐 API Client Module</h3>
+            <p>Test API client functionality.</p>
+            <button class="btn" onclick="testApiHealth()">Test Health Endpoint</button>
+            <button class="btn" onclick="testApiAuth()">Test Auth Endpoint</button>
+            <button class="btn btn-secondary" onclick="testApiError()">Test Error Handling</button>
+        </div>
+        
+        <!-- User State Test -->
+        <div class="test-section">
+            <h3>👤 User State Module</h3>
+            <p>Test user state management.</p>
+            <button class="btn" onclick="testUserState()">Check User State</button>
+            <button class="btn" onclick="testStateSubscription()">Test Subscription</button>
+            <button class="btn btn-secondary" onclick="clearUserState()">Clear State</button>
+        </div>
+        
+        <!-- Console Output -->
+        <div class="test-section">
+            <h3>📊 Console Output</h3>
+            <p>Real-time console messages from module testing.</p>
+            <button class="btn btn-secondary" onclick="clearConsole()">Clear Console</button>
+            <div id="console-output"></div>
+        </div>
+    </div>
+    
+    <!-- Mock UI Elements -->
+    <div class="mock-ui">
+        <!-- Auth Modal -->
+        <div id="authModal">
+            <div style="background: white; width: 400px; margin: 10% auto; padding: 2rem; border-radius: 8px;">
+                <h2>Mock Auth Modal</h2>
+                <div id="loginForm">
+                    <input type="email" id="loginEmail" placeholder="Email" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <input type="password" id="loginPassword" placeholder="Password" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <div id="loginMessage" style="margin-bottom: 1rem;"></div>
+                    <button onclick="testLoginSubmit()" class="btn">Login</button>
+                </div>
+                <div id="registerForm" style="display: none;">
+                    <input type="text" id="registerFirstName" placeholder="First Name" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <input type="text" id="registerUsername" placeholder="Username" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <input type="email" id="registerEmail" placeholder="Email" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <input type="password" id="registerPassword" placeholder="Password" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
+                    <div id="registerMessage" style="margin-bottom: 1rem;"></div>
+                    <button onclick="testRegisterSubmit()" class="btn">Register</button>
+                </div>
+                <button onclick="closeTestAuthModal()" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+        
+        <!-- Search Container -->
+        <div id="searchContainer">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <input type="text" id="searchInput" placeholder="Search users, posts, officials, and topics...">
+                <div id="globalSearchResults"></div>
+                <button onclick="closeTestSearch()" class="btn btn-secondary" style="position: absolute; top: 2rem; right: 2rem;">Close</button>
+            </div>
+        </div>
+        
+        <!-- Mock elements -->
+        <div id="authSection"></div>
+        <div id="userSection"></div>
+        <div id="notificationSection"></div>
+        <div id="logoutThumb"></div>
+        <div id="userGreeting"></div>
+    </div>
+    
+    <!-- Load the modules -->
+    <script type="module">
+        // Import the module loader
+        import { testModularFunctionality } from './src/modules/module-loader.js';
+        
+        // Override console.log to capture output
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        
+        function updateConsoleOutput(message, type = 'log') {
+            const output = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : 'ℹ️';
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            updateConsoleOutput(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            updateConsoleOutput(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalConsoleWarn.apply(console, args);
+            updateConsoleOutput(args.join(' '), 'warn');
+        };
+        
+        // Update status after modules load
+        setTimeout(() => {
+            const statusEl = document.getElementById('test-status');
+            statusEl.className = 'status success';
+            statusEl.innerHTML = '<strong>Status:</strong> ✅ All modules loaded successfully! Ready for testing.';
+        }, 2000);
+        
+        // Make test functions available globally for onclick handlers
+        window.testModularFunctionality = testModularFunctionality;
+    </script>
+    
+    <script>
+        // Test functions for each module
+        function testAuthModal() {
+            if (typeof window.openAuthModal === 'function') {
+                console.log('✅ Opening auth modal...');
+                window.openAuthModal('login');
+            } else {
+                console.error('❌ openAuthModal function not available');
+            }
+        }
+        
+        function testSessionVerification() {
+            if (typeof window.verifyAndSetUser === 'function') {
+                console.log('🔄 Testing session verification...');
+                window.verifyAndSetUser().then(result => {
+                    console.log('✅ Session verification result:', result);
+                }).catch(error => {
+                    console.error('❌ Session verification error:', error);
+                });
+            } else {
+                console.error('❌ verifyAndSetUser function not available');
+            }
+        }
+        
+        function testLogout() {
+            if (typeof window.logout === 'function') {
+                console.log('🔄 Testing logout...');
+                window.logout();
+            } else {
+                console.error('❌ logout function not available');
+            }
+        }
+        
+        function testFeedLoad() {
+            if (typeof window.loadMyFeedPosts === 'function') {
+                console.log('🔄 Testing feed load...');
+                window.loadMyFeedPosts();
+            } else {
+                console.error('❌ loadMyFeedPosts function not available');
+            }
+        }
+        
+        function testCreatePost() {
+            // Create a temporary textarea for testing
+            const testTextarea = document.createElement('textarea');
+            testTextarea.id = 'testPostContent';
+            testTextarea.value = 'This is a test post from the modular system! 🚀';
+            document.body.appendChild(testTextarea);
+            
+            if (typeof window.createPostFromTextarea === 'function') {
+                console.log('🔄 Testing post creation...');
+                window.createPostFromTextarea('testPostContent', (post) => {
+                    console.log('✅ Post created successfully:', post);
+                }, { refreshFeed: true });
+            } else {
+                console.error('❌ createPostFromTextarea function not available');
+            }
+            
+            // Clean up
+            setTimeout(() => {
+                if (testTextarea.parentNode) {
+                    testTextarea.parentNode.removeChild(testTextarea);
+                }
+            }, 1000);
+        }
+        
+        function clearFeed() {
+            const feedEl = document.getElementById('myFeedPosts');
+            feedEl.innerHTML = 'Feed content will appear here...';
+            console.log('🧹 Feed cleared');
+        }
+        
+        function testSearchOpen() {
+            if (typeof window.openSearch === 'function') {
+                console.log('✅ Opening search interface...');
+                window.openSearch();
+            } else {
+                console.error('❌ openSearch function not available');
+            }
+        }
+        
+        function testSearchQuery() {
+            if (typeof window.performGlobalSearch === 'function') {
+                console.log('🔄 Testing search query...');
+                window.performGlobalSearch('test query');
+            } else {
+                console.error('❌ performGlobalSearch function not available');
+            }
+        }
+        
+        function testSearchClose() {
+            if (typeof window.closeSearch === 'function') {
+                console.log('✅ Closing search interface...');
+                window.closeSearch();
+            } else {
+                console.error('❌ closeSearch function not available');
+            }
+        }
+        
+        function testApiHealth() {
+            console.log('🔄 Testing API health endpoint...');
+            // Mock the health check since we don't have a real backend
+            setTimeout(() => {
+                console.log('✅ API health check simulated (would call /health endpoint)');
+            }, 500);
+        }
+        
+        function testApiAuth() {
+            console.log('🔄 Testing API auth endpoint...');
+            // Mock the auth check
+            setTimeout(() => {
+                console.log('✅ API auth check simulated (would call /auth/me endpoint)');
+            }, 500);
+        }
+        
+        function testApiError() {
+            console.log('🔄 Testing API error handling...');
+            setTimeout(() => {
+                console.error('❌ API error simulation: 404 Not Found');
+            }, 500);
+        }
+        
+        function testUserState() {
+            if (window.userState && window.userState.current !== undefined) {
+                console.log('✅ User state accessible:', window.userState.current);
+            } else {
+                console.error('❌ User state not available');
+            }
+        }
+        
+        function testStateSubscription() {
+            if (window.userState && typeof window.userState.subscribe === 'function') {
+                console.log('🔄 Testing state subscription...');
+                const unsubscribe = window.userState.subscribe((user) => {
+                    console.log('✅ State change detected:', user);
+                });
+                setTimeout(() => {
+                    unsubscribe();
+                    console.log('✅ Subscription test complete');
+                }, 1000);
+            } else {
+                console.error('❌ State subscription not available');
+            }
+        }
+        
+        function clearUserState() {
+            if (window.userState) {
+                window.userState.current = null;
+                console.log('🧹 User state cleared');
+            } else {
+                console.error('❌ User state not available');
+            }
+        }
+        
+        function clearConsole() {
+            document.getElementById('console-output').textContent = '';
+            console.log('🧹 Console output cleared');
+        }
+        
+        // Modal test functions
+        function closeTestAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+            console.log('✅ Auth modal closed');
+        }
+        
+        function closeTestSearch() {
+            document.getElementById('searchContainer').style.display = 'none';
+            console.log('✅ Search interface closed');
+        }
+        
+        function testLoginSubmit() {
+            if (typeof window.handleLogin === 'function') {
+                console.log('🔄 Testing login submission...');
+                window.handleLogin();
+            } else {
+                console.error('❌ handleLogin function not available');
+            }
+        }
+        
+        function testRegisterSubmit() {
+            if (typeof window.handleRegister === 'function') {
+                console.log('🔄 Testing register submission...');
+                window.handleRegister();
+            } else {
+                console.error('❌ handleRegister function not available');
+            }
+        }
+    </script>
+</body>
+</html>
