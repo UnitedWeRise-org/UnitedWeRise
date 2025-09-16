@@ -148,6 +148,15 @@ export async function handleLogin() {
         console.log('🔍 Login response:', response);
         
         if ((response.success || response.message === 'Login successful') && response.user) {
+            // Explicitly sync CSRF token for immediate use
+            if (response.csrfToken) {
+                window.csrfToken = response.csrfToken;
+                if (window.apiClient) {
+                    window.apiClient.csrfToken = response.csrfToken;
+                }
+                console.log('🔍 CSRF token synchronized:', response.csrfToken.substring(0, 8) + '...');
+            }
+            
             // Set user state
             userState.current = response.user;
             setUserLoggedIn(response.user);
