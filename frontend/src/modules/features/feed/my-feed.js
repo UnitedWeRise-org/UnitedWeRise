@@ -46,7 +46,10 @@ export async function loadMyFeedPosts() {
         
         // Handle different response formats
         let posts = null;
-        if (response.success && response.posts) {
+        if (response.posts) {
+            // Direct posts array in response
+            posts = response.posts;
+        } else if (response.success && response.posts) {
             posts = response.posts;
         } else if (response.data && response.data.posts) {
             posts = response.data.posts;
