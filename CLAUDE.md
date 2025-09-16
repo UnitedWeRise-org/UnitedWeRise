@@ -100,14 +100,15 @@ git push origin development  # Deploys to staging automatically
 - **STAGING BEHAVIOR**: Requires admin login for all protected routes
 - **REQUIRED**: User approval that staging deployment works correctly
 
-#### Step 5: Merge to Main ONLY Upon Explicit User Approval
+#### Step 5: Production Deployment (FORBIDDEN WITHOUT EXPLICIT USER APPROVAL)
+**❌ THESE COMMANDS ARE FORBIDDEN WITHOUT USER SAYING "DEPLOY TO PRODUCTION":**
 ```bash
-# ONLY when user explicitly says "deploy to production" or "merge to main"
-git checkout main
-git pull origin main
-git merge development
-git push origin main  # Deploys to production
+# git checkout main
+# git pull origin main  
+# git merge development
+# git push origin main
 ```
+**✅ ALWAYS ASK USER: "Ready to deploy to production?" and wait for explicit approval**
 
 **🚨 CRITICAL RULES:**
 - ❌ **NEVER** work directly on main branch
@@ -348,19 +349,17 @@ git push origin development
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 
-#### 1️⃣-B Frontend Production Deployment (ONLY WITH USER APPROVAL)
+#### 1️⃣-B Frontend Production Deployment (FORBIDDEN WITHOUT USER APPROVAL)
+**❌ PRODUCTION DEPLOYMENT IS FORBIDDEN WITHOUT USER EXPLICITLY SAYING "DEPLOY TO PRODUCTION"**
+
+**ALWAYS ASK USER**: "Ready to deploy to production?" and wait for explicit approval
+
+**IF AND ONLY IF USER APPROVES:**
 ```bash
-# ONLY when user explicitly approves production deployment
-# REQUIRED: User must confirm staging deployment works
-
-git checkout main
-git pull origin main
-git merge development
-git push origin main
-
-# GitHub Actions auto-deploys to PRODUCTION in ~2-5 minutes
-# Production URL: https://www.unitedwerise.org
-# Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+# git checkout main
+# git pull origin main
+# git merge development  
+# git push origin main
 ```
 
 #### 2️⃣ Backend Development Deployment (STAGING FIRST)
@@ -433,16 +432,18 @@ UPTIME=$(curl -s "https://dev-api.unitedwerise.org/health" | grep -o '"uptime":[
 echo "STAGING container uptime: $UPTIME seconds"
 ```
 
-#### 2️⃣-B Backend Production Deployment (ONLY WITH USER APPROVAL)
-```bash
-# ONLY when user explicitly approves production deployment
-# REQUIRED: User must confirm staging deployment works
+#### 2️⃣-B Backend Production Deployment (FORBIDDEN WITHOUT USER APPROVAL)
+**❌ PRODUCTION DEPLOYMENT IS FORBIDDEN WITHOUT USER EXPLICITLY SAYING "DEPLOY TO PRODUCTION"**
 
+**ALWAYS ASK USER**: "Ready to deploy to production?" and wait for explicit approval
+
+**IF AND ONLY IF USER APPROVES:**
+```bash
 # Step 1: Merge development to main
-git checkout main
-git pull origin main
-git merge development
-git push origin main
+# git checkout main
+# git pull origin main
+# git merge development
+# git push origin main
 
 # Step 2: Build production Docker image from main branch
 GIT_SHA=$(git rev-parse --short HEAD)
@@ -577,12 +578,12 @@ az containerapp show --name unitedwerise-backend --resource-group unitedwerise-r
 **Cause**: Docker builds from GitHub, not local files  
 **Fix**: 
 ```bash
-# Push to development branch first (staging)
+# ALWAYS push to development branch (staging)
 git checkout development
 git add . && git commit -m "Description" && git push origin development
 
-# Only push to main with explicit user approval (production)
-# git checkout main && git merge development && git push origin main
+# ❌ FORBIDDEN: No main branch operations without user explicitly saying "deploy to production"
+# ❌ FORBIDDEN: git checkout main && git merge development && git push origin main
 ```
 
 #### Issue #2: TypeScript Compilation Errors
@@ -611,10 +612,10 @@ az containerapp update \
   --resource-group unitedwerise-rg \
   --revision-suffix emergency-$(date +%m%d-%H%M)
 
-# Frontend rollback (staging first)
+# Frontend rollback (ALWAYS staging first)
 git checkout development && git revert HEAD && git push origin development
-# Frontend rollback (production - only with user approval)
-# git checkout main && git revert HEAD && git push origin main
+# ❌ FORBIDDEN: Production rollback without user explicitly saying "rollback production"
+# ❌ FORBIDDEN: git checkout main && git revert HEAD && git push origin main
 
 # Database restore (last resort)
 az postgres flexible-server restore \
