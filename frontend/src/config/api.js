@@ -7,7 +7,7 @@ function getBackendURL() {
     
     // Professional staging domain detection
     if (hostname === 'dev.unitedwerise.org') {
-        return 'https://dev-api.unitedwerise.org/api';
+        return 'https://dev-api.unitedwerise.org';
     }
     
     // Fallback staging detection for Azure direct URLs (during DNS transition)
@@ -15,16 +15,16 @@ function getBackendURL() {
         hostname.includes('development') || 
         hostname.includes('dev') ||
         hostname.includes('delightful-smoke-097b2fa0f')) {
-        return 'https://dev-api.unitedwerise.org/api';
+        return 'https://dev-api.unitedwerise.org';
     }
     
     // Local development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:3001/api'; // Use local backend for development
+        return 'http://localhost:3001'; // Use local backend for development
     }
     
     // Production (default)
-    return 'https://api.unitedwerise.org/api';
+    return 'https://api.unitedwerise.org';
 }
 
 const API_CONFIG = {
