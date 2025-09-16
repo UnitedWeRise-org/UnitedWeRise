@@ -15,7 +15,6 @@ import { unifiedAuthManager } from './core/auth/unified-manager.js';
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
 import { verifyAndSetUser, setUserLoggedIn, setUserLoggedOut, logout } from './core/auth/session.js';
-import { unifiedAuthManager } from './core/auth/unified-manager.js';
 
 // Import feed modules
 import { 

@@ -27,7 +27,7 @@ class AppInitializer {
     
     async initUnifiedAuthManager() {
         try {
-            const { unifiedAuthManager } = await import('../src/modules/core/auth/unified-manager.js');
+            const { unifiedAuthManager } = await import('../modules/core/auth/unified-manager.js');
             this.unifiedAuthManager = unifiedAuthManager;
             AppInitializer.log('🔧 AppInitializer: Connected to unified auth manager');
         } catch (error) {
