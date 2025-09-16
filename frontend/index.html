@@ -1272,7 +1272,7 @@
         // Authentication Functions
         // 🔐 SECURITY MIGRATION STATUS: Core auth infrastructure migrated to httpOnly cookies
         // - Primary auth now uses cookies + CSRF tokens (XSS protected)
-        // - apiCall() and adminApiCall() functions fully support cookies
+        // - window.apiClient.call() and adminApiCall() functions fully support cookies
         // - OAuth flows updated to cookie-based auth
         // - Legacy authToken variables maintained for transition compatibility
         // - Individual component functions may still reference authToken but will work via updated API layer
@@ -2167,7 +2167,7 @@
         async function loadUserContent() {
             // Load user's elected officials if they have an address
             try {
-                const response = await apiCall('/users/profile');
+                const response = await window.apiClient.call('/users/profile');
 
                 if (response.ok) {
                     const data = response.data;
@@ -2218,7 +2218,7 @@
 
         async function loadElectedOfficials(zipCode, state) {
             try {
-                const response = await apiCall('/political/representatives');
+                const response = await window.apiClient.call('/political/representatives');
                 
                 if (response.ok && response.data) {
                     const representatives = response.data.representatives;
@@ -2744,7 +2744,7 @@
 
         async function performSearch(query) {
             try {
-                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+                const response = await window.apiClient.call(`/users/search?q=${encodeURIComponent(query)}`);
                 
                 if (response.ok) {
                     // Only use the global search results container, not the feed area
@@ -2890,7 +2890,7 @@
                 // Try AI topic discovery first, fallback to posts if needed
                 let response;
                 try {
-                    response = await apiCall('/topic-navigation/trending?limit=20');
+                    response = await window.apiClient.call('/topic-navigation/trending?limit=20');
                     if (response.ok && response.data.topics && response.data.topics.length > 0) {
                         updateTrendingTopicsPanel(response.data.topics);
                         return;
@@ -2900,7 +2900,7 @@
                 }
                 
                 // Fallback to post-based trending for sidebar
-                response = await apiCall('/feed/trending');
+                response = await window.apiClient.call('/feed/trending');
                 
                 if (response.ok) {
                     updateTrendingPanel(response.data.posts);
@@ -3012,7 +3012,7 @@
                 // Try AI topic aggregation with dual-vector clustering
                 let response;
                 try {
-                    response = await apiCall(`/trending/topics?scope=${scope}&limit=7`);
+                    response = await window.apiClient.call(`/trending/topics?scope=${scope}&limit=7`);
                     if (response.ok && response.data.topics && response.data.topics.length > 0) {
                         updateTrendingTopicsPanel(response.data.topics);
                         
@@ -3026,7 +3026,7 @@
                 }
                 
                 // Fallback to post-based trending if AI aggregation fails
-                response = await apiCall('/feed/trending?limit=20');
+                response = await window.apiClient.call('/feed/trending?limit=20');
                 
                 if (response.ok) {
                     updateTrendingUpdatesPanel(response.data.posts);
@@ -3067,7 +3067,7 @@
                 }
 
                 // Fetch posts for this topic
-                const response = await apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
+                const response = await window.apiClient.call(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
                 
                 if (response.ok) {
                     currentTopicMode = {
@@ -3364,7 +3364,7 @@
                     }
                 }
                 
-                const response = await apiCall(`/topic-navigation/enter/${topicId}`, {
+                const response = await window.apiClient.call(`/topic-navigation/enter/${topicId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ limit: 30 })
@@ -3396,7 +3396,7 @@
             try {
                 console.log('Exiting topic mode...');
                 
-                const response = await apiCall('/topic-navigation/exit', {
+                const response = await window.apiClient.call('/topic-navigation/exit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -3533,7 +3533,7 @@
                 // Check if we need to refresh the cache or if scope changed
                 const currentScope = currentZoomLevel || 'national';
                 if (now - lastMapTopicUpdate > MAP_TOPIC_CACHE_DURATION || mapTopicCache.length === 0 || lastMapTopicScope !== currentScope) {
-                    const response = await apiCall(`/trending/map-topics?count=9&scope=${currentScope}`); // Get 9 topics for current scope
+                    const response = await window.apiClient.call(`/trending/map-topics?count=9&scope=${currentScope}`); // Get 9 topics for current scope
                     
                     if (response.ok && response.data.topics) {
                         mapTopicCache = response.data.topics;
@@ -3636,7 +3636,7 @@
                 }
                 
                 // Fetch latest AI topics using new aggregation API
-                const response = await apiCall('/trending/map-topics?count=12');
+                const response = await window.apiClient.call('/trending/map-topics?count=12');
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     const aiTopics = response.data.topics;
                     const mapBubbles = convertTopicsToMapBubbles(aiTopics);
@@ -4013,7 +4013,7 @@
             if (!currentUser) return;
 
             try {
-                const response = await apiCall('/messages/conversations');
+                const response = await window.apiClient.call('/messages/conversations');
                 
                 if (response.ok) {
                     displayConversations(response.data.conversations);
@@ -4108,7 +4108,7 @@
 
         async function startConversationWithUser(userId, username) {
             try {
-                const response = await apiCall('/messages/conversations', {
+                const response = await window.apiClient.call('/messages/conversations', {
                     method: 'POST',
                     body: JSON.stringify({ participantId: userId })
                 });
@@ -4128,7 +4128,7 @@
         async function openConversation(conversationId, username) {
             try {
                 // Load messages for this conversation
-                const response = await apiCall(`/messages/conversations/${conversationId}/messages`);
+                const response = await window.apiClient.call(`/messages/conversations/${conversationId}/messages`);
                 
                 if (response.ok) {
                     showConversationView(conversationId, username, response.data.messages);
@@ -4218,7 +4218,7 @@
             if (!content) return;
             
             try {
-                const response = await apiCall(`/messages/conversations/${conversationId}/messages`, {
+                const response = await window.apiClient.call(`/messages/conversations/${conversationId}/messages`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -4537,7 +4537,7 @@
             
             try {
                 console.log('🌐 Making API call to /feed/');
-                const response = await apiCall('/feed/?limit=15', {
+                const response = await window.apiClient.call('/feed/?limit=15', {
                     method: 'GET'
                 });
                 
@@ -4681,7 +4681,7 @@
             try {
                 // Use offset-based pagination
                 console.log(`🔄 Loading more My Feed posts... (offset: ${currentFeedOffset})`);
-                const response = await apiCall(`/feed/?limit=15&offset=${currentFeedOffset}`, {
+                const response = await window.apiClient.call(`/feed/?limit=15&offset=${currentFeedOffset}`, {
                     method: 'GET'
                 });
 
@@ -4871,7 +4871,7 @@
                     formData.append('purpose', 'PERSONAL');
 
                     console.log('🖼️ Uploading media for post...');
-                    const mediaResponse = await apiCall('/photos/upload', {
+                    const mediaResponse = await window.apiClient.call('/photos/upload', {
                         method: 'POST',
                         body: formData
                     });
@@ -5038,7 +5038,7 @@
                 window.postsWithContinuation.add(postId);
                 
                 // Create continuation comment (NOT nested - parentId: null)
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ 
                         content: continuationContent,
@@ -5189,7 +5189,7 @@
         // REMOVED: addCommentToPost helper - no longer needed for continuations
         /* async function addCommentToPost(postId, content) {
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: { content }
                 });
@@ -5219,7 +5219,7 @@
 
             try {
                 console.log('Loading user profile...');
-                const response = await apiCall('/users/profile');
+                const response = await window.apiClient.call('/users/profile');
                 
                 console.log('Profile response:', response);
                 
@@ -5587,13 +5587,13 @@
 
             try {
                 // Update basic profile
-                const profileResponse = await apiCall('/users/profile', {
+                const profileResponse = await window.apiClient.call('/users/profile', {
                     method: 'PUT',
                     body: JSON.stringify(profileData)
                 });
 
                 // Update political/address info
-                const politicalResponse = await apiCall('/political/profile', {
+                const politicalResponse = await window.apiClient.call('/political/profile', {
                     method: 'PUT',
                     body: JSON.stringify(politicalData)
                 });
@@ -5627,7 +5627,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/like`, {
+                const response = await window.apiClient.call(`/posts/${postId}/like`, {
                     method: 'POST'
                 });
 
@@ -5674,7 +5674,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                     method: 'POST'
                 });
 
@@ -5722,7 +5722,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -5755,7 +5755,7 @@
             }
 
             try {
-                const response = await apiCall('/posts', {
+                const response = await window.apiClient.call('/posts', {
                     method: 'POST',
                     body: JSON.stringify({ 
                         content
@@ -5779,7 +5779,7 @@
             if (!currentUser) return;
 
             try {
-                const response = await apiCall('/posts/me');
+                const response = await window.apiClient.call('/posts/me');
                 
                 if (response.ok) {
                     // Store posts for later display when feed view is shown
@@ -5904,7 +5904,7 @@
             if (!likeElement) return;
 
             try {
-                const response = await apiCall(`/posts/${postId}/like`, {
+                const response = await window.apiClient.call(`/posts/${postId}/like`, {
                     method: 'POST'
                 });
 
@@ -5950,7 +5950,7 @@
 
             try {
                 // Load comments
-                const response = await apiCall(`/posts/${postId}/comments?limit=50`);
+                const response = await window.apiClient.call(`/posts/${postId}/comments?limit=50`);
                 if (!response.ok) {
                     alert('Failed to load comments');
                     return;
@@ -6042,7 +6042,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -6112,7 +6112,7 @@
         // Follow/Unfollow functionality
         async function followUser(userId, buttonElement) {
             try {
-                const response = await apiCall(`/users/follow/${userId}`, {
+                const response = await window.apiClient.call(`/users/follow/${userId}`, {
                     method: 'POST'
                 });
                 
@@ -6136,7 +6136,7 @@
 
         async function unfollowUser(userId, buttonElement) {
             try {
-                const response = await apiCall(`/users/follow/${userId}`, {
+                const response = await window.apiClient.call(`/users/follow/${userId}`, {
                     method: 'DELETE'
                 });
                 
@@ -6160,7 +6160,7 @@
 
         async function showFollowersList(userId) {
             try {
-                const response = await apiCall(`/users/${userId}/followers`);
+                const response = await window.apiClient.call(`/users/${userId}/followers`);
                 
                 if (response.ok) {
                     displayUsersList(response.data.followers, 'Followers');
@@ -6175,7 +6175,7 @@
 
         async function showFollowingList(userId) {
             try {
-                const response = await apiCall(`/users/${userId}/following`);
+                const response = await window.apiClient.call(`/users/${userId}/following`);
                 
                 if (response.ok) {
                     displayUsersList(response.data.following, 'Following');
@@ -6374,16 +6374,16 @@
                 if (searchType === 'all') {
                     // 🎯 OPTIMIZED: Use unified search endpoint (1 call instead of 4)
                     searchPromises = [
-                        apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
+                        window.apiClient.call(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
                     ];
                 } else if (searchType === 'candidates') {
                     // For candidates filter, search officials but filter client-side
                     const endpoint = `/search/unified?${searchParams.toString()}&types=officials`;
-                    searchPromises = [apiCall(endpoint)];
+                    searchPromises = [window.apiClient.call(endpoint)];
                 } else {
                     // Search specific type - use unified endpoint with single type
                     const endpoint = `/search/unified?${searchParams.toString()}&types=${searchType}`;
-                    searchPromises = [apiCall(endpoint)];
+                    searchPromises = [window.apiClient.call(endpoint)];
                 }
 
                 const results = await Promise.all(searchPromises);
@@ -6726,7 +6726,7 @@
                 closeSearch();
                 
                 // Load single post and display in My Feed
-                const response = await apiCall(`/posts/${postId}`);
+                const response = await window.apiClient.call(`/posts/${postId}`);
                 if (response.ok && response.data) {
                     // Show the post in main content
                     showMyFeedInMain();
@@ -6770,7 +6770,7 @@
                     </div>
                 `;
 
-                const response = await apiCall(`/legislative/officials/${officialId}`);
+                const response = await window.apiClient.call(`/legislative/officials/${officialId}`);
                 if (response.ok && response.data) {
                     const official = response.data;
                     displayOfficialProfile(official);
@@ -6907,8 +6907,8 @@
 
                 // Load user's profile and posts in parallel
                 const [profileResponse, postsResponse] = await Promise.all([
-                    apiCall(`/users/${username}`),
-                    apiCall(`/posts/user/${userId}`)
+                    window.apiClient.call(`/users/${username}`),
+                    window.apiClient.call(`/posts/user/${userId}`)
                 ]);
                 
                 if (profileResponse.ok && postsResponse.ok) {
@@ -7737,7 +7737,7 @@
                 const formData = new FormData();
                 formData.append('backgroundImage', file);
 
-                const response = await apiCall('/users/background-image', {
+                const response = await window.apiClient.call('/users/background-image', {
                     method: 'POST',
                     body: formData,
                     skipContentType: true
@@ -7772,7 +7772,7 @@
             }
 
             try {
-                const response = await apiCall('/users/background-image', {
+                const response = await window.apiClient.call('/users/background-image', {
                     method: 'DELETE'
                 });
 
@@ -7946,7 +7946,7 @@
 
         // Fetch notifications from API
         async function fetchNotifications() {
-            const response = await apiCall('/notifications', {
+            const response = await window.apiClient.call('/notifications', {
                 method: 'GET'
             });
             
@@ -8071,7 +8071,7 @@
                 const notificationIds = unreadNotifications.map(n => n.id);
                 
                 // Use batch endpoint instead of individual calls
-                const response = await apiCall('/notifications/mark-read-batch', {
+                const response = await window.apiClient.call('/notifications/mark-read-batch', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -8103,7 +8103,7 @@
         async function handleNotificationClick(notificationId, type) {
             // Mark as read
             try {
-                await apiCall(`/notifications/${notificationId}/read`, {
+                await window.apiClient.call(`/notifications/${notificationId}/read`, {
                     method: 'PUT'
                 });
                 
@@ -8284,7 +8284,7 @@
         // Show friend requests panel
         async function showFriendRequestsPanel() {
             try {
-                const response = await apiCall('/relationships/friend-requests/pending', {
+                const response = await window.apiClient.call('/relationships/friend-requests/pending', {
                     method: 'GET'
                 });
 
@@ -8647,7 +8647,7 @@
             
             try {
                 // Get friends list using the relationship API
-                const response = await window.apiCall(`/relationships/${window.currentUser.id}/friends`);
+                const response = await window.window.apiClient.call(`/relationships/${window.currentUser.id}/friends`);
                 
                 if (response.ok && response.data) {
                     displayFriendsForMessaging(response.data.friends || []);
@@ -8842,7 +8842,7 @@
             try {
                 const [status, userProfile] = await Promise.all([
                     window.RelationshipUtils.getCombinedStatus(userId),
-                    window.apiCall(`/users/profile/${userId}`)
+                    window.window.apiClient.call(`/users/profile/${userId}`)
                 ]);
                 
                 const containerStyle = inline 
@@ -8918,7 +8918,7 @@
             if (!window.currentUser) return;
             
             try {
-                await window.apiCall('/users/activity', {
+                await window.window.apiClient.call('/users/activity', {
                     method: 'POST',
                     body: JSON.stringify({ timestamp: new Date().toISOString() })
                 });
@@ -8958,7 +8958,7 @@
                 console.log('Opening message with friend:', userId);
                 
                 // Get user info first to have their username
-                const userResponse = await window.apiCall(`/users/profile/${userId}`);
+                const userResponse = await window.window.apiClient.call(`/users/profile/${userId}`);
                 if (!userResponse || !userResponse.username) {
                     showToast('Failed to load user information');
                     return;
@@ -9382,7 +9382,7 @@
             };
 
             try {
-                const response = await apiCall('/civic/petitions', {
+                const response = await window.apiClient.call('/civic/petitions', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
@@ -9469,7 +9469,7 @@
             };
 
             try {
-                const response = await apiCall('/civic/events', {
+                const response = await window.apiClient.call('/civic/events', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
@@ -9600,7 +9600,7 @@
 
                 // Build API query
                 const params = new URLSearchParams(filters);
-                const response = await apiCall(`/civic/browse?${params.toString()}`);
+                const response = await window.apiClient.call(`/civic/browse?${params.toString()}`);
 
                 if (response.ok && response.data) {
                     displayCivicResults(response.data);
