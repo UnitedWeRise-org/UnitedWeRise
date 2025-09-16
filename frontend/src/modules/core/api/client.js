@@ -80,9 +80,13 @@ class APIClient {
                 }
             };
             
-            // Add CSRF token if available
-            if (this.csrfToken) {
-                fetchOptions.headers['X-CSRF-Token'] = this.csrfToken;
+            // Add CSRF token if available - check both instance and global tokens
+            const csrfToken = this.csrfToken || window.csrfToken;
+            if (csrfToken) {
+                fetchOptions.headers['X-CSRF-Token'] = csrfToken;
+                // Sync the tokens bidirectionally
+                this.csrfToken = csrfToken;
+                window.csrfToken = csrfToken;
             }
             
             // Set timeout
@@ -114,9 +118,10 @@ class APIClient {
             // Parse response
             const data = await response.json();
             
-            // Update CSRF token if provided
+            // Update CSRF token if provided - sync both instance and global
             if (data.csrfToken) {
                 this.csrfToken = data.csrfToken;
+                window.csrfToken = data.csrfToken;
             }
             
             return data;
@@ -268,8 +273,12 @@ class APIClient {
             xhr.open('POST', this._buildURL(endpoint));
             xhr.withCredentials = true;
             
-            if (this.csrfToken) {
-                xhr.setRequestHeader('X-CSRF-Token', this.csrfToken);
+            const csrfToken = this.csrfToken || window.csrfToken;
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                // Sync the tokens bidirectionally
+                this.csrfToken = csrfToken;
+                window.csrfToken = csrfToken;
             }
             
             xhr.send(formData);
