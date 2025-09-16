@@ -2744,7 +2744,7 @@
 
         async function performSearch(query) {
             try {
-                const response = await window.apiClient.call(`/users/search?q=${encodeURIComponent(query)}`);
+                const response = await window.apiClient.call(`/search/unified?q=${encodeURIComponent(query)}&types=users`);
                 
                 if (response.ok) {
                     // Only use the global search results container, not the feed area

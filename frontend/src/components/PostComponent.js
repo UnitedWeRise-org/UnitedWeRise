@@ -151,7 +151,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/${endpoint}`, {
+            const response = await window.apiClient.call(`/posts/${postId}/${endpoint}`, {
                 method: 'POST'
             });
 
@@ -212,7 +212,7 @@ class PostComponent {
     async showExtendedContentInline(postId) {
         try {
             // Get the post data to check for extended content
-            const postResponse = await window.apiCall(`/posts/${postId}`);
+            const postResponse = await window.apiClient.call(`/posts/${postId}`);
             if (!postResponse.ok || !postResponse.data.post || !postResponse.data.post.extendedContent) {
                 return; // No extended content to show
             }
@@ -286,13 +286,13 @@ class PostComponent {
 
         try {
             // Bypass cache to ensure fresh data
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                 bypassCache: true
             });
             console.log('Load comments response:', response);
 
-            if (response.ok) {
-                const data = response.data;
+            if (response && (response.comments || response.ok)) {
+                const data = response.data || response;
                 console.log('Comments data:', data);
                 this.renderComments(postId, data.comments || []);
                 // Small delay to ensure DOM has updated, then slow fade in
@@ -587,12 +587,12 @@ class PostComponent {
         input.disabled = true;
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content })
             });
 
-            if (response.ok) {
+            if (response && (response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 input.value = '';
                 console.log('Comment added successfully, reloading comments...');
                 // Small delay to ensure the comment is saved on the server
@@ -746,7 +746,7 @@ class PostComponent {
         input.disabled = true;
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content, parentId })
             });
@@ -1006,7 +1006,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
+            const response = await window.apiClient.call(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
             
             if (response.ok) {
                 const users = response.data.users;
@@ -1032,7 +1032,7 @@ class PostComponent {
      */
     async tagUser(userId, x, y, photoId) {
         try {
-            const response = await window.apiCall('/photo-tags', {
+            const response = await window.apiClient.call('/photo-tags', {
                 method: 'POST',
                 body: JSON.stringify({
                     photoId,
@@ -1061,7 +1061,7 @@ class PostComponent {
      */
     async loadPhotoTags(photoId) {
         try {
-            const response = await window.apiCall(`/photo-tags/photo/${photoId}`);
+            const response = await window.apiClient.call(`/photo-tags/photo/${photoId}`);
             
             if (response.ok) {
                 const tags = response.data.tags;
@@ -1167,7 +1167,7 @@ class PostComponent {
         console.log('🎯 PostComponent: Opening focused view for post:', postId);
         try {
             // Fetch full post details
-            const response = await window.apiCall(`/posts/${postId}`);
+            const response = await window.apiClient.call(`/posts/${postId}`);
             if (!response.ok) {
                 throw new Error('Failed to load post details');
             }
@@ -1175,7 +1175,7 @@ class PostComponent {
             const post = response.data.post;
             
             // Fetch comments for the post
-            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`);
+            const commentsResponse = await window.apiClient.call(`/posts/${postId}/comments?limit=100`);
             const comments = commentsResponse.ok ? commentsResponse.data.comments : [];
             
             // Calculate total comment character count for AI summary threshold
@@ -1225,7 +1225,7 @@ class PostComponent {
     async generateCommentSummary(post, comments) {
         try {
             // Use new public comment summarization endpoint
-            const summaryResponse = await window.apiCall(`/posts/${post.id}/comments/summarize`, {
+            const summaryResponse = await window.apiClient.call(`/posts/${post.id}/comments/summarize`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -1443,7 +1443,7 @@ class PostComponent {
         }
         
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content })
