@@ -1570,7 +1570,10 @@
             // Show My Feed by default in main content area
             showMyFeedInMain();
         }
-        
+
+        // Expose globally for unified auth manager
+        window.setUserLoggedIn = setUserLoggedIn;
+
         function setUserLoggedOut() {
             currentUser = null;
             window.currentUser = null;
@@ -1602,6 +1605,8 @@
             }
         }
 
+        // Expose globally for unified auth manager
+        window.setUserLoggedOut = setUserLoggedOut;
 
         // Enable/disable radio buttons based on available location data
         function updateRadioButtonAvailability() {
@@ -1631,20 +1636,40 @@
             console.log(`Radio button availability - State: ${hasState}, Local: ${hasAddress}`);
         }
 
-        function logout() {
-            // Use unified logout function
-            unifiedLogout('main-site');
-            
+        async function logout() {
+            try {
+                // Call logout endpoint to clear cookies
+                await fetch(`${API_BASE.replace('/api', '')}/api/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRF-Token': window.csrfToken
+                    }
+                });
+            } catch (error) {
+                console.warn('Logout endpoint call failed:', error);
+            }
+
+            // Use unified auth manager if available
+            if (window.unifiedAuthManager && window.unifiedAuthManager.logout) {
+                await window.unifiedAuthManager.logout();
+            }
+
+            // Clear local data
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
+            window.csrfToken = null;
+
             // Additional main-site specific cleanup
             setUserLoggedOut();
-            
+
             // Hide additional elements
             document.getElementById('messagesContainer').style.display = 'none';
             document.getElementById('profilePanel').style.display = 'none';
-            
+
             // Reset panels to default content
             resetPanelsToDefault();
-            
+
             // Reset main content
             const mainContent = document.getElementById('mainContent');
             if (mainContent) {
@@ -1655,6 +1680,8 @@
                     </div>
                 `;
             }
+
+            // Don't redirect - stay on the same page
         }
 
         function showAuthMessage(message, type) {

@@ -157,12 +157,18 @@ class UnifiedAuthManager {
         // 5. Update UI via session manager
         setUserLoggedIn(user);
         
-        // 6. Dispatch events for legacy systems
+        // 6. Call legacy setUserLoggedIn if available
+        if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
+            console.log('🔄 Calling legacy setUserLoggedIn...');
+            await window.setUserLoggedIn(user);
+        }
+
+        // 7. Dispatch events for other systems
         window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
-        window.dispatchEvent(new CustomEvent('authStateChanged', { 
-            detail: { authenticated: true, user, csrfToken } 
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { authenticated: true, user, csrfToken }
         }));
-        
+
         console.log('✅ All systems synchronized with user:', user.username || user.email);
     }
 
@@ -225,6 +231,12 @@ class UnifiedAuthManager {
         // Clear localStorage
         localStorage.removeItem('currentUser');
         
+        // Call legacy setUserLoggedOut if available
+        if (window.setUserLoggedOut && typeof window.setUserLoggedOut === 'function') {
+            console.log('🔄 Calling legacy setUserLoggedOut...');
+            window.setUserLoggedOut();
+        }
+
         // Clear CSRF tokens
         window.csrfToken = null;
         if (window.apiClient) {
