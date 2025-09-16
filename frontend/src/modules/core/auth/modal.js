@@ -160,6 +160,25 @@ export async function handleLogin() {
             }, 1000);
             
             console.log('✅ Login successful:', response.user.username || response.user.email);
+        } else if (response.requiresTOTP) {
+            console.log('🔍 TOTP required, delegating to unified system');
+            showAuthMessage('Two-factor authentication required...', 'info', 'login');
+            
+            // Fall back to the unified login system for TOTP handling
+            try {
+                const result = await window.unifiedLogin(email, password, 'main-site');
+                if (result.success) {
+                    userState.current = result.user;
+                    setUserLoggedIn(result.user);
+                    closeAuthModal();
+                    showAuthMessage('Login successful!', 'success');
+                } else {
+                    showAuthMessage(result.error || 'Login failed', 'error', 'login');
+                }
+            } catch (totpError) {
+                console.error('TOTP login error:', totpError);
+                showAuthMessage('Two-factor authentication failed', 'error', 'login');
+            }
         } else {
             showAuthMessage(response.message || 'Login failed', 'error', 'login');
         }
