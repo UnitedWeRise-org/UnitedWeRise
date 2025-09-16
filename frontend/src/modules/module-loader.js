@@ -10,6 +10,7 @@
 // Import core modules
 import { apiClient } from './core/api/client.js';
 import { userState } from './core/state/user.js';
+import { unifiedAuthManager } from './core/auth/unified-manager.js';
 
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
