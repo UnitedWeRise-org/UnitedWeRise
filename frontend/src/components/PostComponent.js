@@ -155,7 +155,7 @@ class PostComponent {
                 method: 'POST'
             });
 
-            if (!response.ok) {
+            if (!response.success && !response.ok) {
                 // Revert on error
                 if (isLiked) {
                     icon.textContent = '❤️';
@@ -592,7 +592,7 @@ class PostComponent {
                 body: JSON.stringify({ content })
             });
 
-            if (response && (response.comment || response.message === 'Comment added successfully' || response.ok)) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 input.value = '';
                 console.log('Comment added successfully, reloading comments...');
                 // Delay to ensure the comment is saved on the server, then reload with cache bypass
@@ -751,7 +751,7 @@ class PostComponent {
                 body: JSON.stringify({ content, parentId })
             });
 
-            if (response.ok) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 input.value = '';
                 this.toggleReplyBox(parentId, postId); // Hide reply box
                 
@@ -1008,7 +1008,7 @@ class PostComponent {
         try {
             const response = await window.apiClient.call(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
             
-            if (response.ok) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const users = response.data.users;
                 const resultsContainer = document.querySelector('.user-search-results');
                 
@@ -1042,7 +1042,7 @@ class PostComponent {
                 })
             });
 
-            if (response.ok) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 this.hideUserSearch();
                 this.loadPhotoTags(photoId); // Reload tags
                 this.showToast('User tagged successfully!');
@@ -1063,7 +1063,7 @@ class PostComponent {
         try {
             const response = await window.apiClient.call(`/photo-tags/photo/${photoId}`);
             
-            if (response.ok) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const tags = response.data.tags;
                 const overlay = document.querySelector('.photo-tags-overlay');
                 
@@ -1449,7 +1449,7 @@ class PostComponent {
                 body: JSON.stringify({ content })
             });
             
-            if (response.ok) {
+            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 // Clear textarea
                 textarea.value = '';
                 

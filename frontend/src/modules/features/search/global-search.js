@@ -174,7 +174,7 @@ async function executeEnhancedSearch(query) {
         if (searchType === 'all') {
             // Use unified search endpoint (1 call instead of 4)
             searchPromises = [
-                apiClient.call(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
+                apiClient.call(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({success: false, data: {users: [], posts: [], officials: [], topics: []}}))
             ];
         } else if (searchType === 'candidates') {
             // For candidates filter, search officials but filter client-side
@@ -190,8 +190,8 @@ async function executeEnhancedSearch(query) {
         
         // Process unified search results
         const result = results[0];
-        if (result.ok && result.data && result.data.data) {
-            const searchData = result.data.data;
+        if (result && result.success && result.data) {
+            const searchData = result.data;
             currentSearchResults = {
                 users: searchData.users || [],
                 posts: searchData.posts || [],
