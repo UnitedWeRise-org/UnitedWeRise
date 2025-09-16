@@ -2746,9 +2746,10 @@
             try {
                 const response = await window.apiClient.call(`/search/unified?q=${encodeURIComponent(query)}&types=users`);
                 
-                if (response.ok) {
+                if (response && (response.users || response.ok)) {
                     // Only use the global search results container, not the feed area
-                    displayGlobalSearchResults(response.data.users);
+                    const users = response.data?.users || response.users || [];
+                    displayGlobalSearchResults(users);
                 } else {
                     console.error('Search failed');
                 }
@@ -5894,7 +5895,7 @@
         }
 
         async function likePost(postId, event) {
-            if (!currentUser) {
+            if (!window.currentUser) {
                 alert('Please log in to like posts');
                 return;
             }

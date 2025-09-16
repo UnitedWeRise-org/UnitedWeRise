@@ -595,10 +595,10 @@ class PostComponent {
             if (response && (response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 input.value = '';
                 console.log('Comment added successfully, reloading comments...');
-                // Small delay to ensure the comment is saved on the server
+                // Delay to ensure the comment is saved on the server, then reload with cache bypass
                 setTimeout(async () => {
-                    await this.loadComments(postId);
-                }, 200);
+                    await this.loadComments(postId, true); // Force cache bypass
+                }, 500);
                 
                 // Update comment count
                 const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
@@ -1168,15 +1168,15 @@ class PostComponent {
         try {
             // Fetch full post details
             const response = await window.apiClient.call(`/posts/${postId}`);
-            if (!response.ok) {
+            if (!response || (!response.post && !response.ok)) {
                 throw new Error('Failed to load post details');
             }
             
-            const post = response.data.post;
+            const post = response.data?.post || response.post || response;
             
             // Fetch comments for the post
             const commentsResponse = await window.apiClient.call(`/posts/${postId}/comments?limit=100`);
-            const comments = commentsResponse.ok ? commentsResponse.data.comments : [];
+            const comments = commentsResponse?.comments || commentsResponse?.data?.comments || [];
             
             // Calculate total comment character count for AI summary threshold
             const totalCommentChars = this.calculateTotalCommentChars(comments);
