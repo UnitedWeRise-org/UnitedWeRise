@@ -125,8 +125,11 @@ function clearAuthMessages() {
  * Extracted from index.html handleLogin function
  */
 export async function handleLogin() {
+    console.log('🔍 Modular handleLogin called');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
+    
+    console.log('🔍 Login inputs:', {email: email ? 'present' : 'missing', password: password ? 'present' : 'missing'});
     
     if (!email || !password) {
         showAuthMessage('Please fill in all fields', 'error', 'login');
@@ -135,11 +138,14 @@ export async function handleLogin() {
     
     try {
         showAuthMessage('Logging in...', 'info', 'login');
+        console.log('🔍 Making API call to /auth/login');
         
         const response = await apiClient.call('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password })
         });
+        
+        console.log('🔍 Login response:', response);
         
         if (response.success && response.user) {
             // Set user state

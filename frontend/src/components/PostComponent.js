@@ -120,9 +120,8 @@ class PostComponent {
      * Toggle like/unlike for a post
      */
     async toggleLike(postId) {
-        // Check authentication using the same pattern as the main app
-        const authToken = localStorage.getItem('authToken') || window.authToken;
-        if (!authToken) {
+        // Check authentication using user state system
+        if (!window.userState?.isAuthenticated) {
             alert('Please log in to like posts');
             return;
         }
