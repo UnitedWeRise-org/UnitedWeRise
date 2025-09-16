@@ -147,7 +147,7 @@ export async function handleLogin() {
         
         console.log('🔍 Login response:', response);
         
-        if (response.success && response.user) {
+        if ((response.success || response.message === 'Login successful') && response.user) {
             // Set user state
             userState.current = response.user;
             setUserLoggedIn(response.user);
