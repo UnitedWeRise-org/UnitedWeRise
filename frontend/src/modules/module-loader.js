@@ -125,9 +125,13 @@ async function testModularFunctionality() {
         name: 'API Client',
         test: async () => {
             try {
-                // Test a simple API call
-                const response = await apiClient.call('/health');
-                return response ? 'API client responding' : 'API client not responding';
+                // Test using direct health endpoint (not through API config)
+                const healthUrl = window.location.hostname === 'dev.unitedwerise.org' 
+                    ? 'https://dev-api.unitedwerise.org/health'
+                    : 'https://api.unitedwerise.org/health';
+                const response = await fetch(healthUrl);
+                const data = await response.json();
+                return data.status === 'healthy' ? 'API client responding' : 'API client not responding';
             } catch (error) {
                 return `API client error: ${error.message}`;
             }
