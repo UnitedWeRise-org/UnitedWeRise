@@ -2667,7 +2667,10 @@
 
         // API Helper Functions
         async function apiCall(endpoint, options = {}) {
-            // Check cache for GET requests (unless explicitly bypassing cache)
+            // UNIFIED API SYSTEM: Use the centralized modular apiClient
+            // This eliminates API fragmentation and ensures consistent behavior
+            
+            // Preserve legacy caching behavior for backward compatibility
             const isGet = !options.method || options.method === 'GET';
             const bypassCache = options.bypassCache;
             
@@ -2685,49 +2688,19 @@
                     return cached.data;
                 }
             }
-            
-            const config = {
-                credentials: 'include', // Include cookies for authentication
-                headers: {
-                    // Authentication handled by httpOnly cookies automatically
-                },
-                ...options
-            };
-
-            // Only set Content-Type to application/json if body is not FormData
-            // FormData should set its own Content-Type with proper boundary
-            if (!options.skipContentType && !(config.body instanceof FormData)) {
-                config.headers['Content-Type'] = 'application/json';
-                // Stringify body if it exists and is not already a string or FormData
-                if (config.body && typeof config.body !== 'string') {
-                    config.body = JSON.stringify(config.body);
-                }
-            }
-            
-            // Remove custom options before fetch
-            delete config.bypassCache;
-            delete config.skipContentType;
 
             try {
-                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                // DELEGATE TO UNIFIED API CLIENT: This ensures consistent environment detection,
+                // error handling, retry logic, and proper URL construction
+                const response = await window.apiClient.call(endpoint, options);
                 
-                // Create a response object with ok status and parsed data
+                // The apiClient already returns a structured response with parsed data
+                // Transform it to match the legacy apiCall format for backward compatibility
                 const result = {
-                    ok: response.ok,
-                    status: response.status,
-                    data: null
+                    ok: response.ok || response.success || false,
+                    status: response.status || (response.ok ? 200 : 500),
+                    data: response.data || response || null
                 };
-
-                // Try to parse JSON response
-                try {
-                    const text = await response.text();
-                    if (text) {
-                        result.data = JSON.parse(text);
-                    }
-                } catch (parseError) {
-                    console.warn('Failed to parse JSON response:', parseError);
-                    result.data = { error: 'Invalid response format' };
-                }
                 
                 // Cache GET responses
                 if (isGet && !bypassCache && result.ok) {
