@@ -1321,11 +1321,175 @@
             }
         }
 
-        // REMOVED: Authentication modal functions now handled by modules/core/auth/modal.js
+        function openAuthModal(mode = 'login') {
+            document.getElementById('authModal').style.display = 'block';
+            if (mode === 'login') {
+                switchToLogin();
+            } else {
+                switchToRegister();
+            }
+        }
 
-        // REMOVED: handleLogin function now handled by modules/core/auth/modal.js
+        function closeAuthModal() {
+            document.getElementById('authModal').style.display = 'none';
+            clearAuthForm();
+        }
 
-        // REMOVED: handleRegister function now handled by modules/core/auth/modal.js
+        function switchToLogin() {
+            document.getElementById('authTitle').textContent = 'Login';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            clearAuthForm();
+        }
+
+        function switchToRegister() {
+            document.getElementById('authTitle').textContent = 'Sign Up';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            clearAuthForm();
+        }
+
+        function clearAuthForm() {
+            document.getElementById('authMessage').innerHTML = '';
+            // Clear all form inputs
+            document.querySelectorAll('#authModal input').forEach(input => input.value = '');
+            // Hide TOTP field and reset button text
+            const totpField = document.getElementById('totpField');
+            if (totpField) totpField.style.display = 'none';
+            const loginButton = document.getElementById('loginButton');
+            if (loginButton) loginButton.textContent = 'Login';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAuthMessage('Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                const loginButton = document.getElementById('loginButton');
+                loginButton.disabled = true;
+                loginButton.textContent = 'Signing in...';
+                
+                // Use unified login function
+                const result = await unifiedLogin(email, password, 'main-site');
+                
+                if (result.success) {
+                    // Authentication handled by httpOnly cookies
+                    setUserLoggedIn(result.user);
+                    closeAuthModal();
+                    showAuthMessage('Login successful!', 'success');
+                } else {
+                    showAuthMessage(result.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAuthMessage('Network error. Please try again.', 'error');
+            } finally {
+                const loginButton = document.getElementById('loginButton');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
+            }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('registerEmail').value;
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const firstName = document.getElementById('registerFirstName').value;
+            const lastName = document.getElementById('registerLastName').value;
+            
+            
+            // Get hCaptcha response
+            let hcaptchaResponse = null;
+            try {
+                if (window.hcaptcha) {
+                    const widget = document.getElementById('hcaptcha-register');
+                    const hasIframe = widget && widget.querySelector('iframe');
+                    
+                    console.log('hCaptcha check before registration:', {
+                        widget: widget ? 'exists' : 'missing',
+                        iframe: hasIframe ? 'exists' : 'missing',
+                        hcaptchaLoaded: typeof window.hcaptcha !== 'undefined'
+                    });
+                    
+                    hcaptchaResponse = window.hcaptcha.getResponse();
+                    console.log('hCaptcha response length:', hcaptchaResponse ? hcaptchaResponse.length : 0);
+                }
+            } catch (e) {
+                console.error('hCaptcha getResponse error:', e);
+            }
+
+            if (!email || !username || !password) {
+                showAuthMessage('Email, username, and password are required', 'error');
+                return;
+            }
+
+            // Check terms agreement checkbox
+            const termsAgreement = document.getElementById('termsAgreement');
+            if (!termsAgreement || !termsAgreement.checked) {
+                showAuthMessage('You must agree to the Terms of Service and Privacy Policy to continue', 'error');
+                return;
+            }
+            
+            // Skip hCaptcha entirely for local development
+            const isLocalDev = window.location.protocol === 'file:' || 
+                             window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1';
+
+            if (!isLocalDev && !hcaptchaResponse) {
+                showAuthMessage('Please complete the captcha verification by clicking the checkbox above', 'error');
+                return;
+            }
+            
+            // Validate password
+            if (!validatePassword(password)) {
+                showAuthMessage('Password must meet all requirements', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email, 
+                        username, 
+                        password, 
+                        firstName, 
+                        lastName, 
+                        hcaptchaToken: hcaptchaResponse || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Authentication now handled entirely by httpOnly cookies
+                    setUserLoggedIn(data.user);
+                    closeAuthModal();
+                    showAuthMessage('Registration successful!', 'success');
+                } else {
+                    showAuthMessage(data.error || 'Registration failed', 'error');
+                    // Reset hCaptcha on error
+                    if (window.hcaptcha) {
+                        window.hcaptcha.reset();
+                    }
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAuthMessage('Network error. Please try again.', 'error');
+                // Reset hCaptcha on error
+                if (window.hcaptcha) {
+                    window.hcaptcha.reset();
+                }
+            }
+        }
 
         async function refreshUserDataIfNeeded(user) {
             // If user data is missing firstName, refresh it from the backend
@@ -1493,7 +1657,10 @@
             }
         }
 
-        // REMOVED: showAuthMessage function now handled by modules/core/auth/modal.js
+        function showAuthMessage(message, type) {
+            const messageEl = document.getElementById('authMessage');
+            messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
 
         // About Modal Functions
         function openAboutModal() {
@@ -4380,19 +4547,7 @@
         window.showMyFeedInMain = showMyFeedInMain;
 
         // Load posts for My Feed in main area
-        // REMOVED: My Feed functions now handled by modules/features/feed/my-feed.js
-        
-        // The following functions have been extracted to modules:
-        // - loadMyFeedPosts()
-        // - displayMyFeedPosts() 
-        // - loadMoreMyFeedPosts()
-        // - setupMyFeedInfiniteScroll()
-        // - createPostFromTextarea()
-        // - attachMediaToPost()
-        // - handlePostMediaUpload()
-        // - clearMediaAttachment()
-
-        // Placeholder for compatibility during transition - will be removed in final phase {
+        async function loadMyFeedPosts() {
             console.log('🔄 Loading My Feed posts...');
             
             // Ensure user is authenticated (using currentUser since tokens are httpOnly)
@@ -9802,9 +9957,8 @@
     <script src="js/unifiedAuth.js"></script>
     
     <!-- MODULAR JAVASCRIPT SYSTEM -->
-    <!-- Load ES6 modules for modern architecture -->
+    <!-- ES6 modules for modern architecture - replaces inline JavaScript -->
     <script type="module">
-        // Import and initialize all modules
         import { initializeModules, testModularFunctionality } from './src/modules/module-loader.js';
         
         console.log('🚀 Loading modular JavaScript system...');
@@ -9813,12 +9967,16 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 initializeModules();
-                // Test functionality after brief delay to ensure all modules loaded
-                setTimeout(testModularFunctionality, 1000);
+                // Run diagnostics in development
+                if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
+                    setTimeout(testModularFunctionality, 2000);
+                }
             });
         } else {
             initializeModules();
-            setTimeout(testModularFunctionality, 1000);
+            if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
+                setTimeout(testModularFunctionality, 2000);
+            }
         }
     </script>
 </body>

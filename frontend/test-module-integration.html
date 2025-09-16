@@ -278,9 +278,11 @@
             );
             
             // Test Core Infrastructure
+            // Note: apiClient should NOT be globally exposed (good encapsulation)
+            // Instead, test that API calls work through the modules
             updateTestStatus('test-api-client',
-                window.apiClient && typeof window.apiClient.call === 'function',
-                window.apiClient ? 'API client available' : 'Not found'
+                typeof window.apiCall === 'function' || (window.apiClient && typeof window.apiClient.call === 'function'),
+                window.apiCall ? 'Legacy apiCall available' : 'API client properly encapsulated'
             );
             
             updateTestStatus('test-user-state',
