@@ -2744,14 +2744,17 @@
 
         async function performSearch(query) {
             try {
+                console.log('🔍 Search debug - calling:', `/search/unified?q=${encodeURIComponent(query)}&types=users`);
                 const response = await window.apiClient.call(`/search/unified?q=${encodeURIComponent(query)}&types=users`);
+                console.log('🔍 Search response:', response);
                 
                 if (response && (response.users || response.ok)) {
                     // Only use the global search results container, not the feed area
                     const users = response.data?.users || response.users || [];
+                    console.log('🔍 Search users found:', users);
                     displayGlobalSearchResults(users);
                 } else {
-                    console.error('Search failed');
+                    console.error('Search failed - response structure:', response);
                 }
             } catch (error) {
                 console.error('Search error:', error);
@@ -5895,7 +5898,15 @@
         }
 
         async function likePost(postId, event) {
-            if (!window.currentUser) {
+            console.log('🔍 Like post debug:', {
+                windowCurrentUser: window.currentUser,
+                userStateModule: window.userState?.current,
+                localStorageUser: localStorage.getItem('currentUser')
+            });
+            
+            // Check both user state sources for authentication
+            const user = window.currentUser || window.userState?.current;
+            if (!user) {
                 alert('Please log in to like posts');
                 return;
             }
