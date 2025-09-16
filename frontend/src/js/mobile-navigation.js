@@ -299,26 +299,83 @@ function showMobileFeed() {
 }
 
 function showMobileTrending() {
-    const trendingContainer = document.querySelector('.trending-updates');
-    if (trendingContainer) {
-        trendingContainer.style.display = 'block';
+    // Try to load trending content from the real functions
+    if (typeof loadTrendingUpdates === 'function') {
+        loadTrendingUpdates();
+        
+        // Show trending container if it exists
+        const trendingContainer = document.querySelector('.trending-updates');
+        if (trendingContainer) {
+            trendingContainer.style.display = 'block';
+        }
+        
+        // Also try to show the trending panel
+        const trendingPanel = document.getElementById('panel-trending');
+        if (trendingPanel) {
+            trendingPanel.style.display = 'block';
+            trendingPanel.classList.remove('hidden');
+        }
+    } 
+    // Try alternative trending function
+    else if (typeof loadTrendingPosts === 'function') {
+        loadTrendingPosts();
     }
-    // Create temporary trending view if container doesn't exist
-    showTemporaryView('Trending', 'Trending topics and discussions will appear here.');
+    // Fallback to showing existing content
+    else {
+        const trendingContainer = document.querySelector('.trending-updates');
+        if (trendingContainer) {
+            trendingContainer.style.display = 'block';
+        } else {
+            showTemporaryView('Trending', 'Loading trending topics...');
+        }
+        console.warn('Trending functions not available');
+    }
 }
 
 function showMobileMessages() {
-    const messagesContainer = document.querySelector('.messages-container');
-    if (messagesContainer) {
-        messagesContainer.style.display = 'block';
+    // Check if user is logged in
+    if (!window.currentUser) {
+        showTemporaryView('Messages', 'Please log in to view your messages.');
+        return;
+    }
+    
+    // Call the real loadConversations function from index.html
+    if (typeof loadConversations === 'function') {
+        loadConversations();
+        
+        // Show messages container if it exists
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+            messagesContainer.style.display = 'block';
+        }
     } else {
-        showTemporaryView('Messages', 'Your messages will appear here.');
+        showTemporaryView('Messages', 'Loading conversations...');
+        console.warn('loadConversations function not available');
     }
 }
 
 function showMobileCivic() {
-    // Show civic engagement features
-    showTemporaryView('Civic Engagement', 'Elections, officials, and civic tools will appear here.');
+    // Check if user is logged in
+    if (!window.currentUser) {
+        showTemporaryView('Civic Engagement', 'Please log in to access civic organizing tools.');
+        return;
+    }
+    
+    // Call the real openCivicOrganizing function from index.html
+    if (typeof openCivicOrganizing === 'function') {
+        openCivicOrganizing();
+    } else {
+        // Fallback - try to show civic elements manually
+        const civicElements = document.querySelectorAll('[id*="civic"], [class*="civic"]');
+        if (civicElements.length > 0) {
+            civicElements.forEach(element => {
+                element.style.display = 'block';
+            });
+        } else {
+            showTemporaryView('Civic Engagement', 'Loading civic organizing tools...');
+        }
+        console.warn('openCivicOrganizing function not available');
+    }
 }
 
 function showMobileMap() {
@@ -327,11 +384,24 @@ function showMobileMap() {
 }
 
 function showMobileDonate() {
-    // Trigger donation modal
-    if (typeof openDonationModal === 'function') {
+    // Try donation system first (preferred method)
+    if (window.donationSystem && typeof window.donationSystem.openDonationModal === 'function') {
+        window.donationSystem.openDonationModal();
+    } 
+    // Fallback to global function if available
+    else if (typeof openDonationModal === 'function') {
         openDonationModal();
-    } else {
-        showTemporaryView('Donate', 'Support civic causes and candidates.');
+    }
+    // Final fallback - manual modal trigger
+    else {
+        // Look for donation modal in DOM
+        const donationModal = document.querySelector('#donationModal, .donation-modal');
+        if (donationModal) {
+            donationModal.style.display = 'block';
+        } else {
+            showTemporaryView('Donate', 'Loading donation system...');
+        }
+        console.warn('Donation system not fully loaded');
     }
 }
 
