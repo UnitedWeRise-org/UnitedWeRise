@@ -157,6 +157,11 @@ export async function handleLogin() {
             // Close modal after short delay
             setTimeout(() => {
                 closeAuthModal();
+                // Re-initialize app to load user data and feed
+                if (window.initializeApp) {
+                    console.log('🔄 Re-initializing app after login...');
+                    window.initializeApp();
+                }
             }, 1000);
             
             console.log('✅ Login successful:', response.user.username || response.user.email);
@@ -172,6 +177,11 @@ export async function handleLogin() {
                     setUserLoggedIn(result.user);
                     closeAuthModal();
                     showAuthMessage('Login successful!', 'success');
+                    // Re-initialize app to load user data and feed
+                    if (window.initializeApp) {
+                        console.log('🔄 Re-initializing app after TOTP login...');
+                        setTimeout(() => window.initializeApp(), 500);
+                    }
                 } else {
                     showAuthMessage(result.error || 'Login failed', 'error', 'login');
                 }
