@@ -286,7 +286,6 @@ if (typeof window !== 'undefined') {
     
     // Maintain backward compatibility
     window.apiCall = (endpoint, options) => {
-        console.warn('Deprecated: window.apiCall() - Use import { apiClient } instead');
         return apiClient.call(endpoint, options);
     };
 }
