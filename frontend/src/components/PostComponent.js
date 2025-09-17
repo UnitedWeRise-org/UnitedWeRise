@@ -120,8 +120,8 @@ class PostComponent {
      * Toggle like/unlike for a post
      */
     async toggleLike(postId) {
-        // Check authentication using user state system
-        if (!window.userState?.isAuthenticated) {
+        // Check authentication using current user
+        if (!window.currentUser) {
             alert('Please log in to like posts');
             return;
         }
@@ -150,11 +150,11 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiClient.call(`/posts/${postId}/${endpoint}`, {
+            const response = await window.apiCall(`/posts/${postId}/${endpoint}`, {
                 method: 'POST'
             });
 
-            if (!response.success && !response.ok) {
+            if (!response.ok) {
                 // Revert on error
                 if (isLiked) {
                     icon.textContent = '❤️';
@@ -211,7 +211,7 @@ class PostComponent {
     async showExtendedContentInline(postId) {
         try {
             // Get the post data to check for extended content
-            const postResponse = await window.apiClient.call(`/posts/${postId}`);
+            const postResponse = await window.apiCall(`/posts/${postId}`);
             if (!postResponse.ok || !postResponse.data.post || !postResponse.data.post.extendedContent) {
                 return; // No extended content to show
             }
@@ -285,7 +285,7 @@ class PostComponent {
 
         try {
             // Bypass cache to ensure fresh data
-            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
                 bypassCache: true
             });
             console.log('Load comments response:', response);
@@ -586,7 +586,7 @@ class PostComponent {
         input.disabled = true;
 
         try {
-            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content })
             });
@@ -745,7 +745,7 @@ class PostComponent {
         input.disabled = true;
 
         try {
-            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content, parentId })
             });
@@ -1005,7 +1005,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiClient.call(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
+            const response = await window.apiCall(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
             
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const users = response.data.users;
@@ -1031,7 +1031,7 @@ class PostComponent {
      */
     async tagUser(userId, x, y, photoId) {
         try {
-            const response = await window.apiClient.call('/photo-tags', {
+            const response = await window.apiCall('/photo-tags', {
                 method: 'POST',
                 body: JSON.stringify({
                     photoId,
@@ -1060,7 +1060,7 @@ class PostComponent {
      */
     async loadPhotoTags(photoId) {
         try {
-            const response = await window.apiClient.call(`/photo-tags/photo/${photoId}`);
+            const response = await window.apiCall(`/photo-tags/photo/${photoId}`);
             
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const tags = response.data.tags;
@@ -1166,7 +1166,7 @@ class PostComponent {
         console.log('🎯 PostComponent: Opening focused view for post:', postId);
         try {
             // Fetch full post details
-            const response = await window.apiClient.call(`/posts/${postId}`);
+            const response = await window.apiCall(`/posts/${postId}`);
             if (!response || (!response.post && !response.ok)) {
                 throw new Error('Failed to load post details');
             }
@@ -1174,7 +1174,7 @@ class PostComponent {
             const post = response.data?.post || response.post || response;
             
             // Fetch comments for the post
-            const commentsResponse = await window.apiClient.call(`/posts/${postId}/comments?limit=100`);
+            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`);
             const comments = commentsResponse?.comments || commentsResponse?.data?.comments || [];
             
             // Calculate total comment character count for AI summary threshold
@@ -1224,7 +1224,7 @@ class PostComponent {
     async generateCommentSummary(post, comments) {
         try {
             // Use new public comment summarization endpoint
-            const summaryResponse = await window.apiClient.call(`/posts/${post.id}/comments/summarize`, {
+            const summaryResponse = await window.apiCall(`/posts/${post.id}/comments/summarize`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -1442,7 +1442,7 @@ class PostComponent {
         }
         
         try {
-            const response = await window.apiClient.call(`/posts/${postId}/comments`, {
+            const response = await window.apiCall(`/posts/${postId}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content })
