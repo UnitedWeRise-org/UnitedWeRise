@@ -3460,6 +3460,13 @@ class MyProfile {
 // Initialize global instance
 window.myProfile = new MyProfile();
 
+// Log that MyProfile component is loaded
+if (typeof adminDebugLog === 'function') {
+    adminDebugLog('MyProfile', '✅ MyProfile component loaded and initialized');
+} else {
+    console.log('✅ MyProfile component loaded and initialized');
+}
+
 // Profile integration functions for modular system
 function showMyProfile() {
     if (!window.currentUser) {
