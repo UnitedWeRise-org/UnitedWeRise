@@ -155,13 +155,13 @@ class UnifiedAuthManager {
             console.log('🔑 CSRF token synchronized globally:', csrfToken.substring(0, 8) + '...');
         }
         
-        // 5. Update UI via session manager
-        setUserLoggedIn(user);
-        
-        // 6. Call legacy setUserLoggedIn if available
+        // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
             console.log('🔄 Calling legacy setUserLoggedIn...');
             await window.setUserLoggedIn(user);
+        } else {
+            console.log('🔄 Calling modular setUserLoggedIn...');
+            setUserLoggedIn(user);
         }
 
         // 7. Dispatch events for other systems
@@ -199,13 +199,25 @@ class UnifiedAuthManager {
             console.log('🔑 CSRF token synchronized globally:', csrfToken.substring(0, 8) + '...');
         }
 
-        // 5. Update the local currentUser variable in index.html
-        // This is the variable that showMyFeedInMain() checks
-        if (window.setCurrentUser && typeof window.setCurrentUser === 'function') {
-            window.setCurrentUser(user);
+        // 5. Update UI - prefer legacy function if available, fallback to modular
+        if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
+            console.log('🔄 Calling legacy setUserLoggedIn (sync)...');
+            window.setUserLoggedIn(user);
+        } else {
+            console.log('🔄 Calling modular setUserLoggedIn (sync)...');
+            setUserLoggedIn(user);
         }
 
-        // 6. Dispatch events for other systems
+        // 6. Update the local currentUser variable in index.html
+        // This is the variable that showMyFeedInMain() checks
+        if (window.setCurrentUser && typeof window.setCurrentUser === 'function') {
+            console.log('🔧 Unified auth calling setCurrentUser for sync');
+            window.setCurrentUser(user);
+        } else {
+            console.warn('⚠️ window.setCurrentUser function not available during sync');
+        }
+
+        // 7. Dispatch events for other systems
         window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
         window.dispatchEvent(new CustomEvent('authStateChanged', {
             detail: { authenticated: true, user, csrfToken }
@@ -244,6 +256,17 @@ class UnifiedAuthManager {
         // Set logout flag to prevent re-authentication
         this._isLoggingOut = true;
 
+        // Call backend logout endpoint to clear httpOnly cookies
+        try {
+            await window.apiClient.call('/auth/logout', {
+                method: 'POST'
+            });
+            console.log('✅ Backend logout endpoint called successfully');
+        } catch (error) {
+            console.warn('⚠️ Backend logout endpoint failed:', error);
+            // Continue with frontend logout even if backend fails
+        }
+
         // Update internal state
         this._currentAuthState = {
             isAuthenticated: false,
@@ -265,6 +288,7 @@ class UnifiedAuthManager {
         }, 2000); // 2 second delay
 
         console.log('✅ Logout completed across all systems');
+        return { success: true };
     }
 
     /**

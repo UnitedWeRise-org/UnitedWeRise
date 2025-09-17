@@ -66,6 +66,7 @@ export function setUserLoggedIn(user) {
         if (userGreeting) {
             const displayName = user.firstName || user.username || 'User';
             userGreeting.textContent = `Hello, ${displayName}!`;
+            userGreeting.style.display = 'inline'; // Make the greeting visible
         }
     }
     
@@ -153,17 +154,19 @@ function updateRadioButtonAvailability() {
  */
 export async function logout() {
     try {
+        console.log('🔐 Session.js logout function called');
         console.log('🔐 Using unified auth manager for logout');
-        
+
         // Use unified auth manager for logout
         const result = await unifiedAuthManager.logout();
-        
-        if (result.success) {
+        console.log('🔍 Unified auth manager result:', result);
+
+        if (result && result.success) {
             console.log('✅ Logout successful via unified manager');
             // Redirect to home page
             window.location.href = '/';
         } else {
-            console.error('Logout failed:', result.error);
+            console.error('Logout failed:', result);
         }
     } catch (error) {
         console.error('Logout error:', error);

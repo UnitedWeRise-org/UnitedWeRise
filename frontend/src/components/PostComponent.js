@@ -130,7 +130,7 @@ class PostComponent {
         if (!likeBtn) return;
 
         const isLiked = likeBtn.dataset.liked === 'true';
-        const endpoint = isLiked ? 'unlike' : 'like';
+        const endpoint = 'like'; // Single endpoint that toggles like/unlike
 
         // Optimistic UI update
         const icon = likeBtn.querySelector('.action-icon');

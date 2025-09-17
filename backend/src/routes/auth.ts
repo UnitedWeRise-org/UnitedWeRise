@@ -735,16 +735,26 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
     }
     
     // Clear all authentication cookies with the same options they were set with
-    const cookieOptions = {
+    const httpOnlyCookieOptions = {
+      httpOnly: true, // MUST match login cookie settings for authToken
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
-      path: '/'
+      path: '/',
+      domain: '.unitedwerise.org' // MUST match login cookie settings
     };
-    
-    res.clearCookie('authToken', cookieOptions);
-    res.clearCookie('csrf-token', cookieOptions);
-    res.clearCookie('totpSessionToken', cookieOptions);
-    res.clearCookie('totpVerified', cookieOptions);
+
+    const nonHttpOnlyCookieOptions = {
+      httpOnly: false, // MUST match login cookie settings for csrf-token
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as 'lax',
+      path: '/',
+      domain: '.unitedwerise.org'
+    };
+
+    res.clearCookie('authToken', httpOnlyCookieOptions);
+    res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+    res.clearCookie('totpSessionToken', httpOnlyCookieOptions);
+    res.clearCookie('totpVerified', httpOnlyCookieOptions);
     
     res.json({ message: 'Logged out successfully' });
   } catch (error) {

@@ -663,3 +663,14 @@
         margin-top: 50px;
     }
 }
+
+/* ========================================
+   DESKTOP STYLES - Hide Mobile Elements
+======================================== */
+
+@media screen and (min-width: 1025px) {
+    /* Ensure mobile map close button is never visible on desktop */
+    .mobile-map-close {
+        display: none !important;
+    }
+}

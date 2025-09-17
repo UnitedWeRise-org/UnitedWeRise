@@ -1277,340 +1277,38 @@
         // - OAuth flows updated to cookie-based auth
         // - Legacy authToken variables maintained for transition compatibility
         // - Individual component functions may still reference authToken but will work via updated API layer
-        async function verifyAndSetUser() {
-            try {
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('Authentication', 'Verifying user with /auth/me');
-                }
-                const response = await fetch(`${API_BASE}/auth/me`, {
-                    credentials: 'include' // Use cookies for auth
-                });
+        // verifyAndSetUser() moved to /src/modules/core/auth/session.js
 
-                console.log('Auth verification response status:', response.status);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('Authentication', 'Auth verification successful', {
-                            userId: data.user?.id,
-                            username: data.user?.username
-                        });
-                    }
-                    
-                    // Only set user logged in if we actually have user data
-                    if (data.user && data.user.id) {
-                        setUserLoggedIn(data.user);
-                    } else {
-                        console.warn('Invalid user data received:', data);
-                        // Clear invalid session - cookies will be cleared by logout endpoint
-                        window.csrfToken = null;
-                        // Ensure UI shows logged out state
-                        setUserLoggedOut();
-                    }
-                } else {
-                    // Token is invalid - cookies will be cleared by logout endpoint
-                    console.log('Token invalid, clearing session');
-                    window.csrfToken = null;
-                    // Ensure UI shows logged out state
-                    setUserLoggedOut();
-                }
-            } catch (error) {
-                console.error('Auth verification failed:', error);
-                window.csrfToken = null;
-                // Ensure UI shows logged out state
-                setUserLoggedOut();
-            }
-        }
+        // openAuthModal moved to /src/modules/core/auth/modal.js
 
-        function openAuthModal(mode = 'login') {
-            document.getElementById('authModal').style.display = 'block';
-            if (mode === 'login') {
-                switchToLogin();
-            } else {
-                switchToRegister();
-            }
-        }
+        // closeAuthModal moved to /src/modules/core/auth/modal.js
 
-        function closeAuthModal() {
-            document.getElementById('authModal').style.display = 'none';
-            clearAuthForm();
-        }
+        // switchToLogin moved to /src/modules/core/auth/modal.js
 
-        function switchToLogin() {
-            document.getElementById('authTitle').textContent = 'Login';
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            clearAuthForm();
-        }
+        // switchToRegister moved to /src/modules/core/auth/modal.js
 
-        function switchToRegister() {
-            document.getElementById('authTitle').textContent = 'Sign Up';
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearAuthForm();
-        }
+        // clearAuthForm moved to /src/modules/core/auth/modal.js
 
-        function clearAuthForm() {
-            document.getElementById('authMessage').innerHTML = '';
-            // Clear all form inputs
-            document.querySelectorAll('#authModal input').forEach(input => input.value = '');
-            // Hide TOTP field and reset button text
-            const totpField = document.getElementById('totpField');
-            if (totpField) totpField.style.display = 'none';
-            const loginButton = document.getElementById('loginButton');
-            if (loginButton) loginButton.textContent = 'Login';
-        }
+        // handleLogin moved to /src/modules/core/auth/modal.js
 
-        async function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            if (!email || !password) {
-                showAuthMessage('Please fill in all fields', 'error');
-                return;
-            }
-            
-            try {
-                const loginButton = document.getElementById('loginButton');
-                loginButton.disabled = true;
-                loginButton.textContent = 'Signing in...';
-                
-                // Use unified login function
-                const result = await unifiedLogin(email, password, 'main-site');
-                
-                if (result.success) {
-                    // Authentication handled by httpOnly cookies
-                    setUserLoggedIn(result.user);
-                    closeAuthModal();
-                    showAuthMessage('Login successful!', 'success');
-                } else {
-                    showAuthMessage(result.error || 'Login failed', 'error');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showAuthMessage('Network error. Please try again.', 'error');
-            } finally {
-                const loginButton = document.getElementById('loginButton');
-                loginButton.disabled = false;
-                loginButton.textContent = 'Login';
-            }
-        }
+        // handleRegister() moved to /src/modules/core/auth/modal.js
 
-        async function handleRegister() {
-            const email = document.getElementById('registerEmail').value;
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
-            const firstName = document.getElementById('registerFirstName').value;
-            const lastName = document.getElementById('registerLastName').value;
-            
-            
-            // Get hCaptcha response
-            let hcaptchaResponse = null;
-            try {
-                if (window.hcaptcha) {
-                    const widget = document.getElementById('hcaptcha-register');
-                    const hasIframe = widget && widget.querySelector('iframe');
-                    
-                    console.log('hCaptcha check before registration:', {
-                        widget: widget ? 'exists' : 'missing',
-                        iframe: hasIframe ? 'exists' : 'missing',
-                        hcaptchaLoaded: typeof window.hcaptcha !== 'undefined'
-                    });
-                    
-                    hcaptchaResponse = window.hcaptcha.getResponse();
-                    console.log('hCaptcha response length:', hcaptchaResponse ? hcaptchaResponse.length : 0);
-                }
-            } catch (e) {
-                console.error('hCaptcha getResponse error:', e);
-            }
+        // refreshUserDataIfNeeded() moved to /src/modules/core/auth/session.js
 
-            if (!email || !username || !password) {
-                showAuthMessage('Email, username, and password are required', 'error');
-                return;
-            }
-
-            // Check terms agreement checkbox
-            const termsAgreement = document.getElementById('termsAgreement');
-            if (!termsAgreement || !termsAgreement.checked) {
-                showAuthMessage('You must agree to the Terms of Service and Privacy Policy to continue', 'error');
-                return;
-            }
-            
-            // Skip hCaptcha entirely for local development
-            const isLocalDev = window.location.protocol === 'file:' || 
-                             window.location.hostname === 'localhost' || 
-                             window.location.hostname === '127.0.0.1';
-
-            if (!isLocalDev && !hcaptchaResponse) {
-                showAuthMessage('Please complete the captcha verification by clicking the checkbox above', 'error');
-                return;
-            }
-            
-            // Validate password
-            if (!validatePassword(password)) {
-                showAuthMessage('Password must meet all requirements', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        email, 
-                        username, 
-                        password, 
-                        firstName, 
-                        lastName, 
-                        hcaptchaToken: hcaptchaResponse || null
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Authentication now handled entirely by httpOnly cookies
-                    setUserLoggedIn(data.user);
-                    closeAuthModal();
-                    showAuthMessage('Registration successful!', 'success');
-                } else {
-                    showAuthMessage(data.error || 'Registration failed', 'error');
-                    // Reset hCaptcha on error
-                    if (window.hcaptcha) {
-                        window.hcaptcha.reset();
-                    }
-                }
-            } catch (error) {
-                console.error('Registration error:', error);
-                showAuthMessage('Network error. Please try again.', 'error');
-                // Reset hCaptcha on error
-                if (window.hcaptcha) {
-                    window.hcaptcha.reset();
-                }
-            }
-        }
-
-        async function refreshUserDataIfNeeded(user) {
-            // If user data is missing firstName, refresh it from the backend
-            if (!user.firstName && currentUser) {
-                console.log('User data missing firstName, refreshing...');
-                try {
-                    const response = await fetch(`${API_BASE}/auth/me`, {
-                        credentials: 'include' // Include cookies for authentication
-                    });
-                    
-                    if (response.ok) {
-                        const freshUser = await response.json();
-                        console.log('Refreshed user data:', freshUser);
-                        
-                        // Update localStorage with fresh data
-                        localStorage.setItem('currentUser', JSON.stringify(freshUser));
-                        
-                        return freshUser;
-                    }
-                } catch (error) {
-                    console.warn('Could not refresh user data:', error);
-                }
-            }
-            return user;
-        }
-
-        async function setUserLoggedIn(user) {
-            // Safety check - don't process if no user data
-            if (!user || !user.id) {
-                console.error('Invalid user data passed to setUserLoggedIn:', user);
-                setUserLoggedOut();
-                return;
-            }
-            
-            // Refresh user data if needed
-            const refreshedUser = await refreshUserDataIfNeeded(user);
-            currentUser = refreshedUser;
-            window.currentUser = refreshedUser;
-            
-            // Store user data in localStorage for persistence
-            localStorage.setItem('currentUser', JSON.stringify(refreshedUser));
-            
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('userSection').style.display = 'flex';
-            
-            // More robust greeting with multiple fallbacks
-            const displayName = refreshedUser.firstName || refreshedUser.username || 'User';
-            console.log('🔍 Setting greeting - firstName:', refreshedUser.firstName, 'username:', refreshedUser.username, 'displayName:', displayName);
-            const greetingElement = document.getElementById('userGreeting');
-            if (greetingElement) {
-                greetingElement.textContent = `Hello, ${displayName}!`;
-                greetingElement.style.display = 'inline'; // Show the greeting span
-                console.log('✅ Greeting set to:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                
-                // Debug: Check if anything clears this immediately
-                setTimeout(() => {
-                    console.log('🔍 Greeting after 100ms:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                }, 100);
-                setTimeout(() => {
-                    console.log('🔍 Greeting after 1s:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                }, 1000);
-            }
-            
-            // Address info will be loaded by loadUserContent()
-            
-            // Show user-specific sidebar options
-            document.getElementById('messagesThumb').style.display = 'block';
-            document.getElementById('organizingThumb').style.display = 'block';
-            document.getElementById('profileThumb').style.display = 'block';
-            document.getElementById('feedThumb').style.display = 'block';
-            // Note: postComposer is now part of feed view, not a standalone element
-            document.getElementById('logoutThumb').style.display = 'block';
-            
-            // Load user-specific content
-            loadUserContent();
-            loadUserPosts();
-            
-            // Show My Feed by default in main content area
-            showMyFeedInMain();
-        }
+        // setUserLoggedIn() moved to /src/modules/core/auth/session.js
 
         // Expose globally for unified auth manager
         window.setUserLoggedIn = setUserLoggedIn;
 
         // Function to set the local currentUser variable from external systems
         window.setCurrentUser = function(user) {
+            console.log('🔧 setCurrentUser called with:', user?.username || user?.email || 'null user');
             currentUser = user;
             window.currentUser = user;
+            console.log('🔧 Local currentUser now set to:', currentUser?.username || 'null');
         };
 
-        function setUserLoggedOut() {
-            currentUser = null;
-            window.currentUser = null;
-            
-            // Reset UI to logged out state
-            document.getElementById('authSection').style.display = 'flex';
-            document.getElementById('userSection').style.display = 'none';
-            const greetingElement = document.getElementById('userGreeting');
-            if (greetingElement) {
-                greetingElement.textContent = '';
-                greetingElement.style.display = 'none'; // Hide the greeting span
-            }
-            
-            // Hide user-specific sidebar options
-            document.getElementById('messagesThumb').style.display = 'none';
-            document.getElementById('profileThumb').style.display = 'none';
-            document.getElementById('feedThumb').style.display = 'none';
-            document.getElementById('logoutThumb').style.display = 'none';
-            
-            // Reset main content to welcome message
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                mainContent.innerHTML = `
-                    <div class="welcome-content">
-                        <h1>Welcome to United We Rise</h1>
-                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-                    </div>
-                `;
-            }
-        }
+        // setUserLoggedOut() moved to /src/modules/core/auth/session.js
 
         // Expose globally for unified auth manager
         window.setUserLoggedOut = setUserLoggedOut;
@@ -1643,58 +1341,9 @@
             console.log(`Radio button availability - State: ${hasState}, Local: ${hasAddress}`);
         }
 
-        async function logout() {
-            try {
-                // Call logout endpoint to clear cookies
-                await fetch(`${API_BASE.replace('/api', '')}/api/auth/logout`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'X-CSRF-Token': window.csrfToken
-                    }
-                });
-            } catch (error) {
-                console.warn('Logout endpoint call failed:', error);
-            }
+        // logout() moved to /src/modules/core/auth/session.js
 
-            // Use unified auth manager if available
-            if (window.unifiedAuthManager && window.unifiedAuthManager.logout) {
-                await window.unifiedAuthManager.logout();
-            }
-
-            // Clear local data
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('authToken');
-            window.csrfToken = null;
-
-            // Additional main-site specific cleanup
-            setUserLoggedOut();
-
-            // Hide additional elements
-            document.getElementById('messagesContainer').style.display = 'none';
-            document.getElementById('profilePanel').style.display = 'none';
-
-            // Reset panels to default content
-            resetPanelsToDefault();
-
-            // Reset main content
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                mainContent.innerHTML = `
-                    <div class="welcome-content">
-                        <h1>Welcome to United We Rise</h1>
-                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-                    </div>
-                `;
-            }
-
-            // Don't redirect - stay on the same page
-        }
-
-        function showAuthMessage(message, type) {
-            const messageEl = document.getElementById('authMessage');
-            messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
-        }
+        // showAuthMessage() moved to /src/modules/core/auth/modal.js
 
         // About Modal Functions
         function openAboutModal() {
@@ -4428,8 +4077,8 @@
                 candidatesView.style.display = 'none';
             }
             
-            // Check if user is authenticated (using currentUser since tokens are httpOnly)
-            if (!currentUser) {
+            // Check if user is authenticated (using window.currentUser since tokens are httpOnly)
+            if (!window.currentUser) {
                 console.log('❌ No authenticated user, showing login prompt');
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
@@ -4440,7 +4089,7 @@
                 return;
             }
             
-            console.log('✅ Authenticated user found for My Feed:', currentUser.username);
+            console.log('✅ Authenticated user found for My Feed:', window.currentUser.username);
 
             // Hide other content
             closeAllPanels();
