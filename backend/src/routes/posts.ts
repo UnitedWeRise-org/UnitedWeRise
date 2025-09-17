@@ -9,6 +9,7 @@ import { checkUserSuspension, moderateContent, contentFilter, addContentWarnings
 import { azureOpenAI } from '../services/azureOpenAIService';
 import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import { reputationService } from '../services/reputationService';
+import { ActivityTracker } from '../services/activityTracker';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -204,6 +205,14 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             }
         }
 
+        // Track post creation activity
+        try {
+            await ActivityTracker.trackPostCreated(userId, post.id, content.trim());
+        } catch (error) {
+            console.error('Failed to track post creation activity:', error);
+            // Don't fail the post creation if activity tracking fails
+        }
+
         // Async feedback analysis - runs in background without blocking response
         if (quickCheck.isPotentialFeedback) {
             // Fire and forget - don't await
@@ -372,7 +381,12 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
 
         // Check if post exists
         const post = await prisma.post.findUnique({
-            where: { id: postId }
+            where: { id: postId },
+            select: {
+                id: true,
+                authorId: true,
+                content: true
+            }
         });
 
         if (!post) {
@@ -405,6 +419,14 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
                     data: { likesCount: { decrement: 1 } }
                 })
             ]);
+
+            // Track unlike activity
+            try {
+                await ActivityTracker.trackLikeRemoved(userId, postId, post.content);
+            } catch (error) {
+                console.error('Failed to track unlike activity:', error);
+                // Don't fail the unlike action if activity tracking fails
+            }
 
             res.json({ message: 'Post unliked successfully', liked: false });
         } else {
@@ -451,6 +473,14 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
                 }
             }
 
+            // Track like activity
+            try {
+                await ActivityTracker.trackLikeAdded(userId, postId, post.content);
+            } catch (error) {
+                console.error('Failed to track like activity:', error);
+                // Don't fail the like action if activity tracking fails
+            }
+
             res.json({ message: 'Post liked successfully', liked: true });
         }
     } catch (error) {
@@ -473,7 +503,7 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
         // Check if post exists
         const post = await prisma.post.findUnique({
             where: { id: postId },
-            select: { id: true, authorId: true }
+            select: { id: true, authorId: true, content: true }
         });
 
         if (!post) {
@@ -572,6 +602,14 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
         });
 
         console.log(`✅ Comment created successfully: ID=${comment.id}, depth=${comment.depth}, parentId=${comment.parentId}`);
+
+        // Track comment creation activity
+        try {
+            await ActivityTracker.trackCommentCreated(userId, comment.id, content.trim(), postId, post.content);
+        } catch (error) {
+            console.error('Failed to track comment creation activity:', error);
+            // Don't fail the comment creation if activity tracking fails
+        }
 
         // Create notification if not commenting on own post
         if (post.authorId !== userId) {
