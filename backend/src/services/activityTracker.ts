@@ -3,7 +3,7 @@
  * Automatically tracks user activities for accountability and activity feeds
  */
 
-import { prisma } from '../db/connection';
+import { prisma } from '../lib/prisma';
 import { ActivityType } from '@prisma/client';
 
 interface ActivityMetadata {
@@ -262,7 +262,7 @@ export class ActivityTracker {
             avatar: true,
           },
         },
-      } : false,
+      } : undefined,
     });
 
     return activities;

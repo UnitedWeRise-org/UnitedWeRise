@@ -884,8 +884,10 @@ router.get('/activity/:userId', async (req, res) => {
         // Filter out deleted content for public view
         const publicActivities = activities.filter(activity => {
             // Only show non-deleted activities in public view
-            return !activity.metadata ||
-                   !('deletedReason' in activity.metadata) &&
+            if (!activity.metadata || typeof activity.metadata !== 'object') {
+                return true;
+            }
+            return !('deletedReason' in activity.metadata) &&
                    !('originalContent' in activity.metadata);
         });
 

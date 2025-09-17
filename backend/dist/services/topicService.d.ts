@@ -46,6 +46,11 @@ export declare class TopicService {
                 createdAt: Date;
                 updatedAt: Date;
                 content: string;
+                isDeleted: boolean;
+                deletedAt: Date | null;
+                editCount: number;
+                lastEditedAt: Date | null;
+                originalContent: string | null;
                 imageUrl: string | null;
                 extendedContent: string | null;
                 authorId: string;
@@ -61,6 +66,10 @@ export declare class TopicService {
                 feedbackSummary: string | null;
                 feedbackType: string | null;
                 authorReputation: number | null;
+                deletedReason: string | null;
+                searchable: boolean;
+                feedVisible: boolean;
+                editHistory: import("@prisma/client/runtime/library").JsonValue | null;
             };
         } & {
             id: string;
@@ -125,6 +134,12 @@ export declare class TopicService {
                     postId: string;
                     parentId: string | null;
                     depth: number;
+                    isDeleted: boolean;
+                    deletedAt: Date | null;
+                    showUsername: boolean;
+                    editCount: number;
+                    lastEditedAt: Date | null;
+                    originalContent: string | null;
                 })[];
                 likes: {
                     id: string;
@@ -146,6 +161,11 @@ export declare class TopicService {
                 createdAt: Date;
                 updatedAt: Date;
                 content: string;
+                isDeleted: boolean;
+                deletedAt: Date | null;
+                editCount: number;
+                lastEditedAt: Date | null;
+                originalContent: string | null;
                 imageUrl: string | null;
                 extendedContent: string | null;
                 authorId: string;
@@ -161,6 +181,10 @@ export declare class TopicService {
                 feedbackSummary: string | null;
                 feedbackType: string | null;
                 authorReputation: number | null;
+                deletedReason: string | null;
+                searchable: boolean;
+                feedVisible: boolean;
+                editHistory: import("@prisma/client/runtime/library").JsonValue | null;
             };
         } & {
             id: string;

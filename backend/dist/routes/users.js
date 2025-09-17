@@ -10,6 +10,8 @@ const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const relationshipService_1 = require("../services/relationshipService");
 const photoService_1 = require("../services/photoService");
+const activityTracker_1 = require("../services/activityTracker");
+const client_1 = require("@prisma/client");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -743,6 +745,95 @@ router.put('/notification-preferences', auth_1.requireAuth, async (req, res) => 
         res.status(500).json({
             success: false,
             error: 'Failed to update notification preferences'
+        });
+    }
+});
+// Get user activity feed
+router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { types, search, offset = '0', limit = '20' } = req.query;
+        // Parse activity types if provided
+        let activityTypes;
+        if (types && typeof types === 'string') {
+            activityTypes = types.split(',').filter(type => Object.values(client_1.ActivityType).includes(type));
+        }
+        const activities = await activityTracker_1.ActivityTracker.getUserActivity(userId, {
+            types: activityTypes,
+            search: search,
+            offset: parseInt(offset),
+            limit: Math.min(parseInt(limit), 50), // Max 50 items
+            includeTarget: true
+        });
+        // Get counts for filter UI
+        const counts = await activityTracker_1.ActivityTracker.getActivityCounts(userId);
+        res.json({
+            success: true,
+            data: {
+                activities,
+                counts,
+                pagination: {
+                    offset: parseInt(offset),
+                    limit: parseInt(limit),
+                    hasMore: activities.length === parseInt(limit)
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching user activity:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch activity feed'
+        });
+    }
+});
+// Get public user activity feed (for public profiles - future)
+router.get('/activity/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { types, offset = '0', limit = '20' } = req.query;
+        // For public activity, only show certain types and no deleted content
+        const publicActivityTypes = ['POST_CREATED', 'COMMENT_CREATED', 'LIKE_ADDED', 'FOLLOW_ADDED'];
+        let activityTypes = publicActivityTypes;
+        if (types && typeof types === 'string') {
+            const requestedTypes = types.split(',').filter(type => publicActivityTypes.includes(type));
+            if (requestedTypes.length > 0) {
+                activityTypes = requestedTypes;
+            }
+        }
+        const activities = await activityTracker_1.ActivityTracker.getUserActivity(userId, {
+            types: activityTypes,
+            offset: parseInt(offset),
+            limit: Math.min(parseInt(limit), 20), // Lower limit for public
+            includeTarget: true
+        });
+        // Filter out deleted content for public view
+        const publicActivities = activities.filter(activity => {
+            // Only show non-deleted activities in public view
+            if (!activity.metadata || typeof activity.metadata !== 'object') {
+                return true;
+            }
+            return !('deletedReason' in activity.metadata) &&
+                !('originalContent' in activity.metadata);
+        });
+        res.json({
+            success: true,
+            data: {
+                activities: publicActivities,
+                pagination: {
+                    offset: parseInt(offset),
+                    limit: parseInt(limit),
+                    hasMore: publicActivities.length === parseInt(limit)
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching public user activity:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch activity feed'
         });
     }
 });
