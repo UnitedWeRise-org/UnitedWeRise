@@ -7,8 +7,24 @@
 
 class MyProfile {
     constructor() {
-        this.currentTab = 'posts'; // Default to posts tab
+        this.currentTab = 'activity'; // Default to activity tab
         this.userPosts = [];
+        this.userActivities = [];
+        this.activityFilters = {
+            POST_CREATED: true,
+            POST_EDITED: true,
+            POST_DELETED: true,
+            COMMENT_CREATED: true,
+            COMMENT_EDITED: true,
+            COMMENT_DELETED: true,
+            LIKE_ADDED: true,
+            LIKE_REMOVED: true,
+            FOLLOW_ADDED: true,
+            FOLLOW_REMOVED: true
+        };
+        this.activitySearchQuery = '';
+        this.activityOffset = 0;
+        this.activityLimit = 20;
         this.userProfile = null;
         this.editingPositionId = null; // Track which position is being edited
         
@@ -242,8 +258,8 @@ class MyProfile {
 
                 <!-- Tab Navigation -->
                 <div class="profile-tabs">
-                    <button class="tab-button ${this.currentTab === 'posts' ? 'active' : ''}" onclick="window.myProfile.switchTab('posts')">
-                        My Posts
+                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" onclick="window.myProfile.switchTab('activity')">
+                        My Activity
                     </button>
                     <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.myProfile.switchTab('photos')">
                         Photos
@@ -276,7 +292,10 @@ class MyProfile {
         this.addStyles();
         
         // Load data for the initial tab if needed
-        if (this.currentTab === 'photos') {
+        if (this.currentTab === 'activity') {
+            adminDebugLog('📊 Initial render with activity tab, loading activities...');
+            setTimeout(() => this.loadUserActivities(), 100);
+        } else if (this.currentTab === 'photos') {
             adminDebugLog('📸 Initial render with photos tab, loading galleries...');
             setTimeout(() => this.loadPhotoGalleries(), 100);
         } else if (this.currentTab === 'messages') {
@@ -291,6 +310,8 @@ class MyProfile {
 
     renderTabContent() {
         switch (this.currentTab) {
+            case 'activity':
+                return this.renderActivityTab();
             case 'posts':
                 return this.renderPostsTab();
             case 'photos':
@@ -306,8 +327,93 @@ class MyProfile {
                 setTimeout(() => this.loadTOTPStatus(), 100);
                 return this.renderSettingsTab();
             default:
-                return this.renderPostsTab();
+                return this.renderActivityTab();
         }
+    }
+
+    renderActivityTab() {
+        const enabledTypes = Object.keys(this.activityFilters)
+            .filter(type => this.activityFilters[type]);
+
+        let activityHtml = `
+            <div class="tab-pane">
+                <!-- Activity Filters -->
+                <div class="activity-filters" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                    <h4 style="margin-bottom: 1rem;">Show Activity Types:</h4>
+                    <div class="filter-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('POST_CREATED', this.checked)">
+                            📝 Posts Created
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('POST_EDITED', this.checked)">
+                            ✏️ Posts Edited
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('POST_DELETED', this.checked)">
+                            🗑️ Posts Deleted
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_CREATED', this.checked)">
+                            💬 Comments
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_EDITED', this.checked)">
+                            ✏️ Comments Edited
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_DELETED', this.checked)">
+                            🗑️ Comments Deleted
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('LIKE_ADDED', this.checked)">
+                            ❤️ Likes
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
+                                   onchange="window.myProfile.toggleActivityFilter('FOLLOW_ADDED', this.checked)">
+                            👥 Follows
+                        </label>
+                    </div>
+
+                    <!-- Search Box -->
+                    <div class="activity-search" style="margin-top: 1rem;">
+                        <input type="search" id="activitySearch" placeholder="Search your activity..."
+                               value="${this.activitySearchQuery}"
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
+                               onkeyup="if(event.key==='Enter') window.myProfile.searchActivities(this.value)"
+                               oninput="window.myProfile.activitySearchQuery = this.value">
+                        <button onclick="window.myProfile.searchActivities(document.getElementById('activitySearch').value)"
+                                style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Search
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Activity Feed -->
+                <div class="activity-feed" id="activityFeed">
+                    ${this.userActivities.length === 0 ? this.renderEmptyActivityState() : this.renderActivityList()}
+                </div>
+
+                <!-- Load More Button -->
+                <div class="load-more-container" style="text-align: center; margin-top: 2rem;">
+                    <button onclick="window.myProfile.loadMoreActivities()"
+                            class="btn btn-secondary" id="loadMoreActivities"
+                            style="display: ${this.userActivities.length >= this.activityLimit ? 'inline-block' : 'none'}">
+                        Load More Activity
+                    </button>
+                </div>
+            </div>
+        `;
+
+        return activityHtml;
     }
 
     renderPostsTab() {
@@ -3453,6 +3559,290 @@ class MyProfile {
         const activeButton = document.querySelector(`[onclick*="'${tabName}'"]`);
         if (activeButton) {
             activeButton.classList.add('active');
+        }
+    }
+
+    // Activity Feed Methods
+
+    async loadUserActivities(reset = false) {
+        if (reset) {
+            this.activityOffset = 0;
+            this.userActivities = [];
+        }
+
+        try {
+            const enabledTypes = Object.keys(this.activityFilters)
+                .filter(type => this.activityFilters[type]);
+
+            const params = new URLSearchParams({
+                offset: this.activityOffset.toString(),
+                limit: this.activityLimit.toString()
+            });
+
+            if (enabledTypes.length > 0) {
+                params.append('types', enabledTypes.join(','));
+            }
+
+            if (this.activitySearchQuery) {
+                params.append('search', this.activitySearchQuery);
+            }
+
+            const response = await window.apiCall(`/users/activity/me?${params}`);
+
+            if (response.ok && response.data.success) {
+                const newActivities = response.data.data.activities;
+
+                if (reset) {
+                    this.userActivities = newActivities;
+                } else {
+                    this.userActivities = [...this.userActivities, ...newActivities];
+                }
+
+                this.activityOffset += newActivities.length;
+
+                // Update the activity feed display
+                this.updateActivityDisplay();
+
+                adminDebugLog('Activity', `Loaded ${newActivities.length} activities, total: ${this.userActivities.length}`);
+            } else {
+                throw new Error(response.data?.error || 'Failed to load activities');
+            }
+        } catch (error) {
+            adminDebugError('Error loading user activities:', error);
+            // Show error in the activity feed
+            const activityFeed = document.getElementById('activityFeed');
+            if (activityFeed) {
+                activityFeed.innerHTML = `
+                    <div class="error-state" style="text-align: center; padding: 2rem; color: #dc3545;">
+                        <h3>Unable to load activities</h3>
+                        <p>${error.message}</p>
+                        <button onclick="window.myProfile.loadUserActivities(true)" class="btn">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    updateActivityDisplay() {
+        const activityFeed = document.getElementById('activityFeed');
+        if (activityFeed) {
+            activityFeed.innerHTML = this.userActivities.length === 0 ?
+                this.renderEmptyActivityState() :
+                this.renderActivityList();
+        }
+
+        // Update load more button
+        const loadMoreBtn = document.getElementById('loadMoreActivities');
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = this.userActivities.length >= this.activityLimit ? 'inline-block' : 'none';
+        }
+    }
+
+    renderEmptyActivityState() {
+        return `
+            <div class="empty-state" style="text-align: center; padding: 3rem; color: #666;">
+                <h3>No activity yet</h3>
+                <p>Your posts, comments, likes, and follows will appear here.</p>
+                <p style="font-size: 0.9em; margin-top: 1rem;">
+                    Try adjusting the filters above or create some content to see your activity feed!
+                </p>
+            </div>
+        `;
+    }
+
+    renderActivityList() {
+        return this.userActivities.map(activity => this.renderActivityItem(activity)).join('');
+    }
+
+    renderActivityItem(activity) {
+        const timeAgo = this.formatTimeAgo(new Date(activity.createdAt));
+        const metadata = activity.metadata || {};
+
+        switch (activity.activityType) {
+            case 'POST_CREATED':
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">📝</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Created a post
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Content preview not available'}"
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'POST_EDITED':
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">✏️</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Edited a post
+                                ${metadata.editReason ? `<span style="color: #666; font-weight: normal;"> - ${metadata.editReason}</span>` : ''}
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Content preview not available'}"
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'POST_DELETED':
+                return `
+                    <div class="activity-item deleted" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; background: #f8f9fa;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">🗑️</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Deleted a post
+                                ${metadata.deletedReason ? `<span style="color: #666; font-weight: normal;"> - ${metadata.deletedReason}</span>` : ''}
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Content preview not available'}"
+                            </div>
+                            <button onclick="window.myProfile.viewDeletedContent('post', '${activity.targetId}')"
+                                    style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                                View Deleted Content
+                            </button>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'COMMENT_CREATED':
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">💬</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Commented ${metadata.postTitle ? `on "${metadata.postTitle.substring(0, 50)}..."` : 'on a post'}
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Comment preview not available'}"
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'COMMENT_DELETED':
+                return `
+                    <div class="activity-item deleted" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; background: #f8f9fa;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">🗑️</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Deleted a comment
+                            </div>
+                            <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
+                                "${metadata.contentPreview || 'Comment preview not available'}"
+                            </div>
+                            <button onclick="window.myProfile.viewDeletedContent('comment', '${activity.targetId}')"
+                                    style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+                                View Deleted Comment
+                            </button>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em; margin-top: 0.5rem;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'LIKE_ADDED':
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">❤️</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Liked ${metadata.postTitle ? `"${metadata.postTitle.substring(0, 50)}..."` : 'a post'}
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            case 'FOLLOW_ADDED':
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">👥</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                Followed @${metadata.targetUsername || 'user'}
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            default:
+                return `
+                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                        <div class="activity-icon" style="font-size: 1.5rem;">📊</div>
+                        <div class="activity-content" style="flex: 1;">
+                            <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
+                                ${activity.activityType.replace(/_/g, ' ').toLowerCase()}
+                            </div>
+                            <div class="activity-time" style="color: #999; font-size: 0.8em;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }
+    }
+
+    toggleActivityFilter(type, enabled) {
+        this.activityFilters[type] = enabled;
+        // Reload activities with new filters
+        this.loadUserActivities(true);
+    }
+
+    searchActivities(query) {
+        this.activitySearchQuery = query;
+        this.loadUserActivities(true);
+    }
+
+    loadMoreActivities() {
+        this.loadUserActivities(false);
+    }
+
+    viewDeletedContent(type, targetId) {
+        // For now, just show an alert - in the future this could open a modal
+        alert(`Viewing deleted ${type} content: ${targetId}\n\nThis feature will show the full deleted content in a modal.`);
+    }
+
+    formatTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) {
+            return 'just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 2592000) {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        } else {
+            return date.toLocaleDateString();
         }
     }
 }

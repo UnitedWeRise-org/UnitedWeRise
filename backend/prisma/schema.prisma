@@ -135,12 +135,43 @@ model User {
   suspensions                 UserSuspension[]          @relation("UserSuspensions")
   issuedWarnings              UserWarning[]             @relation("IssuedWarnings")
   receivedWarnings            UserWarning[]             @relation("ReceivedWarnings")
+  activities                  UserActivity[]
 
   @@index([username])
   @@index([createdAt])
   @@index([h3Index])
   @@index([politicalProfileType])
   @@index([zipCode, state])
+}
+
+enum ActivityType {
+  POST_CREATED
+  POST_EDITED
+  POST_DELETED
+  COMMENT_CREATED
+  COMMENT_EDITED
+  COMMENT_DELETED
+  LIKE_ADDED
+  LIKE_REMOVED
+  FOLLOW_ADDED
+  FOLLOW_REMOVED
+  // Future: SUBSCRIBE_ADDED, SUBSCRIBE_REMOVED, SUPPORT_ADDED, OPPOSE_ADDED
+}
+
+model UserActivity {
+  id           String       @id @default(cuid())
+  userId       String
+  activityType ActivityType
+  targetType   String       // "post", "comment", "user"
+  targetId     String       // ID of the target
+  metadata     Json?        // Additional context (title, content preview, etc.)
+  createdAt    DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([activityType])
+  @@index([targetType, targetId])
 }
 
 model Follow {
@@ -193,6 +224,16 @@ model Post {
   feedbackSummary    String?
   feedbackType       String?
   authorReputation   Int?
+  // Soft delete and edit tracking fields
+  isDeleted          Boolean           @default(false)
+  deletedAt          DateTime?
+  deletedReason      String?
+  searchable         Boolean           @default(true)  // De-index when deleted
+  feedVisible        Boolean           @default(true)  // Hide from feeds when deleted
+  editCount          Int               @default(0)
+  lastEditedAt       DateTime?
+  editHistory        Json?             // Store edit history
+  originalContent    String?           // Preserve original when edited
   comments           Comment[]
   likes              Like[]
   photos             Photo[]
@@ -221,18 +262,25 @@ model Like {
 }
 
 model Comment {
-  id        String     @id @default(cuid())
-  content   String
-  userId    String
-  postId    String
-  parentId  String?    // For nested replies
-  depth     Int        @default(0) // Track nesting depth (0=top-level, 1-3=nested)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  replies   Comment[]  @relation("CommentReplies")
+  id              String     @id @default(cuid())
+  content         String
+  userId          String
+  postId          String
+  parentId        String?    // For nested replies
+  depth           Int        @default(0) // Track nesting depth (0=top-level, 1-3=nested)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  // Soft delete and edit tracking fields
+  isDeleted       Boolean    @default(false)
+  deletedAt       DateTime?
+  showUsername    Boolean    @default(true) // Hide username when deleted
+  editCount       Int        @default(0)
+  lastEditedAt    DateTime?
+  originalContent String?    // Preserve original when edited
+  post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent          Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies         Comment[]  @relation("CommentReplies")
 
   @@index([postId])
   @@index([userId])
