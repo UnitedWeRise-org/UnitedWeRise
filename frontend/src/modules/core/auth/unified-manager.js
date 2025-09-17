@@ -354,6 +354,9 @@ class UnifiedAuthManager {
                 csrfToken: existingToken,
                 sessionValid: true
             };
+
+            // CRITICAL: Sync this user to ALL systems, including legacy
+            this._syncAllSystems(existingUser, existingToken);
         }
     }
 
