@@ -325,8 +325,36 @@ class APIRequestManager {
 window.apiManager = new APIRequestManager();
 
 // Enhanced apiCall function for backward compatibility
+// Wraps the response in the expected format: {ok, status, data}
 window.apiCall = async (endpoint, options = {}) => {
-    return window.apiManager.request(endpoint, options);
+    try {
+        // Get the API base URL
+        const baseUrl = window.apiManager.config.baseURL;
+        const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+
+        // Build fetch options with all the proper headers
+        const fetchOptions = window.apiManager.buildFetchOptions(options);
+
+        // Make the actual fetch request
+        const response = await fetch(url, fetchOptions);
+
+        // Parse the response
+        const data = await response.json();
+
+        // Return wrapped response in expected format
+        return {
+            ok: response.ok,
+            status: response.status,
+            data: data
+        };
+    } catch (error) {
+        // Return error in consistent format
+        return {
+            ok: false,
+            status: 0,
+            data: { error: error.message }
+        };
+    }
 };
 
 // Batch API call function

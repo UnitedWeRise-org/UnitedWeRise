@@ -293,9 +293,26 @@ export const apiClient = new APIClient();
 if (typeof window !== 'undefined') {
     window.apiClient = apiClient;
     
-    // Maintain backward compatibility
-    window.apiCall = (endpoint, options) => {
-        return apiClient.call(endpoint, options);
+    // Maintain backward compatibility with proper response wrapping
+    window.apiCall = async (endpoint, options) => {
+        try {
+            const data = await apiClient.call(endpoint, options);
+
+            // Wrap the response in the expected format
+            // Since apiClient.call returns the data directly, we need to simulate the response structure
+            return {
+                ok: true,
+                status: 200, // Assume success if we got data
+                data: data
+            };
+        } catch (error) {
+            // Handle errors consistently
+            return {
+                ok: false,
+                status: error.message.includes('401') || error.message.includes('Unauthorized') ? 401 : 500,
+                data: { error: error.message }
+            };
+        }
     };
 }
 
