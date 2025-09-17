@@ -143,8 +143,8 @@ class MyProfile {
         try {
             // Load user profile and posts in parallel
             const [profileResponse, postsResponse] = await Promise.all([
-                window.apiClient.call('/users/profile'),
-                window.apiClient.call('/posts/me')
+                window.apiCall('/users/profile'),
+                window.apiCall('/posts/me')
             ]);
 
             if (profileResponse.ok) {
@@ -178,8 +178,8 @@ class MyProfile {
         try {
             // Load user profile and posts with bypassed cache
             const [profileResponse, postsResponse] = await Promise.all([
-                window.apiClient.call('/users/profile', { bypassCache: true }),
-                window.apiClient.call('/posts/me', { bypassCache: true })
+                window.apiCall('/users/profile', { bypassCache: true }),
+                window.apiCall('/posts/me', { bypassCache: true })
             ]);
 
             if (profileResponse.ok) {
@@ -883,7 +883,7 @@ class MyProfile {
         formData.append('purpose', 'PERSONAL'); // Required field
 
         try {
-            const response = await window.apiClient.call('/photos/upload', {
+            const response = await window.apiCall('/photos/upload', {
                 method: 'POST',
                 body: formData,
                 skipContentType: true // Let browser set multipart boundary
@@ -932,7 +932,7 @@ class MyProfile {
             const content = textarea.value.trim();
             
             try {
-                const response = await window.apiClient.call('/posts', {
+                const response = await window.apiCall('/posts', {
                     method: 'POST',
                     body: JSON.stringify({ 
                         content: content
@@ -1149,7 +1149,7 @@ class MyProfile {
         const zipCode = document.getElementById('editZipCode').value;
         
         try {
-            const response = await window.apiClient.call('/political/profile', {
+            const response = await window.apiCall('/political/profile', {
                 method: 'PUT',
                 body: JSON.stringify({
                     streetAddress,
@@ -1202,7 +1202,7 @@ class MyProfile {
     // Verification methods
     async resendEmailVerification() {
         try {
-            const response = await window.apiClient.call('/verification/email/send', {
+            const response = await window.apiCall('/verification/email/send', {
                 method: 'POST'
             });
             
@@ -1244,7 +1244,7 @@ class MyProfile {
     async loadTOTPStatus() {
         try {
             adminDebugLog('🔒 Loading TOTP status...');
-            const response = await window.apiClient.call('/totp/status');
+            const response = await window.apiCall('/totp/status');
             adminDebugLog('🔒 TOTP status API response:', response);
             if (response.ok) {
                 // Extract nested data like other endpoints
@@ -1328,7 +1328,7 @@ class MyProfile {
     async setupTOTP() {
         adminDebugLog('🔒 Starting TOTP setup... [MyProfile.js v1.3.1]');
         try {
-            const response = await window.apiClient.call('/totp/setup', { method: 'POST' });
+            const response = await window.apiCall('/totp/setup', { method: 'POST' });
             adminDebugLog('🔒 TOTP setup API response:', response);
             if (response.ok) {
                 adminDebugLog('🔒 API success, showing modal with data:', response.data);
@@ -1475,7 +1475,7 @@ class MyProfile {
         }
 
         try {
-            const response = await window.apiClient.call('/totp/verify-setup', {
+            const response = await window.apiCall('/totp/verify-setup', {
                 method: 'POST',
                 body: JSON.stringify({ token: code })
             });
@@ -1581,7 +1581,7 @@ class MyProfile {
         if (!token) return;
 
         try {
-            const response = await window.apiClient.call('/totp/regenerate-backup-codes', {
+            const response = await window.apiCall('/totp/regenerate-backup-codes', {
                 method: 'POST',
                 body: JSON.stringify({ token })
             });
@@ -1607,7 +1607,7 @@ class MyProfile {
         if (!password) return;
 
         try {
-            const response = await window.apiClient.call('/totp/disable', {
+            const response = await window.apiCall('/totp/disable', {
                 method: 'POST',
                 body: JSON.stringify({ password })
             });
@@ -1635,7 +1635,7 @@ class MyProfile {
         
         adminDebugLog('📸 Making API call to /photos/galleries...');
         try {
-            const response = await window.apiClient.call('/photos/galleries', { bypassCache });
+            const response = await window.apiCall('/photos/galleries', { bypassCache });
             
             adminDebugLog('📡 Raw galleries API response:', response);
             
@@ -1756,7 +1756,7 @@ class MyProfile {
         }
 
         try {
-            const response = await window.apiClient.call('/photos/upload', {
+            const response = await window.apiCall('/photos/upload', {
                 method: 'POST',
                 body: formData,
                 skipContentType: true // Let browser set multipart boundary
@@ -1782,7 +1782,7 @@ class MyProfile {
 
     async setAsProfilePicture(photoId) {
         try {
-            const response = await window.apiClient.call(`/photos/${photoId}/set-profile`, {
+            const response = await window.apiCall(`/photos/${photoId}/set-profile`, {
                 method: 'POST'
             });
 
@@ -1803,7 +1803,7 @@ class MyProfile {
         if (!newGallery) return;
 
         try {
-            const response = await window.apiClient.call(`/photos/${photoId}/gallery`, {
+            const response = await window.apiCall(`/photos/${photoId}/gallery`, {
                 method: 'PUT',
                 body: { gallery: newGallery }
             });
@@ -1825,7 +1825,7 @@ class MyProfile {
         }
 
         try {
-            const response = await window.apiClient.call(`/photos/${photoId}`, {
+            const response = await window.apiCall(`/photos/${photoId}`, {
                 method: 'DELETE'
             });
 
@@ -2826,7 +2826,7 @@ class MyProfile {
                 document.querySelector('.sub-settings').classList.remove('disabled');
             }
 
-            const response = await window.apiClient.call('/photo-tags/preferences', {
+            const response = await window.apiCall('/photo-tags/preferences', {
                 method: 'PUT',
                 body: JSON.stringify({ [preference]: value })
             });
@@ -2862,7 +2862,7 @@ class MyProfile {
      */
     async viewPendingTags() {
         try {
-            const response = await window.apiClient.call('/photo-tags/pending');
+            const response = await window.apiCall('/photo-tags/pending');
             
             if (response.ok) {
                 const pendingTags = response.data.pendingTags || [];
@@ -2939,7 +2939,7 @@ class MyProfile {
      */
     async respondToTag(tagId, approve) {
         try {
-            const response = await window.apiClient.call(`/photo-tags/${tagId}/respond`, {
+            const response = await window.apiCall(`/photo-tags/${tagId}/respond`, {
                 method: 'POST',
                 body: JSON.stringify({ approve })
             });
@@ -2977,7 +2977,7 @@ class MyProfile {
      */
     async updatePendingTagsCount() {
         try {
-            const response = await window.apiClient.call('/photo-tags/pending');
+            const response = await window.apiCall('/photo-tags/pending');
             
             if (response.ok) {
                 const count = response.data.count || 0;
@@ -2996,7 +2996,7 @@ class MyProfile {
      */
     async loadCandidateMessages() {
         try {
-            const response = await window.apiClient.call('/candidate/admin-messages');
+            const response = await window.apiCall('/candidate/admin-messages');
             
             if (response.ok && response.data) {
                 // Handle the API response structure: { success: true, data: { candidate, messages, unreadAdminCount } }
@@ -3176,7 +3176,7 @@ class MyProfile {
             // Use REST API if WebSocket failed or unavailable
             if (!messageSent) {
                 adminDebugLog('📤 Sending candidate message via REST API');
-                const response = await window.apiClient.call('/unified-messages/send', {
+                const response = await window.apiCall('/unified-messages/send', {
                     method: 'POST',
                     body: JSON.stringify({
                         type: 'ADMIN_CANDIDATE',
@@ -3226,7 +3226,7 @@ class MyProfile {
      */
     async updateUnreadBadge() {
         try {
-            const response = await window.apiClient.call('/candidate/admin-messages/unread-count');
+            const response = await window.apiCall('/candidate/admin-messages/unread-count');
             
             if (response.ok && response.data) {
                 const unreadCount = response.data.unreadCount || 0;
@@ -3294,7 +3294,7 @@ class MyProfile {
 
     async updateNotificationPreference(key, value) {
         try {
-            const response = await window.apiClient.call('/user/notification-preferences', {
+            const response = await window.apiCall('/user/notification-preferences', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3398,7 +3398,7 @@ class MyProfile {
     // Check if user is a candidate and show candidate-specific notification settings
     async checkCandidateNotificationSettings() {
         try {
-            const response = await window.apiClient.call('/candidate-policy-platform/candidate/status', {
+            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                 }
