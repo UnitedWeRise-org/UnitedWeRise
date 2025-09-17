@@ -1310,9 +1310,7 @@
         };
 
         // setUserLoggedOut() moved to /src/modules/core/auth/session.js
-
-        // Expose globally for unified auth manager
-        window.setUserLoggedOut = setUserLoggedOut;
+        // Now exposed globally by session.js module
 
         // Enable/disable radio buttons based on available location data
         function updateRadioButtonAvailability() {
@@ -2554,7 +2552,8 @@
             if (!currentMOTDData) return;
             
             try {
-                const headers = {'X-Dismissal-Token': dismissalToken};
+                const headers = {};
+                headers['X-Dismissal-Token'] = dismissalToken;
 
                 const response = await fetch(`${API_BASE}/motd/dismiss/${currentMOTDData.id}`, {
                     method: 'POST',
