@@ -660,7 +660,7 @@
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
                 <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
-                <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
+                <div class="thumb" onclick="window.toggleMyProfile ? window.toggleMyProfile() : alert('Profile system loading...')" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
                 <div class="thumb logout-thumb" onclick="logout()" title="Logout" id="logoutThumb" style="display: none;">
