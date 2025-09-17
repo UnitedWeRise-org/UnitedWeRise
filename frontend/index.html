@@ -1575,6 +1575,12 @@
         // Expose globally for unified auth manager
         window.setUserLoggedIn = setUserLoggedIn;
 
+        // Function to set the local currentUser variable from external systems
+        window.setCurrentUser = function(user) {
+            currentUser = user;
+            window.currentUser = user;
+        };
+
         function setUserLoggedOut() {
             currentUser = null;
             window.currentUser = null;

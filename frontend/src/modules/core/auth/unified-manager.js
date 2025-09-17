@@ -174,6 +174,47 @@ class UnifiedAuthManager {
     }
 
     /**
+     * Synchronous version of _syncAllSystems for initialization
+     */
+    _syncAllSystemsSync(user, csrfToken) {
+        console.log('🔧 Synchronizing all authentication systems (sync)...');
+
+        // 1. Update user state module
+        if (window.userState) {
+            window.userState.current = user;
+        }
+
+        // 2. Update legacy global user - THIS IS THE CRITICAL FIX
+        window.currentUser = user;
+
+        // 3. Update localStorage
+        localStorage.setItem('currentUser', JSON.stringify(user));
+
+        // 4. Synchronize CSRF tokens everywhere
+        if (csrfToken) {
+            window.csrfToken = csrfToken;
+            if (window.apiClient) {
+                window.apiClient.csrfToken = csrfToken;
+            }
+            console.log('🔑 CSRF token synchronized globally:', csrfToken.substring(0, 8) + '...');
+        }
+
+        // 5. Update the local currentUser variable in index.html
+        // This is the variable that showMyFeedInMain() checks
+        if (window.setCurrentUser && typeof window.setCurrentUser === 'function') {
+            window.setCurrentUser(user);
+        }
+
+        // 6. Dispatch events for other systems
+        window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { authenticated: true, user, csrfToken }
+        }));
+
+        console.log('✅ All systems synchronized (sync) with user:', user.username || user.email);
+    }
+
+    /**
      * Trigger app reinitialization with proper error handling
      */
     _triggerAppReinitialization() {
@@ -356,7 +397,9 @@ class UnifiedAuthManager {
             };
 
             // CRITICAL: Sync this user to ALL systems, including legacy
-            this._syncAllSystems(existingUser, existingToken);
+            // Note: Can't await here since _syncFromExistingSystems is not async
+            // But we need to sync immediately to prevent race conditions
+            this._syncAllSystemsSync(existingUser, existingToken);
         }
     }
 
