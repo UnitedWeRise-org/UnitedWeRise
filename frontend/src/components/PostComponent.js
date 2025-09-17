@@ -155,6 +155,13 @@ class PostComponent {
             });
 
             if (!response.ok) {
+                // Log the actual error for debugging
+                console.error('Failed to toggle like:', {
+                    status: response.status,
+                    error: response.data?.error || response.data?.message || 'Unknown error',
+                    endpoint: `/posts/${postId}/${endpoint}`
+                });
+
                 // Revert on error
                 if (isLiked) {
                     icon.textContent = '❤️';
@@ -167,7 +174,6 @@ class PostComponent {
                     likeBtn.classList.remove('liked');
                     likeBtn.dataset.liked = 'false';
                 }
-                console.error('Failed to toggle like');
             }
         } catch (error) {
             console.error('Error toggling like:', error);
@@ -591,7 +597,21 @@ class PostComponent {
                 body: JSON.stringify({ content })
             });
 
+            console.log('Comment submission response:', {
+                ok: response.ok,
+                status: response.status,
+                data: response.data
+            });
+
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
+                // Check if this is a staging environment restriction
+                if (response.data?.environment === 'staging' && response.status === 403) {
+                    console.warn('Staging environment: Comment creation restricted to admin users');
+                    this.showToast('Staging environment: Admin access required for comments');
+                    input.disabled = false;
+                    return;
+                }
+
                 input.value = '';
                 console.log('Comment added successfully, reloading comments...');
                 // Delay to ensure the comment is saved on the server, then reload with cache bypass
