@@ -339,7 +339,6 @@ class MyProfile {
             <div class="tab-pane">
                 <!-- Activity Filters -->
                 <div class="activity-filters" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-                    <h4 style="margin-bottom: 1rem;">Show Activity Types:</h4>
                     <div class="filter-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
