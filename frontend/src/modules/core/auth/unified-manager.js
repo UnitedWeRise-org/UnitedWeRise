@@ -28,13 +28,14 @@ class UnifiedAuthManager {
     constructor() {
         this._subscribers = new Set();
         this._isInitialized = false;
+        this._isLoggingOut = false; // Prevent re-auth during logout
         this._currentAuthState = {
             isAuthenticated: false,
             user: null,
             csrfToken: null,
             sessionValid: false
         };
-        
+
         console.log('🔧 Unified Authentication Manager initialized');
     }
 
@@ -198,7 +199,10 @@ class UnifiedAuthManager {
      */
     async logout() {
         console.log('🚪 Unified logout starting...');
-        
+
+        // Set logout flag to prevent re-authentication
+        this._isLoggingOut = true;
+
         // Update internal state
         this._currentAuthState = {
             isAuthenticated: false,
@@ -206,14 +210,57 @@ class UnifiedAuthManager {
             csrfToken: null,
             sessionValid: false
         };
-        
+
         // Clear all systems
         this._clearAllSystems();
-        
+
         // Notify subscribers
         this._notifySubscribers();
-        
+
+        // Reset logout flag after a delay
+        setTimeout(() => {
+            this._isLoggingOut = false;
+            console.log('🔓 Logout flag cleared, re-authentication allowed');
+        }, 2000); // 2 second delay
+
         console.log('✅ Logout completed across all systems');
+    }
+
+    /**
+     * Missing methods that other systems call
+     */
+    async setAuthenticatedUser(user, csrfToken = null) {
+        console.log('🔧 Setting authenticated user via unified manager...');
+        await this._setAuthenticatedState(user, csrfToken || window.csrfToken);
+    }
+
+    async verifySession() {
+        console.log('🔍 Verifying session via unified manager...');
+
+        // Don't verify session if we're in the middle of logging out
+        if (this._isLoggingOut) {
+            console.log('🚫 Skipping session verification during logout');
+            return { success: false, error: 'Logout in progress' };
+        }
+
+        try {
+            if (!window.apiCall) {
+                return { success: false, error: 'API not available' };
+            }
+
+            const response = await window.apiCall('/auth/me');
+            if (response.ok && response.data) {
+                return { success: true, user: response.data };
+            }
+            return { success: false, error: 'No user session' };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async clearAuthentication() {
+        console.log('🧹 Clearing authentication via unified manager...');
+        await this.logout();
     }
 
     /**

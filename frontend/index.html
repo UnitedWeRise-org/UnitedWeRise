@@ -955,18 +955,19 @@
         let currentUser = null;
         let addressForm = null;
         
+        // DISABLED: Let unified auth manager handle initialization
         // Initialize currentUser from localStorage if available (for page refresh persistence)
-        try {
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                currentUser = JSON.parse(storedUser);
-                window.currentUser = currentUser; // Ensure global access
-                console.log('✅ Restored user from localStorage:', currentUser.firstName || currentUser.email);
-            }
-        } catch (error) {
-            console.warn('⚠️ Failed to restore user from localStorage:', error);
-            localStorage.removeItem('currentUser'); // Clear corrupted data
-        }
+        // try {
+        //     const storedUser = localStorage.getItem('currentUser');
+        //     if (storedUser) {
+        //         currentUser = JSON.parse(storedUser);
+        //         window.currentUser = currentUser; // Ensure global access
+        //         console.log('✅ Restored user from localStorage:', currentUser.firstName || currentUser.email);
+        //     }
+        // } catch (error) {
+        //     console.warn('⚠️ Failed to restore user from localStorage:', error);
+        //     localStorage.removeItem('currentUser'); // Clear corrupted data
+        // }
         
         // Utility function to fix auth-related localStorage issues without clearing everything
         function fixAuthStorageIssues() {
