@@ -995,7 +995,8 @@ class PostComponent {
         
         searchContainer.innerHTML = `
             <div class="user-search-box">
-                <input type="text" placeholder="Search users..." class="user-search-input" 
+                <input type="search" placeholder="Search users..." class="user-search-input"
+                       autocomplete="off" autocapitalize="off" spellcheck="false"
                        oninput="postComponent.searchUsers(this.value, ${x}, ${y}, '${photoId}')"
                        onkeydown="if(event.key==='Escape') postComponent.hideUserSearch()">
                 <div class="user-search-results"></div>

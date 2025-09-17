@@ -46,7 +46,7 @@ function setupMobileInterface() {
     mobileTopBar.className = 'mobile-top-bar';
     mobileTopBar.innerHTML = `
         <div class="mobile-search-container">
-            <input type="text" class="mobile-search-input" placeholder="Search..." />
+            <input type="search" class="mobile-search-input" placeholder="Search..." autocomplete="off" autocapitalize="off" spellcheck="false" />
         </div>
         <div class="mobile-logo-container">
             <div class="site-title-container" onclick="window.location.href='/'" title="United We Rise - Home">

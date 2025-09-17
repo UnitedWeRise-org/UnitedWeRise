@@ -386,6 +386,7 @@ class MyProfile {
                     <div class="activity-search" style="margin-top: 1rem;">
                         <input type="search" id="activitySearch" placeholder="Search your activity..."
                                value="${this.activitySearchQuery}"
+                               autocomplete="off" autocapitalize="off" spellcheck="false"
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
                                onkeyup="if(event.key==='Enter') window.myProfile.searchActivities(this.value)"
                                oninput="window.myProfile.activitySearchQuery = this.value">
