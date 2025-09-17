@@ -36,7 +36,7 @@ class MyProfile {
             });
             
             // Only display messages FROM admin (not our own messages as candidate)
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const currentUser = window.currentUser;
             const myUserId = currentUser?.id;
             const myCandidateId = currentUser?.candidateProfile?.id;
             
@@ -74,7 +74,7 @@ class MyProfile {
             // Add sent message to display if we're viewing messages tab
             if (this.currentTab === 'messages' && messageData.type === 'ADMIN_CANDIDATE') {
                 // Get current user info
-                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const currentUser = window.currentUser;
                 const candidateId = currentUser?.candidateProfile?.id;
                 
                 if (candidateId) {
@@ -103,7 +103,7 @@ class MyProfile {
         adminDebugLog('📝 Adding message to display:', messageData);
         
         // Determine if message is from admin
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        const currentUser = window.currentUser;
         const myUserId = currentUser?.id;
         
         // Check various ways the message might indicate it's from admin
@@ -3152,7 +3152,7 @@ class MyProfile {
                         contentInput.value = '';
                         
                         // Immediately add the message to display (don't wait for WebSocket confirmation)
-                        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                        const currentUser = window.currentUser;
                         this.addMessageToDisplay({
                             id: Date.now().toString(),
                             senderId: currentUser?.id,
@@ -3459,3 +3459,46 @@ class MyProfile {
 
 // Initialize global instance
 window.myProfile = new MyProfile();
+
+// Profile integration functions for modular system
+function showMyProfile() {
+    if (!window.currentUser) {
+        document.getElementById('mainContent').innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+                <h2>Please log in to view your profile</h2>
+                <button onclick="openAuthModal('login')" class="btn">Log In</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Hide all panels and show profile in main content
+    const profilePanel = document.getElementById('profilePanel');
+    const messagesContainer = document.getElementById('messagesContainer');
+
+    if (profilePanel) profilePanel.style.display = 'none';
+    if (messagesContainer) messagesContainer.style.display = 'none';
+
+    window.myProfile.render('mainContent');
+}
+
+function toggleMyProfile() {
+    if (!window.currentUser) {
+        showMyProfile(); // Will show login prompt
+        return;
+    }
+
+    const profilePanel = document.getElementById('profilePanel');
+
+    if (profilePanel && profilePanel.style.display === 'block') {
+        profilePanel.style.display = 'none';
+    } else {
+        showMyProfile();
+    }
+}
+
+// Export functions for global use and module system
+if (typeof window !== 'undefined') {
+    window.showMyProfile = showMyProfile;
+    window.toggleMyProfile = toggleMyProfile;
+}
