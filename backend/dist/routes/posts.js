@@ -14,6 +14,7 @@ const moderation_1 = require("../middleware/moderation");
 const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService");
 const reputationService_1 = require("../services/reputationService");
+const activityTracker_1 = require("../services/activityTracker");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Create a new post
@@ -187,6 +188,14 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 console.warn('Failed to update reputation event with post ID:', error);
             }
         }
+        // Track post creation activity
+        try {
+            await activityTracker_1.ActivityTracker.trackPostCreated(userId, post.id, content.trim());
+        }
+        catch (error) {
+            console.error('Failed to track post creation activity:', error);
+            // Don't fail the post creation if activity tracking fails
+        }
         // Async feedback analysis - runs in background without blocking response
         if (quickCheck.isPotentialFeedback) {
             // Fire and forget - don't await
@@ -345,7 +354,12 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
         const userId = req.user.id;
         // Check if post exists
         const post = await prisma_1.prisma.post.findUnique({
-            where: { id: postId }
+            where: { id: postId },
+            select: {
+                id: true,
+                authorId: true,
+                content: true
+            }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
@@ -375,6 +389,14 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                     data: { likesCount: { decrement: 1 } }
                 })
             ]);
+            // Track unlike activity
+            try {
+                await activityTracker_1.ActivityTracker.trackLikeRemoved(userId, postId, post.content);
+            }
+            catch (error) {
+                console.error('Failed to track unlike activity:', error);
+                // Don't fail the unlike action if activity tracking fails
+            }
             res.json({ message: 'Post unliked successfully', liked: false });
         }
         else {
@@ -408,6 +430,14 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
                     console.warn('Failed to award reputation for quality post:', error);
                 }
             }
+            // Track like activity
+            try {
+                await activityTracker_1.ActivityTracker.trackLikeAdded(userId, postId, post.content);
+            }
+            catch (error) {
+                console.error('Failed to track like activity:', error);
+                // Don't fail the like action if activity tracking fails
+            }
             res.json({ message: 'Post liked successfully', liked: true });
         }
     }
@@ -428,7 +458,7 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
         // Check if post exists
         const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
-            select: { id: true, authorId: true }
+            select: { id: true, authorId: true, content: true }
         });
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
@@ -515,6 +545,14 @@ router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspe
             return newComment;
         });
         console.log(`✅ Comment created successfully: ID=${comment.id}, depth=${comment.depth}, parentId=${comment.parentId}`);
+        // Track comment creation activity
+        try {
+            await activityTracker_1.ActivityTracker.trackCommentCreated(userId, comment.id, content.trim(), postId, post.content);
+        }
+        catch (error) {
+            console.error('Failed to track comment creation activity:', error);
+            // Don't fail the comment creation if activity tracking fails
+        }
         // Create notification if not commenting on own post
         if (post.authorId !== userId) {
             await (0, notifications_1.createNotification)('COMMENT', userId, post.authorId, `${req.user.username} commented on your post`, postId, comment.id);
