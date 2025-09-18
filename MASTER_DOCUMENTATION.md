@@ -8906,6 +8906,16 @@ import legislativeRoutes from './routes/legislative';
 **Devices**: Some Android devices
 **Workaround**: Refresh page
 
+#### 6. Multiple Trending Implementations [NEEDS CONSOLIDATION]
+**Status**: 🟡 Technical Debt
+**Impact**: Code complexity and maintenance difficulty
+**Details**: Three separate trending implementations exist:
+- `loadTrendingPosts()` at line 2577 in index.html
+- `loadTrendingUpdates()` at line 2689 in index.html
+- TopicNavigation component with its own trending system
+- Integration wrapper attempting to sync them (line 3377)
+**TODO**: Consolidate into single trending system (deferred for future planning)
+
 ### Resolved Issues (Audit Fixes)
 
 ✅ **Infinite Scroll Broken** - Fixed in Phase 6
