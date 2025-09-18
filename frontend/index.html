@@ -55,6 +55,7 @@
     
     <!-- Application CSS -->
     <link rel="stylesheet" href="src/styles/main.css">
+    <link rel="stylesheet" href="src/styles/profile.css">
     <link rel="stylesheet" href="src/styles/search.css">
     <link rel="stylesheet" href="src/styles/map.css">
     <link rel="stylesheet" href="src/styles/modals.css">
@@ -279,7 +280,7 @@
 <body>
     <div class="top-bar">
         <div class="top-bar-left">
-            <input class="search desktop-search" type="text" placeholder="Search Name or Location" id="searchInput" onfocus="openSearch()" oninput="performGlobalSearch(this.value)">
+            <input class="search desktop-search" type="search" placeholder="Search Name or Location" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false" onfocus="openSearch()" oninput="performGlobalSearch(this.value)">
         </div>
         
         <div class="top-bar-center">
@@ -659,7 +660,7 @@
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
                 <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
-                <div class="thumb" onclick="toggleMyProfile()" title="My Profile" id="profileThumb" style="display: none;">👤 <span class="label">My Profile</span></div>
+                <div class="thumb" onclick="window.toggleMyProfile ? window.toggleMyProfile() : alert('Profile system loading...')" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
                 <div class="thumb logout-thumb" onclick="logout()" title="Logout" id="logoutThumb" style="display: none;">
@@ -955,18 +956,19 @@
         let currentUser = null;
         let addressForm = null;
         
+        // DISABLED: Let unified auth manager handle initialization
         // Initialize currentUser from localStorage if available (for page refresh persistence)
-        try {
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                currentUser = JSON.parse(storedUser);
-                window.currentUser = currentUser; // Ensure global access
-                console.log('✅ Restored user from localStorage:', currentUser.firstName || currentUser.email);
-            }
-        } catch (error) {
-            console.warn('⚠️ Failed to restore user from localStorage:', error);
-            localStorage.removeItem('currentUser'); // Clear corrupted data
-        }
+        // try {
+        //     const storedUser = localStorage.getItem('currentUser');
+        //     if (storedUser) {
+        //         currentUser = JSON.parse(storedUser);
+        //         window.currentUser = currentUser; // Ensure global access
+        //         console.log('✅ Restored user from localStorage:', currentUser.firstName || currentUser.email);
+        //     }
+        // } catch (error) {
+        //     console.warn('⚠️ Failed to restore user from localStorage:', error);
+        //     localStorage.removeItem('currentUser'); // Clear corrupted data
+        // }
         
         // Utility function to fix auth-related localStorage issues without clearing everything
         function fixAuthStorageIssues() {
@@ -1227,6 +1229,9 @@
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Declare variables that are used later in the script
+            let trendingRefreshInterval = null;
+
             // Use new optimized initialization system
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('AppInit', 'Starting optimized app initialization...');
@@ -1272,336 +1277,41 @@
         // Authentication Functions
         // 🔐 SECURITY MIGRATION STATUS: Core auth infrastructure migrated to httpOnly cookies
         // - Primary auth now uses cookies + CSRF tokens (XSS protected)
-        // - apiCall() and adminApiCall() functions fully support cookies
+        // - window.apiCall() and adminApiCall() functions fully support cookies
         // - OAuth flows updated to cookie-based auth
         // - Legacy authToken variables maintained for transition compatibility
         // - Individual component functions may still reference authToken but will work via updated API layer
-        async function verifyAndSetUser() {
-            try {
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('Authentication', 'Verifying user with /auth/me');
-                }
-                const response = await fetch(`${API_BASE}/auth/me`, {
-                    credentials: 'include' // Use cookies for auth
-                });
+        // verifyAndSetUser() moved to /src/modules/core/auth/session.js
 
-                console.log('Auth verification response status:', response.status);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('Authentication', 'Auth verification successful', {
-                            userId: data.user?.id,
-                            username: data.user?.username
-                        });
-                    }
-                    
-                    // Only set user logged in if we actually have user data
-                    if (data.user && data.user.id) {
-                        setUserLoggedIn(data.user);
-                    } else {
-                        console.warn('Invalid user data received:', data);
-                        // Clear invalid session - cookies will be cleared by logout endpoint
-                        window.csrfToken = null;
-                        // Ensure UI shows logged out state
-                        setUserLoggedOut();
-                    }
-                } else {
-                    // Token is invalid - cookies will be cleared by logout endpoint
-                    console.log('Token invalid, clearing session');
-                    window.csrfToken = null;
-                    // Ensure UI shows logged out state
-                    setUserLoggedOut();
-                }
-            } catch (error) {
-                console.error('Auth verification failed:', error);
-                window.csrfToken = null;
-                // Ensure UI shows logged out state
-                setUserLoggedOut();
-            }
-        }
+        // openAuthModal moved to /src/modules/core/auth/modal.js
 
-        function openAuthModal(mode = 'login') {
-            document.getElementById('authModal').style.display = 'block';
-            if (mode === 'login') {
-                switchToLogin();
-            } else {
-                switchToRegister();
-            }
-        }
+        // closeAuthModal moved to /src/modules/core/auth/modal.js
 
-        function closeAuthModal() {
-            document.getElementById('authModal').style.display = 'none';
-            clearAuthForm();
-        }
+        // switchToLogin moved to /src/modules/core/auth/modal.js
 
-        function switchToLogin() {
-            document.getElementById('authTitle').textContent = 'Login';
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            clearAuthForm();
-        }
+        // switchToRegister moved to /src/modules/core/auth/modal.js
 
-        function switchToRegister() {
-            document.getElementById('authTitle').textContent = 'Sign Up';
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearAuthForm();
-        }
+        // clearAuthForm moved to /src/modules/core/auth/modal.js
 
-        function clearAuthForm() {
-            document.getElementById('authMessage').innerHTML = '';
-            // Clear all form inputs
-            document.querySelectorAll('#authModal input').forEach(input => input.value = '');
-            // Hide TOTP field and reset button text
-            const totpField = document.getElementById('totpField');
-            if (totpField) totpField.style.display = 'none';
-            const loginButton = document.getElementById('loginButton');
-            if (loginButton) loginButton.textContent = 'Login';
-        }
+        // handleLogin moved to /src/modules/core/auth/modal.js
 
-        async function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            if (!email || !password) {
-                showAuthMessage('Please fill in all fields', 'error');
-                return;
-            }
-            
-            try {
-                const loginButton = document.getElementById('loginButton');
-                loginButton.disabled = true;
-                loginButton.textContent = 'Signing in...';
-                
-                // Use unified login function
-                const result = await unifiedLogin(email, password, 'main-site');
-                
-                if (result.success) {
-                    // Authentication handled by httpOnly cookies
-                    setUserLoggedIn(result.user);
-                    closeAuthModal();
-                    showAuthMessage('Login successful!', 'success');
-                } else {
-                    showAuthMessage(result.error || 'Login failed', 'error');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showAuthMessage('Network error. Please try again.', 'error');
-            } finally {
-                const loginButton = document.getElementById('loginButton');
-                loginButton.disabled = false;
-                loginButton.textContent = 'Login';
-            }
-        }
+        // handleRegister() moved to /src/modules/core/auth/modal.js
 
-        async function handleRegister() {
-            const email = document.getElementById('registerEmail').value;
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
-            const firstName = document.getElementById('registerFirstName').value;
-            const lastName = document.getElementById('registerLastName').value;
-            
-            
-            // Get hCaptcha response
-            let hcaptchaResponse = null;
-            try {
-                if (window.hcaptcha) {
-                    const widget = document.getElementById('hcaptcha-register');
-                    const hasIframe = widget && widget.querySelector('iframe');
-                    
-                    console.log('hCaptcha check before registration:', {
-                        widget: widget ? 'exists' : 'missing',
-                        iframe: hasIframe ? 'exists' : 'missing',
-                        hcaptchaLoaded: typeof window.hcaptcha !== 'undefined'
-                    });
-                    
-                    hcaptchaResponse = window.hcaptcha.getResponse();
-                    console.log('hCaptcha response length:', hcaptchaResponse ? hcaptchaResponse.length : 0);
-                }
-            } catch (e) {
-                console.error('hCaptcha getResponse error:', e);
-            }
+        // refreshUserDataIfNeeded() moved to /src/modules/core/auth/session.js
 
-            if (!email || !username || !password) {
-                showAuthMessage('Email, username, and password are required', 'error');
-                return;
-            }
+        // setUserLoggedIn() moved to /src/modules/core/auth/session.js
+        // Now exposed globally by session.js module
 
-            // Check terms agreement checkbox
-            const termsAgreement = document.getElementById('termsAgreement');
-            if (!termsAgreement || !termsAgreement.checked) {
-                showAuthMessage('You must agree to the Terms of Service and Privacy Policy to continue', 'error');
-                return;
-            }
-            
-            // Skip hCaptcha entirely for local development
-            const isLocalDev = window.location.protocol === 'file:' || 
-                             window.location.hostname === 'localhost' || 
-                             window.location.hostname === '127.0.0.1';
+        // Function to set the local currentUser variable from external systems
+        window.setCurrentUser = function(user) {
+            console.log('🔧 setCurrentUser called with:', user?.username || user?.email || 'null user');
+            currentUser = user;
+            window.currentUser = user;
+            console.log('🔧 Local currentUser now set to:', currentUser?.username || 'null');
+        };
 
-            if (!isLocalDev && !hcaptchaResponse) {
-                showAuthMessage('Please complete the captcha verification by clicking the checkbox above', 'error');
-                return;
-            }
-            
-            // Validate password
-            if (!validatePassword(password)) {
-                showAuthMessage('Password must meet all requirements', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        email, 
-                        username, 
-                        password, 
-                        firstName, 
-                        lastName, 
-                        hcaptchaToken: hcaptchaResponse || null
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Authentication now handled entirely by httpOnly cookies
-                    setUserLoggedIn(data.user);
-                    closeAuthModal();
-                    showAuthMessage('Registration successful!', 'success');
-                } else {
-                    showAuthMessage(data.error || 'Registration failed', 'error');
-                    // Reset hCaptcha on error
-                    if (window.hcaptcha) {
-                        window.hcaptcha.reset();
-                    }
-                }
-            } catch (error) {
-                console.error('Registration error:', error);
-                showAuthMessage('Network error. Please try again.', 'error');
-                // Reset hCaptcha on error
-                if (window.hcaptcha) {
-                    window.hcaptcha.reset();
-                }
-            }
-        }
-
-        async function refreshUserDataIfNeeded(user) {
-            // If user data is missing firstName, refresh it from the backend
-            if (!user.firstName && currentUser) {
-                console.log('User data missing firstName, refreshing...');
-                try {
-                    const response = await fetch(`${API_BASE}/auth/me`, {
-                        credentials: 'include' // Include cookies for authentication
-                    });
-                    
-                    if (response.ok) {
-                        const freshUser = await response.json();
-                        console.log('Refreshed user data:', freshUser);
-                        
-                        // Update localStorage with fresh data
-                        localStorage.setItem('currentUser', JSON.stringify(freshUser));
-                        
-                        return freshUser;
-                    }
-                } catch (error) {
-                    console.warn('Could not refresh user data:', error);
-                }
-            }
-            return user;
-        }
-
-        async function setUserLoggedIn(user) {
-            // Safety check - don't process if no user data
-            if (!user || !user.id) {
-                console.error('Invalid user data passed to setUserLoggedIn:', user);
-                setUserLoggedOut();
-                return;
-            }
-            
-            // Refresh user data if needed
-            const refreshedUser = await refreshUserDataIfNeeded(user);
-            currentUser = refreshedUser;
-            window.currentUser = refreshedUser;
-            
-            // Store user data in localStorage for persistence
-            localStorage.setItem('currentUser', JSON.stringify(refreshedUser));
-            
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('userSection').style.display = 'flex';
-            
-            // More robust greeting with multiple fallbacks
-            const displayName = refreshedUser.firstName || refreshedUser.username || 'User';
-            console.log('🔍 Setting greeting - firstName:', refreshedUser.firstName, 'username:', refreshedUser.username, 'displayName:', displayName);
-            const greetingElement = document.getElementById('userGreeting');
-            if (greetingElement) {
-                greetingElement.textContent = `Hello, ${displayName}!`;
-                greetingElement.style.display = 'inline'; // Show the greeting span
-                console.log('✅ Greeting set to:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                
-                // Debug: Check if anything clears this immediately
-                setTimeout(() => {
-                    console.log('🔍 Greeting after 100ms:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                }, 100);
-                setTimeout(() => {
-                    console.log('🔍 Greeting after 1s:', greetingElement.textContent, 'visible:', greetingElement.style.display);
-                }, 1000);
-            }
-            
-            // Address info will be loaded by loadUserContent()
-            
-            // Show user-specific sidebar options
-            document.getElementById('messagesThumb').style.display = 'block';
-            document.getElementById('organizingThumb').style.display = 'block';
-            document.getElementById('profileThumb').style.display = 'block';
-            document.getElementById('feedThumb').style.display = 'block';
-            // Note: postComposer is now part of feed view, not a standalone element
-            document.getElementById('logoutThumb').style.display = 'block';
-            
-            // Load user-specific content
-            loadUserContent();
-            loadUserPosts();
-            
-            // Show My Feed by default in main content area
-            showMyFeedInMain();
-        }
-        
-        function setUserLoggedOut() {
-            currentUser = null;
-            window.currentUser = null;
-            
-            // Reset UI to logged out state
-            document.getElementById('authSection').style.display = 'flex';
-            document.getElementById('userSection').style.display = 'none';
-            const greetingElement = document.getElementById('userGreeting');
-            if (greetingElement) {
-                greetingElement.textContent = '';
-                greetingElement.style.display = 'none'; // Hide the greeting span
-            }
-            
-            // Hide user-specific sidebar options
-            document.getElementById('messagesThumb').style.display = 'none';
-            document.getElementById('profileThumb').style.display = 'none';
-            document.getElementById('feedThumb').style.display = 'none';
-            document.getElementById('logoutThumb').style.display = 'none';
-            
-            // Reset main content to welcome message
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                mainContent.innerHTML = `
-                    <div class="welcome-content">
-                        <h1>Welcome to United We Rise</h1>
-                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-                    </div>
-                `;
-            }
-        }
-
+        // setUserLoggedOut() moved to /src/modules/core/auth/session.js
+        // Now exposed globally by session.js module
 
         // Enable/disable radio buttons based on available location data
         function updateRadioButtonAvailability() {
@@ -1631,36 +1341,9 @@
             console.log(`Radio button availability - State: ${hasState}, Local: ${hasAddress}`);
         }
 
-        function logout() {
-            // Use unified logout function
-            unifiedLogout('main-site');
-            
-            // Additional main-site specific cleanup
-            setUserLoggedOut();
-            
-            // Hide additional elements
-            document.getElementById('messagesContainer').style.display = 'none';
-            document.getElementById('profilePanel').style.display = 'none';
-            
-            // Reset panels to default content
-            resetPanelsToDefault();
-            
-            // Reset main content
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                mainContent.innerHTML = `
-                    <div class="welcome-content">
-                        <h1>Welcome to United We Rise</h1>
-                        <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
-                    </div>
-                `;
-            }
-        }
+        // logout() moved to /src/modules/core/auth/session.js
 
-        function showAuthMessage(message, type) {
-            const messageEl = document.getElementById('authMessage');
-            messageEl.innerHTML = `<div class="${type}-message">${message}</div>`;
-        }
+        // showAuthMessage() moved to /src/modules/core/auth/modal.js
 
         // About Modal Functions
         function openAboutModal() {
@@ -2167,7 +1850,7 @@
         async function loadUserContent() {
             // Load user's elected officials if they have an address
             try {
-                const response = await apiCall('/users/profile');
+                const response = await window.apiCall('/users/profile');
 
                 if (response.ok) {
                     const data = response.data;
@@ -2218,7 +1901,7 @@
 
         async function loadElectedOfficials(zipCode, state) {
             try {
-                const response = await apiCall('/political/representatives');
+                const response = await window.apiCall('/political/representatives');
                 
                 if (response.ok && response.data) {
                     const representatives = response.data.representatives;
@@ -2665,24 +2348,27 @@
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for general API calls
         const REPRESENTATIVES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for representatives (they don't change often)
 
-        // API Helper Functions
+        // API Helper Functions - Wrapper for legacy caching
         async function apiCall(endpoint, options = {}) {
-            // UNIFIED API SYSTEM: Use the centralized modular apiClient
-            // This eliminates API fragmentation and ensures consistent behavior
-            
+            // Check if api-manager.js is loaded
+            if (!window.apiManager || typeof window.apiManager.request !== 'function') {
+                console.error('API Manager not loaded yet. Please ensure api-manager.js is loaded.');
+                throw new Error('API Manager not initialized');
+            }
+
             // Preserve legacy caching behavior for backward compatibility
             const isGet = !options.method || options.method === 'GET';
             const bypassCache = options.bypassCache;
-            
+
             if (isGet && !bypassCache) {
                 const cacheKey = `${endpoint}${currentUser ? `_${currentUser.id.substring(0, 10)}` : ''}`;
                 const cached = apiCache.get(cacheKey);
-                
+
                 // Use longer cache duration for representatives data
-                const cacheDuration = endpoint.includes('representatives') || endpoint.includes('officials') 
-                    ? REPRESENTATIVES_CACHE_DURATION 
+                const cacheDuration = endpoint.includes('representatives') || endpoint.includes('officials')
+                    ? REPRESENTATIVES_CACHE_DURATION
                     : CACHE_DURATION;
-                
+
                 if (cached && (Date.now() - cached.timestamp) < cacheDuration) {
                     console.log(`Using cached API response for ${endpoint} (${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`);
                     return cached.data;
@@ -2690,9 +2376,8 @@
             }
 
             try {
-                // DELEGATE TO UNIFIED API CLIENT: This ensures consistent environment detection,
-                // error handling, retry logic, and proper URL construction
-                const response = await window.apiClient.call(endpoint, options);
+                // DELEGATE TO UNIFIED API CLIENT from api-manager.js
+                const response = await window.apiManager.request(endpoint, options);
                 
                 // The apiClient already returns a structured response with parsed data
                 // Transform it to match the legacy apiCall format for backward compatibility
@@ -2744,13 +2429,17 @@
 
         async function performSearch(query) {
             try {
-                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+                console.log('🔍 Search debug - calling:', `/search/unified?q=${encodeURIComponent(query)}&types=users`);
+                const response = await window.apiCall(`/search/unified?q=${encodeURIComponent(query)}&types=users`);
+                console.log('🔍 Search response:', response);
                 
-                if (response.ok) {
+                if (response && (response.success || response.users || response.ok)) {
                     // Only use the global search results container, not the feed area
-                    displayGlobalSearchResults(response.data.users);
+                    const users = response.data?.users || response.users || [];
+                    console.log('🔍 Search users found:', users);
+                    displayGlobalSearchResults(users);
                 } else {
-                    console.error('Search failed');
+                    console.error('Search failed - response structure:', response);
                 }
             } catch (error) {
                 console.error('Search error:', error);
@@ -2814,10 +2503,9 @@
             try {
                 // Get dismissal token for anonymous users
                 dismissalToken = localStorage.getItem('motd-dismissal-token') || generateDismissalToken();
-                
-                const headers = {
-                    'X-Dismissal-Token': dismissalToken
-                };
+
+                const headers = {};
+                headers['X-Dismissal-Token'] = dismissalToken;
 
                 const response = await fetch(`${API_BASE}/motd/current`, {
                     credentials: 'include', // Include cookies for authentication
@@ -2865,7 +2553,8 @@
             if (!currentMOTDData) return;
             
             try {
-                const headers = {'X-Dismissal-Token': dismissalToken};
+                const headers = {};
+                headers['X-Dismissal-Token'] = dismissalToken;
 
                 const response = await fetch(`${API_BASE}/motd/dismiss/${currentMOTDData.id}`, {
                     method: 'POST',
@@ -2890,7 +2579,7 @@
                 // Try AI topic discovery first, fallback to posts if needed
                 let response;
                 try {
-                    response = await apiCall('/topic-navigation/trending?limit=20');
+                    response = await window.apiCall('/topic-navigation/trending?limit=20');
                     if (response.ok && response.data.topics && response.data.topics.length > 0) {
                         updateTrendingTopicsPanel(response.data.topics);
                         return;
@@ -2900,7 +2589,7 @@
                 }
                 
                 // Fallback to post-based trending for sidebar
-                response = await apiCall('/feed/trending');
+                response = await window.apiCall('/feed/trending');
                 
                 if (response.ok) {
                     updateTrendingPanel(response.data.posts);
@@ -2974,7 +2663,7 @@
         }
 
         // Auto-refresh trending posts
-        let trendingRefreshInterval = null;
+        // trendingRefreshInterval declared at top of DOMContentLoaded handler
 
         function startTrendingRefresh() {
             // Load initial trending updates (but don't spam if backend isn't ready)
@@ -3012,7 +2701,7 @@
                 // Try AI topic aggregation with dual-vector clustering
                 let response;
                 try {
-                    response = await apiCall(`/trending/topics?scope=${scope}&limit=7`);
+                    response = await window.apiCall(`/trending/topics?scope=${scope}&limit=7`);
                     if (response.ok && response.data.topics && response.data.topics.length > 0) {
                         updateTrendingTopicsPanel(response.data.topics);
                         
@@ -3026,7 +2715,7 @@
                 }
                 
                 // Fallback to post-based trending if AI aggregation fails
-                response = await apiCall('/feed/trending?limit=20');
+                response = await window.apiCall('/feed/trending?limit=20');
                 
                 if (response.ok) {
                     updateTrendingUpdatesPanel(response.data.posts);
@@ -3067,7 +2756,7 @@
                 }
 
                 // Fetch posts for this topic
-                const response = await apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
+                const response = await window.apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
                 
                 if (response.ok) {
                     currentTopicMode = {
@@ -3364,7 +3053,7 @@
                     }
                 }
                 
-                const response = await apiCall(`/topic-navigation/enter/${topicId}`, {
+                const response = await window.apiCall(`/topic-navigation/enter/${topicId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ limit: 30 })
@@ -3396,7 +3085,7 @@
             try {
                 console.log('Exiting topic mode...');
                 
-                const response = await apiCall('/topic-navigation/exit', {
+                const response = await window.apiCall('/topic-navigation/exit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -3533,7 +3222,7 @@
                 // Check if we need to refresh the cache or if scope changed
                 const currentScope = currentZoomLevel || 'national';
                 if (now - lastMapTopicUpdate > MAP_TOPIC_CACHE_DURATION || mapTopicCache.length === 0 || lastMapTopicScope !== currentScope) {
-                    const response = await apiCall(`/trending/map-topics?count=9&scope=${currentScope}`); // Get 9 topics for current scope
+                    const response = await window.apiCall(`/trending/map-topics?count=9&scope=${currentScope}`); // Get 9 topics for current scope
                     
                     if (response.ok && response.data.topics) {
                         mapTopicCache = response.data.topics;
@@ -3636,7 +3325,7 @@
                 }
                 
                 // Fetch latest AI topics using new aggregation API
-                const response = await apiCall('/trending/map-topics?count=12');
+                const response = await window.apiCall('/trending/map-topics?count=12');
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     const aiTopics = response.data.topics;
                     const mapBubbles = convertTopicsToMapBubbles(aiTopics);
@@ -4013,7 +3702,7 @@
             if (!currentUser) return;
 
             try {
-                const response = await apiCall('/messages/conversations');
+                const response = await window.apiCall('/messages/conversations');
                 
                 if (response.ok) {
                     displayConversations(response.data.conversations);
@@ -4108,7 +3797,7 @@
 
         async function startConversationWithUser(userId, username) {
             try {
-                const response = await apiCall('/messages/conversations', {
+                const response = await window.apiCall('/messages/conversations', {
                     method: 'POST',
                     body: JSON.stringify({ participantId: userId })
                 });
@@ -4128,7 +3817,7 @@
         async function openConversation(conversationId, username) {
             try {
                 // Load messages for this conversation
-                const response = await apiCall(`/messages/conversations/${conversationId}/messages`);
+                const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`);
                 
                 if (response.ok) {
                     showConversationView(conversationId, username, response.data.messages);
@@ -4218,7 +3907,7 @@
             if (!content) return;
             
             try {
-                const response = await apiCall(`/messages/conversations/${conversationId}/messages`, {
+                const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -4245,69 +3934,7 @@
             showMyProfile();
         }
 
-        // New function to show My Profile in main content area
-        function showMyProfile() {
-            if (!currentUser) {
-                document.getElementById('mainContent').innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <h2>Please log in to view your profile</h2>
-                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                    </div>
-                `;
-                return;
-            }
 
-            // Hide all panels and show profile in main content
-            document.getElementById('profilePanel').style.display = 'none';
-            document.getElementById('messagesContainer').style.display = 'none';
-            window.myProfile.render('mainContent');
-        }
-
-        // New function to toggle My Profile - shows/hides profile window
-        function toggleMyProfile() {
-            if (!currentUser) {
-                document.getElementById('mainContent').innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <h2>Please log in to view your profile</h2>
-                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                    </div>
-                `;
-                return;
-            }
-
-            // Hide Civic Organizing container if open
-            const civicOrganizing = document.querySelector('.civic-organizing-container');
-            if (civicOrganizing) {
-                civicOrganizing.style.display = 'none';
-            }
-            
-            // Hide other main view systems
-            const electionsView = document.querySelector('.elections-main-view');
-            if (electionsView) {
-                electionsView.style.display = 'none';
-            }
-            
-            const officialsView = document.querySelector('.officials-main-view');
-            if (officialsView) {
-                officialsView.style.display = 'none';
-            }
-            
-            const candidatesView = document.querySelector('.candidates-main-view');
-            if (candidatesView) {
-                candidatesView.style.display = 'none';
-            }
-
-            const mainContent = document.getElementById('mainContent');
-            const isProfileCurrentlyShown = mainContent.querySelector('.my-profile') !== null;
-            
-            if (isProfileCurrentlyShown) {
-                // Profile is currently shown, hide it and show default view
-                showDefaultView();
-            } else {
-                // Profile is not shown, show it
-                showMyProfile();
-            }
-        }
 
         // Function to show default view when all windows are closed
         function showDefaultView() {
@@ -4388,8 +4015,8 @@
                 candidatesView.style.display = 'none';
             }
             
-            // Check if user is authenticated (using currentUser since tokens are httpOnly)
-            if (!currentUser) {
+            // Check if user is authenticated (using window.currentUser since tokens are httpOnly)
+            if (!window.currentUser) {
                 console.log('❌ No authenticated user, showing login prompt');
                 document.getElementById('mainContent').innerHTML = `
                     <div style="text-align: center; padding: 3rem;">
@@ -4400,7 +4027,7 @@
                 return;
             }
             
-            console.log('✅ Authenticated user found for My Feed:', currentUser.username);
+            console.log('✅ Authenticated user found for My Feed:', window.currentUser.username);
 
             // Hide other content
             closeAllPanels();
@@ -4537,7 +4164,7 @@
             
             try {
                 console.log('🌐 Making API call to /feed/');
-                const response = await apiCall('/feed/?limit=15', {
+                const response = await window.apiCall('/feed/?limit=15', {
                     method: 'GET'
                 });
                 
@@ -4681,7 +4308,7 @@
             try {
                 // Use offset-based pagination
                 console.log(`🔄 Loading more My Feed posts... (offset: ${currentFeedOffset})`);
-                const response = await apiCall(`/feed/?limit=15&offset=${currentFeedOffset}`, {
+                const response = await window.apiCall(`/feed/?limit=15&offset=${currentFeedOffset}`, {
                     method: 'GET'
                 });
 
@@ -4871,7 +4498,7 @@
                     formData.append('purpose', 'PERSONAL');
 
                     console.log('🖼️ Uploading media for post...');
-                    const mediaResponse = await apiCall('/photos/upload', {
+                    const mediaResponse = await window.apiCall('/photos/upload', {
                         method: 'POST',
                         body: formData
                     });
@@ -5038,7 +4665,7 @@
                 window.postsWithContinuation.add(postId);
                 
                 // Create continuation comment (NOT nested - parentId: null)
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiCall(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ 
                         content: continuationContent,
@@ -5189,7 +4816,7 @@
         // REMOVED: addCommentToPost helper - no longer needed for continuations
         /* async function addCommentToPost(postId, content) {
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiCall(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: { content }
                 });
@@ -5219,7 +4846,7 @@
 
             try {
                 console.log('Loading user profile...');
-                const response = await apiCall('/users/profile');
+                const response = await window.apiCall('/users/profile');
                 
                 console.log('Profile response:', response);
                 
@@ -5587,13 +5214,13 @@
 
             try {
                 // Update basic profile
-                const profileResponse = await apiCall('/users/profile', {
+                const profileResponse = await window.apiCall('/users/profile', {
                     method: 'PUT',
                     body: JSON.stringify(profileData)
                 });
 
                 // Update political/address info
-                const politicalResponse = await apiCall('/political/profile', {
+                const politicalResponse = await window.apiCall('/political/profile', {
                     method: 'PUT',
                     body: JSON.stringify(politicalData)
                 });
@@ -5627,7 +5254,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/like`, {
+                const response = await window.apiCall(`/posts/${postId}/like`, {
                     method: 'POST'
                 });
 
@@ -5674,7 +5301,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiCall(`/posts/${postId}/comments`, {
                     method: 'POST'
                 });
 
@@ -5722,7 +5349,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiCall(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -5755,7 +5382,7 @@
             }
 
             try {
-                const response = await apiCall('/posts', {
+                const response = await window.apiCall('/posts', {
                     method: 'POST',
                     body: JSON.stringify({ 
                         content
@@ -5779,7 +5406,7 @@
             if (!currentUser) return;
 
             try {
-                const response = await apiCall('/posts/me');
+                const response = await window.apiCall('/posts/me');
                 
                 if (response.ok) {
                     // Store posts for later display when feed view is shown
@@ -5894,7 +5521,15 @@
         }
 
         async function likePost(postId, event) {
-            if (!currentUser) {
+            console.log('🔍 Like post debug:', {
+                windowCurrentUser: window.currentUser,
+                userStateModule: window.userState?.current,
+                localStorageUser: localStorage.getItem('currentUser')
+            });
+            
+            // Check both user state sources for authentication
+            const user = window.currentUser || window.userState?.current;
+            if (!user) {
                 alert('Please log in to like posts');
                 return;
             }
@@ -5904,7 +5539,7 @@
             if (!likeElement) return;
 
             try {
-                const response = await apiCall(`/posts/${postId}/like`, {
+                const response = await window.apiCall(`/posts/${postId}/like`, {
                     method: 'POST'
                 });
 
@@ -5950,7 +5585,7 @@
 
             try {
                 // Load comments
-                const response = await apiCall(`/posts/${postId}/comments?limit=50`);
+                const response = await window.apiCall(`/posts/${postId}/comments?limit=50`);
                 if (!response.ok) {
                     alert('Failed to load comments');
                     return;
@@ -6042,7 +5677,7 @@
             }
 
             try {
-                const response = await apiCall(`/posts/${postId}/comments`, {
+                const response = await window.apiCall(`/posts/${postId}/comments`, {
                     method: 'POST',
                     body: JSON.stringify({ content })
                 });
@@ -6112,7 +5747,7 @@
         // Follow/Unfollow functionality
         async function followUser(userId, buttonElement) {
             try {
-                const response = await apiCall(`/users/follow/${userId}`, {
+                const response = await window.apiCall(`/users/follow/${userId}`, {
                     method: 'POST'
                 });
                 
@@ -6136,7 +5771,7 @@
 
         async function unfollowUser(userId, buttonElement) {
             try {
-                const response = await apiCall(`/users/follow/${userId}`, {
+                const response = await window.apiCall(`/users/follow/${userId}`, {
                     method: 'DELETE'
                 });
                 
@@ -6160,7 +5795,7 @@
 
         async function showFollowersList(userId) {
             try {
-                const response = await apiCall(`/users/${userId}/followers`);
+                const response = await window.apiCall(`/users/${userId}/followers`);
                 
                 if (response.ok) {
                     displayUsersList(response.data.followers, 'Followers');
@@ -6175,7 +5810,7 @@
 
         async function showFollowingList(userId) {
             try {
-                const response = await apiCall(`/users/${userId}/following`);
+                const response = await window.apiCall(`/users/${userId}/following`);
                 
                 if (response.ok) {
                     displayUsersList(response.data.following, 'Following');
@@ -6374,16 +6009,16 @@
                 if (searchType === 'all') {
                     // 🎯 OPTIMIZED: Use unified search endpoint (1 call instead of 4)
                     searchPromises = [
-                        apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
+                        window.apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
                     ];
                 } else if (searchType === 'candidates') {
                     // For candidates filter, search officials but filter client-side
                     const endpoint = `/search/unified?${searchParams.toString()}&types=officials`;
-                    searchPromises = [apiCall(endpoint)];
+                    searchPromises = [window.apiCall(endpoint)];
                 } else {
                     // Search specific type - use unified endpoint with single type
                     const endpoint = `/search/unified?${searchParams.toString()}&types=${searchType}`;
-                    searchPromises = [apiCall(endpoint)];
+                    searchPromises = [window.apiCall(endpoint)];
                 }
 
                 const results = await Promise.all(searchPromises);
@@ -6726,7 +6361,7 @@
                 closeSearch();
                 
                 // Load single post and display in My Feed
-                const response = await apiCall(`/posts/${postId}`);
+                const response = await window.apiCall(`/posts/${postId}`);
                 if (response.ok && response.data) {
                     // Show the post in main content
                     showMyFeedInMain();
@@ -6770,7 +6405,7 @@
                     </div>
                 `;
 
-                const response = await apiCall(`/legislative/officials/${officialId}`);
+                const response = await window.apiCall(`/legislative/officials/${officialId}`);
                 if (response.ok && response.data) {
                     const official = response.data;
                     displayOfficialProfile(official);
@@ -6907,8 +6542,8 @@
 
                 // Load user's profile and posts in parallel
                 const [profileResponse, postsResponse] = await Promise.all([
-                    apiCall(`/users/${username}`),
-                    apiCall(`/posts/user/${userId}`)
+                    window.apiCall(`/users/${username}`),
+                    window.apiCall(`/posts/user/${userId}`)
                 ]);
                 
                 if (profileResponse.ok && postsResponse.ok) {
@@ -7737,7 +7372,7 @@
                 const formData = new FormData();
                 formData.append('backgroundImage', file);
 
-                const response = await apiCall('/users/background-image', {
+                const response = await window.apiCall('/users/background-image', {
                     method: 'POST',
                     body: formData,
                     skipContentType: true
@@ -7772,7 +7407,7 @@
             }
 
             try {
-                const response = await apiCall('/users/background-image', {
+                const response = await window.apiCall('/users/background-image', {
                     method: 'DELETE'
                 });
 
@@ -7946,7 +7581,7 @@
 
         // Fetch notifications from API
         async function fetchNotifications() {
-            const response = await apiCall('/notifications', {
+            const response = await window.apiCall('/notifications', {
                 method: 'GET'
             });
             
@@ -8071,7 +7706,7 @@
                 const notificationIds = unreadNotifications.map(n => n.id);
                 
                 // Use batch endpoint instead of individual calls
-                const response = await apiCall('/notifications/mark-read-batch', {
+                const response = await window.apiCall('/notifications/mark-read-batch', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -8103,7 +7738,7 @@
         async function handleNotificationClick(notificationId, type) {
             // Mark as read
             try {
-                await apiCall(`/notifications/${notificationId}/read`, {
+                await window.apiCall(`/notifications/${notificationId}/read`, {
                     method: 'PUT'
                 });
                 
@@ -8284,7 +7919,7 @@
         // Show friend requests panel
         async function showFriendRequestsPanel() {
             try {
-                const response = await apiCall('/relationships/friend-requests/pending', {
+                const response = await window.apiCall('/relationships/friend-requests/pending', {
                     method: 'GET'
                 });
 
@@ -8647,7 +8282,7 @@
             
             try {
                 // Get friends list using the relationship API
-                const response = await window.apiCall(`/relationships/${window.currentUser.id}/friends`);
+                const response = await window.window.apiCall(`/relationships/${window.currentUser.id}/friends`);
                 
                 if (response.ok && response.data) {
                     displayFriendsForMessaging(response.data.friends || []);
@@ -8842,7 +8477,7 @@
             try {
                 const [status, userProfile] = await Promise.all([
                     window.RelationshipUtils.getCombinedStatus(userId),
-                    window.apiCall(`/users/profile/${userId}`)
+                    window.window.apiCall(`/users/profile/${userId}`)
                 ]);
                 
                 const containerStyle = inline 
@@ -8918,7 +8553,7 @@
             if (!window.currentUser) return;
             
             try {
-                await window.apiCall('/users/activity', {
+                await window.window.apiCall('/users/activity', {
                     method: 'POST',
                     body: JSON.stringify({ timestamp: new Date().toISOString() })
                 });
@@ -8958,7 +8593,7 @@
                 console.log('Opening message with friend:', userId);
                 
                 // Get user info first to have their username
-                const userResponse = await window.apiCall(`/users/profile/${userId}`);
+                const userResponse = await window.window.apiCall(`/users/profile/${userId}`);
                 if (!userResponse || !userResponse.username) {
                     showToast('Failed to load user information');
                     return;
@@ -9382,7 +9017,7 @@
             };
 
             try {
-                const response = await apiCall('/civic/petitions', {
+                const response = await window.apiCall('/civic/petitions', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
@@ -9469,7 +9104,7 @@
             };
 
             try {
-                const response = await apiCall('/civic/events', {
+                const response = await window.apiCall('/civic/events', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
@@ -9600,7 +9235,7 @@
 
                 // Build API query
                 const params = new URLSearchParams(filters);
-                const response = await apiCall(`/civic/browse?${params.toString()}`);
+                const response = await window.apiCall(`/civic/browse?${params.toString()}`);
 
                 if (response.ok && response.data) {
                     displayCivicResults(response.data);

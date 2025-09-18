@@ -1,0 +1,112 @@
+{
+  "posts": {
+    "healthcare": [
+      "Just attended a town hall on healthcare reform. It's clear we need solutions that put patients first, not insurance company profits. Universal coverage isn't just good policy - it's a moral imperative.",
+      "The free market has driven incredible innovation in medical technology. We should harness competition to reduce costs while ensuring quality care. Price transparency and interstate insurance sales could help.",
+      "Healthcare costs are crushing middle-class families. We need bipartisan solutions: expand community health centers, reduce prescription drug costs, and improve Medicare efficiency without dismantling what works.",
+      "Nurse here - seeing firsthand how understaffing affects patient care. We need policies that invest in healthcare workers, not just insurance coverage. Better staffing ratios save lives.",
+      "As a small business owner, healthcare costs are my biggest expense after salaries. We need portable insurance that isn't tied to employment and real cost controls."
+    ],
+    "climate": [
+      "Climate change isn't a future problem - it's happening now. Just saw the flooding in my community. We need the Green New Deal to create jobs while saving our planet.",
+      "Innovation, not regulation, will solve climate challenges. Carbon capture, nuclear energy, and market incentives for clean tech are more effective than government mandates.",
+      "We can address climate change through practical steps: invest in clean energy infrastructure, support farmers adopting sustainable practices, and modernize our electrical grid.",
+      "Extreme weather is costing us billions. Climate adaptation isn't just environmental policy - it's economic policy. Smart infrastructure investment protects communities and creates jobs.",
+      "Young people like me will inherit this climate crisis. We need bold action now: renewable energy, electric vehicle infrastructure, and green jobs training programs."
+    ],
+    "economy": [
+      "Wealth inequality is at historic levels. We need progressive taxation, stronger labor protections, and investment in public programs that help working families build wealth.",
+      "Economic growth benefits everyone when businesses can thrive. Lower corporate taxes, reduced regulations, and free trade agreements create jobs and opportunity.",
+      "Middle-class families need relief: affordable childcare, paid family leave, and job training programs. Economic policy should strengthen the foundation of our economy - working people.",
+      "Entrepreneur here - access to capital and streamlined regulations help small businesses grow. We need policies that support innovation and entrepreneurship, not just big corporations.",
+      "Rural communities need economic development investment. Broadband access, agricultural support, and small business loans can revitalize main streets across America."
+    ],
+    "education": [
+      "Every child deserves quality education regardless of zip code. Fully fund public schools, support teachers, and make college affordable for working families.",
+      "School choice empowers parents and drives improvement. Charter schools, vouchers, and educational savings accounts give families options while maintaining standards.",
+      "Teacher here - we need smaller class sizes, better resources, and respect for the profession. Education funding should be stable and adequate, not dependent on local property taxes.",
+      "College debt is crushing young people. Community colleges, trade schools, and apprenticeship programs provide valuable career paths without massive debt burdens.",
+      "STEM education and digital literacy are essential for future competitiveness. We need updated curricula, technology access, and teacher training for the 21st century economy."
+    ],
+    "immigration": [
+      "America is stronger because of immigrants. Comprehensive reform should include a path to citizenship, protect Dreamers, and fix our broken asylum system with compassion.",
+      "Border security is national security. We must enforce immigration laws, secure the border, and reform legal immigration to meet economic needs while maintaining sovereignty.",
+      "Immigration reform should be practical: streamline legal immigration, protect workers from exploitation, and integrate newcomers into communities successfully.",
+      "As an immigrant, I know the American dream is real but the system is broken. We need policies that welcome talent while ensuring fair treatment for workers and communities.",
+      "Local communities bear the costs and benefits of immigration. Federal policy should support local integration efforts while maintaining consistent national standards."
+    ],
+    "gun_policy": [
+      "Common sense gun safety saves lives: universal background checks, safe storage requirements, and assault weapon restrictions. We can respect rights while protecting communities.",
+      "The Second Amendment protects fundamental rights. Law-abiding citizens shouldn't be penalized for criminals' actions. Enforce existing laws rather than creating new restrictions.",
+      "Gun violence is a public health crisis requiring comprehensive solutions: improved mental health services, community violence intervention, and evidence-based safety measures.",
+      "Veteran here - responsible gun ownership includes proper training and storage. Support programs that promote safety education while respecting constitutional rights.",
+      "Rural communities rely on firearms for protection and livelihood. Gun policies should account for different community needs while addressing urban violence effectively."
+    ],
+    "local_issues": [
+      "Our downtown needs revitalization without displacement. Mixed-income housing, small business support, and public space improvements can create inclusive growth.",
+      "Property taxes are driving families out of our community. We need assessment reform and economic development that doesn't burden homeowners disproportionately.",
+      "Public transit investment creates jobs and reduces traffic. Connect our neighborhoods with reliable, affordable transportation that serves working families.",
+      "Attended city council meeting tonight. Transparency in local government matters - budgets, development decisions, and public input processes should be accessible to all.",
+      "Infrastructure maintenance can't wait for federal funding. Local investment in roads, water systems, and broadband pays dividends for economic development."
+    ],
+    "civic_engagement": [
+      "Democracy works when everyone participates. Voter registration drives, civic education, and accessible polling are foundations of representative government.",
+      "Local elections matter most - school boards, city councils, and county commissioners make decisions affecting daily life. Research candidates and vote in every election.",
+      "Ran a voter registration booth today. Encouraging to see young people engaged in the process. Civic participation is the antidote to political cynicism.",
+      "Campaign finance reform is essential for fair elections. Limit corporate influence, support public financing options, and require transparent disclosure of all donations.",
+      "Voting rights are under attack nationwide. Protect ballot access, fight gerrymandering, and ensure every eligible citizen can participate in our democracy."
+    ]
+  },
+  "comments": {
+    "supportive": [
+      "This is exactly the kind of thoughtful analysis we need more of. Thank you for breaking down the complexity.",
+      "Great points! Have you seen the recent study from [University]? It supports your argument with additional data.",
+      "As someone working in this field, I can confirm this aligns with what we're seeing on the ground.",
+      "Appreciate you sharing your experience. Personal stories help put policy debates in human terms.",
+      "This is why local engagement matters. You're making a real difference in your community."
+    ],
+    "constructive_disagreement": [
+      "I respectfully disagree on the approach, though I share your goals. Have you considered [alternative solution]?",
+      "Valid concerns, but the data suggests a different trend. Here's what I'm seeing in [specific context]...",
+      "I understand the reasoning, but we should also consider potential unintended consequences like [specific example].",
+      "Good points, though I think there's a middle ground that addresses both our concerns about [specific issue].",
+      "Interesting perspective. How would you address the concern that [specific challenge]?"
+    ],
+    "questions": [
+      "What specific policies would you propose to address this issue?",
+      "How do you think this would work in practice at the local level?",
+      "Have there been successful examples of this approach in other states/cities?",
+      "What would be the timeline for implementing something like this?",
+      "How do you respond to critics who argue that [common counterargument]?"
+    ],
+    "information_sharing": [
+      "For those interested, here's the link to the full report: [URL placeholder]",
+      "The vote is scheduled for [date] - contact your representative if this matters to you.",
+      "There's a town hall on this topic next Tuesday at [location]. Worth attending if you care about this issue.",
+      "The budget numbers are available on the city website under [section]. Transparency matters.",
+      "This connects to the broader discussion about [related policy area]. Worth following both issues."
+    ]
+  },
+  "engagement_patterns": {
+    "like_ratios": {
+      "healthcare": 0.15,
+      "climate": 0.12,
+      "economy": 0.18,
+      "education": 0.14,
+      "immigration": 0.08,
+      "gun_policy": 0.07,
+      "local_issues": 0.22,
+      "civic_engagement": 0.16
+    },
+    "comment_ratios": {
+      "healthcare": 0.08,
+      "climate": 0.06,
+      "economy": 0.09,
+      "education": 0.07,
+      "immigration": 0.04,
+      "gun_policy": 0.03,
+      "local_issues": 0.12,
+      "civic_engagement": 0.08
+    }
+  }
+}

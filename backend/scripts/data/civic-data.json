@@ -1,0 +1,254 @@
+{
+  "elections": [
+    {
+      "name": "2024 General Election",
+      "type": "GENERAL",
+      "level": "FEDERAL",
+      "date": "2024-11-05",
+      "state": "ALL",
+      "description": "Presidential, Congressional, and state elections"
+    },
+    {
+      "name": "2025 Municipal Elections",
+      "type": "LOCAL",
+      "level": "LOCAL",
+      "date": "2025-11-02",
+      "state": "CO",
+      "description": "City council, mayor, and local ballot measures"
+    },
+    {
+      "name": "2025 Special Election - School Board",
+      "type": "SPECIAL",
+      "level": "LOCAL",
+      "date": "2025-03-15",
+      "state": "VA",
+      "description": "School board vacancy and education funding referendum"
+    }
+  ],
+  "offices": [
+    {
+      "title": "Mayor",
+      "level": "LOCAL",
+      "state": "CO",
+      "jurisdiction": "Boulder",
+      "termLength": 4,
+      "description": "Chief executive of Boulder, Colorado"
+    },
+    {
+      "title": "City Council Member",
+      "level": "LOCAL",
+      "state": "CO",
+      "jurisdiction": "Boulder",
+      "termLength": 4,
+      "description": "Boulder City Council representative"
+    },
+    {
+      "title": "School Board Member",
+      "level": "LOCAL",
+      "state": "VA",
+      "jurisdiction": "Richmond",
+      "district": "District 3",
+      "termLength": 4,
+      "description": "Richmond Public Schools Board representative"
+    },
+    {
+      "title": "State Senator",
+      "level": "STATE",
+      "state": "ID",
+      "district": "District 12",
+      "termLength": 4,
+      "description": "Idaho State Senate representative"
+    },
+    {
+      "title": "State Representative",
+      "level": "STATE",
+      "state": "MI",
+      "district": "District 45",
+      "termLength": 2,
+      "description": "Michigan House of Representatives member"
+    },
+    {
+      "title": "City Council",
+      "level": "LOCAL",
+      "state": "AZ",
+      "jurisdiction": "Tucson",
+      "termLength": 4,
+      "description": "Tucson City Council representative"
+    }
+  ],
+  "policy_positions": [
+    {
+      "category": "Healthcare",
+      "issues": [
+        "Universal Healthcare Coverage",
+        "Prescription Drug Costs",
+        "Mental Health Services",
+        "Healthcare Worker Shortage",
+        "Telehealth Access"
+      ]
+    },
+    {
+      "category": "Environment",
+      "issues": [
+        "Climate Change Mitigation",
+        "Renewable Energy Investment",
+        "Environmental Justice",
+        "Water Conservation",
+        "Green Infrastructure"
+      ]
+    },
+    {
+      "category": "Education",
+      "issues": [
+        "Public School Funding",
+        "Teacher Pay and Benefits",
+        "College Affordability",
+        "Early Childhood Education",
+        "Career and Technical Training"
+      ]
+    },
+    {
+      "category": "Economy",
+      "issues": [
+        "Job Creation and Training",
+        "Small Business Support",
+        "Minimum Wage Policy",
+        "Tax Policy",
+        "Economic Development"
+      ]
+    },
+    {
+      "category": "Housing",
+      "issues": [
+        "Affordable Housing Development",
+        "Rent Stabilization",
+        "Homelessness Prevention",
+        "First-Time Homebuyer Programs",
+        "Housing Discrimination"
+      ]
+    },
+    {
+      "category": "Transportation",
+      "issues": [
+        "Public Transit Investment",
+        "Infrastructure Maintenance",
+        "Active Transportation",
+        "Electric Vehicle Infrastructure",
+        "Traffic Safety"
+      ]
+    },
+    {
+      "category": "Public Safety",
+      "issues": [
+        "Community Policing",
+        "Police Accountability",
+        "Gun Violence Prevention",
+        "Emergency Preparedness",
+        "Community Violence Intervention"
+      ]
+    },
+    {
+      "category": "Local Government",
+      "issues": [
+        "Budget Transparency",
+        "Citizen Engagement",
+        "Government Efficiency",
+        "Open Records Access",
+        "Ethics and Accountability"
+      ]
+    }
+  ],
+  "candidate_profiles": [
+    {
+      "username": "candidate_harris",
+      "positions": [
+        {
+          "category": "Environment",
+          "issue": "Green Infrastructure",
+          "stance": "SUPPORT",
+          "statement": "Boulder needs sustainable development that protects our natural environment while meeting housing needs."
+        },
+        {
+          "category": "Economy",
+          "issue": "Small Business Support",
+          "stance": "SUPPORT",
+          "statement": "Local businesses are the backbone of our economy. We should reduce regulatory barriers while maintaining quality standards."
+        },
+        {
+          "category": "Housing",
+          "issue": "Affordable Housing Development",
+          "stance": "SUPPORT",
+          "statement": "Housing affordability is crucial for maintaining diverse, inclusive communities."
+        }
+      ]
+    },
+    {
+      "username": "candidate_powell",
+      "positions": [
+        {
+          "category": "Education",
+          "issue": "Public School Funding",
+          "stance": "SUPPORT",
+          "statement": "Adequate funding is essential for educational equity and student success."
+        },
+        {
+          "category": "Education",
+          "issue": "Teacher Pay and Benefits",
+          "stance": "SUPPORT",
+          "statement": "We must attract and retain quality educators through competitive compensation."
+        },
+        {
+          "category": "Education",
+          "issue": "Early Childhood Education",
+          "stance": "SUPPORT",
+          "statement": "Early investment in education yields the highest returns for student achievement."
+        }
+      ]
+    },
+    {
+      "username": "mayor_torres",
+      "positions": [
+        {
+          "category": "Housing",
+          "issue": "Affordable Housing Development",
+          "stance": "SUPPORT",
+          "statement": "Tucson needs inclusive development policies that create housing opportunities for all income levels."
+        },
+        {
+          "category": "Economy",
+          "issue": "Economic Development",
+          "stance": "SUPPORT",
+          "statement": "Strategic economic development can create good-paying jobs while preserving community character."
+        },
+        {
+          "category": "Transportation",
+          "issue": "Public Transit Investment",
+          "stance": "SUPPORT",
+          "statement": "Reliable public transportation connects communities and reduces environmental impact."
+        }
+      ]
+    }
+  ],
+  "sample_topics": [
+    "Healthcare Reform",
+    "Climate Action",
+    "Education Funding",
+    "Housing Affordability",
+    "Economic Development",
+    "Transportation Infrastructure",
+    "Public Safety",
+    "Government Transparency",
+    "Voting Rights",
+    "Immigration Policy",
+    "Gun Safety",
+    "Veterans Affairs",
+    "Social Justice",
+    "Environmental Protection",
+    "Technology Policy",
+    "Agriculture Policy",
+    "Energy Policy",
+    "Labor Rights",
+    "Criminal Justice Reform",
+    "Mental Health Services"
+  ]
+}

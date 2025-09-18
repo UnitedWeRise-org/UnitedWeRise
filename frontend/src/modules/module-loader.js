@@ -10,6 +10,7 @@
 // Import core modules
 import { apiClient } from './core/api/client.js';
 import { userState } from './core/state/user.js';
+import { unifiedAuthManager } from './core/auth/unified-manager.js';
 
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
@@ -37,26 +38,53 @@ import {
 /**
  * Initialize all modules and maintain backward compatibility
  */
+/**
+ * Initialize modules in the correct dependency order
+ *
+ * DEPENDENCY ORDER:
+ * 1. Core API client (all systems depend on this)
+ * 2. User state management (auth depends on this)
+ * 3. Authentication system (UI depends on this)
+ * 4. Feature modules (depend on auth and state)
+ * 5. Event listeners (connect UI to modules)
+ */
 function initializeModules() {
-    console.log('🚀 Initializing JavaScript modules...');
-    
-    // Verify core dependencies are available
+    console.log('🚀 Initializing JavaScript modules in dependency order...');
+
+    // PHASE 1: Core Dependencies
+    console.log('📋 Phase 1: Initializing core dependencies...');
+
+    // Verify API layer is available
     if (!window.apiCall) {
         console.warn('⚠️ Legacy apiCall function not found - modules will use new apiClient');
     }
-    
-    // Initialize core state management
-    console.log('✅ Core API client and user state initialized');
-    
-    // Initialize authentication system
-    console.log('✅ Authentication modules loaded');
-    
-    // Initialize feed system
-    console.log('✅ My Feed modules loaded');
-    
-    // Initialize search system
-    console.log('✅ Search modules loaded');
-    
+
+    // API client is imported and auto-initialized
+    console.log('✅ API client initialized');
+
+    // User state is imported and auto-initialized
+    console.log('✅ User state management initialized');
+
+    // PHASE 2: Authentication System (depends on API client and user state)
+    console.log('📋 Phase 2: Initializing authentication system...');
+
+    if (typeof unifiedAuthManager !== 'undefined') {
+        console.log('✅ Unified auth manager loaded and auto-initialized');
+        console.log('✅ Auth modal functions loaded');
+        console.log('✅ Auth session functions loaded');
+    } else {
+        console.error('❌ Unified auth manager not available');
+    }
+
+    // PHASE 3: Feature Modules (depend on authentication)
+    console.log('📋 Phase 3: Initializing feature modules...');
+
+    console.log('✅ My Feed system loaded');
+    console.log('✅ Search system loaded');
+
+    // PHASE 4: UI Integration (depends on all above)
+    console.log('📋 Phase 4: Setting up UI integration...');
+
     // Setup event listeners for modular components
     setupModularEventListeners();
     
@@ -125,9 +153,13 @@ async function testModularFunctionality() {
         name: 'API Client',
         test: async () => {
             try {
-                // Test a simple API call
-                const response = await apiClient.call('/health');
-                return response ? 'API client responding' : 'API client not responding';
+                // Test using direct health endpoint (not through API config)
+                const healthUrl = window.location.hostname === 'dev.unitedwerise.org' 
+                    ? 'https://dev-api.unitedwerise.org/health'
+                    : 'https://api.unitedwerise.org/health';
+                const response = await fetch(healthUrl);
+                const data = await response.json();
+                return data.status === 'healthy' ? 'API client responding' : 'API client not responding';
             } catch (error) {
                 return `API client error: ${error.message}`;
             }

@@ -80,9 +80,13 @@ class APIClient {
                 }
             };
             
-            // Add CSRF token if available
-            if (this.csrfToken) {
-                fetchOptions.headers['X-CSRF-Token'] = this.csrfToken;
+            // Add CSRF token if available - check both instance and global tokens
+            const csrfToken = this.csrfToken || window.csrfToken;
+            if (csrfToken) {
+                fetchOptions.headers['X-CSRF-Token'] = csrfToken;
+                // Sync the tokens bidirectionally
+                this.csrfToken = csrfToken;
+                window.csrfToken = csrfToken;
             }
             
             // Set timeout
@@ -114,9 +118,10 @@ class APIClient {
             // Parse response
             const data = await response.json();
             
-            // Update CSRF token if provided
+            // Update CSRF token if provided - sync both instance and global
             if (data.csrfToken) {
                 this.csrfToken = data.csrfToken;
+                window.csrfToken = data.csrfToken;
             }
             
             return data;
@@ -268,8 +273,12 @@ class APIClient {
             xhr.open('POST', this._buildURL(endpoint));
             xhr.withCredentials = true;
             
-            if (this.csrfToken) {
-                xhr.setRequestHeader('X-CSRF-Token', this.csrfToken);
+            const csrfToken = this.csrfToken || window.csrfToken;
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                // Sync the tokens bidirectionally
+                this.csrfToken = csrfToken;
+                window.csrfToken = csrfToken;
             }
             
             xhr.send(formData);
@@ -284,10 +293,26 @@ export const apiClient = new APIClient();
 if (typeof window !== 'undefined') {
     window.apiClient = apiClient;
     
-    // Maintain backward compatibility
-    window.apiCall = (endpoint, options) => {
-        console.warn('Deprecated: window.apiCall() - Use import { apiClient } instead');
-        return apiClient.call(endpoint, options);
+    // Maintain backward compatibility with proper response wrapping
+    window.apiCall = async (endpoint, options) => {
+        try {
+            const data = await apiClient.call(endpoint, options);
+
+            // Wrap the response in the expected format
+            // Since apiClient.call returns the data directly, we need to simulate the response structure
+            return {
+                ok: true,
+                status: 200, // Assume success if we got data
+                data: data
+            };
+        } catch (error) {
+            // Handle errors consistently
+            return {
+                ok: false,
+                status: error.message.includes('401') || error.message.includes('Unauthorized') ? 401 : 500,
+                data: { error: error.message }
+            };
+        }
     };
 }
 

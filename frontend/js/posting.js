@@ -22,8 +22,8 @@ async function createPostWithTag(content, tags, options = {}) {
             ...options // May include: imageUrl, mediaId, volunteerEmail, candidateId, etc.
         };
 
-        // Make API call using existing apiCall function
-        const response = await apiCall('/posts', {
+        // Make API call using existing window.apiCall function
+        const response = await window.apiCall('/posts', {
             method: 'POST',
             body: JSON.stringify(requestBody)
         });

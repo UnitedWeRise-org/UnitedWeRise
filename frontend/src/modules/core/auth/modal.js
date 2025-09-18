@@ -11,6 +11,7 @@
 import { apiClient } from '../api/client.js';
 import { userState } from '../state/user.js';
 import { setUserLoggedIn } from './session.js';
+import { unifiedAuthManager } from './unified-manager.js';
 
 /**
  * Open authentication modal
@@ -122,11 +123,14 @@ function clearAuthMessages() {
 
 /**
  * Handle login form submission
- * Extracted from index.html handleLogin function
+ * Uses unified authentication manager for perfect synchronization
  */
 export async function handleLogin() {
+    console.log('🔍 Modular handleLogin called - using unified auth manager');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
+    
+    console.log('🔍 Login inputs:', {email: email ? 'present' : 'missing', password: password ? 'present' : 'missing'});
     
     if (!email || !password) {
         showAuthMessage('Please fill in all fields', 'error', 'login');
@@ -135,27 +139,42 @@ export async function handleLogin() {
     
     try {
         showAuthMessage('Logging in...', 'info', 'login');
+        console.log('🔍 Using unified auth manager for login');
         
-        const response = await apiClient.call('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
+        // Use the unified auth manager for login
+        const result = await unifiedAuthManager.login(email, password);
         
-        if (response.success && response.user) {
-            // Set user state
-            userState.current = response.user;
-            setUserLoggedIn(response.user);
-            
+        console.log('🔍 Unified login result:', result);
+        
+        if (result.success) {
             showAuthMessage('Login successful!', 'success', 'login');
             
             // Close modal after short delay
             setTimeout(() => {
                 closeAuthModal();
+                console.log('✅ Login successful via unified manager:', result.user.username || result.user.email);
             }, 1000);
             
-            console.log('✅ Login successful:', response.user.username || response.user.email);
+        } else if (result.requiresTOTP) {
+            console.log('🔍 TOTP required, showing TOTP input...');
+            showAuthMessage('Two-factor authentication required...', 'info', 'login');
+            
+            // Handle TOTP requirement (you could implement TOTP input UI here)
+            // For now, fall back to the unified login system for TOTP handling
+            try {
+                const totpResult = await window.unifiedLogin(email, password, 'main-site');
+                if (totpResult.success) {
+                    closeAuthModal();
+                    showAuthMessage('Login successful!', 'success');
+                } else {
+                    showAuthMessage(totpResult.error || 'Two-factor authentication failed', 'error', 'login');
+                }
+            } catch (totpError) {
+                console.error('TOTP login error:', totpError);
+                showAuthMessage('Two-factor authentication failed', 'error', 'login');
+            }
         } else {
-            showAuthMessage(response.message || 'Login failed', 'error', 'login');
+            showAuthMessage(result.error || 'Login failed', 'error', 'login');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -205,9 +224,8 @@ export async function handleRegister() {
         });
         
         if (response.success && response.user) {
-            // Set user state
-            userState.current = response.user;
-            setUserLoggedIn(response.user);
+            // Use unified auth manager for registration success
+            unifiedAuthManager.setAuthenticatedUser(response.user, response.csrfToken);
             
             showAuthMessage('Account created successfully!', 'success', 'register');
             
@@ -216,7 +234,7 @@ export async function handleRegister() {
                 closeAuthModal();
             }, 1000);
             
-            console.log('✅ Registration successful:', response.user.username);
+            console.log('✅ Registration successful via unified manager:', response.user.username);
         } else {
             showAuthMessage(response.message || 'Registration failed', 'error', 'register');
         }

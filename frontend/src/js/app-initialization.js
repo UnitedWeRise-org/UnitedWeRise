@@ -1,5 +1,6 @@
 // Optimized Application Initialization for United We Rise
 // Reduces API calls on page load and implements smart caching
+// Now integrated with unified authentication manager for perfect sync
 
 class AppInitializer {
     // Production logging helper - only shows important messages
@@ -18,6 +19,20 @@ class AppInitializer {
         this.initializationPromise = null;
         this.isInitialized = false;
         this.userData = null;
+        this.unifiedAuthManager = null;
+        
+        // Import unified auth manager dynamically to avoid circular dependencies
+        this.initUnifiedAuthManager();
+    }
+    
+    async initUnifiedAuthManager() {
+        try {
+            const { unifiedAuthManager } = await import('../modules/core/auth/unified-manager.js');
+            this.unifiedAuthManager = unifiedAuthManager;
+            AppInitializer.log('🔧 AppInitializer: Connected to unified auth manager');
+        } catch (error) {
+            console.error('Failed to load unified auth manager:', error);
+        }
     }
 
     // Main initialization method - called once on page load
@@ -64,7 +79,7 @@ class AppInitializer {
             
             try {
                 AppInitializer.log('🔄 About to call /batch/initialize with cookie authentication...');
-                const initData = await window.apiCall('/batch/initialize', {
+                const initData = await window.apiClient.call('/batch/initialize', {
                     cacheTimeout: 60000, // Cache for 1 minute
                     retries: 1 // Only retry once to avoid cascading failures
                 });
@@ -81,8 +96,16 @@ class AppInitializer {
                     
                     // Store fresh user data
                     this.userData = initData.data.data.user;
-                    localStorage.setItem('currentUser', JSON.stringify(this.userData));
-                    window.currentUser = this.userData;
+                    
+                    // Use unified auth manager to set user data if available
+                    if (this.unifiedAuthManager) {
+                        AppInitializer.log('🔧 Setting user via unified auth manager');
+                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.data.csrfToken);
+                    } else {
+                        // Fallback to direct setting
+                        localStorage.setItem('currentUser', JSON.stringify(this.userData));
+                        window.currentUser = this.userData;
+                    }
 
                     // CACHE RELATIONSHIPS FOR ENTIRE SESSION - NO MORE INDIVIDUAL API CALLS!
                     if (initData.data.data.relationships) {
@@ -146,7 +169,7 @@ class AppInitializer {
                 
                 try {
                     // First try auth/me for authentication check
-                    const authData = await window.apiCall('/auth/me');
+                    const authData = await window.apiClient.call('/auth/me');
                     
                     if (authData && authData.user) {
                         AppInitializer.log('✅ Auth/me fallback successful');
@@ -171,7 +194,7 @@ class AppInitializer {
                     
                     try {
                         // Get user profile data as final fallback
-                        const userProfile = await window.apiCall('/users/profile');
+                        const userProfile = await window.apiClient.call('/users/profile');
                         
                         if (userProfile) {
                             AppInitializer.log('✅ Users/profile fallback successful');
@@ -375,7 +398,7 @@ class AppInitializer {
         // Authentication handled by httpOnly cookies automatically
 
         try {
-            const userData = await window.apiCall('/batch/auth-status', {
+            const userData = await window.apiClient.call('/batch/auth-status', {
                 cacheTimeout: 10000 // Short cache for user data updates
             });
 
