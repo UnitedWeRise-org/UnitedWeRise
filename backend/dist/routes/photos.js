@@ -88,23 +88,7 @@ const upload = photoService_1.PhotoService.getMulterConfig();
  *       429:
  *         $ref: '#/components/responses/RateLimitError'
  */
-// Staging-aware authentication middleware
-const stagingAwareAuth = async (req, res, next) => {
-    await (0, auth_1.requireAuth)(req, res, async (authError) => {
-        if (authError) {
-            return next(authError);
-        }
-        // In staging environment, require admin access
-        if ((process.env.NODE_ENV === 'staging' || process.env.STAGING_ENVIRONMENT === 'true') && !req.user?.isAdmin) {
-            return res.status(403).json({
-                error: 'This is a staging environment - admin access required.',
-                environment: 'staging'
-            });
-        }
-        next();
-    });
-};
-router.post('/upload', uploadLimiter, stagingAwareAuth, upload.array('photos', 5), async (req, res) => {
+router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.array('photos', 5), async (req, res) => {
     try {
         const { user } = req;
         const files = req.files;
