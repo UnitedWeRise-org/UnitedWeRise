@@ -75,7 +75,7 @@ class APIClient {
                 ...options,
                 credentials: 'include', // Include cookies
                 headers: {
-                    'Content-Type': 'application/json',
+                    ...(options.skipContentType ? {} : { 'Content-Type': 'application/json' }),
                     ...options.headers
                 }
             };
