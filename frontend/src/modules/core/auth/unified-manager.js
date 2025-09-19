@@ -227,11 +227,57 @@ class UnifiedAuthManager {
     }
 
     /**
+     * Show post-login loading overlay
+     */
+    _showPostLoginLoading() {
+        const overlay = document.getElementById('post-login-loading-overlay');
+        if (!overlay) {
+            // Create post-login loading overlay if it doesn't exist
+            const postLoginOverlay = document.createElement('div');
+            postLoginOverlay.id = 'post-login-loading-overlay';
+            postLoginOverlay.className = 'post-login-loading-overlay';
+            postLoginOverlay.innerHTML = `
+                <div class="post-login-loading-content">
+                    <div class="post-login-loading-spinner"></div>
+                    <p class="post-login-loading-text">Loading your content...</p>
+                </div>
+            `;
+            document.body.appendChild(postLoginOverlay);
+        }
+
+        const newOverlay = document.getElementById('post-login-loading-overlay');
+        if (newOverlay) {
+            newOverlay.style.display = 'flex';
+            // Use setTimeout to ensure the element is rendered before applying the show class
+            setTimeout(() => {
+                newOverlay.classList.add('show');
+            }, 10);
+        }
+    }
+
+    /**
+     * Hide post-login loading overlay
+     */
+    _hidePostLoginLoading() {
+        const overlay = document.getElementById('post-login-loading-overlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            // Wait for transition to complete before hiding
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+    }
+
+    /**
      * Trigger app reinitialization with proper error handling
      */
     _triggerAppReinitialization() {
         console.log('🔄 Triggering app reinitialization...');
-        
+
+        // Show post-login loading immediately
+        this._showPostLoginLoading();
+
         setTimeout(async () => {
             try {
                 if (window.initializeApp && typeof window.initializeApp === 'function') {
@@ -243,6 +289,9 @@ class UnifiedAuthManager {
                 }
             } catch (error) {
                 console.error('❌ App reinitialization failed:', error);
+            } finally {
+                // Hide post-login loading after app initialization
+                this._hidePostLoginLoading();
             }
         }, 1000);
     }

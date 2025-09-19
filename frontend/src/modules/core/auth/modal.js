@@ -122,6 +122,17 @@ function clearAuthMessages() {
 }
 
 /**
+ * Restore login button to original state
+ */
+function restoreLoginButton() {
+    const loginButton = document.getElementById('loginButton');
+    if (loginButton) {
+        loginButton.disabled = false;
+        loginButton.innerHTML = 'Login';
+    }
+}
+
+/**
  * Handle login form submission
  * Uses unified authentication manager for perfect synchronization
  */
@@ -129,14 +140,21 @@ export async function handleLogin() {
     console.log('🔍 Modular handleLogin called - using unified auth manager');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
-    
+    const loginButton = document.getElementById('loginButton');
+
     console.log('🔍 Login inputs:', {email: email ? 'present' : 'missing', password: password ? 'present' : 'missing'});
-    
+
     if (!email || !password) {
         showAuthMessage('Please fill in all fields', 'error', 'login');
         return;
     }
-    
+
+    // Show loading spinner
+    if (loginButton) {
+        loginButton.disabled = true;
+        loginButton.innerHTML = '<div class="loading-spinner" style="width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>';
+    }
+
     try {
         showAuthMessage('Logging in...', 'info', 'login');
         console.log('🔍 Using unified auth manager for login');
@@ -148,17 +166,18 @@ export async function handleLogin() {
         
         if (result.success) {
             showAuthMessage('Login successful!', 'success', 'login');
-            
+
             // Close modal after short delay
             setTimeout(() => {
                 closeAuthModal();
                 console.log('✅ Login successful via unified manager:', result.user.username || result.user.email);
             }, 1000);
-            
+
         } else if (result.requiresTOTP) {
             console.log('🔍 TOTP required, showing TOTP input...');
             showAuthMessage('Two-factor authentication required...', 'info', 'login');
-            
+            restoreLoginButton(); // Restore button for TOTP input
+
             // Handle TOTP requirement (you could implement TOTP input UI here)
             // For now, fall back to the unified login system for TOTP handling
             try {
@@ -175,10 +194,12 @@ export async function handleLogin() {
             }
         } else {
             showAuthMessage(result.error || 'Login failed', 'error', 'login');
+            restoreLoginButton(); // Restore button on login failure
         }
     } catch (error) {
         console.error('Login error:', error);
         showAuthMessage('Login failed. Please try again.', 'error', 'login');
+        restoreLoginButton(); // Restore button on error
     }
 }
 

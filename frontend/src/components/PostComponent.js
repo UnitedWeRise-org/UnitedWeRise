@@ -34,7 +34,12 @@ class PostComponent {
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
-                        <div class="post-avatar">${authorInitial}</div>
+                        <div class="post-avatar">
+                            ${post.author?.avatar ?
+                                `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
+                                `<div class="avatar-placeholder">${authorInitial}</div>`
+                            }
+                        </div>
                         <div class="post-author-info">
                             <div class="post-author-name">
                                 ${authorName}
@@ -1314,7 +1319,12 @@ class PostComponent {
                 <!-- Original Post -->
                 <div class="post-component focused-post" style="margin-bottom: 2rem;">
                     <div class="post-header">
-                        <div class="post-avatar">${authorInitial}</div>
+                        <div class="post-avatar">
+                            ${post.author?.avatar ?
+                                `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
+                                `<div class="avatar-placeholder">${authorInitial}</div>`
+                            }
+                        </div>
                         <div class="post-author-info">
                             <div class="post-author-name">
                                 ${authorName}
