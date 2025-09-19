@@ -998,9 +998,16 @@ class MyProfile {
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 // Profile picture uploaded successfully, reload profile with fresh data
                 adminDebugLog('✅ Profile picture uploaded:', response.data.photos[0].url);
-                
-                // Force fresh profile data by bypassing cache
-                this.refreshProfile('mainContent');
+
+                // Update global user state immediately with new avatar
+                if (window.currentUser) {
+                    window.currentUser.avatar = response.data.photos[0].url;
+                }
+
+                // Small delay to ensure database update propagates, then refresh
+                setTimeout(() => {
+                    this.refreshProfile('mainContent');
+                }, 500);
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
                 alert(errorMsg);
