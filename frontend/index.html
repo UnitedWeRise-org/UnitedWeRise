@@ -9589,24 +9589,28 @@
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                initializeModules().then(() => {
-                    // Hide page loading spinner after modules are loaded
+                initializeModules();
+
+                // Hide page loading spinner after modules are loaded
+                setTimeout(() => {
                     hidePageLoadingOverlay();
+                }, 1000);
 
-                    // Run diagnostics in development
-                    if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
-                        setTimeout(testModularFunctionality, 2000);
-                    }
-                });
-            });
-        } else {
-            initializeModules().then(() => {
-                hidePageLoadingOverlay();
-
+                // Run diagnostics in development
                 if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
                     setTimeout(testModularFunctionality, 2000);
                 }
             });
+        } else {
+            initializeModules();
+
+            setTimeout(() => {
+                hidePageLoadingOverlay();
+            }, 1000);
+
+            if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
+                setTimeout(testModularFunctionality, 2000);
+            }
         }
     </script>
 </body>
