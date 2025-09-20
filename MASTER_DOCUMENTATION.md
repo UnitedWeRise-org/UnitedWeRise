@@ -1,429 +1,12 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 18, 2025
+**Last Updated**: September 19, 2025
 **Version**: 5.4.0 (Database Management & Security Enhancement Complete)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
-### 🎉 MAJOR ACHIEVEMENT (September 18, 2025) - PRODUCTION DATABASE MANAGEMENT & SECURITY ENHANCEMENT COMPLETE
+> **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
+> **🔧 Development Workflows**: See CLAUDE.md for current development protocols and procedures
 
-**✅ ENTERPRISE-GRADE DATABASE CLEANUP SYSTEM**: Implemented comprehensive production database management tools with multi-layer safety protections, achieving complete test data removal while preserving critical user accounts with zero data loss.
-
-**✅ ADVANCED SECURITY VULNERABILITY REMEDIATION**: Eliminated critical Chrome autocomplete security vulnerability that exposed authentication credentials in search fields, implementing comprehensive input security controls across all user interface components.
-
-**✅ ACTIVITY TRACKING INTEGRATION**: Successfully integrated ActivityTracker service into all core endpoints (posts, comments, likes), resolving missing activity feed functionality and enabling complete user engagement monitoring.
-
-**✅ COMPREHENSIVE BACKUP & RECOVERY SYSTEM**: Created automated backup system with JSON export capabilities, providing complete database restoration functionality and audit trail compliance for production operations.
-
-**🎯 PRODUCTION IMPACT**:
-- **Data Cleanup**: Removed 100 test users and 439 test posts while protecting 5 real accounts
-- **Security**: Eliminated credential exposure vulnerability across 5 search input components
-- **Functionality**: Restored missing activity feed with complete post/comment/like tracking
-- **Safety**: Implemented enterprise-grade backup system with rollback capabilities
-
-**🔗 Related Systems**:
-- **Security Authentication** - Enhanced input security controls
-- **Social Features** - Activity tracking integration
-- **Database Schema** - Backup and integrity management
-- **Admin Dashboard** - Production monitoring capabilities
-
-### 🆕 RECENT CHANGES (September 18, 2025) - Database Management & Security Implementation
-
-**✅ Production Database Cleanup**:
-- **Multi-Layer Protection**: Protected admin users (Project2029, UnitedWeRise) and specified accounts (userjb, ijefe, ambenso1)
-- **Targeted Removal**: Deleted 100 test users with "testuser" email pattern and ALL posts (439 total)
-- **Comprehensive Cleanup**: Removed 121 comments, 510 likes, 199 follows, 123 notifications, 1 user activity
-- **Safety Backup**: Created backup_pre-cleanup_2025-09-18T01-01-14-101Z.json for rollback capability
-
-**🔒 Security Enhancements**:
-- **Chrome Autocomplete Fix**: Added autocomplete="off", type="search", autocapitalize="off", spellcheck="false" to all search inputs
-- **Input Security**: Enhanced 5 search components across index.html, sidebar.html, mobile-nav.html, profile.html, feed.html
-- **Credential Protection**: Eliminated password/email autofill in search fields preventing credential exposure
-
-**⚙️ Activity Feed Integration**:
-- **Posts Endpoint**: Added ActivityTracker.trackPostCreated() with user ID, post ID, and content tracking
-- **Comments Endpoint**: Added ActivityTracker.trackCommentCreated() with comprehensive engagement tracking
-- **Likes Endpoint**: Added ActivityTracker.trackLikeAdded/Removed() with post content association
-- **Missing Content Field**: Fixed TypeScript errors by adding content field to post queries
-
-**🛠️ Database Management Tools**:
-- **cleanup-production.js**: Enterprise-grade cleanup script with dry-run mode and force flag
-- **backup-restore.js**: JSON-based backup system with metadata and restore capabilities
-- **verify-integrity.js**: Post-cleanup validation with orphaned record detection
-- **seed-development.js**: Test data injection system for development environment
-
-**Files Modified**:
-- backend/src/routes/posts.ts - ActivityTracker integration
-- frontend/index.html - Search input security
-- frontend/sidebar.html - Search input security
-- frontend/mobile-nav.html - Search input security
-- frontend/profile.html - Search input security
-- frontend/feed.html - Search input security
-- backend/scripts/database-cleanup/* - Complete management suite
-
-### 🎉 MAJOR ACHIEVEMENT (September 15, 2025) - MOBILE UI INTEGRATION & RESPONSIVE DESIGN SYSTEM COMPLETE
-
-**✅ COMPREHENSIVE MOBILE UI SYSTEM**: Implemented complete mobile-responsive design system with 3-state sidebar navigation, touch-optimized interactions, and mobile-first CSS architecture that transforms the platform into a fully native mobile experience.
-
-**✅ MOBILE NAVIGATION REVOLUTION**: Created advanced 3-state sidebar system (collapsed/expanded/overlay) with smooth transitions, touch-friendly controls, and intelligent state management that adapts seamlessly from desktop to mobile viewports.
-
-**✅ MOBILE POSTING INTERFACE**: Optimized posting composer with mobile-specific UI improvements including sticky positioning, touch-optimized buttons, improved textarea sizing, and gesture-friendly interactions for enhanced mobile content creation.
-
-**✅ PERFORMANCE OPTIMIZATIONS**: Eliminated mobile loading flicker, improved scrolling behavior, enhanced feed performance on mobile devices, and implemented efficient CSS transitions that maintain 60fps on mobile hardware.
-
-**🎯 TECHNICAL ARCHITECTURE**: 
-- CSS: Advanced responsive breakpoint system with mobile-first approach
-- JavaScript: Touch event handling and mobile state management via {#javascript-modularization}
-- UI/UX: Native mobile feel with smooth animations and transitions
-- Performance: Optimized for mobile bandwidth and processing constraints via {#performance-optimizations}
-
-**🔗 Related Systems**:
-- **{#responsive-design}** - Enhanced responsive system with mobile improvements
-- **{#ui-ux-components}** - Base component library extended for mobile
-- **{#javascript-modularization}** - ES6 modules powering mobile functionality
-
-### 🎉 MAJOR ACHIEVEMENT (September 15, 2025) - JAVASCRIPT MODULARIZATION PROJECT COMPLETE
-
-**✅ ES6 MODULE ARCHITECTURE**: Successfully analyzed and modularized 8,900+ lines of inline JavaScript into maintainable ES6 modules with clear separation of concerns, dependency management, and modern JavaScript patterns.
-
-**✅ CORE API CLIENT SYSTEM**: Implemented centralized API manager with authentication handling, error management, and request standardization that eliminates code duplication and improves maintainability across all platform features.
-
-**✅ STATE MANAGEMENT MODULES**: Created dedicated modules for user state, feed management, notification handling, and UI state that provide consistent data flow and reduce complexity in component interactions.
-
-**✅ PERFORMANCE IMPROVEMENTS**: Module loading optimization, reduced bundle size through tree-shaking, improved code splitting, and faster page load times through efficient dependency management.
-
-**🎯 MIGRATION SCOPE**: 
-- Frontend: 25+ files refactored with ES6 module imports/exports
-- Architecture: New module structure with clear dependency hierarchy via {#system-architecture}
-- Performance: Reduced JavaScript bundle size by 30% through modularization via {#performance-optimizations}
-- Maintainability: Eliminated duplicate code and improved developer experience via {#development-practices}
-
-**🔗 Related Systems**:
-- **{#mobile-ui-system}** - Mobile-specific modules and touch optimization
-- **{#ui-ux-components}** - Component-based architecture foundation
-- **{#performance-optimizations}** - Module loading and bundle optimization
-
-### 🔐 MAJOR SECURITY ACHIEVEMENT (September 12, 2025) - WORLD-CLASS AUTHENTICATION SECURITY
-**🎯 INDUSTRY STANDARD MIGRATION**: Complete migration from localStorage to httpOnly cookies with CSRF protection, eliminating XSS vulnerabilities and achieving Facebook/Google/Twitter-level security standards.
-
-**✅ XSS PROTECTION ELIMINATED**: JWT tokens moved to httpOnly cookies - JavaScript cannot access authentication tokens, preventing XSS token theft attacks completely.
-
-**✅ CSRF PROTECTION ACTIVE**: Double-submit cookie pattern implemented with SameSite=Strict flags - prevents cross-site request forgery attacks at the network level.
-
-**✅ SECURE SESSION MANAGEMENT**: All authentication cookies use Secure, HttpOnly, and SameSite=Strict flags with 30-day expiration and proper path scoping.
-
-**✅ COMPREHENSIVE SECURITY MONITORING**: Real-time authentication metrics, CSRF attack detection, session management monitoring, and security event logging implemented.
-
-**✅ ENTERPRISE COMPLIANCE READY**: Authentication system now meets SOC 2, OWASP, and enterprise security standards with complete audit trails and incident response capabilities.
-
-**🎯 MIGRATION SCOPE**: 
-- Backend: 8 secure cookie configurations, CSRF middleware, enhanced auth endpoints
-- Frontend: 25+ files updated for cookie authentication, API manager enhanced
-- Security: Complete XSS elimination, CSRF protection, session security
-- Monitoring: Advanced security metrics dashboard with real-time threat detection
-
-### 🎉 MAJOR ACHIEVEMENT (September 10, 2025) - REAL-TIME NOTIFICATION SYSTEM COMPLETE
-
-**✅ REAL-TIME WEBSOCKET NOTIFICATIONS**: Fixed non-functional notification system by implementing missing WebSocket integration, enabling instant real-time notifications for likes, comments, follows, and mentions across the entire platform.
-
-**✅ COMPREHENSIVE UI NOTIFICATION UPDATES**: Complete real-time notification experience with toast notifications, badge updates, dropdown refresh, and smooth animations - notifications now appear instantly without page refresh.
-
-**✅ PHOTO GALLERY SYSTEM OPERATIONAL**: Resolved critical photo gallery loading issues by fixing duplicate function conflicts and URL construction problems, restoring full photo display functionality in user profiles.
-
-**✅ ADMIN SECURITY ENHANCEMENTS**: Implemented safety protections in admin role management to prevent accidental privilege removal, adding conditional updates and comprehensive error handling.
-
-**🎯 SYSTEM RELIABILITY**: All notification components now work seamlessly together - database persistence, REST API endpoints, WebSocket real-time delivery, and frontend UI updates create a complete notification experience.
-
-### 🎉 MAJOR ACHIEVEMENT (September 9, 2025) - COMMENT THREADING SYSTEM COMPLETE
-
-**✅ UNLIMITED DEPTH COMMENT THREADING**: Fixed critical API limitation that prevented comments deeper than 3 levels from being retrieved, implementing industry-standard flat query with dynamic tree building for unlimited comment depth support.
-
-**✅ VISUAL FLATTENING SYSTEM**: Reddit-style three-layer visual hierarchy (0px, 20px, 40px indentation) with clear flattened indicator (↳) for comments at depth 2+, maintaining readability while supporting unlimited depth.
-
-**✅ BACKEND DEPTH CAPPING**: Intelligent depth management that caps storage at depth 2 while preserving full conversation threading - replies to flattened comments remain at depth 2 instead of incrementing infinitely.
-
-**✅ PERFORMANCE OPTIMIZATION**: Replaced O(depth) nested Prisma includes with O(1) flat query, significantly improving performance for posts with many comments.
-
-**🎯 USER EXPERIENCE**: Comments no longer "disappear into layer 5" - all comments are now visible and properly threaded regardless of conversation depth.
-
-### 🆕 RECENT CHANGES (September 13, 2025) - Custom Domain Migration & Authentication Security Enhancement
-
-**✅ Custom Domain Configuration**: Migrated backend API from Azure Container Apps URL to custom domain `api.unitedwerise.org` for improved security and authentication persistence.
-
-**🔒 SECURITY ENHANCEMENTS**:
-- **Same-Site Authentication**: Eliminated cross-origin cookie issues by moving API to same-site subdomain
-- **Cookie Persistence Fixed**: Resolved authentication requiring TOTP re-entry on every page refresh
-- **Third-Party Cookie Bypass**: Circumvented Chrome's cookie blocking by using same-site domain architecture
-- **XSS Protection Maintained**: Kept httpOnly cookies with CSRF double-submit pattern
-
-**🏗️ INFRASTRUCTURE UPDATES**:
-- **DNS Configuration**: Added CNAME record pointing `api.unitedwerise.org` to Azure Container App
-- **SSL Certificate**: Auto-provisioned SSL certificate for secure HTTPS communication
-- **Frontend Migration**: Updated all API endpoints to use centralized configuration
-- **Documentation Updates**: Synchronized all documentation with new custom domain
-
-**📊 IMPACT**:
-- Authentication now persists across page refreshes without TOTP re-entry
-- Improved user experience with seamless session management
-- Enhanced security posture with same-site cookie protections
-- Better branding and easier-to-remember API endpoint
-
-### 🆕 RECENT CHANGES (September 10, 2025) - Real-Time Notification System & Photo Gallery Implementation
-
-**✅ WebSocket Notification Integration**: Fixed non-functional notification system by adding missing WebSocket emission in `createNotification` function, enabling real-time notification delivery across entire platform.
-
-**✅ Frontend Real-Time Handlers**: Implemented `updateNotificationUI()` and `showNotificationToast()` functions with smooth slideInRight animations and automatic badge updates for instant user feedback.
-
-**✅ Photo Gallery URL Construction Fix**: Resolved photo loading issues by implementing proper URL transformation from relative paths to absolute URLs with backend URL concatenation in `getUserGalleries()` function.
-
-**✅ Duplicate Function Resolution**: Fixed photo gallery loading by removing duplicate `switchTab` function in MyProfile.js that was overriding debug-enhanced version, restoring proper photo loading functionality.
-
-**✅ Admin Security Protections**: Enhanced admin role management endpoint to prevent accidental privilege removal with conditional update logic and comprehensive safety checks.
-
-**✅ Real-Time Toast Notifications**: Added elegant toast notification system with 4-second auto-dismiss, proper z-index stacking, and slideInRight animation for professional user experience.
-
-**🔧 Files Modified**:
-- `backend/src/routes/notifications.ts` - Added WebSocket emission to createNotification function
-- `backend/src/services/WebSocketService.ts` - Added emitNotification method for real-time delivery
-- `backend/src/server.ts` - Exported webSocketService instance for global access
-- `frontend/src/js/websocket-client.js` - Added new_notification event handler
-- `frontend/index.html` - Added updateNotificationUI() and showNotificationToast() functions
-- `frontend/src/styles/main.css` - Added slideInRight animation for notifications
-- `backend/src/services/photoService.ts` - Fixed getUserGalleries URL construction
-- `frontend/src/components/MyProfile.js` - Removed duplicate switchTab function
-- `backend/src/routes/admin.ts` - Enhanced admin role management safety
-
-### 🆕 RECENT CHANGES (September 9, 2025) - Comment Threading System Implementation
-
-**✅ API Depth Fix**: Replaced hardcoded 3-level nested Prisma includes with flat query that retrieves ALL comments regardless of depth, then builds tree structure dynamically in JavaScript.
-
-**✅ Frontend Flattening**: Implemented `flattenCommentTree()` and `renderSimpleComment()` methods that flatten nested comment structure into linear array with visual depth capping at 40px maximum indent.
-
-**✅ Backend Depth Logic**: Enhanced comment creation to properly cap depth at 2 for storage while maintaining threading relationships - `if (parentComment.depth >= 2) depth = 2`.
-
-**✅ Documentation**: Added comprehensive industry-standard documentation for comment threading system including schema, endpoints, implementation details, bug fix history, and performance considerations.
-
-**🔧 Files Modified**:
-- `backend/src/routes/posts.ts` - Flat query implementation for GET /api/posts/:postId/comments endpoint
-- `frontend/src/components/PostComponent.js` - Tree flattening and linear rendering implementation
-- `MASTER_DOCUMENTATION.md` - Comprehensive comment threading system documentation
-
-### 🎉 MAJOR ACHIEVEMENT (September 5, 2025) - UNIFIED TOTP AUTHENTICATION & ADMIN DEBUGGING SYSTEM COMPLETE
-
-**✅ UNIFIED TOTP AUTHENTICATION**: Complete unification of TOTP authentication system across main site and admin dashboard with proper session persistence and 24-hour session tokens for seamless user experience.
-
-**✅ ADMIN-ONLY DEBUGGING SYSTEM**: Secure debugging system that only outputs debug information for verified admin users, preventing security vulnerabilities while enabling comprehensive debugging capabilities.
-
-**✅ TOTP VERIFICATION LOGIC FIX**: Corrected TOTP authentication flow to properly handle verification responses, preventing 401 errors and ensuring proper admin access after TOTP verification.
-
-**✅ CLAUDE CODE SESSION REGRESSION**: Documented and confirmed regression bug in Claude Code where session permissions no longer persist across interactions, causing development workflow friction.
-
-**✅ DEBUGGING CONSOLE CLEANUP**: Comprehensive conversion of debugging console.log statements across entire frontend codebase to admin-only verification, eliminating console spam for regular users while preserving debug capabilities for admins.
-
-**🎯 SECURITY ENHANCEMENT**: All debugging functions require admin verification through existing `/api/admin/dashboard` endpoint with 5-minute caching to prevent API spam while maintaining security.
-
-### 🆕 RECENT ACCOMPLISHMENTS (September 5, 2025) - Volunteer System Implementation
-
-**✅ VOLUNTEER INQUIRY SYSTEM**: Complete implementation of tag-based volunteer system using existing Post model's unused `tags` field for content routing, proving concept for unified tag-based post categorization system.
-
-**Features Implemented**:
-- **Modal Interface**: Professional volunteer inquiry modal with character limits and email collection for non-logged users
-- **Tag-Based Routing**: Posts tagged with `"Volunteer"` route to admin dashboard separate from general posting area  
-- **Admin Integration**: New `/api/admin/volunteers` endpoint for viewing volunteer inquiries in admin console
-- **Smart Email Collection**: Shows/hides email field based on user authentication status
-- **Form Validation**: 800 character limit with live counter, email validation for anonymous users
-
-**Files Modified**:
-- `frontend/index.html` - Added volunteer modal, updated About UWR modal links, volunteer form handling
-- `backend/src/routes/posts.ts` - Enhanced to accept tags parameter in post creation
-- `backend/src/routes/admin.ts` - Added volunteer inquiry endpoint with tag filtering
-- About UWR modal content updated to focus on philosophy over geography-based features
-
-**Technical Implementation**:
-- Leverages existing Post model `tags: String[] @default([])` field (schema.prisma:184)
-- Uses tag filtering with Prisma `tags: { has: "Volunteer" }` query syntax
-- Maintains separation from regular posts while using unified infrastructure
-
-**Discovery**: Post model tags field exists but completely unused across application - presents opportunity for comprehensive tag-based content routing system.
-
-### 🆕 RECENT CHANGES (September 5, 2025) - Unified TOTP & Admin Debugging Implementation
-
-**✅ Unified Authentication System**: Enhanced `unifiedAuth.js` to handle both main site and admin dashboard TOTP flows with proper error handling and session token management.
-
-**✅ Admin Debugging System**: New `adminDebugger.js` provides secure debug functions (`adminDebugLog`, `adminDebugError`, `adminDebugWarn`, `adminDebugTable`, `adminDebugSensitive`) with admin verification.
-
-**✅ TOTP Logic Correction**: Fixed unified login to check response content (`!totpResult.requiresTOTP`) not just HTTP status, preventing false success on invalid TOTP codes.
-
-**✅ JavaScript Error Resolution**: Fixed BACKEND_URL temporal dead zone and redeclaration errors in admin dashboard preventing form submission and login functionality.
-
-**✅ Session Permission Documentation**: Documented confirmed regression in Claude Code session permission retention with detailed impact analysis and mitigation strategies.
-
-**✅ Debugging Console Cleanup**: Converted all debugging console.log statements across frontend codebase to use admin verification functions (`adminDebugLog`, `adminDebugWarn`, `adminDebugError`, `adminDebugSensitive`) eliminating console spam for regular users.
-
-**🔧 Files Modified**:
-- `frontend/js/unifiedAuth.js` - Enhanced TOTP verification logic and error handling
-- `frontend/js/adminDebugger.js` - New secure admin-only debugging system
-- `frontend/admin-dashboard.html` - Fixed script loading order and BACKEND_URL conflicts
-- `frontend/src/js/force-optimization.js` - Converted debug statements to admin verification
-- `frontend/src/js/api-manager.js` - Converted API manager logging to admin-only
-- `frontend/src/integrations/*.js` - All system integration debug logging converted to admin-only
-- `frontend/src/js/app-initialization.js` - Deployment status and user data logging admin-only
-- `frontend/src/js/donation-system.js` - System initialization tracking admin-only  
-- `frontend/index.html` - Inline optimization and reputation badge logging admin-only
-- `CLAUDE.md` - Added Claude Code session permission regression documentation
-
-### 🎉 MAJOR ACHIEVEMENT (September 3, 2025) - ADDRESS-BASED CANDIDATE HUB & AI POLICY PLATFORM COMPLETE
-
-**✅ ADDRESS-BASED CANDIDATE DISCOVERY**: Complete overhaul of Candidate Hub with intelligent address-based lookup combining internal registered candidates with external data sources through fuzzy matching algorithm that handles office name variations (e.g., "President" vs "President of the United States").
-
-**✅ AI-ENHANCED POLICY PLATFORM**: Azure OpenAI integration for automated extraction of keywords, categories, and stances from candidate policy positions with visual distinction for AI-generated content (italicized summaries, clickable keywords for similarity search).
-
-**✅ FUZZY OFFICE MATCHING**: Sophisticated normalization algorithm deduplicates races with different naming conventions - "Governor", "Governor of New York", "NY Governor" all group into same race for unified candidate display.
-
-**✅ AUTO-ADDRESS POPULATION**: System automatically uses user's profile address for candidate discovery with manual override option, eliminating friction in finding local candidates.
-
-**🎯 USER EXPERIENCE**: Candidates are visually distinguished by registration status (green border for registered, blue for external) with appropriate action buttons (View Profile/Contact for registered, View Details/Website for external).
-
-### 🆕 RECENT CHANGES (September 3, 2025) - Candidate Hub & Policy Platform Implementation
-
-**✅ Address-Based Candidate Endpoint**: New `/api/external-candidates/for-address` endpoint that auto-populates user address, imports/refreshes external candidates, and returns unified race groups.
-
-**✅ Fuzzy Office Matching Algorithm**: `normalizeOfficeTitle()` function handles common variations (Representative→Rep, Senator→Sen) and removes extraneous text for accurate race deduplication.
-
-**✅ AI Policy Analysis Pipeline**: `analyzePolicyContent()` function uses Azure OpenAI to extract keywords, determine category/stance, and generate summaries when not provided by candidates.
-
-**✅ Enhanced Frontend Display**: Complete UI overhaul with address search controls, race-grouped candidate cards, visual source indicators, and responsive design for mobile devices.
-
-**✅ AI Content Styling**: Italicized AI-generated summaries with "🤖 AI Generated:" prefix, clickable keyword tags for similarity search, and AI processing badges on enhanced positions.
-
-**🔧 Files Modified**:
-- `backend/src/routes/externalCandidates.ts` - Added `/for-address` endpoint with address auto-population
-- `backend/src/services/externalCandidateService.ts` - Implemented `getCandidatesForAddress()` and `normalizeOfficeTitle()`
-- `backend/src/routes/candidatePolicyPlatform.ts` - Added `analyzePolicyContent()` AI pipeline
-- `frontend/src/integrations/candidate-system-integration.js` - Complete UI overhaul with `displayCandidateRaces()`
-- `frontend/src/components/PolicyPlatformManager.js` - Added `renderAIKeywords()` and AI content styling
-
-### 🎉 MAJOR ACHIEVEMENT (September 2, 2025) - EXTERNAL CANDIDATE PRE-POPULATION SYSTEM COMPLETE
-
-**✅ GOOGLE CIVIC API INTEGRATION**: Complete external candidate pre-population system using Google Civic Information API for automatic candidate discovery and import before user registration. Enables voters to research candidates even if they haven't signed up on the platform.
-
-**✅ FEC API INTEGRATION**: Federal Election Commission API integration for enhanced candidate financial data and federal candidate information with 7-day caching for cost optimization.
-
-**✅ UNIFIED SEARCH SYSTEM**: Enhanced search functionality that queries both user-registered candidates AND externally-sourced candidates, providing comprehensive candidate discovery across all data sources.
-
-**✅ CANDIDATE CLAIMING WORKFLOW**: Professional system allowing real candidates to claim their pre-populated external profiles, transitioning them from external data to verified user accounts with full platform access.
-
-**✅ INTELLIGENT CACHING STRATEGY**: 30-day cache for candidate data (vs 24hr), 7-day cache for FEC data, 3-day cache for search results - optimizing API costs while maintaining data freshness for democratic processes.
-
-**✅ ADMIN MANAGEMENT INTERFACE**: Complete admin dashboard integration with External Candidates section featuring address-based import, bulk import, search, API health monitoring, and cache management tools.
-
-**🎯 DATA ACCURACY**: External candidate system provides voters with comprehensive candidate information regardless of platform participation, supporting informed democratic participation through pre-populated candidate profiles.
-
-### 🆕 RECENT CHANGES (September 2, 2025) - External Candidate System Implementation
-
-**✅ Google Civic API Integration**: Deployed Google Civic Information API with 30-day caching for cost-effective candidate discovery across all office levels (Presidential, Senate, House, State, Local).
-
-**✅ FEC API Integration**: Federal Election Commission API integration structure implemented with 7-day caching for enhanced federal candidate financial data and campaign information.
-
-**✅ Unified Search Enhancement**: Updated main search functionality to query both user-registered candidates AND external candidates, providing comprehensive candidate discovery with proper deduplication and sorting.
-
-**✅ Admin Dashboard External Management**: Added complete External Candidates section with three-tab interface (Import, Search, Health) enabling address-based imports, bulk processing, API monitoring, and cache management.
-
-**✅ Candidate Claiming Workflow**: Implemented professional claiming system allowing real candidates to transition from external profiles to verified user accounts with full platform access.
-
-**✅ Production Deployment**: All external candidate system components successfully deployed to Azure Container Apps with API keys configured and operational.
-
-**🔧 Files Created**:
-- `backend/src/services/externalCandidateService.ts` - Google Civic and FEC API integration
-- `backend/src/routes/externalCandidates.ts` - Complete external candidate API endpoints
-- Enhanced `backend/src/routes/search.ts` - Unified search with external candidate support
-- Enhanced `frontend/admin-dashboard.html` - External candidate management interface
-
-### 🎉 MAJOR ACHIEVEMENT (August 30, 2025) - CANDIDATE VERIFICATION & REPORTING SYSTEM COMPLETE
-
-**✅ LAYERED VERIFICATION SYSTEM**: Complete replacement of ID.me mock verification with sophisticated community-based reporting and professional document verification infrastructure.
-
-**✅ GEOGRAPHIC WEIGHTING ALGORITHM**: Office-level-based weighting system ensuring reports from actual voters carry appropriate weight (Presidential nationwide, Senate statewide, House district-level, etc.).
-
-**✅ AI-POWERED URGENCY ASSESSMENT**: Azure OpenAI integration analyzing reports for election integrity threats, voter deception potential, legal violations, and extremist rhetoric with HIGH/MEDIUM/LOW categorization.
-
-**✅ ANTI-BRIGADING PROTECTION**: Algorithmic detection of suspicious reporting patterns (>10 reports/hour, >50% out-of-district) with automatic flagging for manual admin review.
-
-**✅ DOCUMENT VERIFICATION SYSTEM**: Monthly re-verification on 1st Monday with grace period, Azure Blob Storage integration, and comprehensive admin workflow for document requests and verification.
-
-**✅ ADMIN DASHBOARD INTEGRATION**: New Reports and Verification tabs in candidate management with priority visualization, geographic weight display, AI assessment indicators, and interactive modals for taking action.
-
-**🎯 SYSTEM RELIABILITY**: All verification processes include fallback mechanisms, graceful error handling, and security logging to ensure platform integrity without single points of failure.
-
-### 🎉 MAJOR ACHIEVEMENT (August 28, 2025) - COMPREHENSIVE MESSAGING & NOTIFICATION SYSTEM COMPLETE
-
-**✅ USER-TO-CANDIDATE MESSAGING SYSTEM**: Complete messaging infrastructure allowing direct voter-candidate communication through professional inbox interface with real-time WebSocket delivery and conversation threading.
-
-**✅ COMPREHENSIVE NOTIFICATION SETTINGS**: Full opt-out system for all external notifications including browser notifications, email preferences, and candidate-specific communications with granular controls and smart defaults.
-
-**✅ CANDIDATE INBOX INTERFACE**: Professional inbox within Candidate Dashboard featuring conversation management, unread indicators, reply system, and real-time updates with mobile-responsive design.
-
-**✅ PRIVACY-FIRST IMPLEMENTATION**: All external notifications respect user preferences with hierarchical settings, permission management, and graceful fallbacks ensuring user consent is paramount.
-
-**✅ ENHANCED CANDIDATE STATUS DETECTION**: New API endpoint `/candidate-policy-platform/candidate/status` provides real-time verification of candidate status with detailed candidate information including office and election data.
-
-**🎯 SYSTEM INTEGRATION**: All candidate features now seamlessly integrated:
-- **Frontend**: Conditional UI display based on candidate verification
-- **Backend**: New GET/PUT endpoints for policy position management  
-- **Database**: Automatic version tracking with `previousVersionId` relationships
-- **Styling**: Professional dashboard interface with responsive design
-
-**📁 COMPONENT ARCHITECTURE UPDATE (August 28, 2025):**
-- **`MyProfile.js`**: General user settings (Demographics, Political, Photos, Messages, Settings) - Policy Platform removed
-- **`PolicyPlatformManager.js`**: Standalone Policy Platform component with full CRUD operations
-- **`candidate-system-integration.js`**: Candidate Dashboard integration with Policy Platform access
-- **Separation of Concerns**: Clear distinction between user profiles and candidate campaign management
-
-### 🆕 RECENT CHANGES (August 28, 2025) - Site Branding & Implementation
-
-**✅ Site Title Implementation**: Added "United [Logo] We Rise Beta" to header with proper positioning and responsive design. Beta badge positioned as superscript over the "e" in "Rise" for clear development status indication.
-
-**✅ Candidate Hub Rename**: "AI-Enhanced Candidate System" renamed to clean, simple "Candidate Hub" throughout the platform.
-
-**🛡️ Documentation Protocol Enhancement**: Added mandatory pre-implementation protocol to CLAUDE.md to prevent redundant feature creation and accidental deletions of existing functionality. Protocol includes systematic documentation review, codebase verification, and comprehensive mapping requirements.
-
-### 🎉 MAJOR ACHIEVEMENT (August 27, 2025) - WEBSOCKET MESSAGING FULLY OPERATIONAL
-
-**✅ COMPLETE SUCCESS**: Bidirectional WebSocket messaging system is now fully functional with comprehensive testing completed. All routing issues resolved, sender identification fixed, and message display properly aligned.
-
-**🔧 FINAL ARCHITECTURE**: 
-- **Database**: Simplified to use consistent user IDs throughout (`admin_${userId}` conversation format)
-- **Backend**: Socket.IO WebSocket server with proper room management and broadcast logic
-- **Frontend**: Real-time message handling with proper sender identification and display positioning
-- **Testing Edge Case**: Special handling for single-account admin/candidate testing scenarios
-
-**⚡ PERFORMANCE ACHIEVED**: 
-- ✅ Real-time bidirectional messaging (Admin ↔ Candidate)
-- ✅ Instant message delivery and display
-- ✅ Proper message alignment (sender-right/receiver-left)
-- ✅ Cross-tab synchronization working
-- ✅ 99% reduction in API calls (eliminated 10-second polling)
-
-**🎯 SYSTEM CONSOLIDATION COMPLETE**: 
-- Unified database schema with `UnifiedMessage` and `ConversationMeta` tables
-- Single WebSocket server handling all message types via Socket.IO
-- Consistent user ID-based conversation routing: `admin_${userId}`
-- Graceful REST API fallback when WebSocket unavailable
-- Database purged of old messages with conflicting conversation IDs
-
-### 🆕 RECENT CHANGES (August 26, 2025) - Legacy Issues Resolved
-
-**🔥 CRITICAL ROUTE CONFLICT RESOLUTION**: Resolved major route matching issue in admin.ts that caused persistent 404 errors. Route order corrected and all admin endpoints now function properly.
-
-**✅ Admin Dashboard Candidate Profiles**: Admin dashboard successfully loads and displays candidate profiles. Persistent "Candidate registration not found" error resolved through proper route ordering.
-
-**🐛 Message Alignment Fixed**: Corrected candidate messaging display where admin messages appeared on wrong side. Now properly displays sender messages on right, received messages on left.
-
-### 🆕 RECENT CHANGES (August 25, 2025)
-
-**Candidate-Admin Direct Messaging System**: Complete bidirectional communication system between site admins and registered candidates deployed. Features dedicated messaging tabs in candidate profiles, admin dashboard integration with unread count badges, and comprehensive database schema with threading support.
-
-**CRITICAL Deployment Lesson Learned**: Schema dependencies must be resolved BEFORE backend deployment. When Prisma models reference non-existent database tables, entire route files fail to load causing 404 errors for ALL endpoints in that file. Mandatory deployment sequence now established: Schema → Backend → Verification.
-
-**TOTP Session Duration Extended**: Admin dashboard TOTP tokens now last 24 hours instead of 5 minutes, eliminating frequent re-authentication interruptions while maintaining security through initial TOTP verification.
+**Current System Status**: Complete social media platform with advanced civic engagement features, enterprise-grade security, and production-ready infrastructure serving active users with real-time features and comprehensive administrative tools.
 
 ---
 
@@ -433,46 +16,57 @@
 **ALL documentation updates MUST be made in this file ONLY.**  
 Do NOT create separate documentation files. This consolidation was created after an incident where critical functionality (infinite scroll) was accidentally deleted due to fragmented documentation across 52+ files.
 
-### Quick Reference Files Allowed:
-- `CLAUDE.md` - Quick reference for current state and critical issues
+### Critical Documentation Files:
+- `MASTER_DOCUMENTATION.md` - This file - Complete technical system documentation
+- `CHANGELOG.md` - Historical timeline of all changes, features, and deployments
+- `CLAUDE.md` - Development protocols, workflows, and current operational procedures
 - `README.md` - Basic project introduction for GitHub
 
-**Everything else goes HERE in MASTER_DOCUMENTATION.md**
+**All technical details go in MASTER_DOCUMENTATION.md - All historical changes go in CHANGELOG.md**
 
 ---
 
 ## 📑 TABLE OF CONTENTS
+
+> **📋 Development History**: [CHANGELOG.md](CHANGELOG.md) - Complete timeline of features, fixes, and deployments
+> **🔧 Development Protocols**: [CLAUDE.md](CLAUDE.md) - Current workflows, deployment procedures, and standards
 
 1. [🎯 EXECUTIVE SUMMARY](#executive-summary)
 2. [🚀 CURRENT PRODUCTION STATUS](#current-production-status)
 3. [🏗️ SYSTEM ARCHITECTURE](#system-architecture)
 4. [💾 DATABASE SCHEMA](#database-schema)
 5. [🔌 API REFERENCE](#api-reference)
-6. [🎨 UI/UX COMPONENTS](#ui-ux-components)
-7. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
-8. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
-9. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
-10. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
-11. [📊 MONITORING & ADMIN](#monitoring-admin)
-12. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
-13. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
-14. [📱 SOCIAL FEATURES](#social-features)
-15. [🏆 REPUTATION SYSTEM](#reputation-system)
-16. [📸 MEDIA & PHOTOS](#media-photos)
-17. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
-18. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
-19. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
-20. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-21. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-22. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
-23. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-24. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-25. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-26. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-27. [📝 DEVELOPMENT PRACTICES](#development-practices)
-28. [📜 SESSION HISTORY](#session-history)
-29. [🔮 FUTURE ROADMAP](#future-roadmap)
-30. [🆘 TROUBLESHOOTING](#troubleshooting)
+6. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
+7. [🎨 UI/UX COMPONENTS](#ui-ux-components)
+8. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
+9. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
+10. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
+11. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
+12. [📊 MONITORING & ADMIN](#monitoring-admin)
+13. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
+14. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
+15. [📱 SOCIAL FEATURES](#social-features)
+16. [🏆 REPUTATION SYSTEM](#reputation-system)
+17. [📸 MEDIA & PHOTOS](#media-photos)
+18. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
+19. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
+20. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
+21. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
+22. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+23. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+24. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+25. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+26. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+27. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
+28. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
+29. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+30. [📝 DEVELOPMENT PRACTICES](#development-practices)
+31. [📜 SESSION HISTORY](#session-history)
+32. [🔮 FUTURE ROADMAP](#future-roadmap)
+33. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
+34. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
+35. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
+36. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -1661,7 +1255,7 @@ POST /api/notifications/mark-read-batch // Mark multiple notifications as read
 
 ##### Frontend Implementation
 
-**WebSocket Event Handler** (`frontend/src/js/websocket-client.js:78-81`):
+**WebSocket Integration** (See {#unified-messaging-system} for complete implementation):
 ```javascript
 this.socket.on('new_notification', (notification) => {
     updateNotificationUI(notification);
@@ -1751,6 +1345,13 @@ function showNotificationToast(notification) {
 - **Efficient UI Updates**: Batch updates to minimize DOM manipulation
 - **Smart Caching**: Notification preferences cached to reduce API calls
 - **Resource Management**: Auto-cleanup of toast notifications prevents memory leaks
+
+### Related Systems
+- **{#database-schema}**: Database models underlying all API responses
+- **{#security-authentication}**: Authentication patterns used across all endpoints
+- **{#performance-optimizations}**: Caching strategies and optimization techniques
+- **{#unified-messaging-system}**: WebSocket integration with REST API fallback
+- **{#stripe-nonprofit-payment-system}**: Payment processing endpoints and webhooks
 
 ---
 
@@ -2641,7 +2242,7 @@ input, textarea, select {
 
 ### Related Systems
 - **{#ui-ux-components}** - Base component library
-- **{#responsive-design}** - Enhanced responsive system
+- **{#mobile-ui-system}** - Enhanced responsive system
 - **{#performance-optimizations}** - Mobile performance improvements
 - **{#javascript-modularization}** - ES6 module architecture
 
@@ -2656,11 +2257,25 @@ input, textarea, select {
 
 ## ⚙️ JAVASCRIPT MODULARIZATION {#javascript-modularization}
 
+### 🎯 **Quick Overview**
+
+**Status**: ✅ Complete ES6 module architecture deployed (September 17, 2025)
+**Impact**: 8,900+ lines transformed into professional module system
+**Result**: Improved maintainability, performance, and developer experience
+
+> **📋 Detailed Implementation**: See [JavaScript Architecture Details](#javascript-architecture-details) below for complete technical documentation
+
 ### 🎉 **COMPLETE IMPLEMENTATION (September 17, 2025)**
 
 The JavaScript Modularization Project has been **successfully completed and deployed**, transforming 8,900+ lines of inline JavaScript into a professional ES6 module architecture. This represents a major leap forward in code maintainability, performance, and developer experience.
 
 **✅ DEPLOYMENT STATUS**: All modules successfully deployed to both staging and production environments with zero functionality regressions. All authentication flows, feed systems, and search functionality working correctly.
+
+---
+
+## 📋 JavaScript Architecture Details {#javascript-architecture-details}
+
+*Complete technical documentation for the JavaScript modularization system*
 
 ### 📊 **Migration Summary**
 
@@ -4349,6 +3964,14 @@ if (riskScore > 70) {
 - Machine learning risk scoring
 - Community reporting integration
 
+### Related Systems
+- **{#api-reference}**: All endpoints use security patterns documented here
+- **{#social-features}**: Real-time authentication for WebSocket connections
+- **{#monitoring-admin}**: TOTP integration and admin security monitoring
+- **{#stripe-nonprofit-payment-system}**: Payment authentication and PCI compliance
+- **{#unified-messaging-system}**: WebSocket authentication and session management
+- **{#candidate-verification-reporting-system}**: Secure candidate verification workflows
+
 ---
 
 ## ☁️ DEPLOYMENT & INFRASTRUCTURE {#deployment-infrastructure}
@@ -4516,7 +4139,13 @@ az containerapp update \
 DATABASE_URL="postgresql://..."
 JWT_SECRET="..."
 JWT_EXPIRES_IN="30d"
-AZURE_STORAGE_CONNECTION_STRING="..."
+
+# Azure Storage Configuration (REQUIRED for photo uploads)
+AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=uwrstorage2425;..."
+AZURE_STORAGE_ACCOUNT_NAME="uwrstorage2425"
+AZURE_STORAGE_CONTAINER_NAME="photos"
+
+# Azure OpenAI Configuration
 AZURE_OPENAI_ENDPOINT="https://unitedwerise-openai.openai.azure.com/"
 AZURE_OPENAI_API_KEY="..."
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT="text-embedding-ada-002"
@@ -5948,10 +5577,10 @@ See **Comment & Discussion Systems** in the [🔮 FUTURE ROADMAP](#future-roadma
 **Note**: Basic thread collapsing and expansion functionality completed September 11, 2025.
 
 #### Related Systems
-- **Post Display**: {#post-display}
+- **Social Features**: {#social-features}
 - **Notification System**: {#notification-system}
-- **Feed Algorithm**: {#feed-algorithm}
-- **Moderation System**: {#moderation-system}
+- **Feed Algorithm**: {#proposed-feed-algorithm-redesign}
+- **Security & Authentication**: {#security-authentication}
 
 #### Reusable UI Components
 ```javascript
@@ -6213,29 +5842,42 @@ if (post.hasHateSpeech) {
 - **Account Limit**: 100MB total storage
 - **Processing**: Auto-resize, WebP conversion
 
-#### Upload Flow
+#### Profile Avatar Upload (MyProfile.js)
 ```javascript
-// Frontend
+// Frontend implementation
 const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-formData.append('photoType', 'GALLERY');
-formData.append('caption', 'My photo');
+formData.append('photos', file);  // Note: field name is 'photos' not 'file'
+formData.append('photoType', 'AVATAR');
+formData.append('purpose', 'PERSONAL');
 
-const response = await apiCall('/api/photos/upload', {
+const response = await window.apiCall('/photos/upload', {
   method: 'POST',
   body: formData,
-  skipContentType: true // Let browser set multipart boundary
+  skipContentType: true  // Critical for multipart/form-data
 });
-
-// Backend processing
-1. Validate file type and size
-2. Generate unique filename
-3. Resize if needed (max 1920x1080)
-4. Convert to WebP (except GIFs)
-5. Upload to Azure Blob Storage
-6. Create database record
-7. Return URL
 ```
+
+#### Backend Processing Flow (photoService.ts)
+```javascript
+// Processing steps:
+1. Validate user permissions
+2. Check storage limit (100MB per user)
+3. Content moderation (auto-approved for most types)
+4. Image processing:
+   - Resize to type-specific dimensions (e.g., 400x400 for avatars)
+   - Convert to WebP for efficiency (except GIFs)
+   - Generate thumbnails
+5. Upload to Azure Blob Storage (uwrstorage2425)
+6. Fallback to local storage if Azure fails
+7. Save to database with metadata
+8. Update user.avatar field if photoType === 'AVATAR'
+```
+
+#### Azure Blob Storage Configuration
+- **Storage Account**: uwrstorage2425
+- **Container**: photos
+- **Public Access**: Blob-level (images are publicly accessible)
+- **URL Format**: `https://uwrstorage2425.blob.core.windows.net/photos/[folder]/[filename]`
 
 ### Photo Tagging
 
@@ -7565,7 +7207,7 @@ Database: UnifiedMessage schema with migration scripts
 
 #### Verification Workflow
 1. **Admin Request**: Admin selects candidate and document types needed
-2. **Candidate Notification**: Email notification sent (TODO: implement)
+2. **Candidate Notification**: Email notification sent (See FUTURE ROADMAP for implementation status)
 3. **Document Upload**: Candidate uploads via secure Azure Blob Storage
 4. **Admin Review**: Manual verification of submitted documents
 5. **Status Update**: Automatic status progression based on verification results
@@ -7921,9 +7563,9 @@ const SEARCH_CACHE_DURATION = 3 * 24 * 60 * 60 * 1000;
 **Related Systems**:
 - **{#candidate-registration-admin-system}**: External candidates integrate with existing candidate management
 - **{#candidate-verification-reporting-system}**: Claimed profiles enter standard verification workflow
-- **{#unified-search-system}**: External candidates appear in main search results
+- **{#enhanced-search-system}**: External candidates appear in main search results
 - **{#monitoring-admin}**: Admin dashboard monitors external API health and performance
-- **{#api-caching-system}**: Leverages existing caching infrastructure for cost optimization
+- **{#performance-optimizations}**: Leverages existing caching infrastructure for cost optimization
 
 **Files Implemented**:
 - `backend/src/services/externalCandidateService.ts` (450+ lines) - Core external API integration
@@ -8728,14 +8370,32 @@ See **Payment & Financial Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap
 
 ## 🐛 KNOWN ISSUES & BUGS {#known-issues-bugs}
 
-### ⚠️ CURRENT ISSUES (August 26, 2025)
+### ⚠️ CURRENT ISSUES (September 20, 2025)
+
+#### Staging Profile Avatar Display (Minor)
+**Issue**: User profile endpoint returns `avatar: null` on staging even when avatar exists in database
+- **Status**: Low priority - staging-only issue, does not affect production
+- **Root Cause**: Profile endpoint not properly retrieving avatar field on staging environment
+- **Workaround**: Avatars display correctly in posts/feed, just not in Profile tab
+- **Impact**: Minimal - cosmetic issue on staging environment only
+- **Note**: Avatar uploads were failing due to missing Azure Storage config (now fixed)
 
 #### Admin-Candidate Messaging Interface (Minor)
 **Issue**: Messages button in admin dashboard throws "Failed to load messages" error
-- **Status**: 🔧 DEBUGGING IN PROGRESS
+- **Status**: See FUTURE ROADMAP for current debugging status
 - **Root Cause**: Frontend JavaScript debugging needed for messaging modal
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
-- **Next Steps**: Console debugging added, awaiting test results
+
+### 🚨 RECENTLY FIXED - September 20, 2025
+
+#### Staging Azure Storage Configuration (FIXED)
+**Issue**: Photo uploads failing on staging environment with "Successfully uploaded 0 photo(s)" response
+- **Problem**: Azure Blob Storage upload failing, fallback to local storage also failing
+- **Root Cause**: Missing Azure Storage environment variables in staging container app
+- **Fix**: Added `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER_NAME`
+- **Files Modified**: No code changes - environment variable configuration only
+- **Status**: ✅ Fixed and deployed to staging
+- **Impact**: Photo uploads now work correctly on staging environment
 
 ### 🚨 RECENTLY FIXED - August 26, 2025
 
@@ -8850,7 +8510,7 @@ See **Payment & Financial Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap
 ### Critical Issues
 
 #### 1. Login Persistence Bug (TOP PRIORITY)
-**Status**: 🔴 CRITICAL - DEPLOYED FIX PENDING VERIFICATION
+**Status**: ✅ RESOLVED (See FUTURE ROADMAP for current status)
 **Impact**: Users logged out when refreshing page despite valid tokens
 **Root Cause**: 
 - App calls `setUserLoggedOut()` immediately on page load
@@ -8896,7 +8556,7 @@ import legislativeRoutes from './routes/legislative';
 #### 4. Trending Cache Hits
 **Status**: 🟡 Optimization needed
 **Impact**: Excessive cache checks
-**TODO**: Implement smarter cache invalidation
+See FUTURE ROADMAP for cache optimization tasks
 
 ### UI/UX Issues
 
@@ -8914,7 +8574,7 @@ import legislativeRoutes from './routes/legislative';
 - `loadTrendingUpdates()` at line 2689 in index.html
 - TopicNavigation component with its own trending system
 - Integration wrapper attempting to sync them (line 3377)
-**TODO**: Consolidate into single trending system (deferred for future planning)
+See FUTURE ROADMAP for trending system consolidation plans
 
 ### Resolved Issues (Audit Fixes)
 
@@ -9460,7 +9120,7 @@ POST /api/debug/clear-cache
 **Achievement**: Implemented missing candidate profile creation in admin approval workflow
 
 **Problem Identified**: 
-- Admin approval system had TODO comment: "Create or update candidate profile"
+- Admin approval system had incomplete candidate profile creation
 - Approved candidate registrations were not creating actual Candidate database records
 - Users flagged as candidates had no searchable profiles or platform benefits
 
@@ -10270,6 +9930,21 @@ showDefaultView()
 
 ## 🔮 FUTURE ROADMAP {#future-roadmap}
 
+> **Note for Claude Code**: When searching for "TODO", "task list", or "pending work", reference this ROADMAP section which consolidates all project tasks and priorities.
+
+### 🔴 CRITICAL ISSUES & DEBUGGING (Do First)
+
+#### **Current Debugging Queue**
+- [ ] **Legislative routes loading issue**: Route loading problems requiring investigation
+- [ ] **Checkbox display bug**: UI checkbox rendering issues affecting user interface
+- [ ] **Optimize trending cache system**: Performance optimization needed for cache invalidation
+- [ ] **General notification system debugging**: Debug notification delivery and reliability
+- [ ] **Admin-Candidate messaging interface**: Messages button throws "Failed to load messages" error (Frontend JS debugging needed)
+
+#### **Implementation TODOs**
+- [ ] **Email notification system**: Implement email notifications for candidate document verification workflow (Line 7568 reference)
+- [x] **Login persistence bug**: ✅ RESOLVED - Users no longer logged out on page refresh
+
 ### 🚀 IMMEDIATE PRIORITIES (September 5, 2025)
 
 #### **AI Content Enhancement & Tag UI Improvements**
@@ -10329,11 +10004,6 @@ showDefaultView()
 - [x] **External Candidate Pre-Population System**: Google Civic API integration with automatic candidate discovery
 - [x] **Candidate Claiming Workflow**: Complete external-to-registered candidate conversion system
 
-### 🔧 DEBUGGING QUEUE (Pending Resolution)
-- [ ] **Legislative routes loading issue**: Route loading problems
-- [ ] **Checkbox display bug**: UI checkbox rendering issues  
-- [ ] **Optimize trending cache system**: Performance optimization needed
-- [ ] **General notification system debugging**: Debug notification delivery and reliability
 
 ### Phase 1: Prior Completions (August 2025)
 - [x] **TOTP/2FA Implementation**: Complete two-factor authentication system
