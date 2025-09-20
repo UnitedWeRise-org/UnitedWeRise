@@ -217,6 +217,7 @@ class MyProfile {
         const user = this.userProfile;
 
         // === COMPREHENSIVE AVATAR DEBUGGING ===
+        // Admin debug (requires verification)
         adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC START ===');
         adminDebugLog('ProfileAvatar', 'renderProfile user object', user);
         adminDebugLog('ProfileAvatar', 'user.avatar value', user?.avatar);
@@ -225,11 +226,24 @@ class MyProfile {
         adminDebugLog('ProfileAvatar', 'window.currentUser.avatar', window.currentUser?.avatar);
         adminDebugLog('ProfileAvatar', 'window.currentUser.avatar type', typeof window.currentUser?.avatar);
 
+        // Temporary console debug (immediate visibility)
+        console.log('🔧 [ProfileAvatar] === PROFILE AVATAR DIAGNOSTIC START ===');
+        console.log('🔧 [ProfileAvatar] renderProfile user object:', user);
+        console.log('🔧 [ProfileAvatar] user.avatar value:', user?.avatar);
+        console.log('🔧 [ProfileAvatar] user.avatar type:', typeof user?.avatar);
+        console.log('🔧 [ProfileAvatar] window.currentUser:', window.currentUser);
+        console.log('🔧 [ProfileAvatar] window.currentUser.avatar:', window.currentUser?.avatar);
+        console.log('🔧 [ProfileAvatar] window.currentUser.avatar type:', typeof window.currentUser?.avatar);
+
         // Fallback to global user state if profile doesn't have avatar
         const avatarUrl = user?.avatar || window.currentUser?.avatar;
         adminDebugLog('ProfileAvatar', 'FINAL avatar URL to display', avatarUrl);
         adminDebugLog('ProfileAvatar', 'Will show image?', !!avatarUrl);
         adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC END ===');
+
+        console.log('🔧 [ProfileAvatar] FINAL avatar URL to display:', avatarUrl);
+        console.log('🔧 [ProfileAvatar] Will show image?', !!avatarUrl);
+        console.log('🔧 [ProfileAvatar] === PROFILE AVATAR DIAGNOSTIC END ===');
 
         container.innerHTML = `
             <div class="my-profile">
