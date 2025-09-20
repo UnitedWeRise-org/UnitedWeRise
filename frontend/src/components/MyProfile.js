@@ -319,7 +319,22 @@ class MyProfile {
         `;
 
         this.addStyles();
-        
+
+        // Setup profile upload event listener as backup
+        setTimeout(() => {
+            const profileUploadInput = document.querySelector('.profile-upload');
+            if (profileUploadInput) {
+                console.log('🔧 [ProfileUpload] Setting up backup event listener');
+                profileUploadInput.addEventListener('change', (event) => {
+                    console.log('🔧 [ProfileUpload] File input change event triggered');
+                    console.log('🔧 [ProfileUpload] Files selected:', event.target.files.length);
+                    if (event.target.files.length > 0) {
+                        this.uploadProfilePicture(event.target);
+                    }
+                });
+            }
+        }, 100);
+
         // Load data for the initial tab if needed
         if (this.currentTab === 'activity') {
             adminDebugLog('📊 Initial render with activity tab, loading activities...');
