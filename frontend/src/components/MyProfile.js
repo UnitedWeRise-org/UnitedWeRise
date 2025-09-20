@@ -1048,18 +1048,18 @@ class MyProfile {
             return;
         }
 
-        adminDebugLog('AvatarUpload', '✅ Upload file validation passed');
-        adminDebugLog('AvatarUpload', '🔍 Upload creating FormData...');
+        console.log('🔧 [AvatarUpload] ✅ Upload file validation passed');
+        console.log('🔧 [AvatarUpload] 🔍 Upload creating FormData...');
         const formData = new FormData();
         formData.append('photos', file); // Backend expects 'photos' array
         formData.append('photoType', 'AVATAR'); // Must match PhotoType enum
         formData.append('purpose', 'PERSONAL'); // Required field
 
-        adminDebugLog('AvatarUpload', '🔍 Upload FormData entries:');
+        console.log('🔧 [AvatarUpload] 🔍 Upload FormData entries:');
         for (let [key, value] of formData.entries()) {
-            adminDebugLog('AvatarUpload', `   ${key}`, value);
+            console.log('🔧 [AvatarUpload]   ' + key + ':', value);
         }
-        adminDebugLog('AvatarUpload', '🚀 Upload making API call to /photos/upload...');
+        console.log('🔧 [AvatarUpload] 🚀 Upload making API call to /photos/upload...');
 
         try {
             const response = await window.apiCall('/photos/upload', {
@@ -1068,38 +1068,38 @@ class MyProfile {
                 skipContentType: true // Let browser set multipart boundary
             });
 
-            adminDebugLog('AvatarUpload', '🔍 Upload API response', response);
-            adminDebugLog('AvatarUpload', '🔍 Upload response.ok', response.ok);
-            adminDebugLog('AvatarUpload', '🔍 Upload response.data', response.data);
-            adminDebugLog('AvatarUpload', '🔍 Upload response.data.photos', response.data?.photos);
+            console.log('🔧 [AvatarUpload] 🔍 Upload API response:', response);
+            console.log('🔧 [AvatarUpload] 🔍 Upload response.ok:', response.ok);
+            console.log('🔧 [AvatarUpload] 🔍 Upload response.data:', response.data);
+            console.log('🔧 [AvatarUpload] 🔍 Upload response.data.photos:', response.data?.photos);
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 const uploadedPhoto = response.data.photos[0];
-                adminDebugLog('AvatarUpload', '✅ Profile picture uploaded successfully!');
-                adminDebugLog('AvatarUpload', '🔍 Upload uploaded photo object', uploadedPhoto);
-                adminDebugLog('AvatarUpload', '🔍 Upload photo.url', uploadedPhoto.url);
-                adminDebugLog('AvatarUpload', '🔍 Upload photo.photoType', uploadedPhoto.photoType);
+                console.log('🔧 [AvatarUpload] ✅ Profile picture uploaded successfully!');
+                console.log('🔧 [AvatarUpload] 🔍 Upload uploaded photo object:', uploadedPhoto);
+                console.log('🔧 [AvatarUpload] 🔍 Upload photo.url:', uploadedPhoto.url);
+                console.log('🔧 [AvatarUpload] 🔍 Upload photo.photoType:', uploadedPhoto.photoType);
 
                 // Update global user state immediately with new avatar
-                adminDebugLog('AvatarUpload', '🔍 Upload BEFORE - window.currentUser', window.currentUser);
-                adminDebugLog('AvatarUpload', '🔍 Upload BEFORE - window.currentUser.avatar', window.currentUser?.avatar);
+                console.log('🔧 [AvatarUpload] 🔍 Upload BEFORE - window.currentUser:', window.currentUser);
+                console.log('🔧 [AvatarUpload] 🔍 Upload BEFORE - window.currentUser.avatar:', window.currentUser?.avatar);
 
                 if (window.currentUser) {
                     window.currentUser.avatar = uploadedPhoto.url;
-                    adminDebugLog('AvatarUpload', '✅ Upload UPDATED window.currentUser.avatar to', window.currentUser.avatar);
+                    console.log('🔧 [AvatarUpload] ✅ Upload UPDATED window.currentUser.avatar to:', window.currentUser.avatar);
                 } else {
-                    adminDebugLog('AvatarUpload', '❌ Upload ERROR: window.currentUser is null/undefined!');
+                    console.log('🔧 [AvatarUpload] ❌ Upload ERROR: window.currentUser is null/undefined!');
                 }
 
                 // Small delay to ensure database update propagates, then refresh
-                adminDebugLog('AvatarUpload', '🔄 Upload scheduling profile refresh in 500ms...');
+                console.log('🔧 [AvatarUpload] 🔄 Upload scheduling profile refresh in 500ms...');
                 setTimeout(() => {
-                    adminDebugLog('AvatarUpload', '🔄 Upload executing profile refresh now...');
+                    console.log('🔧 [AvatarUpload] 🔄 Upload executing profile refresh now...');
                     this.refreshProfile('mainContent');
                 }, 500);
             } else {
-                adminDebugError('AvatarUpload', '❌ Upload FAILED - API response not ok or no photos returned');
-                adminDebugError('AvatarUpload', '🔍 Upload failure details', {
+                console.error('🔧 [AvatarUpload] ❌ Upload FAILED - API response not ok or no photos returned');
+                console.error('🔧 [AvatarUpload] 🔍 Upload failure details:', {
                     responseOk: response.ok,
                     hasData: !!response.data,
                     hasPhotos: !!response.data?.photos,
@@ -1110,15 +1110,15 @@ class MyProfile {
                 alert(errorMsg);
             }
         } catch (error) {
-            adminDebugError('AvatarUpload', '❌ Upload EXCEPTION occurred', error);
-            adminDebugError('AvatarUpload', '🔍 Upload exception details', {
+            console.error('🔧 [AvatarUpload] ❌ Upload EXCEPTION occurred:', error);
+            console.error('🔧 [AvatarUpload] 🔍 Upload exception details:', {
                 name: error.name,
                 message: error.message,
                 stack: error.stack
             });
             alert('Error uploading profile picture. Please try again.');
         }
-        adminDebugLog('AvatarUpload', '=== AVATAR UPLOAD PROCESS END ===');
+        console.log('🔧 [AvatarUpload] === AVATAR UPLOAD PROCESS END ===');
     }
 
     // Method to submit a quick post from the profile - NOW USES REUSABLE FUNCTION
