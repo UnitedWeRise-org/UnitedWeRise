@@ -329,7 +329,12 @@ class MyProfile {
                     console.log('🔧 [ProfileUpload] File input change event triggered');
                     console.log('🔧 [ProfileUpload] Files selected:', event.target.files.length);
                     if (event.target.files.length > 0) {
-                        this.uploadProfilePicture(event.target);
+                        try {
+                            console.log('🔧 [ProfileUpload] Calling uploadProfilePicture...');
+                            this.uploadProfilePicture(event.target);
+                        } catch (error) {
+                            console.error('🔧 [ProfileUpload] Error calling uploadProfilePicture:', error);
+                        }
                     }
                 });
             }
