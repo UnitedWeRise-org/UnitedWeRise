@@ -1021,17 +1021,20 @@ class MyProfile {
         console.log('🚨 [IMMEDIATE] uploadProfilePicture method ENTERED with input:', input);
 
         // === COMPREHENSIVE UPLOAD PROCESS DEBUGGING ===
-        adminDebugLog('AvatarUpload', '=== AVATAR UPLOAD PROCESS START ===');
-        adminDebugLog('AvatarUpload', 'Upload input element', input);
-        adminDebugLog('AvatarUpload', 'Upload input.files', input.files);
+        console.log('🔧 [AvatarUpload] === AVATAR UPLOAD PROCESS START ===');
+        console.log('🔧 [AvatarUpload] Upload input element:', input);
+        console.log('🔧 [AvatarUpload] Upload input.files:', input.files);
 
         const file = input.files[0];
-        if (!file) return;
+        if (!file) {
+            console.log('🔧 [AvatarUpload] NO FILE SELECTED - returning early');
+            return;
+        }
 
-        adminDebugLog('AvatarUpload', 'Upload selected file', file);
-        adminDebugLog('AvatarUpload', 'Upload file.name', file.name);
-        adminDebugLog('AvatarUpload', 'Upload file.type', file.type);
-        adminDebugLog('AvatarUpload', 'Upload file.size', file.size);
+        console.log('🔧 [AvatarUpload] Upload selected file:', file);
+        console.log('🔧 [AvatarUpload] Upload file.name:', file.name);
+        console.log('🔧 [AvatarUpload] Upload file.type:', file.type);
+        console.log('🔧 [AvatarUpload] Upload file.size:', file.size);
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
