@@ -29,7 +29,19 @@ class PostComponent {
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
-        
+
+        // === COMPREHENSIVE POST AVATAR DEBUGGING ===
+        window.adminDebugLog && window.adminDebugLog('=== POST AVATAR DIAGNOSTIC START ===');
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent renderPost full post object:', post);
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent post.author object:', post.author);
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent post.author.avatar value:', post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent post.author.avatar type:', typeof post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent authorName:', authorName);
+        window.adminDebugLog && window.adminDebugLog('🔍 PostComponent authorInitial:', authorInitial);
+        window.adminDebugLog && window.adminDebugLog('🎯 PostComponent Will show avatar image?', !!post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🎯 PostComponent Avatar URL to use:', post.author?.avatar || `placeholder with ${authorInitial}`);
+        window.adminDebugLog && window.adminDebugLog('=== POST AVATAR DIAGNOSTIC END ===');
+
         return `
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
@@ -1305,7 +1317,17 @@ class PostComponent {
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
-        
+
+        // === COMPREHENSIVE FOCUSED POST AVATAR DEBUGGING ===
+        window.adminDebugLog && window.adminDebugLog('=== FOCUSED POST AVATAR DIAGNOSTIC START ===');
+        window.adminDebugLog && window.adminDebugLog('🔍 FocusedPost full post object:', post);
+        window.adminDebugLog && window.adminDebugLog('🔍 FocusedPost post.author object:', post.author);
+        window.adminDebugLog && window.adminDebugLog('🔍 FocusedPost post.author.avatar value:', post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🔍 FocusedPost post.author.avatar type:', typeof post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🎯 FocusedPost Will show avatar image?', !!post.author?.avatar);
+        window.adminDebugLog && window.adminDebugLog('🎯 FocusedPost Avatar URL to use:', post.author?.avatar || `placeholder with ${authorInitial}`);
+        window.adminDebugLog && window.adminDebugLog('=== FOCUSED POST AVATAR DIAGNOSTIC END ===');
+
         // Display focused post in main content area
         mainContent.innerHTML = `
             <div class="post-focus-view">

@@ -216,13 +216,20 @@ class MyProfile {
     renderProfile(container) {
         const user = this.userProfile;
 
-        // Debug the user object to see what's actually in it
+        // === COMPREHENSIVE AVATAR DEBUGGING ===
+        adminDebugLog('=== PROFILE AVATAR DIAGNOSTIC START ===');
         adminDebugLog('🔍 MyProfile renderProfile user object:', user);
         adminDebugLog('🔍 MyProfile user.avatar value:', user?.avatar);
+        adminDebugLog('🔍 MyProfile user.avatar type:', typeof user?.avatar);
+        adminDebugLog('🔍 MyProfile window.currentUser:', window.currentUser);
+        adminDebugLog('🔍 MyProfile window.currentUser.avatar:', window.currentUser?.avatar);
+        adminDebugLog('🔍 MyProfile window.currentUser.avatar type:', typeof window.currentUser?.avatar);
 
         // Fallback to global user state if profile doesn't have avatar
         const avatarUrl = user?.avatar || window.currentUser?.avatar;
-        adminDebugLog('🔍 MyProfile final avatar URL:', avatarUrl);
+        adminDebugLog('🎯 MyProfile FINAL avatar URL to display:', avatarUrl);
+        adminDebugLog('🎯 MyProfile Will show image?', !!avatarUrl);
+        adminDebugLog('=== PROFILE AVATAR DIAGNOSTIC END ===');
 
         container.innerHTML = `
             <div class="my-profile">
@@ -976,8 +983,18 @@ class MyProfile {
 
 
     async uploadProfilePicture(input) {
+        // === COMPREHENSIVE UPLOAD PROCESS DEBUGGING ===
+        adminDebugLog('=== AVATAR UPLOAD PROCESS START ===');
+        adminDebugLog('🔍 Upload input element:', input);
+        adminDebugLog('🔍 Upload input.files:', input.files);
+
         const file = input.files[0];
         if (!file) return;
+
+        adminDebugLog('🔍 Upload selected file:', file);
+        adminDebugLog('🔍 Upload file.name:', file.name);
+        adminDebugLog('🔍 Upload file.type:', file.type);
+        adminDebugLog('🔍 Upload file.size:', file.size);
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -991,10 +1008,18 @@ class MyProfile {
             return;
         }
 
+        adminDebugLog('✅ Upload file validation passed');
+        adminDebugLog('🔍 Upload creating FormData...');
         const formData = new FormData();
         formData.append('photos', file); // Backend expects 'photos' array
         formData.append('photoType', 'AVATAR'); // Must match PhotoType enum
         formData.append('purpose', 'PERSONAL'); // Required field
+
+        adminDebugLog('🔍 Upload FormData entries:');
+        for (let [key, value] of formData.entries()) {
+            adminDebugLog(`   ${key}:`, value);
+        }
+        adminDebugLog('🚀 Upload making API call to /photos/upload...');
 
         try {
             const response = await window.apiCall('/photos/upload', {
@@ -1003,27 +1028,57 @@ class MyProfile {
                 skipContentType: true // Let browser set multipart boundary
             });
 
+            adminDebugLog('🔍 Upload API response:', response);
+            adminDebugLog('🔍 Upload response.ok:', response.ok);
+            adminDebugLog('🔍 Upload response.data:', response.data);
+            adminDebugLog('🔍 Upload response.data.photos:', response.data?.photos);
+
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
-                // Profile picture uploaded successfully, reload profile with fresh data
-                adminDebugLog('✅ Profile picture uploaded:', response.data.photos[0].url);
+                const uploadedPhoto = response.data.photos[0];
+                adminDebugLog('✅ Profile picture uploaded successfully!');
+                adminDebugLog('🔍 Upload uploaded photo object:', uploadedPhoto);
+                adminDebugLog('🔍 Upload photo.url:', uploadedPhoto.url);
+                adminDebugLog('🔍 Upload photo.photoType:', uploadedPhoto.photoType);
 
                 // Update global user state immediately with new avatar
+                adminDebugLog('🔍 Upload BEFORE - window.currentUser:', window.currentUser);
+                adminDebugLog('🔍 Upload BEFORE - window.currentUser.avatar:', window.currentUser?.avatar);
+
                 if (window.currentUser) {
-                    window.currentUser.avatar = response.data.photos[0].url;
+                    window.currentUser.avatar = uploadedPhoto.url;
+                    adminDebugLog('✅ Upload UPDATED window.currentUser.avatar to:', window.currentUser.avatar);
+                } else {
+                    adminDebugLog('❌ Upload ERROR: window.currentUser is null/undefined!');
                 }
 
                 // Small delay to ensure database update propagates, then refresh
+                adminDebugLog('🔄 Upload scheduling profile refresh in 500ms...');
                 setTimeout(() => {
+                    adminDebugLog('🔄 Upload executing profile refresh now...');
                     this.refreshProfile('mainContent');
                 }, 500);
             } else {
+                adminDebugError('❌ Upload FAILED - API response not ok or no photos returned');
+                adminDebugError('🔍 Upload failure details:', {
+                    responseOk: response.ok,
+                    hasData: !!response.data,
+                    hasPhotos: !!response.data?.photos,
+                    photosLength: response.data?.photos?.length,
+                    fullResponse: response
+                });
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
                 alert(errorMsg);
             }
         } catch (error) {
-            adminDebugError('Upload error:', error);
+            adminDebugError('❌ Upload EXCEPTION occurred:', error);
+            adminDebugError('🔍 Upload exception details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             alert('Error uploading profile picture. Please try again.');
         }
+        adminDebugLog('=== AVATAR UPLOAD PROCESS END ===');
     }
 
     // Method to submit a quick post from the profile - NOW USES REUSABLE FUNCTION
