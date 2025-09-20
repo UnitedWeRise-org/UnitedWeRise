@@ -1017,6 +1017,9 @@ class MyProfile {
 
 
     async uploadProfilePicture(input) {
+        // IMMEDIATE console log to verify method entry
+        console.log('🚨 [IMMEDIATE] uploadProfilePicture method ENTERED with input:', input);
+
         // === COMPREHENSIVE UPLOAD PROCESS DEBUGGING ===
         adminDebugLog('AvatarUpload', '=== AVATAR UPLOAD PROCESS START ===');
         adminDebugLog('AvatarUpload', 'Upload input element', input);
