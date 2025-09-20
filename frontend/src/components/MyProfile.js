@@ -226,24 +226,11 @@ class MyProfile {
         adminDebugLog('ProfileAvatar', 'window.currentUser.avatar', window.currentUser?.avatar);
         adminDebugLog('ProfileAvatar', 'window.currentUser.avatar type', typeof window.currentUser?.avatar);
 
-        // Temporary console debug (immediate visibility)
-        console.log('🔧 [ProfileAvatar] === PROFILE AVATAR DIAGNOSTIC START ===');
-        console.log('🔧 [ProfileAvatar] renderProfile user object:', user);
-        console.log('🔧 [ProfileAvatar] user.avatar value:', user?.avatar);
-        console.log('🔧 [ProfileAvatar] user.avatar type:', typeof user?.avatar);
-        console.log('🔧 [ProfileAvatar] window.currentUser:', window.currentUser);
-        console.log('🔧 [ProfileAvatar] window.currentUser.avatar:', window.currentUser?.avatar);
-        console.log('🔧 [ProfileAvatar] window.currentUser.avatar type:', typeof window.currentUser?.avatar);
-
         // Fallback to global user state if profile doesn't have avatar
         const avatarUrl = user?.avatar || window.currentUser?.avatar;
         adminDebugLog('ProfileAvatar', 'FINAL avatar URL to display', avatarUrl);
         adminDebugLog('ProfileAvatar', 'Will show image?', !!avatarUrl);
         adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC END ===');
-
-        console.log('🔧 [ProfileAvatar] FINAL avatar URL to display:', avatarUrl);
-        console.log('🔧 [ProfileAvatar] Will show image?', !!avatarUrl);
-        console.log('🔧 [ProfileAvatar] === PROFILE AVATAR DIAGNOSTIC END ===');
 
         container.innerHTML = `
             <div class="my-profile">
@@ -320,25 +307,6 @@ class MyProfile {
 
         this.addStyles();
 
-        // Setup profile upload event listener as backup
-        setTimeout(() => {
-            const profileUploadInput = document.querySelector('.profile-upload');
-            if (profileUploadInput) {
-                console.log('🔧 [ProfileUpload] Setting up backup event listener');
-                profileUploadInput.addEventListener('change', (event) => {
-                    console.log('🔧 [ProfileUpload] File input change event triggered');
-                    console.log('🔧 [ProfileUpload] Files selected:', event.target.files.length);
-                    if (event.target.files.length > 0) {
-                        try {
-                            console.log('🔧 [ProfileUpload] Calling uploadProfilePicture...');
-                            this.uploadProfilePicture(event.target);
-                        } catch (error) {
-                            console.error('🔧 [ProfileUpload] Error calling uploadProfilePicture:', error);
-                        }
-                    }
-                });
-            }
-        }, 100);
 
         // Load data for the initial tab if needed
         if (this.currentTab === 'activity') {
@@ -1017,24 +985,10 @@ class MyProfile {
 
 
     async uploadProfilePicture(input) {
-        // IMMEDIATE console log to verify method entry
-        console.log('🚨 [IMMEDIATE] uploadProfilePicture method ENTERED with input:', input);
-
-        // === COMPREHENSIVE UPLOAD PROCESS DEBUGGING ===
-        console.log('🔧 [AvatarUpload] === AVATAR UPLOAD PROCESS START ===');
-        console.log('🔧 [AvatarUpload] Upload input element:', input);
-        console.log('🔧 [AvatarUpload] Upload input.files:', input.files);
-
         const file = input.files[0];
         if (!file) {
-            console.log('🔧 [AvatarUpload] NO FILE SELECTED - returning early');
             return;
         }
-
-        console.log('🔧 [AvatarUpload] Upload selected file:', file);
-        console.log('🔧 [AvatarUpload] Upload file.name:', file.name);
-        console.log('🔧 [AvatarUpload] Upload file.type:', file.type);
-        console.log('🔧 [AvatarUpload] Upload file.size:', file.size);
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -1048,18 +1002,10 @@ class MyProfile {
             return;
         }
 
-        console.log('🔧 [AvatarUpload] ✅ Upload file validation passed');
-        console.log('🔧 [AvatarUpload] 🔍 Upload creating FormData...');
         const formData = new FormData();
         formData.append('photos', file); // Backend expects 'photos' array
         formData.append('photoType', 'AVATAR'); // Must match PhotoType enum
         formData.append('purpose', 'PERSONAL'); // Required field
-
-        console.log('🔧 [AvatarUpload] 🔍 Upload FormData entries:');
-        for (let [key, value] of formData.entries()) {
-            console.log('🔧 [AvatarUpload]   ' + key + ':', value);
-        }
-        console.log('🔧 [AvatarUpload] 🚀 Upload making API call to /photos/upload...');
 
         try {
             const response = await window.apiCall('/photos/upload', {
@@ -1068,57 +1014,26 @@ class MyProfile {
                 skipContentType: true // Let browser set multipart boundary
             });
 
-            console.log('🔧 [AvatarUpload] 🔍 Upload API response:', response);
-            console.log('🔧 [AvatarUpload] 🔍 Upload response.ok:', response.ok);
-            console.log('🔧 [AvatarUpload] 🔍 Upload response.data:', response.data);
-            console.log('🔧 [AvatarUpload] 🔍 Upload response.data.photos:', response.data?.photos);
-
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 const uploadedPhoto = response.data.photos[0];
-                console.log('🔧 [AvatarUpload] ✅ Profile picture uploaded successfully!');
-                console.log('🔧 [AvatarUpload] 🔍 Upload uploaded photo object:', uploadedPhoto);
-                console.log('🔧 [AvatarUpload] 🔍 Upload photo.url:', uploadedPhoto.url);
-                console.log('🔧 [AvatarUpload] 🔍 Upload photo.photoType:', uploadedPhoto.photoType);
 
                 // Update global user state immediately with new avatar
-                console.log('🔧 [AvatarUpload] 🔍 Upload BEFORE - window.currentUser:', window.currentUser);
-                console.log('🔧 [AvatarUpload] 🔍 Upload BEFORE - window.currentUser.avatar:', window.currentUser?.avatar);
-
                 if (window.currentUser) {
                     window.currentUser.avatar = uploadedPhoto.url;
-                    console.log('🔧 [AvatarUpload] ✅ Upload UPDATED window.currentUser.avatar to:', window.currentUser.avatar);
-                } else {
-                    console.log('🔧 [AvatarUpload] ❌ Upload ERROR: window.currentUser is null/undefined!');
                 }
 
                 // Small delay to ensure database update propagates, then refresh
-                console.log('🔧 [AvatarUpload] 🔄 Upload scheduling profile refresh in 500ms...');
                 setTimeout(() => {
-                    console.log('🔧 [AvatarUpload] 🔄 Upload executing profile refresh now...');
                     this.refreshProfile('mainContent');
                 }, 500);
             } else {
-                console.error('🔧 [AvatarUpload] ❌ Upload FAILED - API response not ok or no photos returned');
-                console.error('🔧 [AvatarUpload] 🔍 Upload failure details:', {
-                    responseOk: response.ok,
-                    hasData: !!response.data,
-                    hasPhotos: !!response.data?.photos,
-                    photosLength: response.data?.photos?.length,
-                    fullResponse: response
-                });
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
                 alert(errorMsg);
             }
         } catch (error) {
-            console.error('🔧 [AvatarUpload] ❌ Upload EXCEPTION occurred:', error);
-            console.error('🔧 [AvatarUpload] 🔍 Upload exception details:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
+            console.error('Error uploading profile picture:', error);
             alert('Error uploading profile picture. Please try again.');
         }
-        console.log('🔧 [AvatarUpload] === AVATAR UPLOAD PROCESS END ===');
     }
 
     // Method to submit a quick post from the profile - NOW USES REUSABLE FUNCTION

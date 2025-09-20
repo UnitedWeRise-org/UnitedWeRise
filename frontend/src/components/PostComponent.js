@@ -42,15 +42,6 @@ class PostComponent {
         adminDebugLog('PostAvatar', 'Avatar URL to use', post.author?.avatar || `placeholder with ${authorInitial}`);
         adminDebugLog('PostAvatar', '=== POST AVATAR DIAGNOSTIC END ===');
 
-        // Temporary console debug (immediate visibility)
-        console.log('🔧 [PostAvatar] === POST AVATAR DIAGNOSTIC START ===');
-        console.log('🔧 [PostAvatar] renderPost full post object:', post);
-        console.log('🔧 [PostAvatar] post.author object:', post.author);
-        console.log('🔧 [PostAvatar] post.author.avatar value:', post.author?.avatar);
-        console.log('🔧 [PostAvatar] post.author.avatar type:', typeof post.author?.avatar);
-        console.log('🔧 [PostAvatar] Will show avatar image?', !!post.author?.avatar);
-        console.log('🔧 [PostAvatar] Avatar URL to use:', post.author?.avatar || `placeholder with ${authorInitial}`);
-        console.log('🔧 [PostAvatar] === POST AVATAR DIAGNOSTIC END ===');
 
         return `
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">

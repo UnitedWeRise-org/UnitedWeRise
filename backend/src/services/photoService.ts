@@ -99,30 +99,19 @@ export class PhotoService {
     options: PhotoUploadOptions
   ): Promise<PhotoProcessingResult> {
     try {
-      console.log(`🔧 [Backend] === SINGLE UPLOAD START for ${file.originalname} ===`);
-      console.log(`🔧 [Backend] Processing photo upload for user ${options.userId} (${options.photoType})`);
+      console.log(`📸 Processing photo upload for user ${options.userId} (${options.photoType})`);
 
       // Validate user permissions
-      console.log(`🔧 [Backend] 🔍 Step 1: Validating user permissions...`);
       await this.validateUserPermissions(options.userId, options.candidateId);
-      console.log(`🔧 [Backend] ✅ Step 1: User permissions validated`);
 
       // Check account storage limit
-      console.log(`🔧 [Backend] 🔍 Step 2: Checking storage limit...`);
       await this.validateStorageLimit(options.userId, file.size);
-      console.log(`🔧 [Backend] ✅ Step 2: Storage limit validated`);
 
       // Perform content moderation
-      console.log(`🔧 [Backend] 🔍 Step 3: Performing content moderation...`);
       const moderationResult = await this.performContentModeration(file, options.photoType);
-      console.log(`🔧 [Backend] 📊 Moderation result:`, moderationResult);
       if (!moderationResult.approved) {
-        console.log(`🔧 [Backend] ❌ Step 3: Content moderation failed: ${moderationResult.reason}`);
         throw new Error(moderationResult.reason || 'Content moderation failed');
       }
-      console.log(`🔧 [Backend] ✅ Step 3: Content moderation passed`);
-
-      console.log(`🔧 [Backend] 🔍 Step 4: Starting image processing...`);
 
       // Generate unique filenames
       const fileExtension = path.extname(file.originalname);
@@ -210,16 +199,6 @@ export class PhotoService {
         thumbnailUrl = `/uploads/thumbnails/${thumbnailFilename}`;
       }
 
-      console.log(`🔧 [Backend] 🔍 Step 6: Saving photo to database...`);
-      console.log(`🔧 [Backend] 📊 Photo data to save:`, {
-        userId: options.userId,
-        photoType: options.photoType,
-        purpose: options.purpose,
-        filename: file.originalname,
-        url: photoUrl,
-        thumbnailUrl: thumbnailUrl
-      });
-
       // Save to database
       const photo = await prisma.photo.create({
         data: {
@@ -242,17 +221,12 @@ export class PhotoService {
         }
       });
 
-      console.log(`🔧 [Backend] ✅ Step 6: Photo saved to database with ID: ${photo.id}`);
-
       // Update user/candidate avatar if this is an avatar photo
       if (options.photoType === 'AVATAR') {
-        console.log(`🔧 [Backend] 🔍 Step 7: Updating profile avatar...`);
         await this.updateProfileAvatar(options.userId, photo.url, options.candidateId);
-        console.log(`🔧 [Backend] ✅ Step 7: Profile avatar updated`);
       }
 
-      console.log(`🔧 [Backend] === SINGLE UPLOAD SUCCESS for ${file.originalname} ===`);
-      console.log(`🔧 [Backend] ✅ Photo uploaded successfully: ${photo.id}`);
+      console.log(`✅ Photo uploaded successfully: ${photo.id}`);
 
       return {
         id: photo.id,
@@ -265,9 +239,7 @@ export class PhotoService {
       };
 
     } catch (error) {
-      console.error(`🔧 [Backend] === SINGLE UPLOAD FAILED for ${file.originalname} ===`);
-      console.error(`🔧 [Backend] ❌ Photo upload failed:`, error);
-      console.error(`🔧 [Backend] ❌ Error type:`, error instanceof Error ? error.constructor.name : typeof error);
+      console.error('Photo upload failed:', error);
       throw error;
     }
   }
@@ -279,35 +251,18 @@ export class PhotoService {
     files: Express.Multer.File[],
     options: PhotoUploadOptions
   ): Promise<PhotoProcessingResult[]> {
-    console.log(`🔧 [Backend] === UPLOAD MULTIPLE PHOTOS START ===`);
-    console.log(`🔧 [Backend] Received ${files.length} files for user ${options.userId}`);
-    console.log(`🔧 [Backend] Photo type: ${options.photoType}, Purpose: ${options.purpose}`);
-
     const results: PhotoProcessingResult[] = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      console.log(`🔧 [Backend] Processing file ${i + 1}/${files.length}: ${file.originalname}`);
-      console.log(`🔧 [Backend] File size: ${file.size}, MIME type: ${file.mimetype}`);
-
+    for (const file of files) {
       try {
-        console.log(`🔧 [Backend] ✅ Starting uploadPhoto for ${file.originalname}...`);
         const result = await this.uploadPhoto(file, options);
-        console.log(`🔧 [Backend] ✅ Successfully uploaded ${file.originalname}:`, result);
         results.push(result);
       } catch (error) {
-        console.error(`🔧 [Backend] ❌ Failed to upload file ${file.originalname}:`, error);
-        console.error(`🔧 [Backend] ❌ Error details:`, {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : 'Unknown'
-        });
+        console.error(`Failed to upload file ${file.originalname}:`, error);
         // Continue with other files
       }
     }
 
-    console.log(`🔧 [Backend] === UPLOAD MULTIPLE PHOTOS END ===`);
-    console.log(`🔧 [Backend] Successfully processed ${results.length}/${files.length} files`);
     return results;
   }
 
