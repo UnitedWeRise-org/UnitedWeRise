@@ -215,15 +215,23 @@ class MyProfile {
 
     renderProfile(container) {
         const user = this.userProfile;
-        
+
+        // Debug the user object to see what's actually in it
+        adminDebugLog('🔍 MyProfile renderProfile user object:', user);
+        adminDebugLog('🔍 MyProfile user.avatar value:', user?.avatar);
+
+        // Fallback to global user state if profile doesn't have avatar
+        const avatarUrl = user?.avatar || window.currentUser?.avatar;
+        adminDebugLog('🔍 MyProfile final avatar URL:', avatarUrl);
+
         container.innerHTML = `
             <div class="my-profile">
                 <!-- Profile Header -->
                 <div class="profile-header">
                     <div class="profile-picture-container">
                         <div class="profile-picture">
-                            ${user.avatar ? 
-                                `<img src="${user.avatar}" alt="Profile Picture" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">` : 
+                            ${avatarUrl ?
+                                `<img src="${avatarUrl}" alt="Profile Picture" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">` :
                                 `<div class="profile-placeholder" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">
                                     <span style="font-size: 3rem;">👤</span>
                                     <p>Click to upload photo</p>
@@ -231,7 +239,7 @@ class MyProfile {
                             }
                             <input type="file" class="profile-upload" accept="image/*" style="display: none;" onchange="window.myProfile.uploadProfilePicture(this)">
                         </div>
-                        ${user.avatar ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
+                        ${avatarUrl ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
                     </div>
                     
                     <div class="profile-info">
