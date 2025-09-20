@@ -448,14 +448,14 @@ function showMobileDonate() {
 
 function showMobileProfile() {
     try {
-        if (typeof showMyProfile === 'function') {
-            showMyProfile();
-        } else if (typeof window.showMyProfile === 'function') {
+        if (typeof showProfile === 'function') {
+            showProfile();
+        } else if (typeof window.showProfile === 'function') {
             // Try window scope
-            window.showMyProfile();
-        } else if (typeof toggleMyProfile === 'function') {
+            window.showProfile();
+        } else if (typeof toggleProfile === 'function') {
             // Try alternative function
-            toggleMyProfile();
+            toggleProfile();
         } else {
             showTemporaryView('Profile', 'Your profile is loading. Please wait.');
             console.warn('Profile functions not available');

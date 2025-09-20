@@ -1,11 +1,11 @@
 /**
- * My Profile Component
+ * Profile Component
  * Created: August 10, 2025
- * Purpose: Display user profile in main content area with tabs for different sections
+ * Purpose: Display user profiles in main content area with tabs for different sections
  * Author: Claude Code Assistant
  */
 
-class MyProfile {
+class Profile {
     constructor() {
         this.currentTab = 'activity'; // Default to activity tab
         this.userPosts = [];
@@ -165,8 +165,8 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
-                adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
-                adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
+                adminDebugLog('🔍 Profile: User data loaded:', this.userProfile);
+                adminDebugLog('🔍 Profile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
@@ -200,8 +200,8 @@ class MyProfile {
 
             if (profileResponse.ok) {
                 this.userProfile = profileResponse.data.user;
-                adminDebugLog('🔍 MyProfile: User data loaded:', this.userProfile);
-                adminDebugLog('🔍 MyProfile: candidateProfile:', this.userProfile?.candidateProfile);
+                adminDebugLog('🔍 Profile: User data loaded:', this.userProfile);
+                adminDebugLog('🔍 Profile: candidateProfile:', this.userProfile?.candidateProfile);
                 this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
                 this.renderProfile(container);
             } else {
@@ -245,7 +245,7 @@ class MyProfile {
                                     <p>Click to upload photo</p>
                                 </div>`
                             }
-                            <input type="file" class="profile-upload" accept="image/*" style="display: none;" onchange="window.myProfile.uploadProfilePicture(this)">
+                            <input type="file" class="profile-upload" accept="image/*" style="display: none;" onchange="window.profile.uploadProfilePicture(this)">
                         </div>
                         ${avatarUrl ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
                     </div>
@@ -274,26 +274,26 @@ class MyProfile {
 
                 <!-- Tab Navigation -->
                 <div class="profile-tabs">
-                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" onclick="window.myProfile.switchTab('activity')">
+                    <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" onclick="window.profile.switchTab('activity')">
                         My Activity
                     </button>
-                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.myProfile.switchTab('photos')">
+                    <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.profile.switchTab('photos')">
                         Photos
                     </button>
-                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" onclick="window.myProfile.switchTab('demographics')">
+                    <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" onclick="window.profile.switchTab('demographics')">
                         Demographics
                     </button>
-                    <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.myProfile.switchTab('political')">
+                    <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.profile.switchTab('political')">
                         Political Profile
                     </button>
                     ${user.candidateProfile ? `
                         <!-- Policy Platform moved to Candidate Dashboard -->
-                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.myProfile.switchTab('messages')" id="messagesTab">
+                        <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.profile.switchTab('messages')" id="messagesTab">
                             💬 Admin Messages
                             <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
                         </button>
                     ` : ''}
-                    <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.myProfile.switchTab('settings')">
+                    <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.profile.switchTab('settings')">
                         Settings
                     </button>
                 </div>
@@ -359,42 +359,42 @@ class MyProfile {
                     <div class="filter-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('POST_CREATED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)">
                             📝 Posts Created
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('POST_EDITED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)">
                             ✏️ Posts Edited
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('POST_DELETED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)">
                             🗑️ Posts Deleted
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_CREATED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)">
                             💬 Comments
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_EDITED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)">
                             ✏️ Comments Edited
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('COMMENT_DELETED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)">
                             🗑️ Comments Deleted
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('LIKE_ADDED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)">
                             ❤️ Likes
                         </label>
                         <label style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
-                                   onchange="window.myProfile.toggleActivityFilter('FOLLOW_ADDED', this.checked)">
+                                   onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)">
                             👥 Follows
                         </label>
                     </div>
@@ -405,9 +405,9 @@ class MyProfile {
                                value="${this.activitySearchQuery}"
                                autocomplete="off" autocapitalize="off" spellcheck="false"
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
-                               onkeyup="if(event.key==='Enter') window.myProfile.searchActivities(this.value)"
-                               oninput="window.myProfile.activitySearchQuery = this.value">
-                        <button onclick="window.myProfile.searchActivities(document.getElementById('activitySearch').value)"
+                               onkeyup="if(event.key==='Enter') window.profile.searchActivities(this.value)"
+                               oninput="window.profile.activitySearchQuery = this.value">
+                        <button onclick="window.profile.searchActivities(document.getElementById('activitySearch').value)"
                                 style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
                             Search
                         </button>
@@ -421,7 +421,7 @@ class MyProfile {
 
                 <!-- Load More Button -->
                 <div class="load-more-container" style="text-align: center; margin-top: 2rem;">
-                    <button onclick="window.myProfile.loadMoreActivities()"
+                    <button onclick="window.profile.loadMoreActivities()"
                             class="btn btn-secondary" id="loadMoreActivities"
                             style="display: ${this.userActivities.length >= this.activityLimit ? 'inline-block' : 'none'}">
                         Load More Activity
@@ -442,7 +442,7 @@ class MyProfile {
                     <div class="quick-post-composer">
                         <textarea id="quickPostContent" placeholder="What's on your mind?" rows="4"></textarea>
                         <div style="margin-top: 1rem;">
-                            <button onclick="window.myProfile.submitQuickPost()" class="btn">Create Post</button>
+                            <button onclick="window.profile.submitQuickPost()" class="btn">Create Post</button>
                         </div>
                     </div>
                 </div>
@@ -499,8 +499,8 @@ class MyProfile {
                 <div class="post-header">
                     <span class="post-date">${timeAgo}</span>
                     <div class="post-menu">
-                        <button onclick="window.myProfile.editPost('${post.id}')">Edit</button>
-                        <button onclick="window.myProfile.deletePost('${post.id}')" class="delete-btn">Delete</button>
+                        <button onclick="window.profile.editPost('${post.id}')">Edit</button>
+                        <button onclick="window.profile.deletePost('${post.id}')" class="delete-btn">Delete</button>
                     </div>
                 </div>
                 <div class="post-content">${post.content}</div>
@@ -587,7 +587,7 @@ class MyProfile {
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Personal Information</h3>
-                        <button onclick="window.myProfile.editDemographics()" class="edit-btn">Edit</button>
+                        <button onclick="window.profile.editDemographics()" class="edit-btn">Edit</button>
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
@@ -620,7 +620,7 @@ class MyProfile {
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Address</h3>
-                        <button onclick="window.myProfile.editAddress()" class="edit-btn">Edit</button>
+                        <button onclick="window.profile.editAddress()" class="edit-btn">Edit</button>
                     </div>
                     <div class="info-grid">
                         <div class="info-item full-width">
@@ -660,7 +660,7 @@ class MyProfile {
                 <div class="political-section">
                     <div class="section-header">
                         <h3>Political Profile</h3>
-                        <button onclick="window.myProfile.editPolitical()" class="edit-btn">Edit</button>
+                        <button onclick="window.profile.editPolitical()" class="edit-btn">Edit</button>
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
@@ -699,11 +699,11 @@ class MyProfile {
                         <div class="verification-items">
                             <div class="verification-item">
                                 <span>Email ${user.emailVerified ? '✅' : '❌'}</span>
-                                ${!user.emailVerified ? '<button onclick="window.myProfile.resendEmailVerification()" class="verify-btn">Verify Email</button>' : ''}
+                                ${!user.emailVerified ? '<button onclick="window.profile.resendEmailVerification()" class="verify-btn">Verify Email</button>' : ''}
                             </div>
                             <div class="verification-item">
                                 <span>Phone ${user.phoneVerified ? '✅' : '❌'}</span>
-                                ${!user.phoneVerified ? '<button onclick="window.myProfile.verifyPhone()" class="verify-btn">Verify Phone</button>' : ''}
+                                ${!user.phoneVerified ? '<button onclick="window.profile.verifyPhone()" class="verify-btn">Verify Phone</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -718,7 +718,7 @@ class MyProfile {
                 <div class="messaging-section">
                     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #ddd;">
                         <h3 style="margin: 0;">💬 Messages with Site Admins</h3>
-                        <button onclick="window.myProfile.refreshMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Refresh</button>
+                        <button onclick="window.profile.refreshMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Refresh</button>
                     </div>
                     
                     <div id="candidateMessagesContainer" style="height: 400px; overflow-y: auto; padding: 1rem; background: #fafafa;">
@@ -755,7 +755,7 @@ class MyProfile {
                     
                     <div class="settings-group">
                         <h4>Security</h4>
-                        <button onclick="window.myProfile.changePassword()" class="btn">Change Password</button>
+                        <button onclick="window.profile.changePassword()" class="btn">Change Password</button>
                         <div class="totp-section">
                             <div id="totpStatus" class="totp-status">
                                 <div class="loading">Loading 2FA status...</div>
@@ -764,14 +764,14 @@ class MyProfile {
                                 <!-- TOTP controls will be populated here -->
                             </div>
                         </div>
-                        <button onclick="window.myProfile.downloadData()" class="btn">Download My Data</button>
+                        <button onclick="window.profile.downloadData()" class="btn">Download My Data</button>
                     </div>
 
                     <div class="settings-group">
                         <h4>Privacy</h4>
                         <label class="setting-item">
                             <input type="checkbox" ${this.userProfile.isProfilePublic ? 'checked' : ''} 
-                                   onchange="window.myProfile.toggleProfileVisibility(this.checked)">
+                                   onchange="window.profile.toggleProfileVisibility(this.checked)">
                             <span>Make my profile public</span>
                         </label>
                     </div>
@@ -786,7 +786,7 @@ class MyProfile {
                                 <input type="checkbox" 
                                        id="browserNotificationsEnabled"
                                        ${this.getNotificationPreference('browserNotifications') ? 'checked' : ''} 
-                                       onchange="window.myProfile.updateNotificationPreference('browserNotifications', this.checked)">
+                                       onchange="window.profile.updateNotificationPreference('browserNotifications', this.checked)">
                                 <span>Enable browser notifications</span>
                             </label>
                             
@@ -795,7 +795,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="browserNotifyNewMessages"
                                            ${this.getNotificationPreference('browserNotifyNewMessages') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyNewMessages', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('browserNotifyNewMessages', this.checked)"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>New messages</span>
                                 </label>
@@ -804,7 +804,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="browserNotifyLikes"
                                            ${this.getNotificationPreference('browserNotifyLikes') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyLikes', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('browserNotifyLikes', this.checked)"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>Likes and reactions</span>
                                 </label>
@@ -813,7 +813,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="browserNotifyComments"
                                            ${this.getNotificationPreference('browserNotifyComments') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('browserNotifyComments', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('browserNotifyComments', this.checked)"
                                            ${!this.getNotificationPreference('browserNotifications') ? 'disabled' : ''}>
                                     <span>Comments on my posts</span>
                                 </label>
@@ -824,7 +824,7 @@ class MyProfile {
                                 <input type="checkbox" 
                                        id="emailNotificationsEnabled"
                                        ${this.getNotificationPreference('emailNotifications') ? 'checked' : ''} 
-                                       onchange="window.myProfile.updateNotificationPreference('emailNotifications', this.checked)">
+                                       onchange="window.profile.updateNotificationPreference('emailNotifications', this.checked)">
                                 <span>Enable email notifications</span>
                             </label>
                             
@@ -833,7 +833,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="emailNotifyImportantMessages"
                                            ${this.getNotificationPreference('emailNotifyImportantMessages') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('emailNotifyImportantMessages', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('emailNotifyImportantMessages', this.checked)"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Important messages and replies</span>
                                 </label>
@@ -842,7 +842,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="emailNotifyWeeklyDigest"
                                            ${this.getNotificationPreference('emailNotifyWeeklyDigest') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('emailNotifyWeeklyDigest', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('emailNotifyWeeklyDigest', this.checked)"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Weekly activity digest</span>
                                 </label>
@@ -851,7 +851,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="emailNotifySecurityAlerts"
                                            ${this.getNotificationPreference('emailNotifySecurityAlerts') !== false ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('emailNotifySecurityAlerts', this.checked)"
+                                           onchange="window.profile.updateNotificationPreference('emailNotifySecurityAlerts', this.checked)"
                                            ${!this.getNotificationPreference('emailNotifications') ? 'disabled' : ''}>
                                     <span>Security alerts (recommended)</span>
                                 </label>
@@ -863,7 +863,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="candidateInboxNotifications"
                                            ${this.getNotificationPreference('candidateInboxNotifications') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('candidateInboxNotifications', this.checked)">
+                                           onchange="window.profile.updateNotificationPreference('candidateInboxNotifications', this.checked)">
                                     <span>Constituent messages (candidate inbox)</span>
                                 </label>
                                 
@@ -871,16 +871,16 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="candidateElectionReminders"
                                            ${this.getNotificationPreference('candidateElectionReminders') ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateNotificationPreference('candidateElectionReminders', this.checked)">
+                                           onchange="window.profile.updateNotificationPreference('candidateElectionReminders', this.checked)">
                                     <span>Filing deadlines and election reminders</span>
                                 </label>
                             </div>
                             
                             <div class="notification-controls">
-                                <button onclick="window.myProfile.requestNotificationPermission()" class="btn-secondary">
+                                <button onclick="window.profile.requestNotificationPermission()" class="btn-secondary">
                                     🔔 Grant Browser Permission
                                 </button>
-                                <button onclick="window.myProfile.testNotification()" class="btn-secondary">
+                                <button onclick="window.profile.testNotification()" class="btn-secondary">
                                     📨 Test Notification
                                 </button>
                             </div>
@@ -894,7 +894,7 @@ class MyProfile {
                                 <input type="checkbox" 
                                        id="photoTaggingEnabled"
                                        ${this.userProfile.photoTaggingEnabled !== false ? 'checked' : ''} 
-                                       onchange="window.myProfile.updateTaggingPreference('photoTaggingEnabled', this.checked)">
+                                       onchange="window.profile.updateTaggingPreference('photoTaggingEnabled', this.checked)">
                                 <span>Allow people to tag me in photos</span>
                             </label>
                             
@@ -903,7 +903,7 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="requireTagApproval"
                                            ${this.userProfile.requireTagApproval ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateTaggingPreference('requireTagApproval', this.checked)"
+                                           onchange="window.profile.updateTaggingPreference('requireTagApproval', this.checked)"
                                            ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
                                     <span>Require my approval before tags appear</span>
                                 </label>
@@ -912,14 +912,14 @@ class MyProfile {
                                     <input type="checkbox" 
                                            id="allowTagsByFriendsOnly"
                                            ${this.userProfile.allowTagsByFriendsOnly ? 'checked' : ''} 
-                                           onchange="window.myProfile.updateTaggingPreference('allowTagsByFriendsOnly', this.checked)"
+                                           onchange="window.profile.updateTaggingPreference('allowTagsByFriendsOnly', this.checked)"
                                            ${this.userProfile.photoTaggingEnabled === false ? 'disabled' : ''}>
                                     <span>Only allow friends to tag me</span>
                                 </label>
                             </div>
                             
                             <div class="pending-tags-section" id="pendingTagsSection">
-                                <button onclick="window.myProfile.viewPendingTags()" class="btn-secondary">
+                                <button onclick="window.profile.viewPendingTags()" class="btn-secondary">
                                     View Pending Tags <span class="badge" id="pendingTagsCount"></span>
                                 </button>
                             </div>
@@ -928,7 +928,7 @@ class MyProfile {
 
                     <div class="settings-group danger">
                         <h4>Danger Zone</h4>
-                        <button onclick="window.myProfile.deactivateAccount()" class="btn-danger">Deactivate Account</button>
+                        <button onclick="window.profile.deactivateAccount()" class="btn-danger">Deactivate Account</button>
                     </div>
                 </div>
             </div>
@@ -943,10 +943,10 @@ class MyProfile {
                     <div class="section-header">
                         <h3>Photo Gallery</h3>
                         <div class="photo-actions">
-                            <button onclick="window.myProfile.uploadPhotos()" class="btn">
+                            <button onclick="window.profile.uploadPhotos()" class="btn">
                                 📷 Upload Photos
                             </button>
-                            <button onclick="window.myProfile.createGallery()" class="btn-secondary">
+                            <button onclick="window.profile.createGallery()" class="btn-secondary">
                                 📁 New Gallery
                             </button>
                         </div>
@@ -968,7 +968,7 @@ class MyProfile {
 
                 <!-- Hidden upload input -->
                 <input type="file" id="bulkPhotoUpload" multiple accept="image/*,image/gif" 
-                       style="display: none;" onchange="window.myProfile.handleBulkUpload(this)">
+                       style="display: none;" onchange="window.profile.handleBulkUpload(this)">
             </div>
         `;
     }
@@ -978,7 +978,7 @@ class MyProfile {
             <div class="error-state">
                 <h2>Error</h2>
                 <p>${message}</p>
-                <button onclick="window.myProfile.render('mainContent')" class="btn">Try Again</button>
+                <button onclick="window.profile.render('mainContent')" class="btn">Try Again</button>
             </div>
         `;
     }
@@ -1212,7 +1212,7 @@ class MyProfile {
                         <input type="text" id="editZipCode" value="${user.zipCode || ''}" placeholder="12345" maxlength="5">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="window.myProfile.saveAddress()" class="btn" style="background: #4b5c09;">Save Address</button>
+                        <button onclick="window.profile.saveAddress()" class="btn" style="background: #4b5c09;">Save Address</button>
                         <button onclick="this.closest('.modal').remove()" class="btn" style="background: #666;">Cancel</button>
                     </div>
                 </div>
@@ -1409,10 +1409,10 @@ class MyProfile {
             
             totpControls.innerHTML = `
                 <div class="totp-actions">
-                    <button onclick="window.myProfile.regenerateBackupCodes()" class="btn-secondary">
+                    <button onclick="window.profile.regenerateBackupCodes()" class="btn-secondary">
                         Generate New Backup Codes
                     </button>
-                    <button onclick="window.myProfile.disableTOTP()" class="btn-danger">
+                    <button onclick="window.profile.disableTOTP()" class="btn-danger">
                         Disable 2FA
                     </button>
                     <div class="backup-codes-info">
@@ -1430,7 +1430,7 @@ class MyProfile {
             
             totpControls.innerHTML = `
                 <div class="totp-actions">
-                    <button onclick="window.myProfile.setupTOTP()" class="btn">
+                    <button onclick="window.profile.setupTOTP()" class="btn">
                         🔒 Enable Two-Factor Authentication
                     </button>
                     <div class="totp-info">
@@ -1450,7 +1450,7 @@ class MyProfile {
                 <div class="totp-error">
                     <span class="totp-icon">⚠️</span>
                     <span>${message}</span>
-                    <button onclick="window.myProfile.loadTOTPStatus()" class="btn-small">Retry</button>
+                    <button onclick="window.profile.loadTOTPStatus()" class="btn-small">Retry</button>
                 </div>
             `;
         }
@@ -1571,7 +1571,7 @@ class MyProfile {
                            style="width: 100%; padding: 10px; font-size: 18px; text-align: center; border: 2px solid #ddd; border-radius: 5px; margin-bottom: 15px;"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     <div style="text-align: center;">
-                        <button onclick="window.myProfile.verifyTOTPSetup()" 
+                        <button onclick="window.profile.verifyTOTPSetup()" 
                                 style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
                             Verify & Enable 2FA
                         </button>
@@ -1666,7 +1666,7 @@ class MyProfile {
                         ${backupCodes.map(code => `<div style="padding: 3px 0; font-size: 14px;">${code}</div>`).join('')}
                     </div>
                     <div style="text-align: center; margin-top: 20px;">
-                        <button onclick="window.myProfile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" 
+                        <button onclick="window.profile.copyBackupCodes(${JSON.stringify(backupCodes).replace(/"/g, '&quot;')})" 
                                 style="background: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
                             📋 Copy to Clipboard
                         </button>
@@ -1817,7 +1817,7 @@ class MyProfile {
                 <div class="empty-state">
                     <h3>No Photos Yet</h3>
                     <p>Start building your photo gallery by uploading your first photos!</p>
-                    <button onclick="window.myProfile.uploadPhotos()" class="btn">Upload Photos</button>
+                    <button onclick="window.profile.uploadPhotos()" class="btn">Upload Photos</button>
                 </div>
             `;
             return;
@@ -1835,13 +1835,13 @@ class MyProfile {
                             <img src="${photo.thumbnailUrl || photo.url}" alt="${photo.caption || photo.filename}">
                             ${photo.caption ? `<div class="photo-caption">${photo.caption}</div>` : ''}
                             <div class="photo-overlay">
-                                <button onclick="window.myProfile.setAsProfilePicture('${photo.id}')" class="photo-action">
+                                <button onclick="window.profile.setAsProfilePicture('${photo.id}')" class="photo-action">
                                     👤 Set as Profile
                                 </button>
-                                <button onclick="window.myProfile.movePhoto('${photo.id}')" class="photo-action">
+                                <button onclick="window.profile.movePhoto('${photo.id}')" class="photo-action">
                                     📁 Move
                                 </button>
-                                <button onclick="window.myProfile.deletePhoto('${photo.id}')" class="photo-action delete">
+                                <button onclick="window.profile.deletePhoto('${photo.id}')" class="photo-action delete">
                                     🗑️ Delete
                                 </button>
                             </div>
@@ -3041,10 +3041,10 @@ class MyProfile {
                                     <small>${this.getTimeAgo(new Date(tag.createdAt))}</small>
                                 </div>
                                 <div class="pending-tag-actions">
-                                    <button class="approve-btn" onclick="window.myProfile.respondToTag('${tag.id}', true)">
+                                    <button class="approve-btn" onclick="window.profile.respondToTag('${tag.id}', true)">
                                         ✓ Approve
                                     </button>
-                                    <button class="decline-btn" onclick="window.myProfile.respondToTag('${tag.id}', false)">
+                                    <button class="decline-btn" onclick="window.profile.respondToTag('${tag.id}', false)">
                                         ✗ Decline
                                     </button>
                                 </div>
@@ -3158,7 +3158,7 @@ class MyProfile {
                     <div style="text-align: center; color: #dc3545; margin: 2rem 0;">
                         <p>❌ Error loading messages</p>
                         <p style="font-size: 0.875rem;">${error.message}</p>
-                        <button onclick="window.myProfile.loadCandidateMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Try Again</button>
+                        <button onclick="window.profile.loadCandidateMessages()" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Try Again</button>
                     </div>
                 `;
             }
@@ -3641,7 +3641,7 @@ class MyProfile {
                     <div class="error-state" style="text-align: center; padding: 2rem; color: #dc3545;">
                         <h3>Unable to load activities</h3>
                         <p>${error.message}</p>
-                        <button onclick="window.myProfile.loadUserActivities(true)" class="btn">Try Again</button>
+                        <button onclick="window.profile.loadUserActivities(true)" class="btn">Try Again</button>
                     </div>
                 `;
             }
@@ -3733,7 +3733,7 @@ class MyProfile {
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Content preview not available'}"
                             </div>
-                            <button onclick="window.myProfile.viewDeletedContent('post', '${activity.targetId}')"
+                            <button onclick="window.profile.viewDeletedContent('post', '${activity.targetId}')"
                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                                 View Deleted Content
                             </button>
@@ -3773,7 +3773,7 @@ class MyProfile {
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Comment preview not available'}"
                             </div>
-                            <button onclick="window.myProfile.viewDeletedContent('comment', '${activity.targetId}')"
+                            <button onclick="window.profile.viewDeletedContent('comment', '${activity.targetId}')"
                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
                                 View Deleted Comment
                             </button>
@@ -3873,17 +3873,17 @@ class MyProfile {
 }
 
 // Initialize global instance
-window.myProfile = new MyProfile();
+window.profile = new Profile();
 
-// Log that MyProfile component is loaded
+// Log that Profile component is loaded
 if (typeof adminDebugLog === 'function') {
-    adminDebugLog('MyProfile', '✅ MyProfile component loaded and initialized');
+    adminDebugLog('Profile', '✅ Profile component loaded and initialized');
 } else {
-    console.log('✅ MyProfile component loaded and initialized');
+    console.log('✅ Profile component loaded and initialized');
 }
 
 // Profile integration functions for modular system
-function showMyProfile() {
+function showProfile() {
     if (!window.currentUser) {
         document.getElementById('mainContent').innerHTML = `
             <div style="text-align: center; padding: 3rem;">
@@ -3901,12 +3901,12 @@ function showMyProfile() {
     if (profilePanel) profilePanel.style.display = 'none';
     if (messagesContainer) messagesContainer.style.display = 'none';
 
-    window.myProfile.render('mainContent');
+    window.profile.render('mainContent');
 }
 
-function toggleMyProfile() {
+function toggleProfile() {
     if (!window.currentUser) {
-        showMyProfile(); // Will show login prompt
+        showProfile(); // Will show login prompt
         return;
     }
 
@@ -3915,12 +3915,12 @@ function toggleMyProfile() {
     if (profilePanel && profilePanel.style.display === 'block') {
         profilePanel.style.display = 'none';
     } else {
-        showMyProfile();
+        showProfile();
     }
 }
 
 // Export functions for global use and module system
 if (typeof window !== 'undefined') {
-    window.showMyProfile = showMyProfile;
-    window.toggleMyProfile = toggleMyProfile;
+    window.showProfile = showProfile;
+    window.toggleProfile = toggleProfile;
 }

@@ -149,7 +149,7 @@
     <script src="src/components/ContentReporting.js"></script>
     <script src="src/components/CandidateSystem.js"></script>
     <script src="src/components/PostComponent.js"></script>
-    <script src="src/components/MyProfile.js"></script>
+    <script src="src/components/Profile.js"></script>
     <script src="src/integrations/backend-integration.js"></script>
     <script src="src/integrations/candidate-system-integration.js"></script>
     <script src="src/integrations/officials-system-integration.js"></script>
@@ -668,7 +668,7 @@
                 <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
                 <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
-                <div class="thumb" onclick="window.toggleMyProfile ? window.toggleMyProfile() : alert('Profile system loading...')" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
+                <div class="thumb" onclick="window.toggleProfile ? window.toggleProfile() : alert('Profile system loading...')" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
                 <div class="thumb logout-thumb" onclick="logout()" title="Logout" id="logoutThumb" style="display: none;">
@@ -3939,7 +3939,7 @@
         // Profile Functions - Updated to use main content area
         function toggleProfile() {
             // Use the new My Profile component instead of the old side panel
-            showMyProfile();
+            showProfile();
         }
 
 
@@ -3971,7 +3971,7 @@
                 }
             }
         }
-        window.toggleMyProfile = toggleMyProfile; // Make globally accessible
+        window.toggleProfile = toggleProfile; // Make globally accessible
 
         // Toggle function for My Feed - shows/hides feed window in main content area
         function toggleMyFeed() {
@@ -6350,8 +6350,8 @@
                 `;
 
                 // Load user's profile using the MyProfile component
-                if (window.MyProfile) {
-                    await window.MyProfile.showUserProfile(userId);
+                if (window.Profile) {
+                    await window.Profile.showUserProfile(userId);
                 } else {
                     // Fallback to basic profile view
                     await openUserFeed(userId, username);
@@ -7787,7 +7787,7 @@
                 case 'ADMIN_MESSAGE':
                     // Open My Profile on Messages tab
                     if (window.myProfile) {
-                        showMyProfile();
+                        showProfile();
                         setTimeout(() => {
                             window.myProfile.switchTab('messages');
                         }, 100);

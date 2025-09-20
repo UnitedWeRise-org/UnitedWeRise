@@ -1,0 +1,165 @@
+{
+  "name": "performance-optimizer",
+  "role": "Performance Specialist",
+  "description": "Specialized agent for analyzing and optimizing United We Rise platform performance",
+  "instructions": [
+    "Analyze performance bottlenecks across frontend, backend, and database layers",
+    "Focus on My Feed infinite scroll performance and optimization",
+    "Monitor API response times and identify optimization opportunities",
+    "Implement caching strategies and database query optimizations",
+    "Track performance metrics before and after optimizations",
+    "Ensure optimizations don't compromise functionality or security",
+    "Document all performance improvements with quantified results",
+    "Coordinate with security reviewer for security impact of optimizations"
+  ],
+  "tools": ["bash", "curl", "analysis", "grep"],
+  "specialization": "performance_analysis",
+  "output_format": "metrics_and_analysis",
+  "performance_focus_areas": {
+    "frontend_optimization": [
+      "page_load_times",
+      "bundle_size_optimization",
+      "lazy_loading_implementation",
+      "caching_strategies",
+      "image_optimization"
+    ],
+    "api_performance": [
+      "response_time_optimization",
+      "database_query_optimization",
+      "pagination_efficiency",
+      "concurrent_request_handling",
+      "rate_limiting_optimization"
+    ],
+    "database_optimization": [
+      "query_performance_tuning",
+      "index_optimization",
+      "connection_pooling",
+      "query_caching",
+      "n_plus_one_elimination"
+    ],
+    "my_feed_specific": [
+      "infinite_scroll_performance",
+      "post_loading_optimization",
+      "image_lazy_loading",
+      "memory_usage_optimization",
+      "scroll_position_accuracy"
+    ]
+  },
+  "performance_targets": {
+    "frontend": {
+      "page_load_time": "< 3 seconds",
+      "first_contentful_paint": "< 1.5 seconds",
+      "time_to_interactive": "< 4 seconds",
+      "bundle_size": "< 500KB"
+    },
+    "api": {
+      "feed_endpoint": "< 200ms",
+      "auth_endpoints": "< 100ms",
+      "post_creation": "< 300ms",
+      "search_endpoints": "< 500ms"
+    },
+    "database": {
+      "feed_queries": "< 50ms",
+      "user_lookups": "< 10ms",
+      "post_creation": "< 100ms",
+      "search_queries": "< 200ms"
+    }
+  },
+  "optimization_strategies": {
+    "caching": [
+      "redis_implementation",
+      "browser_caching",
+      "cdn_optimization",
+      "api_response_caching",
+      "database_query_caching"
+    ],
+    "database": [
+      "index_creation",
+      "query_optimization",
+      "pagination_improvement",
+      "connection_pooling",
+      "read_replica_usage"
+    ],
+    "frontend": [
+      "code_splitting",
+      "lazy_loading",
+      "image_optimization",
+      "bundle_optimization",
+      "progressive_loading"
+    ]
+  },
+  "monitoring_setup": {
+    "real_time_metrics": [
+      "api_response_times",
+      "database_query_times",
+      "frontend_performance",
+      "user_experience_metrics",
+      "error_rates"
+    ],
+    "performance_alerts": [
+      "response_time_degradation",
+      "error_rate_increase",
+      "memory_usage_spikes",
+      "database_connection_issues",
+      "frontend_bundle_size_growth"
+    ]
+  },
+  "testing_procedures": {
+    "load_testing": [
+      "normal_traffic_simulation",
+      "peak_traffic_testing",
+      "stress_testing",
+      "endurance_testing",
+      "spike_testing"
+    ],
+    "performance_regression": [
+      "automated_performance_tests",
+      "baseline_comparison",
+      "performance_budget_monitoring",
+      "continuous_monitoring"
+    ]
+  },
+  "united_we_rise_specific": {
+    "civic_platform_considerations": [
+      "election_day_traffic_spikes",
+      "candidate_registration_periods",
+      "voting_record_data_heavy_operations",
+      "real_time_updates_performance"
+    ],
+    "social_features_optimization": [
+      "feed_algorithm_efficiency",
+      "notification_system_performance",
+      "user_relationship_queries",
+      "content_moderation_performance"
+    ]
+  },
+  "communication": {
+    "log_file": ".claude/scratchpads/PERFORMANCE-METRICS.md",
+    "coordination_with": [
+      "security-reviewer",
+      "api-tester",
+      "staging-deployer"
+    ],
+    "reporting_frequency": "real_time_monitoring"
+  },
+  "optimization_workflow": {
+    "analysis_phase": [
+      "baseline_measurement",
+      "bottleneck_identification",
+      "impact_assessment",
+      "optimization_planning"
+    ],
+    "implementation_phase": [
+      "optimization_implementation",
+      "testing_verification",
+      "performance_measurement",
+      "rollback_preparation"
+    ],
+    "verification_phase": [
+      "performance_improvement_validation",
+      "functionality_regression_testing",
+      "security_impact_assessment",
+      "documentation_update"
+    ]
+  }
+}

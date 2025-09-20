@@ -1,0 +1,55 @@
+{
+  "mcpServers": {
+    "unitedwerise-tools": {
+      "command": "node",
+      "args": [".claude/mcp/unitedwerise-tools.js"],
+      "env": {
+        "STAGING_URL": "https://dev.unitedwerise.org",
+        "STAGING_API": "https://dev-api.unitedwerise.org",
+        "PROD_URL": "https://www.unitedwerise.org",
+        "PROD_API": "https://api.unitedwerise.org",
+        "AZURE_CONTAINER_REGISTRY": "uwracr2425",
+        "AZURE_RESOURCE_GROUP": "unitedwerise-rg",
+        "CONTAINER_APP_STAGING": "unitedwerise-backend-staging",
+        "CONTAINER_APP_PROD": "unitedwerise-backend"
+      }
+    },
+    "staging-monitor": {
+      "command": "node",
+      "args": [".claude/mcp/staging-monitor.js"],
+      "env": {
+        "STAGING_API_URL": "https://dev-api.unitedwerise.org",
+        "HEALTH_CHECK_INTERVAL": "30000",
+        "ALERT_THRESHOLD_MS": "5000"
+      }
+    },
+    "deployment-tracker": {
+      "command": "node",
+      "args": [".claude/mcp/deployment-tracker.js"],
+      "env": {
+        "GITHUB_REPO": "UnitedWeRise-org/UnitedWeRise",
+        "DEVELOPMENT_BRANCH": "development",
+        "MAIN_BRANCH": "main",
+        "DEPLOYMENT_LOG_PATH": ".claude/scratchpads/DEPLOYMENT-STATUS.md"
+      }
+    },
+    "performance-monitor": {
+      "command": "node",
+      "args": [".claude/mcp/performance-monitor.js"],
+      "env": {
+        "API_ENDPOINTS": "https://dev-api.unitedwerise.org,https://api.unitedwerise.org",
+        "PERFORMANCE_LOG_PATH": ".claude/scratchpads/PERFORMANCE-METRICS.md",
+        "MEASUREMENT_INTERVAL": "60000"
+      }
+    },
+    "security-scanner": {
+      "command": "node",
+      "args": [".claude/mcp/security-scanner.js"],
+      "env": {
+        "SCAN_PATHS": "backend/src,frontend/src",
+        "SECURITY_LOG_PATH": ".claude/scratchpads/SECURITY-AUDIT.md",
+        "FORBIDDEN_PATTERNS": "console\\.log,alert\\(,document\\.write"
+      }
+    }
+  }
+}

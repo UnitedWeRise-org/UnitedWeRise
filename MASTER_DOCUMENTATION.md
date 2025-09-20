@@ -31,42 +31,44 @@ Do NOT create separate documentation files. This consolidation was created after
 > **📋 Development History**: [CHANGELOG.md](CHANGELOG.md) - Complete timeline of features, fixes, and deployments
 > **🔧 Development Protocols**: [CLAUDE.md](CLAUDE.md) - Current workflows, deployment procedures, and standards
 
-1. [🎯 EXECUTIVE SUMMARY](#executive-summary)
-2. [🚀 CURRENT PRODUCTION STATUS](#current-production-status)
-3. [🏗️ SYSTEM ARCHITECTURE](#system-architecture)
-4. [💾 DATABASE SCHEMA](#database-schema)
-5. [🔌 API REFERENCE](#api-reference)
-6. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
-7. [🎨 UI/UX COMPONENTS](#ui-ux-components)
-8. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
-9. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
-10. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
-11. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
-12. [📊 MONITORING & ADMIN](#monitoring-admin)
-13. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
-14. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
-15. [📱 SOCIAL FEATURES](#social-features)
-16. [🏆 REPUTATION SYSTEM](#reputation-system)
-17. [📸 MEDIA & PHOTOS](#media-photos)
-18. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
-19. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
-20. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
-21. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-22. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-23. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
-24. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-25. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-26. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-27. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
-28. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
-29. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-30. [📝 DEVELOPMENT PRACTICES](#development-practices)
-31. [📜 SESSION HISTORY](#session-history)
-32. [🔮 FUTURE ROADMAP](#future-roadmap)
-33. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
-34. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
-35. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
-36. [🆘 TROUBLESHOOTING](#troubleshooting)
+1. [🚀 DEVELOPER QUICK START](#developer-quick-start)
+2. [🎯 EXECUTIVE SUMMARY](#executive-summary)
+3. [🚀 CURRENT PRODUCTION STATUS](#current-production-status)
+4. [🏗️ SYSTEM ARCHITECTURE](#system-architecture)
+5. [🔄 SYSTEM INTEGRATION WORKFLOWS](#system-integration-workflows)
+6. [💾 DATABASE SCHEMA](#database-schema)
+7. [🔌 API REFERENCE](#api-reference)
+8. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
+9. [🎨 UI/UX COMPONENTS](#ui-ux-components)
+10. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
+11. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
+12. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
+13. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
+14. [📊 MONITORING & ADMIN](#monitoring-admin)
+15. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
+16. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
+17. [📱 SOCIAL FEATURES](#social-features)
+18. [🏆 REPUTATION SYSTEM](#reputation-system)
+19. [📸 MEDIA & PHOTOS](#media-photos)
+20. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
+21. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
+22. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
+23. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
+24. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+25. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+26. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+27. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+28. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+29. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
+30. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
+31. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+32. [📝 DEVELOPMENT PRACTICES](#development-practices)
+33. [📜 SESSION HISTORY](#session-history)
+34. [🔮 FUTURE ROADMAP](#future-roadmap)
+35. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
+36. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
+37. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
+38. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -290,6 +292,253 @@ UnitedWeRise-Dev/
 │   └── Dockerfile
 └── docs/ (consolidated here)
 ```
+
+---
+
+## 🔄 SYSTEM INTEGRATION WORKFLOWS {#system-integration-workflows}
+
+> **Purpose**: Document complete end-to-end processes showing how multiple systems interact to deliver features
+
+### 📝 Complete User Registration Flow
+
+```mermaid
+graph TD
+    A[User Fills Form] --> B[Frontend Validation]
+    B --> C[POST /api/auth/register]
+    C --> D[Backend Validation]
+    D --> E{Email Exists?}
+    E -->|Yes| F[Return Error]
+    E -->|No| G[Create User Record]
+    G --> H[Generate Verification Token]
+    H --> I[Send Email via Notification System]
+    I --> J[Create Welcome Notification]
+    J --> K[WebSocket Broadcast to Admins]
+    K --> L[Log Registration Event]
+    L --> M[Return Success + User Data]
+```
+
+**Systems Involved**:
+1. **Frontend** (`frontend/index.html`): Form validation and submission
+2. **API** (`backend/src/routes/auth.ts`): Registration endpoint
+3. **Database** (`User` model): User record creation
+4. **Email Service**: Verification email sending
+5. **WebSocket** (`backend/src/services/WebSocketService.ts`): Real-time admin notification
+6. **Audit System**: Registration event logging
+
+**Error Handling**:
+- Email already exists → 409 Conflict
+- Invalid data → 400 Bad Request
+- Database error → 500 Internal Server Error
+- Email service failure → Registration succeeds with warning
+
+**Related Systems**: {#security-authentication}, {#api-reference}, {#database-schema}
+
+---
+
+### 💳 Payment Processing End-to-End
+
+```mermaid
+graph TD
+    A[User Selects Payment Option] --> B[Frontend Stripe Integration]
+    B --> C[Create Payment Intent]
+    C --> D[Stripe Processing]
+    D --> E[Webhook to Backend]
+    E --> F[POST /api/payments/webhook]
+    F --> G{Valid Signature?}
+    G -->|No| H[Reject]
+    G -->|Yes| I[Verify Payment]
+    I --> J[Update Database]
+    J --> K[Create Receipt]
+    K --> L[Email Receipt to User]
+    L --> M[Update Admin Dashboard]
+    M --> N[Notify User via WebSocket]
+```
+
+**Systems Involved**:
+1. **Frontend** (`frontend/src/js/donation-system.js`): Stripe Elements UI
+2. **Stripe API**: Payment processing
+3. **Backend Webhook** (`backend/src/routes/payments.ts`): Payment verification
+4. **Database** (`Payment`, `Receipt` models): Transaction records
+5. **Email Service**: Receipt delivery
+6. **Admin Dashboard** (`frontend/admin-dashboard.html`): Metrics update
+7. **WebSocket**: Real-time payment confirmation
+
+**Security Measures**:
+- Webhook signature verification
+- Idempotency key handling
+- PCI compliance via Stripe Elements
+- Audit trail for all transactions
+
+**Error Recovery**:
+- Webhook retry logic for failures
+- Manual receipt generation fallback
+- Admin notification of failed payments
+- Automatic refund processing
+
+**Related Systems**: {#stripe-nonprofit-payment-system}, {#api-reference}, {#monitoring-admin}
+
+---
+
+### 📝 Content Creation and Moderation Workflow
+
+```mermaid
+graph TD
+    A[User Creates Post] --> B[Upload Media to Azure]
+    B --> C[POST /api/posts]
+    C --> D[Content Validation]
+    D --> E[AI Analysis - Async]
+    E --> F[Topic Extraction]
+    F --> G[Store Post with Metadata]
+    G --> H[Check Reputation Score]
+    H --> I{Needs Moderation?}
+    I -->|Yes| J[Admin Review Queue]
+    I -->|No| K[Publish to Feeds]
+    K --> L[WebSocket Broadcast]
+    L --> M[Update Follower Feeds]
+    M --> N[Send Notifications]
+```
+
+**Systems Involved**:
+1. **Frontend** (`frontend/index.html`): Post creation UI
+2. **Azure Storage** (`backend/src/services/azureStorage.ts`): Media upload
+3. **API** (`backend/src/routes/posts.ts`): Post creation endpoint
+4. **AI Service** (`backend/src/services/aiService.ts`): Content analysis
+5. **Database** (`Post`, `Topic` models): Content storage
+6. **Reputation System** (`backend/src/services/reputationService.ts`): Visibility calculation
+7. **WebSocket**: Real-time feed updates
+8. **Notification System**: Follower alerts
+
+**AI Processing Pipeline**:
+1. Semantic analysis for topic discovery
+2. Sentiment scoring
+3. Policy violation detection
+4. Automatic tag generation
+5. Geographic relevance calculation
+
+**Moderation Triggers**:
+- Low reputation score (<100)
+- Flagged keywords detected
+- Multiple user reports
+- AI confidence < 70%
+
+**Related Systems**: {#ai-semantic-features}, {#reputation-system}, {#media-photos}, {#social-features}
+
+---
+
+### 🔐 Authentication & Session Management Flow
+
+```mermaid
+graph TD
+    A[Login Request] --> B[Validate Credentials]
+    B --> C{2FA Enabled?}
+    C -->|Yes| D[Request TOTP]
+    C -->|No| E[Generate JWT]
+    D --> F[Verify TOTP]
+    F --> E
+    E --> G[Set httpOnly Cookie]
+    G --> H[Create Session Record]
+    H --> I[Update Last Login]
+    I --> J[Log Auth Event]
+    J --> K[Return User Data]
+```
+
+**Systems Involved**:
+1. **Frontend** (`frontend/src/js/app-initialization.js`): Cookie-based auth
+2. **API** (`backend/src/routes/auth.ts`): Authentication endpoints
+3. **TOTP System** (`backend/src/routes/totp.ts`): 2FA verification
+4. **Session Manager** (`backend/src/services/sessionManager.ts`): Token management
+5. **Database** (`User` model): User verification
+6. **Audit System**: Security event logging
+
+**Session Lifecycle**:
+- Initial login → 7-day cookie
+- Admin TOTP → 24-hour session
+- Activity extension → Rolling window
+- Explicit logout → Cookie deletion + token blacklist
+
+**Related Systems**: {#security-authentication}, {#api-reference}, {#monitoring-admin}
+
+---
+
+### 🗳️ Candidate Registration & Verification Flow
+
+```mermaid
+graph TD
+    A[Candidate Registration Form] --> B[Personal Info Collection]
+    B --> C[Document Upload to Azure]
+    C --> D[Payment Processing]
+    D --> E{Payment Success?}
+    E -->|No| F[Return to Payment]
+    E -->|Yes| G[Create Registration Record]
+    G --> H[Admin Review Queue]
+    H --> I[Document Verification]
+    I --> J{Approved?}
+    J -->|No| K[Rejection Email]
+    J -->|Yes| L[Create Candidate Profile]
+    L --> M[Setup Candidate Inbox]
+    M --> N[Generate Verified Badge]
+    N --> O[Email Confirmation]
+    O --> P[Activate Campaign Features]
+```
+
+**Systems Involved**:
+1. **Frontend** (`frontend/src/integrations/candidate-system-integration.js`): Multi-step registration
+2. **Azure Storage**: Document storage
+3. **Stripe Integration**: Fee collection
+4. **Admin Dashboard** (`frontend/admin-dashboard.html`): Review interface
+5. **Database** (`CandidateRegistration`, `Candidate` models): Profile creation
+6. **Email Service**: Status notifications
+7. **WebSocket**: Real-time admin alerts
+
+**Verification Requirements**:
+- Government ID validation
+- FEC registration check (federal)
+- Address verification
+- Campaign finance compliance
+- Platform terms acceptance
+
+**Related Systems**: {#candidate-registration-admin-system}, {#stripe-nonprofit-payment-system}, {#monitoring-admin}
+
+---
+
+### 🔄 Cross-System Data Synchronization
+
+**Real-time Updates via WebSocket**:
+- Post creation → Feed updates
+- New follower → Notification dispatch
+- Payment completion → Dashboard metrics
+- Message received → Inbox counter
+- Reputation change → Visibility recalculation
+
+**Batch Processing Jobs**:
+- Hourly: Trending topic calculation
+- Daily: Reputation score updates
+- Weekly: Inactive user notifications
+- Monthly: Analytics aggregation
+
+**Cache Invalidation Strategy**:
+- User profile change → Clear user cache
+- Post interaction → Update engagement metrics
+- New follower → Refresh relationship cache
+- Payment → Update subscription status
+
+---
+
+### 📊 System Integration Best Practices
+
+1. **Async Processing**: Long operations (AI analysis, email) run in background
+2. **Graceful Degradation**: Non-critical failures don't block core functionality
+3. **Idempotency**: All operations safe to retry
+4. **Audit Logging**: Complete trail for debugging and compliance
+5. **Circuit Breakers**: Prevent cascade failures between systems
+6. **Rate Limiting**: Protect downstream services
+7. **Error Recovery**: Automatic retry with exponential backoff
+
+**Related Documentation**:
+- System Architecture: {#system-architecture}
+- API Reference: {#api-reference}
+- Database Schema: {#database-schema}
+- Troubleshooting: {#troubleshooting}
 
 ---
 
@@ -582,6 +831,33 @@ npx prisma generate
 
 Current migration status: ✅ All migrations applied
 
+### 🔗 Related Systems
+
+**Database Schema integrates with:**
+
+- **{#api-reference}** - All API endpoints use these data models for requests and responses
+- **{#security-authentication}** - User, OAuth, TOTP models support authentication system
+- **{#system-integration-workflows}** - Database operations in registration, payment, content creation flows
+- **{#social-features}** - Post, Comment, Like, Follow, Friendship models enable social interactions
+- **{#stripe-nonprofit-payment-system}** - Payment, Receipt, CandidateRegistration models support transactions
+- **{#unified-messaging-system}** - UnifiedMessage, ConversationMeta models for real-time communication
+- **{#candidate-registration-admin-system}** - Candidate verification and registration data models
+- **{#ai-semantic-features}** - Topic, Post embedding fields, semantic search integration
+- **{#reputation-system}** - User reputation scores, democratic reporting data models
+
+**Database Design Principles**:
+- **Relational Integrity**: Foreign key constraints maintain data consistency
+- **Performance Optimization**: Strategic indexing on frequently queried fields
+- **Scalability**: JSON fields for flexible data structures (notifications, metadata)
+- **Audit Trail**: Created/updated timestamps on all entities
+- **Privacy Compliance**: User data isolation and deletion capabilities
+
+**Critical Model Relationships**:
+- **User** ↔ **Posts** ↔ **Comments** ↔ **Engagement Metrics**
+- **Authentication** ↔ **TOTP** ↔ **OAuth** ↔ **Session Management**
+- **Payments** ↔ **Candidate Registration** ↔ **Admin Approval**
+- **Social Graph** ↔ **Feed Algorithm** ↔ **Content Distribution**
+
 ---
 
 ## 🔌 API REFERENCE {#api-reference}
@@ -763,9 +1039,41 @@ Response:
 - **Selection**: Probabilistic sampling based on weighted scores
 - **Personalization**: Uses user's liked posts, follows, and content embeddings
 
+### 🔗 Related Systems
+
+**API Reference integrates with:**
+
+- **{#security-authentication}** - Authentication middleware, JWT validation, TOTP verification for admin endpoints
+- **{#database-schema}** - All data models, relationships, query patterns, database operations
+- **{#system-integration-workflows}** - End-to-end API call chains, authentication flows, error handling
+- **{#social-features}** - Post creation, user interactions, relationship management, notifications
+- **{#stripe-nonprofit-payment-system}** - Payment processing, webhook handling, donation endpoints
+- **{#unified-messaging-system}** - WebSocket connections, real-time messaging, notification delivery
+- **{#candidate-registration-admin-system}** - Candidate registration endpoints, admin review workflows
+- **{#ai-semantic-features}** - Content analysis, topic discovery, semantic search integration
+- **{#troubleshooting}** - API error debugging, endpoint testing, authentication troubleshooting
+
+**API Response Patterns**:
+- **Success**: `{ok: true, status: 200, data: {...}}`
+- **Client Error**: `{ok: false, status: 4xx, error: "message"}`
+- **Server Error**: `{ok: false, status: 500, error: "Internal server error"}`
+- **Authentication**: `{ok: false, status: 401, error: "Authentication required"}`
+
+**Cross-Endpoint Dependencies**:
+- **Authentication** → **All Protected Endpoints** → **User Context**
+- **User Management** → **Posts/Comments** → **Social Interactions**
+- **Payment Processing** → **Candidate Registration** → **Admin Approval**
+- **Content Creation** → **AI Analysis** → **Feed Distribution**
+
+**Rate Limiting & Security**:
+- Public endpoints: 100 requests/minute
+- Authenticated: 300 requests/minute
+- Admin endpoints: Unlimited (TOTP required)
+- Upload endpoints: 10 requests/minute
+
 ---
 
-## 🔮 PROPOSED FEED ALGORITHM REDESIGN
+## 🔮 PROPOSED FEED ALGORITHM REDESIGN {#proposed-feed-algorithm-redesign}
 
 **Status**: Planning Phase - Awaiting Implementation  
 **Date**: August 15, 2025
@@ -2276,6 +2584,24 @@ The JavaScript Modularization Project has been **successfully completed and depl
 ## 📋 JavaScript Architecture Details {#javascript-architecture-details}
 
 *Complete technical documentation for the JavaScript modularization system*
+
+### 🧭 **Quick Navigation**
+
+| Task | Go To Section | File Location |
+|------|---------------|---------------|
+| **API Integration** | [API Client Implementation](#api-client-implementation) | `frontend/src/modules/core/api/client.js` |
+| **User Authentication** | [Authentication System](#auth-system-details) | `frontend/src/modules/core/auth/` |
+| **Feed Development** | [My Feed Module](#my-feed-implementation) | `frontend/src/modules/features/feed/` |
+| **Search Features** | [Global Search](#search-implementation) | `frontend/src/modules/features/search/` |
+| **State Management** | [User State Module](#user-state-details) | `frontend/src/modules/core/state/` |
+| **Module Loading** | [Initialization System](#module-loader-details) | `frontend/src/modules/module-loader.js` |
+| **Testing Modules** | [Testing Infrastructure](#module-testing) | `frontend/src/test-modules.html` |
+
+**🚀 Common Developer Tasks:**
+- **Adding new API endpoint**: Check API Client patterns below
+- **Creating new feature module**: Follow Feed/Search module structure
+- **Debugging authentication**: See Authentication System implementation
+- **Performance optimization**: Review caching and state management patterns
 
 ### 📊 **Migration Summary**
 
@@ -3972,6 +4298,31 @@ if (riskScore > 70) {
 - **{#unified-messaging-system}**: WebSocket authentication and session management
 - **{#candidate-verification-reporting-system}**: Secure candidate verification workflows
 
+### 🔗 Related Systems
+
+**Security & Authentication integrates with:**
+
+- **{#database-schema}** - User authentication models, OAuth providers, session storage, TOTP secrets
+- **{#api-reference}** - Protected endpoints, authentication middleware, JWT verification, TOTP validation
+- **{#system-integration-workflows}** - Authentication flow, session management, security event logging
+- **{#monitoring-admin}** - Security metrics, admin TOTP requirements, audit logging, threat detection
+- **{#stripe-nonprofit-payment-system}** - Payment security, PCI compliance via Stripe Elements
+- **{#unified-messaging-system}** - WebSocket authentication, real-time security events
+- **{#mobile-ui-system}** - Mobile authentication UI, touch-friendly 2FA interfaces
+- **{#troubleshooting}** - Authentication error debugging, security issue resolution
+
+**Cross-System Security Dependencies**:
+- **Session Management** ↔ **API Endpoints** ↔ **Database Models** ↔ **Cookie Handling**
+- **TOTP Verification** ↔ **Admin Dashboard** ↔ **Security Monitoring** ↔ **Audit Logging**
+- **OAuth Integration** ↔ **User Profiles** ↔ **Account Linking** ↔ **Email Verification**
+- **CSRF Protection** ↔ **Form Submissions** ↔ **API Calls** ↔ **Cookie Authentication**
+
+**Security Event Chain**:
+1. Authentication attempt → Security monitoring → Audit logging
+2. Failed login → Rate limiting → Admin notification
+3. OAuth login → Account linking → Profile update → Security verification
+4. TOTP setup → QR generation → Backup codes → Admin notification
+
 ---
 
 ## ☁️ DEPLOYMENT & INFRASTRUCTURE {#deployment-infrastructure}
@@ -4820,6 +5171,41 @@ See **Developer & Admin Tools** in the [🔮 FUTURE ROADMAP](#future-roadmap) se
 - `frontend/js/adminDebugger.js` - Complete debugging system implementation
 - `frontend/admin-dashboard.html` - Integration via script tag inclusion
 
+### 🔗 Related Systems
+
+**Monitoring & Admin integrates with:**
+
+- **{#security-authentication}** - TOTP-protected admin access, admin role verification
+- **{#database-schema}** - Admin debugging of all data models, database performance monitoring
+- **{#api-reference}** - Admin-only endpoints, system metrics APIs, debug tools
+- **{#system-integration-workflows}** - Admin oversight of all system processes, workflow monitoring
+- **{#stripe-nonprofit-payment-system}** - Payment analytics, transaction monitoring, revenue tracking
+- **{#candidate-registration-admin-system}** - Candidate approval workflows, registration oversight
+- **{#ai-semantic-features}** - AI performance monitoring, content analysis metrics
+- **{#unified-messaging-system}** - Message monitoring, WebSocket health, communication oversight
+- **{#troubleshooting}** - System health monitoring, error tracking, performance debugging
+
+**Admin Dashboard Components**:
+- **System Metrics**: API response times, error rates, uptime monitoring
+- **User Analytics**: Registration trends, engagement metrics, platform growth
+- **Content Moderation**: Post flagging, reputation system oversight, community health
+- **Financial Monitoring**: Payment processing, candidate fees, donation tracking
+- **Security Oversight**: Authentication logs, failed login tracking, threat detection
+
+**Real-time Monitoring**:
+- WebSocket connection health and message throughput
+- Database query performance and connection pooling
+- Azure OpenAI usage and response times
+- Payment processing success rates and failures
+- User engagement patterns and platform activity
+
+**Administrative Controls**:
+- User management and role assignment
+- Content moderation and post visibility
+- Candidate registration approval workflows
+- System configuration and feature toggles
+- Emergency procedures and incident response
+
 ---
 
 ## 🤖 AI & SEMANTIC FEATURES {#ai-semantic-features}
@@ -4971,6 +5357,37 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer('all-MiniLM-L6-v2')
 embeddings = model.encode(texts)
 ```
+
+### 🔗 Related Systems
+
+**AI & Semantic Features integrates with:**
+
+- **{#database-schema}** - Topic, Post embedding fields, vector search integration
+- **{#api-reference}** - AI-powered endpoints for content analysis, semantic search, trending topics
+- **{#social-features}** - Content analysis for posts, comments, automated topic discovery
+- **{#system-integration-workflows}** - AI analysis in content creation workflow, moderation pipeline
+- **{#reputation-system}** - AI-driven content quality assessment, behavior analysis
+- **{#ai-trending-topics-system}** - Topic clustering, trend detection, engagement analysis
+- **{#monitoring-admin}** - AI performance monitoring, content analysis metrics
+- **{#troubleshooting}** - AI service debugging, Azure OpenAI connection issues
+- **{#performance-optimizations}** - Async AI processing, caching strategies for embeddings
+
+**AI Processing Pipeline**:
+1. **Content Ingestion** → **Azure OpenAI Analysis** → **Topic Extraction** → **Embedding Generation**
+2. **Semantic Clustering** → **Trend Detection** → **Feed Distribution** → **Engagement Tracking**
+3. **Quality Assessment** → **Moderation Flags** → **Reputation Impact** → **Visibility Adjustment**
+
+**Azure OpenAI Integration**:
+- **GPT-3.5-Turbo**: Content analysis, topic extraction, quality assessment
+- **Ada-002 Embeddings**: Semantic similarity, search, recommendation engine
+- **Real-time Processing**: Async analysis maintains <100ms post creation time
+- **No Data Retention**: Azure OpenAI configured for zero data persistence
+
+**Cross-System AI Benefits**:
+- **Feed Algorithm** ↔ **Topic Discovery** ↔ **User Preferences**
+- **Content Moderation** ↔ **Reputation System** ↔ **Community Health**
+- **Semantic Search** ↔ **Content Discovery** ↔ **User Engagement**
+- **Trend Analysis** ↔ **Geographic Relevance** ↔ **Civic Engagement**
 
 ---
 
@@ -5734,6 +6151,39 @@ function calculatePostScore(post) {
 - 25% Political content
 - 25% Geographic (district)
 - 10% Trending/discovery
+
+### 🔗 Related Systems
+
+**Social Features integrates with:**
+
+- **{#database-schema}** - Post, Comment, Like, Follow, Friendship models, notification system
+- **{#api-reference}** - Social interaction endpoints, relationship management, notification APIs
+- **{#security-authentication}** - User authentication for social actions, privacy controls
+- **{#system-integration-workflows}** - Content creation workflow, real-time updates, notification delivery
+- **{#unified-messaging-system}** - WebSocket notifications, real-time feed updates, chat integration
+- **{#reputation-system}** - User scoring, content visibility, democratic reporting
+- **{#ai-semantic-features}** - Content analysis, topic discovery, sentiment scoring
+- **{#media-photos}** - Photo sharing, tagging system, gallery integration
+- **{#mobile-ui-system}** - Touch-friendly social interactions, mobile notifications
+- **{#troubleshooting}** - Social feature debugging, notification issues, feed problems
+
+**Social Interaction Chain**:
+1. **Post Creation** → **AI Analysis** → **Feed Distribution** → **Notification Delivery**
+2. **Like/Comment** → **Engagement Tracking** → **Reputation Update** → **Real-time Broadcast**
+3. **Follow Request** → **Notification** → **Approval/Rejection** → **Relationship Update**
+4. **Content Reporting** → **Democratic Review** → **Reputation Impact** → **Visibility Adjustment**
+
+**Real-time Social Features**:
+- Post interactions → Instant WebSocket updates
+- New followers → Push notifications
+- Comments/replies → Real-time threading
+- Content sharing → Live feed updates
+
+**Privacy & Control Systems**:
+- Photo tagging approvals
+- Follow request management
+- Content visibility controls
+- Blocking and reporting tools
 
 ---
 
@@ -8361,6 +8811,36 @@ See **Payment & Financial Systems** in the [🔮 FUTURE ROADMAP](#future-roadmap
 
 **Note**: Live Stripe Keys are already operational since August 22, 2025.
 
+### 🔗 Related Systems
+
+**Stripe Nonprofit Payment System integrates with:**
+
+- **{#security-authentication}** - Payment authentication, PCI compliance, secure transactions
+- **{#database-schema}** - Payment, Receipt, CandidateRegistration models, transaction records
+- **{#api-reference}** - Payment processing endpoints, webhook handling, receipt generation APIs
+- **{#system-integration-workflows}** - End-to-end payment flows, candidate registration payments
+- **{#candidate-registration-admin-system}** - Registration fee processing, fee waiver management
+- **{#monitoring-admin}** - Payment analytics, transaction monitoring, admin dashboard metrics
+- **{#unified-messaging-system}** - Payment confirmation notifications, WebSocket updates
+- **{#troubleshooting}** - Payment debugging, webhook failures, Stripe integration issues
+- **{#mobile-ui-system}** - Mobile-optimized payment flows, responsive donation interfaces
+
+**Payment Processing Chain**:
+1. **User Interaction** → **Stripe Elements** → **Payment Intent** → **Webhook Verification**
+2. **Payment Success** → **Database Update** → **Receipt Generation** → **Email Delivery**
+3. **Admin Notification** → **Analytics Update** → **Real-time Dashboard** → **User Confirmation**
+
+**Security Integration**:
+- PCI compliance through Stripe Elements (no card data touches our servers)
+- Webhook signature verification for all payment events
+- Secure authentication for all payment-related API calls
+- Audit logging for compliance and debugging
+
+**Cross-System Dependencies**:
+- **Candidate Registration** → **Payment Collection** → **Admin Approval** → **Profile Creation**
+- **Donation Processing** → **Receipt Generation** → **Tax Compliance** → **User Notification**
+- **Payment Analytics** → **Admin Dashboard** → **Revenue Tracking** → **Nonprofit Reporting**
+
 #### Integration Opportunities
 - **{#civic-organizing-system}**: Fundraising for civic events and causes
 - **{#election-tracking-system}**: Campaign contribution tracking
@@ -10266,273 +10746,603 @@ POST /api/admin/candidates/:candidateId/messages // Send messages (backend worki
 
 ## 🆘 TROUBLESHOOTING {#troubleshooting}
 
-### Common Issues & Solutions
+### 🎯 **Debugging Decision Tree**
 
-#### 🔥 CRITICAL FIX (August 26, 2025)
+**Start Here**: Identify your error category quickly:
 
-**Issue**: Admin Dashboard "Candidate registration not found" 404 errors
-```javascript
-// SYMPTOM: GET /api/admin/candidates/profiles returns 404
-// ERROR: {"error":"Candidate registration not found"}
-// ROOT CAUSE: Express.js route matching conflict
+```
+🔍 STEP 1: What type of error are you seeing?
+├── 🔐 Login/Auth fails, "Not authenticated", 401/403 errors → **Authentication Errors**
+├── 🌐 500/404/429 errors, API calls failing, CORS issues → **API & Network Errors**
+├── 💾 Data not saving, migration fails, connection timeouts → **Database Errors**
+├── 🚀 Code not deploying, build fails, container issues → **Deployment Errors**
+├── 🖼️ UI broken, content not loading, upload fails → **Frontend & Display Issues**
+└── 🛠️ Local dev setup, environment configuration → **Development Environment**
+
+🔍 STEP 2: Check Recent Fixes First
+└── Search for your error in "Recently Resolved" sections below
+
+🔍 STEP 3: Follow Category-Specific Troubleshooting
+└── Use the systematic approach in your error category
 ```
 
-**SOLUTION: Route Order Conflict Resolution**
+---
+
+## 🔐 **AUTHENTICATION ERRORS**
+
+### Quick Diagnosis
 ```javascript
-// PROBLEM: Routes were defined in wrong order in admin.ts
-// /candidates/:id was matching /candidates/profiles first
-// "profiles" was treated as :id parameter
-
-// FIXED: Moved /candidates/profiles BEFORE /candidates/:id
-router.get('/candidates/profiles', ...);  // Now matches first
-router.get('/candidates/:id', ...);       // Matches after specific routes
-
-// VERIFICATION:
-curl backend-url/api/admin/candidates/profiles
-// ✅ Should return 401 "Access denied" (not 404)
-```
-
-**LESSON LEARNED**: Express.js matches routes in definition order. Specific routes must come before parameterized routes.
-
-**DEPLOYMENT STEPS TAKEN**:
-1. **Route Fix**: Reordered routes in `backend/src/routes/admin.ts`
-2. **TypeScript Compilation**: `cd backend && npm run build` 
-3. **Docker Build**: `az acr build --registry uwracr2425 --image unitedwerise-backend:route-conflict-fix`
-4. **Container Deploy**: `az containerapp update --image uwracr2425.azurecr.io/unitedwerise-backend:route-conflict-fix`
-5. **Verification**: Backend uptime reset to <60 seconds confirms new deployment active
-
-#### 🔧 CURRENT DEBUGGING (August 26, 2025) - ADMIN MESSAGING INTERFACE
-**Issue**: Admin-Candidate messaging shows "Failed to load messages" error
-```javascript
-// SYMPTOM: Messages button in admin dashboard shows error dialog
-// INVESTIGATING: Frontend JavaScript messaging modal functionality
-// BACKEND STATUS: Endpoints verified as working correctly
-// DEBUG CODE ADDED: Lines 3357-3371 in frontend/admin-dashboard.html
-```
-**DEBUG STEPS IN PROGRESS**:
-1. **Frontend Debug Code**: Added console.log statements to openCandidateMessaging()
-2. **Error Handling**: Enhanced error reporting in messaging modal
-3. **API Response Logging**: Full response structure being captured
-4. **Candidate ID Validation**: Checking for missing/invalid candidate IDs
-**AWAITING**: User console output to identify exact failure point
-
-**STATUS**: Route conflict issue is **COMPLETELY RESOLVED ✅**. Admin dashboard candidate profiles now load successfully.
-
-#### 🚨 RECENTLY RESOLVED (August 17, 2025)
-
-**Issue**: CORS policy blocking frontend requests
-```javascript
-// FIXED: Backend CORS configuration now includes all required origins
-// Solution: Rate limiting adjusted from 30→80 requests/min
-// Check if resolved:
-fetch('https://api.unitedwerise.org/health')
-  .then(r => console.log('Status:', r.status, 'CORS:', r.headers.get('access-control-allow-origin')));
-```
-
-**Issue**: 429 "Too Many Requests" errors
-```javascript
-// FIXED: Burst rate limiter increased to 80 requests/min
-// Solution: Health check endpoints exempted from rate limiting
-// Check rate limits:
-console.log('Rate limit headers:', 
-  response.headers.get('ratelimit-remaining'),
-  response.headers.get('ratelimit-reset'));
-```
-
-**Issue**: 500 Internal Server Error on friend-status
-```javascript
-// FIXED: Error handling added with safe fallbacks
-// Solution: Returns default values instead of crashing
-// Test endpoint:
-fetch('/api/users/friend-status/test123', {
-  credentials: 'include' // Include httpOnly cookies
-}).then(r => r.json()).then(console.log);
-// Should return: {isFriend: false, isPending: false, status: 'none'}
-```
-
-#### Authentication Problems
-
-**Issue**: "Not authenticated" or "Please log in" errors
-```javascript
-// Solution 1: Verify cookies are being sent
-// Check authentication status:
+// Test 1: Check authentication status
 fetch('https://api.unitedwerise.org/api/auth/me', {
   credentials: 'include' // REQUIRED for cookie authentication
 }).then(r => r.json()).then(console.log);
+// Expected: User object OR {authenticated: false}
 
-// Solution 2: Clear corrupted localStorage and re-authenticate
-localStorage.removeItem('currentUser');
-window.currentUser = null;
-// Re-login through the UI
-
-// Solution 3: Check if cookies are enabled
+// Test 2: Verify cookies enabled
 if (!navigator.cookieEnabled) {
-  console.error('Cookies are disabled - authentication will not work');
+  console.error('❌ Cookies disabled - authentication will not work');
 }
+
+// Test 3: Check for corrupted session
+console.log('CurrentUser:', window.currentUser);
+console.log('LocalStorage:', localStorage.getItem('currentUser'));
 ```
 
-**Issue**: Can't log in
+### Common Authentication Issues
+
+#### "Not authenticated" or "Please log in" errors
+**Root Causes & Solutions:**
+
+1. **Missing Credentials Header**
 ```javascript
-// Check backend health
+// ❌ Wrong - cookies not sent
+fetch('/api/endpoint')
+
+// ✅ Correct - include cookies
+fetch('/api/endpoint', {
+  credentials: 'include'
+})
+```
+
+2. **Corrupted Session Data**
+```javascript
+// Clear and restart authentication
+localStorage.removeItem('currentUser');
+window.currentUser = null;
+sessionStorage.clear();
+// Re-login through the UI
+```
+
+3. **Expired Session**
+```javascript
+// Check token expiration
+fetch('/api/auth/refresh', {
+  credentials: 'include'
+}).then(r => {
+  if (r.status === 401) {
+    console.log('Session expired - redirect to login');
+    window.location.href = '/login';
+  }
+});
+```
+
+#### Login Form Not Working
+**Diagnostic Steps:**
+
+1. **Backend Health Check**
+```javascript
 fetch('https://api.unitedwerise.org/health')
   .then(r => r.json())
   .then(console.log);
-
-// Verify CORS
-// Should see Access-Control-Allow-Origin header
+// Should show uptime and status
 ```
 
-#### Display Issues
-
-**Issue**: Content not loading
+2. **CORS Verification**
 ```javascript
-// Check API calls in Network tab
-// Look for 404, 500, or CORS errors
+fetch('https://api.unitedwerise.org/health')
+  .then(r => {
+    console.log('CORS Header:', r.headers.get('access-control-allow-origin'));
+    console.log('Status:', r.status);
+  });
+// Should see proper CORS headers
+```
 
-// Manual API test
-fetch(API_BASE + '/feed/posts', {
+3. **Login Endpoint Test**
+```javascript
+fetch('/api/auth/login', {
+  method: 'POST',
   headers: {
-    'Authorization': `Bearer ${authToken}`
-  }
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    email: 'test@example.com',
+    password: 'testpassword'
+  })
 }).then(r => r.json()).then(console.log);
 ```
 
-**Issue**: Styles broken
-```bash
-# Clear cache
-Ctrl+Shift+R (Windows/Linux)
-Cmd+Shift+R (Mac)
+#### TOTP/2FA Authentication Issues
+**Common Problems:**
 
-# Check CSS loading
-document.styleSheets
+1. **Time Sync Issues**
+```javascript
+// Check device time synchronization
+const serverTime = new Date(response.headers.get('date'));
+const localTime = new Date();
+const timeDiff = Math.abs(serverTime - localTime);
+if (timeDiff > 30000) {
+  console.warn('Time difference detected:', timeDiff, 'ms');
+}
 ```
 
-#### Upload Problems
-
-**Issue**: Photo upload fails
+2. **Invalid TOTP Code**
 ```javascript
-// Check file size (10MB limit)
-console.log('File size:', file.size / 1024 / 1024, 'MB');
+// Verify TOTP setup
+fetch('/api/totp/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ token: 'XXXXXX' })
+});
+```
 
-// Check file type
-console.log('File type:', file.type);
-// Must be: image/jpeg, image/png, image/webp, image/gif
+#### Admin Access Denied
+**For admin users getting 403 errors:**
 
-// Test upload endpoint
-const formData = new FormData();
-formData.append('file', file);
-fetch(API_BASE + '/photos/upload', {
+1. **Verify Admin Role**
+```javascript
+fetch('/api/auth/me', { credentials: 'include' })
+  .then(r => r.json())
+  .then(user => {
+    console.log('Is Admin:', user.isAdmin);
+    console.log('User Role:', user.role);
+  });
+```
+
+2. **TOTP Required for Admin**
+```javascript
+// Admin routes require TOTP
+fetch('/api/admin/dashboard', { credentials: 'include' })
+  .then(r => {
+    if (r.status === 403) {
+      console.log('TOTP required for admin access');
+      // Redirect to TOTP setup/verification
+    }
+  });
+```
+
+### Recently Resolved Authentication Issues
+
+#### ✅ Cookie Authentication Migration (January 13, 2025)
+- **Fixed**: JWT token management moved to httpOnly cookies
+- **Impact**: More secure, prevents XSS token theft
+- **Required**: All API calls must include `credentials: 'include'`
+
+---
+
+## 🌐 **API & NETWORK ERRORS**
+
+### Quick Network Diagnosis
+```javascript
+// Test 1: Basic connectivity
+fetch('https://api.unitedwerise.org/health')
+  .then(r => console.log('Status:', r.status, 'Headers:', r.headers))
+  .catch(console.error);
+
+// Test 2: Rate limiting check
+fetch('/api/endpoint')
+  .then(r => {
+    console.log('Rate Limit Remaining:', r.headers.get('ratelimit-remaining'));
+    console.log('Rate Limit Reset:', r.headers.get('ratelimit-reset'));
+  });
+
+// Test 3: CORS verification
+fetch(API_BASE + '/health', { mode: 'cors' })
+  .then(r => console.log('CORS OK:', r.headers.get('access-control-allow-origin')))
+  .catch(e => console.error('CORS Failed:', e));
+```
+
+### HTTP Status Code Troubleshooting
+
+#### 500 Internal Server Error
+**Systematic Diagnosis:**
+
+1. **Check Server Logs**
+```bash
+# Azure Container Apps logs
+az containerapp logs show \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --follow
+```
+
+2. **Test Specific Endpoint**
+```javascript
+// Isolate the failing endpoint
+fetch('/api/specific-endpoint', {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${authToken}`
+    'Content-Type': 'application/json'
   },
-  body: formData
-});
+  credentials: 'include',
+  body: JSON.stringify({ test: 'data' })
+}).then(r => {
+  console.log('Status:', r.status);
+  return r.text(); // Get raw response
+}).then(console.log);
 ```
 
-#### Performance Issues
-
-**Issue**: Slow loading
+3. **Database Connection Test**
 ```javascript
-// Check network latency
-console.time('API call');
-fetch(API_BASE + '/health').then(() => {
-  console.timeEnd('API call');
-});
+// Test database-dependent endpoint
+fetch('/api/users/profile', { credentials: 'include' })
+  .then(r => {
+    if (r.status === 500) {
+      console.log('Likely database connection issue');
+    }
+  });
+```
 
-// Monitor resource timing
-performance.getEntriesByType('resource').forEach(r => {
-  if (r.duration > 1000) {
-    console.log('Slow resource:', r.name, r.duration);
+#### 404 Not Found
+**Route Debugging:**
+
+1. **Verify Endpoint URL**
+```javascript
+// Check exact URL being called
+console.log('Calling:', API_BASE + '/api/endpoint');
+// Verify no double slashes or typos
+```
+
+2. **Route Order Issues** (Critical Fix August 26, 2025)
+```javascript
+// LESSON LEARNED: Express.js matches routes in definition order
+// Specific routes must come before parameterized routes
+
+// ✅ Correct order:
+router.get('/candidates/profiles', ...);  // Specific first
+router.get('/candidates/:id', ...);       // Parameterized second
+
+// ❌ Wrong order causes 404:
+router.get('/candidates/:id', ...);       // "profiles" treated as :id
+router.get('/candidates/profiles', ...);  // Never reached
+```
+
+3. **Backend Route Verification**
+```bash
+# Test route exists
+curl -I https://api.unitedwerise.org/api/endpoint
+# Should return 200/401/403, NOT 404
+```
+
+#### 403 Forbidden
+**Authorization Issues:**
+
+1. **Admin Routes** (Common Issue)
+```javascript
+// Admin endpoints require admin role + TOTP
+fetch('/api/admin/dashboard', { credentials: 'include' })
+  .then(r => {
+    if (r.status === 403) {
+      console.log('Check: Admin role + TOTP required');
+    }
+  });
+```
+
+2. **Staging Environment Protection**
+```javascript
+// Staging requires admin access
+if (window.location.hostname.includes('dev.unitedwerise.org')) {
+  console.log('Staging environment - admin access required');
+}
+```
+
+#### 429 Too Many Requests
+**Rate Limiting Issues:**
+
+1. **Check Rate Limit Headers**
+```javascript
+fetch('/api/endpoint')
+  .then(r => {
+    if (r.status === 429) {
+      const remaining = r.headers.get('ratelimit-remaining');
+      const reset = r.headers.get('ratelimit-reset');
+      console.log(`Rate limited. Remaining: ${remaining}, Reset: ${reset}`);
+    }
+  });
+```
+
+2. **Implement Backoff Strategy**
+```javascript
+async function apiCallWithRetry(url, options = {}, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429) {
+      return response;
+    }
+
+    const resetTime = response.headers.get('ratelimit-reset');
+    const waitTime = Math.min(Math.pow(2, i) * 1000, 5000); // Exponential backoff
+
+    console.log(`Rate limited, waiting ${waitTime}ms...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+
+  throw new Error('Rate limit exceeded after retries');
+}
+```
+
+### CORS Issues
+**Cross-Origin Request Problems:**
+
+1. **Frontend-Backend CORS**
+```javascript
+// Verify CORS headers
+fetch('https://api.unitedwerise.org/health')
+  .then(r => {
+    console.log('CORS Origin:', r.headers.get('access-control-allow-origin'));
+    console.log('CORS Methods:', r.headers.get('access-control-allow-methods'));
+    console.log('CORS Headers:', r.headers.get('access-control-allow-headers'));
+  });
+```
+
+2. **Development vs Production CORS**
+```javascript
+// Different CORS rules for different environments
+const allowedOrigins = {
+  production: ['https://www.unitedwerise.org'],
+  staging: ['https://dev.unitedwerise.org'],
+  development: ['http://localhost:3000', 'http://localhost:8080']
+};
+```
+
+### Recently Resolved API Issues
+
+#### ✅ Route Conflict Resolution (August 26, 2025)
+- **Issue**: Admin dashboard 404 errors on `/api/admin/candidates/profiles`
+- **Root Cause**: Express.js route order - parameterized routes matched before specific routes
+- **Solution**: Moved specific routes before parameterized routes in `backend/src/routes/admin.ts`
+- **Verification**: `curl backend-url/api/admin/candidates/profiles` returns 401 (not 404)
+
+#### ✅ CORS & Rate Limiting (August 17, 2025)
+- **Issue**: CORS policy blocking frontend requests
+- **Solution**: Backend CORS configuration updated, rate limiting increased 30→80 requests/min
+- **Issue**: 429 "Too Many Requests" errors
+- **Solution**: Health check endpoints exempted from rate limiting
+
+#### ✅ Friend Status 500 Errors (August 17, 2025)
+- **Issue**: 500 Internal Server Error on friend-status endpoint
+- **Solution**: Added error handling with safe fallbacks
+- **Test**: `fetch('/api/users/friend-status/test123', {credentials: 'include'})`
+- **Expected**: `{isFriend: false, isPending: false, status: 'none'}`
+
+### Cross-References
+- **Authentication**: See [🔐 Authentication Errors](#authentication-errors) for 401/403 issues
+- **Database**: See [💾 Database Errors](#database-errors) for 500 errors with DB connection issues
+- **Deployment**: See [🚀 Deployment Errors](#deployment-errors) for API endpoint not updating
+
+---
+
+## 💾 **DATABASE ERRORS**
+
+### Quick Database Diagnosis
+```javascript
+// Test 1: Database-dependent endpoint
+fetch('/api/users/profile', { credentials: 'include' })
+  .then(r => {
+    if (r.status === 500) {
+      console.log('❌ Database connection issue likely');
+    } else {
+      console.log('✅ Database connection OK');
+    }
+  });
+
+// Test 2: Check for timeout patterns
+console.time('db-call');
+fetch('/api/feed/posts', { credentials: 'include' })
+  .then(() => console.timeEnd('db-call'))
+  .catch(() => console.timeEnd('db-call'));
+// > 5 seconds indicates timeout issues
+```
+
+### Connection & Timeout Issues
+
+#### Database Connection Timeouts
+**Symptoms**: Slow API responses, 500 errors after delay
+
+1. **Connection Pool Monitoring**
+```sql
+-- Check active connections (admin only)
+SELECT count(*) as active_connections,
+       max_conn,
+       max_conn - count(*) as available_connections
+FROM pg_stat_activity
+CROSS JOIN (
+  SELECT setting::int as max_conn
+  FROM pg_settings
+  WHERE name = 'max_connections'
+) s;
+```
+
+2. **Long-Running Queries**
+```sql
+-- Find queries running > 30 seconds
+SELECT pid,
+       now() - pg_stat_activity.query_start AS duration,
+       query
+FROM pg_stat_activity
+WHERE (now() - pg_stat_activity.query_start) > interval '30 seconds'
+  AND state = 'active';
+```
+
+3. **Connection Pool Configuration**
+```javascript
+// Backend: Check Prisma connection pool
+// In backend/.env:
+DATABASE_URL="postgresql://...?connection_limit=10&pool_timeout=20"
+```
+
+#### Data Not Saving
+**Systematic Debugging:**
+
+1. **Transaction Rollback Detection**
+```javascript
+// Check API response for transaction errors
+fetch('/api/posts', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ content: 'test post' })
+}).then(r => r.json()).then(result => {
+  if (!result.success) {
+    console.log('Transaction failed:', result.error);
   }
 });
 ```
 
-#### Database Issues
-
-**Issue**: Data not saving
+2. **Database Locks**
 ```sql
--- Check database connections (admin only)
-SELECT count(*) FROM pg_stat_activity;
-
--- Check for locks
-SELECT * FROM pg_locks WHERE granted = false;
+-- Check for blocking locks (admin only)
+SELECT blocked_locks.pid     AS blocked_pid,
+       blocked_activity.usename  AS blocked_user,
+       blocking_locks.pid     AS blocking_pid,
+       blocking_activity.usename AS blocking_user,
+       blocked_activity.query    AS blocked_statement,
+       blocking_activity.query   AS blocking_statement
+FROM pg_catalog.pg_locks         blocked_locks
+JOIN pg_catalog.pg_stat_activity blocked_activity  ON blocked_activity.pid = blocked_locks.pid
+JOIN pg_catalog.pg_locks         blocking_locks
+    ON blocking_locks.locktype = blocked_locks.locktype
+    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+    AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+    AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+    AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+    AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+    AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+    AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+    AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+    AND blocking_locks.pid != blocked_locks.pid
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE NOT blocked_locks.granted;
 ```
 
-### Development Environment Setup
-
-#### Prerequisites
-```bash
-# Node.js 18+
-node --version
-
-# PostgreSQL 14+
-psql --version
-
-# Docker (optional)
-docker --version
+3. **Constraint Violations**
+```javascript
+// Look for specific constraint errors
+fetch('/api/users/profile', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ email: 'duplicate@email.com' })
+}).then(r => r.json()).then(result => {
+  if (result.error && result.error.includes('unique constraint')) {
+    console.log('Duplicate data violation');
+  }
+});
 ```
 
-#### Backend Setup
+### Migration Issues
+
+#### Schema Migration Failures
+**Common Problems:**
+
+1. **Pending Migrations**
 ```bash
+# Check migration status
 cd backend
-npm install
-cp .env.example .env
-# Edit .env with your values
+npx prisma migrate status
 
-# Database setup
-npx prisma migrate dev
+# Apply pending migrations
+npx prisma migrate deploy
+
+# Reset if corrupted (DEVELOPMENT ONLY)
+npx prisma migrate reset
+```
+
+2. **Migration Conflicts**
+```bash
+# Resolve migration conflicts
+npx prisma migrate resolve --applied 20240815_migration_name
+
+# Create new migration
+npx prisma migrate dev --name fix_conflict
+```
+
+3. **Schema Drift**
+```bash
+# Check for schema differences
+npx prisma db pull
 npx prisma generate
 
-# Start server
-npm run dev
+# Create migration for differences
+npx prisma migrate dev --name sync_schema
 ```
 
-#### Frontend Setup
+#### Deployment Migration Issues
+**Production Migration Safety:**
+
+1. **Pre-Deployment Migration Test**
 ```bash
-cd frontend
-# No build needed - vanilla JavaScript
-# Open index.html directly or use:
-python -m http.server 8080
+# Test migration on staging first
+git checkout development
+npx prisma migrate deploy
+# Verify staging works before production
 ```
 
-#### Local Services
-
-**PostgreSQL**:
-```bash
-# Docker
-docker run -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:14
-
-# Direct
-pg_ctl start
+2. **Migration Rollback Strategy**
+```sql
+-- Create rollback migration if needed
+-- Example: Rollback column addition
+ALTER TABLE users DROP COLUMN IF EXISTS new_column;
 ```
 
-**Qdrant** (optional):
-```bash
-docker run -p 6333:6333 qdrant/qdrant
+### Performance Issues
+
+#### Slow Query Diagnosis
+**Query Performance Monitoring:**
+
+1. **Enable Query Logging** (Admin Only)
+```sql
+-- Temporarily enable slow query logging
+SET log_min_duration_statement = 1000; -- Log queries > 1 second
 ```
 
-**AI Services**: All handled by Azure OpenAI in production
+2. **Index Analysis**
+```sql
+-- Find missing indexes
+SELECT schemaname, tablename, attname, n_distinct, correlation
+FROM pg_stats
+WHERE schemaname = 'public'
+  AND n_distinct > 100
+  AND correlation < 0.1;
+```
 
-### Emergency Procedures
+3. **Query Plan Analysis**
+```sql
+-- Analyze specific slow query
+EXPLAIN ANALYZE SELECT * FROM posts
+WHERE created_at > NOW() - INTERVAL '24 hours'
+ORDER BY created_at DESC;
+```
 
-#### Backend Crash
+### Database Recovery
+
+#### Emergency Recovery Procedures
+**When database is unresponsive:**
+
+1. **Connection Recovery**
 ```bash
-# Restart container
-az containerapp update \
-  --name unitedwerise-backend \
-  --resource-group unitedwerise-rg \
-  --revision-suffix emergency-restart
-
-# Check logs
-az containerapp logs show \
-  --name unitedwerise-backend \
+# Restart database connections
+az postgres flexible-server restart \
+  --name unitedwerise-db \
   --resource-group unitedwerise-rg
 ```
 
-#### Database Recovery
+2. **Point-in-Time Restore**
 ```bash
-# Point-in-time restore
+# Restore to specific timestamp
 az postgres flexible-server restore \
   --resource-group unitedwerise-rg \
   --name unitedwerise-db-restored \
@@ -10540,23 +11350,1409 @@ az postgres flexible-server restore \
   --restore-time "2025-08-15T10:00:00Z"
 ```
 
-#### Frontend Rollback
+3. **Backup Verification**
+```bash
+# Check backup status
+az postgres flexible-server backup list \
+  --resource-group unitedwerise-rg \
+  --server-name unitedwerise-db
+```
+
+### Cross-References
+- **API Errors**: See [🌐 API & Network Errors](#api-network-errors) for 500 errors
+- **Deployment**: See [🚀 Deployment Errors](#deployment-errors) for migration deployment issues
+- **Performance**: See [🖼️ Frontend & Display Issues](#frontend-display-issues) for slow loading related to DB
+
+---
+
+## 🚀 **DEPLOYMENT ERRORS**
+
+### Quick Deployment Diagnosis
+```bash
+# Test 1: Verify code is pushed to GitHub
+git status
+git log origin/development..HEAD  # Should show nothing if all pushed
+
+# Test 2: Check TypeScript compilation (backend)
+cd backend && npm run build
+# Must succeed before Docker build
+
+# Test 3: Verify deployment freshness
+curl -s "https://api.unitedwerise.org/health" | grep uptime
+# Fresh deployment: uptime < 60 seconds
+```
+
+### Build Failures
+
+#### TypeScript Compilation Errors
+**Most Common Deployment Blocker:**
+
+1. **Local Compilation Test**
+```bash
+# CRITICAL: Always test locally first
+cd backend
+npm run build
+
+# If errors, fix them before Docker build
+# Common errors:
+# - Missing type definitions
+# - Import path errors
+# - Unused variables (with strict mode)
+```
+
+2. **Type Definition Issues**
+```typescript
+// Fix missing type definitions
+npm install --save-dev @types/node @types/express
+
+// Fix import errors
+// ❌ Wrong:
+import express from 'express';
+
+// ✅ Correct:
+import express = require('express');
+// OR
+import * as express from 'express';
+```
+
+3. **Prisma Generation**
+```bash
+# Ensure Prisma client is generated
+npx prisma generate
+
+# Check for schema errors
+npx prisma validate
+```
+
+#### Docker Build Failures
+**Azure Container Registry Issues:**
+
+1. **Monitor Build Progress**
+```bash
+# Start build
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-dev-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" --no-wait https://github.com/UnitedWeRise-org/UnitedWeRise.git#development:backend
+
+# Check build status
+az acr task list-runs --registry uwracr2425 --output table | head -3
+```
+
+2. **Build Log Analysis**
+```bash
+# Get detailed build logs
+RUN_ID=$(az acr task list-runs --registry uwracr2425 --query '[0].runId' -o tsv)
+az acr task logs --registry uwracr2425 --run-id $RUN_ID
+```
+
+3. **Common Build Issues**
+```bash
+# Issue: Node modules not found
+# Solution: Check package.json exists and npm install runs
+
+# Issue: Copy command fails
+# Solution: Verify Dockerfile paths match repo structure
+
+# Issue: Permission denied
+# Solution: Check Azure ACR permissions
+```
+
+### Container Deployment Issues
+
+#### Container App Update Failures
+**Azure Container Apps Problems:**
+
+1. **Deployment Status Check**
+```bash
+# Check current revision status
+az containerapp revision list \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --output table
+
+# Check for failed revisions
+az containerapp revision show \
+  --name <revision-name> \
+  --app unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg
+```
+
+2. **Container Logs**
+```bash
+# Real-time logs
+az containerapp logs show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --follow
+
+# Recent logs
+az containerapp logs show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --tail 100
+```
+
+3. **Health Check Failures**
+```bash
+# Test health endpoint
+curl -v https://dev-api.unitedwerise.org/health
+
+# Check container readiness
+az containerapp show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --query "properties.configuration.ingress"
+```
+
+#### Environment Variable Issues
+**Container Configuration:**
+
+1. **Verify Environment Variables**
+```bash
+# Check current environment variables
+az containerapp show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --query "properties.template.containers[0].env"
+```
+
+2. **Required Variables Checklist**
+```bash
+# Critical environment variables:
+NODE_ENV=staging
+STAGING_ENVIRONMENT=true
+RELEASE_SHA=$GIT_SHA
+DATABASE_URL=<connection_string>
+AZURE_OPENAI_ENDPOINT=<endpoint>
+AZURE_STORAGE_ACCOUNT_NAME=uwrstorage2425
+```
+
+### Code Not Updating
+
+#### "Changes Not Deployed" Issues
+**Most Common Problem:**
+
+1. **Verify Deployment Pipeline**
+```bash
+# Check if changes are in GitHub
+git log -1 --oneline
+
+# Check if Docker build completed
+az acr task list-runs --registry uwracr2425 --output table | head -3
+
+# Check if container updated
+curl -s "https://dev-api.unitedwerise.org/health" | jq '.releaseSha'
+```
+
+2. **Cache Busting**
+```bash
+# Force container restart
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --revision-suffix "force-restart-$(date +%H%M%S)"
+```
+
+3. **Frontend Static Files**
+```bash
+# Clear browser cache
+# Ctrl+Shift+R (Windows/Linux)
+# Cmd+Shift+R (Mac)
+
+# Check Azure Static Web Apps deployment
+# Changes auto-deploy from GitHub main/development branches
+```
+
+#### Backend Route Changes Not Working
+**Critical Gap in Auto-Deployment:**
+
+⚠️ **IMPORTANT**: Backend changes do NOT auto-deploy!
+
+```bash
+# Backend deployment is manual process:
+# 1. Push to GitHub ✅ (automatic)
+# 2. Docker build ❌ (manual)
+# 3. Container update ❌ (manual)
+
+# Always follow full backend deployment process:
+# See CLAUDE.md "Backend Deployment" section
+```
+
+### Traffic Routing Issues
+
+#### Custom Domain Problems
+**DNS and SSL Issues:**
+
+1. **DNS Verification**
+```bash
+# Check DNS resolution
+nslookup api.unitedwerise.org
+nslookup dev-api.unitedwerise.org
+
+# Should point to Azure Container Apps
+```
+
+2. **SSL Certificate Status**
+```bash
+# Test SSL
+curl -I https://api.unitedwerise.org
+curl -I https://dev-api.unitedwerise.org
+
+# Check for certificate errors
+openssl s_client -connect api.unitedwerise.org:443 -servername api.unitedwerise.org
+```
+
+3. **Azure Custom Domain**
+```bash
+# Check custom domain configuration
+az containerapp hostname list \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg
+```
+
+### Emergency Deployment Procedures
+
+#### Backend Emergency Restart
+**When backend is unresponsive:**
+
+```bash
+# Emergency restart
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-suffix emergency-$(date +%m%d-%H%M)
+
+# Force single revision (stop old versions)
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+```
+
+#### Frontend Emergency Rollback
+**When frontend is broken:**
+
 ```bash
 # Revert to previous commit
 git revert HEAD
 git push origin main
-# Azure Static Web Apps auto-deploys
+# Azure Static Web Apps auto-deploys in ~2-5 minutes
 ```
 
-### Support Contacts
+#### Database Migration Rollback
+**When migration breaks production:**
 
-**Technical Issues**: 
-- GitHub Issues: https://github.com/unitedwerise/issues
-- Email: support@unitedwerise.org (planned)
+```bash
+# Create rollback migration
+cd backend
+npx prisma migrate dev --name rollback_broken_migration
 
-**Security Issues**:
-- Email: security@unitedwerise.org (planned)
-- Use responsible disclosure
+# Apply rollback
+npx prisma migrate deploy
+```
+
+### Deployment Verification
+
+#### Post-Deployment Checklist
+**Verify successful deployment:**
+
+1. **Backend Health Check**
+```javascript
+fetch('https://api.unitedwerise.org/health')
+  .then(r => r.json())
+  .then(health => {
+    console.log('Uptime:', health.uptime);
+    console.log('Release:', health.releaseSha);
+    // Fresh deployment: uptime < 60 seconds
+  });
+```
+
+2. **Frontend Load Test**
+```javascript
+// Test main functionality
+fetch('/api/auth/me', { credentials: 'include' })
+  .then(r => console.log('Auth:', r.status));
+
+fetch('/api/feed/posts', { credentials: 'include' })
+  .then(r => console.log('Feed:', r.status));
+```
+
+3. **Database Connectivity**
+```javascript
+// Test database-dependent endpoints
+fetch('/api/users/profile', { credentials: 'include' })
+  .then(r => {
+    if (r.status === 200) {
+      console.log('✅ Database connectivity OK');
+    } else {
+      console.log('❌ Database connectivity failed');
+    }
+  });
+```
+
+### Cross-References
+- **Database**: See [💾 Database Errors](#database-errors) for migration deployment issues
+- **API**: See [🌐 API & Network Errors](#api-network-errors) for post-deployment API issues
+- **Environment Setup**: See [🛠️ Development Environment](#development-environment) for local build issues
+
+---
+
+## 🖼️ **FRONTEND & DISPLAY ISSUES**
+
+### Quick Frontend Diagnosis
+```javascript
+// Test 1: Check for JavaScript errors
+console.clear();
+window.addEventListener('error', e => console.error('JS Error:', e.error));
+
+// Test 2: Test API connectivity
+fetch(API_BASE + '/health')
+  .then(r => console.log('API Status:', r.status))
+  .catch(e => console.error('API Failed:', e));
+
+// Test 3: Check critical CSS
+console.log('Stylesheets loaded:', document.styleSheets.length);
+for (let sheet of document.styleSheets) {
+  console.log('CSS:', sheet.href);
+}
+```
+
+### Content Loading Issues
+
+#### Posts/Feed Not Loading
+**Systematic Content Diagnosis:**
+
+1. **Network Tab Analysis**
+```javascript
+// Check for failed API calls
+// Open DevTools → Network tab → Refresh
+// Look for:
+// - 404 errors (endpoint not found)
+// - 500 errors (server issues)
+// - CORS errors (cross-origin blocked)
+// - Long pending requests (timeout)
+```
+
+2. **API Response Testing**
+```javascript
+// Test feed endpoint directly
+fetch(API_BASE + '/feed/posts', {
+  headers: {
+    'Authorization': `Bearer ${authToken}`
+  },
+  credentials: 'include'
+}).then(async r => {
+  console.log('Status:', r.status);
+  console.log('Headers:', Object.fromEntries(r.headers));
+  const data = await r.json();
+  console.log('Data:', data);
+}).catch(console.error);
+```
+
+3. **Authentication Status Check**
+```javascript
+// Verify user is authenticated
+fetch('/api/auth/me', { credentials: 'include' })
+  .then(r => r.json())
+  .then(user => {
+    if (!user.authenticated) {
+      console.log('❌ Not authenticated - content requires login');
+    } else {
+      console.log('✅ Authenticated as:', user.username);
+    }
+  });
+```
+
+#### Profile/User Data Not Loading
+**User-Specific Content Issues:**
+
+1. **Profile API Test**
+```javascript
+// Test user profile endpoint
+fetch('/api/users/profile', { credentials: 'include' })
+  .then(r => {
+    console.log('Profile Status:', r.status);
+    if (r.status === 401) {
+      console.log('❌ Authentication required');
+    } else if (r.status === 404) {
+      console.log('❌ User profile not found');
+    }
+    return r.json();
+  })
+  .then(console.log);
+```
+
+2. **User State Verification**
+```javascript
+// Check frontend user state
+console.log('Window.currentUser:', window.currentUser);
+console.log('LocalStorage user:', localStorage.getItem('currentUser'));
+
+// Clear corrupted state
+if (!window.currentUser || !window.currentUser.id) {
+  localStorage.removeItem('currentUser');
+  window.currentUser = null;
+  console.log('Cleared corrupted user state');
+}
+```
+
+### Visual/Styling Issues
+
+#### Styles Broken or Not Loading
+**CSS Loading Problems:**
+
+1. **CSS File Verification**
+```javascript
+// Check all stylesheets loaded
+for (let i = 0; i < document.styleSheets.length; i++) {
+  const sheet = document.styleSheets[i];
+  try {
+    console.log(`CSS ${i + 1}:`, sheet.href, 'Rules:', sheet.cssRules.length);
+  } catch (e) {
+    console.error(`CSS ${i + 1} failed to load:`, sheet.href, e);
+  }
+}
+```
+
+2. **Cache Issues**
+```bash
+# Force cache refresh
+# Ctrl+Shift+R (Windows/Linux)
+# Cmd+Shift+R (Mac)
+
+# Or disable cache in DevTools:
+# F12 → Network tab → "Disable cache" checkbox
+```
+
+3. **CSS Path Issues**
+```html
+<!-- Check CSS paths in index.html -->
+<link rel="stylesheet" href="src/styles/main.css">
+<link rel="stylesheet" href="src/styles/mobile.css">
+
+<!-- Verify files exist at these paths -->
+```
+
+#### Layout/Responsive Issues
+**Mobile/Desktop Display Problems:**
+
+1. **Viewport Configuration**
+```html
+<!-- Verify viewport meta tag -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+```
+
+2. **Responsive Breakpoint Testing**
+```javascript
+// Test responsive breakpoints
+function testBreakpoints() {
+  const breakpoints = {
+    mobile: '(max-width: 768px)',
+    tablet: '(min-width: 769px) and (max-width: 1024px)',
+    desktop: '(min-width: 1025px)'
+  };
+
+  for (const [name, query] of Object.entries(breakpoints)) {
+    if (window.matchMedia(query).matches) {
+      console.log('Current breakpoint:', name);
+    }
+  }
+}
+testBreakpoints();
+```
+
+3. **CSS Grid/Flexbox Issues**
+```css
+/* Check for common layout issues */
+.container {
+  display: grid; /* or flex */
+  /* Verify grid-template-columns or flex properties */
+}
+
+/* Test in DevTools:
+   1. Right-click element → Inspect
+   2. Check Computed styles
+   3. Look for overridden properties */
+```
+
+### Upload & Media Issues
+
+#### Photo Upload Failures
+**File Upload Troubleshooting:**
+
+1. **File Validation Check**
+```javascript
+// Test file constraints
+function validateFile(file) {
+  console.log('File name:', file.name);
+  console.log('File size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+  console.log('File type:', file.type);
+
+  // Check size limit (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    console.error('❌ File too large (>10MB)');
+    return false;
+  }
+
+  // Check file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    console.error('❌ Invalid file type. Allowed:', allowedTypes);
+    return false;
+  }
+
+  console.log('✅ File validation passed');
+  return true;
+}
+
+// Test with file input
+document.querySelector('input[type="file"]').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) validateFile(file);
+});
+```
+
+2. **Upload Endpoint Test**
+```javascript
+// Test upload endpoint directly
+async function testUpload(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch(API_BASE + '/photos/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      credentials: 'include',
+      body: formData
+    });
+
+    console.log('Upload Status:', response.status);
+    const result = await response.json();
+    console.log('Upload Result:', result);
+
+    return result;
+  } catch (error) {
+    console.error('Upload Error:', error);
+  }
+}
+```
+
+3. **Azure Storage Issues**
+```javascript
+// Check for Azure Storage errors
+// Common issues:
+// - Container not public
+// - SAS token expired
+// - Storage account permissions
+
+// Test Azure Storage connectivity
+fetch('https://uwrstorage2425.blob.core.windows.net/photos/', {
+  method: 'HEAD'
+}).then(r => {
+  console.log('Azure Storage Status:', r.status);
+}).catch(e => {
+  console.error('Azure Storage Error:', e);
+});
+```
+
+### Performance Issues
+
+#### Slow Page Loading
+**Performance Diagnosis:**
+
+1. **Network Performance**
+```javascript
+// Measure API response times
+console.time('API call');
+fetch(API_BASE + '/health')
+  .then(() => console.timeEnd('API call'))
+  .catch(() => console.timeEnd('API call'));
+
+// Monitor all network requests
+performance.getEntriesByType('resource').forEach(resource => {
+  if (resource.duration > 1000) {
+    console.log('Slow resource:', resource.name, resource.duration + 'ms');
+  }
+});
+```
+
+2. **JavaScript Performance**
+```javascript
+// Check for slow JavaScript execution
+console.time('DOM ready');
+document.addEventListener('DOMContentLoaded', () => {
+  console.timeEnd('DOM ready');
+});
+
+// Monitor large data operations
+console.time('Feed render');
+// ... feed rendering code ...
+console.timeEnd('Feed render');
+```
+
+3. **Memory Usage**
+```javascript
+// Check memory usage (Chrome DevTools)
+if (performance.memory) {
+  console.log('Memory usage:', {
+    used: (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2) + 'MB',
+    total: (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2) + 'MB',
+    limit: (performance.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2) + 'MB'
+  });
+}
+```
+
+#### Infinite Scroll Issues
+**Feed Loading Problems:**
+
+1. **Scroll Event Debugging**
+```javascript
+// Debug infinite scroll
+function debugInfiniteScroll() {
+  const feedContainer = document.getElementById('posts-container');
+
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.pageYOffset;
+    const windowHeight = window.innerHeight;
+    const docHeight = document.documentElement.scrollHeight;
+    const distanceFromBottom = docHeight - (scrollTop + windowHeight);
+
+    console.log('Scroll debug:', {
+      scrollTop,
+      windowHeight,
+      docHeight,
+      distanceFromBottom,
+      triggerPoint: distanceFromBottom < 200
+    });
+
+    if (distanceFromBottom < 200) {
+      console.log('🔄 Should trigger more posts loading');
+    }
+  });
+}
+debugInfiniteScroll();
+```
+
+2. **Feed State Verification**
+```javascript
+// Check feed loading state
+console.log('Feed state:', {
+  isLoading: window.isLoadingMorePosts,
+  hasMore: window.hasMorePosts,
+  currentOffset: window.feedOffset || 0,
+  postsDisplayed: document.querySelectorAll('.post').length
+});
+```
+
+### JavaScript Errors
+
+#### Module Loading Issues
+**ES6 Module Problems:**
+
+1. **Module Import Errors**
+```javascript
+// Check for import/export errors in console
+// Common issues:
+// - Incorrect file paths
+// - Missing export statements
+// - Circular dependencies
+
+// Test module loading
+try {
+  import('./src/modules/core/api-client.js')
+    .then(module => console.log('✅ Module loaded:', module))
+    .catch(e => console.error('❌ Module failed:', e));
+} catch (e) {
+  console.error('❌ Import syntax error:', e);
+}
+```
+
+2. **Script Tag Issues**
+```html
+<!-- Verify module script tags -->
+<script type="module" src="src/js/app.js"></script>
+
+<!-- Check for script loading errors in Network tab -->
+```
+
+#### API Integration Errors
+**Frontend-Backend Communication:**
+
+1. **API Response Structure**
+```javascript
+// Verify API response format
+fetch('/api/endpoint', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    console.log('API Response structure:', data);
+
+    // Expected structure:
+    // {success: true, data: {...}} or {success: false, error: "..."}
+
+    if (!data.hasOwnProperty('success')) {
+      console.warn('⚠️ Unexpected API response format');
+    }
+  });
+```
+
+2. **Error Handling**
+```javascript
+// Robust error handling
+async function apiCall(endpoint, options = {}) {
+  try {
+    const response = await fetch(endpoint, {
+      credentials: 'include',
+      ...options
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'API call failed');
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+}
+```
+
+### Cross-References
+- **Authentication**: See [🔐 Authentication Errors](#authentication-errors) for login-related display issues
+- **API**: See [🌐 API & Network Errors](#api-network-errors) for content loading API issues
+- **Performance**: See [💾 Database Errors](#database-errors) for slow loading due to DB issues
+
+---
+
+## 🛠️ **DEVELOPMENT ENVIRONMENT**
+
+### Prerequisites & Setup
+
+#### System Requirements
+**Before starting development:**
+
+```bash
+# 1. Node.js 18+ (Required)
+node --version
+# Should return: v18.x.x or higher
+
+# 2. PostgreSQL 14+ (Required for backend)
+psql --version
+# Should return: psql (PostgreSQL) 14.x or higher
+
+# 3. Git (Required)
+git --version
+
+# 4. Docker (Optional - for containerized development)
+docker --version
+
+# 5. Azure CLI (Optional - for deployment)
+az --version
+```
+
+#### Environment Configuration
+**Critical environment setup:**
+
+1. **Backend Environment Variables**
+```bash
+cd backend
+cp .env.example .env
+
+# Edit .env with required values:
+# DATABASE_URL="postgresql://username:password@localhost:5432/unitedwerise"
+# JWT_SECRET="your-random-secret-here"
+# AZURE_OPENAI_ENDPOINT="https://unitedwerise-openai.openai.azure.com/"
+# AZURE_STORAGE_ACCOUNT_NAME="uwrstorage2425"
+# GOOGLE_CLIENT_ID="your-oauth-client-id"
+```
+
+2. **Frontend Configuration**
+```javascript
+// frontend/src/config/environment.js
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000/api'
+  : 'https://api.unitedwerise.org/api';
+```
+
+### Backend Development Setup
+
+#### Database Setup
+**PostgreSQL Configuration:**
+
+1. **Local PostgreSQL Installation**
+```bash
+# Option 1: Docker (Recommended)
+docker run -d \
+  --name unitedwerise-postgres \
+  -e POSTGRES_USER=unitedwerise \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=unitedwerise \
+  -p 5432:5432 \
+  postgres:14
+
+# Option 2: Direct Installation
+# Windows: Download from postgresql.org
+# Mac: brew install postgresql@14
+# Linux: sudo apt-get install postgresql-14
+```
+
+2. **Database Initialization**
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev
+
+# Seed database (optional)
+npx prisma db seed
+```
+
+3. **Database Connection Testing**
+```bash
+# Test connection
+npx prisma db pull
+
+# If connection fails:
+# 1. Check DATABASE_URL in .env
+# 2. Verify PostgreSQL is running
+# 3. Check firewall/port 5432
+```
+
+#### Backend Server Setup
+**Development Server:**
+
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# TypeScript compilation test
+npm run build
+# Must succeed without errors
+
+# Start development server
+# ⚠️ USER MUST RUN - NOT CLAUDE
+# npm run dev
+
+# Verify server running
+curl http://localhost:3000/health
+# Should return: {"status":"ok","uptime":"..."}
+```
+
+**Common Backend Setup Issues:**
+
+1. **Port Already in Use**
+```bash
+# Find process using port 3000
+lsof -i :3000  # Mac/Linux
+netstat -ano | findstr :3000  # Windows
+
+# Kill process
+kill -9 <PID>  # Mac/Linux
+taskkill /PID <PID> /F  # Windows
+```
+
+2. **TypeScript Compilation Errors**
+```bash
+# Clear TypeScript cache
+rm -rf node_modules/.cache
+npm install
+
+# Check for missing type definitions
+npm install --save-dev @types/node @types/express
+```
+
+3. **Prisma Client Issues**
+```bash
+# Regenerate Prisma client
+npx prisma generate
+
+# Reset database (DEVELOPMENT ONLY)
+npx prisma migrate reset
+```
+
+### Frontend Development Setup
+
+#### Static File Serving
+**Frontend Development Server:**
+
+```bash
+cd frontend
+
+# Option 1: Python HTTP Server
+python -m http.server 8080
+# Access: http://localhost:8080
+
+# Option 2: Node.js serve
+npx serve . -p 8080
+
+# Option 3: VS Code Live Server extension
+# Right-click index.html → "Open with Live Server"
+```
+
+#### Module Development
+**ES6 Module Setup:**
+
+1. **Module Structure Verification**
+```javascript
+// Check module exports
+// frontend/src/modules/core/api-client.js
+export class ApiClient {
+  // ...
+}
+
+// Check module imports
+// frontend/src/js/app.js
+import { ApiClient } from './modules/core/api-client.js';
+```
+
+2. **Module Loading Testing**
+```html
+<!-- Verify script type="module" -->
+<script type="module" src="src/js/app.js"></script>
+
+<!-- Check for module errors in console -->
+```
+
+3. **CORS for Local Development**
+```javascript
+// If serving files directly (file://), modules may fail
+// Always use HTTP server for development
+// Example: python -m http.server 8080
+```
+
+### Development Workflow
+
+#### Daily Development Process
+**Standard workflow:**
+
+```bash
+# 1. Start development session
+git checkout development
+git pull origin development
+
+# 2. Start services (user runs)
+# Terminal 1: cd backend && npm run dev
+# Terminal 2: cd frontend && python -m http.server 8080
+
+# 3. Make changes and test
+# Edit files → Save → Test in browser
+
+# 4. Commit and push
+git add .
+git commit -m "feat: Description of changes"
+git push origin development
+
+# 5. Test on staging
+# https://dev.unitedwerise.org
+```
+
+#### Code Testing Workflow
+**Before committing:**
+
+1. **Backend Testing**
+```bash
+cd backend
+
+# TypeScript compilation
+npm run build
+
+# Run tests (if available)
+npm test
+
+# Manual API testing
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}'
+```
+
+2. **Frontend Testing**
+```javascript
+// Browser console testing
+// Test critical functionality:
+
+// Authentication
+fetch('/api/auth/me', {credentials: 'include'})
+  .then(r => r.json())
+  .then(console.log);
+
+// Feed loading
+fetch('/api/feed/posts', {credentials: 'include'})
+  .then(r => r.json())
+  .then(console.log);
+
+// Photo upload
+const file = document.querySelector('input[type="file"]').files[0];
+if (file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  fetch('/api/photos/upload', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData
+  }).then(r => r.json()).then(console.log);
+}
+```
+
+### Local Services Configuration
+
+#### PostgreSQL Management
+**Database development:**
+
+```bash
+# Start PostgreSQL
+# Docker:
+docker start unitedwerise-postgres
+
+# Direct installation:
+# Mac: brew services start postgresql@14
+# Linux: sudo systemctl start postgresql
+# Windows: Start PostgreSQL service
+
+# Connect to database
+psql -h localhost -U unitedwerise -d unitedwerise
+
+# Common database operations
+\dt  # List tables
+\d users  # Describe table
+SELECT count(*) FROM users;  # Query data
+```
+
+#### Optional Services
+**Enhanced development setup:**
+
+1. **Qdrant Vector Database** (for AI features)
+```bash
+# Start Qdrant
+docker run -p 6333:6333 qdrant/qdrant
+
+# Test connection
+curl http://localhost:6333/health
+```
+
+2. **Redis** (for caching - if implemented)
+```bash
+# Start Redis
+docker run -p 6379:6379 redis:alpine
+
+# Test connection
+redis-cli ping
+```
+
+### Troubleshooting Development Issues
+
+#### Cannot Connect to Backend
+**Backend connectivity issues:**
+
+1. **Check Backend Status**
+```bash
+# Verify backend is running
+curl http://localhost:3000/health
+
+# Check process
+ps aux | grep node  # Mac/Linux
+tasklist | findstr node  # Windows
+```
+
+2. **Port Conflicts**
+```bash
+# Check what's using port 3000
+lsof -i :3000  # Mac/Linux
+netstat -ano | findstr :3000  # Windows
+
+# Use different port
+# In backend/.env: PORT=3001
+```
+
+3. **CORS Issues in Development**
+```javascript
+// Frontend calling wrong API URL
+// Check frontend/src/config/environment.js
+const API_BASE = 'http://localhost:3000/api';  // Development
+```
+
+#### Database Connection Issues
+**PostgreSQL problems:**
+
+1. **Connection String Issues**
+```bash
+# Verify DATABASE_URL format
+# postgresql://username:password@host:port/database
+
+# Test connection manually
+psql "postgresql://unitedwerise:password@localhost:5432/unitedwerise"
+```
+
+2. **Permission Issues**
+```sql
+-- Grant permissions (if needed)
+GRANT ALL PRIVILEGES ON DATABASE unitedwerise TO unitedwerise;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO unitedwerise;
+```
+
+3. **Migration Issues**
+```bash
+# Reset migrations (DEVELOPMENT ONLY)
+npx prisma migrate reset
+
+# Apply specific migration
+npx prisma migrate deploy
+```
+
+### Cross-References
+- **Deployment**: See [🚀 Deployment Errors](#deployment-errors) for production environment setup
+- **Database**: See [💾 Database Errors](#database-errors) for database-specific development issues
+- **API Issues**: See [🌐 API & Network Errors](#api-network-errors) for development API problems
+
+---
+
+## 📚 **RECENTLY RESOLVED ISSUES**
+
+### 🔥 CRITICAL FIXES
+
+#### ✅ Admin Dashboard Route Conflict (August 26, 2025)
+**Issue**: Admin Dashboard "Candidate registration not found" 404 errors
+
+**Root Cause**: Express.js route matching conflict in `backend/src/routes/admin.ts`
+- `/candidates/:id` was matching `/candidates/profiles` first
+- "profiles" was being treated as `:id` parameter
+
+**Solution**: Route order reorganization
+```javascript
+// ❌ Wrong order (caused 404s):
+router.get('/candidates/:id', ...);       // Catches everything
+router.get('/candidates/profiles', ...);  // Never reached
+
+// ✅ Correct order (fixed):
+router.get('/candidates/profiles', ...);  // Specific route first
+router.get('/candidates/:id', ...);       // Parameterized route second
+```
+
+**Verification**:
+```bash
+curl backend-url/api/admin/candidates/profiles
+# ✅ Now returns: 401 "Access denied" (not 404)
+```
+
+**Lesson Learned**: Express.js matches routes in definition order. Specific routes must always come before parameterized routes.
+
+#### ✅ Admin Messaging Interface Debug (August 26, 2025)
+**Issue**: Admin-Candidate messaging showed "Failed to load messages" error
+
+**Investigation Process**:
+1. Backend endpoints verified as working correctly
+2. Frontend debug code added to `openCandidateMessaging()` function
+3. Enhanced error reporting in messaging modal
+4. API response logging implemented
+5. Candidate ID validation checks added
+
+**Status**: **COMPLETELY RESOLVED** - Admin dashboard candidate profiles now load successfully.
+
+### 🌐 NETWORK & API FIXES
+
+#### ✅ CORS Policy Issues (August 17, 2025)
+**Issue**: CORS policy blocking frontend requests
+
+**Solution**:
+- Backend CORS configuration updated to include all required origins
+- Rate limiting adjusted from 30→80 requests/min
+
+**Verification**:
+```javascript
+fetch('https://api.unitedwerise.org/health')
+  .then(r => console.log('Status:', r.status, 'CORS:', r.headers.get('access-control-allow-origin')));
+```
+
+#### ✅ Rate Limiting Errors (August 17, 2025)
+**Issue**: 429 "Too Many Requests" errors
+
+**Solution**:
+- Burst rate limiter increased to 80 requests/min
+- Health check endpoints exempted from rate limiting
+
+**Monitoring**:
+```javascript
+console.log('Rate limit headers:',
+  response.headers.get('ratelimit-remaining'),
+  response.headers.get('ratelimit-reset'));
+```
+
+#### ✅ Friend Status 500 Errors (August 17, 2025)
+**Issue**: 500 Internal Server Error on friend-status endpoint
+
+**Solution**:
+- Error handling added with safe fallbacks
+- Returns default values instead of crashing
+
+**Test Verification**:
+```javascript
+fetch('/api/users/friend-status/test123', {
+  credentials: 'include'
+}).then(r => r.json()).then(console.log);
+// Expected: {isFriend: false, isPending: false, status: 'none'}
+```
+
+### 🔐 SECURITY ENHANCEMENTS
+
+#### ✅ Cookie Authentication Migration (January 13, 2025)
+**Enhancement**: JWT token management moved to httpOnly cookies
+
+**Benefits**:
+- More secure (prevents XSS token theft)
+- Automatic inclusion in requests
+- Simplified frontend authentication
+
+**Required Changes**: All API calls must include `credentials: 'include'`
+
+#### ✅ TOTP 2FA Implementation (August 21, 2025)
+**Feature**: Complete enterprise-grade TOTP authentication system
+
+**Capabilities**:
+- QR code generation for Google Authenticator/Authy
+- Admin enforcement for admin routes
+- 24-hour trusted device sessions
+- Recovery code system
+
+**Implementation**: Fully operational across frontend and admin dashboard
+
+### 🖼️ UI/UX IMPROVEMENTS
+
+#### ✅ My Feed Infinite Scroll Restoration (August 16, 2025)
+**Issue**: Infinite scroll temporarily broken during system audit
+
+**Solution**: Complete restoration of infinite scroll functionality
+- 15-post batch loading
+- Proper offset tracking
+- Smooth user experience
+
+**Status**: **FULLY OPERATIONAL**
+
+#### ✅ Mobile UI System Enhancement (Ongoing)
+**Enhancement**: Comprehensive responsive design improvements
+
+**Features**:
+- 3-state sidebar navigation
+- Touch-optimized controls
+- Mobile-first breakpoint system
+- Progressive enhancement
+
+### 🚀 DEPLOYMENT OPTIMIZATIONS
+
+#### ✅ Dual-Environment Architecture (Current)
+**Achievement**: Gold standard staging/production separation
+
+**Components**:
+- **Staging**: `https://dev.unitedwerise.org` (admin-only access)
+- **Production**: `https://www.unitedwerise.org` (public access)
+- **Automated**: Frontend deployments
+- **Manual**: Backend deployments (intentional safety measure)
+
+#### ✅ Backend Deployment Streamlining
+**Improvement**: Simplified backend deployment process
+
+**Process**:
+1. Push to development branch
+2. Docker build with Azure Container Registry
+3. Container deployment with environment-specific configuration
+4. Health verification and uptime monitoring
+
+### 📊 MONITORING ENHANCEMENTS
+
+#### ✅ Deployment Status System
+**Feature**: Real-time deployment monitoring
+
+**Capabilities**:
+- Release SHA tracking
+- Uptime monitoring (fresh deployments show <60 seconds)
+- Container health verification
+- Environment-specific status
+
+**Access**: Available via `/health` and `/health/deployment` endpoints
+
+### 🎯 DEVELOPMENT WORKFLOW
+
+#### ✅ Documentation Reorganization (Current)
+**Enhancement**: Systematic troubleshooting guide by error category
+
+**Structure**:
+- Debugging decision tree
+- Error category organization
+- Cross-reference system
+- Recently resolved issues tracking
+
+**Benefit**: Faster problem resolution and systematic approach to debugging
+
+---
+
+## 🚨 **EMERGENCY PROCEDURES**
+
+### Backend Emergency Response
+
+#### Service Unresponsive
+```bash
+# 1. Immediate restart
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-suffix emergency-$(date +%m%d-%H%M)
+
+# 2. Force single revision (kill old containers)
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+
+# 3. Verify restart
+curl -s "https://api.unitedwerise.org/health" | jq '.uptime'
+# Should show <60 seconds for fresh restart
+```
+
+#### Database Emergency Recovery
+```bash
+# Point-in-time restore (if database corrupted)
+az postgres flexible-server restore \
+  --resource-group unitedwerise-rg \
+  --name unitedwerise-db-emergency \
+  --source-server unitedwerise-db \
+  --restore-time "$(date -u -d '1 hour ago' '+%Y-%m-%dT%H:%M:%SZ')"
+```
+
+### Frontend Emergency Response
+
+#### Broken Production Frontend
+```bash
+# Quick rollback
+git revert HEAD
+git push origin main
+# Azure Static Web Apps auto-deploys in ~2-5 minutes
+```
+
+### Support & Escalation
+
+#### Technical Issues
+- **GitHub Issues**: https://github.com/unitedwerise/issues (planned)
+- **Email**: support@unitedwerise.org (planned)
+
+#### Security Issues
+- **Email**: security@unitedwerise.org (planned)
+- **Process**: Use responsible disclosure
+- **Response Time**: 24-48 hours for critical issues
 
 ---
 

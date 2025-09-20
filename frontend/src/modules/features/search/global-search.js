@@ -514,8 +514,8 @@ export async function openUserProfile(userId, username) {
         }
 
         // Load user's profile using the MyProfile component
-        if (window.MyProfile) {
-            await window.MyProfile.showUserProfile(userId);
+        if (window.Profile) {
+            await window.Profile.showUserProfile(userId);
         } else {
             // Fallback to basic profile view
             await openUserFeed(userId, username);

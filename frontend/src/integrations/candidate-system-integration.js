@@ -3120,7 +3120,7 @@ class CandidateSystemIntegration {
                                     <button class="quick-btn" onclick="this.backToHub()">
                                         🏠 Back to Hub
                                     </button>
-                                    <button class="quick-btn" onclick="toggleMyProfile()">
+                                    <button class="quick-btn" onclick="toggleProfile()">
                                         👤 My Profile
                                     </button>
                                     <button class="quick-btn" onclick="this.viewPublicProfile()">

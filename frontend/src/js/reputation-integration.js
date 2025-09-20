@@ -70,10 +70,10 @@
     
     function enhanceProfileSystem() {
         // Hook into profile loading to add badges
-        if (window.MyProfile && window.MyProfile.prototype.renderProfile) {
-            const originalRenderProfile = window.MyProfile.prototype.renderProfile;
+        if (window.Profile && window.Profile.prototype.renderProfile) {
+            const originalRenderProfile = window.Profile.prototype.renderProfile;
             
-            window.MyProfile.prototype.renderProfile = function(container) {
+            window.Profile.prototype.renderProfile = function(container) {
                 // Call original render method
                 originalRenderProfile.call(this, container);
                 

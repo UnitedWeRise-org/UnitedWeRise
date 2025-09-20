@@ -99,11 +99,14 @@ python -m http.server 8080
 
 ## 🔐 Security & Privacy
 
-- JWT authentication with 30-day tokens
-- Azure OpenAI for content analysis (no data retention)
-- Comprehensive rate limiting and anti-bot protection
-- Behavior-based reputation system (not content censorship)
-- Privacy-controlled photo tagging and friend-only messaging
+- **Enterprise-grade authentication**: httpOnly cookies with CSRF protection (Facebook/Google-level security)
+- **TOTP 2FA**: Optional two-factor authentication with backup codes
+- **OAuth Integration**: Google, Microsoft, Apple social login support
+- **XSS Prevention**: httpOnly cookies prevent JavaScript access to auth tokens
+- **Azure OpenAI**: Content analysis with no data retention
+- **Rate Limiting**: Comprehensive anti-bot protection and request throttling
+- **Reputation System**: Behavior-based scoring (not content censorship)
+- **Privacy Controls**: Photo tagging approvals, friend-only messaging, content visibility settings
 
 ## 📊 Performance
 

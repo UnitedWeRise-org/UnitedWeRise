@@ -170,7 +170,7 @@ grep -n "{#security-" MASTER_DOCUMENTATION.md
 ```
 
 **Cross-reference patterns to follow:**
-- `{#section-name}` → Jump to specific system documentation
+- Section anchor format (like `#security-authentication`) → Jump to specific system documentation
 - `Related Systems:` → Find interconnected components  
 - `Files Modified:` → Locate implementation files
 - `Recently Fixed:` → Avoid reimplementing solved problems
