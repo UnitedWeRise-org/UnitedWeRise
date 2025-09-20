@@ -293,88 +293,129 @@ function showMobileFeed() {
         postsContainer.style.display = 'block';
         // Trigger feed loading if needed
         if (typeof loadMyFeedPosts === 'function') {
-            loadMyFeedPosts();
+            try {
+                loadMyFeedPosts();
+            } catch (error) {
+                console.error('Error loading feed:', error);
+                showTemporaryView('Feed', 'Unable to load feed. Please refresh the page.');
+            }
+        } else if (typeof window.loadMyFeed === 'function') {
+            // Try alternative function name
+            try {
+                window.loadMyFeed();
+            } catch (error) {
+                console.error('Error loading feed:', error);
+                showTemporaryView('Feed', 'Unable to load feed. Please refresh the page.');
+            }
+        } else {
+            console.warn('Feed loading functions not available');
         }
     }
 }
 
 function showMobileTrending() {
     // Try to load trending content from the real functions
-    if (typeof loadTrendingUpdates === 'function') {
-        loadTrendingUpdates();
-        
-        // Show trending container if it exists
-        const trendingContainer = document.querySelector('.trending-updates');
-        if (trendingContainer) {
-            trendingContainer.style.display = 'block';
+    try {
+        if (typeof loadTrendingUpdates === 'function') {
+            loadTrendingUpdates();
+
+            // Show trending container if it exists
+            const trendingContainer = document.querySelector('.trending-updates');
+            if (trendingContainer) {
+                trendingContainer.style.display = 'block';
+            }
+
+            // Also try to show the trending panel
+            const trendingPanel = document.getElementById('panel-trending');
+            if (trendingPanel) {
+                trendingPanel.style.display = 'block';
+                trendingPanel.classList.remove('hidden');
+            }
         }
-        
-        // Also try to show the trending panel
-        const trendingPanel = document.getElementById('panel-trending');
-        if (trendingPanel) {
-            trendingPanel.style.display = 'block';
-            trendingPanel.classList.remove('hidden');
+        // Try alternative trending function
+        else if (typeof loadTrendingPosts === 'function') {
+            loadTrendingPosts();
         }
-    } 
-    // Try alternative trending function
-    else if (typeof loadTrendingPosts === 'function') {
-        loadTrendingPosts();
-    }
-    // Fallback to showing existing content
-    else {
-        const trendingContainer = document.querySelector('.trending-updates');
-        if (trendingContainer) {
-            trendingContainer.style.display = 'block';
-        } else {
-            showTemporaryView('Trending', 'Loading trending topics...');
+        // Fallback to showing existing content
+        else {
+            const trendingContainer = document.querySelector('.trending-updates');
+            if (trendingContainer) {
+                trendingContainer.style.display = 'block';
+            } else {
+                showTemporaryView('Trending', 'Trending topics are loading. Please wait a moment.');
+            }
+            console.warn('Trending functions not available');
         }
-        console.warn('Trending functions not available');
+    } catch (error) {
+        console.error('Error loading trending content:', error);
+        showTemporaryView('Trending', 'Unable to load trending topics. Please try again later.');
     }
 }
 
 function showMobileMessages() {
     // Check if user is logged in
-    if (!window.currentUser) {
+    if (!window.currentUser && !localStorage.getItem('authToken')) {
         showTemporaryView('Messages', 'Please log in to view your messages.');
         return;
     }
-    
-    // Call the real loadConversations function from index.html
-    if (typeof loadConversations === 'function') {
-        loadConversations();
-        
-        // Show messages container if it exists
-        const messagesContainer = document.querySelector('.messages-container');
-        if (messagesContainer) {
-            messagesContainer.style.display = 'block';
+
+    try {
+        // Call the real loadConversations function from index.html
+        if (typeof loadConversations === 'function') {
+            loadConversations();
+
+            // Show messages container if it exists
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.style.display = 'block';
+            }
+        } else if (typeof window.loadConversations === 'function') {
+            // Try window scope
+            window.loadConversations();
+
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.style.display = 'block';
+            }
+        } else {
+            showTemporaryView('Messages', 'Messages feature is loading. Please wait.');
+            console.warn('loadConversations function not available');
         }
-    } else {
-        showTemporaryView('Messages', 'Loading conversations...');
-        console.warn('loadConversations function not available');
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        showTemporaryView('Messages', 'Unable to load messages. Please try again.');
     }
 }
 
 function showMobileCivic() {
     // Check if user is logged in
-    if (!window.currentUser) {
+    if (!window.currentUser && !localStorage.getItem('authToken')) {
         showTemporaryView('Civic Engagement', 'Please log in to access civic organizing tools.');
         return;
     }
-    
-    // Call the real openCivicOrganizing function from index.html
-    if (typeof openCivicOrganizing === 'function') {
-        openCivicOrganizing();
-    } else {
-        // Fallback - try to show civic elements manually
-        const civicElements = document.querySelectorAll('[id*="civic"], [class*="civic"]');
-        if (civicElements.length > 0) {
-            civicElements.forEach(element => {
-                element.style.display = 'block';
-            });
+
+    try {
+        // Call the real openCivicOrganizing function from index.html
+        if (typeof openCivicOrganizing === 'function') {
+            openCivicOrganizing();
+        } else if (typeof window.openCivicOrganizing === 'function') {
+            // Try window scope
+            window.openCivicOrganizing();
         } else {
-            showTemporaryView('Civic Engagement', 'Loading civic organizing tools...');
+            // Fallback - try to show civic elements manually
+            const civicElements = document.querySelectorAll('[id*="civic"], [class*="civic"]');
+            if (civicElements.length > 0) {
+                civicElements.forEach(element => {
+                    element.style.display = 'block';
+                });
+            } else {
+                showTemporaryView('Civic Engagement', 'Civic organizing tools are loading.');
+            }
+            console.warn('openCivicOrganizing function not available');
         }
-        console.warn('openCivicOrganizing function not available');
+    } catch (error) {
+        console.error('Error loading civic tools:', error);
+        showTemporaryView('Civic Engagement', 'Unable to load civic tools. Please try again.');
     }
 }
 
@@ -406,19 +447,43 @@ function showMobileDonate() {
 }
 
 function showMobileProfile() {
-    if (typeof showMyProfile === 'function') {
-        showMyProfile();
-    } else {
-        showTemporaryView('Profile', 'Your profile will appear here.');
+    try {
+        if (typeof showMyProfile === 'function') {
+            showMyProfile();
+        } else if (typeof window.showMyProfile === 'function') {
+            // Try window scope
+            window.showMyProfile();
+        } else if (typeof toggleMyProfile === 'function') {
+            // Try alternative function
+            toggleMyProfile();
+        } else {
+            showTemporaryView('Profile', 'Your profile is loading. Please wait.');
+            console.warn('Profile functions not available');
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showTemporaryView('Profile', 'Unable to load profile. Please refresh the page.');
     }
 }
 
 function showMobileLogin() {
-    // Open login modal
-    if (typeof openLoginModal === 'function') {
-        openLoginModal();
-    } else {
-        showTemporaryView('Login', 'Please log in to continue.');
+    try {
+        // Open login modal
+        if (typeof openLoginModal === 'function') {
+            openLoginModal();
+        } else if (typeof window.openLoginModal === 'function') {
+            // Try window scope
+            window.openLoginModal();
+        } else if (typeof window.authModal?.open === 'function') {
+            // Try modular auth system
+            window.authModal.open();
+        } else {
+            showTemporaryView('Login', 'Login system is loading. Please wait a moment and try again.');
+            console.warn('Login modal function not available');
+        }
+    } catch (error) {
+        console.error('Error opening login modal:', error);
+        showTemporaryView('Login', 'Unable to open login. Please refresh the page.');
     }
 }
 

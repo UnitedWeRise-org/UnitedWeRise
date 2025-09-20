@@ -215,15 +215,31 @@ class MyProfile {
 
     renderProfile(container) {
         const user = this.userProfile;
-        
+
+        // === COMPREHENSIVE AVATAR DEBUGGING ===
+        // Admin debug (requires verification)
+        adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC START ===');
+        adminDebugLog('ProfileAvatar', 'renderProfile user object', user);
+        adminDebugLog('ProfileAvatar', 'user.avatar value', user?.avatar);
+        adminDebugLog('ProfileAvatar', 'user.avatar type', typeof user?.avatar);
+        adminDebugLog('ProfileAvatar', 'window.currentUser', window.currentUser);
+        adminDebugLog('ProfileAvatar', 'window.currentUser.avatar', window.currentUser?.avatar);
+        adminDebugLog('ProfileAvatar', 'window.currentUser.avatar type', typeof window.currentUser?.avatar);
+
+        // Fallback to global user state if profile doesn't have avatar
+        const avatarUrl = user?.avatar || window.currentUser?.avatar;
+        adminDebugLog('ProfileAvatar', 'FINAL avatar URL to display', avatarUrl);
+        adminDebugLog('ProfileAvatar', 'Will show image?', !!avatarUrl);
+        adminDebugLog('ProfileAvatar', '=== PROFILE AVATAR DIAGNOSTIC END ===');
+
         container.innerHTML = `
             <div class="my-profile">
                 <!-- Profile Header -->
                 <div class="profile-header">
                     <div class="profile-picture-container">
                         <div class="profile-picture">
-                            ${user.avatar ? 
-                                `<img src="${user.avatar}" alt="Profile Picture" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">` : 
+                            ${avatarUrl ?
+                                `<img src="${avatarUrl}" alt="Profile Picture" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">` :
                                 `<div class="profile-placeholder" onclick="this.parentNode.parentNode.querySelector('.profile-upload').click()">
                                     <span style="font-size: 3rem;">👤</span>
                                     <p>Click to upload photo</p>
@@ -231,7 +247,7 @@ class MyProfile {
                             }
                             <input type="file" class="profile-upload" accept="image/*" style="display: none;" onchange="window.myProfile.uploadProfilePicture(this)">
                         </div>
-                        ${user.avatar ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
+                        ${avatarUrl ? '<button class="change-photo-btn" onclick="this.parentNode.querySelector(\'.profile-upload\').click()">Change Photo</button>' : ''}
                     </div>
                     
                     <div class="profile-info">
@@ -290,7 +306,8 @@ class MyProfile {
         `;
 
         this.addStyles();
-        
+
+
         // Load data for the initial tab if needed
         if (this.currentTab === 'activity') {
             adminDebugLog('📊 Initial render with activity tab, loading activities...');
@@ -969,7 +986,9 @@ class MyProfile {
 
     async uploadProfilePicture(input) {
         const file = input.files[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -996,17 +1015,23 @@ class MyProfile {
             });
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
-                // Profile picture uploaded successfully, reload profile with fresh data
-                adminDebugLog('✅ Profile picture uploaded:', response.data.photos[0].url);
-                
-                // Force fresh profile data by bypassing cache
-                this.refreshProfile('mainContent');
+                const uploadedPhoto = response.data.photos[0];
+
+                // Update global user state immediately with new avatar
+                if (window.currentUser) {
+                    window.currentUser.avatar = uploadedPhoto.url;
+                }
+
+                // Small delay to ensure database update propagates, then refresh
+                setTimeout(() => {
+                    this.refreshProfile('mainContent');
+                }, 500);
             } else {
                 const errorMsg = response.data?.message || 'Failed to upload profile picture';
                 alert(errorMsg);
             }
         } catch (error) {
-            adminDebugError('Upload error:', error);
+            console.error('Error uploading profile picture:', error);
             alert('Error uploading profile picture. Please try again.');
         }
     }

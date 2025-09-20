@@ -59,6 +59,13 @@ const requireAuth = async (req, res, next) => {
         if (sessionId) {
             await sessionManager_1.sessionManager.updateSessionActivity(sessionId);
         }
+        // Check if staging environment requires admin access
+        if (process.env.STAGING_ENVIRONMENT === 'true' && !req.user?.isAdmin) {
+            return res.status(403).json({
+                error: 'This is a staging environment - admin access required.',
+                environment: 'staging'
+            });
+        }
         next();
     }
     catch (error) {
@@ -77,7 +84,7 @@ exports.requireAdmin = requireAdmin;
 // Environment-aware authentication for staging
 const requireStagingAuth = async (req, res, next) => {
     // If not in staging environment, proceed with normal auth
-    if (process.env.NODE_ENV !== 'staging' && !process.env.STAGING_ENVIRONMENT) {
+    if (process.env.NODE_ENV !== 'staging' && process.env.STAGING_ENVIRONMENT !== 'true') {
         return (0, exports.requireAuth)(req, res, next);
     }
     // In staging environment, require admin access for all protected routes

@@ -513,7 +513,9 @@ class PhotoService {
         // Get the backend URL for constructing absolute URLs
         const backendUrl = process.env.NODE_ENV === 'production'
             ? 'https://api.unitedwerise.org'
-            : `http://localhost:${process.env.PORT || 3001}`;
+            : process.env.NODE_ENV === 'staging' || process.env.STAGING_ENVIRONMENT === 'true'
+                ? 'https://dev-api.unitedwerise.org'
+                : `http://localhost:${process.env.PORT || 3001}`;
         // Group photos by gallery and transform URLs
         const galleryMap = new Map();
         let totalSize = 0;

@@ -29,12 +29,30 @@ class PostComponent {
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
-        
+
+        // === COMPREHENSIVE POST AVATAR DEBUGGING ===
+        adminDebugLog('PostAvatar', '=== POST AVATAR DIAGNOSTIC START ===');
+        adminDebugLog('PostAvatar', 'renderPost full post object', post);
+        adminDebugLog('PostAvatar', 'post.author object', post.author);
+        adminDebugLog('PostAvatar', 'post.author.avatar value', post.author?.avatar);
+        adminDebugLog('PostAvatar', 'post.author.avatar type', typeof post.author?.avatar);
+        adminDebugLog('PostAvatar', 'authorName', authorName);
+        adminDebugLog('PostAvatar', 'authorInitial', authorInitial);
+        adminDebugLog('PostAvatar', 'Will show avatar image?', !!post.author?.avatar);
+        adminDebugLog('PostAvatar', 'Avatar URL to use', post.author?.avatar || `placeholder with ${authorInitial}`);
+        adminDebugLog('PostAvatar', '=== POST AVATAR DIAGNOSTIC END ===');
+
+
         return `
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
-                        <div class="post-avatar">${authorInitial}</div>
+                        <div class="post-avatar">
+                            ${post.author?.avatar ?
+                                `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
+                                `<div class="avatar-placeholder">${authorInitial}</div>`
+                            }
+                        </div>
                         <div class="post-author-info">
                             <div class="post-author-name">
                                 ${authorName}
@@ -1300,7 +1318,17 @@ class PostComponent {
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
-        
+
+        // === COMPREHENSIVE FOCUSED POST AVATAR DEBUGGING ===
+        adminDebugLog('FocusedPostAvatar', '=== FOCUSED POST AVATAR DIAGNOSTIC START ===');
+        adminDebugLog('FocusedPostAvatar', 'full post object', post);
+        adminDebugLog('FocusedPostAvatar', 'post.author object', post.author);
+        adminDebugLog('FocusedPostAvatar', 'post.author.avatar value', post.author?.avatar);
+        adminDebugLog('FocusedPostAvatar', 'post.author.avatar type', typeof post.author?.avatar);
+        adminDebugLog('FocusedPostAvatar', 'Will show avatar image?', !!post.author?.avatar);
+        adminDebugLog('FocusedPostAvatar', 'Avatar URL to use', post.author?.avatar || `placeholder with ${authorInitial}`);
+        adminDebugLog('FocusedPostAvatar', '=== FOCUSED POST AVATAR DIAGNOSTIC END ===');
+
         // Display focused post in main content area
         mainContent.innerHTML = `
             <div class="post-focus-view">
@@ -1314,7 +1342,12 @@ class PostComponent {
                 <!-- Original Post -->
                 <div class="post-component focused-post" style="margin-bottom: 2rem;">
                     <div class="post-header">
-                        <div class="post-avatar">${authorInitial}</div>
+                        <div class="post-avatar">
+                            ${post.author?.avatar ?
+                                `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
+                                `<div class="avatar-placeholder">${authorInitial}</div>`
+                            }
+                        </div>
                         <div class="post-author-info">
                             <div class="post-author-name">
                                 ${authorName}

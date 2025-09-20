@@ -278,6 +278,14 @@
     </script>
 </head>
 <body>
+    <!-- Page Loading Spinner -->
+    <div id="page-loading-overlay" class="page-loading-overlay">
+        <div class="page-loading-content">
+            <div class="page-loading-spinner"></div>
+            <p class="page-loading-text">Loading United We Rise...</p>
+        </div>
+    </div>
+
     <div class="top-bar">
         <div class="top-bar-left">
             <input class="search desktop-search" type="search" placeholder="Search Name or Location" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false" onfocus="openSearch()" oninput="performGlobalSearch(this.value)">
@@ -9571,10 +9579,23 @@
         
         console.log('🚀 Loading modular JavaScript system...');
         
-        // Initialize all modules when DOM is ready
+        // Hide page loading overlay and initialize modules when DOM is ready
+        function hidePageLoadingOverlay() {
+            const overlay = document.getElementById('page-loading-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 initializeModules();
+
+                // Hide page loading spinner after modules are loaded
+                setTimeout(() => {
+                    hidePageLoadingOverlay();
+                }, 1000);
+
                 // Run diagnostics in development
                 if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
                     setTimeout(testModularFunctionality, 2000);
@@ -9582,6 +9603,11 @@
             });
         } else {
             initializeModules();
+
+            setTimeout(() => {
+                hidePageLoadingOverlay();
+            }, 1000);
+
             if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
                 setTimeout(testModularFunctionality, 2000);
             }

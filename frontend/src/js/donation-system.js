@@ -428,14 +428,122 @@ class DonationSystem {
                     }
                 }
                 
-                @media (max-width: 600px) {
+                /* Mobile Responsive Styles */
+                @media screen and (max-width: 767px) {
                     .donation-modal-content {
                         width: 95%;
-                        margin: 10% auto;
+                        margin: 2% auto;
+                        max-height: 95vh;
+                        overflow-y: auto;
+                        border-radius: 8px;
                     }
-                    
+
+                    .donation-modal-header {
+                        padding: 15px;
+                        position: sticky;
+                        top: 0;
+                        z-index: 10;
+                    }
+
+                    .donation-modal-header h2 {
+                        font-size: 1.2rem;
+                    }
+
+                    .donation-modal-header .tagline {
+                        font-size: 0.9rem;
+                    }
+
+                    .donation-modal-body {
+                        padding: 15px;
+                    }
+
                     .donation-amounts {
                         grid-template-columns: repeat(2, 1fr);
+                        gap: 8px;
+                    }
+
+                    .amount-btn {
+                        padding: 10px 5px;
+                        font-size: 14px;
+                    }
+
+                    .custom-amount-container label {
+                        font-size: 14px;
+                    }
+
+                    .custom-amount-input input {
+                        font-size: 16px; /* Prevents zoom on iOS */
+                    }
+
+                    .donate-btn {
+                        padding: 12px;
+                        font-size: 16px;
+                    }
+
+                    .donation-type label {
+                        padding: 10px 15px;
+                        font-size: 14px;
+                    }
+
+                    .live-mode-notice {
+                        font-size: 12px;
+                        padding: 10px;
+                    }
+
+                    .tax-info {
+                        font-size: 11px;
+                        padding: 15px 10px 10px;
+                    }
+
+                    .donation-close {
+                        width: 28px;
+                        height: 28px;
+                        font-size: 20px;
+                    }
+                }
+
+                /* Very small mobile screens */
+                @media screen and (max-width: 400px) {
+                    .donation-modal-content {
+                        width: 100%;
+                        margin: 0;
+                        border-radius: 0;
+                        height: 100vh;
+                        max-height: 100vh;
+                    }
+
+                    .donation-amounts {
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 5px;
+                    }
+
+                    .amount-btn {
+                        padding: 8px 3px;
+                        font-size: 13px;
+                    }
+                }
+
+                /* Landscape mode for mobile */
+                @media screen and (max-width: 767px) and (orientation: landscape) {
+                    .donation-modal-content {
+                        margin: 1% auto;
+                        max-height: 90vh;
+                    }
+
+                    .donation-modal-header {
+                        padding: 10px 15px;
+                    }
+
+                    .donation-modal-header h2 {
+                        font-size: 1.1rem;
+                    }
+
+                    .donation-modal-body {
+                        padding: 10px 15px;
+                    }
+
+                    .donation-amounts {
+                        grid-template-columns: repeat(3, 1fr);
                     }
                 }
             </style>
