@@ -3687,7 +3687,7 @@ Current Status: Use deploymentStatus.check() for real-time status
                                         🔑 Reset Password
                                     </button>
 
-                                    <button onclick="deleteUser('${user.id}', '${user.username}', ${JSON.stringify({posts: user.stats?.posts || 0, comments: user.stats?.comments || 0, followers: user.stats?.followers || 0})})" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
+                                    <button onclick="deleteUser('${user.id}', '${user.username}', {posts: ${user.stats?.posts || 0}, comments: ${user.stats?.comments || 0}, followers: ${user.stats?.followers || 0}})" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
                                         🗑️ Delete Account
                                     </button>
                                 </div>
@@ -3918,12 +3918,8 @@ Current Status: Use deploymentStatus.check() for real-time status
             statusDiv.innerHTML = '<span style="color: blue;">🔄 Merging accounts...</span>';
             
             try {
-                const response = await fetch('/api/admin/merge-accounts', {
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/merge-accounts`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getStoredAuthToken()}`
-                    },
                     body: JSON.stringify({
                         primaryAccountId: primaryId,
                         duplicateAccountId: duplicateId
