@@ -17,6 +17,11 @@ export interface AuthRequest extends Request {
     isModerator?: boolean;
     isAdmin?: boolean;
   };
+  sensitiveAction?: {
+    description: string;
+    totpVerifiedAt: Date;
+    adminUsername: string;
+  };
 }
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {

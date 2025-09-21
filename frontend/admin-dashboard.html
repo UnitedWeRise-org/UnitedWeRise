@@ -1024,6 +1024,145 @@ Loading deployment status...
     <script>
         // Global state
         let currentUser = null;
+
+        // Reusable TOTP Modal Component for Sensitive Actions
+        async function requestTOTPConfirmation(actionDescription, options = {}) {
+            return new Promise((resolve, reject) => {
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.7); z-index: 2000;
+                    display: flex; align-items: center; justify-content: center;
+                `;
+
+                let countdownInterval;
+                let timeLeft = 30;
+
+                const updateCountdown = () => {
+                    const countdownElement = modal.querySelector('#totp-countdown');
+                    if (countdownElement) {
+                        countdownElement.textContent = timeLeft;
+                        if (timeLeft <= 10) {
+                            countdownElement.style.color = '#e74c3c';
+                        }
+                    }
+                    timeLeft--;
+                    if (timeLeft < 0) {
+                        clearInterval(countdownInterval);
+                        cleanup();
+                        reject(new Error('TOTP timeout'));
+                    }
+                };
+
+                const cleanup = () => {
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    if (modal.parentNode) modal.parentNode.removeChild(modal);
+                };
+
+                modal.innerHTML = `
+                    <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 450px; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔐</div>
+                            <h2 style="margin: 0; color: #2c3e50;">Security Verification Required</h2>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
+                            <p style="margin: 0; font-weight: 600; color: #2c3e50;">Action: ${actionDescription}</p>
+                            ${options.additionalInfo ? `<p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #7f8c8d;">${options.additionalInfo}</p>` : ''}
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">
+                                Enter your current TOTP code:
+                            </label>
+                            <input type="text" id="totp-input"
+                                   placeholder="000000"
+                                   maxlength="6"
+                                   style="width: 100%; padding: 0.75rem; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 1.2rem; text-align: center; font-family: monospace;"
+                                   autocomplete="off">
+                            <div style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem; color: #7f8c8d;">
+                                Time remaining: <span id="totp-countdown" style="font-weight: 600;">30</span>s
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button id="totp-cancel" class="nav-button" style="background: #95a5a6; flex: 1;">
+                                Cancel
+                            </button>
+                            <button id="totp-confirm" class="nav-button" style="background: #e74c3c; flex: 1;">
+                                Confirm Action
+                            </button>
+                        </div>
+
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: #e8f4fd; border-radius: 4px; font-size: 0.85rem; color: #2980b9;">
+                            <strong>Security Notice:</strong> This action requires fresh TOTP verification. Enter the current 6-digit code from your authenticator app.
+                        </div>
+                    </div>
+                `;
+
+                modal.className = 'totp-modal';
+                document.body.appendChild(modal);
+
+                const input = modal.querySelector('#totp-input');
+                const confirmBtn = modal.querySelector('#totp-confirm');
+                const cancelBtn = modal.querySelector('#totp-cancel');
+
+                // Auto-focus on input
+                setTimeout(() => input.focus(), 100);
+
+                // Start countdown
+                countdownInterval = setInterval(updateCountdown, 1000);
+
+                // Auto-format input
+                input.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                    if (e.target.value.length === 6) {
+                        confirmBtn.style.background = '#27ae60';
+                        confirmBtn.textContent = 'Verify & Confirm';
+                    } else {
+                        confirmBtn.style.background = '#e74c3c';
+                        confirmBtn.textContent = 'Confirm Action';
+                    }
+                });
+
+                // Enter key submission
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && input.value.length === 6) {
+                        confirmBtn.click();
+                    }
+                });
+
+                // Cancel handler
+                cancelBtn.addEventListener('click', () => {
+                    cleanup();
+                    reject(new Error('User cancelled TOTP verification'));
+                });
+
+                // Confirm handler
+                confirmBtn.addEventListener('click', () => {
+                    const totpToken = input.value.trim();
+                    if (totpToken.length !== 6) {
+                        input.style.borderColor = '#e74c3c';
+                        input.focus();
+                        return;
+                    }
+                    cleanup();
+                    resolve({
+                        totpToken,
+                        actionDescription
+                    });
+                });
+
+                // Escape key handler
+                document.addEventListener('keydown', function escapeHandler(e) {
+                    if (e.key === 'Escape') {
+                        document.removeEventListener('keydown', escapeHandler);
+                        cleanup();
+                        reject(new Error('User cancelled TOTP verification'));
+                    }
+                });
+            });
+        }
         
         // Initialize currentUser from localStorage if available (for page refresh persistence)
         try {
@@ -3342,19 +3481,14 @@ Current Status: Use deploymentStatus.check() for real-time status
             try {
                 console.log('Loading user details for:', userId);
                 
-                // Fetch user details
-                const response = await fetch(`/api/admin/users/${userId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${getStoredAuthToken()}`
-                    }
-                });
-                
+                // Fetch user details using admin API call
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}`);
+
                 if (!response.ok) {
                     throw new Error('Failed to fetch user details');
                 }
-                
-                const data = await response.json();
-                const user = data.data;
+
+                const user = response.data.user;
                 
                 // Create modal
                 const modal = document.createElement('div');
@@ -3364,42 +3498,193 @@ Current Status: Use deploymentStatus.check() for real-time status
                     display: flex; align-items: center; justify-content: center;
                 `;
                 
+                // Helper function to format role display
+                const getRoleDisplay = (user) => {
+                    if (user.isAdmin) return '👑 Admin';
+                    if (user.isModerator) return '🛡️ Moderator';
+                    return '👤 User';
+                };
+
+                // Helper function to get status color and text
+                const getStatusDisplay = (user) => {
+                    if (user.isSuspended) return { color: '#e74c3c', text: '🚫 Suspended', icon: '🚫' };
+                    if (!user.emailVerified) return { color: '#f39c12', text: '⚠️ Unverified', icon: '⚠️' };
+                    return { color: '#27ae60', text: '✅ Active', icon: '✅' };
+                };
+
+                const status = getStatusDisplay(user);
+                const activity = response.data.activity || {};
+                const moderation = response.data.moderation || {};
+
                 modal.innerHTML = `
-                    <div style="background: white; border-radius: 8px; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative;">
-                        <button onclick="this.closest('.modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
-                        
-                        <h2 style="margin-top: 0;">👤 User Details</h2>
-                        
-                        <div style="margin-bottom: 1.5rem;">
-                            <p><strong>ID:</strong> ${user.id}</p>
-                            <p><strong>Username:</strong> @${user.username}</p>
-                            <p><strong>Email:</strong> ${user.email}</p>
-                            <p><strong>Name:</strong> ${user.firstName || ''} ${user.lastName || ''}</p>
-                            <p><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</p>
-                            <p><strong>Status:</strong> <span style="color: ${user.isActive ? 'green' : 'red'}">${user.isActive ? 'Active' : 'Inactive'}</span></p>
-                            <p><strong>Email Verified:</strong> ${user.emailVerified ? '✅ Yes' : '❌ No'}</p>
-                            <p><strong>Role:</strong> ${user.isAdmin ? 'Admin' : 'User'}</p>
-                            <p><strong>Posts:</strong> ${user._count?.posts || 0}</p>
-                            <p><strong>Comments:</strong> ${user._count?.comments || 0}</p>
-                            <p><strong>Followers:</strong> ${user._count?.followers || 0}</p>
-                            <p><strong>Following:</strong> ${user._count?.following || 0}</p>
-                        </div>
-                        
-                        ${user.oauthProviders && user.oauthProviders.length > 0 ? `
-                            <div style="margin-bottom: 1.5rem;">
-                                <h3>🔐 OAuth Providers</h3>
-                                ${user.oauthProviders.map(provider => `
-                                    <div style="border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; margin-bottom: 0.5rem;">
-                                        <strong>${provider.provider}</strong><br>
-                                        <small>Email: ${provider.email}</small><br>
-                                        <small>Linked: ${new Date(provider.createdAt).toLocaleString()}</small>
+                    <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 95vh; overflow-y: auto; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+                        <button onclick="this.closest('.modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; color: #666; z-index: 10;">&times;</button>
+
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px 12px 0 0;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 4rem;">${user.avatar || '👤'}</div>
+                                <div>
+                                    <h1 style="margin: 0; font-size: 1.8rem;">${user.displayName || user.firstName + ' ' + user.lastName || user.username}</h1>
+                                    <p style="margin: 0.25rem 0; opacity: 0.9;">@${user.username}</p>
+                                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                                        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">${getRoleDisplay(user)}</span>
+                                        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">${status.icon} ${status.text}</span>
                                     </div>
-                                `).join('')}
+                                </div>
                             </div>
-                        ` : ''}
-                        
-                        <div style="text-align: center;">
-                            <button onclick="this.closest('.modal').remove()" class="nav-button">Close</button>
+                        </div>
+
+                        <div style="padding: 2rem;">
+                            <!-- Quick Stats -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                                <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #3498db;">${user.stats?.posts || 0}</div>
+                                    <div style="font-size: 0.85rem; color: #7f8c8d;">Posts</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #9b59b6;">${user.stats?.comments || 0}</div>
+                                    <div style="font-size: 0.85rem; color: #7f8c8d;">Comments</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #e67e22;">${user.stats?.followers || 0}</div>
+                                    <div style="font-size: 0.85rem; color: #7f8c8d;">Followers</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60;">${user.stats?.following || 0}</div>
+                                    <div style="font-size: 0.85rem; color: #7f8c8d;">Following</div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                <!-- Account Information -->
+                                <div>
+                                    <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">📋 Account Information</h3>
+                                    <div style="space-y: 0.75rem;">
+                                        <div style="margin-bottom: 0.75rem;"><strong>User ID:</strong> <code style="background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">${user.id}</code></div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Email:</strong> ${user.email}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Phone:</strong> ${user.phoneNumber || 'Not provided'} ${user.phoneVerified ? '✅' : '❌'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Location:</strong> ${user.city || 'Unknown'}, ${user.state || 'Unknown'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Last Seen:</strong> ${user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString() : 'Never'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Reputation:</strong> ${user.reputationScore || 'Not scored'}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Security Information -->
+                                <div>
+                                    <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">🔒 Security Information</h3>
+                                    <div style="space-y: 0.75rem;">
+                                        <div style="margin-bottom: 0.75rem;"><strong>Email Verified:</strong> ${user.emailVerified ? '✅ Yes' : '❌ No'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>2FA Enabled:</strong> ${user.totpEnabled ? '✅ Yes' : '❌ No'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Risk Score:</strong> <span style="color: ${user.riskScore > 50 ? '#e74c3c' : '#27ae60'}">${user.riskScore || 0}</span></div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Login Attempts:</strong> ${user.loginAttempts || 0}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Last Login:</strong> ${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Password Changed:</strong> ${user.passwordChangedAt ? new Date(user.passwordChangedAt).toLocaleString() : 'Unknown'}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- OAuth Providers -->
+                            ${user.oauthProviders && user.oauthProviders.length > 0 ? `
+                                <div style="margin-top: 2rem;">
+                                    <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">🔐 OAuth Providers</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                        ${user.oauthProviders.map(provider => `
+                                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                                                <strong style="color: #3498db;">${provider.provider}</strong><br>
+                                                <small style="color: #7f8c8d;">Email: ${provider.email}</small><br>
+                                                <small style="color: #7f8c8d;">Linked: ${new Date(provider.createdAt).toLocaleDateString()}</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Recent Activity -->
+                            ${activity.recentPosts && activity.recentPosts.length > 0 ? `
+                                <div style="margin-top: 2rem;">
+                                    <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">📝 Recent Posts</h3>
+                                    <div style="max-height: 200px; overflow-y: auto;">
+                                        ${activity.recentPosts.map(post => `
+                                            <div style="border-left: 3px solid #3498db; padding: 0.75rem; margin-bottom: 1rem; background: #f8f9fa;">
+                                                <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</div>
+                                                <div style="font-size: 0.8rem; color: #7f8c8d;">${new Date(post.createdAt).toLocaleString()} • ${post.likesCount} likes • ${post.commentsCount} comments</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Moderation History -->
+                            ${(moderation.warnings && moderation.warnings.length > 0) || (moderation.suspensions && moderation.suspensions.length > 0) ? `
+                                <div style="margin-top: 2rem;">
+                                    <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">⚖️ Moderation History</h3>
+
+                                    ${moderation.warnings && moderation.warnings.length > 0 ? `
+                                        <h4 style="color: #f39c12; margin-bottom: 0.5rem;">⚠️ Warnings (${moderation.warnings.length})</h4>
+                                        <div style="max-height: 150px; overflow-y: auto; margin-bottom: 1rem;">
+                                            ${moderation.warnings.map(warning => `
+                                                <div style="border-left: 3px solid #f39c12; padding: 0.75rem; margin-bottom: 0.5rem; background: #fef9e7;">
+                                                    <div style="font-size: 0.9rem; margin-bottom: 0.25rem;">${warning.reason}</div>
+                                                    <div style="font-size: 0.8rem; color: #7f8c8d;">By ${warning.moderator?.username || 'System'} on ${new Date(warning.createdAt).toLocaleString()}</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+
+                                    ${moderation.suspensions && moderation.suspensions.length > 0 ? `
+                                        <h4 style="color: #e74c3c; margin-bottom: 0.5rem;">🚫 Suspensions (${moderation.suspensions.length})</h4>
+                                        <div style="max-height: 150px; overflow-y: auto;">
+                                            ${moderation.suspensions.map(suspension => `
+                                                <div style="border-left: 3px solid #e74c3c; padding: 0.75rem; margin-bottom: 0.5rem; background: #fdf2f2;">
+                                                    <div style="font-size: 0.9rem; margin-bottom: 0.25rem;">${suspension.reason}</div>
+                                                    <div style="font-size: 0.8rem; color: #7f8c8d;">
+                                                        ${suspension.type} suspension by ${suspension.moderator?.username || 'System'}<br>
+                                                        ${new Date(suspension.createdAt).toLocaleString()} - ${suspension.endsAt ? new Date(suspension.endsAt).toLocaleString() : 'Permanent'}
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+
+                            <!-- Admin Actions -->
+                            <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                                <h3 style="margin: 0 0 1rem 0; color: #2c3e50;">🛠️ Admin Actions</h3>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+
+                                    ${!user.isSuspended ? `
+                                        <button onclick="suspendUser('${user.id}', '${user.username}')" class="nav-button" style="background: #f39c12; white-space: nowrap;">
+                                            🚫 Suspend User
+                                        </button>
+                                    ` : `
+                                        <button onclick="unsuspendUser('${user.id}', '${user.username}')" class="nav-button" style="background: #27ae60; white-space: nowrap;">
+                                            ✅ Unsuspend User
+                                        </button>
+                                    `}
+
+                                    <button onclick="changeUserRole('${user.id}', '${user.username}', '${user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user'}')" class="nav-button" style="background: #9b59b6; white-space: nowrap;">
+                                        👑 Change Role
+                                    </button>
+
+                                    <button onclick="resetUserPassword('${user.id}', '${user.username}')" class="nav-button" style="background: #3498db; white-space: nowrap;">
+                                        🔑 Reset Password
+                                    </button>
+
+                                    <button onclick="deleteUser('${user.id}', '${user.username}', ${JSON.stringify({posts: user.stats?.posts || 0, comments: user.stats?.comments || 0, followers: user.stats?.followers || 0})})" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
+                                        🗑️ Delete Account
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Close Button -->
+                            <div style="text-align: center; margin-top: 2rem;">
+                                <button onclick="this.closest('.modal').remove()" class="nav-button" style="background: #95a5a6; padding: 0.75rem 2rem;">
+                                    Close Details
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -3410,6 +3695,190 @@ Current Status: Use deploymentStatus.check() for real-time status
             } catch (error) {
                 console.error('Error viewing user:', error);
                 alert('Failed to load user details');
+            }
+        }
+
+        // Admin Action Functions with TOTP Protection
+
+        async function deleteUser(userId, username, impact) {
+            try {
+                // Show impact confirmation first
+                const impactDetails = `This will affect:
+• ${impact.posts} posts
+• ${impact.comments} comments
+• ${impact.followers} followers
+• All associated user data`;
+
+                if (!confirm(`⚠️ DELETE USER ACCOUNT\n\nUser: @${username}\nID: ${userId}\n\n${impactDetails}\n\nThis action requires TOTP verification. Continue?`)) {
+                    return;
+                }
+
+                // Request TOTP confirmation
+                const { totpToken } = await requestTOTPConfirmation(
+                    `Delete user account @${username}`,
+                    { additionalInfo: impactDetails }
+                );
+
+                // Get deletion type preference
+                const deletionType = confirm('Choose deletion type:\n\nOK = Soft Delete (preserve data, mark as deleted)\nCancel = Hard Delete (permanent removal)') ? 'soft' : 'hard';
+
+                // Get deletion reason
+                const reason = prompt('Enter reason for deletion (required, 10-500 characters):');
+                if (!reason || reason.trim().length < 10) {
+                    alert('Deletion reason is required and must be at least 10 characters.');
+                    return;
+                }
+
+                // Perform deletion
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        totpToken,
+                        actionDescription: `Delete user account @${username}`,
+                        deletionType,
+                        reason: reason.trim()
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`✅ User @${username} successfully ${deletionType} deleted.\n\nAudit ID: ${response.data.auditId}\nImpact: ${JSON.stringify(response.data.impact, null, 2)}`);
+
+                    // Close modal and refresh user list
+                    document.querySelector('.modal')?.remove();
+                    if (typeof loadUsersData === 'function') loadUsersData();
+                } else {
+                    throw new Error(response.data?.error || 'Failed to delete user');
+                }
+
+            } catch (error) {
+                console.error('Delete user error:', error);
+                if (error.message.includes('cancelled') || error.message.includes('timeout')) {
+                    // User cancelled or TOTP timeout - no alert needed
+                    return;
+                }
+                alert(`❌ Failed to delete user: ${error.message}`);
+            }
+        }
+
+        async function suspendUser(userId, username) {
+            try {
+                const reason = prompt(`Enter reason for suspending @${username}:`);
+                if (!reason || reason.trim().length < 5) {
+                    alert('Suspension reason is required (minimum 5 characters).');
+                    return;
+                }
+
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}/suspend`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        reason: reason.trim(),
+                        type: 'ADMIN_ACTION'
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`✅ User @${username} has been suspended.`);
+                    document.querySelector('.modal')?.remove();
+                    if (typeof loadUsersData === 'function') loadUsersData();
+                } else {
+                    throw new Error(response.data?.error || 'Failed to suspend user');
+                }
+            } catch (error) {
+                console.error('Suspend user error:', error);
+                alert(`❌ Failed to suspend user: ${error.message}`);
+            }
+        }
+
+        async function unsuspendUser(userId, username) {
+            try {
+                if (!confirm(`Are you sure you want to unsuspend @${username}?`)) {
+                    return;
+                }
+
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}/unsuspend`, {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    alert(`✅ User @${username} has been unsuspended.`);
+                    document.querySelector('.modal')?.remove();
+                    if (typeof loadUsersData === 'function') loadUsersData();
+                } else {
+                    throw new Error(response.data?.error || 'Failed to unsuspend user');
+                }
+            } catch (error) {
+                console.error('Unsuspend user error:', error);
+                alert(`❌ Failed to unsuspend user: ${error.message}`);
+            }
+        }
+
+        async function changeUserRole(userId, username, currentRole) {
+            try {
+                const roles = ['user', 'moderator', 'admin'];
+                const roleNames = { user: 'User', moderator: 'Moderator', admin: 'Admin' };
+
+                let selection = prompt(`Change role for @${username}\n\nCurrent role: ${roleNames[currentRole]}\n\nEnter new role:\n1 = User\n2 = Moderator\n3 = Admin\n\nEnter number (1-3):`);
+
+                if (!selection || !['1', '2', '3'].includes(selection)) {
+                    return;
+                }
+
+                const newRole = roles[parseInt(selection) - 1];
+                if (newRole === currentRole) {
+                    alert('User already has that role.');
+                    return;
+                }
+
+                // Request TOTP for role changes
+                const { totpToken } = await requestTOTPConfirmation(
+                    `Change @${username} role to ${roleNames[newRole]}`,
+                    { additionalInfo: `Current: ${roleNames[currentRole]} → New: ${roleNames[newRole]}` }
+                );
+
+                const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}/role`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        role: newRole,
+                        totpToken,
+                        actionDescription: `Change @${username} role to ${roleNames[newRole]}`
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`✅ @${username} role changed to ${roleNames[newRole]}.`);
+                    document.querySelector('.modal')?.remove();
+                    if (typeof loadUsersData === 'function') loadUsersData();
+                } else {
+                    throw new Error(response.data?.error || 'Failed to change user role');
+                }
+            } catch (error) {
+                console.error('Change role error:', error);
+                if (error.message.includes('cancelled') || error.message.includes('timeout')) {
+                    return;
+                }
+                alert(`❌ Failed to change user role: ${error.message}`);
+            }
+        }
+
+        async function resetUserPassword(userId, username) {
+            try {
+                if (!confirm(`Reset password for @${username}?\n\nThis will invalidate their current password and they will need to use the password reset process.`)) {
+                    return;
+                }
+
+                // Note: This endpoint would need to be implemented in the backend
+                alert('🚧 Password reset functionality will be implemented in the next phase.');
+
+                // Future implementation:
+                // const response = await adminApiCall(`${BACKEND_URL}/api/admin/users/${userId}/reset-password`, {
+                //     method: 'POST',
+                //     body: JSON.stringify({})
+                // });
+
+            } catch (error) {
+                console.error('Reset password error:', error);
+                alert(`❌ Failed to reset password: ${error.message}`);
             }
         }
 

@@ -20,4 +20,10 @@ export declare const markTOTPVerified: (req: AuthRequest, res: Response, next: N
  * Should be called on logout or when verification expires
  */
 export declare const clearTOTPVerification: (req: AuthRequest, res: Response, next: NextFunction) => void;
+/**
+ * Middleware to require fresh TOTP verification for highly sensitive admin actions
+ * Requires TOTP token in request body for each action (30-second window)
+ * Should be used after requireAuth, requireAdmin, and requireTOTPForAdmin middleware
+ */
+export declare const requireFreshTOTP: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 //# sourceMappingURL=totpAuth.d.ts.map

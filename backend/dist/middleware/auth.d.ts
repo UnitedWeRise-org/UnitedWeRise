@@ -9,6 +9,11 @@ export interface AuthRequest extends Request {
         isModerator?: boolean;
         isAdmin?: boolean;
     };
+    sensitiveAction?: {
+        description: string;
+        totpVerifiedAt: Date;
+        adminUsername: string;
+    };
 }
 export declare const requireAuth: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
 export declare const requireAdmin: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;

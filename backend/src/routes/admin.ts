@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireTOTPForAdmin } from '../middleware/totpAuth';
+import { requireTOTPForAdmin, requireFreshTOTP } from '../middleware/totpAuth';
 import { moderationService } from '../services/moderationService';
 import { emailService } from '../services/emailService';
 import { body, query, validationResult } from 'express-validator';
@@ -420,10 +420,11 @@ router.post('/users/:userId/unsuspend', requireAuth, requireAdmin, requireTOTPFo
 });
 
 // Promote/demote user roles
-router.post('/users/:userId/role', 
-  requireAuth, 
+router.post('/users/:userId/role',
+  requireAuth,
   requireAdmin,
   requireTOTPForAdmin,
+  requireFreshTOTP,
   [
     body('role').isIn(['user', 'moderator', 'admin']).withMessage('Invalid role'),
     handleValidationErrors
@@ -477,6 +478,118 @@ router.post('/users/:userId/role',
     } catch (error) {
       console.error('Update user role error:', error);
       res.status(500).json({ error: 'Failed to update user role' });
+    }
+  }
+);
+
+// Delete user account (requires fresh TOTP)
+router.delete('/users/:userId',
+  requireAuth,
+  requireAdmin,
+  requireTOTPForAdmin,
+  requireFreshTOTP,
+  [
+    body('deletionType').optional().isIn(['soft', 'hard']).withMessage('Invalid deletion type'),
+    body('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { deletionType = 'soft', reason } = req.body;
+      const adminId = req.user!.id;
+
+      // Prevent self-deletion
+      if (userId === adminId) {
+        return res.status(400).json({
+          error: 'Cannot delete your own account'
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          isAdmin: true,
+          isModerator: true,
+          _count: {
+            select: {
+              posts: true,
+              comments: true,
+              followers: true,
+              following: true
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Safety check: Prevent deleting the last admin
+      if (user.isAdmin) {
+        const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+        if (adminCount <= 1) {
+          return res.status(400).json({
+            error: 'Cannot delete the last admin user'
+          });
+        }
+      }
+
+      // Calculate impact for audit logging
+      const impact = {
+        postsCount: user._count.posts,
+        commentsCount: user._count.comments,
+        followersCount: user._count.followers,
+        followingCount: user._count.following
+      };
+
+      if (deletionType === 'soft') {
+        // Soft delete: Mark as deleted but preserve data
+        // Note: Using isSuspended for now - dedicated deletion fields can be added in future schema migration
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            isSuspended: true,
+            email: `deleted_${Date.now()}_${user.email}`,
+            username: `deleted_${Date.now()}_${user.username}`
+          }
+        });
+
+        // Log the deletion action
+        console.log(`Admin ${req.sensitiveAction?.adminUsername} soft-deleted user ${user.username} (${userId}). Reason: ${reason}. Impact: ${JSON.stringify(impact)}`);
+
+        res.json({
+          message: 'User account soft deleted successfully',
+          deletionType: 'soft',
+          impact,
+          auditId: `admin_delete_${userId}_${Date.now()}`
+        });
+
+      } else if (deletionType === 'hard') {
+        // Hard delete: Complete removal with cascade
+        // Note: This will cascade delete related records based on Prisma schema
+        await prisma.user.delete({
+          where: { id: userId }
+        });
+
+        // Log the deletion action
+        console.log(`Admin ${req.sensitiveAction?.adminUsername} hard-deleted user ${user.username} (${userId}). Reason: ${reason}. Impact: ${JSON.stringify(impact)}`);
+
+        res.json({
+          message: 'User account permanently deleted',
+          deletionType: 'hard',
+          impact,
+          auditId: `admin_hard_delete_${userId}_${Date.now()}`
+        });
+      }
+
+    } catch (error) {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: 'Failed to delete user account' });
     }
   }
 );
