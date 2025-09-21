@@ -885,6 +885,45 @@ fetch('/api/endpoint', {
 })
 ```
 
+### Performance Optimization Workflow
+**NEW AUTOMATED DEVELOPMENT TOOLS** (Added September 20, 2025):
+
+```bash
+# Pre-commit validation (runs all checks)
+bash scripts/validate-before-commit.sh
+# Checks: TypeScript compilation, cross-references, API endpoints, documentation freshness
+
+# Cross-reference validation
+node scripts/validate-cross-references.js
+# Validates all {#section-name} references across documentation files
+
+# API endpoint testing
+bash scripts/test-api-endpoints.sh
+# Tests critical endpoints on staging environment
+
+# Deployment status monitoring
+bash scripts/deployment-status.sh
+# Shows current deployment status, uptime, and release versions
+```
+
+**Frontend Performance Utilities** (Auto-loaded):
+```javascript
+// Smart caching with TTL and request deduplication
+window.PerformanceUtils.apiCallWithCache(apiCall, '/endpoint', options)
+
+// Advanced error handling with user-friendly messages
+window.ErrorHandler.handleError(error, {context: 'feed-loading'})
+
+// Progressive module loading
+window.AdvancedCaching.loadModuleOnDemand('maps', '/js/leaflet.js')
+```
+
+**Backend Performance Monitoring** (Automatic):
+- Real-time API performance tracking via `performanceMiddleware`
+- Slow request detection (>1000ms) with automatic logging
+- Error rate monitoring with status code tracking
+- Performance reports available at admin endpoints
+
 ### API Response Structure
 ```javascript
 // Backend returns: {success: true, data: {...}}
