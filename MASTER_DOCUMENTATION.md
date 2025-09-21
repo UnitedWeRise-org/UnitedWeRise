@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
 **Last Updated**: September 21, 2025
-**Version**: 5.5.0 (Performance Optimization & Development Efficiency Complete)
+**Version**: 5.6.0 (Admin Console Security Enhancement & User Management Complete)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -4867,6 +4867,62 @@ adminDebug.clearCache()
 - **POST /api/admin/users/:userId/suspend**: Comprehensive user suspension system
 - **POST /api/admin/users/:userId/unsuspend**: Remove user suspensions
 - **POST /api/admin/users/:userId/role**: Promote/demote user roles (user/moderator/admin)
+- **DELETE /api/admin/users/:userId**: 🆕 **NEW** - User account deletion with impact analysis
+
+##### 🔐 **ENHANCED SECURITY ARCHITECTURE** (September 21, 2025) {#admin-security-enhancements}
+**Status**: ✅ **PRODUCTION READY** - Enterprise-grade TOTP security implementation
+
+###### Tier-Based TOTP Security System
+- **Session TOTP** (24-hour validity): Regular admin operations (viewing, listing, analytics)
+- **Fresh TOTP** (30-second validity): Sensitive operations requiring immediate verification
+- **Comprehensive Audit Logging**: All sensitive actions logged with admin info, timestamps, IP tracking
+
+###### Fresh TOTP Protected Operations
+**The following admin actions require immediate TOTP verification:**
+- **User Account Deletion**: Soft/hard delete with comprehensive impact analysis
+- **Role Changes**: Promote/demote users with detailed change tracking
+- **User Suspension**: Account suspension management with reason requirements
+- **Password Resets**: Force password reset for user accounts (framework ready)
+- **Database Schema Changes**: Direct database modifications via admin interface
+
+###### Enhanced User Details Modal
+**Comprehensive User Information Display:**
+- **Account Details**: Complete profile information, creation date, last seen
+- **Security Status**: Email verification, 2FA status, risk score, login history
+- **Activity Statistics**: Posts, comments, followers, engagement metrics
+- **OAuth Providers**: Linked authentication services with timestamps
+- **Recent Activity**: Latest posts and user interactions
+- **Moderation History**: Warnings, suspensions, and administrative actions
+- **Admin Action Buttons**: Secure access to all user management functions
+
+###### User Deletion System
+**Features**:
+- **Impact Analysis**: Shows posts, comments, followers affected before deletion
+- **Deletion Types**: Soft delete (preserve data) or hard delete (permanent removal)
+- **Safety Protections**: Cannot delete last admin, cannot delete own account
+- **Reason Requirements**: Mandatory 10-500 character deletion justification
+- **Audit Trail**: Unique audit IDs for all deletion operations
+- **TOTP Security**: Requires fresh TOTP verification for execution
+
+**API Endpoint**: `DELETE /api/admin/users/:userId`
+**Required Fields**: `totpToken`, `actionDescription`, `deletionType`, `reason`
+**Response**: Includes audit ID and impact summary for tracking
+
+###### Reusable TOTP Modal Component
+**Professional Security Interface**:
+- **30-Second Countdown**: Visual timer with color-coded urgency indicators
+- **Auto-Formatting**: Automatic 6-digit code formatting and validation
+- **Security Messaging**: Clear action descriptions and impact warnings
+- **User Experience**: Auto-focus, enter key submission, escape key cancellation
+- **Error Handling**: Comprehensive validation and timeout management
+
+###### Security Monitoring & Logging
+**Enhanced Audit Trail**:
+- **Failed Attempts**: All failed TOTP attempts logged with IP addresses
+- **Successful Actions**: Complete action logs with before/after state tracking
+- **Admin Identification**: Full admin user details in all audit entries
+- **Unique Identifiers**: Traceable audit IDs for all sensitive operations
+- **Risk Assessment**: Automatic risk scoring for administrative actions
 
 ##### Advanced Analytics (`/api/admin/analytics`)
 - **Geographic Distribution**: State-by-state user growth with visual data
@@ -4904,7 +4960,7 @@ adminDebug.clearCache()
 #### 9-Section Admin Dashboard
 1. **📊 Overview**: Platform metrics, system health, real-time statistics  
 2. **🔒 Security**: Security events, failed logins, risk analysis
-3. **👥 Users**: Complete user management with suspend/promote capabilities
+3. **👥 Users**: 🆕 **ENHANCED** - Complete user management with deletion, detailed profiles, and fresh TOTP security
 4. **📝 Content**: AI-powered content moderation and flagging resolution
 5. **📈 Analytics**: Comprehensive civic engagement intelligence platform
 6. **🐛 Errors**: System error tracking with performance metrics  
