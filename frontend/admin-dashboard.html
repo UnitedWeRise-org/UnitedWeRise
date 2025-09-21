@@ -1056,6 +1056,11 @@ Loading deployment status...
 
                 const cleanup = () => {
                     if (countdownInterval) clearInterval(countdownInterval);
+                    // Clear TOTP input value for security
+                    const totpInput = modal.querySelector('#totp-input');
+                    if (totpInput) {
+                        totpInput.value = '';
+                    }
                     if (modal.parentNode) modal.parentNode.removeChild(modal);
                 };
 
@@ -1079,7 +1084,11 @@ Loading deployment status...
                                    placeholder="000000"
                                    maxlength="6"
                                    style="width: 100%; padding: 0.75rem; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 1.2rem; text-align: center; font-family: monospace;"
-                                   autocomplete="off">
+                                   autocomplete="off"
+                                   autocapitalize="off"
+                                   autocorrect="off"
+                                   spellcheck="false"
+                                   data-lpignore="true">
                             <div style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem; color: #7f8c8d;">
                                 Time remaining: <span id="totp-countdown" style="font-weight: 600;">30</span>s
                             </div>
