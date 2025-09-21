@@ -4131,6 +4131,12 @@ class Profile {
 // Initialize global instance
 window.profile = new Profile();
 
+// Export class constructor for static method access
+window.Profile = Profile;
+
+// Attach static/utility methods to the class
+window.Profile.showUserProfile = showUserProfile;
+
 // Log that Profile component is loaded
 if (typeof adminDebugLog === 'function') {
     adminDebugLog('Profile', '✅ Profile component loaded and initialized');

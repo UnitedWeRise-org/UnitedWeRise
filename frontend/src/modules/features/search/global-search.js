@@ -747,7 +747,7 @@ async function openUserFeed(userId, username) {
 
         // Load user's profile and posts in parallel
         const [profileResponse, postsResponse] = await Promise.all([
-            apiClient.call(`/users/${username}`),
+            apiClient.call(`/users/${userId}`),
             apiClient.call(`/posts/user/${userId}`)
         ]);
         

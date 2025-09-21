@@ -6587,7 +6587,7 @@
 
                 // Load user's profile and posts in parallel
                 const [profileResponse, postsResponse] = await Promise.all([
-                    window.apiCall(`/users/${username}`),
+                    window.apiCall(`/users/${userId}`),
                     window.apiCall(`/posts/user/${userId}`)
                 ]);
                 

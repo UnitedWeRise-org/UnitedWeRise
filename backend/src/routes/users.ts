@@ -581,7 +581,7 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
 });
 
 // Get public profile by username
-router.get('/:username', async (req, res) => {
+router.get('/by-username/:username', async (req, res) => {
     try {
         const { username } = req.params;
 
