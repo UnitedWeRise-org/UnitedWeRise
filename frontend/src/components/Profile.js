@@ -793,6 +793,19 @@ class Profile {
                             </div>
                         </div>
                         <button onclick="window.profile.downloadData()" class="btn">Download My Data</button>
+                        ${this.userProfile?.isAdmin ? `
+                            <div class="admin-section" style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; border: 2px solid #5a67d8;">
+                                <h4 style="color: white; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                                    👑 Administrator Access
+                                </h4>
+                                <p style="color: rgba(255,255,255,0.9); margin: 0 0 1rem 0; font-size: 0.9rem;">
+                                    Access the administrative dashboard to manage users, content, and system settings.
+                                </p>
+                                <button onclick="window.profile.openAdminDashboard()" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;">
+                                    🛠️ Open Admin Dashboard
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="settings-group">
@@ -1437,6 +1450,59 @@ class Profile {
 
     downloadData() {
         alert('Data download coming soon!');
+    }
+
+    openAdminDashboard() {
+        // Security: Double-check admin status on client side (server verification is primary)
+        if (!this.userProfile?.isAdmin) {
+            console.warn('Admin dashboard access attempted by non-admin user');
+            alert('❌ Access denied: Admin privileges required');
+            return;
+        }
+
+        try {
+            // Secure environment detection based on current page hostname
+            const currentHostname = window.location.hostname;
+            let adminDashboardURL;
+
+            // Environment-aware URL generation
+            if (currentHostname.includes('dev.unitedwerise.org') ||
+                currentHostname.includes('delightful-smoke-097b2fa0f.3.azurestaticapps.net')) {
+                // Development/Staging environment
+                adminDashboardURL = 'https://dev.unitedwerise.org/admin-dashboard.html';
+            } else if (currentHostname.includes('www.unitedwerise.org') ||
+                       currentHostname.includes('unitedwerise.org')) {
+                // Production environment
+                adminDashboardURL = 'https://www.unitedwerise.org/admin-dashboard.html';
+            } else if (currentHostname.includes('localhost') ||
+                       currentHostname.includes('127.0.0.1')) {
+                // Local development
+                adminDashboardURL = '/admin-dashboard.html';
+            } else {
+                // Unknown environment - use relative path as fallback
+                console.warn('Unknown environment, using relative path');
+                adminDashboardURL = '/admin-dashboard.html';
+            }
+
+            // Log admin dashboard access for security monitoring
+            console.log(`Admin ${this.userProfile.username} accessing admin dashboard from ${currentHostname}`);
+
+            // Open in new tab for better security isolation
+            const newWindow = window.open(adminDashboardURL, '_blank', 'noopener,noreferrer');
+
+            // Verify window opened successfully
+            if (!newWindow) {
+                alert('⚠️ Admin dashboard blocked by popup blocker. Please allow popups and try again.');
+                // Fallback: navigate in same window
+                if (confirm('Open admin dashboard in current tab instead?')) {
+                    window.location.href = adminDashboardURL;
+                }
+            }
+
+        } catch (error) {
+            console.error('Error opening admin dashboard:', error);
+            alert('❌ Failed to open admin dashboard. Please check console for details.');
+        }
     }
 
     toggleProfileVisibility(isPublic) {
