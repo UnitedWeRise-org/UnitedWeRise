@@ -3991,7 +3991,26 @@ Current Status: Use deploymentStatus.check() for real-time status
                         await loadUsers();
                     }
                 } else {
-                    statusDiv.innerHTML = `<span style="color: red;">❌ ${data.error}</span>`;
+                    // Log detailed error information for debugging
+                    console.error('Merge accounts failed:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: data.error,
+                        details: data.details,
+                        validation: data.validation,
+                        primaryId,
+                        duplicateId
+                    });
+
+                    let errorMsg = data.error || 'Unknown error';
+                    if (data.details) {
+                        errorMsg += ` (Details: ${data.details})`;
+                    }
+                    if (data.validation) {
+                        errorMsg += ` (Validation: ${JSON.stringify(data.validation)})`;
+                    }
+
+                    statusDiv.innerHTML = `<span style="color: red;">❌ ${errorMsg}</span>`;
                 }
             } catch (error) {
                 console.error('Merge accounts error:', error);

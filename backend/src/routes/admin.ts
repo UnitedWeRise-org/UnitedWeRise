@@ -2576,8 +2576,8 @@ router.post('/merge-accounts',
   requireAdmin, 
   requireTOTPForAdmin,
   [
-    body('primaryAccountId').isUUID().withMessage('Primary account ID must be a valid UUID'),
-    body('duplicateAccountId').isUUID().withMessage('Duplicate account ID must be a valid UUID')
+    body('primaryAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Primary account ID must be a valid CUID (starts with "c", 25 characters total)'),
+    body('duplicateAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Duplicate account ID must be a valid CUID (starts with "c", 25 characters total)')
   ],
   handleValidationErrors,
   async (req: AuthRequest, res) => {
