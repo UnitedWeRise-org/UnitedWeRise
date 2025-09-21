@@ -3781,9 +3781,16 @@ Current Status: Use deploymentStatus.check() for real-time status
                     const data = await response.json();
                     alert(`✅ User @${username} successfully ${deletionType} deleted.\n\nAudit ID: ${data.auditId}\nImpact: ${JSON.stringify(data.impact, null, 2)}`);
 
-                    // Close modal and refresh user list
+                    // Close modal and refresh user list immediately
                     document.querySelector('.modal')?.remove();
-                    if (typeof loadUsersData === 'function') loadUsersData();
+
+                    // Force refresh the users table to show updated data
+                    await loadUsersData();
+
+                    // Also refresh the current users count if displayed
+                    if (typeof loadUsers === 'function') {
+                        await loadUsers();
+                    }
                 } else {
                     const errorData = await response.json();
                     throw new Error(errorData?.error || 'Failed to delete user');
@@ -3943,16 +3950,16 @@ Current Status: Use deploymentStatus.check() for real-time status
             statusDiv.innerHTML = '<span style="color: blue;">🔄 Requesting TOTP confirmation...</span>';
 
             try {
-                // Validate UUIDs before sending request
-                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                // Validate CUIDs (not UUIDs!) - CUIDs are what Prisma @default(cuid()) generates
+                const cuidRegex = /^c[a-z0-9]{24}$/;
 
-                if (!uuidRegex.test(primaryId)) {
-                    statusDiv.innerHTML = '<span style="color: red;">❌ Primary Account ID must be a valid UUID format</span>';
+                if (!cuidRegex.test(primaryId)) {
+                    statusDiv.innerHTML = '<span style="color: red;">❌ Primary Account ID must be a valid CUID format (starts with "c", 25 characters total)</span>';
                     return;
                 }
 
-                if (!uuidRegex.test(duplicateId)) {
-                    statusDiv.innerHTML = '<span style="color: red;">❌ Duplicate Account ID must be a valid UUID format</span>';
+                if (!cuidRegex.test(duplicateId)) {
+                    statusDiv.innerHTML = '<span style="color: red;">❌ Duplicate Account ID must be a valid CUID format (starts with "c", 25 characters total)</span>';
                     return;
                 }
 
@@ -3975,8 +3982,14 @@ Current Status: Use deploymentStatus.check() for real-time status
                     // Clear input fields
                     document.getElementById('primaryAccountId').value = '';
                     document.getElementById('duplicateAccountId').value = '';
-                    // Refresh users table
-                    loadUsers();
+
+                    // Force refresh the users table to show updated data
+                    await loadUsersData();
+
+                    // Also refresh the main users view if available
+                    if (typeof loadUsers === 'function') {
+                        await loadUsers();
+                    }
                 } else {
                     statusDiv.innerHTML = `<span style="color: red;">❌ ${data.error}</span>`;
                 }
