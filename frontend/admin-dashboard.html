@@ -3771,13 +3771,15 @@ Current Status: Use deploymentStatus.check() for real-time status
                 });
 
                 if (response.ok) {
-                    alert(`✅ User @${username} successfully ${deletionType} deleted.\n\nAudit ID: ${response.data.auditId}\nImpact: ${JSON.stringify(response.data.impact, null, 2)}`);
+                    const data = await response.json();
+                    alert(`✅ User @${username} successfully ${deletionType} deleted.\n\nAudit ID: ${data.auditId}\nImpact: ${JSON.stringify(data.impact, null, 2)}`);
 
                     // Close modal and refresh user list
                     document.querySelector('.modal')?.remove();
                     if (typeof loadUsersData === 'function') loadUsersData();
                 } else {
-                    throw new Error(response.data?.error || 'Failed to delete user');
+                    const errorData = await response.json();
+                    throw new Error(errorData?.error || 'Failed to delete user');
                 }
 
             } catch (error) {
@@ -3934,21 +3936,28 @@ Current Status: Use deploymentStatus.check() for real-time status
             statusDiv.innerHTML = '<span style="color: blue;">🔄 Requesting TOTP confirmation...</span>';
 
             try {
-                // Request TOTP confirmation for merge operation
-                const { totpToken } = await requestTOTPConfirmation(
-                    `Merge accounts: ${primaryId} ← ${duplicateId}`,
-                    { additionalInfo: 'Account merge operation requires TOTP verification' }
-                );
+                // Validate UUIDs before sending request
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+                if (!uuidRegex.test(primaryId)) {
+                    statusDiv.innerHTML = '<span style="color: red;">❌ Primary Account ID must be a valid UUID format</span>';
+                    return;
+                }
+
+                if (!uuidRegex.test(duplicateId)) {
+                    statusDiv.innerHTML = '<span style="color: red;">❌ Duplicate Account ID must be a valid UUID format</span>';
+                    return;
+                }
 
                 statusDiv.innerHTML = '<span style="color: blue;">🔄 Merging accounts...</span>';
 
+                // Note: merge-accounts endpoint uses requireTOTPForAdmin (not requireFreshTOTP)
+                // so no TOTP token needed in request body, just admin must have TOTP enabled
                 const response = await adminApiCall(`${BACKEND_URL}/api/admin/merge-accounts`, {
                     method: 'POST',
                     body: JSON.stringify({
                         primaryAccountId: primaryId,
-                        duplicateAccountId: duplicateId,
-                        totpToken,
-                        actionDescription: `Merge accounts: ${primaryId} ← ${duplicateId}`
+                        duplicateAccountId: duplicateId
                     })
                 });
                 
@@ -3966,7 +3975,11 @@ Current Status: Use deploymentStatus.check() for real-time status
                 }
             } catch (error) {
                 console.error('Merge accounts error:', error);
-                statusDiv.innerHTML = '<span style="color: red;">❌ Network error during merge</span>';
+                if (error.message.includes('cancelled') || error.message.includes('timeout')) {
+                    statusDiv.innerHTML = '<span style="color: orange;">⏰ Operation cancelled or timed out</span>';
+                } else {
+                    statusDiv.innerHTML = `<span style="color: red;">❌ Error: ${error.message}</span>`;
+                }
             }
         }
 
