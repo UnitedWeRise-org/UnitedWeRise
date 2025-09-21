@@ -3533,7 +3533,11 @@ Current Status: Use deploymentStatus.check() for real-time status
                         <!-- Header -->
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px 12px 0 0;">
                             <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="font-size: 4rem;">${user.avatar || '👤'}</div>
+                                <div style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.1);">
+                                    ${user.avatar && user.avatar.startsWith('http')
+                                        ? `<img src="${user.avatar}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`
+                                        : `<span style="font-size: 3rem;">${user.avatar || '👤'}</span>`}
+                                </div>
                                 <div>
                                     <h1 style="margin: 0; font-size: 1.8rem;">${user.displayName || user.firstName + ' ' + user.lastName || user.username}</h1>
                                     <p style="margin: 0.25rem 0; opacity: 0.9;">@${user.username}</p>
@@ -3572,7 +3576,7 @@ Current Status: Use deploymentStatus.check() for real-time status
                                     <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">📋 Account Information</h3>
                                     <div style="space-y: 0.75rem;">
                                         <div style="margin-bottom: 0.75rem;"><strong>User ID:</strong> <code style="background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">${user.id}</code></div>
-                                        <div style="margin-bottom: 0.75rem;"><strong>Email:</strong> ${user.email}</div>
+                                        <div style="margin-bottom: 0.75rem;"><strong>Email:</strong> ${user.email && user.email.startsWith('http') ? '<em>OAuth Profile URL (check OAuth Providers below)</em>' : user.email}</div>
                                         <div style="margin-bottom: 0.75rem;"><strong>Phone:</strong> ${user.phoneNumber || 'Not provided'} ${user.phoneVerified ? '✅' : '❌'}</div>
                                         <div style="margin-bottom: 0.75rem;"><strong>Location:</strong> ${user.city || 'Unknown'}, ${user.state || 'Unknown'}</div>
                                         <div style="margin-bottom: 0.75rem;"><strong>Created:</strong> ${new Date(user.createdAt).toLocaleString()}</div>
