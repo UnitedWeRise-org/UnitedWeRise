@@ -3503,10 +3503,17 @@ Current Status: Use deploymentStatus.check() for real-time status
                 // Create modal
                 const modal = document.createElement('div');
                 modal.style.cssText = `
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                    background: rgba(0,0,0,0.5); z-index: 1000; 
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.5); z-index: 1000;
                     display: flex; align-items: center; justify-content: center;
                 `;
+
+                // Close modal when clicking outside the content
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
                 
                 // Helper function to format role display
                 const getRoleDisplay = (user) => {
