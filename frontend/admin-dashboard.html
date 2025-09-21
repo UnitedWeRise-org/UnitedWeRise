@@ -3497,7 +3497,8 @@ Current Status: Use deploymentStatus.check() for real-time status
                     throw new Error('Failed to fetch user details');
                 }
 
-                const user = response.data.user;
+                const data = await response.json();
+                const user = data.user;
                 
                 // Create modal
                 const modal = document.createElement('div');

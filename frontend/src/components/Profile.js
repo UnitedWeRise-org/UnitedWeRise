@@ -394,83 +394,94 @@ class Profile {
 
         let activityHtml = `
             <div class="tab-pane">
-                <!-- Activity Filters -->
-                <div class="activity-filters-container" style="margin-bottom: 1.5rem; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">
-                    <div class="activity-filters-header"
-                         onclick="window.profile.toggleFiltersExpanded()"
-                         style="padding: 1rem; cursor: pointer; color: #333; font-weight: 600; font-size: 0.9rem;
-                                display: flex; align-items: center; justify-content: space-between; user-select: none;
-                                border-bottom: 1px solid #e1e5e9;">
-                        <span>🔍 Filter Activity</span>
-                        <span id="filtersToggleIcon" style="transition: transform 0.2s ease;">▼</span>
+                <!-- Search and Filter Row -->
+                <div class="activity-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-start;">
+                    <!-- Search Box (Half Width) -->
+                    <div class="activity-search" style="flex: 1;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem;">
+                            🔍 Search Activity
+                        </label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="search" id="activitySearch" placeholder="Search your activity..."
+                                   value="${this.activitySearchQuery}"
+                                   autocomplete="off" autocapitalize="off" spellcheck="false"
+                                   style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
+                                   onkeyup="if(event.key==='Enter') window.profile.searchActivities(this.value)"
+                                   oninput="window.profile.activitySearchQuery = this.value">
+                            <button onclick="window.profile.searchActivities(document.getElementById('activitySearch').value)"
+                                    style="padding: 0.75rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                                Search
+                            </button>
+                        </div>
                     </div>
-                    <div id="activityFiltersContent" style="display: none; padding: 1rem; background: white;">
-                        <div class="activity-filter-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">📝 Posts Created</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">✏️ Posts Edited</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">🗑️ Posts Deleted</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">💬 Comments</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">✏️ Comments Edited</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">🗑️ Comments Deleted</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">❤️ Likes</span>
-                            </label>
-                            <label class="filter-checkbox-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
-                                <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
-                                       onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)"
-                                       style="width: 16px; height: 16px; accent-color: #007bff;">
-                                <span style="font-size: 0.85rem; color: #333;">👥 Follows</span>
-                            </label>
+
+                    <!-- Filter Dropdown (Half Width) -->
+                    <div class="activity-filter" style="flex: 1; position: relative;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem;">
+                            🔽 Filter by Type
+                        </label>
+                        <div class="filter-dropdown-container" style="position: relative;">
+                            <button id="filterDropdownButton"
+                                    onclick="window.profile.toggleFilterDropdown()"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: white; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                <span id="filterButtonText">Select filters...</span>
+                                <span id="filterDropdownIcon" style="transition: transform 0.2s ease;">▼</span>
+                            </button>
+                            <div id="filterDropdownMenu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 100; max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 0.5rem;">
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">📝 Posts Created</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">✏️ Posts Edited</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">🗑️ Posts Deleted</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">💬 Comments</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">✏️ Comments Edited</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">🗑️ Comments Deleted</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">❤️ Likes</span>
+                                    </label>
+                                    <label class="filter-option" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease;">
+                                        <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
+                                               onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)"
+                                               style="width: 16px; height: 16px; accent-color: #007bff;">
+                                        <span style="font-size: 0.85rem; color: #333;">👥 Follows</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                    <!-- Search Box -->
-                    <div class="activity-search" style="margin-top: 1rem;">
-                        <input type="search" id="activitySearch" placeholder="Search your activity..."
-                               value="${this.activitySearchQuery}"
-                               autocomplete="off" autocapitalize="off" spellcheck="false"
-                               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
-                               onkeyup="if(event.key==='Enter') window.profile.searchActivities(this.value)"
-                               oninput="window.profile.activitySearchQuery = this.value">
-                        <button onclick="window.profile.searchActivities(document.getElementById('activitySearch').value)"
-                                style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Search
-                        </button>
-                    </div>
                 </div>
 
                 <!-- Activity Feed -->
@@ -4178,26 +4189,68 @@ class Profile {
 
     toggleActivityFilter(type, enabled) {
         this.activityFilters[type] = enabled;
+        // Update filter button text
+        this.updateFilterButtonText();
         // Reload activities with new filters
         this.loadUserActivities(true);
     }
 
-    toggleFiltersExpanded() {
-        const content = document.getElementById('activityFiltersContent');
-        const icon = document.getElementById('filtersToggleIcon');
+    toggleFilterDropdown() {
+        const menu = document.getElementById('filterDropdownMenu');
+        const icon = document.getElementById('filterDropdownIcon');
 
-        if (content && icon) {
-            const isExpanded = content.style.display !== 'none';
+        if (menu && icon) {
+            const isOpen = menu.style.display !== 'none';
 
-            if (isExpanded) {
-                content.style.display = 'none';
+            if (isOpen) {
+                menu.style.display = 'none';
                 icon.style.transform = 'rotate(0deg)';
                 icon.textContent = '▼';
             } else {
-                content.style.display = 'block';
+                menu.style.display = 'block';
                 icon.style.transform = 'rotate(180deg)';
                 icon.textContent = '▲';
+                this.updateFilterButtonText();
             }
+        }
+
+        // Close dropdown when clicking outside
+        if (menu && menu.style.display === 'block') {
+            setTimeout(() => {
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.filter-dropdown-container')) {
+                        menu.style.display = 'none';
+                        icon.style.transform = 'rotate(0deg)';
+                        icon.textContent = '▼';
+                    }
+                }, { once: true });
+            }, 100);
+        }
+    }
+
+    updateFilterButtonText() {
+        const buttonText = document.getElementById('filterButtonText');
+        if (!buttonText) return;
+
+        const activeFilters = Object.keys(this.activityFilters)
+            .filter(type => this.activityFilters[type]);
+
+        if (activeFilters.length === 0) {
+            buttonText.textContent = 'Select filters...';
+        } else if (activeFilters.length === 1) {
+            const filterNames = {
+                'POST_CREATED': 'Posts Created',
+                'POST_EDITED': 'Posts Edited',
+                'POST_DELETED': 'Posts Deleted',
+                'COMMENT_CREATED': 'Comments',
+                'COMMENT_EDITED': 'Comments Edited',
+                'COMMENT_DELETED': 'Comments Deleted',
+                'LIKE_ADDED': 'Likes',
+                'FOLLOW_ADDED': 'Follows'
+            };
+            buttonText.textContent = filterNames[activeFilters[0]] || activeFilters[0];
+        } else {
+            buttonText.textContent = `${activeFilters.length} filters selected`;
         }
     }
 
@@ -4229,7 +4282,11 @@ class Profile {
         }
 
         // Switch to My Feed tab and highlight the post
-        window.switchToTab('my-feed');
+        if (typeof showMyFeedInMain === 'function') {
+            showMyFeedInMain();
+        } else {
+            window.location.hash = 'my-feed';
+        }
 
         // Wait for feed to load, then scroll to and highlight the post
         setTimeout(() => {
@@ -4264,7 +4321,11 @@ class Profile {
 
         if (postId) {
             // First navigate to the post
-            window.switchToTab('my-feed');
+            if (typeof showMyFeedInMain === 'function') {
+                showMyFeedInMain();
+            } else {
+                window.location.hash = 'my-feed';
+            }
 
             setTimeout(() => {
                 const postElement = document.querySelector(`[data-post-id="${postId}"]`);
