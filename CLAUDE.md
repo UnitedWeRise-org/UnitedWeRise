@@ -1,6 +1,67 @@
-# Claude Code Development Reference - Condensed
+# Claude Code Development Reference
+
+## 📑 QUICK NAVIGATION & EMERGENCY ACCESS
+
+### **🚨 EMERGENCY COMMANDS (Critical Issues)**
+```bash
+# Backend emergency restart
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --revision-suffix emergency-$(date +%m%d-%H%M)
+
+# Check deployment status immediately
+bash scripts/deployment-status.sh
+
+# Quick health check
+curl -s "https://api.unitedwerise.org/health" | grep uptime
+
+# Emergency rollback to staging
+git checkout development && git revert HEAD && git push origin development
+```
+
+### **⚡ DAILY ESSENTIALS (Copy-Paste Ready)**
+```bash
+# Start development session
+git checkout development && git pull origin development
+
+# Deploy to staging
+git add . && git commit -m "feat/fix: Description" && git push origin development
+
+# Pre-deployment check
+bash scripts/validate-before-commit.sh
+
+# Monitor staging deployment
+curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+```
+
+### **📋 SECTION QUICK REFERENCE**
+| Section | Lines | When to Use |
+|---------|-------|-------------|
+| **🚨 Development Protocols** | 35-197 | Before starting any development work |
+| **🚨 Scope Prevention** | 198-283 | When implementing new features |
+| **🚀 Deployment Guide** | 284-746 | When deploying to staging/production |
+| **🛡️ Security & Standards** | 829-858 | For authentication/admin debugging |
+| **🔧 Development Essentials** | 859-950 | For environment setup and common patterns |
+| **🤖 Multi-Agent Coordination** | 1035-1208 | For complex features or emergency response |
+| **🚨 Critical Failure Prevention** | 1151-1207 | When troubleshooting deployment issues |
+
+### **🔍 FIND ANYTHING FAST**
+```bash
+# Find deployment procedures
+grep -n "deployment\|deploy" CLAUDE.md
+
+# Find multi-agent workflows
+grep -n "Multi-Agent\|coordination" CLAUDE.md
+
+# Find emergency procedures
+grep -n "emergency\|critical\|urgent" CLAUDE.md
+
+# Find specific environment info
+grep -n "production\|staging\|dev\." CLAUDE.md
+```
+
+---
 
 ## 🤖 Production Status & Environment
+**Last Updated:** September 20, 2025
 
 ### Deployment URLs
 **Production:**
@@ -157,9 +218,9 @@ Planning: {#session-history} {#future-roadmap}
 - **UI/Frontend Work**: Check {#ui-ux-components}, {#social-features}, {#media-photos}
 - **Deployment**: Check {#deployment-infrastructure}, Recent Changes sections
 - **Bug Fixes**: Check {#known-issues-bugs}, {#troubleshooting}, Recently Fixed sections
-- **Complex Development**: Use Multi-Agent Coordination (CLAUDE.md Line 967+)
-- **Emergency Response**: Multi-Agent rapid response patterns (CLAUDE.md Line 1013+)
-- **Performance Issues**: Multi-Agent optimization workflows (CLAUDE.md Line 1022+)
+- **Complex Development**: Use Multi-Agent Coordination (CLAUDE.md Line 1035+)
+- **Emergency Response**: Multi-Agent rapid response patterns (CLAUDE.md Line 1081+)
+- **Performance Issues**: Multi-Agent optimization workflows (CLAUDE.md Line 1090+)
 
 **How to search effectively:**
 ```bash
@@ -195,7 +256,7 @@ grep -n "Coordination.*Infrastructure" CLAUDE.md
 
 ---
 
-## 🚨 CRITICAL: SCOPE CREEP PREVENTION PROTOCOL
+## 🚨 SCOPE CREEP PREVENTION PROTOCOL
 
 ### THE CARDINAL RULE: SOLVE THE SPECIFIC PROBLEM ONLY
 
@@ -282,6 +343,7 @@ If ANY answer is uncertain, STOP and clarify with user.
 ---
 
 ## 🚀 COMPREHENSIVE DEPLOYMENT GUIDE
+**Last Updated:** September 20, 2025
 
 ### 📍 Deployment Endpoints
 
@@ -744,7 +806,7 @@ schema: Database changes
 
 ---
 
-## 🎯 GOLD STANDARD STAGING ENVIRONMENT
+## 🎯 STAGING ENVIRONMENT STANDARDS
 
 ### 🏗️ Architecture Overview
 Our staging environment implements industry best practices with **environment-aware code** that behaves differently based on deployment context while maintaining a **single codebase**.
@@ -876,6 +938,35 @@ STRIPE_PUBLISHABLE_KEY=[LIVE_KEY]
 GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com
 ```
 
+### 📋 Daily Development Workflow (Streamlined)
+**Complete development session from start to finish:**
+
+```bash
+# 1. START SESSION (Always first)
+git checkout development && git pull origin development
+
+# 2. MAKE CHANGES (Edit files, implement features)
+# [Your development work here]
+
+# 3. PRE-COMMIT VALIDATION (Required before committing)
+bash scripts/validate-before-commit.sh
+# ✅ Checks: TypeScript compilation, documentation, API endpoints
+
+# 4. COMMIT TO STAGING (Deploys automatically)
+git add . && git commit -m "feat/fix: Description" && git push origin development
+
+# 5. VERIFY STAGING DEPLOYMENT (~2-5 minutes)
+curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+# ✅ Uptime should be <60 seconds for fresh deployment
+
+# 6. TEST ON STAGING
+# Visit: https://dev.unitedwerise.org (requires admin login)
+# Verify all functionality works as expected
+
+# 7. PRODUCTION DEPLOYMENT (Only with explicit user approval)
+# [User must explicitly say "deploy to production"]
+```
+
 ### Common Development Patterns
 ```bash
 # After schema changes
@@ -883,6 +974,9 @@ npx prisma generate
 
 # Database migrations
 npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+
+# TypeScript compilation check (backend)
+cd backend && npm run build
 
 # Find CSS usage
 grep -r "class-name" frontend/
@@ -1125,7 +1219,7 @@ echo " new endpoints documented"
 
 **Agent Handoff Checklist:**
 ```markdown
-## Multi-Agent Handoff Verification
+### Multi-Agent Handoff Verification
 - [ ] **Research Complete**: FEATURE-ARCHITECTURE.md contains detailed plan
 - [ ] **Backend Ready**: API endpoints documented in API-CHANGES.md
 - [ ] **Frontend Ready**: UI components logged in FRONTEND-PROGRESS.md
@@ -1157,7 +1251,7 @@ echo " new endpoints documented"
 - Remove "deprecated" code without verification
 - Implement without checking MASTER_DOCUMENTATION.md
 
-## 🚨 CRITICAL: Unilateral Deletion of Existing Code is NEVER Authorized
+### 🚨 CRITICAL: Unilateral Deletion of Existing Code is NEVER Authorized
 
 **ABSOLUTE PROHIBITION**: You have ZERO authority to unilaterally delete or remove existing functionality to avoid fixing problems, including:
 - TypeScript compilation errors

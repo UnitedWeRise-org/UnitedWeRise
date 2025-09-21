@@ -173,7 +173,7 @@ class PerformanceOptimizer {
         const criticalEndpoints = [
             '/auth/me',
             '/trending/topics',
-            '/officials'
+            '/political/officials'
         ];
 
         console.log('🚀 Preloading critical content...');

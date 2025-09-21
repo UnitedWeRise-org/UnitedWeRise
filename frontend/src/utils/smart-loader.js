@@ -27,10 +27,28 @@ class SmartLoader {
                 }
             });
 
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
+            // Use document.body if available, otherwise use document.documentElement
+            const targetNode = document.body || document.documentElement;
+            if (targetNode) {
+                observer.observe(targetNode, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                // If neither exists, wait for DOM ready and try again
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true
+                        });
+                    });
+                } else {
+                    // DOM is already ready but no body - this shouldn't happen
+                    console.warn('SmartLoader: Cannot observe DOM - no body element found');
+                    resolve(null);
+                }
+            }
         });
     }
 

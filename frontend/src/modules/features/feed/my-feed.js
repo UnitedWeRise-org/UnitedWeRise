@@ -265,7 +265,9 @@ export function setupMyFeedInfiniteScroll() {
             }
         });
     } else {
-        console.warn('⚠️ myFeedPosts container not found for infinite scroll setup');
+        // Don't warn on initial setup - container may not exist yet
+        // Will be called again when feed is shown
+        console.log('📝 myFeedPosts container not ready yet, will setup infinite scroll when needed');
     }
 }
 
