@@ -8738,22 +8738,29 @@ const topics = await TopicAggregationService.aggregateTopics({
 
 ### Map Integration Synchronization
 
-#### Real-Time Topic Rotation
-- **15-Second Cycles**: Map displays 3 topics, rotating every 15 seconds
-- **9-Topic Pool**: Backend provides 9 topics for continuous rotation
+#### Real-Time Topic Rotation ✨ **ENHANCED**
+- **Responsive Cycles**: 15-second intervals (expanded) vs 30-second intervals (collapsed)
+- **Adaptive Bubble Count**: 1-3 bubbles (expanded) vs 1-2 bubbles (collapsed)
+- **15-Topic Pool**: Enhanced diversity with 15 topics for continuous rotation
 - **Synchronized Display**: Same topics appear in trending window and map bubbles
-- **Geographic Distribution**: Topics distributed across major US cities
+- **Geographic Diversity**: Smart distribution across CONUS, Alaska, Hawaii, and US territories
 
-#### Enhanced Map Bubbles
+#### Enhanced Map Bubbles ✨ **REDESIGNED**
+- **Speech Bubble Styling**: CSS arrows pointing to geographic origin locations
+- **Responsive Sizing**: Smaller fonts (12px→10px) and tighter margins when collapsed
+- **Layer-Aware Display**: Event markers properly respect layer toggle controls
+- **Territory Support**: Bubbles appear across all US regions including territories
+
 ```javascript
-// AI topic bubbles on map
+// Enhanced AI topic bubbles with geographic diversity
 {
   text: "💭 Healthcare Reform (73% vs 27%) 🌎",
-  coords: [40.7128, -74.0060], // NYC
+  coords: generateRandomCoordinates(), // Smart CONUS/AK/HI/Territory distribution
   topicId: "topic_123",
   supportPercentage: 73,
   opposePercentage: 27,
-  geographicScope: "national"
+  geographicScope: "national",
+  region: "CONUS" // or "Alaska", "Hawaii", "Puerto Rico", etc.
 }
 ```
 
@@ -11351,7 +11358,12 @@ showDefaultView()
 #### **User Experience & Communication Enhancements**
 - [ ] Implement AI-summarized top issues toggle/modal for candidate inbox
 - [ ] Add public reply option that posts to candidate's public feed
-- [ ] Fix map functionality (currently flashy but useless)
+- ✅ **Enhanced Map Functionality (Sep 21)**: Comprehensive improvements to interactive map system
+  - **Geographic Diversity**: Smart random coordinates across CONUS, Alaska, Hawaii, and US territories
+  - **Responsive Bubble System**: Smaller bubbles with speech bubble arrows, adaptive population rates
+  - **Layer System Fixes**: Event markers properly respect layer toggles, dummy events removed
+  - **Improved Zoom Controls**: Complete 50-state + territory coverage with accurate positioning
+  - **Standardized Sizing**: Consistent collapsed state (25% width, 30% height, 2.1 zoom)
 
 #### **Election Display Improvements**
 - [ ] Show candidate's own election status in dashboard
