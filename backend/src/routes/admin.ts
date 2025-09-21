@@ -9,6 +9,7 @@ import { body, query, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { SecurityService } from '../services/securityService';
 import { metricsService } from '../services/metricsService';
+import { getPerformanceMetrics } from '../middleware/performanceMonitor';
 import fs from 'fs';
 import path from 'path';
 
@@ -83,6 +84,9 @@ router.get('/dashboard', requireAuth, requireAdmin, requireTOTPForAdmin, async (
       take: 10
     });
 
+    // Get performance metrics
+    const performanceData = getPerformanceMetrics();
+
     res.json({
       overview: {
         totalUsers,
@@ -103,6 +107,10 @@ router.get('/dashboard', requireAuth, requireAdmin, requireTOTPForAdmin, async (
       },
       recentActivity: {
         highPriorityReports: recentReports,
+        lastUpdated: new Date().toISOString()
+      },
+      performance: {
+        ...performanceData,
         lastUpdated: new Date().toISOString()
       }
     });

@@ -50,6 +50,7 @@ import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
 import { metricsService } from './services/metricsService';
+import { performanceMiddleware } from './middleware/performanceMonitor';
 
 dotenv.config();
 
@@ -176,6 +177,9 @@ if (process.env.NODE_ENV === 'development') {
 
 // Metrics middleware (must be early to capture all requests)
 app.use(metricsService.requestMetricsMiddleware());
+
+// Performance monitoring middleware
+app.use(performanceMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);

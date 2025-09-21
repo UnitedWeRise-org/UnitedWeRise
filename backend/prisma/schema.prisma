@@ -43,6 +43,8 @@ model User {
   phoneVerified               Boolean                   @default(false)
   phoneVerifyCode             String?
   phoneVerifyExpiry           DateTime?
+  maritalStatus               String?
+  profilePrivacySettings      Json?                     @default("{\"bio\":\"public\",\"website\":\"public\",\"city\":\"followers\",\"state\":\"followers\",\"maritalStatus\":\"friends\",\"phoneNumber\":\"private\",\"politicalParty\":\"public\"}")
   resetToken                  String?
   resetExpiry                 DateTime?
   isOnline                    Boolean                   @default(false)

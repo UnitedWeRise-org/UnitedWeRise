@@ -68,25 +68,61 @@
     <link rel="stylesheet" href="src/styles/post-component.css">
     <link rel="stylesheet" href="src/styles/responsive.css">
     
-    <!-- External JavaScript -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    <!-- External JavaScript - Heavy libraries loaded on-demand -->
+    <!-- Map libraries now loaded via smart-loader when needed -->
+    <!-- <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> -->
+    <!-- <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script> -->
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
-    <!-- Application JavaScript -->
+    <!-- Performance & Optimization Utilities (Load First) -->
+    <script src="src/utils/performance.js"></script>
+    <script src="src/utils/error-handler.js"></script>
+    <script src="src/utils/advanced-caching.js"></script>
+    <script src="src/utils/smart-loader.js"></script>
+
+    <!-- Core Application JavaScript -->
     <script src="src/config/api.js"></script>
     <script src="src/js/api-manager.js"></script>
     <script src="src/js/websocket-client.js"></script>
     <script src="src/js/app-initialization.js"></script>
     <script src="src/js/force-optimization.js"></script>
     <script src="js/posting.js"></script>
-    
+
+    <!-- Initialize Performance Optimizations -->
+    <script>
+    // Initialize performance systems
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Initializing performance optimizations...');
+
+        // Wrap apiCall with performance optimization if available
+        if (window.createOptimizedApiCall && window.apiCall) {
+            const originalApiCall = window.apiCall;
+            window.apiCall = window.createOptimizedApiCall(originalApiCall);
+            console.log('✅ API calls optimized with caching and retry');
+        }
+
+        // Wrap apiCall with error handling if available
+        if (window.createErrorAwareApiCall && window.apiCall) {
+            const currentApiCall = window.apiCall;
+            window.apiCall = window.createErrorAwareApiCall(currentApiCall);
+            console.log('✅ API calls enhanced with user-friendly error handling');
+        }
+
+        // Preload critical content
+        if (window.performanceOptimizer) {
+            window.performanceOptimizer.preloadCriticalContent();
+        }
+
+        console.log('🎉 Performance optimizations active!');
+    });
+    </script>
+
     <!-- Inline Optimization Override (Backup) -->
     <script>
     // Emergency inline optimization override
     if (typeof adminDebugLog !== 'undefined') {
-        adminDebugLog('InlineOptimization', 'Inline optimization override loading...');
+        adminDebugLog('InlineOptimization', 'Performance optimization system loading...');
     }
     
     // Check if main scripts loaded

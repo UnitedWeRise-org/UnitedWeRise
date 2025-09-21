@@ -56,6 +56,7 @@ const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
 const metricsService_1 = require("./services/metricsService");
+const performanceMonitor_1 = require("./middleware/performanceMonitor");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
@@ -164,6 +165,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 // Metrics middleware (must be early to capture all requests)
 app.use(metricsService_1.metricsService.requestMetricsMiddleware());
+// Performance monitoring middleware
+app.use(performanceMonitor_1.performanceMiddleware);
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);

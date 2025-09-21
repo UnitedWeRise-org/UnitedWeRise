@@ -13,6 +13,7 @@ const emailService_1 = require("../services/emailService");
 const express_validator_1 = require("express-validator");
 const securityService_1 = require("../services/securityService");
 const metricsService_1 = require("../services/metricsService");
+const performanceMonitor_1 = require("../middleware/performanceMonitor");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const router = express_1.default.Router();
@@ -70,6 +71,8 @@ router.get('/dashboard', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
             orderBy: { createdAt: 'desc' },
             take: 10
         });
+        // Get performance metrics
+        const performanceData = (0, performanceMonitor_1.getPerformanceMetrics)();
         res.json({
             overview: {
                 totalUsers,
@@ -90,6 +93,10 @@ router.get('/dashboard', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
             },
             recentActivity: {
                 highPriorityReports: recentReports,
+                lastUpdated: new Date().toISOString()
+            },
+            performance: {
+                ...performanceData,
                 lastUpdated: new Date().toISOString()
             }
         });
