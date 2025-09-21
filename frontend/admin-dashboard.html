@@ -3733,8 +3733,24 @@ Current Status: Use deploymentStatus.check() for real-time status
                     { additionalInfo: impactDetails }
                 );
 
-                // Get deletion type preference
-                const deletionType = confirm('Choose deletion type:\n\nOK = Soft Delete (preserve data, mark as deleted)\nCancel = Hard Delete (permanent removal)') ? 'soft' : 'hard';
+                // Get deletion type preference with better UX
+                let deletionType = 'soft'; // Default to safer option
+                const deleteChoice = prompt('Choose deletion type:\n\n1 = Soft Delete (preserve data, mark as deleted) [RECOMMENDED]\n2 = Hard Delete (permanent removal)\n\nEnter 1 or 2:');
+
+                if (deleteChoice === '2') {
+                    if (confirm('⚠️ HARD DELETE WARNING ⚠️\n\nThis will PERMANENTLY remove all user data and cannot be undone.\n\nAre you absolutely sure?')) {
+                        deletionType = 'hard';
+                    } else {
+                        alert('Operation cancelled.');
+                        return;
+                    }
+                } else if (deleteChoice !== '1' && deleteChoice !== null) {
+                    alert('Invalid choice. Operation cancelled.');
+                    return;
+                } else if (deleteChoice === null) {
+                    // User clicked Cancel
+                    return;
+                }
 
                 // Get deletion reason
                 const reason = prompt('Enter reason for deletion (required, 10-500 characters):');
@@ -3900,29 +3916,39 @@ Current Status: Use deploymentStatus.check() for real-time status
             const primaryId = document.getElementById('primaryAccountId').value.trim();
             const duplicateId = document.getElementById('duplicateAccountId').value.trim();
             const statusDiv = document.getElementById('mergeStatus');
-            
+
             if (!primaryId || !duplicateId) {
                 statusDiv.innerHTML = '<span style="color: red;">❌ Please enter both account IDs</span>';
                 return;
             }
-            
+
             if (primaryId === duplicateId) {
                 statusDiv.innerHTML = '<span style="color: red;">❌ Cannot merge account with itself</span>';
                 return;
             }
-            
+
             if (!confirm(`⚠️ Are you sure you want to merge these accounts?\n\nPrimary (keep): ${primaryId}\nDuplicate (delete): ${duplicateId}\n\nThis action cannot be undone!`)) {
                 return;
             }
-            
-            statusDiv.innerHTML = '<span style="color: blue;">🔄 Merging accounts...</span>';
-            
+
+            statusDiv.innerHTML = '<span style="color: blue;">🔄 Requesting TOTP confirmation...</span>';
+
             try {
+                // Request TOTP confirmation for merge operation
+                const { totpToken } = await requestTOTPConfirmation(
+                    `Merge accounts: ${primaryId} ← ${duplicateId}`,
+                    { additionalInfo: 'Account merge operation requires TOTP verification' }
+                );
+
+                statusDiv.innerHTML = '<span style="color: blue;">🔄 Merging accounts...</span>';
+
                 const response = await adminApiCall(`${BACKEND_URL}/api/admin/merge-accounts`, {
                     method: 'POST',
                     body: JSON.stringify({
                         primaryAccountId: primaryId,
-                        duplicateAccountId: duplicateId
+                        duplicateAccountId: duplicateId,
+                        totpToken,
+                        actionDescription: `Merge accounts: ${primaryId} ← ${duplicateId}`
                     })
                 });
                 
