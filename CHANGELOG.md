@@ -1,10 +1,52 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: September 20, 2025
+**Last Updated**: September 21, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## 2025-09-21 - Profile System Fixes & Mission Alignment
+
+### 🚨 CRITICAL FIXES
+- **Profile Viewing Data Contamination Bug**: Fixed critical security issue where users saw their own profile data when viewing other users' profiles
+  - **Root Cause**: Missing `window.Profile` class export causing fallback to buggy code path
+  - **Solution**: Added proper class exports and fixed frontend/backend API routing conflicts
+  - **Impact**: Users now see correct profile data, privacy controls work properly
+  - **Files**: `frontend/src/components/Profile.js`, `backend/src/routes/users.ts`, search components
+
+### 🎯 MAJOR MISSION ALIGNMENT
+- **Political Party Field Removal**: Complete elimination of political party affiliation from platform
+  - **Philosophy**: Aligns with UnitedWeRise core mission of focusing on ideas over party politics
+  - **Changes**: Removed from UI, backend schema, API endpoints, and privacy settings
+  - **Database**: Applied migration to drop `politicalParty` column and clean existing data
+  - **Impact**: Platform now truly focuses on ideas rather than tribal party politics
+  - **Files**: Database schema, all frontend components, backend routes, API documentation
+
+### 🔐 PRIVACY SYSTEM IMPROVEMENTS
+- **Privacy Settings UI Enhancement**: Added "Privacy Settings" heading and cleaned up inappropriate toggles
+- **API Endpoint Fixes**: Corrected `/user/profile-privacy` → `/users/profile-privacy` routing
+- **Field Optimization**: Removed phone number and political party from privacy controls (inappropriate for privacy)
+- **Error Handling**: Added graceful 404 handling for candidate-specific endpoints
+
+### 🛠️ TECHNICAL DETAILS
+- **Frontend Fixes**:
+  - Fixed `window.Profile` vs `window.profile` reference errors
+  - Updated fallback functions to use correct API paths
+  - Cleaned up profile display components
+- **Backend Changes**:
+  - Database schema migration applied successfully
+  - Updated Prisma client and TypeScript compilation
+  - Removed political party references from all API routes
+- **Deployment**: All changes deployed to staging environment
+
+### 📈 BUSINESS IMPACT
+- **Security**: Eliminated privacy breach where users could see wrong profile data
+- **Mission Alignment**: Platform now embodies non-partisan, ideas-focused approach
+- **User Experience**: Cleaner privacy settings, better error handling, more intuitive profile system
+- **Platform Integrity**: Maintains UnitedWeRise's commitment to transcending party politics
 
 ---
 

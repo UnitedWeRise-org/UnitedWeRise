@@ -1,5 +1,5 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 20, 2025
+**Last Updated**: September 21, 2025
 **Version**: 5.5.0 (Performance Optimization & Development Efficiency Complete)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
@@ -577,7 +577,6 @@ model User {
   verificationStatus    VerificationStatus @default(UNVERIFIED)
   office                String?
   officialTitle         String?
-  politicalParty        String?
   campaignWebsite       String?
   
   // Reputation System
@@ -1977,6 +1976,79 @@ input, textarea, select {
 - **{#mobile-ui-system}** - Complete mobile interface architecture
 - **{#javascript-modularization}** - Mobile-specific modules and touch handlers
 - **{#performance-optimizations}** - Mobile performance improvements
+
+### Profile System Components {#profile-system-components}
+
+#### Core Profile Architecture
+**File**: `frontend/src/components/Profile.js`
+**Purpose**: Complete user profile management and viewing system
+
+**Key Classes and Functions:**
+```javascript
+// Class exports (both required for proper functionality)
+window.profile = new Profile();     // Instance for UI interactions
+window.Profile = Profile;           // Class constructor for static methods
+
+// Static utility methods
+window.Profile.showUserProfile = showUserProfile;  // View other users' profiles
+window.showUserProfile = showUserProfile;          // Global access function
+```
+
+**Critical Architecture Notes:**
+- **Dual Export Pattern**: Both `window.profile` (instance) and `window.Profile` (class) are required
+- **Profile Viewing**: Uses `showUserProfile(userId)` for cross-user profile access
+- **Privacy Controls**: Integrated with backend privacy settings API
+- **Tab System**: Personal Info, Political Profile (hidden), Settings, Photos, Messages
+
+#### Profile Viewing System
+**Fixed September 21, 2025**: Critical data contamination bug resolved
+
+**Previous Issue**: Users saw their own profile data when viewing other users
+**Root Cause**: Missing `window.Profile` class export caused fallback to buggy code path
+**Solution**:
+- Added proper class exports to Profile.js
+- Fixed backend route conflicts (`/:userId` vs `/:username`)
+- Updated fallback functions to use correct API parameters
+
+**Current Flow**:
+1. User clicks profile link → `showUserProfile(userId)` called
+2. Check `window.Profile.showUserProfile` exists → Call if available
+3. Fallback to `openUserFeed()` if Profile component unavailable
+4. Backend routes correctly distinguish between userId and username lookups
+5. Privacy filtering applied based on viewer's relationship to profile owner
+
+#### Privacy Settings Integration
+**API Endpoint**: `/users/profile-privacy` (PUT/GET)
+**File**: `frontend/src/components/Profile.js` (updatePrivacySetting method)
+
+**Supported Privacy Fields**:
+- `bio`: Personal biography
+- `email`: Email address visibility
+- `location`: Geographic location
+- `website`: Personal website
+- `maritalStatus`: Relationship status (renamed from "Marital Status")
+
+**Privacy Levels**: `public`, `followers`, `friends`, `private`
+
+**Recent Improvements (September 21, 2025)**:
+- Added "Privacy Settings" heading for better organization
+- Removed inappropriate fields (phone number, political party) from privacy toggles
+- Fixed API endpoint routing issues
+- Added graceful error handling for missing candidate endpoints
+
+#### UserCard Integration
+**File**: `frontend/src/components/UserCard.js`
+**Purpose**: Quick profile preview popups
+
+**Integration Points**:
+- Calls `window.Profile.showUserProfile(userId)` for full profile viewing
+- Respects privacy settings for field visibility
+- Provides hover/click interactions for user mentions and search results
+
+**Related Systems Integration:**
+- **{#social-features}** - User relationships and following system
+- **{#security-authentication}** - Privacy controls and user permissions
+- **{#api-reference}** - User profile and privacy endpoints
 
 ### Custom Styling System
 
