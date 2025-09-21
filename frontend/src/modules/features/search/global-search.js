@@ -457,7 +457,7 @@ function renderCandidateResult(candidate) {
                 <div style="font-weight: bold; font-size: 1rem;">${candidate.firstName ? `${candidate.firstName} ${candidate.lastName || ''}` : candidate.username}</div>
                 <div style="color: #666; font-size: 0.9rem;">${candidate.office || candidate.officialTitle || 'Office Unknown'} Candidate</div>
                 <div style="color: #666; font-size: 0.8rem;">
-                    ${candidate.politicalParty ? `${candidate.politicalParty} • ` : ''}${candidate.state || 'Location Unknown'}
+                    ${candidate.state || 'Location Unknown'}
                     ${candidate.candidateStatus ? ` • ${candidate.candidateStatus}` : ''}
                 </div>
             </div>

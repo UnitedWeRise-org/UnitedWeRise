@@ -183,7 +183,6 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
                             politicalProfileType: true,
                             office: true,
                             officialTitle: true,
-                            politicalParty: true,
                             state: true,
                             city: true,
                             followersCount: true
@@ -294,7 +293,6 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
                         politicalProfileType: 'CANDIDATE' as const,
                         office: candidate.office?.title || 'Office Unknown',
                         officialTitle: candidate.office?.title || 'Office Unknown',
-                        politicalParty: candidate.party,
                         state: candidate.office?.state || 'Unknown',
                         city: null,
                         followersCount: candidate.user.followersCount,
@@ -597,7 +595,6 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
                 politicalProfileType: true,
                 office: true,
                 officialTitle: true,
-                politicalParty: true,
                 state: true,
                 city: true,
                 followersCount: true

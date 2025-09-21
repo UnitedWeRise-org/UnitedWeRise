@@ -43,7 +43,6 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 verificationStatus: true,
                 office: true,
                 officialTitle: true,
-                politicalParty: true,
                 campaignWebsite: true,
                 // Preferences
                 notificationPreferences: true,
@@ -147,7 +146,6 @@ router.get('/:userId', async (req: AuthRequest, res) => {
                 verificationStatus: true,
                 office: true,
                 officialTitle: true,
-                politicalParty: true,
                 campaignWebsite: true,
                 // Privacy settings
                 profilePrivacySettings: true
@@ -172,7 +170,6 @@ router.get('/:userId', async (req: AuthRequest, res) => {
             state: 'followers',
             maritalStatus: 'friends',
             phoneNumber: 'private',
-            politicalParty: 'public'
         };
 
         const privacySettings = {
@@ -266,12 +263,9 @@ router.get('/:userId', async (req: AuthRequest, res) => {
             filteredUser.phoneNumber = user.phoneNumber;
         }
 
-        if (canViewField(privacySettings.politicalParty)) {
-            filteredUser.politicalParty = user.politicalParty;
-        }
 
-        // Campaign website visibility follows political party privacy
-        if (canViewField(privacySettings.politicalParty)) {
+        // Campaign website is public for candidates (campaign transparency)
+        if (user.campaignWebsite) {
             filteredUser.campaignWebsite = user.campaignWebsite;
         }
 
@@ -454,8 +448,7 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
                     verificationStatus: true,
                     office: true,
                     officialTitle: true,
-                    politicalParty: true,
-                    campaignWebsite: true,
+                        campaignWebsite: true,
                     _count: {
                         select: {
                             posts: true,
@@ -856,7 +849,6 @@ router.get('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
             state: 'followers',
             maritalStatus: 'friends',
             phoneNumber: 'private',
-            politicalParty: 'public'
         };
 
         const privacySettings = {
@@ -895,7 +887,7 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
 
         // Validate privacy levels
         const validPrivacyLevels = ['public', 'followers', 'friends', 'private'];
-        const allowedFields = ['bio', 'website', 'city', 'state', 'maritalStatus', 'phoneNumber', 'politicalParty'];
+        const allowedFields = ['bio', 'website', 'city', 'state', 'maritalStatus', 'phoneNumber'];
 
         // Validate field names and privacy levels
         for (const [field, level] of Object.entries(privacySettings)) {

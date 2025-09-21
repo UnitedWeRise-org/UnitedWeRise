@@ -1,1 +1,1 @@
-{"version":3,"file":"swagger.d.ts","sourceRoot":"","sources":["../src/swagger.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AA+wBlC,QAAA,MAAM,KAAK,QAAwB,CAAC;AAEpC,eAAO,MAAM,YAAY,GAAI,KAAK,OAAO,KAAG,IAsB3C,CAAC;AAEF,OAAO,EAAE,KAAK,EAAE,CAAC"}
+{"version":3,"file":"swagger.d.ts","sourceRoot":"","sources":["../src/swagger.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AA8wBlC,QAAA,MAAM,KAAK,QAAwB,CAAC;AAEpC,eAAO,MAAM,YAAY,GAAI,KAAK,OAAO,KAAG,IAsB3C,CAAC;AAEF,OAAO,EAAE,KAAK,EAAE,CAAC"}

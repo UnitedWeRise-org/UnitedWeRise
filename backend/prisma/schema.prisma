@@ -30,7 +30,6 @@ model User {
   politicalProfileType        PoliticalProfileType      @default(CITIZEN)
   verificationStatus          VerificationStatus        @default(PENDING)
   verificationDocuments       String[]                  @default([])
-  politicalParty              String?
   office                      String?
   campaignWebsite             String?
   officialTitle               String?
@@ -44,7 +43,7 @@ model User {
   phoneVerifyCode             String?
   phoneVerifyExpiry           DateTime?
   maritalStatus               String?
-  profilePrivacySettings      Json?                     @default("{\"bio\":\"public\",\"website\":\"public\",\"city\":\"followers\",\"state\":\"followers\",\"maritalStatus\":\"friends\",\"phoneNumber\":\"private\",\"politicalParty\":\"public\"}")
+  profilePrivacySettings      Json?                     @default("{\"bio\":\"public\",\"website\":\"public\",\"city\":\"followers\",\"state\":\"followers\",\"maritalStatus\":\"friends\",\"phoneNumber\":\"private\"}")
   resetToken                  String?
   resetExpiry                 DateTime?
   isOnline                    Boolean                   @default(false)

@@ -131,7 +131,6 @@ const options = {
             city: { type: 'string', maxLength: 100 },
             state: { type: 'string', pattern: '^[A-Z]{2}$' },
             zipCode: { type: 'string', pattern: '^\\d{5}(-\\d{4})?$' },
-            politicalParty: { type: 'string', maxLength: 50 },
             office: { type: 'string', maxLength: 100 },
             officialTitle: { type: 'string', maxLength: 100 },
             campaignWebsite: { type: 'string', format: 'uri' }

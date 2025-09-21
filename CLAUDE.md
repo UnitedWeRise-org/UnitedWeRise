@@ -4,11 +4,14 @@
 
 ### **🚨 EMERGENCY COMMANDS (Critical Issues)**
 ```bash
+# FASTEST EMERGENCY RESPONSE (Using Scripts):
+./scripts/emergency-rollback.sh                           # Automated rollback with verification
+./scripts/deployment-status.sh                            # Check system status
+./scripts/post-deployment-verify.sh                       # Comprehensive health check
+
+# MANUAL EMERGENCY PROCEDURES (If scripts fail):
 # Backend emergency restart
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --revision-suffix emergency-$(date +%m%d-%H%M)
-
-# Check deployment status immediately
-bash scripts/deployment-status.sh
 
 # Quick health check
 curl -s "https://api.unitedwerise.org/health" | grep uptime
@@ -19,16 +22,15 @@ git checkout development && git revert HEAD && git push origin development
 
 ### **⚡ DAILY ESSENTIALS (Copy-Paste Ready)**
 ```bash
-# Start development session
+# FASTEST METHOD (Using Scripts):
+./scripts/dev-start.sh                                    # Start session with environment setup
+./scripts/quick-deploy-staging.sh "feat: your changes"    # One-command deploy (validates, commits, pushes)
+./scripts/deployment-status.sh                            # Monitor deployment status
+
+# MANUAL METHOD (If scripts unavailable):
 git checkout development && git pull origin development
-
-# Deploy to staging
+./scripts/validate-before-commit.sh                       # Always validate first!
 git add . && git commit -m "feat/fix: Description" && git push origin development
-
-# Pre-deployment check
-bash scripts/validate-before-commit.sh
-
-# Monitor staging deployment
 curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ```
 
@@ -93,8 +95,32 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 
 ---
 
+## 🛠️ AVAILABLE AUTOMATION SCRIPTS
+**Save time and reduce errors with these existing automation tools:**
+
+### **Core Development Scripts**
+- **`./scripts/quick-deploy-staging.sh "commit message"`** - One-command staging deployment (validates, commits, pushes, verifies)
+- **`./scripts/validate-before-commit.sh`** - Pre-commit validation (TypeScript, cross-refs, API endpoints)
+- **`./scripts/dev-start.sh`** - Session initialization with environment setup
+- **`./scripts/deployment-status.sh`** - Real-time deployment monitoring
+
+### **Emergency & Recovery Scripts**
+- **`./scripts/emergency-rollback.sh`** - Quick rollback procedure
+- **`./scripts/post-deployment-verify.sh`** - Comprehensive post-deployment verification
+- **`./scripts/backup.sh`** - Database backup creation
+- **`./scripts/restore.sh`** - Database restoration
+
+### **Testing & Validation Scripts**
+- **`./scripts/test-api-endpoints.sh`** - Test critical API endpoints
+- **`./scripts/validate-cross-references.js`** - Validate documentation cross-references
+- **`./scripts/update-docs.sh`** - Update documentation with timestamps
+
+💡 **Pro Tip**: Use these scripts instead of manual procedures for faster, more reliable deployments!
+
+---
+
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS
-**Related Sections:** [Scope Prevention](#scope-prevention) | [Deployment Guide](#deployment-guide) | [Multi-Agent Coordination](#multi-agent-coordination)
+**Related Sections:** [Scope Prevention](#scope-prevention) | [Deployment Guide](#deployment-guide) | [Multi-Agent Coordination](#multi-agent-coordination) | [Automation Scripts](#available-automation-scripts)
 
 ### 🗣️ COLLABORATIVE LANGUAGE PROTOCOL
 **CRITICAL**: When the user uses collaborative words, they indicate a desire for DISCUSSION ONLY, not implementation:
@@ -372,19 +398,27 @@ If ANY answer is uncertain, STOP and clarify with user.
 ### 🚨 MANDATORY PRE-DEPLOYMENT CHECKLIST
 **NEVER SKIP - Prevents 99% of deployment failures:**
 
+**🚀 AUTOMATED METHOD (Recommended):**
+```bash
+# Run all validation checks automatically:
+./scripts/validate-before-commit.sh
+# ✅ Checks: TypeScript compilation, git status, cross-references, API endpoints
+```
+
+**📝 MANUAL METHOD (If script unavailable):**
 ```bash
 # 1. VERIFY CHANGES EXIST (CRITICAL - ALWAYS RUN FIRST)
-git status  
+git status
 # ✅ Should show modified files OR "working tree clean" if already committed
 # ❌ If "working tree clean" but you made changes = CHANGES NOT SAVED!
 
 # 2. VERIFY TYPESCRIPT COMPILATION (for backend changes only)
-cd backend && npm run build  
+cd backend && npm run build
 # ✅ Must compile without errors
 # ❌ If fails = Fix TypeScript errors BEFORE proceeding
 
 # 3. VERIFY GITHUB HAS YOUR CHANGES
-git log -1 --oneline  
+git log -1 --oneline
 # ✅ Should show your recent commit with your changes
 # ❌ If doesn't show your changes = NOT COMMITTED YET!
 
@@ -406,6 +440,14 @@ git log origin/development..HEAD
 #### 🔥 MANDATORY WORKFLOW: Development → Staging → Production
 
 #### 1️⃣ Frontend Development Deployment (STAGING)
+
+**🚀 FASTEST METHOD: Use Automation Script**
+```bash
+./scripts/quick-deploy-staging.sh "feat: your changes"
+# ✅ Handles everything: validation → commit → push → monitoring
+```
+
+**📝 MANUAL METHOD:**
 ```bash
 # ALWAYS work on development branch
 git checkout development
@@ -435,8 +477,19 @@ git push origin development
 ```
 
 #### 2️⃣ Backend Development Deployment (STAGING FIRST)
+
+**🚀 RECOMMENDED: Use Quick Deploy Script**
 ```bash
-# Step 1: Run pre-deployment checklist (see above)
+# Handles validation, commit, push, and initial monitoring
+./scripts/quick-deploy-staging.sh "feat: your backend changes"
+
+# Then follow backend-specific Docker build steps below (Step 5 onwards)
+```
+
+**📝 MANUAL METHOD:**
+```bash
+# Step 1: Run pre-deployment checklist
+./scripts/validate-before-commit.sh  # ← Use script instead of manual checks
 
 # Step 2: ALWAYS work on development branch
 git checkout development
@@ -677,6 +730,15 @@ git add . && git commit -m "Description" && git push origin development
 
 ### 🚑 EMERGENCY PROCEDURES
 
+**🚀 USE SCRIPTS FIRST (Faster & Safer):**
+```bash
+# Automated emergency response with verification:
+./scripts/emergency-rollback.sh                    # Complete rollback procedure
+./scripts/post-deployment-verify.sh                # Verify system recovery
+./scripts/deployment-status.sh                     # Monitor recovery status
+```
+
+**📝 MANUAL PROCEDURES (If scripts fail):**
 ```bash
 # Backend emergency restart
 az containerapp update \
@@ -701,8 +763,14 @@ az postgres flexible-server restore \
 
 ### ✅ POST-DEPLOYMENT VERIFICATION - ENHANCED
 
-**Systematic Verification Checklist:**
+**🚀 AUTOMATED VERIFICATION (Recommended):**
+```bash
+# Run comprehensive post-deployment checks:
+./scripts/post-deployment-verify.sh
+# ✅ Automatically checks: SHA match, uptime, revisions, health, functionality
+```
 
+**📝 MANUAL VERIFICATION CHECKLIST:**
 ```bash
 # 1. Verify correct release SHA is deployed
 GIT_SHA=$(git rev-parse --short HEAD)
@@ -943,6 +1011,21 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 ### 📋 Daily Development Workflow (Streamlined)
 **Complete development session from start to finish:**
 
+#### **🚀 RECOMMENDED: Automated Workflow (3 Steps)**
+```bash
+# 1. START SESSION
+./scripts/dev-start.sh
+
+# 2. MAKE CHANGES AND DEPLOY
+# [Your development work here]
+./scripts/quick-deploy-staging.sh "feat: your description"
+# ✅ Automatically: validates → commits → pushes → verifies
+
+# 3. MONITOR STATUS
+./scripts/deployment-status.sh
+```
+
+#### **📝 Alternative: Manual Workflow (7 Steps)**
 ```bash
 # 1. START SESSION (Always first)
 git checkout development && git pull origin development
@@ -951,7 +1034,7 @@ git checkout development && git pull origin development
 # [Your development work here]
 
 # 3. PRE-COMMIT VALIDATION (Required before committing)
-bash scripts/validate-before-commit.sh
+./scripts/validate-before-commit.sh
 # ✅ Checks: TypeScript compilation, documentation, API endpoints
 
 # 4. COMMIT TO STAGING (Deploys automatically)

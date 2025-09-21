@@ -16,7 +16,7 @@ const router = express_1.default.Router();
 router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { streetAddress, city, state, zipCode, politicalParty, campaignWebsite, politicalProfileType, office, officialTitle, termStart, termEnd } = req.body;
+        const { streetAddress, city, state, zipCode, campaignWebsite, politicalProfileType, office, officialTitle, termStart, termEnd } = req.body;
         // Basic validation
         if (streetAddress && (!city || !state || !zipCode)) {
             return res.status(400).json({
@@ -40,7 +40,6 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
             state,
             zipCode,
             h3Index,
-            politicalParty,
             campaignWebsite,
             office,
             officialTitle
@@ -77,7 +76,6 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
                 zipCode: true,
                 politicalProfileType: true,
                 verificationStatus: true,
-                politicalParty: true,
                 campaignWebsite: true,
                 office: true,
                 officialTitle: true,

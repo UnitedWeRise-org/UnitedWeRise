@@ -699,7 +699,6 @@ class Profile {
                             <label>Profile Type</label>
                             <span>${profileTypes[user.politicalProfileType] || 'Citizen'}</span>
                         </div>
-                        ${this.renderFieldWithPrivacy('politicalParty', 'Political Party', user.politicalParty)}
                         ${user.office ? `
                         <div class="info-item">
                             <label>Office</label>
@@ -3719,8 +3718,7 @@ class Profile {
             city: 'followers',
             state: 'followers',
             maritalStatus: 'friends',
-            phoneNumber: 'private',
-            politicalParty: 'public'
+            phoneNumber: 'private'
         };
 
         return prefs[key] !== undefined ? prefs[key] : defaults[key];

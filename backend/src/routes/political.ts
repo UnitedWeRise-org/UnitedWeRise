@@ -19,7 +19,6 @@ router.put('/profile', requireAuth, validatePoliticalProfile, async (req: AuthRe
       city,
       state,
       zipCode,
-      politicalParty,
       campaignWebsite,
       politicalProfileType,
       office,
@@ -53,7 +52,6 @@ router.put('/profile', requireAuth, validatePoliticalProfile, async (req: AuthRe
       state,
       zipCode,
       h3Index,
-      politicalParty,
       campaignWebsite,
       office,
       officialTitle
@@ -93,7 +91,6 @@ router.put('/profile', requireAuth, validatePoliticalProfile, async (req: AuthRe
         zipCode: true,
         politicalProfileType: true,
         verificationStatus: true,
-        politicalParty: true,
         campaignWebsite: true,
         office: true,
         officialTitle: true,
