@@ -6,7 +6,7 @@
 
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { FollowService, FriendService, RelationshipUtils } from '../services/relationshipService';
+import { FollowService, FriendService, SubscriptionService, RelationshipUtils } from '../services/relationshipService';
 
 const router = express.Router();
 
@@ -108,6 +108,108 @@ router.get('/:userId/following', async (req, res) => {
         }
     } catch (error) {
         console.error('Get following route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+/**
+ * SUBSCRIPTION ENDPOINTS
+ */
+
+// Subscribe to a user
+router.post('/subscribe/:userId', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+
+        const result = await SubscriptionService.subscribeToUser(currentUserId, userId);
+
+        if (result.success) {
+            res.json({ message: result.message, data: result.data });
+        } else {
+            res.status(400).json({ error: result.message });
+        }
+    } catch (error) {
+        console.error('Subscribe to user route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Unsubscribe from a user
+router.delete('/subscribe/:userId', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+
+        const result = await SubscriptionService.unsubscribeFromUser(currentUserId, userId);
+
+        if (result.success) {
+            res.json({ message: result.message, data: result.data });
+        } else {
+            res.status(400).json({ error: result.message });
+        }
+    } catch (error) {
+        console.error('Unsubscribe from user route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get subscription status
+router.get('/subscription-status/:userId', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user!.id;
+
+        const status = await SubscriptionService.getSubscriptionStatus(currentUserId, userId);
+        res.json(status);
+    } catch (error) {
+        console.error('Get subscription status route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get subscribers list
+router.get('/:userId/subscribers', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const result = await SubscriptionService.getSubscribers(
+            userId,
+            parseInt(limit.toString()),
+            parseInt(offset.toString())
+        );
+
+        if (result.success) {
+            res.json(result.data);
+        } else {
+            res.status(500).json({ error: result.message });
+        }
+    } catch (error) {
+        console.error('Get subscribers route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get subscriptions list
+router.get('/:userId/subscriptions', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+
+        const result = await SubscriptionService.getSubscriptions(
+            userId,
+            parseInt(limit.toString()),
+            parseInt(offset.toString())
+        );
+
+        if (result.success) {
+            res.json(result.data);
+        } else {
+            res.status(500).json({ error: result.message });
+        }
+    } catch (error) {
+        console.error('Get subscriptions route error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -337,12 +439,37 @@ router.post('/bulk/friend-status', requireAuth, async (req: AuthRequest, res) =>
         }
 
         const statusMap = await FriendService.getBulkFriendStatus(currentUserId, userIds);
-        
+
         // Convert Map to object for JSON response
         const statusObject = Object.fromEntries(statusMap);
         res.json(statusObject);
     } catch (error) {
         console.error('Bulk friend status route error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get bulk subscription status for multiple users
+router.post('/bulk/subscription-status', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { userIds } = req.body;
+        const currentUserId = req.user!.id;
+
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ error: 'userIds array is required' });
+        }
+
+        if (userIds.length > 100) {
+            return res.status(400).json({ error: 'Maximum 100 users per request' });
+        }
+
+        const statusMap = await SubscriptionService.getBulkSubscriptionStatus(currentUserId, userIds);
+
+        // Convert Map to object for JSON response
+        const statusObject = Object.fromEntries(statusMap);
+        res.json(statusObject);
+    } catch (error) {
+        console.error('Bulk subscription status route error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -47,14 +47,20 @@ class PostComponent {
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
-                        <div class="post-avatar">
+                        <div class="post-avatar user-card-trigger"
+                             onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                             style="cursor: pointer;"
+                             title="Click to view profile">
                             ${post.author?.avatar ?
                                 `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
                                 `<div class="avatar-placeholder">${authorInitial}</div>`
                             }
                         </div>
                         <div class="post-author-info">
-                            <div class="post-author-name">
+                            <div class="post-author-name user-card-trigger"
+                                 onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                                 style="cursor: pointer;"
+                                 title="Click to view profile">
                                 ${authorName}
                                 ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
                             </div>
@@ -1342,14 +1348,20 @@ class PostComponent {
                 <!-- Original Post -->
                 <div class="post-component focused-post" style="margin-bottom: 2rem;">
                     <div class="post-header">
-                        <div class="post-avatar">
+                        <div class="post-avatar user-card-trigger"
+                             onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}', context: 'focused'})"
+                             style="cursor: pointer;"
+                             title="Click to view profile">
                             ${post.author?.avatar ?
                                 `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
                                 `<div class="avatar-placeholder">${authorInitial}</div>`
                             }
                         </div>
                         <div class="post-author-info">
-                            <div class="post-author-name">
+                            <div class="post-author-name user-card-trigger"
+                                 onclick="postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}', context: 'focused'})"
+                                 style="cursor: pointer;"
+                                 title="Click to view profile">
                                 ${authorName}
                                 ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
                             </div>
@@ -1514,6 +1526,41 @@ class PostComponent {
         } catch (error) {
             console.error('Error posting comment:', error);
             alert('Failed to post comment. Please try again.');
+        }
+    }
+
+    /**
+     * Show user card for profile interactions
+     * @param {Event} event - Click event
+     * @param {string} userId - User ID to show
+     * @param {Object} context - Additional context (postId, etc.)
+     */
+    async showUserCard(event, userId, context = {}) {
+        if (!userId) {
+            console.warn('PostComponent: No user ID provided for user card');
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+            // Ensure UserCard component is loaded
+            if (typeof window.UserCard === 'undefined') {
+                console.warn('PostComponent: UserCard component not loaded');
+                return;
+            }
+
+            // Create UserCard instance if it doesn't exist
+            if (!window.userCard) {
+                window.userCard = new window.UserCard();
+            }
+
+            // Show the user card anchored to the clicked element
+            await window.userCard.showCard(event.target.closest('.user-card-trigger'), userId, context);
+
+        } catch (error) {
+            console.error('PostComponent: Error showing user card:', error);
         }
     }
 

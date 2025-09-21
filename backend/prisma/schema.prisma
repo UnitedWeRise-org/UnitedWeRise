@@ -108,6 +108,8 @@ model User {
   eventRSVPs                  EventRSVP[]               @relation("EventRSVPs")
   following                   Follow[]                  @relation("Follower")
   followers                   Follow[]                  @relation("Following")
+  subscriptions               Subscription[]            @relation("Subscriber")
+  subscribers                 Subscription[]            @relation("Subscribed")
   receivedFriendRequests      Friendship[]              @relation("FriendshipRecipient")
   sentFriendRequests          Friendship[]              @relation("FriendshipRequester")
   likes                       Like[]
@@ -187,6 +189,19 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  subscriberId String
+  subscribedId String
+  createdAt    DateTime @default(now())
+  subscriber   User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  subscribed   User     @relation("Subscribed", fields: [subscribedId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, subscribedId])
+  @@index([subscriberId])
+  @@index([subscribedId])
 }
 
 model Friendship {

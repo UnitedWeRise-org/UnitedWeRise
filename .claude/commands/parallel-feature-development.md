@@ -5,6 +5,28 @@ Coordinate multiple Claude instances to develop features in parallel, maximizing
 
 **Estimated Time Savings:** 40-60% compared to sequential development
 
+### Coordinator Pattern Structure
+```
+Main Claude (You) ↔ Coordinator Claude
+                        ├── Research Agent (Architecture & Analysis)
+                        ├── Backend Agent (API Development)
+                        ├── Frontend Agent (UI/UX Implementation)
+                        └── Testing Agent (Quality Assurance)
+```
+
+**Coordinator Responsibilities:**
+- Task analysis and agent assignment decisions
+- Progress monitoring via coordination files
+- Integration of sub-agent results
+- Final quality review and deployment approval
+- Conflict resolution between agents
+
+**Sub-Agent Communication:**
+- All agents read from and write to shared `.claude/scratchpads/` files
+- Handoff points clearly defined with completion criteria
+- Status updates logged for coordinator oversight
+- Fallback to single-agent mode if coordination fails
+
 ---
 
 ## Setup Commands

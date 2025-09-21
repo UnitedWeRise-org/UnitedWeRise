@@ -13,7 +13,8 @@ import { createNotification } from '../routes/notifications';
 
 export enum RelationshipType {
     FOLLOW = 'FOLLOW',
-    FRIEND = 'FRIEND'
+    FRIEND = 'FRIEND',
+    SUBSCRIPTION = 'SUBSCRIPTION'
 }
 
 export enum FriendshipStatus {
@@ -40,6 +41,11 @@ export interface FriendStatus {
     friendshipStatus?: FriendshipStatus;
     requestSentByCurrentUser?: boolean;
     friendsSince?: Date;
+}
+
+export interface SubscriptionStatus {
+    isSubscribed: boolean;
+    subscribedAt?: Date;
 }
 
 /**
@@ -302,6 +308,251 @@ export class FollowService {
 
         } catch (error) {
             console.error('Bulk follow status error:', error);
+            return new Map();
+        }
+    }
+}
+
+/**
+ * SUBSCRIPTION SYSTEM - Reusable Functions
+ */
+
+export class SubscriptionService {
+    /**
+     * Subscribe to a user (high-priority follow for algorithmic boost)
+     */
+    static async subscribeToUser(subscriberId: string, subscribedId: string): Promise<RelationshipResult> {
+        try {
+            // Validation
+            if (subscriberId === subscribedId) {
+                return { success: false, message: 'Cannot subscribe to yourself' };
+            }
+
+            // Check if user exists
+            const userToSubscribe = await prisma.user.findUnique({
+                where: { id: subscribedId },
+                select: { id: true, username: true }
+            });
+
+            if (!userToSubscribe) {
+                return { success: false, message: 'User not found' };
+            }
+
+            // Check if already subscribed
+            const existingSubscription = await this.getSubscriptionStatus(subscriberId, subscribedId);
+            if (existingSubscription.isSubscribed) {
+                return { success: false, message: 'Already subscribed to this user' };
+            }
+
+            // Create subscription relationship atomically
+            await prisma.subscription.create({
+                data: {
+                    subscriberId,
+                    subscribedId
+                }
+            });
+
+            // Create notification (async, don't block response)
+            const subscriber = await prisma.user.findUnique({
+                where: { id: subscriberId },
+                select: { username: true }
+            });
+
+            if (subscriber) {
+                createNotification(
+                    'FOLLOW',
+                    subscriberId,
+                    subscribedId,
+                    `${subscriber.username} subscribed to your posts`
+                ).catch(console.error);
+            }
+
+            return {
+                success: true,
+                message: 'Successfully subscribed to user',
+                data: { subscriberId, subscribedId, subscribedAt: new Date() }
+            };
+
+        } catch (error) {
+            console.error('Subscribe to user error:', error);
+            return { success: false, message: 'Failed to subscribe to user', error: error.message };
+        }
+    }
+
+    /**
+     * Unsubscribe from a user
+     */
+    static async unsubscribeFromUser(subscriberId: string, subscribedId: string): Promise<RelationshipResult> {
+        try {
+            // Check if subscribed
+            const existingSubscription = await prisma.subscription.findUnique({
+                where: {
+                    subscriberId_subscribedId: {
+                        subscriberId,
+                        subscribedId
+                    }
+                }
+            });
+
+            if (!existingSubscription) {
+                return { success: false, message: 'Not subscribed to this user' };
+            }
+
+            // Remove subscription relationship
+            await prisma.subscription.delete({
+                where: {
+                    subscriberId_subscribedId: {
+                        subscriberId,
+                        subscribedId
+                    }
+                }
+            });
+
+            return {
+                success: true,
+                message: 'Successfully unsubscribed from user',
+                data: { subscriberId, subscribedId }
+            };
+
+        } catch (error) {
+            console.error('Unsubscribe from user error:', error);
+            return { success: false, message: 'Failed to unsubscribe from user', error: error.message };
+        }
+    }
+
+    /**
+     * Get subscription status between two users
+     */
+    static async getSubscriptionStatus(subscriberId: string, subscribedId: string): Promise<SubscriptionStatus> {
+        try {
+            const subscription = await prisma.subscription.findUnique({
+                where: {
+                    subscriberId_subscribedId: {
+                        subscriberId,
+                        subscribedId
+                    }
+                },
+                select: { createdAt: true }
+            });
+
+            return {
+                isSubscribed: !!subscription,
+                subscribedAt: subscription?.createdAt
+            };
+
+        } catch (error) {
+            console.error('Get subscription status error:', error);
+            return { isSubscribed: false };
+        }
+    }
+
+    /**
+     * Get subscribers list for a user
+     */
+    static async getSubscribers(userId: string, limit: number = 20, offset: number = 0) {
+        try {
+            const subscribers = await prisma.subscription.findMany({
+                where: { subscribedId: userId },
+                include: {
+                    subscriber: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true,
+                            followersCount: true
+                        }
+                    }
+                },
+                take: limit,
+                skip: offset,
+                orderBy: { createdAt: 'desc' }
+            });
+
+            const total = await prisma.subscription.count({
+                where: { subscribedId: userId }
+            });
+
+            return {
+                success: true,
+                data: {
+                    subscribers: subscribers.map(s => s.subscriber),
+                    pagination: { limit, offset, total }
+                }
+            };
+
+        } catch (error) {
+            console.error('Get subscribers error:', error);
+            return { success: false, message: 'Failed to get subscribers', error: error.message };
+        }
+    }
+
+    /**
+     * Get subscriptions list for a user
+     */
+    static async getSubscriptions(userId: string, limit: number = 20, offset: number = 0) {
+        try {
+            const subscriptions = await prisma.subscription.findMany({
+                where: { subscriberId: userId },
+                include: {
+                    subscribed: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true,
+                            followersCount: true
+                        }
+                    }
+                },
+                take: limit,
+                skip: offset,
+                orderBy: { createdAt: 'desc' }
+            });
+
+            const total = await prisma.subscription.count({
+                where: { subscriberId: userId }
+            });
+
+            return {
+                success: true,
+                data: {
+                    subscriptions: subscriptions.map(s => s.subscribed),
+                    pagination: { limit, offset, total }
+                }
+            };
+
+        } catch (error) {
+            console.error('Get subscriptions error:', error);
+            return { success: false, message: 'Failed to get subscriptions', error: error.message };
+        }
+    }
+
+    /**
+     * Bulk subscription status check - useful for user lists
+     */
+    static async getBulkSubscriptionStatus(currentUserId: string, userIds: string[]): Promise<Map<string, boolean>> {
+        try {
+            const subscriptions = await prisma.subscription.findMany({
+                where: {
+                    subscriberId: currentUserId,
+                    subscribedId: { in: userIds }
+                },
+                select: { subscribedId: true }
+            });
+
+            const subscriptionMap = new Map<string, boolean>();
+            userIds.forEach(id => subscriptionMap.set(id, false));
+            subscriptions.forEach(subscription => subscriptionMap.set(subscription.subscribedId, true));
+
+            return subscriptionMap;
+
+        } catch (error) {
+            console.error('Bulk subscription status error:', error);
             return new Map();
         }
     }
@@ -712,16 +963,18 @@ export class RelationshipUtils {
      * Get combined relationship status for display in UI
      */
     static async getCombinedStatus(currentUserId: string, targetUserId: string) {
-        const [followStatus, friendStatus] = await Promise.all([
+        const [followStatus, friendStatus, subscriptionStatus] = await Promise.all([
             FollowService.getFollowStatus(currentUserId, targetUserId),
-            FriendService.getFriendStatus(currentUserId, targetUserId)
+            FriendService.getFriendStatus(currentUserId, targetUserId),
+            SubscriptionService.getSubscriptionStatus(currentUserId, targetUserId)
         ]);
 
         return {
             follow: followStatus,
             friend: friendStatus,
+            subscription: subscriptionStatus,
             canMessage: friendStatus.isFriend, // Only friends can message
-            displayPriority: friendStatus.isFriend ? 'friend' : (followStatus.isFollowing ? 'following' : 'none')
+            displayPriority: friendStatus.isFriend ? 'friend' : (subscriptionStatus.isSubscribed ? 'subscribed' : (followStatus.isFollowing ? 'following' : 'none'))
         };
     }
 

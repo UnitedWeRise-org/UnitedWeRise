@@ -1,6 +1,7 @@
 export declare enum RelationshipType {
     FOLLOW = "FOLLOW",
-    FRIEND = "FRIEND"
+    FRIEND = "FRIEND",
+    SUBSCRIPTION = "SUBSCRIPTION"
 }
 export declare enum FriendshipStatus {
     PENDING = "PENDING",
@@ -23,6 +24,10 @@ export interface FriendStatus {
     friendshipStatus?: FriendshipStatus;
     requestSentByCurrentUser?: boolean;
     friendsSince?: Date;
+}
+export interface SubscriptionStatus {
+    isSubscribed: boolean;
+    subscribedAt?: Date;
 }
 /**
  * FOLLOW SYSTEM - Reusable Functions
@@ -102,6 +107,85 @@ export declare class FollowService {
      * Bulk follow status check - useful for user lists
      */
     static getBulkFollowStatus(currentUserId: string, userIds: string[]): Promise<Map<string, boolean>>;
+}
+/**
+ * SUBSCRIPTION SYSTEM - Reusable Functions
+ */
+export declare class SubscriptionService {
+    /**
+     * Subscribe to a user (high-priority follow for algorithmic boost)
+     */
+    static subscribeToUser(subscriberId: string, subscribedId: string): Promise<RelationshipResult>;
+    /**
+     * Unsubscribe from a user
+     */
+    static unsubscribeFromUser(subscriberId: string, subscribedId: string): Promise<RelationshipResult>;
+    /**
+     * Get subscription status between two users
+     */
+    static getSubscriptionStatus(subscriberId: string, subscribedId: string): Promise<SubscriptionStatus>;
+    /**
+     * Get subscribers list for a user
+     */
+    static getSubscribers(userId: string, limit?: number, offset?: number): Promise<{
+        success: boolean;
+        data: {
+            subscribers: {
+                id: string;
+                username: string;
+                firstName: string;
+                lastName: string;
+                avatar: string;
+                verified: boolean;
+                followersCount: number;
+            }[];
+            pagination: {
+                limit: number;
+                offset: number;
+                total: number;
+            };
+        };
+        message?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
+    }>;
+    /**
+     * Get subscriptions list for a user
+     */
+    static getSubscriptions(userId: string, limit?: number, offset?: number): Promise<{
+        success: boolean;
+        data: {
+            subscriptions: {
+                id: string;
+                username: string;
+                firstName: string;
+                lastName: string;
+                avatar: string;
+                verified: boolean;
+                followersCount: number;
+            }[];
+            pagination: {
+                limit: number;
+                offset: number;
+                total: number;
+            };
+        };
+        message?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
+    }>;
+    /**
+     * Bulk subscription status check - useful for user lists
+     */
+    static getBulkSubscriptionStatus(currentUserId: string, userIds: string[]): Promise<Map<string, boolean>>;
 }
 /**
  * FRIEND SYSTEM - Reusable Functions
@@ -195,6 +279,7 @@ export declare class RelationshipUtils {
     static getCombinedStatus(currentUserId: string, targetUserId: string): Promise<{
         follow: FollowStatus;
         friend: FriendStatus;
+        subscription: SubscriptionStatus;
         canMessage: boolean;
         displayPriority: string;
     }>;

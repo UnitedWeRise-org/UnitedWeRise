@@ -353,26 +353,34 @@ function renderUserResult(user) {
     const currentUser = userState.current;
     return `
         <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${user.id}', '${user.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
-            <div class="user-avatar" style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+            <div class="user-avatar user-card-trigger"
+                 onclick="event.stopPropagation(); showUserCardFromSearch(event, '${user.id}', {context: 'search', username: '${user.username}'})"
+                 style="margin-right: 1rem; width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;"
+                 title="Click to view profile card">
                 ${(user.firstName?.[0] || user.username[0]).toUpperCase()}
             </div>
             <div style="flex: 1;">
-                <div style="font-weight: bold; font-size: 1rem;">${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}</div>
+                <div class="user-card-trigger"
+                     onclick="event.stopPropagation(); showUserCardFromSearch(event, '${user.id}', {context: 'search', username: '${user.username}'})"
+                     style="font-weight: bold; font-size: 1rem; cursor: pointer;"
+                     title="Click to view profile card">
+                    ${user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.username}
+                </div>
                 <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
                 <div style="color: #666; font-size: 0.8rem;">${user.followersCount || 0} followers${user.state ? ` • ${user.state}` : ''}${user.district ? ` • District ${user.district}` : ''}</div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;" onclick="event.stopPropagation()">
                 ${user.verified ? '<span style="color: #1d9bf0; margin-right: 0.5rem;">✓</span>' : ''}
                 ${user.id !== currentUser?.id ? `
-                    <button onclick="window.FollowUtils.toggleFollow('${user.id}', ${user.isFollowing || false})" 
+                    <button onclick="window.FollowUtils.toggleFollow('${user.id}', ${user.isFollowing || false})"
                         style="padding: 0.25rem 0.5rem; background: ${user.isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         ${user.isFollowing ? 'Following' : 'Follow'}
                     </button>
-                    <button onclick="window.FriendUtils.sendFriendRequest('${user.id}')" 
+                    <button onclick="window.FriendUtils.sendFriendRequest('${user.id}')"
                         style="padding: 0.25rem 0.5rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 0.25rem;">
                         Add Friend
                     </button>
-                    <button onclick="startConversationWithUser('${user.id}', '${user.username}')" 
+                    <button onclick="startConversationWithUser('${user.id}', '${user.username}')"
                         style="padding: 0.25rem 0.5rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                         Message
                     </button>
@@ -797,6 +805,38 @@ function setupSearchInput() {
     }
 }
 
+/**
+ * Show user card from search results
+ * @param {Event} event - Click event
+ * @param {string} userId - User ID to show
+ * @param {Object} context - Additional context
+ */
+async function showUserCardFromSearch(event, userId, context = {}) {
+    if (!userId) {
+        console.warn('Global Search: No user ID provided for user card');
+        return;
+    }
+
+    try {
+        // Ensure UserCard component is loaded
+        if (typeof window.UserCard === 'undefined') {
+            console.warn('Global Search: UserCard component not loaded');
+            return;
+        }
+
+        // Create UserCard instance if it doesn't exist
+        if (!window.userCard) {
+            window.userCard = new window.UserCard();
+        }
+
+        // Show the user card anchored to the clicked element
+        await window.userCard.showCard(event.target.closest('.user-card-trigger'), userId, context);
+
+    } catch (error) {
+        console.error('Global Search: Error showing user card:', error);
+    }
+}
+
 // Maintain backward compatibility by exposing functions globally
 if (typeof window !== 'undefined') {
     window.openSearch = openSearch;
@@ -812,6 +852,7 @@ if (typeof window !== 'undefined') {
     window.viewOfficialProfile = viewOfficialProfile;
     window.viewVotingRecords = viewVotingRecords;
     window.viewOfficialNews = viewOfficialNews;
+    window.showUserCardFromSearch = showUserCardFromSearch;
 }
 
 export default {

@@ -567,6 +567,204 @@ class FriendUtils {
 }
 
 /**
+ * SUBSCRIPTION SYSTEM - Reusable Functions
+ */
+
+class SubscriptionUtils {
+    /**
+     * Subscribe to a user (high-priority follow for algorithmic boost)
+     * @param {string} userId - ID of user to subscribe to
+     * @param {Function} onSuccess - Callback on success (userId, isSubscribed)
+     * @param {Function} onError - Callback on error (error)
+     */
+    static async subscribeToUser(userId, onSuccess = null, onError = null) {
+        try {
+            const response = await apiCall(`/relationships/subscribe/${userId}`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                // Update UI state
+                this.updateSubscriptionUI(userId, true);
+
+                // Show success notification
+                this.showNotification('Successfully subscribed to user', 'success');
+
+                if (onSuccess) onSuccess(userId, true);
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to subscribe to user');
+            }
+
+        } catch (error) {
+            console.error('Subscribe to user error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Unsubscribe from a user
+     * @param {string} userId - ID of user to unsubscribe from
+     * @param {Function} onSuccess - Callback on success (userId, isSubscribed)
+     * @param {Function} onError - Callback on error (error)
+     */
+    static async unsubscribeFromUser(userId, onSuccess = null, onError = null) {
+        try {
+            const response = await apiCall(`/relationships/subscribe/${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Update UI state
+                this.updateSubscriptionUI(userId, false);
+
+                // Show success notification
+                this.showNotification('Successfully unsubscribed from user', 'success');
+
+                if (onSuccess) onSuccess(userId, false);
+                return { success: true, data: response.data };
+            } else {
+                throw new Error(response.data?.error || 'Failed to unsubscribe from user');
+            }
+
+        } catch (error) {
+            console.error('Unsubscribe from user error:', error);
+            this.showNotification(error.message, 'error');
+            if (onError) onError(error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Toggle subscription status (subscribe if not subscribed, unsubscribe if subscribed)
+     * @param {string} userId - ID of user
+     * @param {boolean} currentlySubscribed - Current subscription status
+     * @param {Function} onSuccess - Callback on success (userId, newSubscriptionStatus)
+     * @param {Function} onError - Callback on error (error)
+     */
+    static async toggleSubscription(userId, currentlySubscribed, onSuccess = null, onError = null) {
+        if (currentlySubscribed) {
+            return await this.unsubscribeFromUser(userId, onSuccess, onError);
+        } else {
+            return await this.subscribeToUser(userId, onSuccess, onError);
+        }
+    }
+
+    /**
+     * Get subscription status between current user and target user
+     * @param {string} userId - ID of target user
+     */
+    static async getSubscriptionStatus(userId) {
+        try {
+            const response = await apiCall(`/relationships/subscription-status/${userId}`);
+
+            if (response.ok) {
+                return response.data;
+            } else {
+                return { isSubscribed: false };
+            }
+
+        } catch (error) {
+            console.error('Get subscription status error:', error);
+            return { isSubscribed: false };
+        }
+    }
+
+    /**
+     * Update all subscription buttons in the UI for a specific user
+     * @param {string} userId - User ID
+     * @param {boolean} isSubscribed - New subscription status
+     */
+    static updateSubscriptionUI(userId, isSubscribed) {
+        // Update all subscription buttons for this user across the page
+        const subscriptionButtons = document.querySelectorAll(`[data-subscribe-user="${userId}"]`);
+
+        subscriptionButtons.forEach(button => {
+            button.setAttribute('data-subscribed', isSubscribed.toString());
+
+            if (isSubscribed) {
+                button.textContent = 'Subscribed';
+                button.classList.remove('btn-outline-warning');
+                button.classList.add('btn-warning');
+                button.title = 'Click to unsubscribe (removes priority boost)';
+            } else {
+                button.textContent = 'Subscribe';
+                button.classList.remove('btn-warning');
+                button.classList.add('btn-outline-warning');
+                button.title = 'Subscribe for priority in your feed';
+            }
+        });
+
+        // Dispatch custom event for other components to listen
+        window.dispatchEvent(new CustomEvent('subscriptionStatusChanged', {
+            detail: { userId, isSubscribed }
+        }));
+    }
+
+    /**
+     * Create a reusable subscription button
+     * @param {string} userId - User ID
+     * @param {boolean} isSubscribed - Current subscription status
+     * @param {string} size - Button size ('sm', 'md', 'lg')
+     * @returns {HTMLElement} Subscription button element
+     */
+    static createSubscriptionButton(userId, isSubscribed = false, size = 'md') {
+        const button = document.createElement('button');
+
+        // Set base classes
+        const sizeClasses = {
+            'sm': 'btn-sm',
+            'md': '',
+            'lg': 'btn-lg'
+        };
+
+        button.className = `btn ${sizeClasses[size]} ${isSubscribed ? 'btn-warning' : 'btn-outline-warning'}`;
+        button.setAttribute('data-subscribe-user', userId);
+        button.setAttribute('data-subscribed', isSubscribed.toString());
+        button.textContent = isSubscribed ? 'Subscribed' : 'Subscribe';
+        button.title = isSubscribed ? 'Click to unsubscribe (removes priority boost)' : 'Subscribe for priority in your feed';
+
+        // Add click handler
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const currentlySubscribed = button.getAttribute('data-subscribed') === 'true';
+
+            // Disable button during request
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = 'Loading...';
+
+            try {
+                await this.toggleSubscription(userId, currentlySubscribed);
+            } finally {
+                // Re-enable button
+                button.disabled = false;
+                // Text will be updated by updateSubscriptionUI
+            }
+        });
+
+        return button;
+    }
+
+    /**
+     * Show notification message
+     */
+    static showNotification(message, type = 'info') {
+        // Try to use existing notification system
+        if (window.showNotification) {
+            window.showNotification(message, type);
+        } else {
+            // Fallback to simple alert
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+}
+
+/**
  * COMBINED UTILITIES
  */
 
@@ -576,16 +774,18 @@ class RelationshipUtils {
      * @param {string} userId - Target user ID
      */
     static async getCombinedStatus(userId) {
-        const [followStatus, friendStatus] = await Promise.all([
+        const [followStatus, friendStatus, subscriptionStatus] = await Promise.all([
             FollowUtils.getFollowStatus(userId),
-            FriendUtils.getFriendStatus(userId)
+            FriendUtils.getFriendStatus(userId),
+            SubscriptionUtils.getSubscriptionStatus(userId)
         ]);
 
         return {
             follow: followStatus,
             friend: friendStatus,
+            subscription: subscriptionStatus,
             canMessage: friendStatus.isFriend,
-            displayPriority: friendStatus.isFriend ? 'friend' : (followStatus.isFollowing ? 'following' : 'none')
+            displayPriority: friendStatus.isFriend ? 'friend' : (subscriptionStatus.isSubscribed ? 'subscribed' : (followStatus.isFollowing ? 'following' : 'none'))
         };
     }
 
@@ -598,17 +798,23 @@ class RelationshipUtils {
     static createRelationshipButtons(userId, status) {
         const container = document.createElement('div');
         container.className = 'relationship-buttons d-flex gap-2';
-        
-        // Add friend button (priority over follow)
+
+        // Add friend button (highest priority)
         const friendButton = FriendUtils.createFriendButton(userId, status.friend.friendshipStatus || 'none');
         container.appendChild(friendButton);
-        
+
+        // Add subscription button if following but not friends
+        if (!status.friend.isFriend && status.follow.isFollowing) {
+            const subscriptionButton = SubscriptionUtils.createSubscriptionButton(userId, status.subscription.isSubscribed, 'sm');
+            container.appendChild(subscriptionButton);
+        }
+
         // Add follow button if not friends
         if (!status.friend.isFriend) {
             const followButton = FollowUtils.createFollowButton(userId, status.follow.isFollowing, 'sm');
             container.appendChild(followButton);
         }
-        
+
         // Add message button if friends
         if (status.friend.isFriend) {
             const messageButton = document.createElement('button');
@@ -621,7 +827,7 @@ class RelationshipUtils {
             });
             container.appendChild(messageButton);
         }
-        
+
         return container;
     }
 }
@@ -629,6 +835,7 @@ class RelationshipUtils {
 // Make classes globally available
 window.FollowUtils = FollowUtils;
 window.FriendUtils = FriendUtils;
+window.SubscriptionUtils = SubscriptionUtils;
 window.RelationshipUtils = RelationshipUtils;
 
 // Example usage functions for easy integration
@@ -636,5 +843,8 @@ window.toggleUserFollow = (userId, isFollowing) => FollowUtils.toggleFollow(user
 window.sendFriendRequest = (userId) => FriendUtils.sendFriendRequest(userId);
 window.acceptFriendRequest = (userId) => FriendUtils.acceptFriendRequest(userId);
 window.rejectFriendRequest = (userId) => FriendUtils.rejectFriendRequest(userId);
+window.toggleUserSubscription = (userId, isSubscribed) => SubscriptionUtils.toggleSubscription(userId, isSubscribed);
+window.subscribeToUser = (userId) => SubscriptionUtils.subscribeToUser(userId);
+window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(userId);
 
-console.log('Relationship utilities loaded - FollowUtils, FriendUtils, RelationshipUtils available globally');
+console.log('Relationship utilities loaded - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');
