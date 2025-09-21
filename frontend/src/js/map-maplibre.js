@@ -714,11 +714,24 @@ class UWRMapLibre {
 
     // Display civic events on map
     displayCivicEvents() {
-        const dummyContent = getDummyCivicContent();
-        
-        // Clear existing event markers
+        // Always clear event markers first
         this.clearEventMarkers();
-        
+
+        // Don't show events if layer is disabled OR if no real data available
+        if (!this.activeLayers.has('events')) {
+            return;
+        }
+
+        const dummyContent = getDummyCivicContent();
+
+        // Skip displaying events if array is empty (dummy data disabled)
+        if (!dummyContent.events || dummyContent.events.length === 0) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'Event markers disabled - no real data available', null);
+            }
+            return;
+        }
+
         // Add markers for each event
         dummyContent.events.forEach(event => {
             const el = document.createElement('div');
@@ -810,10 +823,31 @@ class UWRMapLibre {
         this.clearTrendingPopups();
         this.bubbleCycles = [];
         
-        // Start the cycling system with 15-second intervals
-        this.trendingInterval = setInterval(() => {
-            this.manageBubbleCycles();
-        }, 15000);
+        // Start the cycling system with responsive intervals
+        // 15 seconds for expanded, 30 seconds for collapsed (half rate)
+        const getIntervalTime = () => {
+            const mapContainer = document.getElementById('mapContainer');
+            return mapContainer && mapContainer.classList.contains('collapsed') ? 30000 : 15000;
+        };
+
+        const startInterval = () => {
+            if (this.trendingInterval) {
+                clearInterval(this.trendingInterval);
+            }
+            this.trendingInterval = setInterval(() => {
+                this.manageBubbleCycles();
+                // Check if interval needs to change and restart if so
+                const currentInterval = getIntervalTime();
+                if ((currentInterval === 30000 && this.lastInterval === 15000) ||
+                    (currentInterval === 15000 && this.lastInterval === 30000)) {
+                    this.lastInterval = currentInterval;
+                    startInterval();
+                }
+            }, getIntervalTime());
+            this.lastInterval = getIntervalTime();
+        };
+
+        startInterval();
         
         // Start first cycle after brief delay
         setTimeout(() => this.manageBubbleCycles(), 3000);
@@ -843,7 +877,18 @@ class UWRMapLibre {
     }
 
     async createNewBubbleCycle(timestamp) {
-        const popupCount = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        // Responsive bubble count: fewer bubbles when collapsed
+        const mapContainer = document.getElementById('mapContainer');
+        const isCollapsed = mapContainer && mapContainer.classList.contains('collapsed');
+
+        // Collapsed: 1-2 bubbles, Expanded: 1-3 bubbles
+        const maxBubbles = isCollapsed ? 2 : 3;
+        const popupCount = Math.floor(Math.random() * maxBubbles) + 1;
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', `Creating ${popupCount} bubbles (${isCollapsed ? 'collapsed' : 'expanded'} state)`, null);
+        }
+
         const newCycle = {
             timestamp: timestamp,
             popups: []
@@ -954,7 +999,7 @@ class UWRMapLibre {
                         console.log('🚀 Using jumpTo() for immediate zoom change...');
                         this.map.jumpTo({
                             center: [-97.5, 39],  // Center on continental US
-                            zoom: 2.1             // Maximum zoom out for full US overview
+                            zoom: 2.1             // STANDARDIZED: Collapsed state zoom (preferred by user)
                         });
                     } else {
                         console.log('📍 Setting EXPANDED state: Zoom in for detail in large container');
@@ -1157,15 +1202,70 @@ class UWRMapLibre {
     }
 
     getStateCapitolCoords(stateCode) {
-        // State capitol coordinates for official events
+        // Comprehensive state capitol coordinates for all 50 states + territories
         const capitolCoords = {
+            // Continental US States
+            'AL': [-86.7911, 32.377716], // Montgomery
+            'AZ': [-112.073844, 33.448457], // Phoenix
+            'AR': [-92.331122, 34.736009], // Little Rock
             'CA': [-121.4686, 38.5767], // Sacramento
-            'TX': [-97.7431, 30.2672],  // Austin
-            'NY': [-73.7562, 42.6526],  // Albany
-            'FL': [-84.2700, 30.4518],  // Tallahassee
-            // Add more as needed
+            'CO': [-105.015861, 39.739236], // Denver
+            'CT': [-72.677, 41.767], // Hartford
+            'DE': [-75.526755, 39.161921], // Dover
+            'FL': [-84.2700, 30.4518], // Tallahassee
+            'GA': [-84.39, 33.76], // Atlanta
+            'ID': [-116.237651, 43.613739], // Boise
+            'IL': [-89.650373, 39.78325], // Springfield
+            'IN': [-86.147685, 39.790942], // Indianapolis
+            'IA': [-93.620866, 41.590939], // Des Moines
+            'KS': [-95.69, 39.04], // Topeka
+            'KY': [-84.86311, 38.197274], // Frankfort
+            'LA': [-91.140229, 30.45809], // Baton Rouge
+            'ME': [-69.765261, 44.323535], // Augusta
+            'MD': [-76.501157, 38.972945], // Annapolis
+            'MA': [-71.0275, 42.2352], // Boston
+            'MI': [-84.5467, 42.354558], // Lansing
+            'MN': [-94.6859, 46.729553], // Saint Paul
+            'MS': [-90.207, 32.32], // Jackson
+            'MO': [-92.189283, 38.572954], // Jefferson City
+            'MT': [-112.027031, 46.595805], // Helena
+            'NE': [-96.675345, 40.809868], // Lincoln
+            'NV': [-119.753877, 39.161921], // Carson City
+            'NH': [-71.549709, 43.220093], // Concord
+            'NJ': [-74.756138, 40.221741], // Trenton
+            'NM': [-105.964575, 35.667231], // Santa Fe
+            'NY': [-73.7562, 42.6526], // Albany
+            'NC': [-78.638, 35.771], // Raleigh
+            'ND': [-100.779004, 46.813343], // Bismarck
+            'OH': [-82.999069, 39.961176], // Columbus
+            'OK': [-97.544594, 35.482309], // Oklahoma City
+            'OR': [-123.029159, 44.931109], // Salem
+            'PA': [-76.875613, 40.269789], // Harrisburg
+            'RI': [-71.422132, 41.82355], // Providence
+            'SC': [-81.035, 34.000], // Columbia
+            'SD': [-100.346405, 44.367966], // Pierre
+            'TN': [-86.784, 36.165], // Nashville
+            'TX': [-97.7431, 30.2672], // Austin
+            'UT': [-111.892622, 40.777477], // Salt Lake City
+            'VT': [-72.57194, 44.26639], // Montpelier
+            'VA': [-77.46, 37.54], // Richmond
+            'WA': [-122.893077, 47.042418], // Olympia
+            'WV': [-81.633294, 38.349497], // Charleston
+            'WI': [-89.384444, 43.074722], // Madison
+            'WY': [-104.802042, 41.145548], // Cheyenne
+
+            // Alaska & Hawaii
+            'AK': [-152.404419, 61.270716], // Anchorage (largest city)
+            'HI': [-157.826182, 21.30895], // Honolulu
+
+            // US Territories with voting rights
+            'PR': [-66.590149, 18.220833], // San Juan, Puerto Rico
+            'VI': [-64.896334, 17.718], // Charlotte Amalie, USVI
+            'GU': [144.793731, 13.444304], // Hagåtña, Guam
+            'AS': [-170.132217, -14.270972], // Pago Pago, American Samoa
+            'MP': [145.38, 15.0979], // Saipan, Northern Mariana Islands
         };
-        return capitolCoords[stateCode] || this.getRandomUSCoordinates();
+        return capitolCoords[stateCode] || this.US_CENTER;
     }
 
     getRandomStateCoordinates(stateCode) {
@@ -1619,156 +1719,200 @@ class UWRMapLibre {
 let uwrMap = null;
 
 // Dummy civic content for testing
+// Generate random coordinates within CONUS, Alaska, Hawaii, and territories
+function generateRandomCoordinates() {
+    const regions = [
+        // Continental US (85% probability)
+        { bounds: [[-125, 25], [-65, 49]], weight: 85, name: 'CONUS' },
+        // Alaska (5% probability)
+        { bounds: [[-170, 55], [-130, 71]], weight: 5, name: 'Alaska' },
+        // Hawaii (5% probability)
+        { bounds: [[-162, 18], [-154, 23]], weight: 5, name: 'Hawaii' },
+        // Puerto Rico (3% probability)
+        { bounds: [[-67.5, 17.5], [-65.5, 18.7]], weight: 3, name: 'Puerto Rico' },
+        // US Virgin Islands (1% probability)
+        { bounds: [[-65.2, 17.6], [-64.5, 18.5]], weight: 1, name: 'USVI' },
+        // Guam (1% probability)
+        { bounds: [[144.5, 13.2], [145.0, 13.7]], weight: 1, name: 'Guam' }
+    ];
+
+    // Weighted random selection
+    const rand = Math.random() * 100;
+    let cumulative = 0;
+    let selectedRegion = regions[0]; // Default to CONUS
+
+    for (const region of regions) {
+        cumulative += region.weight;
+        if (rand <= cumulative) {
+            selectedRegion = region;
+            break;
+        }
+    }
+
+    const [[minLng, minLat], [maxLng, maxLat]] = selectedRegion.bounds;
+    const lng = minLng + Math.random() * (maxLng - minLng);
+    const lat = minLat + Math.random() * (maxLat - minLat);
+
+    return { coordinates: [lng, lat], region: selectedRegion.name };
+}
+
 function getDummyCivicContent() {
+    // Note: Events are temporarily disabled until real data is available
+    // Remove this comment and uncomment events array when ready to show real events
     return {
-        events: [
-            {
-                id: 'event1',
-                title: 'City Council Meeting - Budget Review',
-                date: '2025-01-15 18:00',
-                location: 'City Hall, Main Chamber',
-                coordinates: [-98.4936, 29.4241], // San Antonio
-                type: 'council_meeting',
-                description: 'Public hearing on 2025 budget allocation',
-                attendees: 45,
-                jurisdiction: 'local'
-            },
-            {
-                id: 'event2', 
-                title: 'Town Hall: Healthcare Reform',
-                date: '2025-01-20 14:00',
-                location: 'Community Center',
-                coordinates: [-74.006, 40.7128], // New York
-                type: 'town_hall',
-                description: 'Representative Johnson discussing healthcare policy',
-                attendees: 120,
-                jurisdiction: 'state'
-            },
-            {
-                id: 'event3',
-                title: 'Climate Action Rally',
-                date: '2025-01-25 12:00',
-                location: 'State Capitol Steps',
-                coordinates: [-121.4944, 38.5816], // Sacramento
-                type: 'rally',
-                description: 'Citizens demanding climate policy action',
-                attendees: 500,
-                jurisdiction: 'state'
-            },
-            {
-                id: 'event4',
-                title: 'School Board Meeting',
-                date: '2025-01-18 19:00',
-                location: 'District Office',
-                coordinates: [-87.6298, 41.8781], // Chicago
-                type: 'school_board',
-                description: 'Discussion on new curriculum standards',
-                attendees: 75,
-                jurisdiction: 'local'
-            },
-            {
-                id: 'event5',
-                title: 'Voter Registration Drive',
-                date: '2025-01-22 10:00',
-                location: 'Public Library',
-                coordinates: [-84.388, 33.749], // Atlanta
-                type: 'voter_registration',
-                description: 'Help citizens register to vote',
-                attendees: 30,
-                jurisdiction: 'local'
-            }
-        ],
+        events: [], // Disabled dummy events per user request
         
-        trendingTopics: [
-            {
-                id: 'topic1',
-                title: 'Infrastructure Bill Impact',
-                content: 'New federal infrastructure funding allocates $2.3B to our state for road improvements and public transit upgrades.',
-                location: 'Texas',
-                coordinates: [-99.9018, 31.9686],
-                engagement: 1250,
-                jurisdiction: 'state',
-                tags: ['infrastructure', 'federal_funding', 'transportation'],
-                layers: ['news', 'civic']
-            },
-            {
-                id: 'topic2',
-                title: 'Local Housing Crisis',
-                content: 'City council debates rent control measures as housing costs rise 30% in past year.',
-                location: 'Austin, TX',
-                coordinates: [-97.7431, 30.2672],
-                engagement: 890,
-                jurisdiction: 'local',
-                tags: ['housing', 'rent_control', 'affordability'],
-                layers: ['trending', 'civic']
-            },
-            {
-                id: 'topic3',
-                title: 'Education Funding Debate',
-                content: 'State legislature considers increasing teacher salaries by 15% amid budget negotiations.',
-                location: 'California',
-                coordinates: [-119.4179, 36.7783],
-                engagement: 2100,
-                jurisdiction: 'state',
-                tags: ['education', 'teachers', 'budget'],
-                layers: ['news', 'civic', 'community']
-            },
-            {
-                id: 'topic4',
-                title: 'Environmental Protection Act',
-                content: 'National debate on new EPA regulations affecting local businesses and industry.',
-                location: 'Washington, DC',
-                coordinates: [-77.0369, 38.9072],
-                engagement: 5400,
-                jurisdiction: 'national',
-                tags: ['environment', 'regulation', 'business'],
-                layers: ['news', 'trending']
-            },
-            {
-                id: 'topic5',
-                title: 'Police Reform Initiative',
-                content: 'Community-led police reform proposal gains traction with city officials.',
-                location: 'Minneapolis, MN',
-                coordinates: [-93.265, 44.9778],
-                engagement: 1800,
-                jurisdiction: 'local',
-                tags: ['police_reform', 'community', 'public_safety'],
-                layers: ['trending', 'community', 'civic']
-            },
-            {
-                id: 'topic6',
-                title: 'Downtown Concert Series',
-                content: 'Local band performs at city hall plaza fundraiser for community center renovations.',
-                location: 'Phoenix, AZ',
-                coordinates: [-112.074, 33.4484],
-                engagement: 340,
-                jurisdiction: 'local',
-                tags: ['community', 'arts', 'fundraiser'],
-                layers: ['events', 'community']
-            },
-            {
-                id: 'topic7',
-                title: 'Breaking: Supreme Court Rules',
-                content: 'Supreme Court decision on redistricting case affects elections in 12 states.',
-                location: 'Washington, DC',
-                coordinates: [-77.0369, 38.9072],
-                engagement: 8900,
-                jurisdiction: 'national',
-                tags: ['supreme_court', 'redistricting', 'elections'],
-                layers: ['news', 'trending', 'civic']
-            },
-            {
-                id: 'topic8',
-                title: 'Neighborhood Watch Meeting',
-                content: 'Monthly community safety discussion and new member orientation.',
-                location: 'Denver, CO',
-                coordinates: [-104.991, 39.7392],
-                engagement: 85,
-                jurisdiction: 'local',
-                tags: ['public_safety', 'neighborhood', 'volunteer'],
-                layers: ['events', 'community']
-            }
-        ],
+        // Generate diverse trending topics with random geographic distribution
+        trendingTopics: (() => {
+            const topics = [
+                {
+                    id: 'topic1',
+                    title: 'Infrastructure Bill Impact',
+                    content: 'New federal infrastructure funding allocates $2.3B to our state for road improvements and public transit upgrades.',
+                    engagement: 1250,
+                    jurisdiction: 'state',
+                    tags: ['infrastructure', 'federal_funding', 'transportation'],
+                    layers: ['news', 'civic']
+                },
+                {
+                    id: 'topic2',
+                    title: 'Local Housing Crisis',
+                    content: 'City council debates rent control measures as housing costs rise 30% in past year.',
+                    engagement: 890,
+                    jurisdiction: 'local',
+                    tags: ['housing', 'rent_control', 'affordability'],
+                    layers: ['trending', 'civic']
+                },
+                {
+                    id: 'topic3',
+                    title: 'Education Funding Debate',
+                    content: 'State legislature considers increasing teacher salaries by 15% amid budget negotiations.',
+                    engagement: 2100,
+                    jurisdiction: 'state',
+                    tags: ['education', 'teachers', 'budget'],
+                    layers: ['news', 'civic', 'community']
+                },
+                {
+                    id: 'topic4',
+                    title: 'Environmental Protection Act',
+                    content: 'National debate on new EPA regulations affecting local businesses and industry.',
+                    engagement: 5400,
+                    jurisdiction: 'national',
+                    tags: ['environment', 'regulation', 'business'],
+                    layers: ['news', 'trending']
+                },
+                {
+                    id: 'topic5',
+                    title: 'Police Reform Initiative',
+                    content: 'Community-led police reform proposal gains traction with city officials.',
+                    engagement: 1800,
+                    jurisdiction: 'local',
+                    tags: ['police_reform', 'community', 'public_safety'],
+                    layers: ['trending', 'community', 'civic']
+                },
+                {
+                    id: 'topic6',
+                    title: 'Downtown Concert Series',
+                    content: 'Local band performs at city hall plaza fundraiser for community center renovations.',
+                    engagement: 340,
+                    jurisdiction: 'local',
+                    tags: ['community', 'arts', 'fundraiser'],
+                    layers: ['events', 'community']
+                },
+                {
+                    id: 'topic7',
+                    title: 'Breaking: Supreme Court Rules',
+                    content: 'Supreme Court decision on redistricting case affects elections in 12 states.',
+                    engagement: 8900,
+                    jurisdiction: 'national',
+                    tags: ['supreme_court', 'redistricting', 'elections'],
+                    layers: ['news', 'trending', 'civic']
+                },
+                {
+                    id: 'topic8',
+                    title: 'Neighborhood Watch Meeting',
+                    content: 'Monthly community safety discussion and new member orientation.',
+                    engagement: 85,
+                    jurisdiction: 'local',
+                    tags: ['public_safety', 'neighborhood', 'volunteer'],
+                    layers: ['events', 'community']
+                },
+                {
+                    id: 'topic9',
+                    title: 'Coastal Protection Initiative',
+                    content: 'New seawall construction approved to protect against rising sea levels.',
+                    engagement: 450,
+                    jurisdiction: 'local',
+                    tags: ['climate', 'infrastructure', 'coastal'],
+                    layers: ['news', 'civic']
+                },
+                {
+                    id: 'topic10',
+                    title: 'Rural Broadband Expansion',
+                    content: 'Federal grant provides high-speed internet access to remote communities.',
+                    engagement: 680,
+                    jurisdiction: 'state',
+                    tags: ['technology', 'rural', 'connectivity'],
+                    layers: ['news', 'community']
+                },
+                {
+                    id: 'topic11',
+                    title: 'Veterans Healthcare Access',
+                    content: 'New VA facility opens, reducing travel time for veterans seeking care.',
+                    engagement: 920,
+                    jurisdiction: 'local',
+                    tags: ['veterans', 'healthcare', 'access'],
+                    layers: ['news', 'community']
+                },
+                {
+                    id: 'topic12',
+                    title: 'Tribal Sovereignty Discussion',
+                    content: 'Native American leaders meet with state officials on land rights and jurisdiction.',
+                    engagement: 730,
+                    jurisdiction: 'state',
+                    tags: ['tribal', 'sovereignty', 'rights'],
+                    layers: ['news', 'civic']
+                },
+                {
+                    id: 'topic13',
+                    title: 'Tourism Recovery Plan',
+                    content: 'Local businesses collaborate on strategies to boost tourism and economic recovery.',
+                    engagement: 380,
+                    jurisdiction: 'local',
+                    tags: ['tourism', 'economy', 'recovery'],
+                    layers: ['community', 'trending']
+                },
+                {
+                    id: 'topic14',
+                    title: 'Military Base Expansion',
+                    content: 'Defense Department announces major facility upgrades and job creation.',
+                    engagement: 560,
+                    jurisdiction: 'local',
+                    tags: ['military', 'jobs', 'defense'],
+                    layers: ['news', 'community']
+                },
+                {
+                    id: 'topic15',
+                    title: 'Agricultural Support Program',
+                    content: 'New federal assistance helps farmers adapt to climate challenges.',
+                    engagement: 420,
+                    jurisdiction: 'state',
+                    tags: ['agriculture', 'climate', 'support'],
+                    layers: ['news', 'civic']
+                }
+            ];
+
+            // Assign random coordinates to each topic
+            return topics.map(topic => {
+                const coordData = generateRandomCoordinates();
+                return {
+                    ...topic,
+                    coordinates: coordData.coordinates,
+                    location: coordData.region,
+                    region: coordData.region
+                };
+            });
+        })(),
         
         civicGroups: [
             {
