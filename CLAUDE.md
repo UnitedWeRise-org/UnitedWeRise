@@ -35,13 +35,13 @@ curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ### **📋 SECTION QUICK REFERENCE**
 | Section | Lines | When to Use |
 |---------|-------|-------------|
-| **🚨 Development Protocols** | 35-197 | Before starting any development work |
-| **🚨 Scope Prevention** | 198-283 | When implementing new features |
-| **🚀 Deployment Guide** | 284-746 | When deploying to staging/production |
-| **🛡️ Security & Standards** | 829-858 | For authentication/admin debugging |
-| **🔧 Development Essentials** | 859-950 | For environment setup and common patterns |
-| **🤖 Multi-Agent Coordination** | 1035-1208 | For complex features or emergency response |
-| **🚨 Critical Failure Prevention** | 1151-1207 | When troubleshooting deployment issues |
+| **🚨 Development Protocols** | 96-258 | Before starting any development work |
+| **🚨 Scope Prevention** | 259-344 | When implementing new features |
+| **🚀 Deployment Guide** | 345-810 | When deploying to staging/production |
+| **🛡️ Security & Standards** | 893-922 | For authentication/admin debugging |
+| **🔧 Development Essentials** | 923-1068 | For environment setup and common patterns |
+| **🤖 Multi-Agent Coordination** | 1069-1245 | For complex features or emergency response |
+| **🚨 Critical Failure Prevention** | 1246-1302 | When troubleshooting deployment issues |
 
 ### **🔍 FIND ANYTHING FAST**
 ```bash
@@ -94,6 +94,7 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 ---
 
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS
+**Related Sections:** [Scope Prevention](#scope-prevention) | [Deployment Guide](#deployment-guide) | [Multi-Agent Coordination](#multi-agent-coordination)
 
 ### 🗣️ COLLABORATIVE LANGUAGE PROTOCOL
 **CRITICAL**: When the user uses collaborative words, they indicate a desire for DISCUSSION ONLY, not implementation:
@@ -218,9 +219,9 @@ Planning: {#session-history} {#future-roadmap}
 - **UI/Frontend Work**: Check {#ui-ux-components}, {#social-features}, {#media-photos}
 - **Deployment**: Check {#deployment-infrastructure}, Recent Changes sections
 - **Bug Fixes**: Check {#known-issues-bugs}, {#troubleshooting}, Recently Fixed sections
-- **Complex Development**: Use Multi-Agent Coordination (CLAUDE.md Line 1035+)
-- **Emergency Response**: Multi-Agent rapid response patterns (CLAUDE.md Line 1081+)
-- **Performance Issues**: Multi-Agent optimization workflows (CLAUDE.md Line 1090+)
+- **Complex Development**: Use Multi-Agent Coordination (CLAUDE.md Line 1069+)
+- **Emergency Response**: Multi-Agent rapid response patterns (CLAUDE.md Line 1116+)
+- **Performance Issues**: Multi-Agent optimization workflows (CLAUDE.md Line 1125+)
 
 **How to search effectively:**
 ```bash
@@ -344,6 +345,7 @@ If ANY answer is uncertain, STOP and clarify with user.
 
 ## 🚀 COMPREHENSIVE DEPLOYMENT GUIDE
 **Last Updated:** September 20, 2025
+**Related Sections:** [Development Protocols](#development-protocols) | [Emergency Commands](#emergency-commands) | [Quick Command Reference](#quick-command-reference-appendix)
 
 ### 📍 Deployment Endpoints
 
@@ -988,7 +990,7 @@ fetch('/api/endpoint', {
 ```
 
 ### Performance Optimization Workflow
-**NEW AUTOMATED DEVELOPMENT TOOLS** (Added September 20, 2025):
+**Last Updated:** September 20, 2025
 
 ```bash
 # Pre-commit validation (runs all checks)
@@ -1067,6 +1069,8 @@ deploymentStatus.check()  // Complete status
 ---
 
 ## 🤖 MULTI-AGENT COORDINATION
+**Last Updated:** September 20, 2025
+**Related Sections:** [Development Protocols](#development-protocols) | [Emergency Commands](#emergency-commands) | [Performance Optimization](#performance-optimization-workflow)
 
 ### When to Use Multi-Agent Approach
 **High-Benefit Scenarios (Use Multi-Agent):**
@@ -1296,6 +1300,92 @@ echo " new endpoints documented"
 - Backend uptime drops to <60 seconds after deployment (for backend changes)
 - New functionality works in production
 - No TypeScript compilation errors locally
+
+---
+
+## 📋 QUICK COMMAND REFERENCE APPENDIX
+
+### 🚨 Emergency Commands
+```bash
+# Backend restart
+az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --revision-suffix emergency-$(date +%m%d-%H%M)
+
+# Health check
+curl -s "https://api.unitedwerise.org/health" | grep uptime
+
+# Rollback to staging
+git checkout development && git revert HEAD && git push origin development
+```
+
+### ⚡ Daily Development
+```bash
+# Session start
+git checkout development && git pull origin development
+
+# Validate before commit
+bash scripts/validate-before-commit.sh
+
+# Deploy to staging
+git add . && git commit -m "feat/fix: Description" && git push origin development
+
+# Check staging deployment
+curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+```
+
+### 🤖 Multi-Agent Launch
+```bash
+# Feature development (4 agents)
+# See: .claude/commands/parallel-feature-development.md
+
+# Emergency response (2 agents)
+# Coordination: .claude/scratchpads/EMERGENCY-STATUS.md
+
+# Performance optimization (3 agents)
+# Coordination: .claude/scratchpads/PERFORMANCE-OPTIMIZATION.md
+```
+
+### 🔧 Development Tools
+```bash
+# TypeScript check
+cd backend && npm run build
+
+# Cross-reference validation
+node scripts/validate-cross-references.js
+
+# API endpoint testing
+bash scripts/test-api-endpoints.sh
+
+# Deployment status
+bash scripts/deployment-status.sh
+```
+
+### 📊 Quick Status Checks
+```bash
+# Multi-agent coordination status
+ls -la .claude/scratchpads/*LOG*.md .claude/scratchpads/*STATUS*.md
+
+# Git status check
+git status && git log -1 --oneline
+
+# Deployment verification
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+echo "Deployed: $DEPLOYED_SHA, Local: $(git rev-parse --short HEAD)"
+```
+
+### 🔍 Search Commands
+```bash
+# Find anything in CLAUDE.md
+grep -n "search_term" CLAUDE.md
+
+# Find deployment procedures
+grep -n "deploy" CLAUDE.md
+
+# Find multi-agent workflows
+grep -n "Multi-Agent\|coordination" CLAUDE.md
+
+# Find environment URLs
+grep -n "https://" CLAUDE.md
+```
 
 ---
 
