@@ -597,8 +597,13 @@ class SubscriptionUtils {
             }
 
         } catch (error) {
-            console.error('Subscribe to user error:', error);
-            this.showNotification(error.message, 'error');
+            // Check if subscription system is not yet deployed
+            if (error.message?.includes('404')) {
+                this.showNotification('Subscription feature is being deployed. Please try again in a few minutes.', 'info');
+            } else {
+                console.error('Subscribe to user error:', error);
+                this.showNotification(error.message, 'error');
+            }
             if (onError) onError(error);
             return { success: false, error: error.message };
         }
@@ -630,8 +635,13 @@ class SubscriptionUtils {
             }
 
         } catch (error) {
-            console.error('Unsubscribe from user error:', error);
-            this.showNotification(error.message, 'error');
+            // Check if subscription system is not yet deployed
+            if (error.message?.includes('404')) {
+                this.showNotification('Subscription feature is being deployed. Please try again in a few minutes.', 'info');
+            } else {
+                console.error('Unsubscribe from user error:', error);
+                this.showNotification(error.message, 'error');
+            }
             if (onError) onError(error);
             return { success: false, error: error.message };
         }
@@ -667,7 +677,10 @@ class SubscriptionUtils {
             }
 
         } catch (error) {
-            console.error('Get subscription status error:', error);
+            // Only log non-404 errors to reduce console noise during development
+            if (!error.message?.includes('404')) {
+                console.error('Get subscription status error:', error);
+            }
             return { isSubscribed: false };
         }
     }

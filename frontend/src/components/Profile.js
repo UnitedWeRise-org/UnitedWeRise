@@ -320,9 +320,10 @@ class Profile {
                     <button class="tab-button ${this.currentTab === 'demographics' ? 'active' : ''}" onclick="window.profile.switchTab('demographics')">
                         Demographics
                     </button>
-                    <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.profile.switchTab('political')">
+                    <!-- Temporarily hidden - Political Profile tab -->
+                    <!-- <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.profile.switchTab('political')">
                         Political Profile
-                    </button>
+                    </button> -->
                     ${this.isOwnProfile && user.candidateProfile ? `
                         <!-- Policy Platform moved to Candidate Dashboard -->
                         <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.profile.switchTab('messages')" id="messagesTab">
@@ -646,7 +647,7 @@ class Profile {
                         ${this.renderFieldWithPrivacy('phoneNumber', 'Phone', user.phoneNumber)}
                         ${this.renderFieldWithPrivacy('website', 'Website', user.website)}
                         ${this.renderFieldWithPrivacy('bio', 'Bio', user.bio, true)}
-                        ${this.renderFieldWithPrivacy('maritalStatus', 'Marital Status', user.maritalStatus)}
+                        ${this.renderFieldWithPrivacy('maritalStatus', 'Relationship Status', user.maritalStatus)}
                     </div>
                 </div>
 
@@ -841,7 +842,7 @@ class Profile {
                             </div>
 
                             <div class="privacy-field">
-                                <label class="privacy-label">Marital Status</label>
+                                <label class="privacy-label">Relationship Status</label>
                                 <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('maritalStatus', this.value)">
                                     <option value="public" ${this.getPrivacySetting('maritalStatus') === 'public' ? 'selected' : ''}>Public</option>
                                     <option value="followers" ${this.getPrivacySetting('maritalStatus') === 'followers' ? 'selected' : ''}>Followers</option>
