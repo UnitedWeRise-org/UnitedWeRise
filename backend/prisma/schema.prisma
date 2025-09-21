@@ -23,6 +23,7 @@ model User {
   createdAt                   DateTime                  @default(now())
   updatedAt                   DateTime                  @updatedAt
   streetAddress               String?
+  streetAddress2              String?
   city                        String?
   state                       String?
   zipCode                     String?

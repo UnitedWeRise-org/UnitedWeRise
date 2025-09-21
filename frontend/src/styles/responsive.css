@@ -262,7 +262,7 @@
     }
     
     /* Mobile MOTD - Full Screen */
-    #google-cta-panel {
+    #motd-panel {
         position: fixed !important;
         top: 51px !important; /* Below mobile top bar - starts after top bar */
         left: 0 !important;

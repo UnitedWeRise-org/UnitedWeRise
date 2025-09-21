@@ -251,7 +251,7 @@
    CTA PANELS
 ======================================== */
 
-#google-cta-panel {
+#motd-panel {
     position: absolute;
     top: 20%;
     left: 50%;
@@ -266,9 +266,36 @@
     box-sizing: border-box;
     display: none;
     z-index: 9999;
+    animation: motdSlideIn 0.3s ease-out;
 }
 
-#google-cta-panel button {
+#motd-panel.dismissed {
+    animation: motdSlideOut 0.2s ease-in forwards;
+}
+
+@keyframes motdSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes motdSlideOut {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+}
+
+#motd-panel button {
     position: absolute;
     top: 8px;
     right: 8px;

@@ -29,6 +29,7 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
                 website: true,
                 location: true,
                 verified: true,
+                isAdmin: true,
                 followersCount: true,
                 followingCount: true,
                 createdAt: true,

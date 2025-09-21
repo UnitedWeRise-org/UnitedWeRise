@@ -96,13 +96,27 @@ function createAddressForm(options = {}) {
                 <label for="${containerId}_streetAddress">
                     Street Address ${required ? '*' : ''}
                 </label>
-                <input 
-                    type="text" 
-                    id="${containerId}_streetAddress" 
+                <input
+                    type="text"
+                    id="${containerId}_streetAddress"
                     name="streetAddress"
                     value="${initialValues.streetAddress || ''}"
                     placeholder="123 Main Street"
                     ${required ? 'required' : ''}
+                    class="address-input"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="${containerId}_streetAddress2">
+                    Apartment, Suite, Unit, Building, Floor (Optional)
+                </label>
+                <input
+                    type="text"
+                    id="${containerId}_streetAddress2"
+                    name="streetAddress2"
+                    value="${initialValues.streetAddress2 || ''}"
+                    placeholder="Apt 4B, Suite 200, Unit 5, etc."
                     class="address-input"
                 >
             </div>

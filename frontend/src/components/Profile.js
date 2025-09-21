@@ -395,49 +395,114 @@ class Profile {
         let activityHtml = `
             <div class="tab-pane">
                 <!-- Activity Filters -->
-                <div class="activity-filters" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-                    <div class="filter-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)">
-                            📝 Posts Created
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)">
-                            ✏️ Posts Edited
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)">
-                            🗑️ Posts Deleted
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)">
-                            💬 Comments
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)">
-                            ✏️ Comments Edited
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)">
-                            🗑️ Comments Deleted
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)">
-                            ❤️ Likes
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
-                                   onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)">
-                            👥 Follows
-                        </label>
+                <div class="activity-filters-container" style="margin-bottom: 1.5rem;">
+                    <div class="activity-filters-header" style="margin-bottom: 0.75rem; color: #333; font-weight: 600; font-size: 0.9rem;">
+                        Filter Activity:
                     </div>
+                    <div class="activity-filters-scroll" style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
+                        <div class="activity-filter-chips" style="display: flex; gap: 0.5rem; padding: 0.25rem 0; min-width: max-content;">
+                            <label class="filter-chip ${this.activityFilters.POST_CREATED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.POST_CREATED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.POST_CREATED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.POST_CREATED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.POST_CREATED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('POST_CREATED', this.checked)"
+                                       style="display: none;">
+                                📝 Posts Created
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.POST_EDITED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.POST_EDITED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.POST_EDITED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.POST_EDITED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.POST_EDITED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('POST_EDITED', this.checked)"
+                                       style="display: none;">
+                                ✏️ Posts Edited
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.POST_DELETED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.POST_DELETED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.POST_DELETED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.POST_DELETED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.POST_DELETED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('POST_DELETED', this.checked)"
+                                       style="display: none;">
+                                🗑️ Posts Deleted
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.COMMENT_CREATED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.COMMENT_CREATED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.COMMENT_CREATED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.COMMENT_CREATED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.COMMENT_CREATED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('COMMENT_CREATED', this.checked)"
+                                       style="display: none;">
+                                💬 Comments
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.COMMENT_EDITED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.COMMENT_EDITED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.COMMENT_EDITED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.COMMENT_EDITED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.COMMENT_EDITED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('COMMENT_EDITED', this.checked)"
+                                       style="display: none;">
+                                ✏️ Comments Edited
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.COMMENT_DELETED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.COMMENT_DELETED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.COMMENT_DELETED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.COMMENT_DELETED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.COMMENT_DELETED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('COMMENT_DELETED', this.checked)"
+                                       style="display: none;">
+                                🗑️ Comments Deleted
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.LIKE_ADDED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.LIKE_ADDED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.LIKE_ADDED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.LIKE_ADDED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.LIKE_ADDED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('LIKE_ADDED', this.checked)"
+                                       style="display: none;">
+                                ❤️ Likes
+                            </label>
+                            <label class="filter-chip ${this.activityFilters.FOLLOW_ADDED ? 'active' : ''}"
+                                   style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem;
+                                          background: ${this.activityFilters.FOLLOW_ADDED ? '#007bff' : '#ffffff'};
+                                          color: ${this.activityFilters.FOLLOW_ADDED ? '#ffffff' : '#333333'};
+                                          border: 1px solid ${this.activityFilters.FOLLOW_ADDED ? '#007bff' : '#d1d5db'};
+                                          border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+                                          user-select: none; white-space: nowrap; font-weight: 500;">
+                                <input type="checkbox" ${this.activityFilters.FOLLOW_ADDED ? 'checked' : ''}
+                                       onchange="window.profile.toggleActivityFilter('FOLLOW_ADDED', this.checked)"
+                                       style="display: none;">
+                                👥 Follows
+                            </label>
+                        </div>
+                    </div>
+                    <div style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">
+                        💡 Scroll horizontally to see all filters
+                    </div>
+                </div>
 
                     <!-- Search Box -->
                     <div class="activity-search" style="margin-top: 1rem;">
@@ -662,6 +727,12 @@ class Profile {
                                 <label>Street Address <span class="privacy-indicator privacy-private" title="Always private"></span></label>
                                 <span>${user.streetAddress || 'Not set'}</span>
                             </div>
+                            ${user.streetAddress2 ? `
+                                <div class="info-item full-width">
+                                    <label>Address Line 2 <span class="privacy-indicator privacy-private" title="Always private"></span></label>
+                                    <span>${user.streetAddress2}</span>
+                                </div>
+                            ` : ''}
                         ` : ''}
                         ${this.renderFieldWithPrivacy('city', 'City', user.city)}
                         ${this.renderFieldWithPrivacy('state', 'State', user.state)}
@@ -3991,11 +4062,14 @@ class Profile {
         switch (activity.activityType) {
             case 'POST_CREATED':
                 return `
-                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                    <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: background 0.2s ease;"
+                         onclick="window.profile.navigateToPost('${activity.targetId}')"
+                         onmouseover="this.style.background='#f8f9fa'"
+                         onmouseout="this.style.background='transparent'">
                         <div class="activity-icon" style="font-size: 1.5rem;">📝</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
-                                Created a post
+                                Created a post <span style="color: #007bff; font-size: 0.8em;">→ Click to view</span>
                             </div>
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Content preview not available'}"
@@ -4009,11 +4083,14 @@ class Profile {
 
             case 'POST_EDITED':
                 return `
-                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                    <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: background 0.2s ease;"
+                         onclick="window.profile.navigateToPost('${activity.targetId}')"
+                         onmouseover="this.style.background='#f8f9fa'"
+                         onmouseout="this.style.background='transparent'">
                         <div class="activity-icon" style="font-size: 1.5rem;">✏️</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
-                                Edited a post
+                                Edited a post <span style="color: #007bff; font-size: 0.8em;">→ Click to view</span>
                                 ${metadata.editReason ? `<span style="color: #666; font-weight: normal;"> - ${metadata.editReason}</span>` : ''}
                             </div>
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
@@ -4051,11 +4128,14 @@ class Profile {
 
             case 'COMMENT_CREATED':
                 return `
-                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                    <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: background 0.2s ease;"
+                         onclick="window.profile.navigateToComment('${activity.targetId}', '${metadata.postId || ''}')"
+                         onmouseover="this.style.background='#f8f9fa'"
+                         onmouseout="this.style.background='transparent'">
                         <div class="activity-icon" style="font-size: 1.5rem;">💬</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
-                                Commented ${metadata.postTitle ? `on "${metadata.postTitle.substring(0, 50)}..."` : 'on a post'}
+                                Commented ${metadata.postTitle ? `on "${metadata.postTitle.substring(0, 50)}..."` : 'on a post'} <span style="color: #007bff; font-size: 0.8em;">→ Click to view</span>
                             </div>
                             <div class="activity-preview" style="color: #666; font-size: 0.9em; line-height: 1.4;">
                                 "${metadata.contentPreview || 'Comment preview not available'}"
@@ -4091,11 +4171,14 @@ class Profile {
 
             case 'LIKE_ADDED':
                 return `
-                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                    <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: background 0.2s ease;"
+                         onclick="window.profile.navigateToPost('${metadata.postId || activity.targetId}')"
+                         onmouseover="this.style.background='#f8f9fa'"
+                         onmouseout="this.style.background='transparent'">
                         <div class="activity-icon" style="font-size: 1.5rem;">❤️</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
-                                Liked ${metadata.postTitle ? `"${metadata.postTitle.substring(0, 50)}..."` : 'a post'}
+                                Liked ${metadata.postTitle ? `"${metadata.postTitle.substring(0, 50)}..."` : 'a post'} <span style="color: #007bff; font-size: 0.8em;">→ Click to view</span>
                             </div>
                             <div class="activity-time" style="color: #999; font-size: 0.8em;">
                                 ${timeAgo}
@@ -4106,11 +4189,14 @@ class Profile {
 
             case 'FOLLOW_ADDED':
                 return `
-                    <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem;">
+                    <div class="activity-item clickable" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; transition: background 0.2s ease;"
+                         onclick="window.profile.navigateToUser('${metadata.targetUsername || ''}')"
+                         onmouseover="this.style.background='#f8f9fa'"
+                         onmouseout="this.style.background='transparent'">
                         <div class="activity-icon" style="font-size: 1.5rem;">👥</div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-action" style="font-weight: 500; margin-bottom: 0.5rem;">
-                                Followed @${metadata.targetUsername || 'user'}
+                                Followed @${metadata.targetUsername || 'user'} <span style="color: #007bff; font-size: 0.8em;">→ Click to view profile</span>
                             </div>
                             <div class="activity-time" style="color: #999; font-size: 0.8em;">
                                 ${timeAgo}
@@ -4154,6 +4240,96 @@ class Profile {
     viewDeletedContent(type, targetId) {
         // For now, just show an alert - in the future this could open a modal
         alert(`Viewing deleted ${type} content: ${targetId}\n\nThis feature will show the full deleted content in a modal.`);
+    }
+
+    navigateToPost(postId) {
+        if (!postId) {
+            if (typeof adminDebugWarn !== 'undefined') {
+                adminDebugWarn('Profile', 'Cannot navigate: postId is missing');
+            }
+            return;
+        }
+
+        // Close profile modal and switch to feed with post highlighted
+        this.closeModal();
+
+        // Switch to My Feed tab and highlight the post
+        window.switchToTab('my-feed');
+
+        // Wait for feed to load, then scroll to and highlight the post
+        setTimeout(() => {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            if (postElement) {
+                postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                postElement.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    postElement.style.backgroundColor = '';
+                }, 3000);
+            } else {
+                // Post might not be loaded in current feed view, could implement search/fetch here
+                if (typeof adminDebugWarn !== 'undefined') {
+                    adminDebugWarn('Profile', `Post ${postId} not found in current feed view`);
+                }
+            }
+        }, 500);
+    }
+
+    navigateToComment(commentId, postId) {
+        if (!commentId) {
+            if (typeof adminDebugWarn !== 'undefined') {
+                adminDebugWarn('Profile', 'Cannot navigate: commentId is missing');
+            }
+            return;
+        }
+
+        // Close profile modal and navigate to the post containing the comment
+        this.closeModal();
+
+        if (postId) {
+            // First navigate to the post
+            window.switchToTab('my-feed');
+
+            setTimeout(() => {
+                const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                if (postElement) {
+                    postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Try to expand comments if they're collapsed
+                    const expandCommentsBtn = postElement.querySelector('.toggle-comments');
+                    if (expandCommentsBtn && !expandCommentsBtn.classList.contains('expanded')) {
+                        expandCommentsBtn.click();
+                    }
+
+                    // Highlight the specific comment
+                    setTimeout(() => {
+                        const commentElement = postElement.querySelector(`[data-comment-id="${commentId}"]`);
+                        if (commentElement) {
+                            commentElement.style.backgroundColor = '#e3f2fd';
+                            setTimeout(() => {
+                                commentElement.style.backgroundColor = '';
+                            }, 3000);
+                        }
+                    }, 300);
+                }
+            }, 500);
+        }
+    }
+
+    navigateToUser(username) {
+        if (!username) {
+            if (typeof adminDebugWarn !== 'undefined') {
+                adminDebugWarn('Profile', 'Cannot navigate: username is missing');
+            }
+            return;
+        }
+
+        // Close current profile modal
+        this.closeModal();
+
+        // Open the target user's profile
+        setTimeout(() => {
+            window.openProfile(username);
+        }, 300);
     }
 
     formatTimeAgo(date) {

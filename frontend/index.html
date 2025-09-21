@@ -987,7 +987,7 @@
     </div>
 
     <!-- MOTD Panel (Message of the Day) -->
-    <div id="google-cta-panel" style="display: none;">
+    <div id="motd-panel" style="display: none;">
         <button id="motd-close-btn">&times;</button>
         <div id="motd-content" style="text-align: left; margin: 0 10px;">
             <div id="motd-title" style="font-weight: bold; margin-bottom: 8px; color: #5A534A;"></div>
@@ -2579,7 +2579,7 @@
         }
 
         function displayMOTD(motd) {
-            const panel = document.getElementById('google-cta-panel');
+            const panel = document.getElementById('motd-panel');
             const title = document.getElementById('motd-title');
             const body = document.getElementById('motd-body');
             
@@ -2596,8 +2596,18 @@
 
         async function dismissCurrentMOTD() {
             if (!currentMOTDData) return;
-            
+
+            const panel = document.getElementById('motd-panel');
+
             try {
+                // Add dismissed animation class
+                panel.classList.add('dismissed');
+
+                // Add admin debug logging if available
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MOTD', `Dismissing MOTD: ${currentMOTDData.id} with token: ${dismissalToken}`);
+                }
+
                 const headers = {};
                 headers['X-Dismissal-Token'] = dismissalToken;
 
@@ -2608,13 +2618,36 @@
                 });
 
                 if (response.ok) {
-                    document.getElementById('google-cta-panel').style.display = 'none';
+                    // Wait for animation to complete before hiding
+                    setTimeout(() => {
+                        panel.style.display = 'none';
+                        panel.classList.remove('dismissed');
+                    }, 200);
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MOTD', 'MOTD dismissed successfully');
+                    }
                     currentMOTDData = null;
+                } else {
+                    if (typeof adminDebugError !== 'undefined') {
+                        adminDebugError('MOTD', 'Failed to dismiss MOTD on server');
+                    }
+                    // Still hide panel but remove animation class
+                    setTimeout(() => {
+                        panel.style.display = 'none';
+                        panel.classList.remove('dismissed');
+                    }, 200);
                 }
             } catch (error) {
                 console.error('Failed to dismiss MOTD:', error);
-                // Still hide the panel on error
-                document.getElementById('google-cta-panel').style.display = 'none';
+                if (typeof adminDebugError !== 'undefined') {
+                    adminDebugError('MOTD', `MOTD dismissal error: ${error.message}`);
+                }
+                // Still hide the panel on error with animation
+                setTimeout(() => {
+                    panel.style.display = 'none';
+                    panel.classList.remove('dismissed');
+                }, 200);
             }
         }
 
