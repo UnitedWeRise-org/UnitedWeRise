@@ -4,34 +4,42 @@
 
 ### **🚨 EMERGENCY COMMANDS (Critical Issues)**
 ```bash
-# FASTEST EMERGENCY RESPONSE (Using Scripts):
-./scripts/emergency-rollback.sh                           # Automated rollback with verification
-./scripts/deployment-status.sh                            # Check system status
-./scripts/post-deployment-verify.sh                       # Comprehensive health check
+# Emergency rollback (try script first, manual fallback)
+./scripts/emergency-rollback.sh || {
+  git checkout development && git revert HEAD && git push origin development
+}
 
-# MANUAL EMERGENCY PROCEDURES (If scripts fail):
-# Backend emergency restart
+# System status check
+./scripts/deployment-status.sh || {
+  curl -s "https://api.unitedwerise.org/health" | grep uptime
+}
+
+# Backend emergency restart (manual only)
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --revision-suffix emergency-$(date +%m%d-%H%M)
 
-# Quick health check
-curl -s "https://api.unitedwerise.org/health" | grep uptime
-
-# Emergency rollback to staging
-git checkout development && git revert HEAD && git push origin development
+# Comprehensive verification
+./scripts/post-deployment-verify.sh || {
+  curl -s "https://api.unitedwerise.org/health" | jq .
+}
 ```
 
 ### **⚡ DAILY ESSENTIALS (Copy-Paste Ready)**
 ```bash
-# FASTEST METHOD (Using Scripts):
-./scripts/dev-start.sh                                    # Start session with environment setup
-./scripts/quick-deploy-staging.sh "feat: your changes"    # One-command deploy (validates, commits, pushes)
-./scripts/deployment-status.sh                            # Monitor deployment status
+# Start development session
+./scripts/dev-start.sh || {
+  git checkout development && git pull origin development
+}
 
-# MANUAL METHOD (If scripts unavailable):
-git checkout development && git pull origin development
-./scripts/validate-before-commit.sh                       # Always validate first!
-git add . && git commit -m "feat/fix: Description" && git push origin development
-curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+# Deploy to staging with validation
+./scripts/quick-deploy-staging.sh "feat: your changes" || {
+  ./scripts/validate-before-commit.sh
+  git add . && git commit -m "feat: your changes" && git push origin development
+}
+
+# Monitor deployment status
+./scripts/deployment-status.sh || {
+  curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+}
 ```
 
 ### **📋 SECTION QUICK REFERENCE**
@@ -95,32 +103,8 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 
 ---
 
-## 🛠️ AVAILABLE AUTOMATION SCRIPTS
-**Save time and reduce errors with these existing automation tools:**
-
-### **Core Development Scripts**
-- **`./scripts/quick-deploy-staging.sh "commit message"`** - One-command staging deployment (validates, commits, pushes, verifies)
-- **`./scripts/validate-before-commit.sh`** - Pre-commit validation (TypeScript, cross-refs, API endpoints)
-- **`./scripts/dev-start.sh`** - Session initialization with environment setup
-- **`./scripts/deployment-status.sh`** - Real-time deployment monitoring
-
-### **Emergency & Recovery Scripts**
-- **`./scripts/emergency-rollback.sh`** - Quick rollback procedure
-- **`./scripts/post-deployment-verify.sh`** - Comprehensive post-deployment verification
-- **`./scripts/backup.sh`** - Database backup creation
-- **`./scripts/restore.sh`** - Database restoration
-
-### **Testing & Validation Scripts**
-- **`./scripts/test-api-endpoints.sh`** - Test critical API endpoints
-- **`./scripts/validate-cross-references.js`** - Validate documentation cross-references
-- **`./scripts/update-docs.sh`** - Update documentation with timestamps
-
-💡 **Pro Tip**: Use these scripts instead of manual procedures for faster, more reliable deployments!
-
----
-
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS
-**Related Sections:** [Scope Prevention](#scope-prevention) | [Deployment Guide](#deployment-guide) | [Multi-Agent Coordination](#multi-agent-coordination) | [Automation Scripts](#available-automation-scripts)
+**Related Sections:** [Scope Prevention](#scope-prevention) | [Deployment Guide](#deployment-guide) | [Multi-Agent Coordination](#multi-agent-coordination)
 
 ### 🗣️ COLLABORATIVE LANGUAGE PROTOCOL
 **CRITICAL**: When the user uses collaborative words, they indicate a desire for DISCUSSION ONLY, not implementation:
@@ -398,34 +382,16 @@ If ANY answer is uncertain, STOP and clarify with user.
 ### 🚨 MANDATORY PRE-DEPLOYMENT CHECKLIST
 **NEVER SKIP - Prevents 99% of deployment failures:**
 
-**🚀 AUTOMATED METHOD (Recommended):**
 ```bash
-# Run all validation checks automatically:
-./scripts/validate-before-commit.sh
-# ✅ Checks: TypeScript compilation, git status, cross-references, API endpoints
-```
-
-**📝 MANUAL METHOD (If script unavailable):**
-```bash
-# 1. VERIFY CHANGES EXIST (CRITICAL - ALWAYS RUN FIRST)
-git status
-# ✅ Should show modified files OR "working tree clean" if already committed
-# ❌ If "working tree clean" but you made changes = CHANGES NOT SAVED!
-
-# 2. VERIFY TYPESCRIPT COMPILATION (for backend changes only)
-cd backend && npm run build
-# ✅ Must compile without errors
-# ❌ If fails = Fix TypeScript errors BEFORE proceeding
-
-# 3. VERIFY GITHUB HAS YOUR CHANGES
-git log -1 --oneline
-# ✅ Should show your recent commit with your changes
-# ❌ If doesn't show your changes = NOT COMMITTED YET!
-
-# 4. VERIFY ALL CHANGES PUSHED (development branch)
-git log origin/development..HEAD
-# ✅ Should show nothing (all commits pushed to development)
-# ❌ If shows commits = NOT PUSHED TO GITHUB!
+# Run comprehensive validation (script with manual fallback)
+./scripts/validate-before-commit.sh || {
+  # Manual validation if script fails:
+  git status  # Verify changes exist
+  cd backend && npm run build  # TypeScript compilation
+  git log -1 --oneline  # Verify GitHub has changes
+  git log origin/development..HEAD  # Verify all changes pushed
+  cd ..
+}
 ```
 
 **⚠️ CRITICAL UNDERSTANDING:**
@@ -440,27 +406,15 @@ git log origin/development..HEAD
 #### 🔥 MANDATORY WORKFLOW: Development → Staging → Production
 
 #### 1️⃣ Frontend Development Deployment (STAGING)
-
-**🚀 FASTEST METHOD: Use Automation Script**
 ```bash
-./scripts/quick-deploy-staging.sh "feat: your changes"
-# ✅ Handles everything: validation → commit → push → monitoring
-```
-
-**📝 MANUAL METHOD:**
-```bash
-# ALWAYS work on development branch
-git checkout development
-git pull origin development
-
-# Make changes and commit to development
-git add .
-git commit -m "feat/fix/docs: Description of changes"
-git push origin development
-
-# GitHub Actions auto-deploys to STAGING in ~2-5 minutes
-# Staging URL: https://dev.unitedwerise.org
-# Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+# Deploy to staging (script with manual fallback)
+./scripts/quick-deploy-staging.sh "feat: your changes" || {
+  # Manual deployment if script fails:
+  git checkout development && git pull origin development
+  git add . && git commit -m "feat: your changes" && git push origin development
+  # GitHub Actions auto-deploys to STAGING in ~2-5 minutes
+  # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+}
 ```
 
 #### 1️⃣-B Frontend Production Deployment (FORBIDDEN WITHOUT USER APPROVAL)
@@ -477,31 +431,19 @@ git push origin development
 ```
 
 #### 2️⃣ Backend Development Deployment (STAGING FIRST)
-
-**🚀 RECOMMENDED: Use Quick Deploy Script**
 ```bash
-# Handles validation, commit, push, and initial monitoring
-./scripts/quick-deploy-staging.sh "feat: your backend changes"
+# Deploy backend to staging (script with manual fallback for git operations)
+./scripts/quick-deploy-staging.sh "feat: your backend changes" || {
+  # Manual git operations if script fails:
+  ./scripts/validate-before-commit.sh || {
+    git status && cd backend && npm run build && cd ..
+  }
+  git checkout development && git pull origin development
+  git add . && git commit -m "feat: your backend changes" && git push origin development
+  git status  # Verify push succeeded
+}
 
-# Then follow backend-specific Docker build steps below (Step 5 onwards)
-```
-
-**📝 MANUAL METHOD:**
-```bash
-# Step 1: Run pre-deployment checklist
-./scripts/validate-before-commit.sh  # ← Use script instead of manual checks
-
-# Step 2: ALWAYS work on development branch
-git checkout development
-git pull origin development
-
-# Step 3: Commit and push to development (STAGING)
-git add .
-git commit -m "feat/fix/refactor: Description of changes"
-git push origin development
-
-# Step 4: Verify push succeeded
-git status  # Must show "Your branch is up to date with 'origin/development'"
+# Backend-specific Docker build steps:
 
 # Step 5: Build Docker image with Git SHA tracking FROM DEVELOPMENT BRANCH
 GIT_SHA=$(git rev-parse --short HEAD)
@@ -729,27 +671,23 @@ git add . && git commit -m "Description" && git push origin development
 ---
 
 ### 🚑 EMERGENCY PROCEDURES
-
-**🚀 USE SCRIPTS FIRST (Faster & Safer):**
 ```bash
-# Automated emergency response with verification:
-./scripts/emergency-rollback.sh                    # Complete rollback procedure
-./scripts/post-deployment-verify.sh                # Verify system recovery
-./scripts/deployment-status.sh                     # Monitor recovery status
-```
+# Complete emergency rollback (script with manual fallback)
+./scripts/emergency-rollback.sh || {
+  # Manual rollback if script fails:
+  git checkout development && git revert HEAD && git push origin development
+}
 
-**📝 MANUAL PROCEDURES (If scripts fail):**
-```bash
-# Backend emergency restart
+# Backend emergency restart (manual only)
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
   --revision-suffix emergency-$(date +%m%d-%H%M)
 
-# Frontend rollback (ALWAYS staging first)
-git checkout development && git revert HEAD && git push origin development
-# ❌ FORBIDDEN: Production rollback without user explicitly saying "rollback production"
-# ❌ FORBIDDEN: git checkout main && git revert HEAD && git push origin main
+# Verify system recovery
+./scripts/post-deployment-verify.sh || {
+  curl -s "https://api.unitedwerise.org/health" | jq .
+}
 
 # Database restore (last resort)
 az postgres flexible-server restore \
@@ -761,33 +699,18 @@ az postgres flexible-server restore \
 
 ---
 
-### ✅ POST-DEPLOYMENT VERIFICATION - ENHANCED
-
-**🚀 AUTOMATED VERIFICATION (Recommended):**
+### ✅ POST-DEPLOYMENT VERIFICATION
 ```bash
-# Run comprehensive post-deployment checks:
-./scripts/post-deployment-verify.sh
-# ✅ Automatically checks: SHA match, uptime, revisions, health, functionality
-```
-
-**📝 MANUAL VERIFICATION CHECKLIST:**
-```bash
-# 1. Verify correct release SHA is deployed
-GIT_SHA=$(git rev-parse --short HEAD)
-DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/version" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
-echo "Local SHA: $GIT_SHA, Deployed SHA: $DEPLOYED_SHA"
-
-# 2. Check container is fresh (uptime < 60 seconds)
-curl -s "https://api.unitedwerise.org/health" | grep uptime
-
-# 3. Verify single active revision
-az containerapp revision list --name unitedwerise-backend --resource-group unitedwerise-rg -o table | head -3
-
-# 4. Test new functionality works in production
-curl -s "https://api.unitedwerise.org/health" | jq .
-
-# 5. Check for X-Release header (quick browser verification)
-curl -I "https://api.unitedwerise.org/version" | grep X-Release
+# Comprehensive post-deployment verification (script with manual fallback)
+./scripts/post-deployment-verify.sh || {
+  # Manual verification steps if script fails:
+  GIT_SHA=$(git rev-parse --short HEAD)
+  DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/version" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+  echo "Local SHA: $GIT_SHA, Deployed SHA: $DEPLOYED_SHA"
+  curl -s "https://api.unitedwerise.org/health" | grep uptime
+  curl -s "https://api.unitedwerise.org/health" | jq .
+  curl -I "https://api.unitedwerise.org/version" | grep X-Release
+}
 ```
 
 ```javascript
@@ -1009,46 +932,32 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 ```
 
 ### 📋 Daily Development Workflow (Streamlined)
-**Complete development session from start to finish:**
-
-#### **🚀 RECOMMENDED: Automated Workflow (3 Steps)**
 ```bash
+# Complete development session (script with manual fallback)
 # 1. START SESSION
-./scripts/dev-start.sh
+./scripts/dev-start.sh || {
+  git checkout development && git pull origin development
+}
 
 # 2. MAKE CHANGES AND DEPLOY
 # [Your development work here]
-./scripts/quick-deploy-staging.sh "feat: your description"
-# ✅ Automatically: validates → commits → pushes → verifies
+./scripts/quick-deploy-staging.sh "feat: your description" || {
+  ./scripts/validate-before-commit.sh || {
+    git status && cd backend && npm run build && cd ..
+  }
+  git add . && git commit -m "feat: your description" && git push origin development
+}
 
-# 3. MONITOR STATUS
-./scripts/deployment-status.sh
-```
+# 3. MONITOR AND VERIFY
+./scripts/deployment-status.sh || {
+  curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+}
 
-#### **📝 Alternative: Manual Workflow (7 Steps)**
-```bash
-# 1. START SESSION (Always first)
-git checkout development && git pull origin development
-
-# 2. MAKE CHANGES (Edit files, implement features)
-# [Your development work here]
-
-# 3. PRE-COMMIT VALIDATION (Required before committing)
-./scripts/validate-before-commit.sh
-# ✅ Checks: TypeScript compilation, documentation, API endpoints
-
-# 4. COMMIT TO STAGING (Deploys automatically)
-git add . && git commit -m "feat/fix: Description" && git push origin development
-
-# 5. VERIFY STAGING DEPLOYMENT (~2-5 minutes)
-curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
-# ✅ Uptime should be <60 seconds for fresh deployment
-
-# 6. TEST ON STAGING
+# 4. TEST ON STAGING
 # Visit: https://dev.unitedwerise.org (requires admin login)
 # Verify all functionality works as expected
 
-# 7. PRODUCTION DEPLOYMENT (Only with explicit user approval)
+# 5. PRODUCTION DEPLOYMENT (Only with explicit user approval)
 # [User must explicitly say "deploy to production"]
 ```
 

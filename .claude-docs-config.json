@@ -1,0 +1,81 @@
+{
+  "_description": "Smart Documentation Assistant Configuration",
+  "_version": "1.0.0",
+  "_lastUpdated": "2025-09-21",
+
+  "autoPrompt": {
+    "_description": "Controls when to prompt for documentation updates",
+    "schemaChanges": true,
+    "newComponents": true,
+    "modifiedComponents": true,
+    "apiChanges": true,
+    "majorBugFixes": true,
+    "minorBugFixes": false,
+    "featureAdditions": true,
+    "performanceImprovements": false
+  },
+
+  "templates": {
+    "_description": "Template generation settings",
+    "generateSuggestions": true,
+    "autoFillBasics": true,
+    "includeCommitInfo": true,
+    "includeFileList": true,
+    "verboseTemplates": false
+  },
+
+  "interactivity": {
+    "_description": "User interaction preferences",
+    "batchMode": false,
+    "autoOpenFiles": false,
+    "defaultToYes": false,
+    "skipMinorChanges": true,
+    "rememberChoices": false
+  },
+
+  "detection": {
+    "_description": "What types of changes to detect",
+    "sensitivityLevel": "medium",
+    "filePatterns": {
+      "schema": ["**/schema.prisma", "**/migrations/*.sql"],
+      "components": ["frontend/src/components/*.js", "frontend/src/js/*.js"],
+      "routes": ["backend/src/routes/*.ts", "backend/src/routes/*.js"],
+      "tests": ["**/*.test.js", "**/*.spec.js"]
+    },
+    "commitMessageKeywords": {
+      "major": ["fix.*critical", "fix.*security", "fix.*data.*contamination", "breaking", "migration"],
+      "minor": ["fix.*typo", "fix.*style", "update.*comment"],
+      "features": ["feat:", "add:", "implement:", "create:"],
+      "improvements": ["enhance:", "improve:", "optimize:", "refactor:"]
+    }
+  },
+
+  "documentation": {
+    "_description": "Documentation file settings",
+    "masterDocFile": "MASTER_DOCUMENTATION.md",
+    "changelogFile": "CHANGELOG.md",
+    "autoUpdateTimestamps": true,
+    "sections": {
+      "database": "Database Schema",
+      "components": "UI/UX Components",
+      "api": "API Reference",
+      "security": "Security & Authentication",
+      "deployment": "Deployment & Infrastructure"
+    }
+  },
+
+  "learning": {
+    "_description": "Smart learning preferences (future feature)",
+    "enabled": false,
+    "trackUserChoices": false,
+    "adaptToPatterns": false
+  },
+
+  "notifications": {
+    "_description": "How to present information",
+    "useColors": true,
+    "useEmojis": true,
+    "verbosity": "normal",
+    "showFileStats": true
+  }
+}
