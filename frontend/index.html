@@ -2562,11 +2562,15 @@
                     if (data.success && data.data.motd) {
                         currentMOTDData = data.data.motd;
                         dismissalToken = data.data.dismissalToken;
-                        
+
                         // Store dismissal token for future use
                         localStorage.setItem('motd-dismissal-token', dismissalToken);
-                        
-                        displayMOTD(currentMOTDData);
+
+                        // Check if this MOTD was already dismissed locally
+                        const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
+                        if (!dismissedMOTDs.includes(currentMOTDData.id)) {
+                            displayMOTD(currentMOTDData);
+                        }
                     }
                 }
             } catch (error) {
@@ -2618,6 +2622,17 @@
                 });
 
                 if (response.ok) {
+                    // Store dismissal locally to prevent re-showing on refresh
+                    const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
+                    if (!dismissedMOTDs.includes(currentMOTDData.id)) {
+                        dismissedMOTDs.push(currentMOTDData.id);
+                        // Keep only the last 20 dismissed MOTDs to prevent localStorage bloat
+                        if (dismissedMOTDs.length > 20) {
+                            dismissedMOTDs.shift();
+                        }
+                        localStorage.setItem('dismissed-motds', JSON.stringify(dismissedMOTDs));
+                    }
+
                     // Wait for animation to complete before hiding
                     setTimeout(() => {
                         panel.style.display = 'none';

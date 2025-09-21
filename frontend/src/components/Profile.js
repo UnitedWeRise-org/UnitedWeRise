@@ -395,9 +395,9 @@ class Profile {
         let activityHtml = `
             <div class="tab-pane">
                 <!-- Search and Filter Row -->
-                <div class="activity-controls" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-start;">
-                    <!-- Search Box (Half Width) -->
-                    <div class="activity-search" style="flex: 1;">
+                <div class="activity-controls" style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; align-items: flex-start;">
+                    <!-- Search Box (50% Width) -->
+                    <div class="activity-search" style="width: 50%;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem;">
                             🔍 Search Activity
                         </label>
@@ -415,8 +415,8 @@ class Profile {
                         </div>
                     </div>
 
-                    <!-- Filter Dropdown (Half Width) -->
-                    <div class="activity-filter" style="flex: 1; position: relative;">
+                    <!-- Filter Dropdown (25% Width, Aligned Right) -->
+                    <div class="activity-filter" style="width: 25%; position: relative;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem;">
                             🔽 Filter by Type
                         </label>
