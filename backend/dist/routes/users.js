@@ -545,7 +545,7 @@ router.get('/:userId/complete', async (req, res) => {
     }
 });
 // Get public profile by username
-router.get('/:username', async (req, res) => {
+router.get('/by-username/:username', async (req, res) => {
     try {
         const { username } = req.params;
         const user = await prisma_1.prisma.user.findUnique({
