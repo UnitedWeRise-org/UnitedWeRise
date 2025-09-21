@@ -27,7 +27,12 @@ class Profile {
         this.activityLimit = 20;
         this.userProfile = null;
         this.editingPositionId = null; // Track which position is being edited
-        
+
+        // Profile viewing mode properties
+        this.viewingUserId = null; // ID of user being viewed (null = current user)
+        this.isOwnProfile = true; // Whether viewing own profile
+        this.relationshipContext = null; // Relationship info with viewed user
+
         // Setup WebSocket event handlers
         this.setupWebSocketHandlers();
     }
@@ -144,33 +149,65 @@ class Profile {
         adminDebugLog('✅ Message added to display as', isFromAdmin ? 'from-admin' : 'from-candidate');
     }
 
-    async render(containerId) {
+    async render(containerId, targetUserId = null) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        // Show loading state
+        // Determine if we're viewing own profile or someone else's
+        const isOwnProfile = !targetUserId || targetUserId === window.currentUser?.id;
+        this.viewingUserId = targetUserId;
+        this.isOwnProfile = isOwnProfile;
+
+        // When viewing another user's profile, ensure we're on a public tab
+        if (!isOwnProfile && (this.currentTab === 'settings' || this.currentTab === 'messages')) {
+            this.currentTab = 'activity';
+        }
+
+        // Show loading state with appropriate message
+        const loadingMessage = isOwnProfile ? 'Loading Your Profile...' : 'Loading Profile...';
         container.innerHTML = `
             <div style="text-align: center; padding: 3rem;">
-                <h2>Loading Your Profile...</h2>
+                <h2>${loadingMessage}</h2>
                 <div class="loading-spinner"></div>
             </div>
         `;
 
         try {
-            // Load user profile and posts in parallel
-            const [profileResponse, postsResponse] = await Promise.all([
-                window.apiCall('/users/profile'),
-                window.apiCall('/posts/me')
-            ]);
+            if (isOwnProfile) {
+                // Load current user's profile and posts (existing behavior)
+                const [profileResponse, postsResponse] = await Promise.all([
+                    window.apiCall('/users/profile'),
+                    window.apiCall('/posts/me')
+                ]);
 
-            if (profileResponse.ok) {
-                this.userProfile = profileResponse.data.user;
-                adminDebugLog('🔍 Profile: User data loaded:', this.userProfile);
-                adminDebugLog('🔍 Profile: candidateProfile:', this.userProfile?.candidateProfile);
-                this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
-                this.renderProfile(container);
+                if (profileResponse.ok) {
+                    this.userProfile = profileResponse.data.user;
+                    adminDebugLog('🔍 Profile: User data loaded:', this.userProfile);
+                    adminDebugLog('🔍 Profile: candidateProfile:', this.userProfile?.candidateProfile);
+                    this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
+                    this.renderProfile(container);
+                } else {
+                    this.renderError(container, 'Unable to load your profile');
+                }
             } else {
-                this.renderError(container, 'Unable to load your profile');
+                // Load other user's profile with privacy filtering
+                const [profileResponse, postsResponse, activityResponse] = await Promise.all([
+                    window.apiCall(`/users/${targetUserId}`),
+                    window.apiCall(`/posts/user/${targetUserId}`),
+                    window.apiCall(`/users/activity/${targetUserId}`)
+                ]);
+
+                if (profileResponse.ok) {
+                    this.userProfile = profileResponse.data.user;
+                    this.relationshipContext = profileResponse.data.relationshipContext || null;
+                    adminDebugLog('🔍 Profile: Other user data loaded:', this.userProfile);
+                    adminDebugLog('🔍 Profile: Relationship context:', this.relationshipContext);
+                    this.userPosts = postsResponse.ok ? (postsResponse.data.posts || []) : [];
+                    this.userActivities = activityResponse.ok ? (activityResponse.data.activities || []) : [];
+                    this.renderProfile(container);
+                } else {
+                    this.renderError(container, profileResponse.data?.error || 'Unable to load profile');
+                }
             }
         } catch (error) {
             adminDebugError('Error loading profile:', error);
@@ -275,7 +312,7 @@ class Profile {
                 <!-- Tab Navigation -->
                 <div class="profile-tabs">
                     <button class="tab-button ${this.currentTab === 'activity' ? 'active' : ''}" onclick="window.profile.switchTab('activity')">
-                        My Activity
+                        ${this.isOwnProfile ? 'My Activity' : 'Activity'}
                     </button>
                     <button class="tab-button ${this.currentTab === 'photos' ? 'active' : ''}" onclick="window.profile.switchTab('photos')">
                         Photos
@@ -286,16 +323,18 @@ class Profile {
                     <button class="tab-button ${this.currentTab === 'political' ? 'active' : ''}" onclick="window.profile.switchTab('political')">
                         Political Profile
                     </button>
-                    ${user.candidateProfile ? `
+                    ${this.isOwnProfile && user.candidateProfile ? `
                         <!-- Policy Platform moved to Candidate Dashboard -->
                         <button class="tab-button ${this.currentTab === 'messages' ? 'active' : ''}" onclick="window.profile.switchTab('messages')" id="messagesTab">
                             💬 Admin Messages
                             <span id="unreadBadge" style="display: none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 0.5rem;">0</span>
                         </button>
                     ` : ''}
-                    <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.profile.switchTab('settings')">
-                        Settings
-                    </button>
+                    ${this.isOwnProfile ? `
+                        <button class="tab-button ${this.currentTab === 'settings' ? 'active' : ''}" onclick="window.profile.switchTab('settings')">
+                            Settings
+                        </button>
+                    ` : ''}
                 </div>
 
                 <!-- Tab Content -->
@@ -587,7 +626,7 @@ class Profile {
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Personal Information</h3>
-                        <button onclick="window.profile.editDemographics()" class="edit-btn">Edit</button>
+                        ${this.isOwnProfile ? `<button onclick="window.profile.editDemographics()" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
@@ -598,49 +637,41 @@ class Profile {
                             <label>Last Name</label>
                             <span>${user.lastName || 'Not set'}</span>
                         </div>
-                        <div class="info-item">
-                            <label>Email</label>
-                            <span>${user.email}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Phone</label>
-                            <span>${user.phoneNumber || 'Not set'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>Website</label>
-                            <span>${user.website || 'Not set'}</span>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Bio</label>
-                            <span>${user.bio || 'Not set'}</span>
-                        </div>
+                        ${this.isOwnProfile ? `
+                            <div class="info-item">
+                                <label>Email</label>
+                                <span>${user.email}</span>
+                            </div>
+                        ` : ''}
+                        ${this.renderFieldWithPrivacy('phoneNumber', 'Phone', user.phoneNumber)}
+                        ${this.renderFieldWithPrivacy('website', 'Website', user.website)}
+                        ${this.renderFieldWithPrivacy('bio', 'Bio', user.bio, true)}
+                        ${this.renderFieldWithPrivacy('maritalStatus', 'Marital Status', user.maritalStatus)}
                     </div>
                 </div>
 
                 <div class="demographics-section">
                     <div class="section-header">
                         <h3>Address</h3>
-                        <button onclick="window.profile.editAddress()" class="edit-btn">Edit</button>
+                        ${this.isOwnProfile ? `<button onclick="window.profile.editAddress()" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
-                        <div class="info-item full-width">
-                            <label>Street Address</label>
-                            <span>${user.streetAddress || 'Not set'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>City</label>
-                            <span>${user.city || 'Not set'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>State</label>
-                            <span>${user.state || 'Not set'}</span>
-                        </div>
-                        <div class="info-item">
-                            <label>ZIP Code</label>
-                            <span>${user.zipCode || 'Not set'}</span>
-                        </div>
+                        ${this.isOwnProfile ? `
+                            <div class="info-item full-width">
+                                <label>Street Address <span class="privacy-indicator privacy-private" title="Always private"></span></label>
+                                <span>${user.streetAddress || 'Not set'}</span>
+                            </div>
+                        ` : ''}
+                        ${this.renderFieldWithPrivacy('city', 'City', user.city)}
+                        ${this.renderFieldWithPrivacy('state', 'State', user.state)}
+                        ${this.isOwnProfile ? `
+                            <div class="info-item">
+                                <label>ZIP Code <span class="privacy-indicator privacy-private" title="Always private"></span></label>
+                                <span>${user.zipCode || 'Not set'}</span>
+                            </div>
+                        ` : ''}
                     </div>
-                    ${!user.streetAddress ? '<p class="help-text">📍 Add your address to find your elected officials</p>' : ''}
+                    ${this.isOwnProfile && !user.streetAddress ? '<p class="help-text">📍 Add your address to find your elected officials</p>' : ''}
                 </div>
             </div>
         `;
@@ -660,17 +691,14 @@ class Profile {
                 <div class="political-section">
                     <div class="section-header">
                         <h3>Political Profile</h3>
-                        <button onclick="window.profile.editPolitical()" class="edit-btn">Edit</button>
+                        ${this.isOwnProfile ? `<button onclick="window.profile.editPolitical()" class="edit-btn">Edit</button>` : ''}
                     </div>
                     <div class="info-grid">
                         <div class="info-item">
                             <label>Profile Type</label>
                             <span>${profileTypes[user.politicalProfileType] || 'Citizen'}</span>
                         </div>
-                        <div class="info-item">
-                            <label>Political Party</label>
-                            <span>${user.politicalParty || 'Not set'}</span>
-                        </div>
+                        ${this.renderFieldWithPrivacy('politicalParty', 'Political Party', user.politicalParty)}
                         ${user.office ? `
                         <div class="info-item">
                             <label>Office</label>
@@ -768,12 +796,80 @@ class Profile {
                     </div>
 
                     <div class="settings-group">
-                        <h4>Privacy</h4>
-                        <label class="setting-item">
-                            <input type="checkbox" ${this.userProfile.isProfilePublic ? 'checked' : ''} 
-                                   onchange="window.profile.toggleProfileVisibility(this.checked)">
-                            <span>Make my profile public</span>
-                        </label>
+                        <h4>Profile Privacy</h4>
+                        <p class="setting-description">Control who can see each part of your profile information.</p>
+
+                        <div class="privacy-settings">
+                            <div class="privacy-field">
+                                <label class="privacy-label">Bio</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('bio', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('bio') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('bio') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('bio') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('bio') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">Website</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('website', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('website') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('website') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('website') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('website') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">City</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('city', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('city') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('city') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('city') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('city') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">State</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('state', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('state') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('state') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('state') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('state') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">Marital Status</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('maritalStatus', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('maritalStatus') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('maritalStatus') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('maritalStatus') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('maritalStatus') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">Phone Number</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('phoneNumber', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('phoneNumber') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('phoneNumber') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('phoneNumber') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('phoneNumber') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+
+                            <div class="privacy-field">
+                                <label class="privacy-label">Political Party</label>
+                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('politicalParty', this.value)">
+                                    <option value="public" ${this.getPrivacySetting('politicalParty') === 'public' ? 'selected' : ''}>Public</option>
+                                    <option value="followers" ${this.getPrivacySetting('politicalParty') === 'followers' ? 'selected' : ''}>Followers</option>
+                                    <option value="friends" ${this.getPrivacySetting('politicalParty') === 'friends' ? 'selected' : ''}>Friends</option>
+                                    <option value="private" ${this.getPrivacySetting('politicalParty') === 'private' ? 'selected' : ''}>Private</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="settings-group">
@@ -2579,6 +2675,74 @@ class Profile {
                 color: #333;
             }
 
+            /* Privacy Settings Styles */
+            .privacy-settings {
+                margin-top: 1rem;
+            }
+
+            .privacy-field {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 0.75rem 0;
+                padding: 0.5rem;
+                border-radius: 4px;
+                transition: background 0.2s;
+            }
+
+            .privacy-field:hover {
+                background: #f8f9fa;
+            }
+
+            .privacy-label {
+                font-size: 0.95rem;
+                color: #333;
+                font-weight: 500;
+                min-width: 120px;
+            }
+
+            .privacy-dropdown {
+                padding: 0.4rem 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                background: white;
+                font-size: 0.9rem;
+                color: #333;
+                cursor: pointer;
+                transition: border-color 0.2s;
+                min-width: 120px;
+            }
+
+            .privacy-dropdown:hover {
+                border-color: #4b5c09;
+            }
+
+            .privacy-dropdown:focus {
+                outline: none;
+                border-color: #4b5c09;
+                box-shadow: 0 0 0 2px rgba(75, 92, 9, 0.1);
+            }
+
+            .privacy-indicator {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                margin-left: 0.5rem;
+                vertical-align: middle;
+            }
+
+            .privacy-public { background: #28a745; }
+            .privacy-followers { background: #17a2b8; }
+            .privacy-friends { background: #ffc107; }
+            .privacy-private { background: #dc3545; }
+
+            .privacy-hidden {
+                color: #6c757d;
+                font-style: italic;
+                font-size: 0.9rem;
+            }
+
             .pending-tags-section {
                 margin-top: 1.5rem;
                 padding-top: 1rem;
@@ -3526,6 +3690,97 @@ class Profile {
         this.showToast('Test notification sent!', 3000);
     }
 
+    // Helper method to render fields with privacy indicators and filtering
+    renderFieldWithPrivacy(fieldKey, label, value, isFullWidth = false) {
+        if (this.isOwnProfile) {
+            // For own profile, show field with privacy indicator
+            const privacyLevel = this.getPrivacySetting(fieldKey);
+            const privacyIndicator = `<span class="privacy-indicator privacy-${privacyLevel}" title="Visible to: ${privacyLevel}"></span>`;
+
+            return `
+                <div class="info-item ${isFullWidth ? 'full-width' : ''}">
+                    <label>${label} ${privacyIndicator}</label>
+                    <span>${value || 'Not set'}</span>
+                </div>
+            `;
+        } else {
+            // For viewing other's profile, check if field should be visible
+            if (value === undefined || value === null) {
+                // Field is not available (filtered by backend privacy)
+                return `
+                    <div class="info-item ${isFullWidth ? 'full-width' : ''}">
+                        <label>${label}</label>
+                        <span class="privacy-hidden">Hidden from you</span>
+                    </div>
+                `;
+            } else {
+                // Field is visible
+                return `
+                    <div class="info-item ${isFullWidth ? 'full-width' : ''}">
+                        <label>${label}</label>
+                        <span>${value || 'Not set'}</span>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // Privacy Settings Methods
+    getPrivacySetting(key) {
+        const prefs = this.userProfile?.profilePrivacySettings || {};
+
+        // Default privacy values for different fields
+        const defaults = {
+            bio: 'public',
+            website: 'public',
+            city: 'followers',
+            state: 'followers',
+            maritalStatus: 'friends',
+            phoneNumber: 'private',
+            politicalParty: 'public'
+        };
+
+        return prefs[key] !== undefined ? prefs[key] : defaults[key];
+    }
+
+    async updatePrivacySetting(key, value) {
+        try {
+            // Get current privacy settings
+            const currentPrivacySettings = this.userProfile?.profilePrivacySettings || {};
+            const updatedPrivacySettings = {
+                ...currentPrivacySettings,
+                [key]: value
+            };
+
+            const response = await window.apiCall('/user/profile-privacy', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({
+                    privacySettings: updatedPrivacySettings
+                })
+            });
+
+            if (response.ok && response.data?.success) {
+                // Update local user profile
+                if (!this.userProfile.profilePrivacySettings) {
+                    this.userProfile.profilePrivacySettings = {};
+                }
+                this.userProfile.profilePrivacySettings[key] = value;
+
+                adminDebugLog('Privacy setting updated:', { key, value });
+                this.showToast(`Privacy setting for ${key} updated to ${value}`);
+            } else {
+                throw new Error(response.data?.error || 'Failed to update privacy settings');
+            }
+        } catch (error) {
+            adminDebugError('Error updating privacy settings:', error);
+            this.showToast('Failed to update privacy settings', 5000);
+        }
+    }
+
     // Check if user is a candidate and show candidate-specific notification settings
     async checkCandidateNotificationSettings() {
         try {
@@ -3883,25 +4138,51 @@ if (typeof adminDebugLog === 'function') {
 }
 
 // Profile integration functions for modular system
-function showProfile() {
-    if (!window.currentUser) {
-        document.getElementById('mainContent').innerHTML = `
-            <div style="text-align: center; padding: 3rem;">
-                <h2>Please log in to view your profile</h2>
-                <button onclick="openAuthModal('login')" class="btn">Log In</button>
-            </div>
-        `;
-        return;
-    }
-
-    // Hide all panels and show profile in main content
+function showProfile(userId = null) {
+    // Hide all panels
     const profilePanel = document.getElementById('profilePanel');
     const messagesContainer = document.getElementById('messagesContainer');
 
     if (profilePanel) profilePanel.style.display = 'none';
     if (messagesContainer) messagesContainer.style.display = 'none';
 
-    window.profile.render('mainContent');
+    if (userId) {
+        // Show another user's profile
+        window.profile.render('mainContent', userId);
+    } else {
+        // Show current user's profile
+        if (!window.currentUser) {
+            document.getElementById('mainContent').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <h2>Please log in to view your profile</h2>
+                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                </div>
+            `;
+            return;
+        }
+        window.profile.render('mainContent');
+    }
+}
+
+// Function to show user profile by ID (can be called from search results, user mentions, etc.)
+function showUserProfile(userId) {
+    if (!userId) {
+        console.error('No user ID provided to showUserProfile');
+        return;
+    }
+    showProfile(userId);
+}
+
+// Function to parse URL and show appropriate profile
+function showProfileFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user');
+
+    if (userId) {
+        showProfile(userId);
+    } else {
+        showProfile(); // Show current user's profile
+    }
 }
 
 function toggleProfile() {
@@ -3922,5 +4203,7 @@ function toggleProfile() {
 // Export functions for global use and module system
 if (typeof window !== 'undefined') {
     window.showProfile = showProfile;
+    window.showUserProfile = showUserProfile;
+    window.showProfileFromUrl = showProfileFromUrl;
     window.toggleProfile = toggleProfile;
 }

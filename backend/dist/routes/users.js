@@ -49,10 +49,13 @@ router.get('/profile', auth_1.requireAuth, async (req, res) => {
                 campaignWebsite: true,
                 // Preferences
                 notificationPreferences: true,
-                // Photo tagging preferences 
+                // Photo tagging preferences
                 photoTaggingEnabled: true,
                 requireTagApproval: true,
                 allowTagsByFriendsOnly: true,
+                // Profile privacy settings
+                maritalStatus: true,
+                profilePrivacySettings: true,
                 // Candidate profile relation
                 candidateProfile: {
                     select: {
@@ -109,10 +112,12 @@ router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, a
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get public user profile (no authentication required)
+// Get user profile with privacy filtering (authentication optional)
 router.get('/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const viewerId = req.user?.id; // Optional authentication
+        // Get full user data including privacy settings
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -129,23 +134,144 @@ router.get('/:userId', async (req, res) => {
                 followingCount: true,
                 createdAt: true,
                 backgroundImage: true,
-                // Public political profile fields only
+                // Address fields (subject to privacy filtering)
+                city: true,
+                state: true,
+                // Personal fields (subject to privacy filtering)
+                maritalStatus: true,
+                phoneNumber: true,
+                // Political profile fields (subject to privacy filtering)
                 politicalProfileType: true,
                 verificationStatus: true,
                 office: true,
                 officialTitle: true,
                 politicalParty: true,
                 campaignWebsite: true,
-                // Hide private fields - no email, address, etc.
+                // Privacy settings
+                profilePrivacySettings: true
             }
         });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json({ user });
+        // If viewing own profile, return everything
+        if (viewerId === userId) {
+            res.json({ user });
+            return;
+        }
+        // Get privacy settings with defaults
+        const defaultPrivacySettings = {
+            bio: 'public',
+            website: 'public',
+            city: 'followers',
+            state: 'followers',
+            maritalStatus: 'friends',
+            phoneNumber: 'private',
+            politicalParty: 'public'
+        };
+        const privacySettings = {
+            ...defaultPrivacySettings,
+            ...(user.profilePrivacySettings || {})
+        };
+        // Check relationship status if viewer is authenticated
+        let relationshipLevel = 'public';
+        if (viewerId) {
+            const [followStatus, friendshipStatus] = await Promise.all([
+                // Check if viewer follows this user
+                prisma_1.prisma.follow.findFirst({
+                    where: {
+                        followerId: viewerId,
+                        followingId: userId
+                    }
+                }),
+                // Check friendship status
+                prisma_1.prisma.friendship.findFirst({
+                    where: {
+                        OR: [
+                            { requesterId: viewerId, recipientId: userId },
+                            { requesterId: userId, recipientId: viewerId }
+                        ],
+                        status: 'ACCEPTED'
+                    }
+                })
+            ]);
+            if (friendshipStatus) {
+                relationshipLevel = 'friends';
+            }
+            else if (followStatus) {
+                relationshipLevel = 'followers';
+            }
+        }
+        // Apply privacy filtering
+        const filteredUser = {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: user.avatar,
+            verified: user.verified,
+            followersCount: user.followersCount,
+            followingCount: user.followingCount,
+            createdAt: user.createdAt,
+            backgroundImage: user.backgroundImage,
+            // Always show political profile type, verification status, and office
+            politicalProfileType: user.politicalProfileType,
+            verificationStatus: user.verificationStatus,
+            office: user.office,
+            officialTitle: user.officialTitle
+        };
+        // Helper function to check if field should be visible
+        const canViewField = (fieldPrivacy) => {
+            switch (fieldPrivacy) {
+                case 'public': return true;
+                case 'followers': return relationshipLevel === 'followers' || relationshipLevel === 'friends';
+                case 'friends': return relationshipLevel === 'friends';
+                case 'private': return false;
+                default: return false;
+            }
+        };
+        // Apply field-level privacy filtering
+        if (canViewField(privacySettings.bio)) {
+            filteredUser.bio = user.bio;
+        }
+        if (canViewField(privacySettings.website)) {
+            filteredUser.website = user.website;
+        }
+        if (canViewField(privacySettings.city)) {
+            filteredUser.city = user.city;
+        }
+        if (canViewField(privacySettings.state)) {
+            filteredUser.state = user.state;
+        }
+        if (canViewField(privacySettings.maritalStatus)) {
+            filteredUser.maritalStatus = user.maritalStatus;
+        }
+        if (canViewField(privacySettings.phoneNumber)) {
+            filteredUser.phoneNumber = user.phoneNumber;
+        }
+        if (canViewField(privacySettings.politicalParty)) {
+            filteredUser.politicalParty = user.politicalParty;
+        }
+        // Campaign website visibility follows political party privacy
+        if (canViewField(privacySettings.politicalParty)) {
+            filteredUser.campaignWebsite = user.campaignWebsite;
+        }
+        // Always include location field for backward compatibility (but it may be empty)
+        filteredUser.location = user.location;
+        res.json({
+            user: filteredUser,
+            // Include relationship context for frontend
+            relationshipContext: viewerId ? {
+                relationshipLevel,
+                isAuthenticated: true
+            } : {
+                relationshipLevel: 'public',
+                isAuthenticated: false
+            }
+        });
     }
     catch (error) {
-        console.error('Get public user profile error:', error);
+        console.error('Get user profile error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -645,6 +771,119 @@ router.post('/activity', auth_1.requireAuth, async (req, res) => {
     catch (error) {
         console.error('Activity tracking error:', error);
         res.status(500).json({ error: 'Failed to track activity' });
+    }
+});
+// Get user profile privacy settings
+router.get('/profile-privacy', auth_1.requireAuth, async (req, res) => {
+    try {
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: {
+                profilePrivacySettings: true,
+                maritalStatus: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+        // Return privacy settings or default values
+        const defaultPrivacySettings = {
+            bio: 'public',
+            website: 'public',
+            city: 'followers',
+            state: 'followers',
+            maritalStatus: 'friends',
+            phoneNumber: 'private',
+            politicalParty: 'public'
+        };
+        const privacySettings = {
+            ...defaultPrivacySettings,
+            ...(user.profilePrivacySettings || {})
+        };
+        res.json({
+            success: true,
+            data: {
+                privacySettings,
+                maritalStatus: user.maritalStatus
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error fetching profile privacy settings:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch profile privacy settings'
+        });
+    }
+});
+// Update user profile privacy settings
+router.put('/profile-privacy', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { privacySettings, maritalStatus } = req.body;
+        if (!privacySettings) {
+            return res.status(400).json({
+                success: false,
+                error: 'Privacy settings are required'
+            });
+        }
+        // Validate privacy levels
+        const validPrivacyLevels = ['public', 'followers', 'friends', 'private'];
+        const allowedFields = ['bio', 'website', 'city', 'state', 'maritalStatus', 'phoneNumber', 'politicalParty'];
+        // Validate field names and privacy levels
+        for (const [field, level] of Object.entries(privacySettings)) {
+            if (!allowedFields.includes(field)) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Invalid field: ${field}`
+                });
+            }
+            if (!validPrivacyLevels.includes(level)) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Invalid privacy level: ${level} for field ${field}`
+                });
+            }
+        }
+        // Get current privacy settings
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { profilePrivacySettings: true }
+        });
+        const currentPrivacySettings = user?.profilePrivacySettings || {};
+        const updatedPrivacySettings = {
+            ...currentPrivacySettings,
+            ...privacySettings
+        };
+        // Update user privacy settings and marital status
+        const updateData = {
+            profilePrivacySettings: updatedPrivacySettings
+        };
+        if (maritalStatus !== undefined) {
+            updateData.maritalStatus = maritalStatus;
+        }
+        await prisma_1.prisma.user.update({
+            where: { id: userId },
+            data: updateData
+        });
+        console.log(`Updated profile privacy settings for user ${userId}:`, privacySettings);
+        res.json({
+            success: true,
+            data: {
+                privacySettings: updatedPrivacySettings,
+                maritalStatus
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error updating profile privacy settings:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update profile privacy settings'
+        });
     }
 });
 // Get user notification preferences
