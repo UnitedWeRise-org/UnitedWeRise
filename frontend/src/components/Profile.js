@@ -800,6 +800,7 @@ class Profile {
                         <h4>Profile Privacy</h4>
                         <p class="setting-description">Control who can see each part of your profile information.</p>
 
+                        <h4>Privacy Settings</h4>
                         <div class="privacy-settings">
                             <div class="privacy-field">
                                 <label class="privacy-label">Bio</label>
@@ -851,25 +852,6 @@ class Profile {
                                 </select>
                             </div>
 
-                            <div class="privacy-field">
-                                <label class="privacy-label">Phone Number</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('phoneNumber', this.value)">
-                                    <option value="public" ${this.getPrivacySetting('phoneNumber') === 'public' ? 'selected' : ''}>Public</option>
-                                    <option value="followers" ${this.getPrivacySetting('phoneNumber') === 'followers' ? 'selected' : ''}>Followers</option>
-                                    <option value="friends" ${this.getPrivacySetting('phoneNumber') === 'friends' ? 'selected' : ''}>Friends</option>
-                                    <option value="private" ${this.getPrivacySetting('phoneNumber') === 'private' ? 'selected' : ''}>Private</option>
-                                </select>
-                            </div>
-
-                            <div class="privacy-field">
-                                <label class="privacy-label">Political Party</label>
-                                <select class="privacy-dropdown" onchange="window.profile.updatePrivacySetting('politicalParty', this.value)">
-                                    <option value="public" ${this.getPrivacySetting('politicalParty') === 'public' ? 'selected' : ''}>Public</option>
-                                    <option value="followers" ${this.getPrivacySetting('politicalParty') === 'followers' ? 'selected' : ''}>Followers</option>
-                                    <option value="friends" ${this.getPrivacySetting('politicalParty') === 'friends' ? 'selected' : ''}>Friends</option>
-                                    <option value="private" ${this.getPrivacySetting('politicalParty') === 'private' ? 'selected' : ''}>Private</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
 
@@ -3753,7 +3735,7 @@ class Profile {
                 [key]: value
             };
 
-            const response = await window.apiCall('/user/profile-privacy', {
+            const response = await window.apiCall('/users/profile-privacy', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3800,7 +3782,10 @@ class Profile {
             }
         } catch (error) {
             // User is not a candidate or error occurred, keep candidate settings hidden
-            adminDebugLog('User is not a candidate or error checking status');
+            // This is expected for non-candidate users, so we don't need to log it
+            if (!error.message?.includes('404')) {
+                adminDebugLog('Error checking candidate status:', error);
+            }
         }
     }
 
