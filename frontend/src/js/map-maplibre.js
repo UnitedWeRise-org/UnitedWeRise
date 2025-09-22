@@ -1022,6 +1022,23 @@ class UWRMapLibre {
         return topic;
     }
 
+    formatTimestamp(dateString) {
+        const now = new Date();
+        const postDate = new Date(dateString);
+        const diffMinutes = Math.floor((now - postDate) / (1000 * 60));
+
+        if (diffMinutes < 1) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        return postDate.toLocaleDateString();
+    }
+
     // Enhanced fade animation methods - fade entire popup, not just text
     fadeInBubbleGradually(popup) {
         if (popup && popup.getElement) {
@@ -1218,7 +1235,52 @@ class UWRMapLibre {
             adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
         }
 
-        // Try to fetch real map topics from the API first
+        // Try to fetch real posts with geographic data first
+        try {
+            const apiUrl = window.location.hostname.includes('dev') ?
+                'https://dev-api.unitedwerise.org' :
+                'https://api.unitedwerise.org';
+
+            const response = await fetch(`${apiUrl}/api/posts/map-data?scope=${jurisdiction}&count=9`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data && data.data.length > 0) {
+                    const post = data.data[Math.floor(Math.random() * data.data.length)];
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MapSystem', `Retrieved real post from ${post.author} for ${jurisdiction}`, null);
+                    }
+
+                    return {
+                        id: post.id,
+                        summary: post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content,
+                        topic: 'Real Discussion',
+                        location: `${post.author}'s area`,
+                        coordinates: post.coordinates, // Privacy-displaced coordinates
+                        engagement: post.engagement,
+                        timestamp: this.formatTimestamp(post.createdAt),
+                        isEdge: false,
+                        jurisdiction: jurisdiction,
+                        isRealPost: true
+                    };
+                }
+            } else {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Posts API call failed (${response.status}), checking legacy API`, null);
+                }
+            }
+        } catch (error) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Posts API error: ${error.message}, trying legacy API`, null);
+            }
+        }
+
+        // Try legacy trending topics API as secondary fallback
         try {
             const apiUrl = window.location.hostname.includes('dev') ?
                 'https://dev-api.unitedwerise.org' :
@@ -1236,33 +1298,30 @@ class UWRMapLibre {
                     const topic = data.data[Math.floor(Math.random() * data.data.length)];
 
                     if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('MapSystem', `Retrieved real topic: "${topic.topic}" for ${jurisdiction}`, null);
+                        adminDebugLog('MapSystem', `Retrieved legacy topic: "${topic.topic}" for ${jurisdiction}`, null);
                     }
 
                     return {
                         id: topic.id,
                         summary: topic.topic,
                         topic: 'Trending Topic',
-                        location: 'Real Location',
+                        location: 'Community',
                         coordinates: topic.coordinates,
                         engagement: topic.participantCount || 0,
-                        timestamp: 'Real Time',
+                        timestamp: 'Recent',
                         isEdge: false,
-                        jurisdiction: jurisdiction
+                        jurisdiction: jurisdiction,
+                        isRealPost: false
                     };
-                }
-            } else {
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `API call failed (${response.status}), falling back to dummy data`, null);
                 }
             }
         } catch (error) {
             if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `API error: ${error.message}, falling back to dummy data`, null);
+                adminDebugLog('MapSystem', `Legacy API error: ${error.message}, falling back to dummy data`, null);
             }
         }
 
-        // Fallback to dummy data if API fails
+        // Final fallback to enhanced dummy data
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
@@ -1280,13 +1339,14 @@ class UWRMapLibre {
                 return {
                     id: topic.id,
                     summary: topic.text,
-                    topic: 'Trending Topic',
+                    topic: 'Sample Discussion',
                     location: topic.region,
                     coordinates: topic.coordinates,
                     engagement: topic.engagement,
                     timestamp: topic.timestamp,
                     isEdge: topic.isEdge,
-                    jurisdiction: topic.jurisdiction
+                    jurisdiction: topic.jurisdiction,
+                    isRealPost: false
                 };
             }
         }

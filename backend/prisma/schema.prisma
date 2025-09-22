@@ -251,6 +251,14 @@ model Post {
   lastEditedAt       DateTime?
   editHistory        Json?             // Store edit history
   originalContent    String?           // Preserve original when edited
+
+  // Geographic fields with privacy displacement
+  h3Index            String?           // H3 index from displaced coordinates (for map display)
+  latitude           Float?            // Privacy-displaced latitude for map display
+  longitude          Float?            // Privacy-displaced longitude for map display
+  originalH3Index    String?           // H3 index from real user address (for jurisdiction filtering)
+  privacyDisplaced   Boolean           @default(true) // Flag indicating coordinates are displaced
+
   comments           Comment[]
   likes              Like[]
   photos             Photo[]
@@ -260,6 +268,9 @@ model Post {
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([h3Index])
+  @@index([h3Index, createdAt])
+  @@index([originalH3Index, createdAt])
   @@index([likesCount])
   @@index([isPolitical])
   @@index([containsFeedback, feedbackType, feedbackPriority])
