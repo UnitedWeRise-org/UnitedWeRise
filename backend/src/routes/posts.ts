@@ -284,6 +284,12 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                 ...post,
                 likesCount: post._count.likes,
                 commentsCount: post._count.comments,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                userSentiment: null,
+                userStance: null,
+                isLiked: false,
                 _count: undefined,
                 reputationImpact: reputationImpact.penalties.length > 0 ? {
                     penalties: reputationImpact.penalties,
@@ -334,6 +340,13 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
                         mimeType: true
                     }
                 },
+                reactions: {
+                    where: { userId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -346,12 +359,22 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
             skip: offsetNum
         });
 
-        const formattedPosts = posts.map(post => ({
-            ...post,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments,
-            _count: undefined
-        }));
+        const formattedPosts = posts.map(post => {
+            const userReaction = post.reactions[0] || null;
+            return {
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
+                _count: undefined
+            };
+        });
 
         res.json({
             posts: formattedPosts,
@@ -371,6 +394,8 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 router.get('/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
+        const userId = req.headers.authorization ?
+            (req as any).user?.id : null; // Try to get user ID if authenticated
 
         const post = await prisma.post.findUnique({
             where: { id: postId },
@@ -399,6 +424,13 @@ router.get('/:postId', async (req, res) => {
                         mimeType: true
                     }
                 },
+                reactions: userId ? {
+                    where: { userId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -412,11 +444,20 @@ router.get('/:postId', async (req, res) => {
             return res.status(404).json({ error: 'Post not found' });
         }
 
+        const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+
         res.json({
             post: {
                 ...post,
                 likesCount: post._count.likes,
                 commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
                 _count: undefined
             }
         });
@@ -960,6 +1001,8 @@ router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const { limit = 20, offset = 0 } = req.query;
+        const currentUserId = req.headers.authorization ?
+            (req as any).user?.id : null; // Try to get user ID if authenticated
 
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
@@ -1001,6 +1044,13 @@ router.get('/user/:userId', async (req, res) => {
                         mimeType: true
                     }
                 },
+                reactions: currentUserId ? {
+                    where: { userId: currentUserId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -1013,12 +1063,22 @@ router.get('/user/:userId', async (req, res) => {
             skip: offsetNum
         });
 
-        const postsWithCounts = posts.map(post => ({
-            ...post,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments,
-            _count: undefined
-        }));
+        const postsWithCounts = posts.map(post => {
+            const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+            return {
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
+                _count: undefined
+            };
+        });
 
         res.json({
             posts: postsWithCounts,

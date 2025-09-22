@@ -58,6 +58,10 @@ export declare class ActivityTracker {
      */
     static trackFollowRemoved(userId: string, targetUserId: string, targetUsername: string): Promise<void>;
     /**
+     * Track enhanced reaction changes (sentiment/stance)
+     */
+    static trackReactionChanged(userId: string, postId: string, postTitle: string, reactionType: 'sentiment' | 'stance', oldValue: string | null, newValue: string | null): Promise<void>;
+    /**
      * Get user activity log with filtering
      */
     static getUserActivity(userId: string, options?: {

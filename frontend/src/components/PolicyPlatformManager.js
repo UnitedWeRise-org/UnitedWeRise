@@ -464,8 +464,7 @@ class PolicyPlatformManager {
             const response = await window.apiCall(url, {
                 method: method,
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestData)
             });
@@ -499,21 +498,13 @@ class PolicyPlatformManager {
      */
     async loadPolicyPositions() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/categories', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
-            });
+            const response = await window.apiCall('/candidate-policy-platform/categories');
 
             if (response.ok && response.data?.success) {
                 const categories = response.data.data;
                 
                 // Get user's positions
-                const candidateResponse = await window.apiCall(`/candidate-policy-platform/candidate/my-positions`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                    }
-                });
+                const candidateResponse = await window.apiCall(`/candidate-policy-platform/candidate/my-positions`);
 
                 if (candidateResponse.ok && candidateResponse.data?.success) {
                     this.policyPositions = candidateResponse.data.data || [];
@@ -598,12 +589,7 @@ class PolicyPlatformManager {
      */
     async editPosition(positionId) {
         try {
-            const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
-            });
+            const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}`);
 
             if (!response.ok || !response.data?.success) {
                 throw new Error('Failed to load position for editing');
@@ -680,8 +666,7 @@ class PolicyPlatformManager {
             const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}/publish`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ isPublished: publish })
             });
@@ -708,10 +693,7 @@ class PolicyPlatformManager {
 
         try {
             const response = await window.apiCall(`/candidate-policy-platform/positions/${positionId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                method: 'DELETE'
             });
 
             if (response.ok && response.data?.success) {

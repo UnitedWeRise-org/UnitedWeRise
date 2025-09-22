@@ -3677,8 +3677,7 @@ class Profile {
             const response = await window.apiCall('/user/notification-preferences', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     [key]: value
@@ -3839,8 +3838,7 @@ class Profile {
             const response = await window.apiCall('/users/profile-privacy', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     privacySettings: updatedPrivacySettings
@@ -3868,11 +3866,7 @@ class Profile {
     // Check if user is a candidate and show candidate-specific notification settings
     async checkCandidateNotificationSettings() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
-            });
+            const response = await window.apiCall('/candidate-policy-platform/candidate/status');
 
             if (response.ok && response.data?.success) {
                 // User is a candidate, show candidate notification settings

@@ -256,6 +256,12 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 ...post,
                 likesCount: post._count.likes,
                 commentsCount: post._count.comments,
+                dislikesCount: 0,
+                agreesCount: 0,
+                disagreesCount: 0,
+                userSentiment: null,
+                userStance: null,
+                isLiked: false,
                 _count: undefined,
                 reputationImpact: reputationImpact.penalties.length > 0 ? {
                     penalties: reputationImpact.penalties,
@@ -303,6 +309,13 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
                         mimeType: true
                     }
                 },
+                reactions: {
+                    where: { userId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -314,12 +327,22 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
             take: limitNum,
             skip: offsetNum
         });
-        const formattedPosts = posts.map(post => ({
-            ...post,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments,
-            _count: undefined
-        }));
+        const formattedPosts = posts.map(post => {
+            const userReaction = post.reactions[0] || null;
+            return {
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
+                _count: undefined
+            };
+        });
         res.json({
             posts: formattedPosts,
             pagination: {
@@ -338,6 +361,8 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
 router.get('/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
+        const userId = req.headers.authorization ?
+            req.user?.id : null; // Try to get user ID if authenticated
         const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             include: {
@@ -365,6 +390,13 @@ router.get('/:postId', async (req, res) => {
                         mimeType: true
                     }
                 },
+                reactions: userId ? {
+                    where: { userId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -376,11 +408,19 @@ router.get('/:postId', async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
+        const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
         res.json({
             post: {
                 ...post,
                 likesCount: post._count.likes,
                 commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
                 _count: undefined
             }
         });
@@ -486,6 +526,166 @@ router.post('/:postId/like', auth_1.requireAuth, async (req, res) => {
     }
     catch (error) {
         console.error('Like/unlike post error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Enhanced reaction system (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { reactionType, reactionValue } = req.body;
+        const userId = req.user.id;
+        // Validate reaction type and value
+        if (!reactionType || !['sentiment', 'stance'].includes(reactionType)) {
+            return res.status(400).json({ error: 'Invalid reaction type. Must be "sentiment" or "stance"' });
+        }
+        const validSentiments = ['LIKE', 'DISLIKE'];
+        const validStances = ['AGREE', 'DISAGREE'];
+        if (reactionType === 'sentiment' && reactionValue && !validSentiments.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid sentiment. Must be LIKE or DISLIKE' });
+        }
+        if (reactionType === 'stance' && reactionValue && !validStances.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid stance. Must be AGREE or DISAGREE' });
+        }
+        // Check if post exists
+        const post = await prisma_1.prisma.post.findUnique({
+            where: { id: postId },
+            select: {
+                id: true,
+                authorId: true,
+                content: true
+            }
+        });
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        // Find existing reaction for this user and post
+        const existingReaction = await prisma_1.prisma.reaction.findUnique({
+            where: {
+                userId_postId: {
+                    userId,
+                    postId
+                }
+            }
+        });
+        if (reactionValue === null) {
+            // Remove reaction
+            if (existingReaction) {
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.delete({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        }
+                    }),
+                    // Update post counts based on what was removed
+                    prisma_1.prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            ...(existingReaction.sentiment === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(existingReaction.sentiment === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'DISAGREE' && { disagreesCount: { decrement: 1 } })
+                        }
+                    })
+                ]);
+                // Track reaction removal
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, existingReaction[reactionType] || '', null);
+                }
+                catch (error) {
+                    console.error('Failed to track reaction removal:', error);
+                }
+            }
+            res.json({ message: 'Reaction removed successfully' });
+        }
+        else {
+            // Add or update reaction
+            const reactionData = {
+                userId,
+                postId,
+                ...(reactionType === 'sentiment' ? { sentiment: reactionValue } : {}),
+                ...(reactionType === 'stance' ? { stance: reactionValue } : {})
+            };
+            if (existingReaction) {
+                // Update existing reaction
+                const oldValue = existingReaction[reactionType];
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.update({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        },
+                        data: reactionData
+                    }),
+                    // Update post counts - decrement old, increment new
+                    prisma_1.prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            // Decrement old reaction counts
+                            ...(oldValue === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(oldValue === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISAGREE' && { disagreesCount: { decrement: 1 } }),
+                            // Increment new reaction counts
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+                // Track reaction change
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, oldValue, reactionValue);
+                }
+                catch (error) {
+                    console.error('Failed to track reaction change:', error);
+                }
+            }
+            else {
+                // Create new reaction
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.create({
+                        data: reactionData
+                    }),
+                    // Update post counts
+                    prisma_1.prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+                // Create notification if not reacting to own post
+                if (post.authorId !== userId) {
+                    try {
+                        await (0, notifications_1.createNotification)('REACTION', userId, post.authorId, `${req.user.username} reacted to your post`, postId);
+                    }
+                    catch (error) {
+                        console.warn('Failed to create reaction notification:', error);
+                    }
+                }
+                // Track new reaction
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, postId, post.content, reactionType, null, reactionValue);
+                }
+                catch (error) {
+                    console.error('Failed to track new reaction:', error);
+                }
+            }
+            res.json({ message: 'Reaction updated successfully', reactionType, reactionValue });
+        }
+    }
+    catch (error) {
+        console.error('Enhanced reaction error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -680,6 +880,8 @@ router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const { limit = 20, offset = 0 } = req.query;
+        const currentUserId = req.headers.authorization ?
+            req.user?.id : null; // Try to get user ID if authenticated
         const limitNum = parseInt(limit.toString());
         const offsetNum = parseInt(offset.toString());
         // Verify user exists
@@ -717,6 +919,13 @@ router.get('/user/:userId', async (req, res) => {
                         mimeType: true
                     }
                 },
+                reactions: currentUserId ? {
+                    where: { userId: currentUserId },
+                    select: {
+                        sentiment: true,
+                        stance: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -728,12 +937,22 @@ router.get('/user/:userId', async (req, res) => {
             take: limitNum,
             skip: offsetNum
         });
-        const postsWithCounts = posts.map(post => ({
-            ...post,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments,
-            _count: undefined
-        }));
+        const postsWithCounts = posts.map(post => {
+            const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+            return {
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                isLiked: userReaction?.sentiment === 'LIKE',
+                reactions: undefined,
+                _count: undefined
+            };
+        });
         res.json({
             posts: postsWithCounts,
             pagination: {
