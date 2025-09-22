@@ -145,7 +145,8 @@ class PostComponent {
      */
     async toggleLike(postId) {
         // Check authentication using current user
-        if (!window.currentUser) {
+        const currentUser = window.currentUser;
+        if (!currentUser) {
             alert('Please log in to like posts');
             return;
         }
@@ -604,7 +605,8 @@ class PostComponent {
      */
     async addComment(postId) {
         // Check authentication using current user data
-        if (!window.currentUser) {
+        const currentUser = window.currentUser;
+        if (!currentUser) {
             alert('Please log in to comment');
             return;
         }
@@ -777,7 +779,8 @@ class PostComponent {
      * Submit a reply to a comment
      */
     async submitReply(parentId, postId) {
-        if (!window.currentUser) {
+        const currentUser = window.currentUser;
+        if (!currentUser) {
             alert('Please log in to reply');
             return;
         }
