@@ -269,6 +269,135 @@
             color: #666;
         }
 
+        /* Admin Table Styles */
+        .admin-table {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .admin-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .admin-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .admin-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .user-info strong {
+            color: #333;
+        }
+
+        .user-info small {
+            color: #666;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .role-badge.admin {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .role-badge.moderator {
+            background: #e7f3ff;
+            color: #0056b3;
+        }
+
+        .role-badge.user {
+            background: #f8f9fa;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .actions {
+            white-space: nowrap;
+        }
+
+        .action-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 0 4px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .role-btn {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .admin-dashboard {
@@ -287,6 +416,15 @@
 
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .admin-table {
+                font-size: 0.9rem;
+            }
+
+            .action-btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -393,8 +531,30 @@
 
         <!-- Users Section -->
         <div id="users" class="dashboard-section">
-            <h2>User Management</h2>
-            <p>User management features will be implemented by UsersController module.</p>
+            <h2>👥 User Management</h2>
+
+            <div>
+                <input type="text" id="userSearch" placeholder="Search users..." style="width: 300px; padding: 0.5rem; margin-bottom: 1rem;">
+                <button class="nav-button">Search</button>
+            </div>
+
+            <!-- Account Merge Tool -->
+            <div style="background: #fff3cd; border: 1px solid #f0c36d; border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                <h3 style="margin-top: 0; color: #856404;">🔧 Account Merge Tool</h3>
+                <p style="margin: 0.5rem 0; color: #856404; font-size: 0.9rem;">
+                    Merge duplicate accounts (e.g., OAuth email variations like jeffrey@gmail.com vs jeffrey.a.benson@gmail.com)
+                </p>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                    <input type="text" id="primaryAccountId" placeholder="Primary Account ID (keep this one)" style="flex: 1; padding: 0.5rem;">
+                    <input type="text" id="duplicateAccountId" placeholder="Duplicate Account ID (delete this one)" style="flex: 1; padding: 0.5rem;">
+                    <button class="nav-button" style="background: #e67e22; border-color: #e67e22;">🔄 Merge</button>
+                </div>
+                <div id="mergeStatus" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
+            </div>
+
+            <div id="usersTable">
+                <div class="loading">Loading users...</div>
+            </div>
         </div>
 
         <!-- Content Section -->
@@ -437,6 +597,7 @@
     <script src="src/modules/admin/auth/AdminAuth.js"></script>
     <script src="src/modules/admin/state/AdminState.js"></script>
     <script src="src/modules/admin/controllers/OverviewController.js"></script>
+    <script src="src/modules/admin/controllers/UsersController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script src="src/modules/admin/AdminModuleLoader.js"></script>
@@ -462,6 +623,100 @@
             if (window.adminAuth) {
                 window.adminAuth.logout();
             }
+        };
+
+        // TOTP confirmation function for admin actions
+        window.requestTOTPConfirmation = async function(actionDescription, options = {}) {
+            return new Promise((resolve, reject) => {
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.7); z-index: 2000;
+                    display: flex; align-items: center; justify-content: center;
+                `;
+
+                let countdownInterval;
+                let timeLeft = 30;
+
+                const updateCountdown = () => {
+                    const countdownElement = modal.querySelector('#totp-countdown');
+                    if (countdownElement) {
+                        countdownElement.textContent = timeLeft;
+                        if (timeLeft <= 10) {
+                            countdownElement.style.color = '#e74c3c';
+                        }
+                    }
+                    timeLeft--;
+                    if (timeLeft < 0) {
+                        clearInterval(countdownInterval);
+                        cleanup();
+                        reject(new Error('TOTP timeout'));
+                    }
+                };
+
+                const cleanup = () => {
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    const totpInput = modal.querySelector('#totp-input');
+                    if (totpInput) totpInput.value = '';
+                    if (modal.parentNode) modal.parentNode.removeChild(modal);
+                };
+
+                modal.innerHTML = `
+                    <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 450px; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔐</div>
+                            <h2 style="margin: 0; color: #2c3e50;">Security Verification Required</h2>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
+                            <p style="margin: 0; font-weight: 600; color: #2c3e50;">Action: ${actionDescription}</p>
+                            ${options.additionalInfo ? `<p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #7f8c8d;">${options.additionalInfo}</p>` : ''}
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">
+                                Enter your current TOTP code:
+                            </label>
+                            <input type="text" id="totp-input" placeholder="000000" maxlength="6"
+                                   style="width: 100%; padding: 0.75rem; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 1.2rem; text-align: center; font-family: monospace;">
+                            <div style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem; color: #7f8c8d;">
+                                Time remaining: <span id="totp-countdown" style="font-weight: 600;">30</span>s
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button id="totp-cancel" class="nav-button" style="background: #95a5a6; flex: 1;">Cancel</button>
+                            <button id="totp-confirm" class="nav-button" style="background: #e74c3c; flex: 1;">Confirm Action</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                const input = modal.querySelector('#totp-input');
+                const confirmBtn = modal.querySelector('#totp-confirm');
+                const cancelBtn = modal.querySelector('#totp-cancel');
+
+                input.focus();
+                countdownInterval = setInterval(updateCountdown, 1000);
+
+                confirmBtn.onclick = () => {
+                    const totpCode = input.value.trim();
+                    if (totpCode.length !== 6) {
+                        alert('Please enter a 6-digit TOTP code');
+                        return;
+                    }
+                    cleanup();
+                    resolve({ totpToken: totpCode });
+                };
+
+                cancelBtn.onclick = () => {
+                    cleanup();
+                    reject(new Error('TOTP cancelled'));
+                };
+
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && input.value.length === 6) {
+                        confirmBtn.click();
+                    }
+                });
+            });
         };
 
         // Error handling
