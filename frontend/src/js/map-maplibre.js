@@ -24,9 +24,12 @@ class UWRMapLibre {
         this.trendingInterval = null;
         this.bubbleCycles = []; // Track bubble cycles with timestamps
 
-        // Enhanced caching and animation system
-        this.topicCache = []; // Cache of topics to reduce API calls
-        this.cacheTimestamp = 0;
+        // Enhanced caching and animation system with jurisdiction support
+        this.topicCaches = {
+            national: { topics: [], timestamp: 0 },
+            state: { topics: [], timestamp: 0 },
+            local: { topics: [], timestamp: 0 }
+        }; // Separate caches per jurisdiction
         this.cacheValidityMs = 180000; // 3 minutes cache validity
         this.lastBubbleCount = 0; // Track last bubble count to avoid consecutive same numbers
         this.activeAnimations = []; // Track ongoing animations for cleanup
@@ -934,14 +937,15 @@ class UWRMapLibre {
         this.bubbleCycles.push(newCycle);
     }
 
-    // Enhanced caching system to reduce API calls
+    // Enhanced caching system to reduce API calls with jurisdiction support
     async ensureTopicCache() {
         const now = Date.now();
-        const isExpired = (now - this.cacheTimestamp) > this.cacheValidityMs;
+        const currentCache = this.topicCaches[this.currentJurisdiction];
+        const isExpired = (now - currentCache.timestamp) > this.cacheValidityMs;
 
-        if (this.topicCache.length === 0 || isExpired) {
+        if (currentCache.topics.length === 0 || isExpired) {
             if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'Refreshing topic cache - fetching new batch', null);
+                adminDebugLog('MapSystem', `Refreshing ${this.currentJurisdiction} topic cache - fetching new batch`, null);
             }
 
             // Fetch a batch of topics (12-15 topics for 3-minute cache period)
@@ -955,8 +959,8 @@ class UWRMapLibre {
                 }
             }
 
-            this.topicCache = newTopics;
-            this.cacheTimestamp = now;
+            currentCache.topics = newTopics;
+            currentCache.timestamp = now;
         }
     }
 
@@ -1005,14 +1009,16 @@ class UWRMapLibre {
     }
 
     getNextCachedTopic() {
-        if (this.topicCache.length === 0) {
+        const currentCache = this.topicCaches[this.currentJurisdiction];
+
+        if (currentCache.topics.length === 0) {
             // Fallback if cache is empty
             return this.fetchTrendingComment(this.currentJurisdiction);
         }
 
         // Rotate through cached topics to provide variety
-        const topic = this.topicCache.shift();
-        this.topicCache.push(topic); // Move to end for rotation
+        const topic = currentCache.topics.shift();
+        currentCache.topics.push(topic); // Move to end for rotation
         return topic;
     }
 
