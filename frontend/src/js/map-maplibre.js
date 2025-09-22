@@ -1241,7 +1241,7 @@ class UWRMapLibre {
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('MapSystem', 'No auth token available, using dummy data', null);
             }
-            return this.generateDummyTopic(jurisdiction);
+            return this.getDummyTopicFromHelper(jurisdiction);
         }
 
         // Add simple rate limiting to prevent API spam
@@ -1251,7 +1251,7 @@ class UWRMapLibre {
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('MapSystem', 'Rate limiting API calls, using dummy data', null);
             }
-            return this.generateDummyTopic(jurisdiction);
+            return this.getDummyTopicFromHelper(jurisdiction);
         }
         this.lastApiCall = now;
 
@@ -1471,6 +1471,52 @@ class UWRMapLibre {
 
         const comments = mockComments[jurisdiction] || [];
         return comments[Math.floor(Math.random() * comments.length)];
+    }
+
+    getDummyTopicFromHelper(jurisdiction) {
+        // Use the enhanced dummy data system
+        if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
+            const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
+            }
+
+            if (dummyTopics.length > 0) {
+                const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
+                }
+
+                return {
+                    id: topic.id,
+                    summary: topic.text,
+                    topic: 'Community Discussion',
+                    location: topic.location,
+                    coordinates: topic.coordinates,
+                    engagement: topic.engagement,
+                    timestamp: this.formatTimestamp(new Date()),
+                    isEdge: false,
+                    jurisdiction: jurisdiction,
+                    isRealPost: false
+                };
+            }
+        }
+
+        // Fallback to basic mock data if dummy system not available
+        return {
+            id: 'fallback-' + Math.random(),
+            summary: 'Community discussion about local civic engagement...',
+            topic: 'Civic Engagement',
+            location: 'Local Area',
+            coordinates: this.getRandomUSCoordinates(),
+            engagement: Math.floor(Math.random() * 50) + 10,
+            timestamp: this.formatTimestamp(new Date()),
+            isEdge: false,
+            jurisdiction: jurisdiction,
+            isRealPost: false
+        };
     }
 
     getRandomUSCoordinates() {

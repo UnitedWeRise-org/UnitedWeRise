@@ -1,6 +1,6 @@
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 import { ActivityType } from '@prisma/client';
 interface ActivityMetadata {
@@ -58,7 +58,7 @@ export declare class ActivityTracker {
      */
     static trackFollowRemoved(userId: string, targetUserId: string, targetUsername: string): Promise<void>;
     /**
-     * Get user activity feed with filtering
+     * Get user activity log with filtering
      */
     static getUserActivity(userId: string, options?: {
         types?: ActivityType[];

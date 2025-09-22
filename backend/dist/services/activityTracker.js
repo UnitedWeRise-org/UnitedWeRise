@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityTracker = void 0;
@@ -131,7 +131,7 @@ class ActivityTracker {
         });
     }
     /**
-     * Get user activity feed with filtering
+     * Get user activity log with filtering
      */
     static async getUserActivity(userId, options = {}) {
         const { types, search, offset = 0, limit = 20, includeTarget = false, } = options;

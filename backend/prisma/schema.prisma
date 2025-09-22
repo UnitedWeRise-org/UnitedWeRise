@@ -113,6 +113,7 @@ model User {
   receivedFriendRequests      Friendship[]              @relation("FriendshipRecipient")
   sentFriendRequests          Friendship[]              @relation("FriendshipRequester")
   likes                       Like[]
+  reactions                   Reaction[]
   sentMessages                Message[]                 @relation("SentMessages")
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
@@ -157,9 +158,20 @@ enum ActivityType {
   COMMENT_DELETED
   LIKE_ADDED
   LIKE_REMOVED
+  REACTION_CHANGED  // For new enhanced reaction system
   FOLLOW_ADDED
   FOLLOW_REMOVED
   // Future: SUBSCRIBE_ADDED, SUBSCRIBE_REMOVED, SUPPORT_ADDED, OPPOSE_ADDED
+}
+
+enum ReactionSentiment {
+  LIKE
+  DISLIKE
+}
+
+enum ReactionStance {
+  AGREE
+  DISAGREE
 }
 
 model UserActivity {
@@ -232,7 +244,12 @@ model Post {
   isPolitical        Boolean           @default(false)
   tags               String[]          @default([])
   likesCount         Int               @default(0)
+  dislikesCount      Int               @default(0)
+  agreesCount        Int               @default(0)
+  disagreesCount     Int               @default(0)
   commentsCount      Int               @default(0)
+  sharesCount        Int               @default(0)
+  viewsCount         Int               @default(0)
   containsFeedback   Boolean?          @default(false)
   feedbackCategory   String?
   feedbackConfidence Float?
@@ -261,6 +278,7 @@ model Post {
 
   comments           Comment[]
   likes              Like[]
+  reactions          Reaction[]
   photos             Photo[]
   author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   reputationEvents   ReputationEvent[]
@@ -287,6 +305,24 @@ model Like {
   @@unique([userId, postId])
   @@index([postId])
   @@index([userId])
+}
+
+model Reaction {
+  id        String             @id @default(cuid())
+  userId    String
+  postId    String
+  sentiment ReactionSentiment? // LIKE or DISLIKE (nullable - user might only have stance)
+  stance    ReactionStance?    // AGREE or DISAGREE (nullable - user might only have sentiment)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId]) // One reaction per user per post
+  @@index([postId])
+  @@index([userId])
+  @@index([updatedAt]) // For 1-hour grouping queries
 }
 
 model Comment {

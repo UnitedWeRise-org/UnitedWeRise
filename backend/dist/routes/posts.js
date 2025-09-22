@@ -16,6 +16,7 @@ const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService")
 const reputationService_1 = require("../services/reputationService");
 const activityTracker_1 = require("../services/activityTracker");
 const postGeographicService_1 = require("../services/postGeographicService");
+const postManagementService_1 = require("../services/postManagementService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get posts with geographic data for map display
@@ -809,6 +810,282 @@ router.post('/:postId/comments/summarize', auth_1.requireAuth, async (req, res) 
     catch (error) {
         console.error('Comment summarization error:', error);
         res.status(500).json({ error: 'Failed to summarize comments' });
+    }
+});
+// ========================================
+// POST MANAGEMENT ENDPOINTS
+// ========================================
+/**
+ * Edit a post with full history tracking
+ */
+router.put('/:postId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { content, editReason, extendedContent } = req.body;
+        // Validate required fields
+        if (!content || content.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Post content is required'
+            });
+        }
+        // Check content length limits
+        if (content.length > 2000) {
+            return res.status(400).json({
+                success: false,
+                error: 'Post content must be 2000 characters or less'
+            });
+        }
+        // Check permissions
+        const canEdit = await postManagementService_1.PostManagementService.canEditPost(postId, userId);
+        if (!canEdit) {
+            return res.status(403).json({
+                success: false,
+                error: 'You can only edit your own posts'
+            });
+        }
+        // Perform the edit
+        const result = await postManagementService_1.PostManagementService.editPost(postId, userId, {
+            content: content.trim(),
+            editReason: editReason?.trim(),
+            extendedContent: extendedContent?.trim()
+        });
+        res.json({
+            success: true,
+            message: 'Post updated successfully',
+            data: {
+                post: result.post,
+                previousContent: result.previousContent,
+                editReason: result.editReason,
+                version: result.version
+            }
+        });
+    }
+    catch (error) {
+        console.error('Post edit error:', error);
+        if (error instanceof Error) {
+            if (error.message.includes('not found')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Post not found'
+                });
+            }
+            if (error.message.includes('Unauthorized')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'You can only edit your own posts'
+                });
+            }
+            if (error.message.includes('required')) {
+                return res.status(400).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update post'
+        });
+    }
+});
+/**
+ * Delete a post with archival
+ */
+router.delete('/:postId', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { deleteReason } = req.body;
+        // Check permissions
+        const canDelete = await postManagementService_1.PostManagementService.canDeletePost(postId, userId);
+        if (!canDelete) {
+            return res.status(403).json({
+                success: false,
+                error: 'You can only delete your own posts'
+            });
+        }
+        // Perform the deletion
+        const result = await postManagementService_1.PostManagementService.deletePost(postId, userId, {
+            deleteReason: deleteReason?.trim()
+        });
+        res.json({
+            success: true,
+            message: 'Post deleted successfully',
+            data: {
+                postId,
+                deleteReason: result.deleteReason,
+                softDelete: result.softDelete,
+                archiveCreated: true
+            }
+        });
+    }
+    catch (error) {
+        console.error('Post delete error:', error);
+        if (error instanceof Error) {
+            if (error.message.includes('not found')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Post not found'
+                });
+            }
+            if (error.message.includes('Unauthorized')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'You can only delete your own posts'
+                });
+            }
+        }
+        res.status(500).json({
+            success: false,
+            error: 'Failed to delete post'
+        });
+    }
+});
+/**
+ * Get post edit history
+ */
+router.get('/:postId/history', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const history = await postManagementService_1.PostManagementService.getPostHistory(postId, userId);
+        res.json({
+            success: true,
+            data: history
+        });
+    }
+    catch (error) {
+        console.error('Post history error:', error);
+        if (error instanceof Error) {
+            if (error.message.includes('not found')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Post not found'
+                });
+            }
+            if (error.message.includes('Unauthorized')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'You can only view history of your own posts'
+                });
+            }
+        }
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve post history'
+        });
+    }
+});
+/**
+ * Get archived post content (for deleted posts)
+ */
+router.get('/:postId/archive', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const archive = await postManagementService_1.PostManagementService.getArchivedPost(postId, userId);
+        res.json({
+            success: true,
+            data: archive
+        });
+    }
+    catch (error) {
+        console.error('Post archive error:', error);
+        if (error instanceof Error) {
+            if (error.message.includes('not found')) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Post not found'
+                });
+            }
+            if (error.message.includes('not deleted')) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Post is not deleted'
+                });
+            }
+            if (error.message.includes('Unauthorized')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'You can only view archives of your own posts'
+                });
+            }
+        }
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve post archive'
+        });
+    }
+});
+/**
+ * Update Post Management Service configuration (admin only)
+ */
+router.put('/config/management', auth_1.requireAuth, async (req, res) => {
+    try {
+        // Check if user is admin
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { isAdmin: true }
+        });
+        if (!user?.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                error: 'Admin access required'
+            });
+        }
+        const { maxEditHistoryVersions, enableSoftDelete, requireEditReasons, archiveCommentsOnDelete } = req.body;
+        // Update configuration
+        postManagementService_1.PostManagementService.updateConfig({
+            maxEditHistoryVersions,
+            enableSoftDelete,
+            requireEditReasons,
+            archiveCommentsOnDelete
+        });
+        const newConfig = postManagementService_1.PostManagementService.getConfig();
+        res.json({
+            success: true,
+            message: 'Post management configuration updated',
+            data: newConfig
+        });
+    }
+    catch (error) {
+        console.error('Config update error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update configuration'
+        });
+    }
+});
+/**
+ * Get current Post Management Service configuration (admin only)
+ */
+router.get('/config/management', auth_1.requireAuth, async (req, res) => {
+    try {
+        // Check if user is admin
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { isAdmin: true }
+        });
+        if (!user?.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                error: 'Admin access required'
+            });
+        }
+        const config = postManagementService_1.PostManagementService.getConfig();
+        res.json({
+            success: true,
+            data: config
+        });
+    }
+    catch (error) {
+        console.error('Config retrieval error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve configuration'
+        });
     }
 });
 exports.default = router;
