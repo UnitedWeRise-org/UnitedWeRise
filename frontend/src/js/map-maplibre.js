@@ -960,6 +960,49 @@ class UWRMapLibre {
         }
     }
 
+    showInsufficientContentMessage() {
+        // Create a modal-style popup for insufficient content message
+        const existingModal = document.querySelector('.insufficient-content-modal');
+        if (existingModal) {
+            existingModal.remove(); // Remove existing modal if present
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'insufficient-content-modal';
+        modal.innerHTML = `
+            <div class="insufficient-content-overlay" onclick="this.parentElement.remove()">
+                <div class="insufficient-content-popup" onclick="event.stopPropagation()">
+                    <div class="insufficient-content-header">
+                        <h3>🚧 Feature Under Development</h3>
+                        <button class="close-btn" onclick="this.closest('.insufficient-content-modal').remove()">&times;</button>
+                    </div>
+                    <div class="insufficient-content-body">
+                        <p>This feature requires more user posts before it can function properly.</p>
+                        <p>As more people join and share their thoughts, you'll see real conversations from your community here!</p>
+                        <div class="insufficient-content-actions">
+                            <button class="primary-btn" onclick="this.closest('.insufficient-content-modal').remove()">Got it!</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add escape key listener
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', 'Showing insufficient content message', null);
+        }
+    }
+
     getNextCachedTopic() {
         if (this.topicCache.length === 0) {
             // Fallback if cache is empty
@@ -1470,17 +1513,26 @@ class UWRMapLibre {
             displayText = displayText.substring(0, maxLength).trim() + '...';
         }
 
-        // Simplified chat bubble with only text content
-        // For mock data: topics have 'topic' property, regular comments don't
-        // For real API data: check for topicId and aiTopic properties
+        // Determine if this is dummy data or real content
+        const isDummyData = comment.id?.toString().startsWith('dummy-') ||
+                           (window.mapDummyData && window.mapDummyData.shouldUseDummyData());
+
+        // Set click handler based on content type
         const isAITopic = comment.topic || (comment.topicId && comment.aiTopic);
         const topicIdentifier = comment.topic || comment.topicId || comment.id;
-        const clickHandler = isAITopic ? 
-            `window.enterTopicMode && window.enterTopicMode('${topicIdentifier}')` : 
-            `window.navigateToComment && window.navigateToComment('${comment.id}')`;
-        const clickTitle = isAITopic ? 
-            "Click to view posts about this topic" : 
-            "Click to view full conversation";
+
+        let clickHandler, clickTitle;
+        if (isDummyData) {
+            clickHandler = `uwrMap.showInsufficientContentMessage()`;
+            clickTitle = "Click to learn more about this feature";
+        } else {
+            clickHandler = isAITopic ?
+                `window.enterTopicMode && window.enterTopicMode('${topicIdentifier}')` :
+                `window.navigateToComment && window.navigateToComment('${comment.id}')`;
+            clickTitle = isAITopic ?
+                "Click to view posts about this topic" :
+                "Click to view full conversation";
+        }
             
         const popupHtml = `
             <div class="trending-bubble" onclick="${clickHandler}" 
