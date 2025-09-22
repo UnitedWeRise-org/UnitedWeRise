@@ -1062,7 +1062,7 @@ router.put('/notification-preferences', requireAuth, async (req: AuthRequest, re
     }
 });
 
-// Get user activity feed
+// Get user activity log
 router.get('/activity/me', requireAuth, async (req: AuthRequest, res) => {
     try {
         const userId = req.user!.id;
@@ -1108,12 +1108,12 @@ router.get('/activity/me', requireAuth, async (req: AuthRequest, res) => {
         console.error('Error fetching user activity:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch activity feed'
+            error: 'Failed to fetch activity log'
         });
     }
 });
 
-// Get public user activity feed (for public profiles - future)
+// Get public user activity log (for public profiles - future)
 router.get('/activity/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -1168,7 +1168,7 @@ router.get('/activity/:userId', async (req, res) => {
         console.error('Error fetching public user activity:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch activity feed'
+            error: 'Failed to fetch activity log'
         });
     }
 });

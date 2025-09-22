@@ -1,6 +1,6 @@
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 
 import { prisma } from '../lib/prisma';
@@ -192,7 +192,7 @@ export class ActivityTracker {
   }
 
   /**
-   * Get user activity feed with filtering
+   * Get user activity log with filtering
    */
   static async getUserActivity(
     userId: string,

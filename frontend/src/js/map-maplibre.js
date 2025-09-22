@@ -1235,6 +1235,26 @@ class UWRMapLibre {
             adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
         }
 
+        // Check if user is authenticated before making API calls
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'No auth token available, using dummy data', null);
+            }
+            return this.generateDummyTopic(jurisdiction);
+        }
+
+        // Add simple rate limiting to prevent API spam
+        const now = Date.now();
+        if (!this.lastApiCall) this.lastApiCall = 0;
+        if (now - this.lastApiCall < 2000) { // Wait at least 2 seconds between API calls
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'Rate limiting API calls, using dummy data', null);
+            }
+            return this.generateDummyTopic(jurisdiction);
+        }
+        this.lastApiCall = now;
+
         // Try to fetch real posts with geographic data first
         try {
             const apiUrl = window.location.hostname.includes('dev') ?
@@ -1243,7 +1263,7 @@ class UWRMapLibre {
 
             const response = await fetch(`${apiUrl}/api/posts/map-data?scope=${jurisdiction}&count=9`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                    'Authorization': `Bearer ${authToken}`
                 }
             });
 
@@ -1288,7 +1308,7 @@ class UWRMapLibre {
 
             const response = await fetch(`${apiUrl}/api/trending/map-topics?count=9&scope=${jurisdiction}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                    'Authorization': `Bearer ${authToken}`
                 }
             });
 
