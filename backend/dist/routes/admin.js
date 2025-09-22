@@ -2313,8 +2313,8 @@ router.get('/messages/overview', auth_1.requireAuth, requireAdmin, totpAuth_1.re
 });
 // Merge duplicate user accounts (for OAuth email normalization issues)
 router.post('/merge-accounts', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, [
-    (0, express_validator_1.body)('primaryAccountId').isUUID().withMessage('Primary account ID must be a valid UUID'),
-    (0, express_validator_1.body)('duplicateAccountId').isUUID().withMessage('Duplicate account ID must be a valid UUID')
+    (0, express_validator_1.body)('primaryAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Primary account ID must be a valid CUID (starts with "c", 25 characters total)'),
+    (0, express_validator_1.body)('duplicateAccountId').matches(/^c[a-z0-9]{24}$/).withMessage('Duplicate account ID must be a valid CUID (starts with "c", 25 characters total)')
 ], handleValidationErrors, async (req, res) => {
     try {
         const { primaryAccountId, duplicateAccountId } = req.body;

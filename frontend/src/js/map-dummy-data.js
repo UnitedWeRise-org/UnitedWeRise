@@ -15,7 +15,11 @@ function getRandomUSCoordinate() {
     };
 
     // Generate random coordinates within continental US
+    // Latitude: 25 to 49 (south to north)
     const lat = bounds.south + Math.random() * (bounds.north - bounds.south);
+
+    // Longitude: -125 to -66 (west to east, both negative)
+    // Since west (-125) is less than east (-66), we calculate properly
     const lng = bounds.west + Math.random() * (bounds.east - bounds.west);
 
     // Weighted chance for Alaska/Hawaii placement at edges

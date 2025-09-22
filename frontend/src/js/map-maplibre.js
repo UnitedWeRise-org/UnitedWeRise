@@ -1192,7 +1192,7 @@ class UWRMapLibre {
                     summary: "Supreme Court decision impacts state voting laws nationwide...",
                     topic: "Voting Rights",
                     location: "Trending Nationally",
-                    coordinates: this.getRandomUSCoordinates(),
+                    coordinates: window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates(),
                     engagement: 847,
                     timestamp: "1 hour ago"
                 },
@@ -1201,7 +1201,7 @@ class UWRMapLibre {
                     summary: "Summary: 15 states debate similar healthcare legislation...",
                     topic: "Healthcare Policy",
                     location: "Multi-State Summary",
-                    coordinates: this.getRandomUSCoordinates(),
+                    coordinates: window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates(),
                     engagement: 623,
                     timestamp: "3 hours ago"
                 },
@@ -1210,7 +1210,7 @@ class UWRMapLibre {
                     summary: "District-level races gaining national attention across 8 states...",
                     topic: "Election Summary",
                     location: "Congressional Districts",
-                    coordinates: this.getRandomUSCoordinates(),
+                    coordinates: window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates(),
                     engagement: 412,
                     timestamp: "5 hours ago"
                 }
@@ -1231,7 +1231,7 @@ class UWRMapLibre {
                     summary: `Summary: District conversations about ${userState || 'state'} education funding...`,
                     topic: "District Summary",
                     location: `Multiple ${userState || 'State'} Districts`,
-                    coordinates: userState ? this.getRandomStateCoordinates(userState) : this.getRandomUSCoordinates(),
+                    coordinates: userState ? this.getRandomStateCoordinates(userState) : (window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates()),
                     engagement: 98,
                     timestamp: "4 hours ago"
                 },
@@ -1254,7 +1254,7 @@ class UWRMapLibre {
                     summary: `${userDistrict?.city || 'Local'} school board discusses budget allocation...`,
                     topic: "Education",
                     location: `${userDistrict?.city || 'Local'} Area`,
-                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : this.getRandomUSCoordinates(),
+                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : (window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates()),
                     engagement: 34,
                     timestamp: "1 hour ago"
                 },
@@ -1263,7 +1263,7 @@ class UWRMapLibre {
                     summary: "City council meeting scheduled for downtown development review...",
                     topic: "Municipal Event",
                     location: `${userDistrict?.city || 'Local'} City Hall`,
-                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : this.getRandomUSCoordinates(),
+                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : (window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates()),
                     engagement: 28,
                     timestamp: "Tomorrow 7PM",
                     actionable: true,
@@ -1274,7 +1274,7 @@ class UWRMapLibre {
                     summary: "Local candidates debate district representation priorities...",
                     topic: "Local Politics",
                     location: `${userDistrict?.city || 'District'} Area`,
-                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : this.getRandomUSCoordinates(),
+                    coordinates: userDistrict ? this.getSecureLocalCoordinates(userDistrict) : (window.mapDummyData?.getRandomCoordinate()?.coordinates || this.getRandomUSCoordinates()),
                     engagement: 19,
                     timestamp: "3 hours ago"
                 }
@@ -1286,9 +1286,14 @@ class UWRMapLibre {
     }
 
     getRandomUSCoordinates() {
-        // Random coordinates within US bounds for national trending
-        const lng = -130 + Math.random() * 65; // -130 to -65
-        const lat = 24 + Math.random() * 26;   // 24 to 50
+        // Use dummy data system if available for consistent US bounds
+        if (window.mapDummyData && window.mapDummyData.getRandomCoordinate) {
+            return window.mapDummyData.getRandomCoordinate().coordinates;
+        }
+
+        // Fallback to proper continental US bounds only
+        const lng = -125 + Math.random() * 59; // -125 to -66 (continental US)
+        const lat = 25 + Math.random() * 24;   // 25 to 49 (continental US)
         return [lng, lat];
     }
 
@@ -1374,6 +1379,10 @@ class UWRMapLibre {
             const lng = bounds.minLng + Math.random() * (bounds.maxLng - bounds.minLng);
             const lat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
             return [lng, lat];
+        }
+        // Use dummy data system for consistent coordinate generation
+        if (window.mapDummyData && window.mapDummyData.getRandomCoordinate) {
+            return window.mapDummyData.getRandomCoordinate().coordinates;
         }
         return this.getRandomUSCoordinates();
     }
