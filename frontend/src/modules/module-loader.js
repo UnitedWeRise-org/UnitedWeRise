@@ -76,6 +76,14 @@ function initializeModules() {
         console.error('❌ Unified auth manager not available');
     }
 
+    // Load unified authentication utilities
+    try {
+        await import('/modules/core/auth/utils.js');
+        console.log('✅ Unified auth utilities loaded');
+    } catch (error) {
+        console.error('❌ Failed to load auth utilities:', error);
+    }
+
     // PHASE 3: Feature Modules (depend on authentication)
     console.log('📋 Phase 3: Initializing feature modules...');
 

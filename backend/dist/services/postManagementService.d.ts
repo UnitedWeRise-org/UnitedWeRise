@@ -40,6 +40,13 @@ export declare class PostManagementService {
      */
     static editPost(postId: string, userId: string, options: PostEditOptions): Promise<{
         post: {
+            author: {
+                id: string;
+                username: string;
+                firstName: string;
+                lastName: string;
+            };
+        } & {
             id: string;
             embedding: number[];
             createdAt: Date;
@@ -166,7 +173,7 @@ export declare class PostManagementService {
     static getArchivedPost(postId: string, userId: string): Promise<{
         postId: string;
         deletedAt: Date;
-        deleteReason: any;
+        deleteReason: string;
         archive: import("@prisma/client/runtime/library").JsonValue;
     }>;
     /**

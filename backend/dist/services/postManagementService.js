@@ -31,7 +31,7 @@ class PostManagementService {
             where: { id: postId },
             select: {
                 id: true,
-                userId: true,
+                authorId: true,
                 content: true,
                 extendedContent: true,
                 editHistory: true,
@@ -43,7 +43,7 @@ class PostManagementService {
         if (!post) {
             throw new Error('Post not found');
         }
-        if (post.userId !== userId) {
+        if (post.authorId !== userId) {
             throw new Error('Unauthorized: You can only edit your own posts');
         }
         // Check if edit reason is required
@@ -153,7 +153,7 @@ class PostManagementService {
         if (!post) {
             throw new Error('Post not found');
         }
-        if (post.userId !== userId) {
+        if (post.authorId !== userId) {
             throw new Error('Unauthorized: You can only delete your own posts');
         }
         // Create deletion archive
@@ -178,8 +178,8 @@ class PostManagementService {
                 where: { id: postId },
                 data: {
                     deletedAt: new Date(),
-                    deleteReason,
-                    // Store archive in metadata field (you may need to add this to schema)
+                    deletedReason: deleteReason,
+                    // Store archive in metadata field
                     editHistory: deletionArchive,
                 },
             });
@@ -207,7 +207,7 @@ class PostManagementService {
             where: { id: postId },
             select: {
                 id: true,
-                userId: true,
+                authorId: true,
                 editHistory: true,
                 originalContent: true,
                 content: true,
@@ -219,7 +219,7 @@ class PostManagementService {
         if (!post) {
             throw new Error('Post not found');
         }
-        if (post.userId !== userId) {
+        if (post.authorId !== userId) {
             throw new Error('Unauthorized: You can only view history of your own posts');
         }
         const history = post.editHistory || [];
@@ -245,10 +245,10 @@ class PostManagementService {
             where: { id: postId },
             select: {
                 id: true,
-                userId: true,
+                authorId: true,
                 editHistory: true, // Contains archive data for soft deleted posts
                 deletedAt: true,
-                deleteReason: true,
+                deletedReason: true,
             },
         });
         if (!post) {
@@ -257,13 +257,13 @@ class PostManagementService {
         if (!post.deletedAt) {
             throw new Error('Post is not deleted');
         }
-        if (post.userId !== userId) {
+        if (post.authorId !== userId) {
             throw new Error('Unauthorized: You can only view archives of your own posts');
         }
         return {
             postId,
             deletedAt: post.deletedAt,
-            deleteReason: post.deleteReason,
+            deleteReason: post.deletedReason,
             archive: post.editHistory, // Contains full archive data
         };
     }
@@ -274,7 +274,7 @@ class PostManagementService {
         const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             select: {
-                userId: true,
+                authorId: true,
                 deletedAt: true,
             },
         });
@@ -282,7 +282,7 @@ class PostManagementService {
             return false;
         if (post.deletedAt)
             return false; // Cannot edit deleted posts
-        return post.userId === userId;
+        return post.authorId === userId;
     }
     /**
      * Check if user can delete post (modular permission system)
@@ -291,7 +291,7 @@ class PostManagementService {
         const post = await prisma_1.prisma.post.findUnique({
             where: { id: postId },
             select: {
-                userId: true,
+                authorId: true,
                 deletedAt: true,
             },
         });
@@ -299,7 +299,7 @@ class PostManagementService {
             return false;
         if (post.deletedAt)
             return false; // Cannot delete already deleted posts
-        return post.userId === userId;
+        return post.authorId === userId;
     }
 }
 exports.PostManagementService = PostManagementService;

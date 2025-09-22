@@ -48,8 +48,13 @@ class EngagementScoringService {
                     reportsWeight: -1.0
                 },
                 modifiers: {
+                    timeDecayEnabled: true,
+                    timeDecayFactor: 0.95,
                     controversyBoost: false,
-                    qualityBias: true
+                    controversyThreshold: 1.5,
+                    qualityBias: true,
+                    newContentBoost: true,
+                    authorReputationWeight: 0.2
                 }
             },
             controversy: {
@@ -66,9 +71,13 @@ class EngagementScoringService {
                     reportsWeight: 0.0 // Don't penalize controversial content
                 },
                 modifiers: {
+                    timeDecayEnabled: true,
+                    timeDecayFactor: 0.98,
                     controversyBoost: true,
                     controversyThreshold: 1.2,
-                    qualityBias: false
+                    qualityBias: false,
+                    newContentBoost: false,
+                    authorReputationWeight: 0.1
                 }
             },
             quality: {
@@ -85,8 +94,12 @@ class EngagementScoringService {
                     reportsWeight: -2.0 // Heavy penalty for reported content
                 },
                 modifiers: {
+                    timeDecayEnabled: true,
+                    timeDecayFactor: 0.92,
                     controversyBoost: false,
+                    controversyThreshold: 1.5,
                     qualityBias: true,
+                    newContentBoost: true,
                     authorReputationWeight: 0.5 // Strong reputation influence
                 }
             },
@@ -104,9 +117,12 @@ class EngagementScoringService {
                     reportsWeight: -0.5
                 },
                 modifiers: {
+                    timeDecayEnabled: true,
+                    timeDecayFactor: 0.95,
                     controversyBoost: true,
                     controversyThreshold: 1.5,
                     qualityBias: true,
+                    newContentBoost: true,
                     authorReputationWeight: 0.3
                 }
             },

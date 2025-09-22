@@ -542,6 +542,203 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
+// Enhanced reaction system (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+router.post('/:postId/reaction', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { postId } = req.params;
+        const { reactionType, reactionValue } = req.body;
+        const userId = req.user!.id;
+
+        // Validate reaction type and value
+        if (!reactionType || !['sentiment', 'stance'].includes(reactionType)) {
+            return res.status(400).json({ error: 'Invalid reaction type. Must be "sentiment" or "stance"' });
+        }
+
+        const validSentiments = ['LIKE', 'DISLIKE'];
+        const validStances = ['AGREE', 'DISAGREE'];
+
+        if (reactionType === 'sentiment' && reactionValue && !validSentiments.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid sentiment. Must be LIKE or DISLIKE' });
+        }
+
+        if (reactionType === 'stance' && reactionValue && !validStances.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid stance. Must be AGREE or DISAGREE' });
+        }
+
+        // Check if post exists
+        const post = await prisma.post.findUnique({
+            where: { id: postId },
+            select: {
+                id: true,
+                authorId: true,
+                content: true
+            }
+        });
+
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        // Find existing reaction for this user and post
+        const existingReaction = await prisma.reaction.findUnique({
+            where: {
+                userId_postId: {
+                    userId,
+                    postId
+                }
+            }
+        });
+
+        if (reactionValue === null) {
+            // Remove reaction
+            if (existingReaction) {
+                await prisma.$transaction([
+                    prisma.reaction.delete({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        }
+                    }),
+                    // Update post counts based on what was removed
+                    prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            ...(existingReaction.sentiment === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(existingReaction.sentiment === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'DISAGREE' && { disagreesCount: { decrement: 1 } })
+                        }
+                    })
+                ]);
+
+                // Track reaction removal
+                try {
+                    await ActivityTracker.trackReactionChanged(
+                        userId,
+                        postId,
+                        post.content,
+                        reactionType,
+                        existingReaction[reactionType as keyof typeof existingReaction] as string || '',
+                        null
+                    );
+                } catch (error) {
+                    console.error('Failed to track reaction removal:', error);
+                }
+            }
+
+            res.json({ message: 'Reaction removed successfully' });
+        } else {
+            // Add or update reaction
+            const reactionData = {
+                userId,
+                postId,
+                ...(reactionType === 'sentiment' ? { sentiment: reactionValue } : {}),
+                ...(reactionType === 'stance' ? { stance: reactionValue } : {})
+            };
+
+            if (existingReaction) {
+                // Update existing reaction
+                const oldValue = existingReaction[reactionType as keyof typeof existingReaction] as string;
+
+                await prisma.$transaction([
+                    prisma.reaction.update({
+                        where: {
+                            userId_postId: {
+                                userId,
+                                postId
+                            }
+                        },
+                        data: reactionData
+                    }),
+                    // Update post counts - decrement old, increment new
+                    prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            // Decrement old reaction counts
+                            ...(oldValue === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(oldValue === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISAGREE' && { disagreesCount: { decrement: 1 } }),
+                            // Increment new reaction counts
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+
+                // Track reaction change
+                try {
+                    await ActivityTracker.trackReactionChanged(
+                        userId,
+                        postId,
+                        post.content,
+                        reactionType,
+                        oldValue,
+                        reactionValue
+                    );
+                } catch (error) {
+                    console.error('Failed to track reaction change:', error);
+                }
+            } else {
+                // Create new reaction
+                await prisma.$transaction([
+                    prisma.reaction.create({
+                        data: reactionData
+                    }),
+                    // Update post counts
+                    prisma.post.update({
+                        where: { id: postId },
+                        data: {
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+
+                // Create notification if not reacting to own post
+                if (post.authorId !== userId) {
+                    try {
+                        await createNotification(
+                            'REACTION',
+                            userId,
+                            post.authorId,
+                            `${req.user!.username} reacted to your post`,
+                            postId
+                        );
+                    } catch (error) {
+                        console.warn('Failed to create reaction notification:', error);
+                    }
+                }
+
+                // Track new reaction
+                try {
+                    await ActivityTracker.trackReactionChanged(
+                        userId,
+                        postId,
+                        post.content,
+                        reactionType,
+                        null,
+                        reactionValue
+                    );
+                } catch (error) {
+                    console.error('Failed to track new reaction:', error);
+                }
+            }
+
+            res.json({ message: 'Reaction updated successfully', reactionType, reactionValue });
+        }
+    } catch (error) {
+        console.error('Enhanced reaction error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Add comment to post
 router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter, validateComment, moderateContent('COMMENT'), async (req: AuthRequest, res) => {
     try {

@@ -192,6 +192,28 @@ export class ActivityTracker {
   }
 
   /**
+   * Track enhanced reaction changes (sentiment/stance)
+   */
+  static async trackReactionChanged(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    reactionType: 'sentiment' | 'stance',
+    oldValue: string | null,
+    newValue: string | null
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      reactionType,
+      oldValue,
+      newValue,
+      change: oldValue && newValue ? 'modified' : newValue ? 'added' : 'removed'
+    };
+
+    await this.track(userId, ActivityType.REACTION_CHANGED, 'post', postId, metadata);
+  }
+
+  /**
    * Get user activity log with filtering
    */
   static async getUserActivity(

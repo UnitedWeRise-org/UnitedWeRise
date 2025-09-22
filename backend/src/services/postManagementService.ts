@@ -294,11 +294,11 @@ export class PostManagementService {
       throw new Error('Post not found');
     }
 
-    if (post.userId !== userId) {
+    if (post.authorId !== userId) {
       throw new Error('Unauthorized: You can only view history of your own posts');
     }
 
-    const history = (post.editHistory as EditHistoryEntry[]) || [];
+    const history = (post.editHistory as unknown as EditHistoryEntry[]) || [];
 
     return {
       postId,
@@ -323,10 +323,10 @@ export class PostManagementService {
       where: { id: postId },
       select: {
         id: true,
-        userId: true,
+        authorId: true,
         editHistory: true, // Contains archive data for soft deleted posts
         deletedAt: true,
-        deleteReason: true,
+        deletedReason: true,
       },
     });
 
@@ -338,14 +338,14 @@ export class PostManagementService {
       throw new Error('Post is not deleted');
     }
 
-    if (post.userId !== userId) {
+    if (post.authorId !== userId) {
       throw new Error('Unauthorized: You can only view archives of your own posts');
     }
 
     return {
       postId,
       deletedAt: post.deletedAt,
-      deleteReason: post.deleteReason,
+      deleteReason: post.deletedReason,
       archive: post.editHistory, // Contains full archive data
     };
   }
@@ -357,14 +357,14 @@ export class PostManagementService {
     const post = await prisma.post.findUnique({
       where: { id: postId },
       select: {
-        userId: true,
+        authorId: true,
         deletedAt: true,
       },
     });
 
     if (!post) return false;
     if (post.deletedAt) return false; // Cannot edit deleted posts
-    return post.userId === userId;
+    return post.authorId === userId;
   }
 
   /**
@@ -374,14 +374,14 @@ export class PostManagementService {
     const post = await prisma.post.findUnique({
       where: { id: postId },
       select: {
-        userId: true,
+        authorId: true,
         deletedAt: true,
       },
     });
 
     if (!post) return false;
     if (post.deletedAt) return false; // Cannot delete already deleted posts
-    return post.userId === userId;
+    return post.authorId === userId;
   }
 }
 
