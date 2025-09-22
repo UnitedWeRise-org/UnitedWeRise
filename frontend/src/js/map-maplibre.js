@@ -972,42 +972,51 @@ class UWRMapLibre {
         return topic;
     }
 
-    // Enhanced fade animation methods
+    // Enhanced fade animation methods - fade entire popup, not just text
     fadeInBubbleGradually(popup) {
         if (popup && popup.getElement) {
-            const bubbleElement = popup.getElement();
-            const bubble = bubbleElement?.querySelector('.trending-bubble');
+            const popupElement = popup.getElement();
 
-            if (bubble) {
-                // Start invisible, then add fade-in class
-                bubble.classList.remove('fade-out');
-                bubble.classList.add('fade-in');
+            // Add fade-in class to popup container
+            popupElement.classList.add('fade-in');
+            popupElement.classList.remove('fade-out');
 
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', 'Starting 3-second fade-in animation', null);
+            // Force opacity change after DOM update
+            setTimeout(() => {
+                const popupContent = popupElement.querySelector('.maplibregl-popup-content');
+                if (popupContent) {
+                    popupContent.style.opacity = '1';
                 }
+            }, 50);
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'Starting 3-second fade-in animation', null);
             }
         }
     }
 
     fadeOutBubbleGradually(popup) {
         if (popup && popup.getElement) {
-            const bubbleElement = popup.getElement();
-            const bubble = bubbleElement?.querySelector('.trending-bubble');
+            const popupElement = popup.getElement();
+            const popupContent = popupElement.querySelector('.maplibregl-popup-content');
 
-            if (bubble) {
-                bubble.classList.remove('fade-in');
-                bubble.classList.add('fade-out');
+            // Add fade-out class to popup container
+            popupElement.classList.add('fade-out');
+            popupElement.classList.remove('fade-in');
 
-                // Remove popup after fade completes (3 seconds)
-                setTimeout(() => {
-                    try {
-                        popup.remove();
-                    } catch (e) {
-                        // Popup may already be removed
-                    }
-                }, 3000);
+            // Start fade animation
+            if (popupContent) {
+                popupContent.style.opacity = '0';
             }
+
+            // Remove popup after fade completes (3 seconds)
+            setTimeout(() => {
+                try {
+                    popup.remove();
+                } catch (e) {
+                    // Popup may already be removed
+                }
+            }, 3000);
         }
     }
 
@@ -1155,37 +1164,23 @@ class UWRMapLibre {
     }
 
     async fetchTrendingComment(jurisdiction) {
-        const userState = this.getUserState();
-        const userDistrict = this.getUserDistrict();
-        
-        // Use dummy civic content for testing
-        const dummyContent = getDummyCivicContent();
-        
-        // Filter content by jurisdiction and active layers
-        const filteredTopics = dummyContent.trendingTopics.filter(topic => {
-            // Check jurisdiction match
-            const jurisdictionMatch = jurisdiction === 'national' || topic.jurisdiction === jurisdiction;
-            
-            // Check if any of the topic's layers are active
-            const layerMatch = topic.layers.some(layer => this.activeLayers.has(layer));
-            
-            return jurisdictionMatch && layerMatch;
-        });
-        
-        // Randomly select a topic
-        if (filteredTopics.length > 0) {
-            const topic = filteredTopics[Math.floor(Math.random() * filteredTopics.length)];
-            return {
-                id: topic.id,
-                summary: topic.content,
-                topic: topic.title,
-                location: topic.location,
-                coordinates: topic.coordinates,
-                engagement: topic.engagement,
-                time: `${Math.floor(Math.random() * 60) + 1} minutes ago`,
-                tags: topic.tags,
-                layers: topic.layers
-            };
+        // Check if we should use dummy data
+        if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
+            const dummyTopics = window.mapDummyData.getTopics();
+            if (dummyTopics.length > 0) {
+                // Return a random topic from dummy data
+                const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
+                return {
+                    id: topic.id,
+                    summary: topic.text,
+                    topic: 'Trending Topic',
+                    location: topic.region,
+                    coordinates: topic.coordinates,
+                    engagement: topic.engagement,
+                    timestamp: topic.timestamp,
+                    isEdge: topic.isEdge
+                };
+            }
         }
         
         // Fallback to original mock data if no dummy content matches
@@ -1815,86 +1810,22 @@ class UWRMapLibre {
 let uwrMap = null;
 
 // Dummy civic content for testing
-// Generate coordinates within visible map bounds or edge placement for off-screen regions
+// Simple coordinate generation for dummy data - uses external fallback script
 function generateRandomCoordinates() {
-    // Get current map bounds to ensure bubbles appear within view
-    const mapInstance = window.mapLibre || window.map?._maplibre;
-
-    // Default to continental US bounds if map not available
-    let visibleBounds = [[-125, 25], [-65, 49]]; // CONUS default
-
-    if (mapInstance && typeof mapInstance.getBounds === 'function') {
-        const bounds = mapInstance.getBounds();
-        const sw = bounds.getSouthWest();
-        const ne = bounds.getNorthEast();
-        visibleBounds = [[sw.lng, sw.lat], [ne.lng, ne.lat]];
+    // Use dummy data system if available
+    if (window.mapDummyData && window.mapDummyData.getRandomCoordinate) {
+        return window.mapDummyData.getRandomCoordinate();
     }
 
-    const regions = [
-        // Continental US (90% probability) - always within visible bounds
-        {
-            bounds: [
-                [Math.max(-125, visibleBounds[0][0]), Math.max(25, visibleBounds[0][1])],
-                [Math.min(-65, visibleBounds[1][0]), Math.min(49, visibleBounds[1][1])]
-            ],
-            weight: 90,
-            name: 'CONUS',
-            onScreen: true
-        },
-        // Off-screen regions (10% total) - place at visible map edges
-        { bounds: 'edge-west', weight: 3, name: 'Alaska', onScreen: false },
-        { bounds: 'edge-southwest', weight: 3, name: 'Hawaii', onScreen: false },
-        { bounds: 'edge-southeast', weight: 2, name: 'Puerto Rico', onScreen: false },
-        { bounds: 'edge-south', weight: 1, name: 'USVI', onScreen: false },
-        { bounds: 'edge-west', weight: 1, name: 'Guam', onScreen: false }
-    ];
+    // Fallback to simple US bounds if dummy data script not loaded
+    const lat = 25 + Math.random() * 24; // 25 to 49 degrees north
+    const lng = -125 + Math.random() * 59; // -125 to -66 degrees west
 
-    // Weighted random selection
-    const rand = Math.random() * 100;
-    let cumulative = 0;
-    let selectedRegion = regions[0]; // Default to CONUS
-
-    for (const region of regions) {
-        cumulative += region.weight;
-        if (rand <= cumulative) {
-            selectedRegion = region;
-            break;
-        }
-    }
-
-    let coordinates;
-
-    if (selectedRegion.onScreen && Array.isArray(selectedRegion.bounds)) {
-        // Generate within visible bounds
-        const [[minLng, minLat], [maxLng, maxLat]] = selectedRegion.bounds;
-        const lng = minLng + Math.random() * (maxLng - minLng);
-        const lat = minLat + Math.random() * (maxLat - minLat);
-        coordinates = [lng, lat];
-    } else {
-        // Place at map edge to indicate off-screen origin
-        const [[minLng, minLat], [maxLng, maxLat]] = visibleBounds;
-        const margin = 0.02; // Small margin from exact edge
-
-        switch (selectedRegion.bounds) {
-            case 'edge-west':
-                coordinates = [minLng + margin, minLat + Math.random() * (maxLat - minLat)];
-                break;
-            case 'edge-southwest':
-                coordinates = [minLng + Math.random() * (maxLng - minLng) * 0.3, minLat + margin];
-                break;
-            case 'edge-southeast':
-                coordinates = [maxLng - Math.random() * (maxLng - minLng) * 0.3, minLat + margin];
-                break;
-            case 'edge-south':
-                coordinates = [minLng + Math.random() * (maxLng - minLng), minLat + margin];
-                break;
-            default:
-                // Fallback to center if edge placement fails
-                coordinates = [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
-        }
-    }
-
-    return { coordinates, region: selectedRegion.name, onScreen: selectedRegion.onScreen };
+    return {
+        coordinates: [lng, lat],
+        region: 'Continental US',
+        isEdge: false
+    };
 }
 
 function getDummyCivicContent() {
