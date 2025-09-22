@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 21, 2025
-**Version**: 5.6.0 (Admin Console Security Enhancement & User Management Complete)
+**Last Updated**: September 22, 2025
+**Version**: 5.7.0 (13-Section Admin Dashboard Complete & MOTD System Integration)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -5319,6 +5319,7 @@ adminDebug.clearCache()
 - **POST /api/admin/users/:userId/unsuspend**: Remove user suspensions
 - **POST /api/admin/users/:userId/role**: Promote/demote user roles (user/moderator/admin)
 - **DELETE /api/admin/users/:userId**: 🆕 **NEW** - User account deletion with impact analysis
+- **POST /api/admin/merge-accounts**: 🆕 **NEW** - Merge user accounts with data preservation and TOTP security
 
 ##### 🔐 **ENHANCED SECURITY ARCHITECTURE** (September 21, 2025) {#admin-security-enhancements}
 **Status**: ✅ **PRODUCTION READY** - Enterprise-grade TOTP security implementation
@@ -5331,10 +5332,13 @@ adminDebug.clearCache()
 ###### Fresh TOTP Protected Operations
 **The following admin actions require immediate TOTP verification:**
 - **User Account Deletion**: Soft/hard delete with comprehensive impact analysis
+- **Account Merging**: Smart data consolidation with audit trail
 - **Role Changes**: Promote/demote users with detailed change tracking
 - **User Suspension**: Account suspension management with reason requirements
-- **Password Resets**: Force password reset for user accounts (framework ready)
+- **Candidate Registration Actions**: Approve, reject, waiver applications
+- **MOTD Management**: Create, update, activate/deactivate messages
 - **Database Schema Changes**: Direct database modifications via admin interface
+- **Password Resets**: Force password reset for user accounts (framework ready)
 
 ###### Enhanced User Details Modal
 **Comprehensive User Information Display:**
@@ -5358,6 +5362,56 @@ adminDebug.clearCache()
 **API Endpoint**: `DELETE /api/admin/users/:userId`
 **Required Fields**: `totpToken`, `actionDescription`, `deletionType`, `reason`
 **Response**: Includes audit ID and impact summary for tracking
+
+###### 🆕 **Account Merging System** (September 2025)
+**Professional account consolidation with data preservation:**
+
+**Features**:
+- **Smart Data Merging**: Preserves posts, comments, followers, and relationships
+- **Primary Account Selection**: Designate which account becomes the primary
+- **Duplicate Prevention**: Intelligent handling of overlapping data
+- **Comprehensive Audit Trail**: Complete merge history with before/after state
+- **TOTP Security**: Requires fresh TOTP verification for execution
+- **Impact Analysis**: Shows data to be merged before execution
+
+**API Endpoint**: `POST /api/admin/merge-accounts`
+**Required Fields**:
+```json
+{
+  "primaryUserId": "string",
+  "secondaryUserId": "string",
+  "totpToken": "string",
+  "actionDescription": "string",
+  "reason": "string (10-500 chars)"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "auditId": "string",
+    "mergedData": {
+      "postsTransferred": number,
+      "commentsTransferred": number,
+      "followersTransferred": number,
+      "followingTransferred": number
+    },
+    "primaryUser": {
+      "id": "string",
+      "username": "string",
+      "email": "string"
+    }
+  }
+}
+```
+
+**Safety Features**:
+- Cannot merge admin accounts without super admin privileges
+- Cannot merge accounts with different verification levels (requires manual review)
+- Prevents data loss through comprehensive backup before merge
+- Automatic rollback capability for 24 hours post-merge
 
 ###### Reusable TOTP Modal Component
 **Professional Security Interface**:
@@ -5402,22 +5456,74 @@ adminDebug.clearCache()
 - **Performance Metrics**: Request rates, error rates, system health indicators
 - **Fallback Systems**: Health endpoint integration for comprehensive monitoring
 
+##### 🆕 **Message of the Day (MOTD) Management** (`/api/motd/*`)
+**Full MOTD lifecycle management with analytics and security:**
+- **GET /api/motd/current**: Get active MOTD for display (public endpoint)
+- **POST /api/motd/dismiss/:id**: Dismiss MOTD for user or anonymous token
+- **GET /api/motd/admin/list**: List all MOTDs with view/dismissal statistics (Admin)
+- **POST /api/motd/admin/create**: Create new MOTD with scheduling and targeting (Admin)
+- **PUT /api/motd/admin/update/:id**: Update existing MOTD with change tracking (Admin)
+- **POST /api/motd/admin/toggle/:id**: Activate/deactivate MOTD with automatic conflict resolution (Admin)
+- **DELETE /api/motd/admin/delete/:id**: Delete MOTD with confirmation (Admin)
+- **GET /api/motd/admin/analytics/:id**: Detailed analytics with view/dismissal data (Admin)
+
+**Features**:
+- Scheduled start/end dates, user targeting, dismissal tracking
+- Anonymous user support via dismissal tokens
+- Comprehensive analytics and audit logging
+- Auto-deactivation of conflicting active MOTDs
+
+##### 🆕 **External Candidates Management** (`/api/external-candidates/*`)
+**Professional candidate data integration and management:**
+- **POST /api/external-candidates/import-address**: Import candidates for specific address (Admin)
+- **POST /api/external-candidates/bulk-import**: Bulk import from all user locations (Admin)
+- **GET /api/external-candidates/for-address**: Get all candidates (internal + external) for address (User)
+
+**Integration**: Connects with ExternalCandidateService for API data retrieval
+**Rate Limiting**: Protected with apiLimiter middleware
+**Metrics**: Comprehensive import tracking and performance monitoring
+
+##### 🆕 **Database Administration** (`/api/admin/schema`)
+**Direct database access and administration:**
+- **GET /api/admin/schema**: View Prisma database schema (Super Admin only)
+
+**Security**: Requires Super Admin privileges (`requireSuperAdmin` middleware)
+**Features**: Read-only schema viewer, migration status tracking
+
+##### 🆕 **Candidate Registration Management** (`/api/admin/candidates/*`)
+**Complete candidate lifecycle management:**
+- **GET /api/admin/candidates**: List pending candidate registrations
+- **GET /api/admin/candidates/profiles**: List approved candidate profiles
+- **GET /api/admin/candidates/:id**: Get detailed candidate registration
+- **POST /api/admin/candidates/:id/approve**: Approve candidate registration
+- **POST /api/admin/candidates/:id/reject**: Reject candidate registration
+- **POST /api/admin/candidates/:id/waiver**: Apply fee waiver
+- **PUT /api/admin/candidates/profiles/:id/status**: Update candidate profile status
+- **POST /api/admin/candidates/profiles/:registrationId/create**: Create profile from registration
+- **GET /api/admin/candidates/:candidateId/messages**: Get candidate communication history
+- **POST /api/admin/candidates/:candidateId/messages**: Send message to candidate
+- **GET /api/admin/messages/overview**: Overview of all candidate communications
+
 #### Authentication & Authorization
 - **Admin Role Required**: All endpoints check `req.user?.isAdmin`
 - **JWT Authentication**: Uses existing authentication system
 - **Admin Middleware**: Comprehensive permission checking
 - **Security Validation**: Input validation and error handling
 
-#### 9-Section Admin Dashboard
-1. **📊 Overview**: Platform metrics, system health, real-time statistics  
-2. **🔒 Security**: Security events, failed logins, risk analysis
-3. **👥 Users**: 🆕 **ENHANCED** - Complete user management with deletion, detailed profiles, and fresh TOTP security
-4. **📝 Content**: AI-powered content moderation and flagging resolution
-5. **📈 Analytics**: Comprehensive civic engagement intelligence platform
-6. **🐛 Errors**: System error tracking with performance metrics  
-7. **🤖 AI Insights**: Real user feedback analysis and content patterns
-8. **🚀 Deployment**: Live deployment monitoring and system console
-9. **⚙️ System**: Configuration management and health monitoring
+#### 13-Section Professional Admin Dashboard
+1. **📊 Overview**: Platform metrics, system health, real-time statistics
+2. **🔒 Security**: Security events, failed logins, risk analysis, TOTP monitoring
+3. **👥 Users**: 🆕 **ENHANCED** - Complete user management with deletion, account merging, detailed profiles, and fresh TOTP security
+4. **🗳️ Candidates**: Internal candidate registration management, approval workflow, profile creation
+5. **🌐 External Candidates**: External candidate data import, address-based searches, bulk operations
+6. **📝 Content**: AI-powered content moderation, flagging resolution, user reports
+7. **📢 MOTD**: Message of the Day management, scheduling, analytics, and dismissal tracking
+8. **📈 Analytics**: Comprehensive civic engagement intelligence platform with geographic insights
+9. **🐛 Errors**: System error tracking with performance metrics and real-time monitoring
+10. **🤖 AI Insights**: Real user feedback analysis, content patterns, and AI-powered suggestions
+11. **🚀 Deployment**: Live deployment monitoring, system console, and release tracking
+12. **⚙️ System**: Configuration management, health monitoring, and settings
+13. **🗄️ Database**: Direct database access, schema viewer, and administrative queries
 
 #### Admin Account Configuration
 - **Username**: `Project2029`

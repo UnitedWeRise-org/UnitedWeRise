@@ -109,10 +109,16 @@
 | `/api/admin/candidates` | GET | Candidate registrations | Admin + TOTP | `{ok: true, candidates: [...]}` |
 | `/api/admin/candidates/:id/approve` | POST | Approve candidate | Admin + TOTP | `{ok: true, approved: true}` |
 | `/api/admin/users` | GET | User management | Admin + TOTP | `{ok: true, users: [...]}` |
+| `/api/admin/motd` | GET/POST/PUT/DELETE | MOTD management | Admin + TOTP | `{ok: true, motd: {...}}` |
+| `/api/admin/accounts/merge` | POST | Account merging | Admin + TOTP | `{ok: true, merged: true}` |
+| `/api/admin/moderation/reports` | GET | Moderation reports | Admin + TOTP | `{ok: true, reports: [...]}` |
+| `/api/admin/system/metrics` | GET | System performance | Admin + TOTP | `{ok: true, metrics: {...}}` |
 
 **Key Parameters**:
 - Candidate Approval: `{approvalNotes?, createProfile: true}`
 - User Management: `?role=admin&status=active`
+- MOTD Operations: `{title, content, isActive, priority?}`
+- Account Merge: `{primaryUserId, duplicateUserId, mergeStrategy}`
 
 ---
 

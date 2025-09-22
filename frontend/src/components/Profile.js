@@ -154,7 +154,8 @@ class Profile {
         if (!container) return;
 
         // Determine if we're viewing own profile or someone else's
-        const isOwnProfile = !targetUserId || targetUserId === window.currentUser?.id;
+        const currentUser = window.currentUser;
+        const isOwnProfile = !targetUserId || targetUserId === currentUser?.id;
         this.viewingUserId = targetUserId;
         this.isOwnProfile = isOwnProfile;
 
