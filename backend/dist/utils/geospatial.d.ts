@@ -4,6 +4,7 @@ export interface Coordinates {
 }
 export interface AddressComponents {
     streetAddress: string;
+    streetAddress2?: string;
     city: string;
     state: string;
     zipCode: string;
@@ -13,6 +14,8 @@ export declare const coordinatesToH3: (coords: Coordinates, resolution?: number)
 export declare const h3ToCoordinates: (h3Index: string) => Coordinates;
 export declare const getNearbyH3Indexes: (h3Index: string, ringSize?: number) => string[];
 export declare const addressToH3: (address: AddressComponents, resolution?: number) => Promise<string | null>;
+export declare const generatePrivacyDisplacedCoordinates: (realCoords: Coordinates, privacyLevel?: "standard" | "high") => Coordinates;
+export declare const formatFullAddress: (address: AddressComponents) => string;
 export declare const getVotingDistrict: (coords: Coordinates) => Promise<{
     congressional: string;
     state: string;

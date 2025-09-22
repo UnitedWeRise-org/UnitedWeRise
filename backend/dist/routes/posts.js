@@ -15,8 +15,40 @@ const azureOpenAIService_1 = require("../services/azureOpenAIService");
 const feedbackAnalysisService_1 = require("../services/feedbackAnalysisService");
 const reputationService_1 = require("../services/reputationService");
 const activityTracker_1 = require("../services/activityTracker");
+const postGeographicService_1 = require("../services/postGeographicService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
+// Get posts with geographic data for map display
+router.get('/map-data', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { scope = 'national', count = 9 } = req.query;
+        const userId = req.user.id;
+        // Get user's H3 index for jurisdiction filtering
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { h3Index: true }
+        });
+        const posts = await postGeographicService_1.PostGeographicService.getPostsForMap(scope, user?.h3Index || undefined, parseInt(count));
+        if (typeof console !== 'undefined') {
+            console.log(`Map data request: ${posts.length} posts found for ${scope} scope`);
+        }
+        res.json({
+            success: true,
+            data: posts,
+            scope,
+            hasRealPosts: posts.length > 0,
+            fallbackNeeded: posts.length < 2
+        });
+    }
+    catch (error) {
+        console.error('Error fetching map data:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch map data',
+            fallbackNeeded: true
+        });
+    }
+});
 // Create a new post
 router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimiting_1.postLimiter, moderation_1.contentFilter, validation_1.validatePost, (0, moderation_1.moderateContent)('POST'), async (req, res) => {
     try {
@@ -114,6 +146,8 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
             }
             // "Public Post" and "Volunteer Post" are allowed for everyone
         }
+        // Generate geographic data for post (graceful fallback if user has no address)
+        const geographicData = await postGeographicService_1.PostGeographicService.generatePostGeographicData(userId);
         const post = await prisma_1.prisma.post.create({
             data: {
                 content: mainContent,
@@ -123,7 +157,15 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 embedding,
                 authorReputation: userReputation.current,
                 tags: requestedTags,
-                ...feedbackData
+                ...feedbackData,
+                // Include geographic data if available (null values are handled gracefully)
+                ...(geographicData && {
+                    h3Index: geographicData.h3Index,
+                    latitude: geographicData.latitude,
+                    longitude: geographicData.longitude,
+                    originalH3Index: geographicData.originalH3Index,
+                    privacyDisplaced: geographicData.privacyDisplaced
+                })
             },
             include: {
                 author: {

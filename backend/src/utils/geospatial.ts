@@ -13,6 +13,7 @@ export interface Coordinates {
 
 export interface AddressComponents {
   streetAddress: string;
+  streetAddress2?: string;
   city: string;
   state: string;
   zipCode: string;

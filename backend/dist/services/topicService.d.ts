@@ -45,6 +45,7 @@ export declare class TopicService {
                 embedding: number[];
                 createdAt: Date;
                 updatedAt: Date;
+                h3Index: string | null;
                 content: string;
                 isDeleted: boolean;
                 deletedAt: Date | null;
@@ -70,6 +71,10 @@ export declare class TopicService {
                 searchable: boolean;
                 feedVisible: boolean;
                 editHistory: import("@prisma/client/runtime/library").JsonValue | null;
+                latitude: number | null;
+                longitude: number | null;
+                originalH3Index: string | null;
+                privacyDisplaced: boolean;
             };
         } & {
             id: string;
@@ -160,6 +165,7 @@ export declare class TopicService {
                 embedding: number[];
                 createdAt: Date;
                 updatedAt: Date;
+                h3Index: string | null;
                 content: string;
                 isDeleted: boolean;
                 deletedAt: Date | null;
@@ -185,6 +191,10 @@ export declare class TopicService {
                 searchable: boolean;
                 feedVisible: boolean;
                 editHistory: import("@prisma/client/runtime/library").JsonValue | null;
+                latitude: number | null;
+                longitude: number | null;
+                originalH3Index: string | null;
+                privacyDisplaced: boolean;
             };
         } & {
             id: string;
