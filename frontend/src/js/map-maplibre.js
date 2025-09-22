@@ -1214,12 +1214,26 @@ class UWRMapLibre {
     }
 
     async fetchTrendingComment(jurisdiction) {
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
+        }
+
         // Check if we should use dummy data
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Found ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
+            }
+
             if (dummyTopics.length > 0) {
                 // Return a random topic from dummy data
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Selected topic: "${topic.text}" for ${jurisdiction}`, null);
+                }
+
                 return {
                     id: topic.id,
                     summary: topic.text,
@@ -1625,12 +1639,25 @@ class UWRMapLibre {
         // Start showing content for the specified layer
         if (layerName === 'trending') {
             this.startTrendingComments();
+
+            // Immediately show a bubble after jurisdiction change for better UX
+            setTimeout(async () => {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Immediately showing bubble for ${this.currentJurisdiction} jurisdiction`, null);
+                }
+                await this.showNextTrendingComment();
+            }, 1000); // Show first bubble after 1 second
         }
         // Add other layer types here as they're implemented
     }
 
     setJurisdiction(jurisdiction) {
         console.log(`🗺️ Setting jurisdiction to: ${jurisdiction}`);
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', `Jurisdiction changed from ${this.currentJurisdiction} to ${jurisdiction}`, null);
+        }
+
         this.currentJurisdiction = jurisdiction;
         
         // Update map view based on jurisdiction
