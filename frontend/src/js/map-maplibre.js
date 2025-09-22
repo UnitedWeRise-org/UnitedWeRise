@@ -973,12 +973,13 @@ class UWRMapLibre {
             <div class="insufficient-content-overlay" onclick="this.parentElement.remove()">
                 <div class="insufficient-content-popup" onclick="event.stopPropagation()">
                     <div class="insufficient-content-header">
-                        <h3>🚧 Feature Under Development</h3>
+                        <h3>💬 Trending Conversations</h3>
                         <button class="close-btn" onclick="this.closest('.insufficient-content-modal').remove()">&times;</button>
                     </div>
                     <div class="insufficient-content-body">
-                        <p>This feature requires more user posts before it can function properly.</p>
-                        <p>As more people join and share their thoughts, you'll see real conversations from your community here!</p>
+                        <p><strong>This is a placeholder.</strong> Once users begin posting content, these bubbles will populate with trending posts or summarized discussion topics, and clicking on them will navigate you to that discussion so you can join in.</p>
+                        <p>Selecting different levels (National, State, Local) will populate topics trending in those jurisdictions, giving you insight into what's being discussed at each level of government and civic engagement.</p>
+                        <p><em>Start the conversation! Share your thoughts on civic issues to help build this community-driven feature.</em></p>
                         <div class="insufficient-content-actions">
                             <button class="primary-btn" onclick="this.closest('.insufficient-content-modal').remove()">Got it!</button>
                         </div>
