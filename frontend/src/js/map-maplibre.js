@@ -1216,7 +1216,7 @@ class UWRMapLibre {
     async fetchTrendingComment(jurisdiction) {
         // Check if we should use dummy data
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
-            const dummyTopics = window.mapDummyData.getTopics();
+            const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
             if (dummyTopics.length > 0) {
                 // Return a random topic from dummy data
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
@@ -1228,7 +1228,8 @@ class UWRMapLibre {
                     coordinates: topic.coordinates,
                     engagement: topic.engagement,
                     timestamp: topic.timestamp,
-                    isEdge: topic.isEdge
+                    isEdge: topic.isEdge,
+                    jurisdiction: topic.jurisdiction
                 };
             }
         }
