@@ -1580,8 +1580,17 @@
         async function handleGoogleCredentialResponse(response) {
             try {
                 console.log('Google credential response received');
-                
-                const result = await fetch(`${API_BASE}/oauth/google`, {
+
+                // Debug API configuration
+                console.log('🔧 Debug - Current hostname:', window.location.hostname);
+                console.log('🔧 Debug - window.API_CONFIG:', window.API_CONFIG);
+                console.log('🔧 Debug - API_BASE value:', API_BASE);
+
+                // Ensure we're using the correct API base
+                const currentApiBase = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
+                console.log('🔧 Debug - Using API base:', currentApiBase);
+
+                const result = await fetch(`${currentApiBase}/oauth/google`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
