@@ -48,25 +48,48 @@ function getRandomUSCoordinate() {
     };
 }
 
-// Dummy topic content generator
-function getDummyMapTopics() {
-    const topics = [
-        "Infrastructure bill passes with bipartisan support",
-        "Local schools receive federal funding boost",
-        "Community rallies for climate action",
-        "Veterans healthcare expansion approved",
-        "Small business grants now available",
-        "Housing affordability crisis deepens",
-        "Police reform measures gain momentum",
-        "Rural broadband initiative launches",
-        "Healthcare costs debate intensifies",
-        "Education funding increases statewide",
-        "Environmental protection act proposed",
-        "Transportation improvements funded",
-        "Economic recovery plan unveiled",
-        "Voter registration drive succeeds",
-        "Civic engagement reaches new heights"
-    ];
+// Dummy topic content generator with jurisdiction support
+function getDummyMapTopics(jurisdiction = 'national') {
+    const topicsByJurisdiction = {
+        national: [
+            "Infrastructure bill passes with bipartisan support",
+            "Supreme Court decision impacts voting rights nationwide",
+            "Federal healthcare legislation advances in Senate",
+            "Veterans healthcare expansion approved",
+            "National climate action plan announced",
+            "Border security funding debate continues",
+            "Federal minimum wage discussion heats up",
+            "Military spending bill passes Congress",
+            "National education reform proposed",
+            "Immigration policy changes debated"
+        ],
+        state: [
+            "State legislature debates education funding",
+            "Governor signs new environmental protection act",
+            "State budget includes infrastructure improvements",
+            "Healthcare costs debate intensifies statewide",
+            "Police reform measures gain momentum in capitol",
+            "State university tuition freeze approved",
+            "Economic development zones announced",
+            "State park funding restored",
+            "Transportation improvements funded",
+            "Housing affordability crisis addressed"
+        ],
+        local: [
+            "City council meeting scheduled tonight",
+            "Local schools receive federal funding boost",
+            "Community rallies for climate action",
+            "Small business grants now available",
+            "Neighborhood watch program expands",
+            "Public library hours extended",
+            "Local election candidate forums announced",
+            "Road construction begins next month",
+            "Voter registration drive succeeds",
+            "Community center renovation approved"
+        ]
+    };
+
+    const topics = topicsByJurisdiction[jurisdiction] || topicsByJurisdiction.national;
 
     // Shuffle and return with coordinates
     return topics
@@ -74,13 +97,14 @@ function getDummyMapTopics() {
         .map((text, index) => {
             const coordData = getRandomUSCoordinate();
             return {
-                id: `dummy-${index}-${Date.now()}`,
+                id: `dummy-${jurisdiction}-${index}-${Date.now()}`,
                 text: text,
                 coordinates: coordData.coordinates,
                 region: coordData.region,
                 isEdge: coordData.isEdge,
                 engagement: Math.floor(Math.random() * 500) + 50,
-                timestamp: `${Math.floor(Math.random() * 12) + 1} hours ago`
+                timestamp: `${Math.floor(Math.random() * 12) + 1} hours ago`,
+                jurisdiction: jurisdiction
             };
         });
 }
