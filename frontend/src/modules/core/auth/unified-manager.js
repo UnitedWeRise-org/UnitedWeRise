@@ -264,6 +264,7 @@ class UnifiedAuthManager {
             overlay.classList.remove('show');
             // Wait for transition to complete before hiding
             setTimeout(() => {
+                overlay.style.display = 'none'; // Clear inline style that overrides CSS
                 overlay.classList.add('hidden');
             }, 300);
         }
