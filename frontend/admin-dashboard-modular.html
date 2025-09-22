@@ -398,6 +398,159 @@
             margin: 1rem 0;
         }
 
+        /* Tab System Styles */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            border-radius: 6px 6px 0 0;
+            margin-right: 2px;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #343a40;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #4b5c09;
+            border-color: #4b5c09;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0 6px 6px 6px;
+            margin-top: -1px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Content Moderation Specific Styles */
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4b5c09;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-sm:hover {
+            opacity: 0.8;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .admin-dashboard {
@@ -559,8 +712,65 @@
 
         <!-- Content Section -->
         <div id="content" class="dashboard-section">
-            <h2>Content Management</h2>
-            <p>Content management features will be implemented by ContentController module.</p>
+            <h2>📝 Content Moderation</h2>
+
+            <!-- Content Moderation Tabs -->
+            <div style="display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                <button id="userReportsTab" class="tab-button active">
+                    🚨 User Reports
+                </button>
+                <button id="aiFlagsTab" class="tab-button">
+                    🤖 AI Flagged
+                </button>
+            </div>
+
+            <!-- User Reports Tab Content -->
+            <div id="userReportsContent" class="tab-content active">
+                <h3>User-Submitted Reports</h3>
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <select id="reportStatusFilter" style="padding: 0.5rem;">
+                            <option value="PENDING">Pending Review</option>
+                            <option value="IN_REVIEW">In Review</option>
+                            <option value="RESOLVED">Resolved</option>
+                            <option value="all">All Statuses</option>
+                        </select>
+                        <select id="reportTargetTypeFilter" style="padding: 0.5rem;">
+                            <option value="all">All Types</option>
+                            <option value="POST">Posts</option>
+                            <option value="COMMENT">Comments</option>
+                            <option value="USER">Users</option>
+                            <option value="CANDIDATE">Candidates</option>
+                        </select>
+                        <select id="reportPriorityFilter" style="padding: 0.5rem;">
+                            <option value="all">All Priorities</option>
+                            <option value="URGENT">Urgent</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                        <button class="nav-button">🔍 Search</button>
+                    </div>
+
+                    <!-- Report Statistics -->
+                    <div id="userReportStats" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                        <!-- Stats will be populated by ContentController -->
+                    </div>
+
+                    <!-- Reports Table -->
+                    <div id="userReportsTable">
+                        <div class="loading">Loading user reports...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Flags Tab Content -->
+            <div id="aiFlagsContent" class="tab-content">
+                <h3>AI-Flagged Content</h3>
+                <div id="flaggedContent">
+                    <div class="loading">Loading flagged content...</div>
+                </div>
+            </div>
         </div>
 
         <!-- Reports Section -->
@@ -598,6 +808,7 @@
     <script src="src/modules/admin/state/AdminState.js"></script>
     <script src="src/modules/admin/controllers/OverviewController.js"></script>
     <script src="src/modules/admin/controllers/UsersController.js"></script>
+    <script src="src/modules/admin/controllers/ContentController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script src="src/modules/admin/AdminModuleLoader.js"></script>

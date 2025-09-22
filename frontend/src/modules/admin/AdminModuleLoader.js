@@ -14,7 +14,8 @@ class AdminModuleLoader {
             'AdminAuth',
             'AdminState',
             'OverviewController',
-            'UsersController'
+            'UsersController',
+            'ContentController'
         ];
         this.isInitialized = false;
         this.dependencies = {
@@ -22,7 +23,8 @@ class AdminModuleLoader {
             'AdminAPI': ['adminDebugLog'],
             'AdminState': ['AdminAPI', 'adminDebugLog'],
             'OverviewController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
-            'UsersController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'UsersController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'ContentController': ['AdminAPI', 'AdminState', 'adminDebugLog']
         };
 
         // Bind methods
@@ -169,6 +171,15 @@ class AdminModuleLoader {
                 window.usersController = new window.UsersController();
                 await window.usersController.init();
                 this.modules.set('UsersController', window.usersController);
+                break;
+
+            case 'ContentController':
+                if (!window.ContentController) {
+                    throw new Error('ContentController class not found in global scope');
+                }
+                window.contentController = new window.ContentController();
+                await window.contentController.init();
+                this.modules.set('ContentController', window.contentController);
                 break;
 
             default:
