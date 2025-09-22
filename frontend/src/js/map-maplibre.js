@@ -23,6 +23,13 @@ class UWRMapLibre {
         this.trendingPopups = [];
         this.trendingInterval = null;
         this.bubbleCycles = []; // Track bubble cycles with timestamps
+
+        // Enhanced caching and animation system
+        this.topicCache = []; // Cache of topics to reduce API calls
+        this.cacheTimestamp = 0;
+        this.cacheValidityMs = 180000; // 3 minutes cache validity
+        this.lastBubbleCount = 0; // Track last bubble count to avoid consecutive same numbers
+        this.activeAnimations = []; // Track ongoing animations for cleanup
         
         // Map layers system
         this.activeLayers = new Set(['trending', 'events', 'news', 'civic', 'community']); // Default active layers
@@ -856,87 +863,176 @@ class UWRMapLibre {
     async manageBubbleCycles() {
         try {
             const currentTime = Date.now();
-            
-            // Remove cycles that are 45+ seconds old (3 cycles * 15 seconds)
+
+            // Clear any ongoing animations from previous cycles
+            this.cleanupActiveAnimations();
+
+            // Fade out old cycles 3 seconds before they expire (42 seconds)
             this.bubbleCycles = this.bubbleCycles.filter(cycle => {
                 const age = currentTime - cycle.timestamp;
-                if (age >= 45000) {
-                    // Fade out these bubbles
-                    cycle.popups.forEach(popup => this.fadeOutBubble(popup));
+                if (age >= 42000) { // 3 seconds before 45 second expiry
+                    this.fadeOutCycleSequentially(cycle);
                     return false;
                 }
                 return true;
             });
-            
-            // Create new cycle
-            await this.createNewBubbleCycle(currentTime);
-            
+
+            // Create new cycle with enhanced logic
+            await this.createNewBubbleCycleEnhanced(currentTime);
+
         } catch (error) {
             console.error('Error managing bubble cycles:', error);
         }
     }
 
-    async createNewBubbleCycle(timestamp) {
-        // Responsive bubble count: fewer bubbles when collapsed
+    async createNewBubbleCycleEnhanced(timestamp) {
+        // Ensure cache is populated
+        await this.ensureTopicCache();
+
+        // Responsive bubble count with no consecutive same numbers
         const mapContainer = document.getElementById('mapContainer');
         const isCollapsed = mapContainer && mapContainer.classList.contains('collapsed');
-
-        // Collapsed: 1-2 bubbles, Expanded: 1-3 bubbles
         const maxBubbles = isCollapsed ? 2 : 3;
-        const popupCount = Math.floor(Math.random() * maxBubbles) + 1;
+
+        // Generate bubble count avoiding consecutive same numbers
+        let popupCount;
+        do {
+            popupCount = Math.floor(Math.random() * maxBubbles) + 1;
+        } while (popupCount === this.lastBubbleCount && maxBubbles > 1);
+        this.lastBubbleCount = popupCount;
 
         if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MapSystem', `Creating ${popupCount} bubbles (${isCollapsed ? 'collapsed' : 'expanded'} state)`, null);
+            adminDebugLog('MapSystem', `Creating ${popupCount} bubbles sequentially (${isCollapsed ? 'collapsed' : 'expanded'} state)`, null);
         }
 
         const newCycle = {
             timestamp: timestamp,
-            popups: []
+            popups: [],
+            animations: []
         };
-        
+
+        // Create bubbles sequentially with 3-second fade-ins
         for (let i = 0; i < popupCount; i++) {
-            const comment = await this.fetchTrendingComment(this.currentJurisdiction);
+            const comment = this.getNextCachedTopic();
             if (comment) {
-                // Stagger bubble creation to avoid overlap
-                setTimeout(async () => {
+                // Wait for previous bubble to finish fading in (3 seconds apart)
+                const delay = i * 3000;
+
+                const animationTimeout = setTimeout(async () => {
                     const popup = await this.displayTrendingPopup(comment);
                     if (popup) {
                         newCycle.popups.push(popup);
-                        this.fadeInBubble(popup);
+                        this.fadeInBubbleGradually(popup);
                     }
-                }, i * 300); // 300ms stagger
+                }, delay);
+
+                newCycle.animations.push(animationTimeout);
+                this.activeAnimations.push(animationTimeout);
             }
         }
         
         this.bubbleCycles.push(newCycle);
     }
 
-    fadeInBubble(popup) {
-        // Add fade-in class after a brief delay to ensure element is rendered
-        setTimeout(() => {
-            const popupElement = popup.getElement();
-            if (popupElement) {
-                popupElement.classList.add('fade-in');
-            }
-        }, 50);
-    }
+    // Enhanced caching system to reduce API calls
+    async ensureTopicCache() {
+        const now = Date.now();
+        const isExpired = (now - this.cacheTimestamp) > this.cacheValidityMs;
 
-    fadeOutBubble(popup) {
-        const popupElement = popup.getElement();
-        if (popupElement) {
-            popupElement.classList.add('fade-out');
-            popupElement.classList.remove('fade-in');
-            
-            // Remove popup after fade animation completes
-            setTimeout(() => {
-                if (popup && popup.remove) {
-                    popup.remove();
-                    // Remove from main tracking array
-                    this.trendingPopups = this.trendingPopups.filter(p => p !== popup);
+        if (this.topicCache.length === 0 || isExpired) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'Refreshing topic cache - fetching new batch', null);
+            }
+
+            // Fetch a batch of topics (12-15 topics for 3-minute cache period)
+            const batchSize = 15;
+            const newTopics = [];
+
+            for (let i = 0; i < batchSize; i++) {
+                const topic = await this.fetchTrendingComment(this.currentJurisdiction);
+                if (topic) {
+                    newTopics.push(topic);
                 }
-            }, 400); // Match CSS transition duration
+            }
+
+            this.topicCache = newTopics;
+            this.cacheTimestamp = now;
         }
     }
+
+    getNextCachedTopic() {
+        if (this.topicCache.length === 0) {
+            // Fallback if cache is empty
+            return this.fetchTrendingComment(this.currentJurisdiction);
+        }
+
+        // Rotate through cached topics to provide variety
+        const topic = this.topicCache.shift();
+        this.topicCache.push(topic); // Move to end for rotation
+        return topic;
+    }
+
+    // Enhanced fade animation methods
+    fadeInBubbleGradually(popup) {
+        if (popup && popup.getElement) {
+            const bubbleElement = popup.getElement();
+            const bubble = bubbleElement?.querySelector('.trending-bubble');
+
+            if (bubble) {
+                // Start invisible, then add fade-in class
+                bubble.classList.remove('fade-out');
+                bubble.classList.add('fade-in');
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', 'Starting 3-second fade-in animation', null);
+                }
+            }
+        }
+    }
+
+    fadeOutBubbleGradually(popup) {
+        if (popup && popup.getElement) {
+            const bubbleElement = popup.getElement();
+            const bubble = bubbleElement?.querySelector('.trending-bubble');
+
+            if (bubble) {
+                bubble.classList.remove('fade-in');
+                bubble.classList.add('fade-out');
+
+                // Remove popup after fade completes (3 seconds)
+                setTimeout(() => {
+                    try {
+                        popup.remove();
+                    } catch (e) {
+                        // Popup may already be removed
+                    }
+                }, 3000);
+            }
+        }
+    }
+
+    fadeOutCycleSequentially(cycle) {
+        if (cycle.popups && cycle.popups.length > 0) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Fading out ${cycle.popups.length} bubbles sequentially`, null);
+            }
+
+            // Fade out all bubbles simultaneously (3 seconds before new cycle)
+            cycle.popups.forEach(popup => {
+                this.fadeOutBubbleGradually(popup);
+            });
+        }
+    }
+
+    cleanupActiveAnimations() {
+        // Clear any pending timeouts to prevent overlap
+        this.activeAnimations.forEach(timeout => {
+            clearTimeout(timeout);
+        });
+        this.activeAnimations = [];
+    }
+
+    // Legacy fade methods removed - using enhanced gradual fade methods above
 
     // Map transition methods for smooth bubble handling
     hideAllBubblesDuringTransition() {
@@ -1719,21 +1815,38 @@ class UWRMapLibre {
 let uwrMap = null;
 
 // Dummy civic content for testing
-// Generate random coordinates within CONUS, Alaska, Hawaii, and territories
+// Generate coordinates within visible map bounds or edge placement for off-screen regions
 function generateRandomCoordinates() {
+    // Get current map bounds to ensure bubbles appear within view
+    const mapInstance = window.mapLibre || window.map?._maplibre;
+
+    // Default to continental US bounds if map not available
+    let visibleBounds = [[-125, 25], [-65, 49]]; // CONUS default
+
+    if (mapInstance && typeof mapInstance.getBounds === 'function') {
+        const bounds = mapInstance.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        visibleBounds = [[sw.lng, sw.lat], [ne.lng, ne.lat]];
+    }
+
     const regions = [
-        // Continental US (85% probability)
-        { bounds: [[-125, 25], [-65, 49]], weight: 85, name: 'CONUS' },
-        // Alaska (5% probability)
-        { bounds: [[-170, 55], [-130, 71]], weight: 5, name: 'Alaska' },
-        // Hawaii (5% probability)
-        { bounds: [[-162, 18], [-154, 23]], weight: 5, name: 'Hawaii' },
-        // Puerto Rico (3% probability)
-        { bounds: [[-67.5, 17.5], [-65.5, 18.7]], weight: 3, name: 'Puerto Rico' },
-        // US Virgin Islands (1% probability)
-        { bounds: [[-65.2, 17.6], [-64.5, 18.5]], weight: 1, name: 'USVI' },
-        // Guam (1% probability)
-        { bounds: [[144.5, 13.2], [145.0, 13.7]], weight: 1, name: 'Guam' }
+        // Continental US (90% probability) - always within visible bounds
+        {
+            bounds: [
+                [Math.max(-125, visibleBounds[0][0]), Math.max(25, visibleBounds[0][1])],
+                [Math.min(-65, visibleBounds[1][0]), Math.min(49, visibleBounds[1][1])]
+            ],
+            weight: 90,
+            name: 'CONUS',
+            onScreen: true
+        },
+        // Off-screen regions (10% total) - place at visible map edges
+        { bounds: 'edge-west', weight: 3, name: 'Alaska', onScreen: false },
+        { bounds: 'edge-southwest', weight: 3, name: 'Hawaii', onScreen: false },
+        { bounds: 'edge-southeast', weight: 2, name: 'Puerto Rico', onScreen: false },
+        { bounds: 'edge-south', weight: 1, name: 'USVI', onScreen: false },
+        { bounds: 'edge-west', weight: 1, name: 'Guam', onScreen: false }
     ];
 
     // Weighted random selection
@@ -1749,11 +1862,39 @@ function generateRandomCoordinates() {
         }
     }
 
-    const [[minLng, minLat], [maxLng, maxLat]] = selectedRegion.bounds;
-    const lng = minLng + Math.random() * (maxLng - minLng);
-    const lat = minLat + Math.random() * (maxLat - minLat);
+    let coordinates;
 
-    return { coordinates: [lng, lat], region: selectedRegion.name };
+    if (selectedRegion.onScreen && Array.isArray(selectedRegion.bounds)) {
+        // Generate within visible bounds
+        const [[minLng, minLat], [maxLng, maxLat]] = selectedRegion.bounds;
+        const lng = minLng + Math.random() * (maxLng - minLng);
+        const lat = minLat + Math.random() * (maxLat - minLat);
+        coordinates = [lng, lat];
+    } else {
+        // Place at map edge to indicate off-screen origin
+        const [[minLng, minLat], [maxLng, maxLat]] = visibleBounds;
+        const margin = 0.02; // Small margin from exact edge
+
+        switch (selectedRegion.bounds) {
+            case 'edge-west':
+                coordinates = [minLng + margin, minLat + Math.random() * (maxLat - minLat)];
+                break;
+            case 'edge-southwest':
+                coordinates = [minLng + Math.random() * (maxLng - minLng) * 0.3, minLat + margin];
+                break;
+            case 'edge-southeast':
+                coordinates = [maxLng - Math.random() * (maxLng - minLng) * 0.3, minLat + margin];
+                break;
+            case 'edge-south':
+                coordinates = [minLng + Math.random() * (maxLng - minLng), minLat + margin];
+                break;
+            default:
+                // Fallback to center if edge placement fails
+                coordinates = [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+        }
+    }
+
+    return { coordinates, region: selectedRegion.name, onScreen: selectedRegion.onScreen };
 }
 
 function getDummyCivicContent() {

@@ -16,12 +16,22 @@
 .trending-bubble {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 12px;
-    padding: 8px 10px; /* Tighter margins */
+    padding: 4px 6px; /* Ultra-tight margins around text */
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 3s ease-in-out;
     border: 1px solid rgba(75, 92, 9, 0.2);
     position: relative;
     max-width: 180px; /* Smaller max width */
+    opacity: 0; /* Start invisible for fade-in effect */
+}
+
+/* Fade animation states */
+.trending-bubble.fade-in {
+    opacity: 1;
+}
+
+.trending-bubble.fade-out {
+    opacity: 0;
 }
 
 /* Speech bubble arrow pointing down to origin */
@@ -78,7 +88,7 @@
 }
 
 #mapContainer.collapsed .trending-bubble {
-    padding: 6px 8px; /* Even tighter for collapsed */
+    padding: 3px 5px; /* Minimal padding for collapsed state */
     max-width: 140px; /* Smaller bubbles when collapsed */
 }
 
