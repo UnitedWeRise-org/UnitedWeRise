@@ -168,12 +168,6 @@ exports.validatePoliticalProfile = [
         .optional()
         .matches(/^\d{5}(-\d{4})?$/)
         .withMessage('ZIP code must be valid format'),
-    (0, express_validator_1.body)('politicalParty')
-        .optional()
-        .isLength({ max: 50 })
-        .trim()
-        .escape()
-        .withMessage('Political party must be less than 50 characters'),
     (0, express_validator_1.body)('campaignWebsite')
         .optional()
         .isURL()

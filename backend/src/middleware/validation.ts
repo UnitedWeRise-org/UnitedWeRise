@@ -177,12 +177,6 @@ export const validatePoliticalProfile = [
     .optional()
     .matches(/^\d{5}(-\d{4})?$/)
     .withMessage('ZIP code must be valid format'),
-  body('politicalParty')
-    .optional()
-    .isLength({ max: 50 })
-    .trim()
-    .escape()
-    .withMessage('Political party must be less than 50 characters'),
   body('campaignWebsite')
     .optional()
     .isURL()
