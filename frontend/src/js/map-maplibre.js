@@ -1218,20 +1218,63 @@ class UWRMapLibre {
             adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
         }
 
-        // Check if we should use dummy data
+        // Try to fetch real map topics from the API first
+        try {
+            const apiUrl = window.location.hostname.includes('dev') ?
+                'https://dev-api.unitedwerise.org' :
+                'https://api.unitedwerise.org';
+
+            const response = await fetch(`${apiUrl}/api/trending/map-topics?count=9&scope=${jurisdiction}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data && data.data.length > 0) {
+                    const topic = data.data[Math.floor(Math.random() * data.data.length)];
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MapSystem', `Retrieved real topic: "${topic.topic}" for ${jurisdiction}`, null);
+                    }
+
+                    return {
+                        id: topic.id,
+                        summary: topic.topic,
+                        topic: 'Trending Topic',
+                        location: 'Real Location',
+                        coordinates: topic.coordinates,
+                        engagement: topic.participantCount || 0,
+                        timestamp: 'Real Time',
+                        isEdge: false,
+                        jurisdiction: jurisdiction
+                    };
+                }
+            } else {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `API call failed (${response.status}), falling back to dummy data`, null);
+                }
+            }
+        } catch (error) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `API error: ${error.message}, falling back to dummy data`, null);
+            }
+        }
+
+        // Fallback to dummy data if API fails
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
             if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Found ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
+                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
             }
 
             if (dummyTopics.length > 0) {
-                // Return a random topic from dummy data
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
 
                 if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Selected topic: "${topic.text}" for ${jurisdiction}`, null);
+                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
                 }
 
                 return {
@@ -1646,7 +1689,15 @@ class UWRMapLibre {
                     adminDebugLog('MapSystem', `Immediately showing bubble for ${this.currentJurisdiction} jurisdiction`, null);
                 }
                 await this.showNextTrendingComment();
-            }, 1000); // Show first bubble after 1 second
+            }, 500); // Show first bubble after 0.5 second
+
+            // Force a second bubble quickly to ensure visibility
+            setTimeout(async () => {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Force showing second bubble for ${this.currentJurisdiction} jurisdiction`, null);
+                }
+                await this.showNextTrendingComment();
+            }, 2000); // Show second bubble after 2 seconds
         }
         // Add other layer types here as they're implemented
     }
