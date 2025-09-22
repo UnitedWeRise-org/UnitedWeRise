@@ -109,7 +109,12 @@ function setupMobileInterface() {
     document.documentElement.style.setProperty('--mobile-top-bar-height', '50px');
     
     // Set initial view based on login status
-    if (!window.authUtils?.isUserAuthenticated()) {
+    const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
+                           window.currentUser ||
+                           (window.userState && window.userState.current) ||
+                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+
+    if (!isAuthenticated) {
         // Show login if not authenticated
         showMobileLogin();
     } else {
@@ -353,7 +358,12 @@ function showMobileTrending() {
 
 function showMobileMessages() {
     // Check if user is logged in
-    if (!window.authUtils?.isUserAuthenticated()) {
+    const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
+                           window.currentUser ||
+                           (window.userState && window.userState.current) ||
+                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+
+    if (!isAuthenticated) {
         showTemporaryView('Messages', 'Please log in to view your messages.');
         return;
     }
@@ -388,7 +398,12 @@ function showMobileMessages() {
 
 function showMobileCivic() {
     // Check if user is logged in
-    if (!window.authUtils?.isUserAuthenticated()) {
+    const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
+                           window.currentUser ||
+                           (window.userState && window.userState.current) ||
+                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+
+    if (!isAuthenticated) {
         showTemporaryView('Civic Engagement', 'Please log in to access civic organizing tools.');
         return;
     }

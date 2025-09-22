@@ -48,7 +48,7 @@ import {
  * 4. Feature modules (depend on auth and state)
  * 5. Event listeners (connect UI to modules)
  */
-function initializeModules() {
+async function initializeModules() {
     console.log('🚀 Initializing JavaScript modules in dependency order...');
 
     // PHASE 1: Core Dependencies
@@ -78,7 +78,7 @@ function initializeModules() {
 
     // Load unified authentication utilities
     try {
-        await import('/modules/core/auth/utils.js');
+        await import('/src/modules/core/auth/utils.js');
         console.log('✅ Unified auth utilities loaded');
     } catch (error) {
         console.error('❌ Failed to load auth utilities:', error);
@@ -271,17 +271,19 @@ function setupLegacyCompatibility() {
 
 // Initialize everything when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initializeModules();
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initializeModules();
         setupLegacyCompatibility();
-        
+
         // Test functionality after a brief delay to ensure everything is loaded
         setTimeout(testModularFunctionality, 1000);
     });
 } else {
-    initializeModules();
-    setupLegacyCompatibility();
-    setTimeout(testModularFunctionality, 1000);
+    (async () => {
+        await initializeModules();
+        setupLegacyCompatibility();
+        setTimeout(testModularFunctionality, 1000);
+    })();
 }
 
 // Export for use in other modules

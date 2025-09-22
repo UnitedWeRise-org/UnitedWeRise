@@ -235,9 +235,20 @@ if (document.readyState === 'loading') {
 }
 
 // Load current user reputation if logged in
-if (window.authUtils?.isUserAuthenticated()) {
-    loadCurrentUserReputation();
-}
+const checkAndLoadReputation = () => {
+    const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
+                           window.currentUser ||
+                           (window.userState && window.userState.current) ||
+                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+
+    if (isAuthenticated) {
+        loadCurrentUserReputation();
+    }
+};
+
+// Try immediately, then try again after auth system loads
+checkAndLoadReputation();
+setTimeout(checkAndLoadReputation, 2000);
 
 // Export functions for use in other modules
 window.ReputationBadges = {
