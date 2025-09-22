@@ -109,8 +109,7 @@ function setupMobileInterface() {
     document.documentElement.style.setProperty('--mobile-top-bar-height', '50px');
     
     // Set initial view based on login status
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    if (!window.authUtils?.isUserAuthenticated()) {
         // Show login if not authenticated
         showMobileLogin();
     } else {
@@ -354,7 +353,7 @@ function showMobileTrending() {
 
 function showMobileMessages() {
     // Check if user is logged in
-    if (!window.currentUser && !localStorage.getItem('authToken')) {
+    if (!window.authUtils?.isUserAuthenticated()) {
         showTemporaryView('Messages', 'Please log in to view your messages.');
         return;
     }
@@ -389,7 +388,7 @@ function showMobileMessages() {
 
 function showMobileCivic() {
     // Check if user is logged in
-    if (!window.currentUser && !localStorage.getItem('authToken')) {
+    if (!window.authUtils?.isUserAuthenticated()) {
         showTemporaryView('Civic Engagement', 'Please log in to access civic organizing tools.');
         return;
     }

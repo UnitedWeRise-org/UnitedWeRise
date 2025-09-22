@@ -1813,6 +1813,7 @@ enum NotificationType {
   PHOTO_TAG_APPROVED
   PHOTO_TAG_DECLINED
   PRIVACY_REQUEST
+  REACTION
 }
 
 enum FriendshipStatus {

@@ -64,7 +64,12 @@ export declare class PostManagementService {
             isPolitical: boolean;
             tags: string[];
             likesCount: number;
+            dislikesCount: number;
+            agreesCount: number;
+            disagreesCount: number;
             commentsCount: number;
+            sharesCount: number;
+            viewsCount: number;
             containsFeedback: boolean | null;
             feedbackCategory: string | null;
             feedbackConfidence: number | null;
