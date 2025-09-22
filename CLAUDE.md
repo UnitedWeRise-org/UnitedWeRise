@@ -392,12 +392,20 @@ If ANY answer is uncertain, STOP and clarify with user.
   git log origin/development..HEAD  # Verify all changes pushed
   cd ..
 }
+
+# DATABASE SCHEMA VALIDATION (CRITICAL for database changes)
+cd backend
+npx prisma validate  # Ensures schema is valid
+npx prisma generate   # Regenerates client to match schema
+npm run build        # Ensures code compiles with current schema
+cd ..
 ```
 
 **⚠️ CRITICAL UNDERSTANDING:**
 - Docker builds from GitHub repository, NOT your local files
 - Uncommitted changes will NEVER deploy
 - This is the #1 cause of "mysterious" deployment failures
+- **NEW**: Database schema and code MUST be synchronized before deployment
 
 ---
 
@@ -565,21 +573,51 @@ UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*
 echo "Container uptime: $UPTIME seconds"
 ```
 
-#### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
+#### 3️⃣ Database Schema Changes - CRITICAL PROTOCOL
+**🚨 NEVER apply database migrations without matching code deployment!**
+
 ```bash
-# Step 1: Commit schema changes to development branch
+# CORRECT SEQUENCE (prevents schema-code mismatch):
+
+# Step 1: Update schema AND code together in development branch
 git checkout development
+# a) Modify prisma/schema.prisma
+# b) Update backend code to match new schema
+# c) Remove/add validations as needed
+
+# Step 2: Validate schema-code synchronization
+cd backend
+npx prisma validate      # Schema is valid
+npx prisma generate       # Client matches schema
+npm run build            # Code compiles with schema
+cd ..
+
+# Step 3: Create migration file (for tracking)
+cd backend
+npx prisma migrate dev --name descriptive_name --create-only
+# This creates migration file without applying it
+
+# Step 4: Commit EVERYTHING together
 git add .
-git commit -m "schema: Description of changes"
+git commit -m "schema: Description with migration and code changes"
 git push origin development
 
-# Step 2: Generate Prisma client locally
-cd backend && npx prisma generate
+# Step 5: Deploy to STAGING first
+# Follow Backend Deployment steps for staging
+# Migration auto-applies during deployment
 
-# Step 3: Apply migrations to production database
-npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+# Step 6: Test thoroughly on staging
+# Verify all functionality works with new schema
 
-# Step 4: Follow Backend Deployment steps above
+# Step 7: Production deployment (ONLY with user approval)
+# Merge to main and deploy - migration applies automatically
+```
+
+**❌ NEVER DO THIS:**
+```bash
+# WRONG: Direct database modification without code update
+npx prisma db execute --file remove-column.sql  # ❌ NO!
+# This breaks production immediately if code still references the column
 ```
 
 ---
