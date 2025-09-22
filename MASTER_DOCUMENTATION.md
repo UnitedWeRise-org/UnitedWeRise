@@ -4693,6 +4693,42 @@ if (riskScore > 70) {
 3. OAuth login → Account linking → Profile update → Security verification
 4. TOTP setup → QR generation → Backup codes → Admin notification
 
+### 🛡️ **AUTHENTICATION STATE BEST PRACTICES**
+
+#### **Critical Rule: Consistent Auth State Usage**
+```javascript
+// ✅ CORRECT: User-facing components use global state
+if (!window.currentUser) {
+  showLoginPrompt();
+}
+
+// ❌ WRONG: Don't mix auth state systems
+if (!userState.current) { // Module state - can be null even when logged in
+  showLoginPrompt(); // False negative!
+}
+```
+
+#### **System Boundaries**
+- **User-facing components** → Use `window.currentUser`
+  - Feed loading, search, profile display, mobile navigation
+- **Auth infrastructure** → Use `userState.current`
+  - Login/logout handlers, auth middleware, session management
+
+#### **Prevention Checklist**
+- [ ] New components check `window.currentUser` for auth state
+- [ ] Search for `userState.current` in user-facing code (likely bug)
+- [ ] Test auth-dependent features after login to verify state consistency
+- [ ] Use consistent auth patterns across similar components
+
+#### **Common Auth Bug Patterns**
+```javascript
+// ❌ DANGER: Using module state in user-facing components
+if (!userState.current) return showLogin(); // May be null when user is logged in
+
+// ✅ SAFE: Using global state in user-facing components
+if (!window.currentUser) return showLogin(); // Reliable auth check
+```
+
 ---
 
 ## ☁️ DEPLOYMENT & INFRASTRUCTURE {#deployment-infrastructure}
@@ -11842,6 +11878,32 @@ fetch('/api/admin/dashboard', { credentials: 'include' })
 - **Fixed**: JWT token management moved to httpOnly cookies
 - **Impact**: More secure, prevents XSS token theft
 - **Required**: All API calls must include `credentials: 'include'`
+
+#### ✅ Auth State Inconsistency Resolution (September 22, 2025)
+- **Issue**: "Please log in to view your feed/search" errors despite being logged in
+- **Root Cause**: Dual authentication state systems - `userState.current` vs `window.currentUser`
+- **Components Affected**: My Feed, Global Search, Mobile Feed Loading
+- **Solution**: Standardized user-facing components to use `window.currentUser`
+
+**Technical Details**:
+```javascript
+// ❌ WRONG: Module state system (userState.current was null)
+if (!userState.current) {
+  showLoginPrompt(); // False negative - user was actually logged in
+}
+
+// ✅ FIXED: Global state system (window.currentUser works correctly)
+if (!window.currentUser) {
+  showLoginPrompt(); // Accurate auth check
+}
+```
+
+**Files Modified**:
+- `frontend/src/modules/features/feed/my-feed.js` - Fixed feed loading auth check
+- `frontend/src/modules/features/search/global-search.js` - Fixed search auth check and user rendering
+- `frontend/src/modules/module-loader.js` - Fixed mobile feed loading auth check
+
+**Rule Established**: User-facing components use `window.currentUser`, auth infrastructure uses `userState.current`
 
 ---
 
