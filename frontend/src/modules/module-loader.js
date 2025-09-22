@@ -126,7 +126,7 @@ function setupModularEventListeners() {
             // Enhanced mobile view switching with modules
             switch (view) {
                 case 'feed':
-                    if (userState.current) {
+                    if (window.currentUser) {
                         loadMyFeedPosts();
                     }
                     break;
