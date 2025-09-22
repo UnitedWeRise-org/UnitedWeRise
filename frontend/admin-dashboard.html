@@ -1025,6 +1025,16 @@ Loading deployment status...
         // Global state
         let currentUser = null;
 
+        // API Configuration - Environment-aware backend URL
+        const API_BASE = (() => {
+            const hostname = window.location.hostname;
+            if (hostname.includes('dev.unitedwerise.org')) {
+                return 'https://dev-api.unitedwerise.org/api';
+            } else {
+                return 'https://api.unitedwerise.org/api';
+            }
+        })();
+
         // Reusable TOTP Modal Component for Sensitive Actions
         async function requestTOTPConfirmation(actionDescription, options = {}) {
             return new Promise((resolve, reject) => {
