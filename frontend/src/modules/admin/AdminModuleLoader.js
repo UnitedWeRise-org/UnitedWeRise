@@ -15,7 +15,9 @@ class AdminModuleLoader {
             'AdminState',
             'OverviewController',
             'UsersController',
-            'ContentController'
+            'ContentController',
+            'SecurityController',
+            'ReportsController'
         ];
         this.isInitialized = false;
         this.dependencies = {
@@ -24,7 +26,9 @@ class AdminModuleLoader {
             'AdminState': ['AdminAPI', 'adminDebugLog'],
             'OverviewController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
             'UsersController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'ContentController': ['AdminAPI', 'AdminState', 'adminDebugLog']
+            'ContentController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
+            'SecurityController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'ReportsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
         };
 
         // Bind methods
@@ -180,6 +184,24 @@ class AdminModuleLoader {
                 window.contentController = new window.ContentController();
                 await window.contentController.init();
                 this.modules.set('ContentController', window.contentController);
+                break;
+
+            case 'SecurityController':
+                if (!window.SecurityController) {
+                    throw new Error('SecurityController class not found in global scope');
+                }
+                window.securityController = new window.SecurityController();
+                await window.securityController.init();
+                this.modules.set('SecurityController', window.securityController);
+                break;
+
+            case 'ReportsController':
+                if (!window.ReportsController) {
+                    throw new Error('ReportsController class not found in global scope');
+                }
+                window.reportsController = new window.ReportsController();
+                await window.reportsController.init();
+                this.modules.set('ReportsController', window.reportsController);
                 break;
 
             default:
