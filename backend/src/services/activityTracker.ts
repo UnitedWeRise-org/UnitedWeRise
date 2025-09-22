@@ -214,6 +214,43 @@ export class ActivityTracker {
   }
 
   /**
+   * Track post share
+   */
+  static async trackShareAdded(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    shareType: 'SIMPLE' | 'QUOTE',
+    quoteContent?: string
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      shareType,
+      hasQuote: shareType === 'QUOTE',
+      quoteContent: quoteContent?.substring(0, 100)
+    };
+
+    await this.track(userId, ActivityType.SHARE_ADDED, 'post', postId, metadata);
+  }
+
+  /**
+   * Track post share removal (unshare)
+   */
+  static async trackShareRemoved(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    shareType: 'SIMPLE' | 'QUOTE'
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      shareType
+    };
+
+    await this.track(userId, ActivityType.SHARE_REMOVED, 'post', postId, metadata);
+  }
+
+  /**
    * Get user activity log with filtering
    */
   static async getUserActivity(

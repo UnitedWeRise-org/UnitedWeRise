@@ -144,6 +144,28 @@ class ActivityTracker {
         await this.track(userId, client_1.ActivityType.REACTION_CHANGED, 'post', postId, metadata);
     }
     /**
+     * Track post share
+     */
+    static async trackShareAdded(userId, postId, postTitle, shareType, quoteContent) {
+        const metadata = {
+            postTitle: postTitle?.substring(0, 100),
+            shareType,
+            hasQuote: shareType === 'QUOTE',
+            quoteContent: quoteContent?.substring(0, 100)
+        };
+        await this.track(userId, client_1.ActivityType.SHARE_ADDED, 'post', postId, metadata);
+    }
+    /**
+     * Track post share removal (unshare)
+     */
+    static async trackShareRemoved(userId, postId, postTitle, shareType) {
+        const metadata = {
+            postTitle: postTitle?.substring(0, 100),
+            shareType
+        };
+        await this.track(userId, client_1.ActivityType.SHARE_REMOVED, 'post', postId, metadata);
+    }
+    /**
      * Get user activity log with filtering
      */
     static async getUserActivity(userId, options = {}) {

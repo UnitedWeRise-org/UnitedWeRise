@@ -13,6 +13,8 @@ export interface EngagementWeights {
     views: number;
     communityNotes: number;
     reportsWeight: number;
+    commentEngagement: number;
+    enhancedShares: number;
 }
 export interface EngagementMetrics {
     likesCount: number;
@@ -24,6 +26,18 @@ export interface EngagementMetrics {
     viewsCount: number;
     communityNotesCount: number;
     reportsCount: number;
+    commentEngagement?: {
+        totalCommentReactions: number;
+        avgReactionsPerComment: number;
+        commentQualityScore: number;
+    };
+    shareMetrics?: {
+        simpleSharesCount: number;
+        quoteSharesCount: number;
+        avgQuoteLength: number;
+        recentSharesBoost: number;
+        shareQualityScore: number;
+    };
 }
 export interface EngagementConfig {
     algorithm: 'standard' | 'controversy' | 'quality' | 'balanced' | 'custom';
@@ -85,6 +99,83 @@ export declare class EngagementScoringService {
         breakdown: any;
         algorithm: string;
     }>;
+    /**
+     * Calculate comment engagement metrics for a post
+     */
+    static calculateCommentEngagement(comments: Array<{
+        likesCount: number;
+        dislikesCount: number;
+        agreesCount: number;
+        disagreesCount: number;
+    }>): EngagementMetrics['commentEngagement'];
+    /**
+     * Calculate enhanced share metrics for a post
+     */
+    static calculateShareMetrics(shares: Array<{
+        shareType: 'SIMPLE' | 'QUOTE';
+        content?: string | null;
+        createdAt: Date;
+    }>, postCreatedAt: Date): EngagementMetrics['shareMetrics'];
+    /**
+     * Calculate engagement score for individual comments
+     */
+    static calculateCommentScore(comment: {
+        likesCount: number;
+        dislikesCount: number;
+        agreesCount: number;
+        disagreesCount: number;
+        replyCount: number;
+        createdAt: Date;
+        content: string;
+    }, authorReputation?: number): {
+        score: number;
+        breakdown: any;
+    };
+    /**
+     * Find trending comments for a post
+     */
+    static findTrendingComments(comments: Array<{
+        id: string;
+        likesCount: number;
+        dislikesCount: number;
+        agreesCount: number;
+        disagreesCount: number;
+        replyCount?: number;
+        createdAt: Date;
+        content: string;
+        author?: {
+            reputation?: number;
+        };
+    }>, options?: {
+        limit?: number;
+        minScore?: number;
+        timeWindow?: number;
+    }): {
+        trendingComments: {
+            engagementData: {
+                score: number;
+                breakdown: any;
+            };
+            id: string;
+            likesCount: number;
+            dislikesCount: number;
+            agreesCount: number;
+            disagreesCount: number;
+            replyCount?: number;
+            createdAt: Date;
+            content: string;
+            author?: {
+                reputation?: number;
+            };
+        }[];
+        stats: {
+            totalComments: number;
+            recentComments: number;
+            qualifyingComments: number;
+            averageScore: number;
+            timeWindow: number;
+        };
+    };
     /**
      * Get algorithm performance metrics
      */

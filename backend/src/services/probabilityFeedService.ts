@@ -6,9 +6,9 @@ import { prisma } from '../lib/prisma';
  * Author: Claude Code Assistant
  */
 
-;
 import { azureOpenAI } from './azureOpenAIService';
 import { reputationService } from './reputationService';
+import { EngagementScoringService } from './engagementScoringService';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -158,7 +158,16 @@ export class ProbabilityFeedService {
                 _count: {
                     select: {
                         likes: true,
-                        comments: true
+                        comments: true,
+                        shares: true
+                    }
+                },
+                comments: {
+                    select: {
+                        likesCount: true,
+                        dislikesCount: true,
+                        agreesCount: true,
+                        disagreesCount: true
                     }
                 }
             },
@@ -181,12 +190,31 @@ export class ProbabilityFeedService {
         // 2. Social Score (posts from followed users get boost)
         const socialScore = userProfile.followedUserIds.has(post.authorId) ? 1.0 : 0.1;
         
-        // 3. Trending Score (based on engagement velocity)
-        const likesCount = post._count.likes;
-        const commentsCount = post._count.comments;
-        const engagementScore = likesCount + (commentsCount * 2); // Comments worth more
-        const hoursAge = Math.max(1, hoursSincePost);
-        const trendingScore = Math.min(1.0, engagementScore / hoursAge); // Engagement per hour, capped at 1
+        // 3. Trending Score (using EngagementScoringService)
+        // Calculate comment engagement metrics
+        const commentEngagement = EngagementScoringService.calculateCommentEngagement(post.comments || []);
+
+        const engagementMetrics = {
+            likesCount: post.likesCount || 0,
+            dislikesCount: post.dislikesCount || 0,
+            agreesCount: post.agreesCount || 0,
+            disagreesCount: post.disagreesCount || 0,
+            commentsCount: post._count.comments || 0,
+            sharesCount: post._count.shares || 0,
+            viewsCount: 0, // Views not implemented yet
+            communityNotesCount: 0, // TODO: Implement community notes
+            reportsCount: 0, // TODO: Add reports count if available
+            commentEngagement
+        };
+
+        const engagementResult = EngagementScoringService.calculateScore(
+            engagementMetrics,
+            new Date(post.createdAt),
+            post.author?.reputation || 70
+        );
+
+        // Normalize engagement score to 0-1 range for trending score
+        const trendingScore = Math.min(1.0, engagementResult.score / 100);
         
         // 4. Similarity Score (cosine similarity to user's interests)
         let similarityScore = 0.5; // Default neutral score

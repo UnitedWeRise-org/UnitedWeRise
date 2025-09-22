@@ -17,6 +17,7 @@ const reputationService_1 = require("../services/reputationService");
 const activityTracker_1 = require("../services/activityTracker");
 const postGeographicService_1 = require("../services/postGeographicService");
 const postManagementService_1 = require("../services/postManagementService");
+const engagementScoringService_1 = require("../services/engagementScoringService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get posts with geographic data for map display
@@ -262,6 +263,9 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 userSentiment: null,
                 userStance: null,
                 isLiked: false,
+                isShared: false,
+                userShareType: null,
+                userShareContent: null,
                 _count: undefined,
                 reputationImpact: reputationImpact.penalties.length > 0 ? {
                     penalties: reputationImpact.penalties,
@@ -316,6 +320,13 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
                         stance: true
                     }
                 },
+                shares: {
+                    where: { userId },
+                    select: {
+                        shareType: true,
+                        content: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
@@ -329,6 +340,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
         });
         const formattedPosts = posts.map(post => {
             const userReaction = post.reactions[0] || null;
+            const userShare = post.shares[0] || null;
             return {
                 ...post,
                 likesCount: post._count.likes,
@@ -339,7 +351,11 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
                 userSentiment: userReaction?.sentiment || null,
                 userStance: userReaction?.stance || null,
                 isLiked: userReaction?.sentiment === 'LIKE',
+                isShared: !!userShare,
+                userShareType: userShare?.shareType || null,
+                userShareContent: userShare?.content || null,
                 reactions: undefined,
+                shares: undefined,
                 _count: undefined
             };
         });
@@ -397,6 +413,13 @@ router.get('/:postId', async (req, res) => {
                         stance: true
                     }
                 } : false,
+                shares: userId ? {
+                    where: { userId },
+                    select: {
+                        shareType: true,
+                        content: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -409,6 +432,7 @@ router.get('/:postId', async (req, res) => {
             return res.status(404).json({ error: 'Post not found' });
         }
         const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+        const userShare = post.shares && post.shares[0] ? post.shares[0] : null;
         res.json({
             post: {
                 ...post,
@@ -420,7 +444,11 @@ router.get('/:postId', async (req, res) => {
                 userSentiment: userReaction?.sentiment || null,
                 userStance: userReaction?.stance || null,
                 isLiked: userReaction?.sentiment === 'LIKE',
+                isShared: !!userShare,
+                userShareType: userShare?.shareType || null,
+                userShareContent: userShare?.content || null,
                 reactions: undefined,
+                shares: undefined,
                 _count: undefined
             }
         });
@@ -689,6 +717,259 @@ router.post('/:postId/reaction', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Share a post (simple share or quote share)
+router.post('/:postId/share', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { shareType, content } = req.body;
+        const userId = req.user.id;
+        // Validate share type
+        if (!shareType || !['SIMPLE', 'QUOTE'].includes(shareType)) {
+            return res.status(400).json({ error: 'Invalid share type. Must be SIMPLE or QUOTE' });
+        }
+        // Validate quote content if it's a quote share
+        if (shareType === 'QUOTE') {
+            if (!content || content.trim().length === 0) {
+                return res.status(400).json({ error: 'Quote content is required for quote shares' });
+            }
+            if (content.length > 500) {
+                return res.status(400).json({ error: 'Quote content must be 500 characters or less' });
+            }
+        }
+        // Check if post exists
+        const post = await prisma_1.prisma.post.findUnique({
+            where: { id: postId },
+            select: {
+                id: true,
+                authorId: true,
+                content: true
+            }
+        });
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        // Prevent sharing own posts
+        if (post.authorId === userId) {
+            return res.status(400).json({ error: 'You cannot share your own posts' });
+        }
+        // Check if user already shared this post
+        const existingShare = await prisma_1.prisma.share.findUnique({
+            where: {
+                userId_postId: {
+                    userId,
+                    postId
+                }
+            }
+        });
+        if (existingShare) {
+            return res.status(400).json({ error: 'You have already shared this post' });
+        }
+        // Create share record and update post count
+        await prisma_1.prisma.$transaction([
+            prisma_1.prisma.share.create({
+                data: {
+                    userId,
+                    postId,
+                    shareType,
+                    content: shareType === 'QUOTE' ? content.trim() : null
+                }
+            }),
+            prisma_1.prisma.post.update({
+                where: { id: postId },
+                data: { sharesCount: { increment: 1 } }
+            })
+        ]);
+        // Create notification if not sharing own post
+        if (post.authorId !== userId) {
+            try {
+                await (0, notifications_1.createNotification)('REACTION', // Using REACTION type for shares for now
+                userId, post.authorId, shareType === 'QUOTE'
+                    ? `${req.user.username} shared your post with a quote`
+                    : `${req.user.username} shared your post`, postId);
+            }
+            catch (error) {
+                console.warn('Failed to create share notification:', error);
+            }
+        }
+        // Track share activity
+        try {
+            await activityTracker_1.ActivityTracker.trackShareAdded(userId, postId, post.content.substring(0, 100), shareType, content?.substring(0, 100));
+        }
+        catch (error) {
+            console.error('Failed to track share activity:', error);
+        }
+        res.json({
+            message: shareType === 'QUOTE' ? 'Post shared with quote successfully' : 'Post shared successfully',
+            shareType,
+            hasContent: !!content
+        });
+    }
+    catch (error) {
+        console.error('Share post error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// React to a comment (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+router.post('/comments/:commentId/reaction', auth_1.requireAuth, async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const { reactionType, reactionValue } = req.body;
+        const userId = req.user.id;
+        // Validate reaction type and value
+        if (!reactionType || !['sentiment', 'stance'].includes(reactionType)) {
+            return res.status(400).json({ error: 'Invalid reaction type. Must be "sentiment" or "stance"' });
+        }
+        const validSentiments = ['LIKE', 'DISLIKE'];
+        const validStances = ['AGREE', 'DISAGREE'];
+        if (reactionType === 'sentiment' && reactionValue && !validSentiments.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid sentiment. Must be LIKE or DISLIKE' });
+        }
+        if (reactionType === 'stance' && reactionValue && !validStances.includes(reactionValue)) {
+            return res.status(400).json({ error: 'Invalid stance. Must be AGREE or DISAGREE' });
+        }
+        // Check if comment exists
+        const comment = await prisma_1.prisma.comment.findUnique({
+            where: { id: commentId },
+            select: {
+                id: true,
+                userId: true,
+                content: true,
+                postId: true
+            }
+        });
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+        // Find existing reaction for this user and comment
+        const existingReaction = await prisma_1.prisma.reaction.findUnique({
+            where: {
+                userId_commentId: {
+                    userId,
+                    commentId
+                }
+            }
+        });
+        if (reactionValue === null) {
+            // Remove reaction
+            if (existingReaction) {
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.delete({
+                        where: {
+                            userId_commentId: {
+                                userId,
+                                commentId
+                            }
+                        }
+                    }),
+                    // Update comment counts based on what was removed
+                    prisma_1.prisma.comment.update({
+                        where: { id: commentId },
+                        data: {
+                            ...(existingReaction.sentiment === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(existingReaction.sentiment === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(existingReaction.stance === 'DISAGREE' && { disagreesCount: { decrement: 1 } })
+                        }
+                    })
+                ]);
+                // Track reaction removal
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, existingReaction[reactionType] || '', null);
+                }
+                catch (error) {
+                    console.error('Failed to track comment reaction removal:', error);
+                }
+            }
+            res.json({ message: 'Comment reaction removed successfully' });
+        }
+        else {
+            // Add or update reaction
+            const reactionData = {
+                userId,
+                commentId,
+                ...(reactionType === 'sentiment' ? { sentiment: reactionValue } : {}),
+                ...(reactionType === 'stance' ? { stance: reactionValue } : {})
+            };
+            if (existingReaction) {
+                // Update existing reaction
+                const oldValue = existingReaction[reactionType];
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.update({
+                        where: {
+                            userId_commentId: {
+                                userId,
+                                commentId
+                            }
+                        },
+                        data: reactionData
+                    }),
+                    // Update comment counts - decrement old, increment new
+                    prisma_1.prisma.comment.update({
+                        where: { id: commentId },
+                        data: {
+                            // Decrement old reaction counts
+                            ...(oldValue === 'LIKE' && { likesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISLIKE' && { dislikesCount: { decrement: 1 } }),
+                            ...(oldValue === 'AGREE' && { agreesCount: { decrement: 1 } }),
+                            ...(oldValue === 'DISAGREE' && { disagreesCount: { decrement: 1 } }),
+                            // Increment new reaction counts
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+                // Track reaction change
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, oldValue, reactionValue);
+                }
+                catch (error) {
+                    console.error('Failed to track comment reaction change:', error);
+                }
+            }
+            else {
+                // Create new reaction
+                await prisma_1.prisma.$transaction([
+                    prisma_1.prisma.reaction.create({
+                        data: reactionData
+                    }),
+                    // Update comment counts
+                    prisma_1.prisma.comment.update({
+                        where: { id: commentId },
+                        data: {
+                            ...(reactionValue === 'LIKE' && { likesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISLIKE' && { dislikesCount: { increment: 1 } }),
+                            ...(reactionValue === 'AGREE' && { agreesCount: { increment: 1 } }),
+                            ...(reactionValue === 'DISAGREE' && { disagreesCount: { increment: 1 } })
+                        }
+                    })
+                ]);
+                // Create notification if not reacting to own comment
+                if (comment.userId !== userId) {
+                    try {
+                        await (0, notifications_1.createNotification)('REACTION', userId, comment.userId, `${req.user.username} reacted to your comment`, comment.postId, commentId);
+                    }
+                    catch (error) {
+                        console.warn('Failed to create comment reaction notification:', error);
+                    }
+                }
+                // Track new reaction
+                try {
+                    await activityTracker_1.ActivityTracker.trackReactionChanged(userId, comment.postId, comment.content, reactionType, null, reactionValue);
+                }
+                catch (error) {
+                    console.error('Failed to track new comment reaction:', error);
+                }
+            }
+            res.json({ message: 'Comment reaction updated successfully', reactionType, reactionValue });
+        }
+    }
+    catch (error) {
+        console.error('Comment reaction error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Add comment to post
 router.post('/:postId/comments', auth_1.requireAuth, moderation_1.checkUserSuspension, moderation_1.contentFilter, validation_1.validateComment, (0, moderation_1.moderateContent)('COMMENT'), async (req, res) => {
     try {
@@ -837,16 +1118,35 @@ router.get('/:postId/comments', moderation_1.addContentWarnings, async (req, res
                         avatar: true,
                         verified: true
                     }
-                }
+                },
+                reactions: req.user ? {
+                    where: {
+                        userId: req.user.id // Include user's reactions if authenticated
+                    }
+                } : false
             },
             orderBy: { createdAt: 'asc' }
         });
         // Build comment tree structure from flat array
         const commentMap = new Map();
         const topLevelComments = [];
-        // First pass: create map of all comments
+        // First pass: create map of all comments with reaction data
         allComments.forEach(comment => {
-            commentMap.set(comment.id, { ...comment, replies: [] });
+            // Extract user reactions from the reactions array (if user is authenticated)
+            const userReaction = comment.reactions?.[0]; // There should be at most one reaction per user per comment
+            // Create enhanced comment object with reaction data
+            const enhancedComment = {
+                ...comment,
+                replies: [],
+                // User's current reactions
+                userSentiment: userReaction?.sentiment || null,
+                userStance: userReaction?.stance || null,
+                // Reaction counts are already in the comment model from schema
+                // likesCount, dislikesCount, agreesCount, disagreesCount
+            };
+            // Remove the reactions array as it's no longer needed
+            delete enhancedComment.reactions;
+            commentMap.set(comment.id, enhancedComment);
         });
         // Second pass: build parent-child relationships
         allComments.forEach(comment => {
@@ -926,6 +1226,13 @@ router.get('/user/:userId', async (req, res) => {
                         stance: true
                     }
                 } : false,
+                shares: currentUserId ? {
+                    where: { userId: currentUserId },
+                    select: {
+                        shareType: true,
+                        content: true
+                    }
+                } : false,
                 _count: {
                     select: {
                         likes: true,
@@ -939,6 +1246,7 @@ router.get('/user/:userId', async (req, res) => {
         });
         const postsWithCounts = posts.map(post => {
             const userReaction = post.reactions && post.reactions[0] ? post.reactions[0] : null;
+            const userShare = post.shares && post.shares[0] ? post.shares[0] : null;
             return {
                 ...post,
                 likesCount: post._count.likes,
@@ -949,7 +1257,11 @@ router.get('/user/:userId', async (req, res) => {
                 userSentiment: userReaction?.sentiment || null,
                 userStance: userReaction?.stance || null,
                 isLiked: userReaction?.sentiment === 'LIKE',
+                isShared: !!userShare,
+                userShareType: userShare?.shareType || null,
+                userShareContent: userShare?.content || null,
                 reactions: undefined,
+                shares: undefined,
                 _count: undefined
             };
         });
@@ -1304,6 +1616,102 @@ router.get('/config/management', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to retrieve configuration'
+        });
+    }
+});
+// Get trending comments for a post
+router.get('/:postId/trending-comments', async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { limit = 5, minScore = 1.0, timeWindow = 24 } = req.query;
+        // Validate query parameters
+        const limitNum = Math.max(1, Math.min(20, parseInt(limit.toString()) || 5));
+        const minScoreNum = Math.max(0, parseFloat(minScore.toString()) || 1.0);
+        const timeWindowNum = Math.max(1, Math.min(168, parseInt(timeWindow.toString()) || 24)); // Max 1 week
+        // Check if post exists
+        const post = await prisma_1.prisma.post.findUnique({
+            where: { id: postId }
+        });
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                error: 'Post not found'
+            });
+        }
+        // Get all comments for the post with engagement data
+        const comments = await prisma_1.prisma.comment.findMany({
+            where: { postId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        verified: true
+                    }
+                },
+                _count: {
+                    select: {
+                        replies: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        // Transform comments for trending analysis
+        const commentsForAnalysis = comments.map(comment => ({
+            id: comment.id,
+            likesCount: comment.likesCount,
+            dislikesCount: comment.dislikesCount,
+            agreesCount: comment.agreesCount,
+            disagreesCount: comment.disagreesCount,
+            replyCount: comment._count.replies,
+            createdAt: comment.createdAt,
+            content: comment.content,
+            author: {
+                reputation: 70 // Default reputation for simplicity
+            }
+        }));
+        // Find trending comments using EngagementScoringService
+        const trendingResult = engagementScoringService_1.EngagementScoringService.findTrendingComments(commentsForAnalysis, {
+            limit: limitNum,
+            minScore: minScoreNum,
+            timeWindow: timeWindowNum
+        });
+        // Enrich trending comments with full author data
+        const enrichedTrendingComments = trendingResult.trendingComments.map(trendingComment => {
+            const originalComment = comments.find(c => c.id === trendingComment.id);
+            return {
+                id: trendingComment.id,
+                content: trendingComment.content,
+                createdAt: trendingComment.createdAt,
+                likesCount: trendingComment.likesCount,
+                dislikesCount: trendingComment.dislikesCount,
+                agreesCount: trendingComment.agreesCount,
+                disagreesCount: trendingComment.disagreesCount,
+                replyCount: trendingComment.replyCount,
+                author: originalComment?.user,
+                engagementScore: trendingComment.engagementData.score,
+                engagementBreakdown: trendingComment.engagementData.breakdown
+            };
+        });
+        res.json({
+            success: true,
+            data: {
+                trendingComments: enrichedTrendingComments,
+                stats: trendingResult.stats,
+                postId,
+                algorithm: 'comment-engagement-scoring'
+            }
+        });
+    }
+    catch (error) {
+        console.error('Trending comments error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve trending comments'
         });
     }
 });

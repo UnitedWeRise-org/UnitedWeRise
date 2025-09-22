@@ -58,15 +58,15 @@ export declare class PostManagementService {
             editCount: number;
             lastEditedAt: Date | null;
             originalContent: string | null;
+            likesCount: number;
+            dislikesCount: number;
+            agreesCount: number;
+            disagreesCount: number;
             imageUrl: string | null;
             extendedContent: string | null;
             authorId: string;
             isPolitical: boolean;
             tags: string[];
-            likesCount: number;
-            dislikesCount: number;
-            agreesCount: number;
-            disagreesCount: number;
             commentsCount: number;
             sharesCount: number;
             viewsCount: number;
@@ -122,6 +122,10 @@ export declare class PostManagementService {
                 editCount: number;
                 lastEditedAt: Date | null;
                 originalContent: string | null;
+                likesCount: number;
+                dislikesCount: number;
+                agreesCount: number;
+                disagreesCount: number;
             }[];
             photos: {
                 id: string;

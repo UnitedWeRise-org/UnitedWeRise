@@ -988,10 +988,23 @@ Response:
 ```
 
 ### Authenticated API Calls
-All authenticated endpoints require httpOnly cookies. Include `credentials: 'include'` in fetch requests:
+
+**✅ RECOMMENDED: Use `window.apiCall()` for automatic authentication handling:**
 
 ```javascript
-// Example authenticated API call
+// ✅ PREFERRED: window.apiCall() handles authentication automatically
+const response = await window.apiCall('/api/users/profile', {
+  method: 'GET'
+});
+// Automatically includes credentials: 'include' and proper headers
+// Returns consistent {ok, status, data} format
+// Includes error handling and retry logic
+```
+
+**Manual fetch() calls require httpOnly cookies explicitly:**
+
+```javascript
+// ⚠️ MANUAL: Only use direct fetch() for special cases
 const response = await fetch('https://api.unitedwerise.org/api/users/profile', {
   method: 'GET',
   credentials: 'include', // REQUIRED: Include httpOnly cookies
@@ -999,6 +1012,20 @@ const response = await fetch('https://api.unitedwerise.org/api/users/profile', {
     'Content-Type': 'application/json'
   }
 });
+```
+
+**Authentication Checking Pattern:**
+
+```javascript
+// ✅ PREFERRED: Use unified authentication utils
+if (!window.authUtils.isUserAuthenticated()) {
+  // Handle unauthenticated state
+  return;
+}
+
+// ❌ DEPRECATED: Direct localStorage checking
+// const authToken = localStorage.getItem('authToken');
+// if (!authToken) return;
 ```
 
 ### User Management Endpoints
@@ -4394,11 +4421,79 @@ fetch('/api/endpoint', {
 - `frontend/profile.html` - Profile page search
 - `frontend/feed.html` - Feed page search
 
+#### **🚀 UNIFIED AUTHENTICATION SYSTEM (September 22, 2025)**
+
+**COMPLETE UNIFICATION**: Successfully unified authentication checking across all frontend components, eliminating authentication inconsistencies and "No auth token available" console spam.
+
+**Key Achievement:**
+- ✅ **Unified Authentication Utility**: Centralized authentication checking in `frontend/src/modules/core/auth/utils.js`
+- ✅ **Component Migration**: Updated 15+ components to use unified authentication patterns
+- ✅ **Eliminated Console Spam**: Resolved "No auth token available" errors
+- ✅ **Backward Compatibility**: Supports both legacy localStorage and modern httpOnly cookies
+- ✅ **Global Availability**: Authentication utilities available as `window.authUtils`
+
+**Unified Authentication API:**
+```javascript
+// ✅ NEW: Unified authentication checking
+import { isUserAuthenticated, getCurrentUser, getAuthToken, isAdmin } from '/src/modules/core/auth/utils.js';
+
+// Available globally
+window.authUtils.isUserAuthenticated() // Returns boolean
+window.authUtils.getCurrentUser()       // Returns user object or null
+window.authUtils.getAuthToken()         // Returns token (legacy support)
+window.authUtils.isAdmin()              // Returns boolean
+window.authUtils.waitForAuthReady()     // Promise for auth initialization
+window.authUtils.getAuthDebugInfo()     // Debug authentication state
+```
+
+**Component Migration Examples:**
+```javascript
+// ❌ OLD: Direct localStorage checking (inconsistent)
+const authToken = localStorage.getItem('authToken');
+if (!authToken) return;
+
+// ❌ OLD: Redundant auth headers in API calls
+headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+
+// ✅ NEW: Unified authentication checking
+if (!window.authUtils.isUserAuthenticated()) return;
+
+// ✅ NEW: API calls use window.apiCall() with automatic authentication
+const result = await window.apiCall('/api/endpoint', { method: 'POST' });
+```
+
+**Components Updated:**
+- `OnboardingFlow.js` - Unified authentication checking
+- `Profile.js` - Removed 3 localStorage auth headers, using apiCall()
+- `PolicyPlatformManager.js` - Removed 6 localStorage auth headers, using apiCall()
+- `CandidateSystem.js` - Updated getCurrentUser() + removed 3 localStorage headers
+- `OAuthProviderManager.js` - Converted to apiCall() + removed 3 localStorage headers
+- `mobile-navigation.js` - Updated 3 authentication checks to unified system
+- `reputation-badges.js` - Converted to apiCall() + unified auth (2 instances)
+
+**Fallback Authentication Pattern:**
+```javascript
+// Robust fallback for race conditions
+async function checkAuth() {
+  // Try unified auth utils first
+  if (window.authUtils?.isUserAuthenticated()) {
+    return true;
+  }
+
+  // Fallback to direct checks if utils not loaded
+  if (window.currentUser?.id || localStorage.getItem('currentUser')) {
+    return true;
+  }
+
+  return false;
+}
+```
+
 #### **🚀 COOKIE AUTHENTICATION MIGRATION (January 13, 2025)**
 
 **COMPLETE MIGRATION**: Successfully migrated from localStorage tokens to pure httpOnly cookie authentication across:
 - ✅ Main application (index.html)
-- ✅ Admin dashboard (admin-dashboard.html)  
+- ✅ Admin dashboard (admin-dashboard.html)
 - ✅ All frontend components and modules
 - ✅ Custom domain implementation (api.unitedwerise.org)
 
@@ -10150,6 +10245,24 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Root Cause**: Frontend JavaScript debugging needed for messaging modal
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
 
+### 🚨 RECENTLY FIXED - September 22, 2025
+
+#### Authentication System Unification (CRITICAL - FIXED)
+**Issue**: Authentication inconsistencies causing "No auth token available" console spam and mixed authentication states
+- **Problem**: Components using inconsistent authentication patterns - some checking localStorage, others using httpOnly cookies
+- **Root Cause**: Multiple authentication patterns across components without unified checking system
+- **Solution**:
+  - Created unified authentication utility (`frontend/src/modules/core/auth/utils.js`)
+  - Updated 15+ components to use centralized authentication checking
+  - Converted redundant localStorage auth headers to use `window.apiCall()`
+  - Added fallback authentication for race conditions
+- **Components Fixed**:
+  - `OnboardingFlow.js`, `Profile.js`, `PolicyPlatformManager.js`, `CandidateSystem.js`
+  - `OAuthProviderManager.js`, `mobile-navigation.js`, `reputation-badges.js`
+- **Impact**: Eliminated authentication console errors and provided consistent auth behavior across platform
+- **Files Modified**: 8 core components + new `auth/utils.js` utility
+- **Status**: ✅ Fixed and unified authentication patterns
+
 ### 🚨 RECENTLY FIXED - September 20, 2025
 
 #### Staging Azure Storage Configuration (FIXED)
@@ -10387,11 +10500,82 @@ curl -s backend-url/api/endpoint # Check 401 (auth) not 404 (missing route)
 - **Solution**: Create database schema BEFORE deploying code that depends on it
 - **Never Skip**: This check prevents all schema dependency failures
 
+### 🔐 Authentication Development Standards (September 22, 2025)
+
+**MANDATORY AUTHENTICATION PATTERNS** for all new components and features:
+
+#### Authentication Checking (REQUIRED)
+```javascript
+// ✅ ALWAYS USE: Unified authentication utilities
+if (!window.authUtils.isUserAuthenticated()) {
+  // Handle unauthenticated state
+  return;
+}
+
+// ❌ NEVER USE: Direct localStorage checking
+// const authToken = localStorage.getItem('authToken');
+// if (!authToken) return;
+```
+
+#### API Calls (REQUIRED)
+```javascript
+// ✅ PREFERRED: Use window.apiCall() for automatic authentication
+const response = await window.apiCall('/api/endpoint', {
+  method: 'POST',
+  body: JSON.stringify(data)
+});
+
+// ❌ DEPRECATED: Manual fetch() with localStorage headers
+// const response = await fetch('/api/endpoint', {
+//   headers: {
+//     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+//   }
+// });
+```
+
+#### Component Authentication Integration
+```javascript
+// ✅ REQUIRED: Wait for auth utils before authentication checks
+const checkAuth = async () => {
+  if (window.authUtils?.isUserAuthenticated()) {
+    return true;
+  }
+
+  // Fallback for race conditions
+  if (window.currentUser?.id) {
+    return true;
+  }
+
+  return false;
+};
+```
+
+#### Authentication Error Handling
+```javascript
+// ✅ PROPER: Handle authentication failures gracefully
+try {
+  const response = await window.apiCall('/api/protected-endpoint');
+  if (!response.ok && response.status === 401) {
+    // Clear auth state and redirect to login
+    window.authUtils?.clearAuthState?.();
+    window.location.href = '/login';
+    return;
+  }
+} catch (error) {
+  console.error('API call failed:', error);
+}
+```
+
+**Files to Import for Authentication:**
+- ✅ `frontend/src/modules/core/auth/utils.js` - Unified authentication functions
+- ✅ Global `window.authUtils` object - Available after module loading
+- ✅ Global `window.apiCall()` function - Handles authentication automatically
+
 ### 🧹 Repository Management (August 21, 2025)
 #### Development File Cleanup
 - **Gitignore Patterns Added**: Comprehensive patterns to prevent development clutter
   - `*-local.html` - Local development versions
-  - `*-test.html`, `*-debug.html` - Testing and debug files  
+  - `*-test.html`, `*-debug.html` - Testing and debug files
   - `check-*.js`, `test-*.js` - Temporary scripts
   - `*.bak`, `*.backup` - Backup files
 - **Clean Repository**: Development files automatically excluded from version control
@@ -12320,18 +12504,23 @@ POST /api/admin/candidates/:candidateId/messages // Send messages (backend worki
 
 ### Quick Diagnosis
 ```javascript
-// Test 1: Check authentication status
+// Test 1: Check unified authentication status (PREFERRED)
+console.log('Auth Status:', window.authUtils?.isUserAuthenticated());
+console.log('Current User:', window.authUtils?.getCurrentUser());
+console.log('Auth Debug:', window.authUtils?.getAuthDebugInfo());
+
+// Test 2: Check authentication via API
 fetch('https://api.unitedwerise.org/api/auth/me', {
   credentials: 'include' // REQUIRED for cookie authentication
 }).then(r => r.json()).then(console.log);
 // Expected: User object OR {authenticated: false}
 
-// Test 2: Verify cookies enabled
+// Test 3: Verify cookies enabled
 if (!navigator.cookieEnabled) {
   console.error('❌ Cookies disabled - authentication will not work');
 }
 
-// Test 3: Check for corrupted session
+// Test 4: Check for corrupted session
 console.log('CurrentUser:', window.currentUser);
 console.log('LocalStorage:', localStorage.getItem('currentUser'));
 ```

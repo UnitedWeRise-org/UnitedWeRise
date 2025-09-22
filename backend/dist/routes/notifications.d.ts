@@ -14,9 +14,9 @@ export declare const createNotification: (type: "LIKE" | "COMMENT" | "FOLLOW" | 
     senderId: string | null;
     postId: string | null;
     type: import(".prisma/client").$Enums.NotificationType;
+    commentId: string | null;
     message: string;
     receiverId: string;
-    commentId: string | null;
     read: boolean;
 }>;
 export default router;

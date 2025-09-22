@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UnitedWeRise - Admin Dashboard (Modular)</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <style>
+        /* Admin Dashboard Styles - Extracted from original */
+        .admin-dashboard {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #f8f9fa;
+            min-height: 100vh;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 2px solid #4b5c09;
+            color: #4b5c09;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .nav-button:hover, .nav-button.active {
+            background: #4b5c09;
+            color: white;
+        }
+
+        .dashboard-section {
+            display: none;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-section.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4b5c09 0%, #6b8109 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-card.stat-updating {
+            animation: statUpdate 0.3s ease-in-out;
+        }
+
+        @keyframes statUpdate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .login-required {
+            display: none;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4b5c09;
+        }
+
+        .error {
+            background: #fee;
+            color: #d00;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .health-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+
+        .health-status.status-healthy {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+        }
+
+        .health-status.status-unhealthy {
+            background: #fee;
+            border-left: 4px solid #dc3545;
+        }
+
+        .health-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .health-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #28a745;
+            margin-right: 0.5rem;
+        }
+
+        .status-unhealthy .health-dot {
+            background: #dc3545;
+        }
+
+        .health-text {
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+
+        .health-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .health-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .health-label {
+            color: #666;
+        }
+
+        .health-value {
+            font-weight: 600;
+        }
+
+        .refresh-indicator {
+            animation: spin 1s linear;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: "Loading...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-dashboard {
+                margin: 1rem;
+                padding: 1rem;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .admin-nav {
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-required">
+        <div class="login-form">
+            <h2>Admin Dashboard Access</h2>
+            <p>Please log in with your admin credentials</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div id="loginError" class="error" style="display: none;"></div>
+                <button type="submit" class="nav-button" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardMain" class="admin-dashboard" style="display: none;">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>Admin Dashboard (Modular)</h1>
+                <p id="welcomeMessage">Welcome back</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="lastRefreshTime" style="font-size: 0.875rem; color: #666;"></span>
+                <button id="refreshAllBtn" class="nav-button">
+                    <span id="refreshIcon">🔄</span> Refresh
+                </button>
+                <button onclick="logout()" class="nav-button">Logout</button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="admin-nav">
+            <button class="nav-button active" data-section="overview">Overview</button>
+            <button class="nav-button" data-section="security">Security</button>
+            <button class="nav-button" data-section="users">Users</button>
+            <button class="nav-button" data-section="content">Content</button>
+            <button class="nav-button" data-section="reports">Reports</button>
+            <button class="nav-button" data-section="candidates">Candidates</button>
+            <button class="nav-button" data-section="analytics">Analytics</button>
+            <button class="nav-button" data-section="system">System</button>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview" class="dashboard-section active">
+            <h2>System Overview</h2>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card" data-type="users">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card" data-type="users">
+                    <div class="stat-number" id="activeUsers">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card" data-type="posts">
+                    <div class="stat-number" id="totalPosts">0</div>
+                    <div class="stat-label">Total Posts</div>
+                </div>
+                <div class="stat-card" data-type="reports">
+                    <div class="stat-number" id="pendingReports">0</div>
+                    <div class="stat-label">Pending Reports</div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div>
+                <h3>Performance Metrics</h3>
+                <div id="performanceMetrics">
+                    <p>Loading performance data...</p>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div>
+                <h3>System Health</h3>
+                <div id="healthStatus">
+                    <p>Checking system health...</p>
+                </div>
+            </div>
+
+            <div id="overviewError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Security Section -->
+        <div id="security" class="dashboard-section">
+            <h2>Security Monitor</h2>
+            <p>Security features will be implemented by SecurityController module.</p>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users" class="dashboard-section">
+            <h2>User Management</h2>
+            <p>User management features will be implemented by UsersController module.</p>
+        </div>
+
+        <!-- Content Section -->
+        <div id="content" class="dashboard-section">
+            <h2>Content Management</h2>
+            <p>Content management features will be implemented by ContentController module.</p>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports" class="dashboard-section">
+            <h2>Report Management</h2>
+            <p>Report management features will be implemented by ReportsController module.</p>
+        </div>
+
+        <!-- Candidates Section -->
+        <div id="candidates" class="dashboard-section">
+            <h2>Candidate Management</h2>
+            <p>Candidate management features will be implemented by CandidatesController module.</p>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics" class="dashboard-section">
+            <h2>Analytics</h2>
+            <p>Analytics features will be implemented by AnalyticsController module.</p>
+        </div>
+
+        <!-- System Section -->
+        <div id="system" class="dashboard-section">
+            <h2>System Administration</h2>
+            <p>System administration features will be implemented by SystemController module.</p>
+        </div>
+    </div>
+
+    <!-- Load Core Dependencies -->
+    <script src="js/adminDebugger.js"></script>
+    <script src="js/unifiedAuth.js"></script>
+
+    <!-- Load Admin Modules -->
+    <script src="src/modules/admin/api/AdminAPI.js"></script>
+    <script src="src/modules/admin/auth/AdminAuth.js"></script>
+    <script src="src/modules/admin/state/AdminState.js"></script>
+    <script src="src/modules/admin/controllers/OverviewController.js"></script>
+
+    <!-- Load Module Loader (orchestrates everything) -->
+    <script src="src/modules/admin/AdminModuleLoader.js"></script>
+
+    <!-- Legacy compatibility -->
+    <script>
+        // Global variables for API configuration
+        window.API_CONFIG = {
+            BASE_URL: (() => {
+                const hostname = window.location.hostname;
+                if (hostname.includes('dev.unitedwerise.org')) {
+                    return 'https://dev-api.unitedwerise.org/api';
+                } else if (hostname.includes('unitedwerise.org')) {
+                    return 'https://api.unitedwerise.org/api';
+                } else {
+                    return 'http://localhost:3001/api';
+                }
+            })()
+        };
+
+        // Legacy global functions for backward compatibility
+        window.logout = function() {
+            if (window.adminAuth) {
+                window.adminAuth.logout();
+            }
+        };
+
+        // Error handling
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            if (typeof adminDebugError === 'function') {
+                adminDebugError('GlobalError', 'Unhandled error occurred', {
+                    message: event.error?.message,
+                    filename: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno
+                });
+            }
+        });
+
+        // Initialization status
+        console.log('🚀 Modular Admin Dashboard loading...');
+        console.log('📦 Core dependencies:', {
+            adminDebugger: typeof adminDebugLog === 'function',
+            unifiedAuth: typeof unifiedLogin === 'function'
+        });
+    </script>
+</body>
+</html>

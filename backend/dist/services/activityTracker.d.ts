@@ -62,6 +62,14 @@ export declare class ActivityTracker {
      */
     static trackReactionChanged(userId: string, postId: string, postTitle: string, reactionType: 'sentiment' | 'stance', oldValue: string | null, newValue: string | null): Promise<void>;
     /**
+     * Track post share
+     */
+    static trackShareAdded(userId: string, postId: string, postTitle: string, shareType: 'SIMPLE' | 'QUOTE', quoteContent?: string): Promise<void>;
+    /**
+     * Track post share removal (unshare)
+     */
+    static trackShareRemoved(userId: string, postId: string, postTitle: string, shareType: 'SIMPLE' | 'QUOTE'): Promise<void>;
+    /**
      * Get user activity log with filtering
      */
     static getUserActivity(userId: string, options?: {

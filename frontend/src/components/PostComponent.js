@@ -93,7 +93,7 @@ class PostComponent {
                             <span class="action-count">${post.commentsCount || 0}</span>
                         </button>
 
-                        <button class="post-action-btn share-btn"
+                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}"
                                 onclick="postComponent.sharePost('${post.id}')">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
@@ -218,6 +218,103 @@ class PostComponent {
             }
         } catch (error) {
             console.error('Error toggling reaction:', error);
+
+            // Revert all UI changes on error
+            originalStates.forEach(state => {
+                if (state.wasActive) {
+                    state.button.classList.add('active');
+                } else {
+                    state.button.classList.remove('active');
+                }
+                state.button.querySelector('.reaction-count').textContent = state.originalCount;
+            });
+        }
+    }
+
+    /**
+     * Toggle reaction on a comment
+     */
+    async toggleCommentReaction(commentId, reactionType, reactionValue) {
+        // Check authentication using current user
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to react to comments');
+            return;
+        }
+
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        if (!commentElement) return;
+
+        // Find the specific reaction button using both reaction type and value
+        const reactionBtn = commentElement.querySelector(`.comment-reaction-btn.${reactionType}-${reactionValue.toLowerCase()}`);
+        if (!reactionBtn) return;
+
+        const isActive = reactionBtn.classList.contains('active');
+        const countElement = reactionBtn.querySelector('.reaction-count');
+        const currentCount = parseInt(countElement.textContent) || 0;
+
+        // Find other buttons in the same group to deactivate them
+        const groupSelector = reactionType === 'sentiment' ? '.comment-sentiment-group .comment-reaction-btn' : '.comment-stance-group .comment-reaction-btn';
+        const groupButtons = commentElement.querySelectorAll(groupSelector);
+
+        // Store original states for rollback
+        const originalStates = Array.from(groupButtons).map(btn => ({
+            button: btn,
+            wasActive: btn.classList.contains('active'),
+            originalCount: parseInt(btn.querySelector('.reaction-count').textContent) || 0
+        }));
+
+        // Optimistic UI update
+        if (isActive) {
+            // Deactivate current reaction
+            reactionBtn.classList.remove('active');
+            countElement.textContent = Math.max(0, currentCount - 1);
+        } else {
+            // Deactivate other buttons in the same group
+            groupButtons.forEach(btn => {
+                if (btn !== reactionBtn && btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    const btnCount = btn.querySelector('.reaction-count');
+                    const btnCurrentCount = parseInt(btnCount.textContent) || 0;
+                    btnCount.textContent = Math.max(0, btnCurrentCount - 1);
+                }
+            });
+
+            // Activate current reaction
+            reactionBtn.classList.add('active');
+            countElement.textContent = currentCount + 1;
+        }
+
+        try {
+            const response = await window.apiCall(`/posts/comments/${commentId}/reaction`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    reactionType,
+                    reactionValue: isActive ? null : reactionValue // null to remove reaction
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Failed to toggle comment reaction:', {
+                    status: response.status,
+                    error: response.data?.error || response.data?.message || 'Unknown error',
+                    reactionType,
+                    reactionValue,
+                    endpoint: `/posts/comments/${commentId}/reaction`
+                });
+
+                // Revert all UI changes on error
+                originalStates.forEach(state => {
+                    if (state.wasActive) {
+                        state.button.classList.add('active');
+                    } else {
+                        state.button.classList.remove('active');
+                    }
+                    state.button.querySelector('.reaction-count').textContent = state.originalCount;
+                });
+            }
+        } catch (error) {
+            console.error('Error toggling comment reaction:', error);
 
             // Revert all UI changes on error
             originalStates.forEach(state => {
@@ -473,6 +570,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     ${hasReplies ? `
                         <button class="expand-thread-btn" onclick="postComponent.toggleThread('${comment.id}')">
                             <span class="expand-icon">▶</span> <span class="replies-count">${comment.replyCount || ''} replies</span>
@@ -528,6 +626,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
                         💬 Reply
                     </button>
@@ -596,12 +695,12 @@ class PostComponent {
     renderFlatComment(comment, postId) {
         const user = comment.author || comment.user;
         const displayName = user?.firstName || user?.username || 'Anonymous';
-        
+
         // All flattened comments display at depth 2 (40px indent)
         const marginLeft = 40;
-        
+
         console.log(`         → Rendering flat comment: ${comment.id.slice(-4)} at 40px indent`);
-        
+
         return `
             <div class="comment flattened-comment" data-comment-id="${comment.id}" data-depth="2" style="margin-left: ${marginLeft}px;">
                 <div class="comment-header">
@@ -611,6 +710,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
                         💬 Reply
                     </button>
@@ -885,26 +985,249 @@ class PostComponent {
     }
 
     /**
-     * Share a post
+     * Show share options modal
      */
     async sharePost(postId) {
-        // For now, just copy link to clipboard
+        // Check authentication
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to share posts');
+            return;
+        }
+
+        // Show share options modal
+        this.showShareModal(postId);
+    }
+
+    /**
+     * Show share modal with options
+     */
+    showShareModal(postId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal share-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Share Post</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="share-options">
+                        <button class="share-option simple-share" onclick="postComponent.performSimpleShare('${postId}')">
+                            <span class="option-icon">🔄</span>
+                            <div class="option-text">
+                                <span class="option-title">Share</span>
+                                <span class="option-desc">Share this post to your timeline</span>
+                            </div>
+                        </button>
+
+                        <button class="share-option quote-share" onclick="postComponent.showQuoteShareDialog('${postId}')">
+                            <span class="option-icon">💬</span>
+                            <div class="option-text">
+                                <span class="option-title">Quote Share</span>
+                                <span class="option-desc">Add your thoughts and share</span>
+                            </div>
+                        </button>
+
+                        <hr class="menu-divider">
+
+                        <button class="share-option copy-link" onclick="postComponent.copyPostLink('${postId}')">
+                            <span class="option-icon">🔗</span>
+                            <div class="option-text">
+                                <span class="option-title">Copy Link</span>
+                                <span class="option-desc">Copy link to clipboard</span>
+                            </div>
+                        </button>
+
+                        <button class="share-option external-share" onclick="postComponent.externalShare('${postId}')">
+                            <span class="option-icon">📱</span>
+                            <div class="option-text">
+                                <span class="option-title">Share Externally</span>
+                                <span class="option-desc">Share via system share menu</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Perform simple share (no commentary)
+     */
+    async performSimpleShare(postId) {
+        try {
+            const response = await window.apiCall(`/posts/${postId}/share`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    shareType: 'SIMPLE'
+                })
+            });
+
+            if (response.ok) {
+                this.showToast('Post shared successfully!');
+                this.updateShareCount(postId, 1);
+                document.querySelector('.share-modal').remove();
+            } else {
+                console.error('Failed to share post:', response.data?.error);
+                this.showToast('Failed to share post', 'error');
+            }
+        } catch (error) {
+            console.error('Error sharing post:', error);
+            this.showToast('Error sharing post', 'error');
+        }
+    }
+
+    /**
+     * Show quote share dialog
+     */
+    showQuoteShareDialog(postId) {
+        // Close share modal first
+        document.querySelector('.share-modal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal quote-share-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quote Share</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="quote-form">
+                        <div class="form-group">
+                            <label for="quote-content">Add your thoughts:</label>
+                            <textarea id="quote-content"
+                                      class="edit-textarea"
+                                      placeholder="What do you think about this post?"
+                                      rows="4"
+                                      maxlength="500"></textarea>
+                            <span class="char-count">0/500</span>
+                        </div>
+                    </div>
+                    <div class="quote-actions">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="postComponent.performQuoteShare('${postId}')">Share with Quote</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+
+        // Add character counting
+        const textarea = modal.querySelector('#quote-content');
+        const charCount = modal.querySelector('.char-count');
+        textarea.addEventListener('input', () => {
+            const count = textarea.value.length;
+            charCount.textContent = `${count}/500`;
+            charCount.style.color = count > 500 ? '#dc3545' : '#666';
+        });
+    }
+
+    /**
+     * Perform quote share with commentary
+     */
+    async performQuoteShare(postId) {
+        const content = document.getElementById('quote-content').value.trim();
+
+        if (!content) {
+            this.showToast('Please add your thoughts before sharing', 'error');
+            return;
+        }
+
+        if (content.length > 500) {
+            this.showToast('Commentary must be 500 characters or less', 'error');
+            return;
+        }
+
+        try {
+            const response = await window.apiCall(`/posts/${postId}/share`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    shareType: 'QUOTE',
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                this.showToast('Post shared with your thoughts!');
+                this.updateShareCount(postId, 1);
+                document.querySelector('.quote-share-modal').remove();
+            } else {
+                console.error('Failed to share post:', response.data?.error);
+                this.showToast('Failed to share post', 'error');
+            }
+        } catch (error) {
+            console.error('Error sharing post:', error);
+            this.showToast('Error sharing post', 'error');
+        }
+    }
+
+    /**
+     * Copy post link to clipboard
+     */
+    async copyPostLink(postId) {
         const postUrl = `${window.location.origin}/post/${postId}`;
-        
+
+        if (navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(postUrl);
+                this.showToast('Link copied to clipboard!');
+                document.querySelector('.share-modal').remove();
+            } catch (err) {
+                console.error('Failed to copy to clipboard:', err);
+                this.showToast('Failed to copy link', 'error');
+            }
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = postUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showToast('Link copied to clipboard!');
+            document.querySelector('.share-modal').remove();
+        }
+    }
+
+    /**
+     * Use system share menu
+     */
+    async externalShare(postId) {
+        const postUrl = `${window.location.origin}/post/${postId}`;
+
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Check out this post',
+                    title: 'Check out this post on UnitedWeRise',
                     url: postUrl
                 });
+                document.querySelector('.share-modal').remove();
             } catch (err) {
-                console.log('Share cancelled or failed');
+                if (err.name !== 'AbortError') {
+                    console.error('Share failed:', err);
+                    this.showToast('Share cancelled or failed', 'error');
+                }
             }
-        } else if (navigator.clipboard) {
-            await navigator.clipboard.writeText(postUrl);
-            this.showToast('Link copied to clipboard!');
         } else {
-            alert('Share URL: ' + postUrl);
+            this.showToast('System sharing not available on this device', 'error');
+        }
+    }
+
+    /**
+     * Update share count in UI
+     */
+    updateShareCount(postId, increment) {
+        const shareBtn = document.querySelector(`[data-post-id="${postId}"] .share-btn .action-count`);
+        if (shareBtn) {
+            const currentCount = parseInt(shareBtn.textContent) || 0;
+            shareBtn.textContent = Math.max(0, currentCount + increment);
         }
     }
 
@@ -1431,6 +1754,44 @@ class PostComponent {
     }
 
     /**
+     * Render compact reaction buttons for comments
+     */
+    renderCommentReactions(comment) {
+        return `
+            <div class="comment-reaction-groups">
+                <div class="comment-sentiment-group">
+                    <button class="comment-reaction-btn sentiment-like ${comment.userSentiment === 'LIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'LIKE')"
+                            title="Like this comment">
+                        <span class="emoji">😊</span>
+                        <span class="reaction-count">${comment.likesCount || 0}</span>
+                    </button>
+                    <button class="comment-reaction-btn sentiment-dislike ${comment.userSentiment === 'DISLIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'DISLIKE')"
+                            title="Dislike this comment">
+                        <span class="emoji">😞</span>
+                        <span class="reaction-count">${comment.dislikesCount || 0}</span>
+                    </button>
+                </div>
+                <div class="comment-stance-group">
+                    <button class="comment-reaction-btn stance-agree ${comment.userStance === 'AGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'AGREE')"
+                            title="Agree with this comment">
+                        <span class="emoji">👍</span>
+                        <span class="reaction-count">${comment.agreesCount || 0}</span>
+                    </button>
+                    <button class="comment-reaction-btn stance-disagree ${comment.userStance === 'DISAGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'DISAGREE')"
+                            title="Disagree with this comment">
+                        <span class="emoji">👎</span>
+                        <span class="reaction-count">${comment.disagreesCount || 0}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Render post media attachments (photos/GIFs)
      */
     renderPostMedia(photos) {
@@ -1893,7 +2254,7 @@ class PostComponent {
                             <span class="action-count">${comments.length}</span>
                         </button>
 
-                        <button class="post-action-btn share-btn" onclick="postComponent.sharePost('${post.id}')">
+                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}" onclick="postComponent.sharePost('${post.id}')">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>

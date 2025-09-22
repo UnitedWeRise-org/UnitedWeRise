@@ -1,16 +1,19 @@
 /* Post Management UI Styles */
 
 /* Post Menu Modal */
-.post-menu-modal .modal-content {
+.post-menu-modal .modal-content,
+.share-modal .modal-content {
     max-width: 400px;
     width: 90%;
 }
 
-.post-menu-options {
+.post-menu-options,
+.share-options {
     padding: 0;
 }
 
-.menu-option {
+.menu-option,
+.share-option {
     width: 100%;
     display: flex;
     align-items: center;
@@ -63,16 +66,19 @@
 }
 
 /* Edit Post Modal */
-.edit-post-modal .modal-content {
+.edit-post-modal .modal-content,
+.quote-share-modal .modal-content {
     max-width: 600px;
     width: 90%;
 }
 
-.edit-form .form-group {
+.edit-form .form-group,
+.quote-form .form-group {
     margin-bottom: 1.5rem;
 }
 
-.edit-form label {
+.edit-form label,
+.quote-form label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
@@ -113,7 +119,8 @@
 }
 
 .edit-actions,
-.delete-actions {
+.delete-actions,
+.quote-actions {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
@@ -310,6 +317,16 @@
     color: white;
 }
 
+/* Shared button state */
+.share-btn.shared {
+    background: #28a745;
+    color: white;
+}
+
+.share-btn.shared:hover {
+    background: #218838;
+}
+
 .reaction-btn .emoji {
     font-size: 1rem;
 }
@@ -320,23 +337,78 @@
     text-align: center;
 }
 
+/* Compact Comment Reactions */
+.comment-reaction-groups {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-right: 0.75rem;
+}
+
+.comment-sentiment-group,
+.comment-stance-group {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+.comment-reaction-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    color: #666;
+    min-height: 28px;
+}
+
+.comment-reaction-btn:hover {
+    background: #e9ecef;
+}
+
+.comment-reaction-btn.active {
+    background: #4b5c09;
+    color: white;
+}
+
+.comment-reaction-btn .emoji {
+    font-size: 0.875rem;
+}
+
+.comment-reaction-btn .reaction-count {
+    font-weight: 500;
+    min-width: 0.75rem;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .post-menu-modal .modal-content,
     .edit-post-modal .modal-content,
     .delete-post-modal .modal-content,
-    .history-modal .modal-content {
+    .history-modal .modal-content,
+    .share-modal .modal-content,
+    .quote-share-modal .modal-content {
         width: 95%;
         margin: 0.5rem;
     }
 
     .edit-actions,
-    .delete-actions {
+    .delete-actions,
+    .quote-actions {
         flex-direction: column;
     }
 
     .edit-actions button,
-    .delete-actions button {
+    .delete-actions button,
+    .quote-actions button {
         width: 100%;
         margin-bottom: 0.5rem;
     }
@@ -349,6 +421,17 @@
 
     .sentiment-group,
     .stance-group {
+        justify-content: center;
+    }
+
+    .comment-reaction-groups {
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: stretch;
+    }
+
+    .comment-sentiment-group,
+    .comment-stance-group {
         justify-content: center;
     }
 
@@ -404,6 +487,20 @@
     }
 
     .reaction-btn:hover {
+        background: #4b5563;
+    }
+
+    .comment-sentiment-group,
+    .comment-stance-group {
+        background: #374151;
+        border-color: #4b5563;
+    }
+
+    .comment-reaction-btn {
+        color: #d1d5db;
+    }
+
+    .comment-reaction-btn:hover {
         background: #4b5563;
     }
 }
