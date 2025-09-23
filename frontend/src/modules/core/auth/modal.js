@@ -291,11 +291,13 @@ export async function handleRegister() {
 
             console.log('✅ Registration successful via unified manager:', response.user.username);
         } else {
-            showAuthMessage(response.message || 'Registration failed', 'error', 'register');
+            showAuthMessage(response.message || response.error || 'Registration failed', 'error', 'register');
         }
     } catch (error) {
         console.error('Registration error:', error);
-        showAuthMessage('Registration failed. Please try again.', 'error', 'register');
+        // Extract the actual error message from the Error object
+        const errorMessage = error.message || 'Registration failed. Please try again.';
+        showAuthMessage(errorMessage, 'error', 'register');
     }
 }
 
