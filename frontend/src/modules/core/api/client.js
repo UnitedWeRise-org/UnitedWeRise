@@ -105,14 +105,21 @@ class APIClient {
                     this._handleUnauthorized();
                     throw new Error('Unauthorized');
                 }
-                
+
                 // Retry on 5xx errors
                 if (response.status >= 500 && attempt < API_CONFIG.RETRY_ATTEMPTS) {
                     await this._delay(1000 * attempt); // Exponential backoff
                     return this._makeRequest(url, options, attempt + 1);
                 }
-                
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+
+                // For client errors (4xx), try to parse the error response
+                try {
+                    const errorData = await response.json();
+                    console.error(`API Error Response:`, errorData);
+                    throw new Error(errorData.error || errorData.message || `API Error: ${response.status}`);
+                } catch (parseError) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
             }
             
             // Parse response
