@@ -99,10 +99,12 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
   try {
     const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint } = req.body;
 
-    // Check if running in local development environment
-    const isLocalDevelopment = process.env.NODE_ENV === 'development' || 
-                              req.ip === '127.0.0.1' || 
-                              req.ip === '::1' || 
+    // Check if running in local development or staging environment
+    const isLocalDevelopment = process.env.NODE_ENV === 'development' ||
+                              process.env.NODE_ENV === 'staging' ||
+                              process.env.STAGING_ENVIRONMENT === 'true' ||
+                              req.ip === '127.0.0.1' ||
+                              req.ip === '::1' ||
                               req.ip?.startsWith('192.168.') ||
                               req.ip?.startsWith('10.') ||
                               req.ip?.startsWith('172.16.') ||
