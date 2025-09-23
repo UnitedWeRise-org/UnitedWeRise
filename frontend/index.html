@@ -424,11 +424,21 @@
                 <div id="registerForm" style="display: none;">
                     <div class="form-group">
                         <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" required>
+                        <div class="password-input-container">
+                            <input type="email" id="registerEmail" required>
+                            <div class="password-status" id="email-status" style="display: none;">✓</div>
+                            <div class="password-status" id="email-error" style="display: none; color: #e74c3c;">❌</div>
+                        </div>
+                        <div class="availability-message" id="email-message" style="display: none; font-size: 0.8rem; margin-top: 0.25rem;"></div>
                     </div>
                     <div class="form-group">
                         <label for="registerUsername">Username</label>
-                        <input type="text" id="registerUsername" required>
+                        <div class="password-input-container">
+                            <input type="text" id="registerUsername" required>
+                            <div class="password-status" id="username-status" style="display: none;">✓</div>
+                            <div class="password-status" id="username-error" style="display: none; color: #e74c3c;">❌</div>
+                        </div>
+                        <div class="availability-message" id="username-message" style="display: none; font-size: 0.8rem; margin-top: 0.25rem;"></div>
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">Password</label>
@@ -7372,12 +7382,106 @@
             }
         }
 
-        // Add real-time password validation
+        // Real-time availability checking
+        let usernameCheckTimeout;
+        let emailCheckTimeout;
+
+        async function checkUsername(username) {
+            if (!username || username.length < 3) {
+                document.getElementById('username-status').style.display = 'none';
+                document.getElementById('username-error').style.display = 'none';
+                document.getElementById('username-message').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/check-username`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                const data = await response.json();
+
+                if (data.available) {
+                    document.getElementById('username-status').style.display = 'block';
+                    document.getElementById('username-error').style.display = 'none';
+                    document.getElementById('username-message').innerHTML = '<span style="color: #27ae60;">Username is available</span>';
+                    document.getElementById('username-message').style.display = 'block';
+                } else {
+                    document.getElementById('username-status').style.display = 'none';
+                    document.getElementById('username-error').style.display = 'block';
+                    document.getElementById('username-message').innerHTML = '<span style="color: #e74c3c;">Username is already taken</span>';
+                    document.getElementById('username-message').style.display = 'block';
+                }
+            } catch (error) {
+                console.log('Username check failed:', error);
+                document.getElementById('username-status').style.display = 'none';
+                document.getElementById('username-error').style.display = 'none';
+                document.getElementById('username-message').style.display = 'none';
+            }
+        }
+
+        async function checkEmail(email) {
+            if (!email || !email.includes('@')) {
+                document.getElementById('email-status').style.display = 'none';
+                document.getElementById('email-error').style.display = 'none';
+                document.getElementById('email-message').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_CONFIG.BASE_URL}/auth/check-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await response.json();
+
+                if (data.available) {
+                    document.getElementById('email-status').style.display = 'block';
+                    document.getElementById('email-error').style.display = 'none';
+                    document.getElementById('email-message').innerHTML = '<span style="color: #27ae60;">Email is available</span>';
+                    document.getElementById('email-message').style.display = 'block';
+                } else {
+                    document.getElementById('email-status').style.display = 'none';
+                    document.getElementById('email-error').style.display = 'block';
+                    document.getElementById('email-message').innerHTML = '<span style="color: #e74c3c;">Email is already registered</span>';
+                    document.getElementById('email-message').style.display = 'block';
+                }
+            } catch (error) {
+                console.log('Email check failed:', error);
+                document.getElementById('email-status').style.display = 'none';
+                document.getElementById('email-error').style.display = 'none';
+                document.getElementById('email-message').style.display = 'none';
+            }
+        }
+
+        // Add real-time validation
         document.addEventListener('DOMContentLoaded', function() {
             const passwordField = document.getElementById('registerPassword');
             if (passwordField) {
                 passwordField.addEventListener('input', function() {
                     validatePassword(this.value);
+                });
+            }
+
+            const usernameField = document.getElementById('registerUsername');
+            if (usernameField) {
+                usernameField.addEventListener('input', function() {
+                    clearTimeout(usernameCheckTimeout);
+                    usernameCheckTimeout = setTimeout(() => {
+                        checkUsername(this.value);
+                    }, 500); // Debounce for 500ms
+                });
+            }
+
+            const emailField = document.getElementById('registerEmail');
+            if (emailField) {
+                emailField.addEventListener('input', function() {
+                    clearTimeout(emailCheckTimeout);
+                    emailCheckTimeout = setTimeout(() => {
+                        checkEmail(this.value);
+                    }, 500); // Debounce for 500ms
                 });
             }
         });

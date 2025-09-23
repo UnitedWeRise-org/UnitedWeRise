@@ -961,4 +961,46 @@ router.post('/create-test-user', async (req, res) => {
   }
 });
 
+// Check username availability
+router.post('/check-username', async (req: express.Request, res: express.Response) => {
+  try {
+    const { username } = req.body;
+
+    if (!username || username.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    }
+
+    // Check if username exists
+    const existingUser = await prisma.user.findUnique({
+      where: { username }
+    });
+
+    res.json({ available: !existingUser });
+  } catch (error) {
+    console.error('Username check error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Check email availability
+router.post('/check-email', async (req: express.Request, res: express.Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Check if email exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    res.json({ available: !existingUser });
+  } catch (error) {
+    console.error('Email check error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
