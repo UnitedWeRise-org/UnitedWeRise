@@ -78,9 +78,9 @@ export function enableApiDocs(): boolean {
 
 /**
  * Get database logging level based on environment
- * @returns {string[]} Prisma log levels to enable
+ * @returns Prisma log levels to enable
  */
-export function getDatabaseLogLevel(): string[] {
+export function getDatabaseLogLevel(): ('query' | 'info' | 'warn' | 'error')[] {
     if (isDevelopment()) {
         return ['query', 'error', 'warn'];
     }
