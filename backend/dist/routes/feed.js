@@ -7,6 +7,7 @@ const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const probabilityFeedService_1 = require("../services/probabilityFeedService");
+const engagementScoringService_1 = require("../services/engagementScoringService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get personalized feed using probability cloud algorithm
@@ -99,29 +100,64 @@ router.get('/trending', async (req, res) => {
                 _count: {
                     select: {
                         likes: true,
-                        comments: true
+                        comments: true,
+                        shares: true
+                    }
+                },
+                comments: {
+                    select: {
+                        likesCount: true,
+                        dislikesCount: true,
+                        agreesCount: true,
+                        disagreesCount: true
                     }
                 }
             },
             orderBy: [
                 { createdAt: 'desc' }
             ],
-            take: limitNum,
-            skip: offsetNum
+            take: limitNum * 3 // Get more posts to calculate engagement scores
         });
-        const formattedPosts = trendingPosts.map(post => ({
-            ...post,
-            likesCount: post._count.likes,
-            commentsCount: post._count.comments,
-            _count: undefined
-        }));
+        // Calculate engagement scores for all posts
+        const postsWithScores = trendingPosts.map(post => {
+            // Calculate comment engagement metrics
+            const commentEngagement = engagementScoringService_1.EngagementScoringService.calculateCommentEngagement(post.comments || []);
+            const engagementMetrics = {
+                likesCount: post.likesCount || 0,
+                dislikesCount: post.dislikesCount || 0,
+                agreesCount: post.agreesCount || 0,
+                disagreesCount: post.disagreesCount || 0,
+                commentsCount: post._count.comments || 0,
+                sharesCount: post._count.shares || 0,
+                viewsCount: 0, // Views not implemented yet
+                communityNotesCount: 0,
+                reportsCount: 0,
+                commentEngagement
+            };
+            const engagementResult = engagementScoringService_1.EngagementScoringService.calculateScore(engagementMetrics, new Date(post.createdAt), 70 // Default reputation
+            );
+            return {
+                ...post,
+                likesCount: post._count.likes,
+                commentsCount: post._count.comments,
+                sharesCount: post._count.shares,
+                engagementScore: engagementResult.score,
+                _count: undefined
+            };
+        });
+        // Sort by engagement score and apply pagination
+        const sortedPosts = postsWithScores
+            .sort((a, b) => b.engagementScore - a.engagementScore)
+            .slice(offsetNum, offsetNum + limitNum);
+        const formattedPosts = sortedPosts;
         res.json({
             posts: formattedPosts,
             pagination: {
                 limit: limitNum,
                 offset: offsetNum,
-                count: trendingPosts.length
-            }
+                count: formattedPosts.length
+            },
+            algorithm: 'engagement-scoring'
         });
     }
     catch (error) {

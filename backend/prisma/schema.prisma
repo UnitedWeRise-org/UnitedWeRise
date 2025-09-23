@@ -113,6 +113,8 @@ model User {
   receivedFriendRequests      Friendship[]              @relation("FriendshipRecipient")
   sentFriendRequests          Friendship[]              @relation("FriendshipRequester")
   likes                       Like[]
+  reactions                   Reaction[]
+  shares                      Share[]
   sentMessages                Message[]                 @relation("SentMessages")
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
@@ -157,9 +159,27 @@ enum ActivityType {
   COMMENT_DELETED
   LIKE_ADDED
   LIKE_REMOVED
+  REACTION_CHANGED  // For new enhanced reaction system
+  SHARE_ADDED
+  SHARE_REMOVED
   FOLLOW_ADDED
   FOLLOW_REMOVED
   // Future: SUBSCRIBE_ADDED, SUBSCRIBE_REMOVED, SUPPORT_ADDED, OPPOSE_ADDED
+}
+
+enum ReactionSentiment {
+  LIKE
+  DISLIKE
+}
+
+enum ReactionStance {
+  AGREE
+  DISAGREE
+}
+
+enum ShareType {
+  SIMPLE  // Basic share without commentary
+  QUOTE   // Share with user commentary/quote
 }
 
 model UserActivity {
@@ -232,7 +252,12 @@ model Post {
   isPolitical        Boolean           @default(false)
   tags               String[]          @default([])
   likesCount         Int               @default(0)
+  dislikesCount      Int               @default(0)
+  agreesCount        Int               @default(0)
+  disagreesCount     Int               @default(0)
   commentsCount      Int               @default(0)
+  sharesCount        Int               @default(0)
+  viewsCount         Int               @default(0)
   containsFeedback   Boolean?          @default(false)
   feedbackCategory   String?
   feedbackConfidence Float?
@@ -251,8 +276,18 @@ model Post {
   lastEditedAt       DateTime?
   editHistory        Json?             // Store edit history
   originalContent    String?           // Preserve original when edited
+
+  // Geographic fields with privacy displacement
+  h3Index            String?           // H3 index from displaced coordinates (for map display)
+  latitude           Float?            // Privacy-displaced latitude for map display
+  longitude          Float?            // Privacy-displaced longitude for map display
+  originalH3Index    String?           // H3 index from real user address (for jurisdiction filtering)
+  privacyDisplaced   Boolean           @default(true) // Flag indicating coordinates are displaced
+
   comments           Comment[]
   likes              Like[]
+  reactions          Reaction[]
+  shares             Share[]
   photos             Photo[]
   author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   reputationEvents   ReputationEvent[]
@@ -260,6 +295,9 @@ model Post {
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([h3Index])
+  @@index([h3Index, createdAt])
+  @@index([originalH3Index, createdAt])
   @@index([likesCount])
   @@index([isPolitical])
   @@index([containsFeedback, feedbackType, feedbackPriority])
@@ -278,6 +316,46 @@ model Like {
   @@index([userId])
 }
 
+model Reaction {
+  id        String             @id @default(cuid())
+  userId    String
+  postId    String?            // Nullable for comment reactions
+  commentId String?            // For comment reactions
+  sentiment ReactionSentiment? // LIKE or DISLIKE (nullable - user might only have stance)
+  stance    ReactionStance?    // AGREE or DISAGREE (nullable - user might only have sentiment)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment?           @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])   // One reaction per user per post
+  @@unique([userId, commentId]) // One reaction per user per comment
+  @@index([postId])
+  @@index([commentId])
+  @@index([userId])
+  @@index([updatedAt]) // For 1-hour grouping queries
+}
+
+model Share {
+  id        String    @id @default(cuid())
+  userId    String    // User who shared the post
+  postId    String    // Post being shared
+  content   String?   // Optional commentary (quote share)
+  shareType ShareType @default(SIMPLE) // SIMPLE or QUOTE
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId]) // One share per user per post
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
 model Comment {
   id              String     @id @default(cuid())
   content         String
@@ -294,10 +372,17 @@ model Comment {
   editCount       Int        @default(0)
   lastEditedAt    DateTime?
   originalContent String?    // Preserve original when edited
+  // Reaction counts for enhanced comment engagement
+  likesCount      Int        @default(0)
+  dislikesCount   Int        @default(0)
+  agreesCount     Int        @default(0)
+  disagreesCount  Int        @default(0)
+
   post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent          Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies         Comment[]  @relation("CommentReplies")
+  reactions       Reaction[]
 
   @@index([postId])
   @@index([userId])
@@ -1766,6 +1851,7 @@ enum NotificationType {
   PHOTO_TAG_APPROVED
   PHOTO_TAG_DECLINED
   PRIVACY_REQUEST
+  REACTION
 }
 
 enum FriendshipStatus {

@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityTracker = void 0;
@@ -131,7 +131,42 @@ class ActivityTracker {
         });
     }
     /**
-     * Get user activity feed with filtering
+     * Track enhanced reaction changes (sentiment/stance)
+     */
+    static async trackReactionChanged(userId, postId, postTitle, reactionType, oldValue, newValue) {
+        const metadata = {
+            postTitle: postTitle?.substring(0, 100),
+            reactionType,
+            oldValue,
+            newValue,
+            change: oldValue && newValue ? 'modified' : newValue ? 'added' : 'removed'
+        };
+        await this.track(userId, client_1.ActivityType.REACTION_CHANGED, 'post', postId, metadata);
+    }
+    /**
+     * Track post share
+     */
+    static async trackShareAdded(userId, postId, postTitle, shareType, quoteContent) {
+        const metadata = {
+            postTitle: postTitle?.substring(0, 100),
+            shareType,
+            hasQuote: shareType === 'QUOTE',
+            quoteContent: quoteContent?.substring(0, 100)
+        };
+        await this.track(userId, client_1.ActivityType.SHARE_ADDED, 'post', postId, metadata);
+    }
+    /**
+     * Track post share removal (unshare)
+     */
+    static async trackShareRemoved(userId, postId, postTitle, shareType) {
+        const metadata = {
+            postTitle: postTitle?.substring(0, 100),
+            shareType
+        };
+        await this.track(userId, client_1.ActivityType.SHARE_REMOVED, 'post', postId, metadata);
+    }
+    /**
+     * Get user activity log with filtering
      */
     static async getUserActivity(userId, options = {}) {
         const { types, search, offset = 0, limit = 20, includeTarget = false, } = options;

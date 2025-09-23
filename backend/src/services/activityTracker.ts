@@ -1,6 +1,6 @@
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 
 import { prisma } from '../lib/prisma';
@@ -192,7 +192,66 @@ export class ActivityTracker {
   }
 
   /**
-   * Get user activity feed with filtering
+   * Track enhanced reaction changes (sentiment/stance)
+   */
+  static async trackReactionChanged(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    reactionType: 'sentiment' | 'stance',
+    oldValue: string | null,
+    newValue: string | null
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      reactionType,
+      oldValue,
+      newValue,
+      change: oldValue && newValue ? 'modified' : newValue ? 'added' : 'removed'
+    };
+
+    await this.track(userId, ActivityType.REACTION_CHANGED, 'post', postId, metadata);
+  }
+
+  /**
+   * Track post share
+   */
+  static async trackShareAdded(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    shareType: 'SIMPLE' | 'QUOTE',
+    quoteContent?: string
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      shareType,
+      hasQuote: shareType === 'QUOTE',
+      quoteContent: quoteContent?.substring(0, 100)
+    };
+
+    await this.track(userId, ActivityType.SHARE_ADDED, 'post', postId, metadata);
+  }
+
+  /**
+   * Track post share removal (unshare)
+   */
+  static async trackShareRemoved(
+    userId: string,
+    postId: string,
+    postTitle: string,
+    shareType: 'SIMPLE' | 'QUOTE'
+  ) {
+    const metadata = {
+      postTitle: postTitle?.substring(0, 100),
+      shareType
+    };
+
+    await this.track(userId, ActivityType.SHARE_REMOVED, 'post', postId, metadata);
+  }
+
+  /**
+   * Get user activity log with filtering
    */
   static async getUserActivity(
     userId: string,

@@ -1,0 +1,506 @@
+/* Post Management UI Styles */
+
+/* Post Menu Modal */
+.post-menu-modal .modal-content,
+.share-modal .modal-content {
+    max-width: 400px;
+    width: 90%;
+}
+
+.post-menu-options,
+.share-options {
+    padding: 0;
+}
+
+.menu-option,
+.share-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.menu-option:hover {
+    background-color: #f5f5f5;
+}
+
+.menu-option.danger:hover {
+    background-color: #fef2f2;
+    color: #dc3545;
+}
+
+.option-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    width: 2rem;
+    text-align: center;
+}
+
+.option-text {
+    flex: 1;
+}
+
+.option-title {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.option-desc {
+    display: block;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.menu-divider {
+    margin: 0.5rem 0;
+    border: none;
+    border-top: 1px solid #eee;
+}
+
+/* Edit Post Modal */
+.edit-post-modal .modal-content,
+.quote-share-modal .modal-content {
+    max-width: 600px;
+    width: 90%;
+}
+
+.edit-form .form-group,
+.quote-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.edit-form label,
+.quote-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.edit-textarea,
+.edit-input,
+.delete-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+.edit-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.edit-textarea:focus,
+.edit-input:focus,
+.delete-input:focus {
+    outline: none;
+    border-color: #4b5c09;
+    box-shadow: 0 0 0 2px rgba(75, 92, 9, 0.1);
+}
+
+.char-count {
+    display: block;
+    text-align: right;
+    color: #666;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.edit-actions,
+.delete-actions,
+.quote-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+/* Delete Post Modal */
+.delete-post-modal .modal-content {
+    max-width: 500px;
+    width: 90%;
+}
+
+.delete-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.delete-warning p {
+    margin: 0 0 0.5rem 0;
+    color: #856404;
+}
+
+.delete-warning p:last-child {
+    margin-bottom: 0;
+}
+
+/* History Modal */
+.history-modal .modal-content {
+    max-width: 700px;
+    width: 95%;
+}
+
+.history-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.loading,
+.error {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.error {
+    color: #dc3545;
+}
+
+.no-history {
+    text-align: center;
+    padding: 2rem;
+}
+
+.history-timeline {
+    position: relative;
+}
+
+.version {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #fff;
+}
+
+.version.current-version {
+    border-color: #4b5c09;
+    background: #f8f9fa;
+}
+
+.version.original-version {
+    border-color: #6c757d;
+    background: #f8f9fa;
+}
+
+.version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.version-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.version-date {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.version-content {
+    line-height: 1.6;
+    color: #333;
+}
+
+.edit-reason {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+/* Edited Indicator */
+.edited-indicator {
+    font-size: 0.75rem;
+    color: #666;
+    margin-left: 0.5rem;
+    font-style: italic;
+}
+
+/* Toast Messages */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    transition: opacity 0.3s ease;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast-success {
+    background-color: #28a745;
+}
+
+.toast-error {
+    background-color: #dc3545;
+}
+
+.toast-info {
+    background-color: #17a2b8;
+}
+
+/* Enhanced Reaction System */
+.reaction-groups {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.sentiment-group,
+.stance-group {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+.reaction-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    color: #666;
+}
+
+.reaction-btn:hover {
+    background: #e9ecef;
+}
+
+.reaction-btn.active {
+    background: #4b5c09;
+    color: white;
+}
+
+/* Shared button state */
+.share-btn.shared {
+    background: #28a745;
+    color: white;
+}
+
+.share-btn.shared:hover {
+    background: #218838;
+}
+
+.reaction-btn .emoji {
+    font-size: 1rem;
+}
+
+.reaction-count {
+    font-weight: 500;
+    min-width: 1rem;
+    text-align: center;
+}
+
+/* Compact Comment Reactions */
+.comment-reaction-groups {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-right: 0.75rem;
+}
+
+.comment-sentiment-group,
+.comment-stance-group {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+.comment-reaction-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    color: #666;
+    min-height: 28px;
+}
+
+.comment-reaction-btn:hover {
+    background: #e9ecef;
+}
+
+.comment-reaction-btn.active {
+    background: #4b5c09;
+    color: white;
+}
+
+.comment-reaction-btn .emoji {
+    font-size: 0.875rem;
+}
+
+.comment-reaction-btn .reaction-count {
+    font-weight: 500;
+    min-width: 0.75rem;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .post-menu-modal .modal-content,
+    .edit-post-modal .modal-content,
+    .delete-post-modal .modal-content,
+    .history-modal .modal-content,
+    .share-modal .modal-content,
+    .quote-share-modal .modal-content {
+        width: 95%;
+        margin: 0.5rem;
+    }
+
+    .edit-actions,
+    .delete-actions,
+    .quote-actions {
+        flex-direction: column;
+    }
+
+    .edit-actions button,
+    .delete-actions button,
+    .quote-actions button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .reaction-groups {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+
+    .sentiment-group,
+    .stance-group {
+        justify-content: center;
+    }
+
+    .comment-reaction-groups {
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: stretch;
+    }
+
+    .comment-sentiment-group,
+    .comment-stance-group {
+        justify-content: center;
+    }
+
+    .toast {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .menu-option:hover {
+        background-color: #2d3748;
+    }
+
+    .menu-option.danger:hover {
+        background-color: #2d1b1b;
+    }
+
+    .edit-textarea,
+    .edit-input,
+    .delete-input {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+
+    .version {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+
+    .version.current-version,
+    .version.original-version {
+        background: #374151;
+    }
+
+    .edit-reason {
+        background: #374151;
+        color: #9ca3af;
+    }
+
+    .sentiment-group,
+    .stance-group {
+        background: #374151;
+        border-color: #4b5563;
+    }
+
+    .reaction-btn {
+        color: #d1d5db;
+    }
+
+    .reaction-btn:hover {
+        background: #4b5563;
+    }
+
+    .comment-sentiment-group,
+    .comment-stance-group {
+        background: #374151;
+        border-color: #4b5563;
+    }
+
+    .comment-reaction-btn {
+        color: #d1d5db;
+    }
+
+    .comment-reaction-btn:hover {
+        background: #4b5563;
+    }
+}

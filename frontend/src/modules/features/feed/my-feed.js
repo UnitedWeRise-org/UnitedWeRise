@@ -25,7 +25,7 @@ export async function loadMyFeedPosts() {
     console.log('🔄 Loading My Feed posts...');
     
     // Ensure user is authenticated
-    if (!userState.current) {
+    if (!window.currentUser) {
         console.error('❌ No authenticated user for My Feed');
         document.getElementById('myFeedPosts').innerHTML = `
             <div style="text-align: center; padding: 2rem;">

@@ -140,7 +140,7 @@ export async function updateSearchResults() {
  * Extracted from index.html line 6371
  */
 async function executeEnhancedSearch(query) {
-    if (!userState.current) {
+    if (!window.currentUser) {
         document.getElementById('globalSearchResults').innerHTML = `
             <div style="text-align: center; color: #666; padding: 2rem;">
                 Please log in to search
@@ -350,7 +350,7 @@ function renderSearchSection(title, results, renderFunction) {
  * Extracted from index.html line 6572
  */
 function renderUserResult(user) {
-    const currentUser = userState.current;
+    const currentUser = window.currentUser;
     return `
         <div class="search-result-item" style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;" onclick="openUserProfile('${user.id}', '${user.username}')" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'">
             <div class="user-avatar user-card-trigger"

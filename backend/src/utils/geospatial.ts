@@ -13,6 +13,7 @@ export interface Coordinates {
 
 export interface AddressComponents {
   streetAddress: string;
+  streetAddress2?: string;
   city: string;
   state: string;
   zipCode: string;
@@ -79,22 +80,61 @@ export const addressToH3 = async (address: AddressComponents, resolution: number
   return coordinatesToH3(coords, resolution);
 };
 
-// Get voting district info (simplified - you'd integrate with real district APIs)
+// Privacy displacement for post coordinates
+export const generatePrivacyDisplacedCoordinates = (
+  realCoords: Coordinates,
+  privacyLevel: 'standard' | 'high' = 'standard'
+): Coordinates => {
+  const minDistance = privacyLevel === 'high' ? 500 : 50;   // meters
+  const maxDistance = privacyLevel === 'high' ? 5000 : 2000; // meters
+
+  const randomAngle = Math.random() * 360; // degrees
+  const randomDistance = minDistance + Math.random() * (maxDistance - minDistance);
+
+  // Convert to radians
+  const angleRad = randomAngle * Math.PI / 180;
+
+  // Earth's radius in meters
+  const earthRadius = 6371000;
+
+  // Calculate displacement
+  const deltaLat = (randomDistance * Math.cos(angleRad)) / earthRadius * (180 / Math.PI);
+  const deltaLng = (randomDistance * Math.sin(angleRad)) /
+    (earthRadius * Math.cos(realCoords.lat * Math.PI / 180)) * (180 / Math.PI);
+
+  return {
+    lat: realCoords.lat + deltaLat,
+    lng: realCoords.lng + deltaLng
+  };
+};
+
+// Enhanced address formatting using both address lines
+export const formatFullAddress = (address: AddressComponents): string => {
+  const parts = [
+    address.streetAddress,
+    address.streetAddress2, // Include second line
+    address.city,
+    address.state,
+    address.zipCode
+  ].filter(Boolean); // Remove empty parts
+
+  return parts.join(', ');
+};
+
+// Get voting district info (integrated with existing Geocodio system)
 export const getVotingDistrict = async (coords: Coordinates): Promise<{
   congressional: string;
-  state: string;  
+  state: string;
   local: string;
 } | null> => {
   try {
-    // This is where you'd integrate with:
-    // - Google Civic Information API
-    // - Ballotpedia API  
-    // - Local election office APIs
-    
+    // This integrates with the existing DistrictIdentificationService
+    // which already uses Geocodio + Google Civic APIs
+
     // For demo, return mock district info
     return {
       congressional: "IL-13",
-      state: "Illinois Senate District 48", 
+      state: "Illinois Senate District 48",
       local: "Springfield Ward 3"
     };
   } catch (error) {

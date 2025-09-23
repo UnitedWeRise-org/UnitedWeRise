@@ -17,15 +17,10 @@ class OAuthProviderManager {
 
     async loadLinkedProviders() {
         try {
-            const response = await fetch('/api/oauth/linked', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
-            });
+            const response = await window.apiCall('/oauth/linked');
 
             if (response.ok) {
-                const data = await response.json();
-                this.linkedProviders = data.providers || [];
+                this.linkedProviders = response.data?.providers || [];
             } else {
                 console.error('Failed to load linked providers');
             }
@@ -136,8 +131,7 @@ class OAuthProviderManager {
             const response = await fetch(`/api/oauth/link/${provider}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(authData)
             });
@@ -163,11 +157,8 @@ class OAuthProviderManager {
         if (!confirmed) return;
 
         try {
-            const response = await fetch(`/api/oauth/unlink/${provider}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+            const response = await window.apiCall(`/oauth/unlink/${provider}`, {
+                method: 'DELETE'
             });
 
             const data = await response.json();

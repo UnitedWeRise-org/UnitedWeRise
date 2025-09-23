@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getVotingDistrict = exports.addressToH3 = exports.getNearbyH3Indexes = exports.h3ToCoordinates = exports.coordinatesToH3 = exports.geocodeAddress = void 0;
+exports.getVotingDistrict = exports.formatFullAddress = exports.generatePrivacyDisplacedCoordinates = exports.addressToH3 = exports.getNearbyH3Indexes = exports.h3ToCoordinates = exports.coordinatesToH3 = exports.geocodeAddress = void 0;
 const h3_js_1 = require("h3-js");
 // H3 resolution levels:
 // 7 = ~5km hexagons (good for voting districts)
@@ -64,13 +64,43 @@ const addressToH3 = async (address, resolution = DEFAULT_H3_RESOLUTION) => {
     return (0, exports.coordinatesToH3)(coords, resolution);
 };
 exports.addressToH3 = addressToH3;
-// Get voting district info (simplified - you'd integrate with real district APIs)
+// Privacy displacement for post coordinates
+const generatePrivacyDisplacedCoordinates = (realCoords, privacyLevel = 'standard') => {
+    const minDistance = privacyLevel === 'high' ? 500 : 50; // meters
+    const maxDistance = privacyLevel === 'high' ? 5000 : 2000; // meters
+    const randomAngle = Math.random() * 360; // degrees
+    const randomDistance = minDistance + Math.random() * (maxDistance - minDistance);
+    // Convert to radians
+    const angleRad = randomAngle * Math.PI / 180;
+    // Earth's radius in meters
+    const earthRadius = 6371000;
+    // Calculate displacement
+    const deltaLat = (randomDistance * Math.cos(angleRad)) / earthRadius * (180 / Math.PI);
+    const deltaLng = (randomDistance * Math.sin(angleRad)) /
+        (earthRadius * Math.cos(realCoords.lat * Math.PI / 180)) * (180 / Math.PI);
+    return {
+        lat: realCoords.lat + deltaLat,
+        lng: realCoords.lng + deltaLng
+    };
+};
+exports.generatePrivacyDisplacedCoordinates = generatePrivacyDisplacedCoordinates;
+// Enhanced address formatting using both address lines
+const formatFullAddress = (address) => {
+    const parts = [
+        address.streetAddress,
+        address.streetAddress2, // Include second line
+        address.city,
+        address.state,
+        address.zipCode
+    ].filter(Boolean); // Remove empty parts
+    return parts.join(', ');
+};
+exports.formatFullAddress = formatFullAddress;
+// Get voting district info (integrated with existing Geocodio system)
 const getVotingDistrict = async (coords) => {
     try {
-        // This is where you'd integrate with:
-        // - Google Civic Information API
-        // - Ballotpedia API  
-        // - Local election office APIs
+        // This integrates with the existing DistrictIdentificationService
+        // which already uses Geocodio + Google Civic APIs
         // For demo, return mock district info
         return {
             congressional: "IL-13",

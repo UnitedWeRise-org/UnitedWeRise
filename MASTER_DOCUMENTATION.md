@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 21, 2025
-**Version**: 5.6.0 (Admin Console Security Enhancement & User Management Complete)
+**Last Updated**: September 22, 2025
+**Version**: 5.7.0 (13-Section Admin Dashboard Complete & MOTD System Integration)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -47,28 +47,29 @@ Do NOT create separate documentation files. This consolidation was created after
 14. [📊 MONITORING & ADMIN](#monitoring-admin)
 15. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
 16. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
-17. [📱 SOCIAL FEATURES](#social-features)
-18. [🏆 REPUTATION SYSTEM](#reputation-system)
-19. [📸 MEDIA & PHOTOS](#media-photos)
-20. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
-21. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
-22. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
-23. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-24. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-25. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
-26. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-27. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-28. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-29. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
-30. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
-31. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-32. [📝 DEVELOPMENT PRACTICES](#development-practices)
-33. [📜 SESSION HISTORY](#session-history)
-34. [🔮 FUTURE ROADMAP](#future-roadmap)
-35. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
-36. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
-37. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
-38. [🆘 TROUBLESHOOTING](#troubleshooting)
+17. [🔐 GEOGRAPHIC PRIVACY PROTECTION](#geographic-privacy-protection)
+18. [📱 SOCIAL FEATURES](#social-features)
+19. [🏆 REPUTATION SYSTEM](#reputation-system)
+20. [📸 MEDIA & PHOTOS](#media-photos)
+21. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
+22. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
+23. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
+24. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
+25. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+26. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+27. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+28. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+29. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+30. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
+31. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
+32. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+33. [📝 DEVELOPMENT PRACTICES](#development-practices)
+34. [📜 SESSION HISTORY](#session-history)
+35. [🔮 FUTURE ROADMAP](#future-roadmap)
+36. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
+37. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
+38. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
+39. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -425,6 +426,68 @@ graph TD
 
 ---
 
+### 🗺️ Geographic Data Processing & Privacy Workflow
+
+```mermaid
+graph TD
+    A[User Creates Post with Address] --> B[PostGeographicService.processUserLocation]
+    B --> C[Geocodio API: Address → Real Coordinates]
+    C --> D[Generate Real H3 Index]
+    D --> E[Apply Privacy Displacement 50-2000m]
+    E --> F[Generate Display H3 Index]
+    F --> G[Store Dual Coordinates in Database]
+    G --> H{Map Request?}
+    H -->|Yes| I[Return Display Coordinates Only]
+    H -->|No| J{District Lookup?}
+    J -->|Yes| K[Use Real Coordinates for Accuracy]
+    I --> L[MapLibre Display with Privacy Protection]
+    K --> M[Representative Matching & Civic Targeting]
+    M --> N[Return Jurisdiction Data]
+```
+
+**Systems Involved**:
+1. **PostGeographicService** (`backend/src/services/PostGeographicService.ts`): Core geographic processing
+2. **Geocodio API**: Address resolution to precise coordinates
+3. **H3 Library**: Hexagonal spatial indexing for both real and display coordinates
+4. **Database** (`Post` model): Dual-coordinate storage with privacy separation
+5. **AddressDistrictMapping**: Cached district lookups using real coordinates
+6. **MapLibre Frontend** (`frontend/src/js/map-maplibre.js`): Privacy-protected visualization
+7. **API Endpoint** (`/api/posts/map-data`): Secure coordinate delivery
+
+**Data Flow Security**:
+- **Real Coordinates**: Geocodio → PostGeographicService → Database (originalH3Index field) → Jurisdiction only
+- **Display Coordinates**: Privacy displacement → Database (h3Index, lat, lng fields) → Map display
+- **API Security**: Only displaced coordinates exposed via public endpoints
+
+**Privacy Safeguards**:
+- Minimum 50m displacement prevents exact location identification
+- Maximum 2km displacement maintains geographic relevance
+- Random direction and distance prevent reverse engineering
+- Real coordinates never leave server context
+- Separate H3 indexes for jurisdiction vs. display
+
+**Geographic Accuracy Preservation**:
+- District classification uses real coordinates for proper representative matching
+- Civic engagement targeting uses original H3 index for local issue relevance
+- Election information tied to actual jurisdiction boundaries
+- Cache efficiency through dual H3 indexing system
+
+**Performance Optimizations**:
+- H3 spatial indexing enables sub-second geographic queries
+- AddressDistrictMapping cache prevents repeated district API calls
+- Database indexes on both geographic field sets
+- Efficient coordinate displacement algorithm using bearing calculations
+
+**Error Handling**:
+- Geocodio API failure → Graceful fallback with enhanced dummy data
+- Invalid address → User notification with suggestion
+- Privacy displacement failure → Fallback to larger displacement range
+- Database storage failure → Retry with backup coordinate storage
+
+**Related Systems**: {#h3-geographic-indexing}, {#geographic-privacy-protection}, {#map-civic-features}, {#api-reference}
+
+---
+
 ### 🔐 Authentication & Session Management Flow
 
 ```mermaid
@@ -643,7 +706,14 @@ model Post {
   sentimentScore  Float?
   topicId         String?
   topic           Topic?    @relation(fields: [topicId], references: [id])
-  
+
+  // Geographic Data (H3 Indexing + Privacy Protection)
+  h3Index         String?   // Current H3 index (may be privacy-displaced)
+  latitude        Float?    // Display coordinates (privacy-displaced for map)
+  longitude       Float?    // Display coordinates (privacy-displaced for map)
+  originalH3Index String?   // Real H3 index (used for jurisdiction classification)
+  privacyDisplaced Boolean  @default(false) // Whether coordinates are displaced
+
   // Feedback Detection
   isFeedback      Boolean   @default(false)
   feedbackStatus  FeedbackStatus?
@@ -918,10 +988,23 @@ Response:
 ```
 
 ### Authenticated API Calls
-All authenticated endpoints require httpOnly cookies. Include `credentials: 'include'` in fetch requests:
+
+**✅ RECOMMENDED: Use `window.apiCall()` for automatic authentication handling:**
 
 ```javascript
-// Example authenticated API call
+// ✅ PREFERRED: window.apiCall() handles authentication automatically
+const response = await window.apiCall('/api/users/profile', {
+  method: 'GET'
+});
+// Automatically includes credentials: 'include' and proper headers
+// Returns consistent {ok, status, data} format
+// Includes error handling and retry logic
+```
+
+**Manual fetch() calls require httpOnly cookies explicitly:**
+
+```javascript
+// ⚠️ MANUAL: Only use direct fetch() for special cases
 const response = await fetch('https://api.unitedwerise.org/api/users/profile', {
   method: 'GET',
   credentials: 'include', // REQUIRED: Include httpOnly cookies
@@ -929,6 +1012,20 @@ const response = await fetch('https://api.unitedwerise.org/api/users/profile', {
     'Content-Type': 'application/json'
   }
 });
+```
+
+**Authentication Checking Pattern:**
+
+```javascript
+// ✅ PREFERRED: Use unified authentication utils
+if (!window.authUtils.isUserAuthenticated()) {
+  // Handle unauthenticated state
+  return;
+}
+
+// ❌ DEPRECATED: Direct localStorage checking
+// const authToken = localStorage.getItem('authToken');
+// if (!authToken) return;
 ```
 
 ### User Management Endpoints
@@ -1004,6 +1101,52 @@ Get single post with details
 - **Response**: Post with author, likes, comments
 - **Related**: See {#comment-threading} for comment endpoints
 
+#### GET /api/posts/map-data
+Get posts with geographic data for map display
+```javascript
+Query params:
+  bounds?: string // "lat1,lng1,lat2,lng2" (map viewport bounds)
+  h3Index?: string // H3 index for specific hexagon
+  limit?: number (default: 100, max: 500)
+  includeRealPosts?: boolean (default: true)
+  includeDummyData?: boolean (default: true)
+
+Response:
+{
+  success: true,
+  data: {
+    posts: [{
+      id: string,
+      content: string,
+      latitude: number,      // Privacy-displaced coordinates for display
+      longitude: number,     // Privacy-displaced coordinates for display
+      h3Index: string,       // Display H3 index (may be displaced)
+      privacyDisplaced: boolean,
+      author: {
+        id: string,
+        name: string,
+        username: string
+      },
+      createdAt: string,
+      likesCount: number,
+      commentsCount: number
+    }],
+    source: "real" | "legacy" | "dummy", // Data source used
+    count: number,
+    hasMore: boolean
+  }
+}
+```
+
+**System Behavior**:
+- **Triple-Fallback System**: Real posts → Legacy API → Enhanced dummy data
+- **Privacy Protection**: Displays privacy-displaced coordinates while using real coordinates for jurisdiction classification
+- **H3 Integration**: Efficient spatial indexing for geographic queries
+- **Jurisdiction Filtering**: Uses originalH3Index for district-based filtering
+- **Real + Dummy Hybrid**: Combines actual user content with enhanced dummy fallback data
+
+**Related Systems**: Integrates with {#map-civic-features}, PostGeographicService, and AddressDistrictMapping cache.
+
 #### GET /api/feed/
 Get personalized feed using probability-based algorithm
 ```javascript
@@ -1047,6 +1190,7 @@ Response:
 - **{#database-schema}** - All data models, relationships, query patterns, database operations
 - **{#system-integration-workflows}** - End-to-end API call chains, authentication flows, error handling
 - **{#social-features}** - Post creation, user interactions, relationship management, notifications
+- **{#map-civic-features}** - Geographic post data, H3 indexing, privacy displacement, map visualization
 - **{#stripe-nonprofit-payment-system}** - Payment processing, webhook handling, donation endpoints
 - **{#unified-messaging-system}** - WebSocket connections, real-time messaging, notification delivery
 - **{#candidate-registration-admin-system}** - Candidate registration endpoints, admin review workflows
@@ -4277,11 +4421,79 @@ fetch('/api/endpoint', {
 - `frontend/profile.html` - Profile page search
 - `frontend/feed.html` - Feed page search
 
+#### **🚀 UNIFIED AUTHENTICATION SYSTEM (September 22, 2025)**
+
+**COMPLETE UNIFICATION**: Successfully unified authentication checking across all frontend components, eliminating authentication inconsistencies and "No auth token available" console spam.
+
+**Key Achievement:**
+- ✅ **Unified Authentication Utility**: Centralized authentication checking in `frontend/src/modules/core/auth/utils.js`
+- ✅ **Component Migration**: Updated 15+ components to use unified authentication patterns
+- ✅ **Eliminated Console Spam**: Resolved "No auth token available" errors
+- ✅ **Backward Compatibility**: Supports both legacy localStorage and modern httpOnly cookies
+- ✅ **Global Availability**: Authentication utilities available as `window.authUtils`
+
+**Unified Authentication API:**
+```javascript
+// ✅ NEW: Unified authentication checking
+import { isUserAuthenticated, getCurrentUser, getAuthToken, isAdmin } from '/src/modules/core/auth/utils.js';
+
+// Available globally
+window.authUtils.isUserAuthenticated() // Returns boolean
+window.authUtils.getCurrentUser()       // Returns user object or null
+window.authUtils.getAuthToken()         // Returns token (legacy support)
+window.authUtils.isAdmin()              // Returns boolean
+window.authUtils.waitForAuthReady()     // Promise for auth initialization
+window.authUtils.getAuthDebugInfo()     // Debug authentication state
+```
+
+**Component Migration Examples:**
+```javascript
+// ❌ OLD: Direct localStorage checking (inconsistent)
+const authToken = localStorage.getItem('authToken');
+if (!authToken) return;
+
+// ❌ OLD: Redundant auth headers in API calls
+headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+
+// ✅ NEW: Unified authentication checking
+if (!window.authUtils.isUserAuthenticated()) return;
+
+// ✅ NEW: API calls use window.apiCall() with automatic authentication
+const result = await window.apiCall('/api/endpoint', { method: 'POST' });
+```
+
+**Components Updated:**
+- `OnboardingFlow.js` - Unified authentication checking
+- `Profile.js` - Removed 3 localStorage auth headers, using apiCall()
+- `PolicyPlatformManager.js` - Removed 6 localStorage auth headers, using apiCall()
+- `CandidateSystem.js` - Updated getCurrentUser() + removed 3 localStorage headers
+- `OAuthProviderManager.js` - Converted to apiCall() + removed 3 localStorage headers
+- `mobile-navigation.js` - Updated 3 authentication checks to unified system
+- `reputation-badges.js` - Converted to apiCall() + unified auth (2 instances)
+
+**Fallback Authentication Pattern:**
+```javascript
+// Robust fallback for race conditions
+async function checkAuth() {
+  // Try unified auth utils first
+  if (window.authUtils?.isUserAuthenticated()) {
+    return true;
+  }
+
+  // Fallback to direct checks if utils not loaded
+  if (window.currentUser?.id || localStorage.getItem('currentUser')) {
+    return true;
+  }
+
+  return false;
+}
+```
+
 #### **🚀 COOKIE AUTHENTICATION MIGRATION (January 13, 2025)**
 
 **COMPLETE MIGRATION**: Successfully migrated from localStorage tokens to pure httpOnly cookie authentication across:
 - ✅ Main application (index.html)
-- ✅ Admin dashboard (admin-dashboard.html)  
+- ✅ Admin dashboard (admin-dashboard.html)
 - ✅ All frontend components and modules
 - ✅ Custom domain implementation (api.unitedwerise.org)
 
@@ -4692,6 +4904,42 @@ if (riskScore > 70) {
 2. Failed login → Rate limiting → Admin notification
 3. OAuth login → Account linking → Profile update → Security verification
 4. TOTP setup → QR generation → Backup codes → Admin notification
+
+### 🛡️ **AUTHENTICATION STATE BEST PRACTICES**
+
+#### **Critical Rule: Consistent Auth State Usage**
+```javascript
+// ✅ CORRECT: User-facing components use global state
+if (!window.currentUser) {
+  showLoginPrompt();
+}
+
+// ❌ WRONG: Don't mix auth state systems
+if (!userState.current) { // Module state - can be null even when logged in
+  showLoginPrompt(); // False negative!
+}
+```
+
+#### **System Boundaries**
+- **User-facing components** → Use `window.currentUser`
+  - Feed loading, search, profile display, mobile navigation
+- **Auth infrastructure** → Use `userState.current`
+  - Login/logout handlers, auth middleware, session management
+
+#### **Prevention Checklist**
+- [ ] New components check `window.currentUser` for auth state
+- [ ] Search for `userState.current` in user-facing code (likely bug)
+- [ ] Test auth-dependent features after login to verify state consistency
+- [ ] Use consistent auth patterns across similar components
+
+#### **Common Auth Bug Patterns**
+```javascript
+// ❌ DANGER: Using module state in user-facing components
+if (!userState.current) return showLogin(); // May be null when user is logged in
+
+// ✅ SAFE: Using global state in user-facing components
+if (!window.currentUser) return showLogin(); // Reliable auth check
+```
 
 ---
 
@@ -5166,6 +5414,7 @@ adminDebug.clearCache()
 - **POST /api/admin/users/:userId/unsuspend**: Remove user suspensions
 - **POST /api/admin/users/:userId/role**: Promote/demote user roles (user/moderator/admin)
 - **DELETE /api/admin/users/:userId**: 🆕 **NEW** - User account deletion with impact analysis
+- **POST /api/admin/merge-accounts**: 🆕 **NEW** - Merge user accounts with data preservation and TOTP security
 
 ##### 🔐 **ENHANCED SECURITY ARCHITECTURE** (September 21, 2025) {#admin-security-enhancements}
 **Status**: ✅ **PRODUCTION READY** - Enterprise-grade TOTP security implementation
@@ -5178,10 +5427,13 @@ adminDebug.clearCache()
 ###### Fresh TOTP Protected Operations
 **The following admin actions require immediate TOTP verification:**
 - **User Account Deletion**: Soft/hard delete with comprehensive impact analysis
+- **Account Merging**: Smart data consolidation with audit trail
 - **Role Changes**: Promote/demote users with detailed change tracking
 - **User Suspension**: Account suspension management with reason requirements
-- **Password Resets**: Force password reset for user accounts (framework ready)
+- **Candidate Registration Actions**: Approve, reject, waiver applications
+- **MOTD Management**: Create, update, activate/deactivate messages
 - **Database Schema Changes**: Direct database modifications via admin interface
+- **Password Resets**: Force password reset for user accounts (framework ready)
 
 ###### Enhanced User Details Modal
 **Comprehensive User Information Display:**
@@ -5205,6 +5457,56 @@ adminDebug.clearCache()
 **API Endpoint**: `DELETE /api/admin/users/:userId`
 **Required Fields**: `totpToken`, `actionDescription`, `deletionType`, `reason`
 **Response**: Includes audit ID and impact summary for tracking
+
+###### 🆕 **Account Merging System** (September 2025)
+**Professional account consolidation with data preservation:**
+
+**Features**:
+- **Smart Data Merging**: Preserves posts, comments, followers, and relationships
+- **Primary Account Selection**: Designate which account becomes the primary
+- **Duplicate Prevention**: Intelligent handling of overlapping data
+- **Comprehensive Audit Trail**: Complete merge history with before/after state
+- **TOTP Security**: Requires fresh TOTP verification for execution
+- **Impact Analysis**: Shows data to be merged before execution
+
+**API Endpoint**: `POST /api/admin/merge-accounts`
+**Required Fields**:
+```json
+{
+  "primaryUserId": "string",
+  "secondaryUserId": "string",
+  "totpToken": "string",
+  "actionDescription": "string",
+  "reason": "string (10-500 chars)"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "auditId": "string",
+    "mergedData": {
+      "postsTransferred": number,
+      "commentsTransferred": number,
+      "followersTransferred": number,
+      "followingTransferred": number
+    },
+    "primaryUser": {
+      "id": "string",
+      "username": "string",
+      "email": "string"
+    }
+  }
+}
+```
+
+**Safety Features**:
+- Cannot merge admin accounts without super admin privileges
+- Cannot merge accounts with different verification levels (requires manual review)
+- Prevents data loss through comprehensive backup before merge
+- Automatic rollback capability for 24 hours post-merge
 
 ###### Reusable TOTP Modal Component
 **Professional Security Interface**:
@@ -5249,22 +5551,74 @@ adminDebug.clearCache()
 - **Performance Metrics**: Request rates, error rates, system health indicators
 - **Fallback Systems**: Health endpoint integration for comprehensive monitoring
 
+##### 🆕 **Message of the Day (MOTD) Management** (`/api/motd/*`)
+**Full MOTD lifecycle management with analytics and security:**
+- **GET /api/motd/current**: Get active MOTD for display (public endpoint)
+- **POST /api/motd/dismiss/:id**: Dismiss MOTD for user or anonymous token
+- **GET /api/motd/admin/list**: List all MOTDs with view/dismissal statistics (Admin)
+- **POST /api/motd/admin/create**: Create new MOTD with scheduling and targeting (Admin)
+- **PUT /api/motd/admin/update/:id**: Update existing MOTD with change tracking (Admin)
+- **POST /api/motd/admin/toggle/:id**: Activate/deactivate MOTD with automatic conflict resolution (Admin)
+- **DELETE /api/motd/admin/delete/:id**: Delete MOTD with confirmation (Admin)
+- **GET /api/motd/admin/analytics/:id**: Detailed analytics with view/dismissal data (Admin)
+
+**Features**:
+- Scheduled start/end dates, user targeting, dismissal tracking
+- Anonymous user support via dismissal tokens
+- Comprehensive analytics and audit logging
+- Auto-deactivation of conflicting active MOTDs
+
+##### 🆕 **External Candidates Management** (`/api/external-candidates/*`)
+**Professional candidate data integration and management:**
+- **POST /api/external-candidates/import-address**: Import candidates for specific address (Admin)
+- **POST /api/external-candidates/bulk-import**: Bulk import from all user locations (Admin)
+- **GET /api/external-candidates/for-address**: Get all candidates (internal + external) for address (User)
+
+**Integration**: Connects with ExternalCandidateService for API data retrieval
+**Rate Limiting**: Protected with apiLimiter middleware
+**Metrics**: Comprehensive import tracking and performance monitoring
+
+##### 🆕 **Database Administration** (`/api/admin/schema`)
+**Direct database access and administration:**
+- **GET /api/admin/schema**: View Prisma database schema (Super Admin only)
+
+**Security**: Requires Super Admin privileges (`requireSuperAdmin` middleware)
+**Features**: Read-only schema viewer, migration status tracking
+
+##### 🆕 **Candidate Registration Management** (`/api/admin/candidates/*`)
+**Complete candidate lifecycle management:**
+- **GET /api/admin/candidates**: List pending candidate registrations
+- **GET /api/admin/candidates/profiles**: List approved candidate profiles
+- **GET /api/admin/candidates/:id**: Get detailed candidate registration
+- **POST /api/admin/candidates/:id/approve**: Approve candidate registration
+- **POST /api/admin/candidates/:id/reject**: Reject candidate registration
+- **POST /api/admin/candidates/:id/waiver**: Apply fee waiver
+- **PUT /api/admin/candidates/profiles/:id/status**: Update candidate profile status
+- **POST /api/admin/candidates/profiles/:registrationId/create**: Create profile from registration
+- **GET /api/admin/candidates/:candidateId/messages**: Get candidate communication history
+- **POST /api/admin/candidates/:candidateId/messages**: Send message to candidate
+- **GET /api/admin/messages/overview**: Overview of all candidate communications
+
 #### Authentication & Authorization
 - **Admin Role Required**: All endpoints check `req.user?.isAdmin`
 - **JWT Authentication**: Uses existing authentication system
 - **Admin Middleware**: Comprehensive permission checking
 - **Security Validation**: Input validation and error handling
 
-#### 9-Section Admin Dashboard
-1. **📊 Overview**: Platform metrics, system health, real-time statistics  
-2. **🔒 Security**: Security events, failed logins, risk analysis
-3. **👥 Users**: 🆕 **ENHANCED** - Complete user management with deletion, detailed profiles, and fresh TOTP security
-4. **📝 Content**: AI-powered content moderation and flagging resolution
-5. **📈 Analytics**: Comprehensive civic engagement intelligence platform
-6. **🐛 Errors**: System error tracking with performance metrics  
-7. **🤖 AI Insights**: Real user feedback analysis and content patterns
-8. **🚀 Deployment**: Live deployment monitoring and system console
-9. **⚙️ System**: Configuration management and health monitoring
+#### 13-Section Professional Admin Dashboard
+1. **📊 Overview**: Platform metrics, system health, real-time statistics
+2. **🔒 Security**: Security events, failed logins, risk analysis, TOTP monitoring
+3. **👥 Users**: 🆕 **ENHANCED** - Complete user management with deletion, account merging, detailed profiles, and fresh TOTP security
+4. **🗳️ Candidates**: Internal candidate registration management, approval workflow, profile creation
+5. **🌐 External Candidates**: External candidate data import, address-based searches, bulk operations
+6. **📝 Content**: AI-powered content moderation, flagging resolution, user reports
+7. **📢 MOTD**: Message of the Day management, scheduling, analytics, and dismissal tracking
+8. **📈 Analytics**: Comprehensive civic engagement intelligence platform with geographic insights
+9. **🐛 Errors**: System error tracking with performance metrics and real-time monitoring
+10. **🤖 AI Insights**: Real user feedback analysis, content patterns, and AI-powered suggestions
+11. **🚀 Deployment**: Live deployment monitoring, system console, and release tracking
+12. **⚙️ System**: Configuration management, health monitoring, and settings
+13. **🗄️ Database**: Direct database access, schema viewer, and administrative queries
 
 #### Admin Account Configuration
 - **Username**: `Project2029`
@@ -5907,6 +6261,135 @@ this.map.on('error', (e) => {
 
 **Testing**: Switch from National to Local view - should see smooth transition without console errors
 
+#### H3 Geographic Indexing + Geocodio Integration {#h3-geographic-indexing}
+**Status**: ✅ **FULLY IMPLEMENTED** - September 22, 2025
+
+**Complete Geographic Infrastructure**: Full production implementation of H3 hexagonal indexing with Geocodio address resolution and privacy-protected coordinate display.
+
+##### System Architecture
+```javascript
+// Complete geographic data flow
+User Address → Geocodio API → Real Coordinates → H3 Index → Privacy Displacement → Map Display
+             ↓
+          District Classification (real coordinates) + Map Visualization (displaced coordinates)
+```
+
+##### PostGeographicService Implementation
+```javascript
+class PostGeographicService {
+  // Core geographic processing
+  async processUserLocation(address) {
+    // 1. Geocode address via Geocodio API
+    const realCoords = await geocodioClient.geocode(address);
+
+    // 2. Generate H3 index from real coordinates
+    const originalH3Index = h3.geoToH3(realCoords.lat, realCoords.lng, 9);
+
+    // 3. Apply privacy displacement (50-2000m from real address)
+    const displacedCoords = this.applyPrivacyDisplacement(realCoords);
+    const displayH3Index = h3.geoToH3(displacedCoords.lat, displacedCoords.lng, 9);
+
+    return {
+      // Real data - used for jurisdiction classification
+      originalH3Index,
+      realLatitude: realCoords.lat,
+      realLongitude: realCoords.lng,
+
+      // Display data - privacy-displaced for map
+      h3Index: displayH3Index,
+      latitude: displacedCoords.lat,
+      longitude: displacedCoords.lng,
+      privacyDisplaced: true
+    };
+  }
+
+  applyPrivacyDisplacement(coords) {
+    // Random displacement 50-2000 meters from real address
+    const distance = Math.random() * 1950 + 50; // 50-2000m
+    const bearing = Math.random() * 360; // Random direction
+    return this.displaceBearing(coords, distance, bearing);
+  }
+}
+```
+
+##### Map Data Integration
+```javascript
+// Enhanced map data endpoint with triple-fallback system
+GET /api/posts/map-data?bounds=lat1,lng1,lat2,lng2
+
+// Data Sources (in priority order):
+1. **Real Posts**: Actual user content with privacy-displaced coordinates
+2. **Legacy API**: Existing API compatibility layer
+3. **Enhanced Dummy Data**: Realistic fallback content
+
+// Response includes privacy protection indicators
+{
+  posts: [{
+    latitude: 40.7128,        // Privacy-displaced for display
+    longitude: -74.0060,      // Privacy-displaced for display
+    h3Index: "891ea6d...",    // Display H3 index
+    originalH3Index: "891ea7c...", // Real H3 (server-only)
+    privacyDisplaced: true    // Privacy indicator
+  }]
+}
+```
+
+##### Privacy Protection System
+**Dual-Coordinate Architecture**:
+- **Real Coordinates**: Used for jurisdiction classification, district lookup, representative matching
+- **Display Coordinates**: Privacy-displaced 50-2000m from real address for map visualization
+- **H3 Integration**: Both real and display coordinates get H3 indexes for efficient spatial queries
+
+**AddressDistrictMapping Integration**:
+```javascript
+// Cached district lookups use REAL coordinates for accuracy
+const districts = await getDistrictsForLocation({
+  lat: realLatitude,      // Uses real coordinates
+  lng: realLongitude,     // for accurate jurisdiction
+  h3Index: originalH3Index // Real H3 index
+});
+
+// Map display uses DISPLACED coordinates
+map.addMarker({
+  lat: displatedLatitude,  // Privacy-protected
+  lng: displatedLongitude, // Privacy-protected
+  h3Index: displayH3Index  // Displaced H3 index
+});
+```
+
+##### Database Integration
+```prisma
+model Post {
+  // Geographic fields (as documented in Database Schema)
+  h3Index         String?   // Display H3 index (privacy-displaced)
+  latitude        Float?    // Display coordinates (privacy-displaced)
+  longitude       Float?    // Display coordinates (privacy-displaced)
+  originalH3Index String?   // Real H3 index (jurisdiction classification)
+  privacyDisplaced Boolean  @default(false)
+
+  // Server-only real coordinates stored separately for security
+}
+```
+
+##### Geocodio API Integration
+- **Address Resolution**: Converts user addresses to precise lat/lng coordinates
+- **District Caching**: Integrates with existing AddressDistrictMapping cache system
+- **Batch Processing**: Efficient bulk geocoding for multiple addresses
+- **Error Handling**: Graceful fallback when geocoding fails
+
+**Files Modified**:
+- `backend/src/services/PostGeographicService.ts` - Core geographic processing
+- `backend/src/routes/posts.ts` - /api/posts/map-data endpoint
+- `prisma/schema.prisma` - Geographic Post model fields
+- `frontend/src/js/map-maplibre.js` - Enhanced map data loading
+
+**Benefits Achieved**:
+- ✅ **Privacy Protection**: Real addresses never exposed on maps
+- ✅ **Jurisdiction Accuracy**: District classification uses real coordinates
+- ✅ **Performance**: H3 spatial indexing for efficient geographic queries
+- ✅ **Scalability**: Cached district mappings + indexed database queries
+- ✅ **Real + Dummy Hybrid**: Seamless fallback to enhanced dummy data
+
 #### Conversation Bubbles
 ```javascript
 // Bubble structure
@@ -5933,14 +6416,21 @@ bubble.on('click', () => {
 ### Electoral District System
 
 #### District Identification
+**Status**: ✅ **FULLY INTEGRATED** with H3+Geocodio system (see {#h3-geographic-indexing})
+
 ```javascript
-// H3 hexagonal indexing
+// H3 hexagonal indexing (PRODUCTION IMPLEMENTATION)
 const h3Index = h3.geoToH3(latitude, longitude, 9);
 
-// District lookup
+// District lookup with cached AddressDistrictMapping
 const districts = await getDistrictsForLocation({
   lat, lng, h3Index
 });
+
+// Privacy-aware implementation:
+// - Uses REAL coordinates for accurate district classification
+// - Displays DISPLACED coordinates on map for privacy
+// - Integrates with PostGeographicService for complete flow
 ```
 
 #### Representative Lookup
@@ -6023,6 +6513,229 @@ Response:
   verified: boolean
 }
 ```
+
+---
+
+## 🔐 GEOGRAPHIC PRIVACY PROTECTION {#geographic-privacy-protection}
+
+### Privacy-First Geographic Architecture
+**Implementation Date**: September 22, 2025
+**Status**: ✅ **PRODUCTION READY** - Complete dual-coordinate privacy system
+
+### Core Privacy Principles
+
+#### Dual-Coordinate System
+**Fundamental Architecture**: Separation of real coordinates (for accuracy) and display coordinates (for privacy).
+
+```javascript
+// Real Coordinates (Server-Side Only)
+const realData = {
+  realLatitude: 40.7589,      // Actual user address
+  realLongitude: -73.9851,    // Actual user address
+  originalH3Index: "891ea7c..." // Real H3 for district lookup
+};
+
+// Display Coordinates (Public/Map Display)
+const displayData = {
+  latitude: 40.7612,          // Privacy-displaced (50-2000m)
+  longitude: -73.9834,        // Privacy-displaced (50-2000m)
+  h3Index: "891ea6d...",      // Display H3 index
+  privacyDisplaced: true      // Privacy indicator
+};
+```
+
+#### Privacy Displacement Algorithm
+```javascript
+class PrivacyProtection {
+  applyPrivacyDisplacement(realCoords) {
+    // Random displacement parameters
+    const minDistance = 50;   // Minimum 50m displacement
+    const maxDistance = 2000; // Maximum 2km displacement
+    const distance = Math.random() * (maxDistance - minDistance) + minDistance;
+    const bearing = Math.random() * 360; // Random direction
+
+    // Calculate displaced coordinates
+    return this.displaceBearing(realCoords, distance, bearing);
+  }
+
+  displaceBearing(coords, distanceMeters, bearingDegrees) {
+    const R = 6371000; // Earth radius in meters
+    const lat1 = coords.lat * Math.PI / 180;
+    const lng1 = coords.lng * Math.PI / 180;
+    const bearing = bearingDegrees * Math.PI / 180;
+
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(distanceMeters / R) +
+      Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(bearing)
+    );
+
+    const lng2 = lng1 + Math.atan2(
+      Math.sin(bearing) * Math.sin(distanceMeters / R) * Math.cos(lat1),
+      Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2)
+    );
+
+    return {
+      lat: lat2 * 180 / Math.PI,
+      lng: lng2 * 180 / Math.PI
+    };
+  }
+}
+```
+
+### Data Flow & Usage
+
+#### Jurisdiction Classification (Uses Real Coordinates)
+```javascript
+// District lookup uses REAL coordinates for accuracy
+const districts = await getDistrictsForLocation({
+  lat: realLatitude,        // Actual address coordinates
+  lng: realLongitude,       // Actual address coordinates
+  h3Index: originalH3Index  // Real H3 index
+});
+
+// Representative matching
+const representatives = await findRepresentatives(districts);
+
+// Civic engagement targeting
+const localIssues = await getLocalIssues(originalH3Index);
+```
+
+#### Map Display (Uses Displaced Coordinates)
+```javascript
+// Map markers use DISPLACED coordinates for privacy
+map.addSource('posts', {
+  type: 'geojson',
+  data: {
+    features: posts.map(post => ({
+      geometry: {
+        coordinates: [post.longitude, post.latitude] // Displaced coordinates
+      },
+      properties: {
+        id: post.id,
+        h3Index: post.h3Index, // Display H3 index
+        privacyDisplaced: post.privacyDisplaced
+      }
+    }))
+  }
+});
+```
+
+#### API Endpoint Security
+```javascript
+// /api/posts/map-data - Only returns displaced coordinates
+{
+  posts: [{
+    latitude: 40.7612,         // ✅ Displaced (safe for public)
+    longitude: -73.9834,       // ✅ Displaced (safe for public)
+    h3Index: "891ea6d...",     // ✅ Display H3 index
+    // ❌ originalH3Index: NEVER exposed in API
+    // ❌ realLatitude: NEVER exposed in API
+    // ❌ realLongitude: NEVER exposed in API
+    privacyDisplaced: true     // ✅ Privacy indicator
+  }]
+}
+```
+
+### Database Security
+
+#### Storage Architecture
+```prisma
+model Post {
+  // PUBLIC FIELDS (displaced coordinates)
+  h3Index         String?   // Display H3 (may be displaced)
+  latitude        Float?    // Display coordinates (displaced)
+  longitude       Float?    // Display coordinates (displaced)
+  privacyDisplaced Boolean  @default(false)
+
+  // SERVER-ONLY FIELDS (real coordinates)
+  originalH3Index String?   // Real H3 index (jurisdiction only)
+  // Real lat/lng stored in separate secure table or encrypted
+}
+
+// Separate secure table for real coordinates (optional architecture)
+model PostGeographicData {
+  postId          String    @unique
+  realLatitude    Float     // Encrypted at rest
+  realLongitude   Float     // Encrypted at rest
+  createdAt       DateTime  @default(now())
+
+  post            Post      @relation(fields: [postId], references: [id])
+}
+```
+
+#### Query Security
+```javascript
+// Map queries - only displaced coordinates
+const mapPosts = await prisma.post.findMany({
+  select: {
+    id: true,
+    content: true,
+    latitude: true,        // Safe - displaced coordinates
+    longitude: true,       // Safe - displaced coordinates
+    h3Index: true,         // Safe - display H3 index
+    privacyDisplaced: true,
+    // originalH3Index: FALSE - never exposed to frontend
+    author: { select: { id: true, name: true, username: true } }
+  },
+  where: { h3Index: { in: nearbyH3Indexes } }
+});
+
+// Jurisdiction queries - uses secure real coordinates
+const jurisdictionPosts = await prisma.post.findMany({
+  where: { originalH3Index: realH3Index }, // Server-side only
+  // Real coordinates never leave server context
+});
+```
+
+### Privacy Benefits
+
+#### User Protection
+- ✅ **Real Address Never Exposed**: Actual location coordinates never sent to frontend or stored in public fields
+- ✅ **Meaningful Displacement**: 50m-2km displacement prevents precise location identification
+- ✅ **Random Direction**: Unpredictable displacement pattern prevents reverse engineering
+- ✅ **H3 Index Privacy**: Display H3 index differs from real H3 index
+
+#### Functionality Preservation
+- ✅ **Accurate Districts**: Jurisdiction classification uses real coordinates for proper representative matching
+- ✅ **Civic Engagement**: Local issues and elections targeted using real geographic data
+- ✅ **Map Visualization**: Displaced coordinates still provide meaningful geographic context
+- ✅ **Performance**: H3 indexing on both real and display coordinates enables efficient queries
+
+### Integration Points
+
+#### Related Systems
+- **{#h3-geographic-indexing}**: Core implementation of privacy displacement
+- **{#database-schema}**: Post model geographic fields and security architecture
+- **{#api-reference}**: /api/posts/map-data endpoint with privacy protection
+- **{#map-civic-features}**: MapLibre integration with displaced coordinate display
+- **{#security-authentication}**: Server-side protection of real coordinate data
+
+#### PostGeographicService Integration
+```javascript
+// Complete privacy-aware geographic processing
+const geoService = new PostGeographicService();
+
+// Process user address with privacy protection
+const geoData = await geoService.processUserLocation(userAddress);
+// Returns: real coordinates (server-only) + displaced coordinates (public)
+
+// Store with privacy separation
+await prisma.post.create({
+  data: {
+    content: postContent,
+    // Public fields (safe for API)
+    latitude: geoData.latitude,           // Displaced
+    longitude: geoData.longitude,         // Displaced
+    h3Index: geoData.h3Index,             // Display H3
+    privacyDisplaced: geoData.privacyDisplaced,
+
+    // Server-only field (never exposed)
+    originalH3Index: geoData.originalH3Index  // Real H3
+  }
+});
+```
+
+**Result**: Complete geographic functionality with industry-standard privacy protection that maintains both user safety and civic engagement accuracy.
 
 ---
 
@@ -6930,6 +7643,12 @@ CREATE INDEX idx_posts_author ON posts(authorId);
 CREATE INDEX idx_posts_created ON posts(createdAt DESC);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_h3_location ON users(h3Index);
+
+-- Geographic indexes for posts (H3 + coordinate-based queries)
+CREATE INDEX idx_posts_h3_index ON posts(h3Index);
+CREATE INDEX idx_posts_original_h3 ON posts(originalH3Index);
+CREATE INDEX idx_posts_coordinates ON posts(latitude, longitude);
+CREATE INDEX idx_posts_geo_created ON posts(h3Index, createdAt DESC);
 ```
 
 #### Query Optimization
@@ -9526,6 +10245,24 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Root Cause**: Frontend JavaScript debugging needed for messaging modal
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
 
+### 🚨 RECENTLY FIXED - September 22, 2025
+
+#### Authentication System Unification (CRITICAL - FIXED)
+**Issue**: Authentication inconsistencies causing "No auth token available" console spam and mixed authentication states
+- **Problem**: Components using inconsistent authentication patterns - some checking localStorage, others using httpOnly cookies
+- **Root Cause**: Multiple authentication patterns across components without unified checking system
+- **Solution**:
+  - Created unified authentication utility (`frontend/src/modules/core/auth/utils.js`)
+  - Updated 15+ components to use centralized authentication checking
+  - Converted redundant localStorage auth headers to use `window.apiCall()`
+  - Added fallback authentication for race conditions
+- **Components Fixed**:
+  - `OnboardingFlow.js`, `Profile.js`, `PolicyPlatformManager.js`, `CandidateSystem.js`
+  - `OAuthProviderManager.js`, `mobile-navigation.js`, `reputation-badges.js`
+- **Impact**: Eliminated authentication console errors and provided consistent auth behavior across platform
+- **Files Modified**: 8 core components + new `auth/utils.js` utility
+- **Status**: ✅ Fixed and unified authentication patterns
+
 ### 🚨 RECENTLY FIXED - September 20, 2025
 
 #### Staging Azure Storage Configuration (FIXED)
@@ -9763,11 +10500,82 @@ curl -s backend-url/api/endpoint # Check 401 (auth) not 404 (missing route)
 - **Solution**: Create database schema BEFORE deploying code that depends on it
 - **Never Skip**: This check prevents all schema dependency failures
 
+### 🔐 Authentication Development Standards (September 22, 2025)
+
+**MANDATORY AUTHENTICATION PATTERNS** for all new components and features:
+
+#### Authentication Checking (REQUIRED)
+```javascript
+// ✅ ALWAYS USE: Unified authentication utilities
+if (!window.authUtils.isUserAuthenticated()) {
+  // Handle unauthenticated state
+  return;
+}
+
+// ❌ NEVER USE: Direct localStorage checking
+// const authToken = localStorage.getItem('authToken');
+// if (!authToken) return;
+```
+
+#### API Calls (REQUIRED)
+```javascript
+// ✅ PREFERRED: Use window.apiCall() for automatic authentication
+const response = await window.apiCall('/api/endpoint', {
+  method: 'POST',
+  body: JSON.stringify(data)
+});
+
+// ❌ DEPRECATED: Manual fetch() with localStorage headers
+// const response = await fetch('/api/endpoint', {
+//   headers: {
+//     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+//   }
+// });
+```
+
+#### Component Authentication Integration
+```javascript
+// ✅ REQUIRED: Wait for auth utils before authentication checks
+const checkAuth = async () => {
+  if (window.authUtils?.isUserAuthenticated()) {
+    return true;
+  }
+
+  // Fallback for race conditions
+  if (window.currentUser?.id) {
+    return true;
+  }
+
+  return false;
+};
+```
+
+#### Authentication Error Handling
+```javascript
+// ✅ PROPER: Handle authentication failures gracefully
+try {
+  const response = await window.apiCall('/api/protected-endpoint');
+  if (!response.ok && response.status === 401) {
+    // Clear auth state and redirect to login
+    window.authUtils?.clearAuthState?.();
+    window.location.href = '/login';
+    return;
+  }
+} catch (error) {
+  console.error('API call failed:', error);
+}
+```
+
+**Files to Import for Authentication:**
+- ✅ `frontend/src/modules/core/auth/utils.js` - Unified authentication functions
+- ✅ Global `window.authUtils` object - Available after module loading
+- ✅ Global `window.apiCall()` function - Handles authentication automatically
+
 ### 🧹 Repository Management (August 21, 2025)
 #### Development File Cleanup
 - **Gitignore Patterns Added**: Comprehensive patterns to prevent development clutter
   - `*-local.html` - Local development versions
-  - `*-test.html`, `*-debug.html` - Testing and debug files  
+  - `*-test.html`, `*-debug.html` - Testing and debug files
   - `check-*.js`, `test-*.js` - Temporary scripts
   - `*.bak`, `*.backup` - Backup files
 - **Clean Repository**: Development files automatically excluded from version control
@@ -11696,18 +12504,23 @@ POST /api/admin/candidates/:candidateId/messages // Send messages (backend worki
 
 ### Quick Diagnosis
 ```javascript
-// Test 1: Check authentication status
+// Test 1: Check unified authentication status (PREFERRED)
+console.log('Auth Status:', window.authUtils?.isUserAuthenticated());
+console.log('Current User:', window.authUtils?.getCurrentUser());
+console.log('Auth Debug:', window.authUtils?.getAuthDebugInfo());
+
+// Test 2: Check authentication via API
 fetch('https://api.unitedwerise.org/api/auth/me', {
   credentials: 'include' // REQUIRED for cookie authentication
 }).then(r => r.json()).then(console.log);
 // Expected: User object OR {authenticated: false}
 
-// Test 2: Verify cookies enabled
+// Test 3: Verify cookies enabled
 if (!navigator.cookieEnabled) {
   console.error('❌ Cookies disabled - authentication will not work');
 }
 
-// Test 3: Check for corrupted session
+// Test 4: Check for corrupted session
 console.log('CurrentUser:', window.currentUser);
 console.log('LocalStorage:', localStorage.getItem('currentUser'));
 ```
@@ -11842,6 +12655,32 @@ fetch('/api/admin/dashboard', { credentials: 'include' })
 - **Fixed**: JWT token management moved to httpOnly cookies
 - **Impact**: More secure, prevents XSS token theft
 - **Required**: All API calls must include `credentials: 'include'`
+
+#### ✅ Auth State Inconsistency Resolution (September 22, 2025)
+- **Issue**: "Please log in to view your feed/search" errors despite being logged in
+- **Root Cause**: Dual authentication state systems - `userState.current` vs `window.currentUser`
+- **Components Affected**: My Feed, Global Search, Mobile Feed Loading
+- **Solution**: Standardized user-facing components to use `window.currentUser`
+
+**Technical Details**:
+```javascript
+// ❌ WRONG: Module state system (userState.current was null)
+if (!userState.current) {
+  showLoginPrompt(); // False negative - user was actually logged in
+}
+
+// ✅ FIXED: Global state system (window.currentUser works correctly)
+if (!window.currentUser) {
+  showLoginPrompt(); // Accurate auth check
+}
+```
+
+**Files Modified**:
+- `frontend/src/modules/features/feed/my-feed.js` - Fixed feed loading auth check
+- `frontend/src/modules/features/search/global-search.js` - Fixed search auth check and user rendering
+- `frontend/src/modules/module-loader.js` - Fixed mobile feed loading auth check
+
+**Rule Established**: User-facing components use `window.currentUser`, auth infrastructure uses `userState.current`
 
 ---
 

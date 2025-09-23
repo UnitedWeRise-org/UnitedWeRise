@@ -1022,6 +1022,23 @@ class UWRMapLibre {
         return topic;
     }
 
+    formatTimestamp(dateString) {
+        const now = new Date();
+        const postDate = new Date(dateString);
+        const diffMinutes = Math.floor((now - postDate) / (1000 * 60));
+
+        if (diffMinutes < 1) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        return postDate.toLocaleDateString();
+    }
+
     // Enhanced fade animation methods - fade entire popup, not just text
     fadeInBubbleGradually(popup) {
         if (popup && popup.getElement) {
@@ -1214,22 +1231,142 @@ class UWRMapLibre {
     }
 
     async fetchTrendingComment(jurisdiction) {
-        // Check if we should use dummy data
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
+        }
+
+        // Check if user is authenticated before making API calls
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'No auth token available, using dummy data', null);
+            }
+            return this.getDummyTopicFromHelper(jurisdiction);
+        }
+
+        // Add simple rate limiting to prevent API spam
+        const now = Date.now();
+        if (!this.lastApiCall) this.lastApiCall = 0;
+        if (now - this.lastApiCall < 2000) { // Wait at least 2 seconds between API calls
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', 'Rate limiting API calls, using dummy data', null);
+            }
+            return this.getDummyTopicFromHelper(jurisdiction);
+        }
+        this.lastApiCall = now;
+
+        // Try to fetch real posts with geographic data first
+        try {
+            const apiUrl = window.location.hostname.includes('dev') ?
+                'https://dev-api.unitedwerise.org' :
+                'https://api.unitedwerise.org';
+
+            const response = await fetch(`${apiUrl}/api/posts/map-data?scope=${jurisdiction}&count=9`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data && data.data.length > 0) {
+                    const post = data.data[Math.floor(Math.random() * data.data.length)];
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MapSystem', `Retrieved real post from ${post.author} for ${jurisdiction}`, null);
+                    }
+
+                    return {
+                        id: post.id,
+                        summary: post.content.length > 100 ? post.content.substring(0, 100) + '...' : post.content,
+                        topic: 'Real Discussion',
+                        location: `${post.author}'s area`,
+                        coordinates: post.coordinates, // Privacy-displaced coordinates
+                        engagement: post.engagement,
+                        timestamp: this.formatTimestamp(post.createdAt),
+                        isEdge: false,
+                        jurisdiction: jurisdiction,
+                        isRealPost: true
+                    };
+                }
+            } else {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Posts API call failed (${response.status}), checking legacy API`, null);
+                }
+            }
+        } catch (error) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Posts API error: ${error.message}, trying legacy API`, null);
+            }
+        }
+
+        // Try legacy trending topics API as secondary fallback
+        try {
+            const apiUrl = window.location.hostname.includes('dev') ?
+                'https://dev-api.unitedwerise.org' :
+                'https://api.unitedwerise.org';
+
+            const response = await fetch(`${apiUrl}/api/trending/map-topics?count=9&scope=${jurisdiction}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data && data.data.length > 0) {
+                    const topic = data.data[Math.floor(Math.random() * data.data.length)];
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('MapSystem', `Retrieved legacy topic: "${topic.topic}" for ${jurisdiction}`, null);
+                    }
+
+                    return {
+                        id: topic.id,
+                        summary: topic.topic,
+                        topic: 'Trending Topic',
+                        location: 'Community',
+                        coordinates: topic.coordinates,
+                        engagement: topic.participantCount || 0,
+                        timestamp: 'Recent',
+                        isEdge: false,
+                        jurisdiction: jurisdiction,
+                        isRealPost: false
+                    };
+                }
+            }
+        } catch (error) {
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Legacy API error: ${error.message}, falling back to dummy data`, null);
+            }
+        }
+
+        // Final fallback to enhanced dummy data
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
+            }
+
             if (dummyTopics.length > 0) {
-                // Return a random topic from dummy data
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
+                }
+
                 return {
                     id: topic.id,
                     summary: topic.text,
-                    topic: 'Trending Topic',
+                    topic: 'Sample Discussion',
                     location: topic.region,
                     coordinates: topic.coordinates,
                     engagement: topic.engagement,
                     timestamp: topic.timestamp,
                     isEdge: topic.isEdge,
-                    jurisdiction: topic.jurisdiction
+                    jurisdiction: topic.jurisdiction,
+                    isRealPost: false
                 };
             }
         }
@@ -1334,6 +1471,52 @@ class UWRMapLibre {
 
         const comments = mockComments[jurisdiction] || [];
         return comments[Math.floor(Math.random() * comments.length)];
+    }
+
+    getDummyTopicFromHelper(jurisdiction) {
+        // Use the enhanced dummy data system
+        if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
+            const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
+            }
+
+            if (dummyTopics.length > 0) {
+                const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
+                }
+
+                return {
+                    id: topic.id,
+                    summary: topic.text,
+                    topic: 'Community Discussion',
+                    location: topic.location,
+                    coordinates: topic.coordinates,
+                    engagement: topic.engagement,
+                    timestamp: this.formatTimestamp(new Date()),
+                    isEdge: false,
+                    jurisdiction: jurisdiction,
+                    isRealPost: false
+                };
+            }
+        }
+
+        // Fallback to basic mock data if dummy system not available
+        return {
+            id: 'fallback-' + Math.random(),
+            summary: 'Community discussion about local civic engagement...',
+            topic: 'Civic Engagement',
+            location: 'Local Area',
+            coordinates: this.getRandomUSCoordinates(),
+            engagement: Math.floor(Math.random() * 50) + 10,
+            timestamp: this.formatTimestamp(new Date()),
+            isEdge: false,
+            jurisdiction: jurisdiction,
+            isRealPost: false
+        };
     }
 
     getRandomUSCoordinates() {
@@ -1625,12 +1808,33 @@ class UWRMapLibre {
         // Start showing content for the specified layer
         if (layerName === 'trending') {
             this.startTrendingComments();
+
+            // Immediately show a bubble after jurisdiction change for better UX
+            setTimeout(async () => {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Immediately showing bubble for ${this.currentJurisdiction} jurisdiction`, null);
+                }
+                await this.showNextTrendingComment();
+            }, 500); // Show first bubble after 0.5 second
+
+            // Force a second bubble quickly to ensure visibility
+            setTimeout(async () => {
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('MapSystem', `Force showing second bubble for ${this.currentJurisdiction} jurisdiction`, null);
+                }
+                await this.showNextTrendingComment();
+            }, 2000); // Show second bubble after 2 seconds
         }
         // Add other layer types here as they're implemented
     }
 
     setJurisdiction(jurisdiction) {
         console.log(`🗺️ Setting jurisdiction to: ${jurisdiction}`);
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('MapSystem', `Jurisdiction changed from ${this.currentJurisdiction} to ${jurisdiction}`, null);
+        }
+
         this.currentJurisdiction = jurisdiction;
         
         // Update map view based on jurisdiction

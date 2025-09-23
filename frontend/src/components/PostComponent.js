@@ -85,27 +85,22 @@ class PostComponent {
                 
                 ${settings.showActions ? `
                     <div class="post-actions" data-post-id="${post.id}">
-                        <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
-                                onclick="postComponent.toggleLike('${post.id}')"
-                                data-liked="${post.isLiked || false}">
-                            <span class="action-icon">${post.isLiked ? '❤️' : '🤍'}</span>
-                            <span class="action-count">${post.likesCount || 0}</span>
-                        </button>
-                        
-                        <button class="post-action-btn comment-btn" 
+                        ${this.renderEnhancedReactions(post)}
+
+                        <button class="post-action-btn comment-btn"
                                 onclick="postComponent.toggleComments('${post.id}')">
                             <span class="action-icon">💬</span>
                             <span class="action-count">${post.commentsCount || 0}</span>
                         </button>
-                        
-                        <button class="post-action-btn share-btn" 
+
+                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}"
                                 onclick="postComponent.sharePost('${post.id}')">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>
-                        
+
                         ${post.isOwner ? `
-                            <button class="post-action-btn more-btn" 
+                            <button class="post-action-btn more-btn"
                                     onclick="postComponent.showPostMenu('${post.id}')">
                                 <span class="action-icon">⋯</span>
                             </button>
@@ -141,66 +136,195 @@ class PostComponent {
     }
 
     /**
-     * Toggle like/unlike for a post
+     * Toggle reaction for a post (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
      */
-    async toggleLike(postId) {
+    async toggleReaction(postId, reactionType, reactionValue) {
         // Check authentication using current user
-        if (!window.currentUser) {
-            alert('Please log in to like posts');
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to react to posts');
             return;
         }
 
-        const likeBtn = document.querySelector(`[data-post-id="${postId}"] .like-btn`);
-        if (!likeBtn) return;
+        const postActions = document.querySelector(`[data-post-id="${postId}"]`);
+        if (!postActions) return;
 
-        const isLiked = likeBtn.dataset.liked === 'true';
-        const endpoint = 'like'; // Single endpoint that toggles like/unlike
+        // Find the specific reaction button
+        const reactionBtn = postActions.querySelector(`[data-reaction-type="${reactionType}"][data-reaction-value="${reactionValue}"]`);
+        if (!reactionBtn) return;
+
+        const isActive = reactionBtn.classList.contains('active');
+        const countElement = reactionBtn.querySelector('.reaction-count');
+        const currentCount = parseInt(countElement.textContent) || 0;
+
+        // Find other buttons in the same group to deactivate them
+        const groupButtons = postActions.querySelectorAll(`[data-reaction-type="${reactionType}"]`);
+
+        // Store original states for rollback
+        const originalStates = Array.from(groupButtons).map(btn => ({
+            button: btn,
+            wasActive: btn.classList.contains('active'),
+            originalCount: parseInt(btn.querySelector('.reaction-count').textContent) || 0
+        }));
 
         // Optimistic UI update
-        const icon = likeBtn.querySelector('.action-icon');
-        const count = likeBtn.querySelector('.action-count');
-        const currentCount = parseInt(count.textContent) || 0;
-
-        if (isLiked) {
-            icon.textContent = '🤍';
-            count.textContent = Math.max(0, currentCount - 1);
-            likeBtn.classList.remove('liked');
-            likeBtn.dataset.liked = 'false';
+        if (isActive) {
+            // Deactivate current reaction
+            reactionBtn.classList.remove('active');
+            countElement.textContent = Math.max(0, currentCount - 1);
         } else {
-            icon.textContent = '❤️';
-            count.textContent = currentCount + 1;
-            likeBtn.classList.add('liked');
-            likeBtn.dataset.liked = 'true';
+            // Deactivate other buttons in the same group
+            groupButtons.forEach(btn => {
+                if (btn !== reactionBtn && btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    const btnCount = btn.querySelector('.reaction-count');
+                    const btnCurrentCount = parseInt(btnCount.textContent) || 0;
+                    btnCount.textContent = Math.max(0, btnCurrentCount - 1);
+                }
+            });
+
+            // Activate current reaction
+            reactionBtn.classList.add('active');
+            countElement.textContent = currentCount + 1;
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/${endpoint}`, {
-                method: 'POST'
+            const response = await window.apiCall(`/posts/${postId}/reaction`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    reactionType,
+                    reactionValue: isActive ? null : reactionValue // null to remove reaction
+                })
             });
 
             if (!response.ok) {
-                // Log the actual error for debugging
-                console.error('Failed to toggle like:', {
+                console.error('Failed to toggle reaction:', {
                     status: response.status,
                     error: response.data?.error || response.data?.message || 'Unknown error',
-                    endpoint: `/posts/${postId}/${endpoint}`
+                    reactionType,
+                    reactionValue,
+                    endpoint: `/posts/${postId}/reaction`
                 });
 
-                // Revert on error
-                if (isLiked) {
-                    icon.textContent = '❤️';
-                    count.textContent = currentCount;
-                    likeBtn.classList.add('liked');
-                    likeBtn.dataset.liked = 'true';
-                } else {
-                    icon.textContent = '🤍';
-                    count.textContent = currentCount;
-                    likeBtn.classList.remove('liked');
-                    likeBtn.dataset.liked = 'false';
-                }
+                // Revert all UI changes on error
+                originalStates.forEach(state => {
+                    if (state.wasActive) {
+                        state.button.classList.add('active');
+                    } else {
+                        state.button.classList.remove('active');
+                    }
+                    state.button.querySelector('.reaction-count').textContent = state.originalCount;
+                });
             }
         } catch (error) {
-            console.error('Error toggling like:', error);
+            console.error('Error toggling reaction:', error);
+
+            // Revert all UI changes on error
+            originalStates.forEach(state => {
+                if (state.wasActive) {
+                    state.button.classList.add('active');
+                } else {
+                    state.button.classList.remove('active');
+                }
+                state.button.querySelector('.reaction-count').textContent = state.originalCount;
+            });
+        }
+    }
+
+    /**
+     * Toggle reaction on a comment
+     */
+    async toggleCommentReaction(commentId, reactionType, reactionValue) {
+        // Check authentication using current user
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to react to comments');
+            return;
+        }
+
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        if (!commentElement) return;
+
+        // Find the specific reaction button using both reaction type and value
+        const reactionBtn = commentElement.querySelector(`.comment-reaction-btn.${reactionType}-${reactionValue.toLowerCase()}`);
+        if (!reactionBtn) return;
+
+        const isActive = reactionBtn.classList.contains('active');
+        const countElement = reactionBtn.querySelector('.reaction-count');
+        const currentCount = parseInt(countElement.textContent) || 0;
+
+        // Find other buttons in the same group to deactivate them
+        const groupSelector = reactionType === 'sentiment' ? '.comment-sentiment-group .comment-reaction-btn' : '.comment-stance-group .comment-reaction-btn';
+        const groupButtons = commentElement.querySelectorAll(groupSelector);
+
+        // Store original states for rollback
+        const originalStates = Array.from(groupButtons).map(btn => ({
+            button: btn,
+            wasActive: btn.classList.contains('active'),
+            originalCount: parseInt(btn.querySelector('.reaction-count').textContent) || 0
+        }));
+
+        // Optimistic UI update
+        if (isActive) {
+            // Deactivate current reaction
+            reactionBtn.classList.remove('active');
+            countElement.textContent = Math.max(0, currentCount - 1);
+        } else {
+            // Deactivate other buttons in the same group
+            groupButtons.forEach(btn => {
+                if (btn !== reactionBtn && btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    const btnCount = btn.querySelector('.reaction-count');
+                    const btnCurrentCount = parseInt(btnCount.textContent) || 0;
+                    btnCount.textContent = Math.max(0, btnCurrentCount - 1);
+                }
+            });
+
+            // Activate current reaction
+            reactionBtn.classList.add('active');
+            countElement.textContent = currentCount + 1;
+        }
+
+        try {
+            const response = await window.apiCall(`/posts/comments/${commentId}/reaction`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    reactionType,
+                    reactionValue: isActive ? null : reactionValue // null to remove reaction
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Failed to toggle comment reaction:', {
+                    status: response.status,
+                    error: response.data?.error || response.data?.message || 'Unknown error',
+                    reactionType,
+                    reactionValue,
+                    endpoint: `/posts/comments/${commentId}/reaction`
+                });
+
+                // Revert all UI changes on error
+                originalStates.forEach(state => {
+                    if (state.wasActive) {
+                        state.button.classList.add('active');
+                    } else {
+                        state.button.classList.remove('active');
+                    }
+                    state.button.querySelector('.reaction-count').textContent = state.originalCount;
+                });
+            }
+        } catch (error) {
+            console.error('Error toggling comment reaction:', error);
+
+            // Revert all UI changes on error
+            originalStates.forEach(state => {
+                if (state.wasActive) {
+                    state.button.classList.add('active');
+                } else {
+                    state.button.classList.remove('active');
+                }
+                state.button.querySelector('.reaction-count').textContent = state.originalCount;
+            });
         }
     }
 
@@ -446,6 +570,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     ${hasReplies ? `
                         <button class="expand-thread-btn" onclick="postComponent.toggleThread('${comment.id}')">
                             <span class="expand-icon">▶</span> <span class="replies-count">${comment.replyCount || ''} replies</span>
@@ -501,6 +626,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
                         💬 Reply
                     </button>
@@ -569,12 +695,12 @@ class PostComponent {
     renderFlatComment(comment, postId) {
         const user = comment.author || comment.user;
         const displayName = user?.firstName || user?.username || 'Anonymous';
-        
+
         // All flattened comments display at depth 2 (40px indent)
         const marginLeft = 40;
-        
+
         console.log(`         → Rendering flat comment: ${comment.id.slice(-4)} at 40px indent`);
-        
+
         return `
             <div class="comment flattened-comment" data-comment-id="${comment.id}" data-depth="2" style="margin-left: ${marginLeft}px;">
                 <div class="comment-header">
@@ -584,6 +710,7 @@ class PostComponent {
                 </div>
                 <div class="comment-content">${comment.content}</div>
                 <div class="comment-actions">
+                    ${this.renderCommentReactions(comment)}
                     <button class="reply-btn" onclick="postComponent.toggleReplyBox('${comment.id}', '${postId}')">
                         💬 Reply
                     </button>
@@ -604,7 +731,8 @@ class PostComponent {
      */
     async addComment(postId) {
         // Check authentication using current user data
-        if (!window.currentUser) {
+        const currentUser = window.currentUser;
+        if (!currentUser) {
             alert('Please log in to comment');
             return;
         }
@@ -777,7 +905,8 @@ class PostComponent {
      * Submit a reply to a comment
      */
     async submitReply(parentId, postId) {
-        if (!window.currentUser) {
+        const currentUser = window.currentUser;
+        if (!currentUser) {
             alert('Please log in to reply');
             return;
         }
@@ -856,26 +985,249 @@ class PostComponent {
     }
 
     /**
-     * Share a post
+     * Show share options modal
      */
     async sharePost(postId) {
-        // For now, just copy link to clipboard
+        // Check authentication
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to share posts');
+            return;
+        }
+
+        // Show share options modal
+        this.showShareModal(postId);
+    }
+
+    /**
+     * Show share modal with options
+     */
+    showShareModal(postId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal share-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Share Post</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="share-options">
+                        <button class="share-option simple-share" onclick="postComponent.performSimpleShare('${postId}')">
+                            <span class="option-icon">🔄</span>
+                            <div class="option-text">
+                                <span class="option-title">Share</span>
+                                <span class="option-desc">Share this post to your timeline</span>
+                            </div>
+                        </button>
+
+                        <button class="share-option quote-share" onclick="postComponent.showQuoteShareDialog('${postId}')">
+                            <span class="option-icon">💬</span>
+                            <div class="option-text">
+                                <span class="option-title">Quote Share</span>
+                                <span class="option-desc">Add your thoughts and share</span>
+                            </div>
+                        </button>
+
+                        <hr class="menu-divider">
+
+                        <button class="share-option copy-link" onclick="postComponent.copyPostLink('${postId}')">
+                            <span class="option-icon">🔗</span>
+                            <div class="option-text">
+                                <span class="option-title">Copy Link</span>
+                                <span class="option-desc">Copy link to clipboard</span>
+                            </div>
+                        </button>
+
+                        <button class="share-option external-share" onclick="postComponent.externalShare('${postId}')">
+                            <span class="option-icon">📱</span>
+                            <div class="option-text">
+                                <span class="option-title">Share Externally</span>
+                                <span class="option-desc">Share via system share menu</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Perform simple share (no commentary)
+     */
+    async performSimpleShare(postId) {
+        try {
+            const response = await window.apiCall(`/posts/${postId}/share`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    shareType: 'SIMPLE'
+                })
+            });
+
+            if (response.ok) {
+                this.showToast('Post shared successfully!');
+                this.updateShareCount(postId, 1);
+                document.querySelector('.share-modal').remove();
+            } else {
+                console.error('Failed to share post:', response.data?.error);
+                this.showToast('Failed to share post', 'error');
+            }
+        } catch (error) {
+            console.error('Error sharing post:', error);
+            this.showToast('Error sharing post', 'error');
+        }
+    }
+
+    /**
+     * Show quote share dialog
+     */
+    showQuoteShareDialog(postId) {
+        // Close share modal first
+        document.querySelector('.share-modal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal quote-share-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quote Share</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="quote-form">
+                        <div class="form-group">
+                            <label for="quote-content">Add your thoughts:</label>
+                            <textarea id="quote-content"
+                                      class="edit-textarea"
+                                      placeholder="What do you think about this post?"
+                                      rows="4"
+                                      maxlength="500"></textarea>
+                            <span class="char-count">0/500</span>
+                        </div>
+                    </div>
+                    <div class="quote-actions">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="postComponent.performQuoteShare('${postId}')">Share with Quote</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+
+        // Add character counting
+        const textarea = modal.querySelector('#quote-content');
+        const charCount = modal.querySelector('.char-count');
+        textarea.addEventListener('input', () => {
+            const count = textarea.value.length;
+            charCount.textContent = `${count}/500`;
+            charCount.style.color = count > 500 ? '#dc3545' : '#666';
+        });
+    }
+
+    /**
+     * Perform quote share with commentary
+     */
+    async performQuoteShare(postId) {
+        const content = document.getElementById('quote-content').value.trim();
+
+        if (!content) {
+            this.showToast('Please add your thoughts before sharing', 'error');
+            return;
+        }
+
+        if (content.length > 500) {
+            this.showToast('Commentary must be 500 characters or less', 'error');
+            return;
+        }
+
+        try {
+            const response = await window.apiCall(`/posts/${postId}/share`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    shareType: 'QUOTE',
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                this.showToast('Post shared with your thoughts!');
+                this.updateShareCount(postId, 1);
+                document.querySelector('.quote-share-modal').remove();
+            } else {
+                console.error('Failed to share post:', response.data?.error);
+                this.showToast('Failed to share post', 'error');
+            }
+        } catch (error) {
+            console.error('Error sharing post:', error);
+            this.showToast('Error sharing post', 'error');
+        }
+    }
+
+    /**
+     * Copy post link to clipboard
+     */
+    async copyPostLink(postId) {
         const postUrl = `${window.location.origin}/post/${postId}`;
-        
+
+        if (navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(postUrl);
+                this.showToast('Link copied to clipboard!');
+                document.querySelector('.share-modal').remove();
+            } catch (err) {
+                console.error('Failed to copy to clipboard:', err);
+                this.showToast('Failed to copy link', 'error');
+            }
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = postUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showToast('Link copied to clipboard!');
+            document.querySelector('.share-modal').remove();
+        }
+    }
+
+    /**
+     * Use system share menu
+     */
+    async externalShare(postId) {
+        const postUrl = `${window.location.origin}/post/${postId}`;
+
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Check out this post',
+                    title: 'Check out this post on UnitedWeRise',
                     url: postUrl
                 });
+                document.querySelector('.share-modal').remove();
             } catch (err) {
-                console.log('Share cancelled or failed');
+                if (err.name !== 'AbortError') {
+                    console.error('Share failed:', err);
+                    this.showToast('Share cancelled or failed', 'error');
+                }
             }
-        } else if (navigator.clipboard) {
-            await navigator.clipboard.writeText(postUrl);
-            this.showToast('Link copied to clipboard!');
         } else {
-            alert('Share URL: ' + postUrl);
+            this.showToast('System sharing not available on this device', 'error');
+        }
+    }
+
+    /**
+     * Update share count in UI
+     */
+    updateShareCount(postId, increment) {
+        const shareBtn = document.querySelector(`[data-post-id="${postId}"] .share-btn .action-count`);
+        if (shareBtn) {
+            const currentCount = parseInt(shareBtn.textContent) || 0;
+            shareBtn.textContent = Math.max(0, currentCount + increment);
         }
     }
 
@@ -883,8 +1235,447 @@ class PostComponent {
      * Show post menu (edit, delete, etc.)
      */
     showPostMenu(postId) {
-        // TODO: Implement post menu with edit/delete options
-        alert('Post menu coming soon!');
+        // Create and show post menu modal
+        const modalHtml = `
+            <div class="modal post-menu-modal" id="postMenu-${postId}">
+                <div class="modal-content post-menu-content">
+                    <div class="modal-header">
+                        <h3>Post Options</h3>
+                        <span class="close" onclick="postComponent.closePostMenu('${postId}')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="post-menu-options">
+                            <button class="menu-option edit-option" onclick="postComponent.editPost('${postId}')">
+                                <span class="option-icon">✏️</span>
+                                <div class="option-text">
+                                    <span class="option-title">Edit Post</span>
+                                    <span class="option-desc">Make changes to your post</span>
+                                </div>
+                            </button>
+
+                            <button class="menu-option history-option" onclick="postComponent.viewPostHistory('${postId}')">
+                                <span class="option-icon">📜</span>
+                                <div class="option-text">
+                                    <span class="option-title">View Edit History</span>
+                                    <span class="option-desc">See all changes made to this post</span>
+                                </div>
+                            </button>
+
+                            <hr class="menu-divider">
+
+                            <button class="menu-option delete-option danger" onclick="postComponent.deletePost('${postId}')">
+                                <span class="option-icon">🗑️</span>
+                                <div class="option-text">
+                                    <span class="option-title">Delete Post</span>
+                                    <span class="option-desc">Permanently remove this post</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing post menu
+        const existingMenu = document.getElementById(`postMenu-${postId}`);
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        // Add menu to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show menu
+        document.getElementById(`postMenu-${postId}`).style.display = 'block';
+    }
+
+    closePostMenu(postId) {
+        const menu = document.getElementById(`postMenu-${postId}`);
+        if (menu) {
+            menu.remove();
+        }
+    }
+
+    editPost(postId) {
+        this.closePostMenu(postId);
+
+        // Find the post element and create inline editing interface
+        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+        if (!postElement) return;
+
+        const post = this.findPostById(postId);
+        if (!post) return;
+
+        // Create edit modal
+        const editModalHtml = `
+            <div class="modal edit-post-modal" id="editModal-${postId}">
+                <div class="modal-content edit-post-content">
+                    <div class="modal-header">
+                        <h3>Edit Post</h3>
+                        <span class="close" onclick="postComponent.closeEditModal('${postId}')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="edit-form">
+                            <div class="form-group">
+                                <label for="editContent-${postId}">Post Content</label>
+                                <textarea id="editContent-${postId}" class="edit-textarea"
+                                          maxlength="2000" rows="5">${post.content || ''}</textarea>
+                                <small class="char-count">0 / 2000 characters</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="editReason-${postId}">Reason for Edit (Optional)</label>
+                                <input type="text" id="editReason-${postId}" class="edit-input"
+                                       placeholder="e.g., Fixed typo, Added more context..."
+                                       maxlength="200">
+                            </div>
+
+                            <div class="edit-actions">
+                                <button onclick="postComponent.closeEditModal('${postId}')" class="btn btn-secondary">
+                                    Cancel
+                                </button>
+                                <button onclick="postComponent.submitPostEdit('${postId}')" class="btn btn-primary">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', editModalHtml);
+        document.getElementById(`editModal-${postId}`).style.display = 'block';
+
+        // Add character counter
+        const textarea = document.getElementById(`editContent-${postId}`);
+        const charCount = document.querySelector(`#editModal-${postId} .char-count`);
+        textarea.addEventListener('input', (e) => {
+            const count = e.target.value.length;
+            charCount.textContent = `${count} / 2000 characters`;
+            charCount.style.color = count > 2000 ? '#dc3545' : '#666';
+        });
+
+        // Trigger initial count
+        textarea.dispatchEvent(new Event('input'));
+        textarea.focus();
+    }
+
+    closeEditModal(postId) {
+        const modal = document.getElementById(`editModal-${postId}`);
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async submitPostEdit(postId) {
+        const content = document.getElementById(`editContent-${postId}`).value.trim();
+        const editReason = document.getElementById(`editReason-${postId}`).value.trim();
+
+        if (!content) {
+            alert('Post content cannot be empty');
+            return;
+        }
+
+        if (content.length > 2000) {
+            alert('Post content must be 2000 characters or less');
+            return;
+        }
+
+        try {
+            const response = await apiCall(`/posts/${postId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    content,
+                    editReason: editReason || undefined
+                })
+            });
+
+            if (response.ok) {
+                this.closeEditModal(postId);
+
+                // Update the post in the UI
+                const updatedPost = response.data.data.post;
+                this.updatePostInUI(postId, updatedPost);
+
+                // Show success message
+                this.showMessage('Post updated successfully', 'success');
+
+                // Refresh the current view to show updated content
+                if (window.location.pathname.includes('profile')) {
+                    // Refresh profile if on profile page
+                    window.myProfile?.loadCurrentTab();
+                } else {
+                    // Refresh feed if on main page
+                    window.loadMyFeed?.();
+                }
+            } else {
+                throw new Error(response.data?.error || 'Failed to update post');
+            }
+        } catch (error) {
+            console.error('Error updating post:', error);
+            this.showMessage(error.message || 'Failed to update post', 'error');
+        }
+    }
+
+    deletePost(postId) {
+        this.closePostMenu(postId);
+
+        // Create delete confirmation modal
+        const deleteModalHtml = `
+            <div class="modal delete-post-modal" id="deleteModal-${postId}">
+                <div class="modal-content delete-post-content">
+                    <div class="modal-header">
+                        <h3>Delete Post</h3>
+                        <span class="close" onclick="postComponent.closeDeleteModal('${postId}')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="delete-warning">
+                            <span class="warning-icon">⚠️</span>
+                            <p><strong>Are you sure you want to delete this post?</strong></p>
+                            <p>This action cannot be undone. The post will be removed from all feeds and searches,
+                               but a copy will be archived in your Activity Log for accountability.</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deleteReason-${postId}">Reason for Deletion (Optional)</label>
+                            <input type="text" id="deleteReason-${postId}" class="delete-input"
+                                   placeholder="e.g., Posted by mistake, Outdated information..."
+                                   maxlength="200">
+                        </div>
+
+                        <div class="delete-actions">
+                            <button onclick="postComponent.closeDeleteModal('${postId}')" class="btn btn-secondary">
+                                Cancel
+                            </button>
+                            <button onclick="postComponent.confirmDeletePost('${postId}')" class="btn btn-danger">
+                                Delete Post
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', deleteModalHtml);
+        document.getElementById(`deleteModal-${postId}`).style.display = 'block';
+    }
+
+    closeDeleteModal(postId) {
+        const modal = document.getElementById(`deleteModal-${postId}`);
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async confirmDeletePost(postId) {
+        const deleteReason = document.getElementById(`deleteReason-${postId}`).value.trim();
+
+        try {
+            const response = await apiCall(`/posts/${postId}`, {
+                method: 'DELETE',
+                body: JSON.stringify({
+                    deleteReason: deleteReason || undefined
+                })
+            });
+
+            if (response.ok) {
+                this.closeDeleteModal(postId);
+
+                // Remove post from UI
+                const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                if (postElement) {
+                    postElement.style.transition = 'opacity 0.3s ease';
+                    postElement.style.opacity = '0';
+                    setTimeout(() => {
+                        postElement.remove();
+                    }, 300);
+                }
+
+                // Show success message
+                this.showMessage('Post deleted successfully', 'success');
+
+                // Refresh the current view
+                if (window.location.pathname.includes('profile')) {
+                    window.myProfile?.loadCurrentTab();
+                } else {
+                    window.loadMyFeed?.();
+                }
+            } else {
+                throw new Error(response.data?.error || 'Failed to delete post');
+            }
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            this.showMessage(error.message || 'Failed to delete post', 'error');
+        }
+    }
+
+    viewPostHistory(postId) {
+        this.closePostMenu(postId);
+
+        // Create history modal
+        const historyModalHtml = `
+            <div class="modal history-modal" id="historyModal-${postId}">
+                <div class="modal-content history-content">
+                    <div class="modal-header">
+                        <h3>Post Edit History</h3>
+                        <span class="close" onclick="postComponent.closeHistoryModal('${postId}')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div id="historyContent-${postId}" class="history-content">
+                            <div class="loading">Loading history...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', historyModalHtml);
+        document.getElementById(`historyModal-${postId}`).style.display = 'block';
+
+        // Load history data
+        this.loadPostHistory(postId);
+    }
+
+    closeHistoryModal(postId) {
+        const modal = document.getElementById(`historyModal-${postId}`);
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async loadPostHistory(postId) {
+        try {
+            const response = await apiCall(`/posts/${postId}/history`);
+
+            if (response.ok) {
+                const history = response.data.data;
+                this.displayPostHistory(postId, history);
+            } else {
+                throw new Error(response.data?.error || 'Failed to load history');
+            }
+        } catch (error) {
+            console.error('Error loading history:', error);
+            document.getElementById(`historyContent-${postId}`).innerHTML = `
+                <div class="error">Failed to load edit history: ${error.message}</div>
+            `;
+        }
+    }
+
+    displayPostHistory(postId, history) {
+        const container = document.getElementById(`historyContent-${postId}`);
+
+        if (!history.history || history.history.length === 0) {
+            container.innerHTML = `
+                <div class="no-history">
+                    <p>This post has not been edited.</p>
+                    <div class="original-version">
+                        <h4>Original Content</h4>
+                        <div class="version-content">${this.formatPostContent(history.currentContent)}</div>
+                        <small>Created: ${this.formatDate(new Date(history.createdAt))}</small>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        let historyHtml = `
+            <div class="history-timeline">
+                <div class="version current-version">
+                    <div class="version-header">
+                        <h4>Current Version</h4>
+                        <span class="version-date">${this.formatDate(new Date())}</span>
+                    </div>
+                    <div class="version-content">${this.formatPostContent(history.currentContent)}</div>
+                </div>
+        `;
+
+        // Display edit history in reverse chronological order
+        history.history.reverse().forEach((entry, index) => {
+            historyHtml += `
+                <div class="version">
+                    <div class="version-header">
+                        <h4>Version ${entry.version}</h4>
+                        <span class="version-date">${this.formatDate(new Date(entry.editedAt))}</span>
+                    </div>
+                    <div class="version-content">${this.formatPostContent(entry.content)}</div>
+                    ${entry.editReason ? `<div class="edit-reason"><strong>Reason:</strong> ${entry.editReason}</div>` : ''}
+                </div>
+            `;
+        });
+
+        if (history.originalContent && history.originalContent !== history.currentContent) {
+            historyHtml += `
+                <div class="version original-version">
+                    <div class="version-header">
+                        <h4>Original Version</h4>
+                        <span class="version-date">${this.formatDate(new Date(history.createdAt))}</span>
+                    </div>
+                    <div class="version-content">${this.formatPostContent(history.originalContent)}</div>
+                </div>
+            `;
+        }
+
+        historyHtml += '</div>';
+        container.innerHTML = historyHtml;
+    }
+
+    // Helper methods
+    findPostById(postId) {
+        // This method should return the post data from wherever it's stored
+        // You may need to implement this based on how posts are managed in your app
+        return window.currentPosts?.find(p => p.id === postId) || null;
+    }
+
+    updatePostInUI(postId, updatedPost) {
+        // Update post content in the UI
+        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+        if (postElement) {
+            const contentElement = postElement.querySelector('.post-content');
+            if (contentElement) {
+                contentElement.innerHTML = this.formatPostContent(updatedPost.content);
+            }
+
+            // Add edited indicator
+            const headerElement = postElement.querySelector('.post-header');
+            if (headerElement && !headerElement.querySelector('.edited-indicator')) {
+                headerElement.insertAdjacentHTML('beforeend', `
+                    <span class="edited-indicator" title="This post has been edited">
+                        (edited)
+                    </span>
+                `);
+            }
+        }
+    }
+
+    showMessage(message, type = 'info') {
+        // Create a temporary message notification
+        const messageHtml = `
+            <div class="toast toast-${type}" id="postMessage-${Date.now()}">
+                ${message}
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', messageHtml);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            const toast = document.querySelector('.toast:last-child');
+            if (toast) {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 3000);
+    }
+
+    formatDate(date) {
+        return new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
     }
 
     /**
@@ -918,6 +1709,86 @@ class PostComponent {
         // The "read more" functionality is handled by clicking the post text area or comment button
         
         return content;
+    }
+
+    /**
+     * Render enhanced reaction system with grouped sentiment/stance buttons
+     */
+    renderEnhancedReactions(post) {
+        return `
+            <div class="reaction-groups">
+                <div class="sentiment-group">
+                    <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleReaction('${post.id}', 'sentiment', 'LIKE')"
+                            data-reaction-type="sentiment"
+                            data-reaction-value="LIKE">
+                        <span class="emoji">😊</span>
+                        <span class="reaction-count">${post.likesCount || 0}</span>
+                    </button>
+                    <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleReaction('${post.id}', 'sentiment', 'DISLIKE')"
+                            data-reaction-type="sentiment"
+                            data-reaction-value="DISLIKE">
+                        <span class="emoji">😞</span>
+                        <span class="reaction-count">${post.dislikesCount || 0}</span>
+                    </button>
+                </div>
+                <div class="stance-group">
+                    <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleReaction('${post.id}', 'stance', 'AGREE')"
+                            data-reaction-type="stance"
+                            data-reaction-value="AGREE">
+                        <span class="emoji">👍</span>
+                        <span class="reaction-count">${post.agreesCount || 0}</span>
+                    </button>
+                    <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleReaction('${post.id}', 'stance', 'DISAGREE')"
+                            data-reaction-type="stance"
+                            data-reaction-value="DISAGREE">
+                        <span class="emoji">👎</span>
+                        <span class="reaction-count">${post.disagreesCount || 0}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render compact reaction buttons for comments
+     */
+    renderCommentReactions(comment) {
+        return `
+            <div class="comment-reaction-groups">
+                <div class="comment-sentiment-group">
+                    <button class="comment-reaction-btn sentiment-like ${comment.userSentiment === 'LIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'LIKE')"
+                            title="Like this comment">
+                        <span class="emoji">😊</span>
+                        <span class="reaction-count">${comment.likesCount || 0}</span>
+                    </button>
+                    <button class="comment-reaction-btn sentiment-dislike ${comment.userSentiment === 'DISLIKE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'sentiment', 'DISLIKE')"
+                            title="Dislike this comment">
+                        <span class="emoji">😞</span>
+                        <span class="reaction-count">${comment.dislikesCount || 0}</span>
+                    </button>
+                </div>
+                <div class="comment-stance-group">
+                    <button class="comment-reaction-btn stance-agree ${comment.userStance === 'AGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'AGREE')"
+                            title="Agree with this comment">
+                        <span class="emoji">👍</span>
+                        <span class="reaction-count">${comment.agreesCount || 0}</span>
+                    </button>
+                    <button class="comment-reaction-btn stance-disagree ${comment.userStance === 'DISAGREE' ? 'active' : ''}"
+                            onclick="postComponent.toggleCommentReaction('${comment.id}', 'stance', 'DISAGREE')"
+                            title="Disagree with this comment">
+                        <span class="emoji">👎</span>
+                        <span class="reaction-count">${comment.disagreesCount || 0}</span>
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -1376,18 +2247,14 @@ class PostComponent {
                     ${this.renderPostMedia(post.photos)}
                     
                     <div class="post-actions" data-post-id="${post.id}">
-                        <button class="post-action-btn like-btn ${post.isLiked ? 'liked' : ''}" 
-                                onclick="postComponent.toggleLike('${post.id}')">
-                            <span class="action-icon">${post.isLiked ? '❤️' : '🤍'}</span>
-                            <span class="action-count">${post.likesCount || 0}</span>
-                        </button>
-                        
+                        ${this.renderEnhancedReactions(post)}
+
                         <button class="post-action-btn comment-btn">
                             <span class="action-icon">💬</span>
                             <span class="action-count">${comments.length}</span>
                         </button>
-                        
-                        <button class="post-action-btn share-btn" onclick="postComponent.sharePost('${post.id}')">
+
+                        <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}" onclick="postComponent.sharePost('${post.id}')">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>

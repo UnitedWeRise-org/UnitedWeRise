@@ -1,6 +1,6 @@
 /**
  * Activity Tracker Service
- * Automatically tracks user activities for accountability and activity feeds
+ * Automatically tracks user activities for accountability and activity logs
  */
 import { ActivityType } from '@prisma/client';
 interface ActivityMetadata {
@@ -58,7 +58,19 @@ export declare class ActivityTracker {
      */
     static trackFollowRemoved(userId: string, targetUserId: string, targetUsername: string): Promise<void>;
     /**
-     * Get user activity feed with filtering
+     * Track enhanced reaction changes (sentiment/stance)
+     */
+    static trackReactionChanged(userId: string, postId: string, postTitle: string, reactionType: 'sentiment' | 'stance', oldValue: string | null, newValue: string | null): Promise<void>;
+    /**
+     * Track post share
+     */
+    static trackShareAdded(userId: string, postId: string, postTitle: string, shareType: 'SIMPLE' | 'QUOTE', quoteContent?: string): Promise<void>;
+    /**
+     * Track post share removal (unshare)
+     */
+    static trackShareRemoved(userId: string, postId: string, postTitle: string, shareType: 'SIMPLE' | 'QUOTE'): Promise<void>;
+    /**
+     * Get user activity log with filtering
      */
     static getUserActivity(userId: string, options?: {
         types?: ActivityType[];

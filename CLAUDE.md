@@ -95,7 +95,7 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 - ✅ Reputation system with democratic reporting
 - ✅ AI content analysis & topic discovery
 - ✅ Officials panel with voting records
-- ✅ Admin dashboard with deployment monitoring
+- ✅ Comprehensive 13-section admin dashboard with deployment monitoring
 - ✅ LIVE Stripe payments with tax receipts
 - ✅ OAuth Authentication (Google)
 - ✅ TOTP 2FA with 24-hour sessions
@@ -573,52 +573,24 @@ UPTIME=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"uptime":[^,]*
 echo "Container uptime: $UPTIME seconds"
 ```
 
-#### 3️⃣ Database Schema Changes - CRITICAL PROTOCOL
-**🚨 NEVER apply database migrations without matching code deployment!**
+#### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
+**🚨 Shared database: schema changes affect BOTH staging and production immediately**
 
 ```bash
-# CORRECT SEQUENCE (prevents schema-code mismatch):
-
-# Step 1: Update schema AND code together in development branch
-git checkout development
-# a) Modify prisma/schema.prisma
-# b) Update backend code to match new schema
-# c) Remove/add validations as needed
-
-# Step 2: Validate schema-code synchronization
-cd backend
-npx prisma validate      # Schema is valid
-npx prisma generate       # Client matches schema
-npm run build            # Code compiles with schema
-cd ..
-
-# Step 3: Create migration file (for tracking)
-cd backend
-npx prisma migrate dev --name descriptive_name --create-only
-# This creates migration file without applying it
-
-# Step 4: Commit EVERYTHING together
-git add .
-git commit -m "schema: Description with migration and code changes"
-git push origin development
-
-# Step 5: Deploy to STAGING first
-# Follow Backend Deployment steps for staging
-# Migration auto-applies during deployment
-
-# Step 6: Test thoroughly on staging
-# Verify all functionality works with new schema
-
-# Step 7: Production deployment (ONLY with user approval)
-# Merge to main and deploy - migration applies automatically
+# Schema change deployment (script with manual fallback)
+./scripts/deploy-schema-change.sh "description" || {
+  # Manual schema deployment if script fails:
+  git checkout development
+  # 1. Update schema.prisma AND matching backend code together
+  # 2. Validate synchronization
+  cd backend && npx prisma validate && npx prisma generate && npm run build && cd ..
+  # 3. Deploy immediately to both environments (shared database)
+  git add . && git commit -m "schema: description" && git push origin development
+  # Deploy to staging first, then production within hours (not days)
+}
 ```
 
-**❌ NEVER DO THIS:**
-```bash
-# WRONG: Direct database modification without code update
-npx prisma db execute --file remove-column.sql  # ❌ NO!
-# This breaks production immediately if code still references the column
-```
+**❌ NEVER**: Apply database migrations without matching code deployment
 
 ---
 

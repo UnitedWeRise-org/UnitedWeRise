@@ -154,7 +154,8 @@ class Profile {
         if (!container) return;
 
         // Determine if we're viewing own profile or someone else's
-        const isOwnProfile = !targetUserId || targetUserId === window.currentUser?.id;
+        const currentUser = window.currentUser;
+        const isOwnProfile = !targetUserId || targetUserId === currentUser?.id;
         this.viewingUserId = targetUserId;
         this.isOwnProfile = isOwnProfile;
 
@@ -484,7 +485,7 @@ class Profile {
                 </div>
                 </div>
 
-                <!-- Activity Feed -->
+                <!-- Activity Log -->
                 <div class="activity-feed" id="activityFeed">
                     ${this.userActivities.length === 0 ? this.renderEmptyActivityState() : this.renderActivityList()}
                 </div>
@@ -3676,8 +3677,7 @@ class Profile {
             const response = await window.apiCall('/user/notification-preferences', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     [key]: value
@@ -3838,8 +3838,7 @@ class Profile {
             const response = await window.apiCall('/users/profile-privacy', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     privacySettings: updatedPrivacySettings
@@ -3867,11 +3866,7 @@ class Profile {
     // Check if user is a candidate and show candidate-specific notification settings
     async checkCandidateNotificationSettings() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
-            });
+            const response = await window.apiCall('/candidate-policy-platform/candidate/status');
 
             if (response.ok && response.data?.success) {
                 // User is a candidate, show candidate notification settings
@@ -3928,7 +3923,7 @@ class Profile {
         }
     }
 
-    // Activity Feed Methods
+    // Activity Log Methods
 
     async loadUserActivities(reset = false) {
         if (reset) {
@@ -3966,7 +3961,7 @@ class Profile {
 
                 this.activityOffset += newActivities.length;
 
-                // Update the activity feed display
+                // Update the activity log display
                 this.updateActivityDisplay();
 
                 adminDebugLog('Activity', `Loaded ${newActivities.length} activities, total: ${this.userActivities.length}`);
@@ -3975,7 +3970,7 @@ class Profile {
             }
         } catch (error) {
             adminDebugError('Error loading user activities:', error);
-            // Show error in the activity feed
+            // Show error in the activity log
             const activityFeed = document.getElementById('activityFeed');
             if (activityFeed) {
                 activityFeed.innerHTML = `
@@ -4010,7 +4005,7 @@ class Profile {
                 <h3>No activity yet</h3>
                 <p>Your posts, comments, likes, and follows will appear here.</p>
                 <p style="font-size: 0.9em; margin-top: 1rem;">
-                    Try adjusting the filters above or create some content to see your activity feed!
+                    Try adjusting the filters above or create some content to see your activity log!
                 </p>
             </div>
         `;

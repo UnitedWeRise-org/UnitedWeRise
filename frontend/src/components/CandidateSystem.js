@@ -14,16 +14,20 @@ class CandidateSystem {
     }
 
     getCurrentUser() {
-        // Integration with existing auth system
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                return payload;
-            } catch (e) {
-                return null;
-            }
+        // Use unified authentication system
+        if (window.authUtils?.getCurrentUser) {
+            return window.authUtils.getCurrentUser();
         }
+
+        // Fallback to existing auth sources
+        if (window.currentUser) {
+            return window.currentUser;
+        }
+
+        if (window.userState?.current) {
+            return window.userState.current;
+        }
+
         return null;
     }
 
@@ -653,7 +657,7 @@ class CandidateSystem {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    ...(this.currentUser ? { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } : {})
+                    // Auth handled automatically by apiCall
                 },
                 body: JSON.stringify(inquiryData)
             });
@@ -686,8 +690,7 @@ class CandidateSystem {
             const response = await fetch(`${this.API_BASE}/candidate-messages/${candidateId}/public-qa/${qaId}/vote`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ voteType })
             });

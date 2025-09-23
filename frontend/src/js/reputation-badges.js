@@ -213,14 +213,10 @@ function initializeReputationBadges() {
  */
 async function loadCurrentUserReputation() {
     try {
-        const response = await fetch('/api/reputation/me', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
-        });
-        
+        const response = await window.apiCall('/reputation/me');
+
         if (response.ok) {
-            const data = await response.json();
+            const data = response.data;
             updateProfileBadge(data.reputation.current);
             
             // Store in global for other components to use
@@ -239,9 +235,20 @@ if (document.readyState === 'loading') {
 }
 
 // Load current user reputation if logged in
-if (window.authToken || localStorage.getItem('authToken')) {
-    loadCurrentUserReputation();
-}
+const checkAndLoadReputation = () => {
+    const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
+                           window.currentUser ||
+                           (window.userState && window.userState.current) ||
+                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+
+    if (isAuthenticated) {
+        loadCurrentUserReputation();
+    }
+};
+
+// Try immediately, then try again after auth system loads
+checkAndLoadReputation();
+setTimeout(checkAndLoadReputation, 2000);
 
 // Export functions for use in other modules
 window.ReputationBadges = {
