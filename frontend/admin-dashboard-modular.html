@@ -398,6 +398,97 @@
             margin: 1rem 0;
         }
 
+        /* Deployment-specific styles */
+        .deployment-dashboard {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            min-height: 200px;
+        }
+
+        .deployment-console {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-line;
+            border: 1px solid #333;
+        }
+
+        .container-health {
+            margin-bottom: 1rem;
+        }
+
+        .health-metric {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .build-status {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            min-height: 150px;
+        }
+
+        .action-btn.danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .action-btn.danger:hover {
+            background: #c82333;
+        }
+
+        .action-btn.secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .action-btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-indicator.green {
+            background: #28a745;
+        }
+
+        .status-indicator.yellow {
+            background: #ffc107;
+        }
+
+        .status-indicator.red {
+            background: #dc3545;
+        }
+
         /* Tab System Styles */
         .tab-button {
             padding: 0.75rem 1.5rem;
@@ -1684,6 +1775,1896 @@
                 align-items: stretch;
             }
         }
+        /* Candidates-specific styles */
+        .candidates-analytics {
+            margin-bottom: 2rem;
+        }
+
+        .candidates-analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .candidates-tabs-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .candidates-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #4b5c09;
+            border-bottom-color: #4b5c09;
+        }
+
+        .tab-badge {
+            background: #6c757d;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .tab-badge.urgent {
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .tab-content {
+            padding: 0;
+        }
+
+        .tab-pane {
+            display: none;
+            padding: 2rem;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .tab-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tab-filters select,
+        .tab-filters input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .candidates-table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .candidates-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        .candidates-table th,
+        .candidates-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+
+        .candidates-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .candidates-table th.sortable {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .candidates-table th.sortable:hover {
+            background: #e9ecef;
+        }
+
+        .candidate-details,
+        .candidate-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .profile-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .profile-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .candidate-meta,
+        .profile-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .office-info,
+        .location-info,
+        .document-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .office-level,
+        .district,
+        .email,
+        .phone,
+        .username {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .doc-count {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .doc-type-badge {
+            background: #e9ecef;
+            color: #333;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-right: 0.3rem;
+        }
+
+        .more-docs {
+            font-size: 0.7rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .no-docs {
+            color: #999;
+            font-style: italic;
+        }
+
+        .bg-check {
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .bg-check.passed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .bg-check.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .bg-check.reviewing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .bg-check.pending {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .campaign-status-info,
+        .finance-info,
+        .activity-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .campaign-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .campaign-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .campaign-status.planning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .campaign-status.suspended {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+
+        .social-verified {
+            margin-left: 0.5rem;
+        }
+
+        .funds-raised,
+        .funds-spent {
+            font-weight: 600;
+        }
+
+        .compliance-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .compliance-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .compliance-badge.compliant {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .compliance-badge.non-compliant {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .compliance-badge.unknown {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .last-check {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .type-badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .type-badge.campaign-finance-violation {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .type-badge.ethics-violation {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .type-badge.misinformation {
+            background: #ffeaa7;
+            color: #b8860b;
+        }
+
+        .type-badge.identity-verification {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .type-badge.eligibility-check {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .severity-badge,
+        .priority-badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .severity-critical,
+        .priority-urgent {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .severity-high,
+        .priority-high {
+            background: #ffcccc;
+            color: #cc0000;
+        }
+
+        .severity-medium,
+        .priority-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .severity-low,
+        .priority-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .legal-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .fec-reportable {
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .fec-reportable.required {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .fec-reportable.not-required {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .legal-consulted {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+        }
+
+        .document-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .doc-type {
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .view-doc-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .requirements-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .requirements-progress {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .requirements-percentage {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .queue-time {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .duration {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .queue-date {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .registrations-controls,
+        .profiles-controls,
+        .reports-controls,
+        .verification-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .selection-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .bulk-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bulk-actions select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .bulk-btn {
+            background: #17a2b8;
+            border-color: #17a2b8;
+        }
+
+        .bulk-btn:disabled {
+            background: #6c757d;
+            border-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .document-upload-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        .upload-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .progress-text {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Modal styles for verification and profile editing */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 2rem;
+        }
+
+        .verification-modal,
+        .profile-edit-modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .verification-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .verification-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .candidate-summary {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 6px;
+        }
+
+        .verification-checklist {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 6px;
+        }
+
+        .verification-notes textarea {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.75rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .document-viewer {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .document-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .doc-tab {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .doc-tab.active {
+            background: #4b5c09;
+            color: white;
+            border-color: #4b5c09;
+        }
+
+        .document-content {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 400px;
+            overflow: auto;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .action-btn.large {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+
+        /* Responsive adjustments for candidates section */
+        @media (max-width: 768px) {
+            .candidates-tabs {
+                flex-direction: column;
+            }
+
+            .tab-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .candidates-table {
+                font-size: 0.8rem;
+            }
+
+            .verification-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .candidates-analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Analytics Dashboard Styles */
+        .analytics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e6ed;
+        }
+
+        .analytics-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .control-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4b5c09;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .custom-date-range {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .last-updated {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        /* Metric Cards */
+        .analytics-metrics {
+            margin-bottom: 2rem;
+        }
+
+        .metric-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e0e6ed;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4b5c09 0%, #6b8109 100%);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(75, 92, 9, 0.15);
+        }
+
+        .metric-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+        }
+
+        .metric-content {
+            flex: 1;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1;
+        }
+
+        .metric-trend {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .metric-trend.positive {
+            color: #27ae60;
+        }
+
+        .metric-trend.negative {
+            color: #e74c3c;
+        }
+
+        .metric-trend.neutral {
+            color: #95a5a6;
+        }
+
+        /* Charts Section */
+        .analytics-charts {
+            margin-bottom: 2rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .chart-container h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .chart-container canvas {
+            max-height: 300px;
+            width: 100% !important;
+        }
+
+        /* Filters Section */
+        .analytics-filters {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .analytics-filters h3 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #4b5c09;
+            font-size: 0.875rem;
+        }
+
+        .filter-group select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            min-width: 150px;
+        }
+
+        /* Analytics Tabs */
+        .analytics-details {
+            margin-bottom: 2rem;
+        }
+
+        .analytics-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e0e6ed;
+        }
+
+        .analytics-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .analytics-tab.active {
+            color: #4b5c09;
+            border-bottom-color: #4b5c09;
+        }
+
+        .analytics-tab:hover {
+            color: #4b5c09;
+            background: rgba(75, 92, 9, 0.05);
+        }
+
+        .analytics-tab-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            border: 1px solid #e0e6ed;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Engagement Metrics */
+        .engagement-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .engagement-metrics .metric-card {
+            background: linear-gradient(135deg, #e8f4fd 0%, #dae8fc 100%);
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .feature-name {
+            font-weight: 500;
+        }
+
+        .feature-rate {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        /* Content Performance */
+        .content-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .top-content-card,
+        .content-type-card,
+        .trending-hashtags-card {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .top-content-card h4,
+        .content-type-card h4,
+        .trending-hashtags-card h4 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+            font-size: 1.125rem;
+        }
+
+        .top-posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .top-post-item {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .post-rank {
+            font-weight: 700;
+            color: #4b5c09;
+            font-size: 1.125rem;
+            min-width: 30px;
+        }
+
+        .post-content {
+            flex: 1;
+        }
+
+        .post-text {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .post-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .post-engagement {
+            font-weight: 700;
+            color: #4b5c09;
+        }
+
+        .type-performance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .type-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .type-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .type-metrics {
+            text-align: right;
+        }
+
+        .type-count {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .type-engagement {
+            font-weight: 600;
+            color: #4b5c09;
+        }
+
+        .hashtag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .hashtag-item {
+            background: #4b5c09;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Growth Metrics */
+        .growth-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .acquisition-card,
+        .retention-card,
+        .churn-card {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .acquisition-sources {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .source-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .source-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .source-metrics {
+            text-align: right;
+        }
+
+        .source-users {
+            font-weight: 600;
+            color: #4b5c09;
+        }
+
+        .source-percentage {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .source-cost {
+            font-size: 0.75rem;
+            color: #e74c3c;
+        }
+
+        .cohort-table {
+            display: grid;
+            grid-template-columns: 1fr repeat(4, 80px);
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .cohort-header {
+            display: contents;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .cohort-row {
+            display: contents;
+        }
+
+        .cohort-period {
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .cohort-rate {
+            padding: 0.5rem;
+            text-align: center;
+            background: #e8f4fd;
+            border-radius: 4px;
+        }
+
+        .churn-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .churn-rate {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #fff5f5;
+            border-radius: 6px;
+        }
+
+        .churn-value {
+            font-weight: 700;
+            color: #e74c3c;
+            font-size: 1.25rem;
+        }
+
+        .churn-reasons {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .churn-reason {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .reason-text {
+            color: #2c3e50;
+        }
+
+        .reason-percentage {
+            font-weight: 600;
+            color: #e74c3c;
+        }
+
+        /* Custom Reports */
+        .custom-reports {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .custom-reports h3 {
+            margin: 0 0 1.5rem 0;
+            color: #2c3e50;
+        }
+
+        .report-builder {
+            margin-bottom: 2rem;
+        }
+
+        .metric-selectors {
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-selectors h4 {
+            margin: 0 0 1rem 0;
+            color: #4b5c09;
+        }
+
+        .metric-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .metric-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .metric-checkboxes label:hover {
+            background: #e8f4fd;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .custom-report {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e6ed;
+        }
+
+        .report-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .report-section {
+            margin-bottom: 2rem;
+        }
+
+        .report-section h4 {
+            margin: 0 0 1rem 0;
+            color: #4b5c09;
+            border-bottom: 1px solid #e0e6ed;
+            padding-bottom: 0.5rem;
+        }
+
+        .report-data {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .data-item,
+        .data-pair,
+        .data-value {
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .data-pair strong {
+            color: #4b5c09;
+            margin-right: 0.5rem;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e0e6ed;
+        }
+
+        /* Error States */
+        .error-message {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #e53e3e;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .error-message h3 {
+            margin: 0 0 1rem 0;
+            color: #c53030;
+        }
+
+        .error-message p {
+            margin: 0 0 1rem 0;
+        }
+
+        /* Responsive Design for Analytics */
+        @media (max-width: 768px) {
+            .analytics-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .analytics-controls {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+            }
+
+            .metric-cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .analytics-tabs {
+                flex-wrap: wrap;
+            }
+
+            .analytics-tab {
+                flex: 1;
+                text-align: center;
+            }
+
+            .content-metrics,
+            .growth-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .cohort-table {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
+            }
+
+            .cohort-header,
+            .cohort-row {
+                display: grid;
+                grid-template-columns: 1fr repeat(4, 1fr);
+                gap: 0.25rem;
+            }
+
+            .metric-checkboxes {
+                grid-template-columns: 1fr;
+            }
+
+            .report-actions {
+                flex-direction: column;
+            }
+        }
+
+        /* MOTD-specific styles */
+        .motd-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .motd-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .motd-card.active {
+            border-left: 4px solid #4b5c09;
+        }
+
+        .motd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .motd-title h4 {
+            margin: 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .motd-priority {
+            margin-left: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .motd-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .motd-content {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #4b5c09;
+        }
+
+        .motd-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .motd-schedule {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .motd-stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .motd-list {
+            min-height: 200px;
+        }
+
+        /* Editor styles */
+        .editor-container {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .editor-toolbar {
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            padding: 0.5rem;
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #e9e9e9;
+            border-color: #999;
+        }
+
+        .toolbar-btn:active {
+            background: #4b5c09;
+            color: white;
+        }
+
+        .editor-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #ddd;
+        }
+
+        .char-count {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .char-count.over-limit {
+            color: #d32f2f;
+            font-weight: 600;
+        }
+
+        .editor-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .auto-save-indicator {
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .content-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f9f9f9;
+        }
+
+        .preview-content {
+            background: white;
+            padding: 1rem;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+
+        /* Priority badges */
+        .priority-badge.high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .priority-badge.medium {
+            background: #fff8e1;
+            color: #f57c00;
+        }
+
+        .priority-badge.low {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        /* Target audience badges */
+        .target-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        /* Status badges */
+        .status-badge.active {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .status-badge.scheduled {
+            background: #fff8e1;
+            color: #f57c00;
+        }
+
+        .status-badge.expired {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Performance stats */
+        .performance-stats {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .performance-stats span {
+            padding: 0.2rem 0.4rem;
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+
+        /* Analytics grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .analytics-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .analytics-card h3 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            border-bottom: 2px solid #4b5c09;
+            padding-bottom: 0.5rem;
+        }
+
+        .chart-container {
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-placeholder {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .metrics-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #4b5c09;
+        }
+
+        .metric-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #4b5c09;
+            font-size: 1.1rem;
+        }
+
+        /* Form sections */
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .form-section h4 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .checkbox-label:hover {
+            background: #f0f0f0;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 0.75rem;
+            transform: scale(1.2);
+        }
+
+        .checkmark {
+            margin-left: 0.5rem;
+        }
+
+        /* Filter controls */
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            min-width: 150px;
+        }
+
+        .search-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 250px;
+        }
+
+        /* Tab functionality */
+        .tab-container {
+            margin-top: 2rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 2rem;
+        }
+
+        .tab-button {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            background: #f5f5f5;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #4b5c09;
+            color: #4b5c09;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .motd-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .motd-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .motd-schedule,
+            .motd-stats {
+                flex-wrap: wrap;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .editor-footer {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-buttons {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1734,6 +3715,8 @@
             <button class="nav-button" data-section="reports">Reports</button>
             <button class="nav-button" data-section="candidates">Candidates</button>
             <button class="nav-button" data-section="analytics">Analytics</button>
+            <button class="nav-button" data-section="motd">MOTD</button>
+            <button class="nav-button" data-section="deployment">🚀 Deployment</button>
             <button class="nav-button" data-section="system">System</button>
         </div>
 
@@ -2032,14 +4015,819 @@
 
         <!-- Candidates Section -->
         <div id="candidates" class="dashboard-section">
-            <h2>Candidate Management</h2>
-            <p>Candidate management features will be implemented by CandidatesController module.</p>
+            <div class="section-header">
+                <h2>🗳️ Candidate Management</h2>
+                <div class="section-actions">
+                    <button id="refreshCandidatesBtn" class="action-btn primary">🔄 Refresh</button>
+                    <button id="exportCandidatesBtn" class="action-btn secondary">📊 Export</button>
+                    <span id="candidatesLastRefreshTime" class="last-refresh">Last updated: --</span>
+                </div>
+            </div>
+
+            <!-- Candidates Analytics Dashboard -->
+            <div id="candidatesAnalytics" class="candidates-analytics">
+                <!-- Analytics will be populated by CandidatesController -->
+            </div>
+
+            <!-- Multi-Tab Navigation -->
+            <div id="candidatesTabContainer" class="candidates-tabs-container">
+                <div class="candidates-tabs">
+                    <button class="tab-button active" data-tab="registrations">
+                        📝 Registrations
+                        <span class="tab-badge" id="registrationsBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="profiles">
+                        👤 Profiles
+                        <span class="tab-badge" id="profilesBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="reports">
+                        📋 Reports
+                        <span class="tab-badge" id="reportsBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="verification">
+                        🔍 Verification
+                        <span class="tab-badge urgent" id="verificationBadge">0</span>
+                    </button>
+                </div>
+
+                <!-- Tab Content Areas -->
+                <div class="tab-content">
+                    <!-- Registrations Tab -->
+                    <div id="registrations-tab" class="tab-pane active">
+                        <div class="tab-header">
+                            <h3>📝 Candidate Registrations</h3>
+                            <div class="tab-filters">
+                                <select id="candidateStatusFilter">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="under-review">Under Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                                <select id="candidateOfficeFilter">
+                                    <option value="all">All Offices</option>
+                                    <option value="president">President</option>
+                                    <option value="senate">Senate</option>
+                                    <option value="house">House</option>
+                                    <option value="governor">Governor</option>
+                                    <option value="mayor">Mayor</option>
+                                    <option value="local">Local Office</option>
+                                </select>
+                                <select id="candidateStateFilter">
+                                    <option value="all">All States</option>
+                                </select>
+                                <input type="text" id="candidatesSearch" placeholder="🔍 Search candidates..." class="search-input">
+                            </div>
+                        </div>
+                        <div id="candidatesRegistrationsTable" class="candidates-table-container">
+                            <!-- Registrations table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Profiles Tab -->
+                    <div id="profiles-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>👤 Candidate Profiles</h3>
+                            <div class="tab-filters">
+                                <select id="profileStatusFilter">
+                                    <option value="all">All Campaigns</option>
+                                    <option value="active">Active</option>
+                                    <option value="planning">Planning</option>
+                                    <option value="suspended">Suspended</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <select id="profileComplianceFilter">
+                                    <option value="all">All Compliance</option>
+                                    <option value="compliant">Compliant</option>
+                                    <option value="issues">Has Issues</option>
+                                    <option value="pending">Pending Review</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesProfilesTable" class="candidates-table-container">
+                            <!-- Profiles table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Reports Tab -->
+                    <div id="reports-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>📋 Candidate Reports</h3>
+                            <div class="tab-filters">
+                                <select id="reportSeverityFilter">
+                                    <option value="all">All Severity</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <select id="reportTypeFilter">
+                                    <option value="all">All Types</option>
+                                    <option value="campaign-finance">Campaign Finance</option>
+                                    <option value="ethics">Ethics Violation</option>
+                                    <option value="misinformation">Misinformation</option>
+                                    <option value="legal">Legal Issue</option>
+                                </select>
+                                <select id="reportStatusFilter">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="investigating">Investigating</option>
+                                    <option value="resolved">Resolved</option>
+                                    <option value="escalated">Escalated</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesReportsTable" class="candidates-table-container">
+                            <!-- Reports table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Verification Tab -->
+                    <div id="verification-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>🔍 Candidate Verification</h3>
+                            <div class="tab-filters">
+                                <select id="candidateVerificationFilter">
+                                    <option value="all">All Verification</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                                <select id="verificationTypeFilter">
+                                    <option value="all">All Types</option>
+                                    <option value="identity">Identity</option>
+                                    <option value="eligibility">Eligibility</option>
+                                    <option value="background">Background</option>
+                                    <option value="documents">Documents</option>
+                                    <option value="references">References</option>
+                                </select>
+                                <select id="priorityFilter">
+                                    <option value="all">All Priority</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesVerificationTable" class="candidates-table-container">
+                            <!-- Verification table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Upload Area -->
+            <div class="document-upload-section" style="display: none;">
+                <h4>📄 Document Upload</h4>
+                <input type="file" id="candidateDocumentUpload" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <div class="upload-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <span class="progress-text">0%</span>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="candidatesError" class="error-message" style="display: none;"></div>
         </div>
 
         <!-- Analytics Section -->
         <div id="analytics" class="dashboard-section">
-            <h2>Analytics</h2>
-            <p>Analytics features will be implemented by AnalyticsController module.</p>
+            <div class="analytics-header">
+                <h2>Analytics Dashboard</h2>
+                <div class="analytics-controls">
+                    <div class="control-group">
+                        <label for="analyticsDateRange">Date Range:</label>
+                        <select id="analyticsDateRange">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="custom-date-range" style="display: none;">
+                        <input type="date" id="customStartDate" placeholder="Start Date">
+                        <input type="date" id="customEndDate" placeholder="End Date">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="realTimeToggle"> Real-time Updates
+                        </label>
+                    </div>
+                    <button id="refreshAnalytics" class="btn btn-secondary">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div class="last-updated">
+                    Last updated: <span id="lastRefreshTime">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Core Metrics Dashboard -->
+            <div class="analytics-metrics">
+                <div class="metric-cards-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Users</div>
+                            <div class="metric-value" id="totalUsersMetric">-</div>
+                            <div class="metric-trend" id="totalUsersTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Active Users</div>
+                            <div class="metric-value" id="activeUsersMetric">-</div>
+                            <div class="metric-trend" id="activeUsersTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✨</div>
+                        <div class="metric-content">
+                            <div class="metric-label">New Registrations</div>
+                            <div class="metric-value" id="newRegistrationsMetric">-</div>
+                            <div class="metric-trend" id="newRegistrationsTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📝</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Posts</div>
+                            <div class="metric-value" id="totalPostsMetric">-</div>
+                            <div class="metric-trend" id="totalPostsTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💖</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Engagement Rate</div>
+                            <div class="metric-value" id="engagementRateMetric">-</div>
+                            <div class="metric-trend" id="engagementRateTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🔁</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Retention Rate</div>
+                            <div class="metric-value" id="retentionRateMetric">-</div>
+                            <div class="metric-trend" id="retentionRateTrend"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="analytics-charts">
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>User Growth Over Time</h3>
+                        <canvas id="userGrowthChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>User Engagement Metrics</h3>
+                        <canvas id="engagementChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Content Type Distribution</h3>
+                        <canvas id="contentPerformanceChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Geographic User Distribution</h3>
+                        <canvas id="geographicChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>User Retention Analysis</h3>
+                        <canvas id="retentionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Device Usage Statistics</h3>
+                        <canvas id="deviceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Advanced Analytics -->
+            <div class="analytics-filters">
+                <h3>Advanced Filters</h3>
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label for="demographicsFilter">Demographics:</label>
+                        <select id="demographicsFilter">
+                            <option value="all">All Demographics</option>
+                            <option value="18-25">18-25 years</option>
+                            <option value="26-35">26-35 years</option>
+                            <option value="36-50">36-50 years</option>
+                            <option value="51+">51+ years</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="geographyFilter">Geography:</label>
+                        <select id="geographyFilter">
+                            <option value="all">All Regions</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                            <option value="east">East</option>
+                            <option value="west">West</option>
+                            <option value="midwest">Midwest</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="contentTypeFilter">Content Type:</label>
+                        <select id="contentTypeFilter">
+                            <option value="all">All Content</option>
+                            <option value="text">Text Posts</option>
+                            <option value="photo">Photo Posts</option>
+                            <option value="civic">Civic Content</option>
+                            <option value="discussion">Discussions</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics Sections -->
+            <div class="analytics-details">
+                <div class="analytics-tabs">
+                    <button class="analytics-tab active" data-tab="engagement">User Engagement</button>
+                    <button class="analytics-tab" data-tab="content">Content Performance</button>
+                    <button class="analytics-tab" data-tab="growth">Growth Metrics</button>
+                </div>
+
+                <div class="analytics-tab-content">
+                    <!-- User Engagement Tab -->
+                    <div id="engagementTab" class="tab-panel active">
+                        <h3>User Engagement Analytics</h3>
+                        <div id="userEngagementContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+
+                    <!-- Content Performance Tab -->
+                    <div id="contentTab" class="tab-panel">
+                        <h3>Content Performance Analytics</h3>
+                        <div id="contentPerformanceContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+
+                    <!-- Growth Metrics Tab -->
+                    <div id="growthTab" class="tab-panel">
+                        <h3>Growth Metrics Analytics</h3>
+                        <div id="growthMetricsContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Reports Section -->
+            <div class="custom-reports">
+                <h3>Custom Reports</h3>
+                <div class="report-builder">
+                    <div class="metric-selectors">
+                        <h4>Select Metrics to Include:</h4>
+                        <div class="metric-checkboxes">
+                            <label><input type="checkbox" class="metric-selector" value="userGrowth"> User Growth</label>
+                            <label><input type="checkbox" class="metric-selector" value="engagement"> Engagement Metrics</label>
+                            <label><input type="checkbox" class="metric-selector" value="content"> Content Performance</label>
+                            <label><input type="checkbox" class="metric-selector" value="retention"> User Retention</label>
+                            <label><input type="checkbox" class="metric-selector" value="geographic"> Geographic Data</label>
+                            <label><input type="checkbox" class="metric-selector" value="device"> Device Usage</label>
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <button id="generateCustomReport" class="btn btn-primary">Generate Custom Report</button>
+                        <button id="exportCSV" class="btn btn-secondary">Export CSV</button>
+                        <button id="exportPDF" class="btn btn-secondary">Export PDF</button>
+                    </div>
+                </div>
+                <div id="customReportContainer">
+                    <!-- Generated reports appear here -->
+                </div>
+            </div>
+
+            <!-- Analytics Content Container -->
+            <div id="analyticsContent">
+                <!-- Main analytics content populated by controller -->
+            </div>
+
+            <!-- Error Display -->
+            <div id="analyticsError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- MOTD Section -->
+        <div id="motd" class="dashboard-section">
+            <div class="section-header">
+                <h2>📢 Message of the Day Management</h2>
+                <div class="section-controls">
+                    <button id="createMOTDBtn" class="action-btn primary">✏️ Create MOTD</button>
+                    <button id="scheduleMOTDBtn" class="action-btn secondary">📅 Schedule</button>
+                    <button id="refreshMOTDBtn" class="action-btn">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- MOTD Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMOTDs">0</div>
+                    <div class="stat-label">Total MOTDs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeMOTDs">0</div>
+                    <div class="stat-label">Active MOTDs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalViews">0</div>
+                    <div class="stat-label">Total Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgEngagement">0%</div>
+                    <div class="stat-label">Avg Engagement</div>
+                </div>
+            </div>
+
+            <!-- MOTD Tabs -->
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="active">🟢 Active MOTDs</button>
+                    <button class="tab-button" data-tab="history">📜 History</button>
+                    <button class="tab-button" data-tab="analytics">📊 Analytics</button>
+                </div>
+
+                <!-- Active MOTDs Tab -->
+                <div id="activeMOTDsTab" class="tab-content active">
+                    <div class="section-controls" style="margin-bottom: 1rem;">
+                        <div class="filter-controls">
+                            <select id="motdPriorityFilter" class="filter-select">
+                                <option value="">All Priorities</option>
+                                <option value="high">🔴 High Priority</option>
+                                <option value="medium">🟡 Medium Priority</option>
+                                <option value="low">🟢 Low Priority</option>
+                            </select>
+                            <select id="motdAudienceFilter" class="filter-select">
+                                <option value="">All Audiences</option>
+                                <option value="all">👥 All Users</option>
+                                <option value="new">🆕 New Users</option>
+                                <option value="active">⚡ Active Users</option>
+                                <option value="admins">👑 Admins</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="activeMOTDsList" class="motd-list">
+                        <div class="loading">Loading active MOTDs...</div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="motdHistoryTab" class="tab-content">
+                    <div class="section-controls" style="margin-bottom: 1rem;">
+                        <input type="text" id="motdHistorySearch" placeholder="Search MOTDs by title..." class="search-input">
+                        <select id="motdStatusFilter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="active">🟢 Active</option>
+                            <option value="scheduled">🟡 Scheduled</option>
+                            <option value="expired">🔴 Expired</option>
+                        </select>
+                    </div>
+
+                    <div id="motdHistoryTable" class="table-container">
+                        <div class="loading">Loading MOTD history...</div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div id="motdAnalyticsTab" class="tab-content">
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h3>📊 Performance Overview</h3>
+                            <div id="motdPerformanceChart" class="chart-container">
+                                <div class="chart-placeholder">Performance charts will be displayed here</div>
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h3>🎯 Engagement Metrics</h3>
+                            <div id="motdEngagementMetrics" class="metrics-container">
+                                <div class="metric-item">
+                                    <span class="metric-label">Click-through Rate:</span>
+                                    <span class="metric-value" id="motdCTR">0%</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Dismissal Rate:</span>
+                                    <span class="metric-value" id="motdDismissalRate">0%</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Average View Time:</span>
+                                    <span class="metric-value" id="motdAvgViewTime">0s</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Best Performing Time:</span>
+                                    <span class="metric-value" id="motdBestTime">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOTD Editor Modal -->
+            <div id="motdEditor" class="modal-overlay" style="display: none;">
+                <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3 id="motdEditorTitle">Create New MOTD</h3>
+                        <button class="modal-close" onclick="window.motdController.hideMOTDEditor()">✕</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <form id="motdForm" onsubmit="event.preventDefault(); window.motdController.handleUpdateMOTD();">
+                            <!-- Basic Information -->
+                            <div class="form-section">
+                                <h4>📝 Basic Information</h4>
+                                <div class="form-group">
+                                    <label for="motdTitle">Title *</label>
+                                    <input type="text" id="motdTitle" required maxlength="100"
+                                           placeholder="Enter MOTD title (max 100 characters)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="motdContent">Content *</label>
+                                    <div class="editor-container">
+                                        <!-- Rich Text Toolbar -->
+                                        <div id="motdToolbar" class="editor-toolbar">
+                                            <!-- Toolbar buttons will be added by JavaScript -->
+                                        </div>
+
+                                        <textarea id="motdContent" required
+                                                  placeholder="Enter your message content. HTML formatting is supported."
+                                                  rows="8"></textarea>
+
+                                        <div class="editor-footer">
+                                            <div id="characterCount" class="char-count">0/2000</div>
+                                            <div class="editor-actions">
+                                                <button type="button" id="previewMOTDBtn" class="btn-secondary">👁️ Preview</button>
+                                                <div id="autoSaveIndicator" class="auto-save-indicator">Auto-save enabled</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Preview Area -->
+                                    <div id="motdPreview" class="content-preview" style="display: none;">
+                                        <h5>Preview:</h5>
+                                        <div class="preview-content"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="motdTemplateSelect">Quick Templates</label>
+                                    <select id="motdTemplateSelect" class="form-control">
+                                        <option value="">Select a template...</option>
+                                        <!-- Templates will be loaded by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Configuration -->
+                            <div class="form-section">
+                                <h4>⚙️ Configuration</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="motdPriority">Priority</label>
+                                        <select id="motdPriority" class="form-control">
+                                            <option value="low">🟢 Low Priority</option>
+                                            <option value="medium" selected>🟡 Medium Priority</option>
+                                            <option value="high">🔴 High Priority</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="motdTargetAudience">Target Audience</label>
+                                        <select id="motdTargetAudience" class="form-control">
+                                            <option value="all">👥 All Users</option>
+                                            <option value="new">🆕 New Users (< 30 days)</option>
+                                            <option value="active">⚡ Active Users</option>
+                                            <option value="inactive">😴 Inactive Users</option>
+                                            <option value="admins">👑 Admins Only</option>
+                                            <option value="moderators">🛡️ Moderators</option>
+                                            <option value="candidates">🗳️ Candidates</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Scheduling -->
+                            <div class="form-section">
+                                <h4>📅 Scheduling</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="motdStartDate">Start Date & Time *</label>
+                                        <input type="datetime-local" id="motdStartDate" required class="form-control">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="motdEndDate">End Date & Time</label>
+                                        <input type="datetime-local" id="motdEndDate" class="form-control">
+                                        <small>Leave empty for no expiration</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Display Options -->
+                            <div class="form-section">
+                                <h4>🎨 Display Options</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdIsActive" checked>
+                                        <span class="checkmark"></span>
+                                        Activate immediately
+                                    </label>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdIsDismissible" checked>
+                                        <span class="checkmark"></span>
+                                        Allow users to dismiss
+                                    </label>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdShowOnce">
+                                        <span class="checkmark"></span>
+                                        Show only once per user
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="window.motdController.hideMOTDEditor()">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    💾 Save MOTD
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduling Modal -->
+            <div id="scheduleModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📅 Schedule MOTD</h3>
+                        <button class="modal-close" onclick="document.getElementById('scheduleModal').style.display='none'">✕</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <form id="scheduleForm" onsubmit="event.preventDefault(); window.motdController.handleScheduleMOTD();">
+                            <div class="form-group">
+                                <label for="scheduleMOTDSelect">Select MOTD</label>
+                                <select id="scheduleMOTDSelect" required class="form-control">
+                                    <option value="">Choose a MOTD to schedule...</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="scheduleStartDate">Start Date & Time</label>
+                                    <input type="datetime-local" id="scheduleStartDate" required class="form-control">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="scheduleEndDate">End Date & Time</label>
+                                    <input type="datetime-local" id="scheduleEndDate" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="scheduleTimezone">Timezone</label>
+                                <select id="scheduleTimezone" class="form-control">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                </select>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="document.getElementById('scheduleModal').style.display='none'">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    📅 Schedule MOTD
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="motdError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- Deployment Status Section -->
+        <div id="deployment" class="dashboard-section">
+            <div class="section-header">
+                <h2>🚀 Deployment Status & Container Monitoring</h2>
+                <div class="section-controls">
+                    <button id="refreshDeploymentBtn" class="action-btn">🔄 Check Status Now</button>
+                    <button id="deploymentHistoryBtn" class="action-btn secondary">📜 Deployment History</button>
+                    <button id="environmentComparisonBtn" class="action-btn secondary">🔀 Environment Comparison</button>
+                </div>
+            </div>
+
+            <!-- Deployment Statistics -->
+            <div class="stats-grid" id="deploymentStats">
+                <div class="stat-card">
+                    <div class="stat-number" id="backendUptime">-</div>
+                    <div class="stat-label">Backend Uptime (hours)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="lastDeploy">-</div>
+                    <div class="stat-label">Last Deploy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="frontendVersion">-</div>
+                    <div class="stat-label">Frontend Version</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="schemaVersion">-</div>
+                    <div class="stat-label">Schema Version</div>
+                </div>
+            </div>
+
+            <!-- Deployment Monitoring Dashboard -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                <div>
+                    <h3>🏭 Component Status</h3>
+                    <div id="componentStatus" class="deployment-dashboard">
+                        <div class="loading">Checking component status...</div>
+                    </div>
+                </div>
+                <div>
+                    <h3>⚡ Advanced Deployment Actions</h3>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button id="containerHealthBtn" class="action-btn secondary" style="margin: 0;">
+                            📊 Container Health
+                        </button>
+                        <button id="buildPipelineBtn" class="action-btn secondary" style="margin: 0;">
+                            🔨 Build Pipeline Status
+                        </button>
+                        <button id="emergencyRollbackBtn" class="action-btn danger" style="margin: 0;">
+                            ⚠️ Emergency Rollback
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Monitoring Panel -->
+            <div style="margin-top: 2rem;">
+                <h3>📊 Real-Time Container Monitoring</h3>
+                <div class="container-health" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="health-metric">
+                        <div class="metric-label">Production CPU</div>
+                        <div class="metric-value" id="prodCPU">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Production Memory</div>
+                        <div class="metric-value" id="prodMemory">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Staging CPU</div>
+                        <div class="metric-value" id="stagingCPU">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Staging Memory</div>
+                        <div class="metric-value" id="stagingMemory">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployment Console Output -->
+            <div style="margin-top: 2rem;">
+                <h3>📝 Deployment Console Output</h3>
+                <div id="deploymentConsole" class="deployment-console">
+Loading deployment status...
+                </div>
+            </div>
+
+            <!-- Build Status Display -->
+            <div style="margin-top: 2rem;">
+                <h3>🔨 CI/CD Pipeline Status</h3>
+                <div class="build-status" id="buildStatus">
+                    <div class="loading">Loading build pipeline status...</div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="deploymentError" class="error-message" style="display: none;"></div>
         </div>
 
         <!-- System Section -->
@@ -2052,6 +4840,7 @@
     <!-- Load Core Dependencies -->
     <script src="js/adminDebugger.js"></script>
     <script src="js/unifiedAuth.js"></script>
+    <script src="src/js/deployment-status.js"></script>
 
     <!-- Load Admin Modules -->
     <script src="src/modules/admin/api/AdminAPI.js"></script>
@@ -2062,9 +4851,62 @@
     <script src="src/modules/admin/controllers/ContentController.js"></script>
     <script src="src/modules/admin/controllers/SecurityController.js"></script>
     <script src="src/modules/admin/controllers/ReportsController.js"></script>
+    <script src="src/modules/admin/controllers/CandidatesController.js"></script>
+    <script src="src/modules/admin/controllers/AnalyticsController.js"></script>
+    <script src="src/modules/admin/controllers/MOTDController.js"></script>
+    <script src="src/modules/admin/controllers/DeploymentController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script src="src/modules/admin/AdminModuleLoader.js"></script>
+
+    <!-- Analytics Tab Functionality -->
+    <script>
+        // Analytics tab switching functionality
+        function setupAnalyticsTabs() {
+            const tabs = document.querySelectorAll('.analytics-tab');
+            const panels = document.querySelectorAll('.tab-panel');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
+
+                    // Remove active class from all tabs and panels
+                    tabs.forEach(t => t.classList.remove('active'));
+                    panels.forEach(p => p.classList.remove('active'));
+
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+
+                    // Show corresponding panel
+                    const targetPanel = document.getElementById(targetTab + 'Tab');
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                    }
+                });
+            });
+
+            // Handle custom date range visibility
+            const dateRangeSelect = document.getElementById('analyticsDateRange');
+            const customDateRange = document.querySelector('.custom-date-range');
+
+            if (dateRangeSelect && customDateRange) {
+                dateRangeSelect.addEventListener('change', function() {
+                    if (this.value === 'custom') {
+                        customDateRange.style.display = 'flex';
+                    } else {
+                        customDateRange.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        // Initialize analytics tabs when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupAnalyticsTabs);
+        } else {
+            setupAnalyticsTabs();
+        }
+    </script>
 
     <!-- Legacy compatibility -->
     <script>

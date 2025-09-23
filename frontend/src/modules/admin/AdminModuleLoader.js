@@ -17,7 +17,11 @@ class AdminModuleLoader {
             'UsersController',
             'ContentController',
             'SecurityController',
-            'ReportsController'
+            'ReportsController',
+            'CandidatesController',
+            'AnalyticsController',
+            'MOTDController',
+            'DeploymentController'
         ];
         this.isInitialized = false;
         this.dependencies = {
@@ -28,7 +32,11 @@ class AdminModuleLoader {
             'UsersController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ContentController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
             'SecurityController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'ReportsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'ReportsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'CandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'AnalyticsController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
+            'MOTDController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'DeploymentController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
         };
 
         // Bind methods
@@ -202,6 +210,42 @@ class AdminModuleLoader {
                 window.reportsController = new window.ReportsController();
                 await window.reportsController.init();
                 this.modules.set('ReportsController', window.reportsController);
+                break;
+
+            case 'CandidatesController':
+                if (!window.CandidatesController) {
+                    throw new Error('CandidatesController class not found in global scope');
+                }
+                window.candidatesController = new window.CandidatesController();
+                await window.candidatesController.init();
+                this.modules.set('CandidatesController', window.candidatesController);
+                break;
+
+            case 'AnalyticsController':
+                if (!window.AnalyticsController) {
+                    throw new Error('AnalyticsController class not found in global scope');
+                }
+                window.analyticsController = new window.AnalyticsController();
+                await window.analyticsController.init();
+                this.modules.set('AnalyticsController', window.analyticsController);
+                break;
+
+            case 'MOTDController':
+                if (!window.MOTDController) {
+                    throw new Error('MOTDController class not found in global scope');
+                }
+                window.motdController = new window.MOTDController();
+                await window.motdController.init();
+                this.modules.set('MOTDController', window.motdController);
+                break;
+
+            case 'DeploymentController':
+                if (!window.DeploymentController) {
+                    throw new Error('DeploymentController class not found in global scope');
+                }
+                window.deploymentController = new window.DeploymentController();
+                await window.deploymentController.init();
+                this.modules.set('DeploymentController', window.deploymentController);
                 break;
 
             default:
