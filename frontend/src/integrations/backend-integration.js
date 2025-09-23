@@ -39,11 +39,20 @@ class BackendIntegration {
                 return;
             }
 
-            // Add hCaptcha validation
-            const hcaptchaToken = this.getHCaptchaToken();
-            if (!hcaptchaToken) {
-                showAuthMessage('Please complete the captcha verification', 'error');
-                return;
+            // Add hCaptcha validation (skip for staging/dev environments)
+            const isDevEnvironment = window.location.hostname === 'dev.unitedwerise.org' ||
+                                    window.location.hostname === 'localhost' ||
+                                    window.location.hostname === '127.0.0.1';
+
+            let hcaptchaToken = null;
+            if (!isDevEnvironment) {
+                hcaptchaToken = this.getHCaptchaToken();
+                if (!hcaptchaToken) {
+                    showAuthMessage('Please complete the captcha verification', 'error');
+                    return;
+                }
+            } else {
+                console.log('🔧 Development environment detected: Bypassing hCaptcha validation');
             }
 
             if (!email || !username || !password) {
