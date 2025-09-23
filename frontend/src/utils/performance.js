@@ -180,6 +180,18 @@ class PerformanceOptimizer {
 
         const preloadPromises = criticalEndpoints.map(async endpoint => {
             try {
+                // Skip political officials if it's likely to fail (user needs address)
+                if (endpoint === '/political/officials') {
+                    const authResponse = await this.apiCallWithCache(window.apiCall, '/auth/me', {
+                        useCache: true,
+                        silent: true
+                    });
+                    if (!authResponse?.data?.zipCode) {
+                        console.log('📝 Skipping political/officials preload - user needs to add address');
+                        return;
+                    }
+                }
+
                 await this.apiCallWithCache(window.apiCall, endpoint, {
                     useCache: true,
                     showLoading: false,

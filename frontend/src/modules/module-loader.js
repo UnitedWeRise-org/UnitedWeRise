@@ -48,8 +48,17 @@ import {
  * 4. Feature modules (depend on auth and state)
  * 5. Event listeners (connect UI to modules)
  */
+let modulesInitialized = false;
+
 async function initializeModules() {
+    // Prevent duplicate initialization
+    if (modulesInitialized) {
+        console.log('📋 Modules already initialized, skipping...');
+        return;
+    }
+
     console.log('🚀 Initializing JavaScript modules in dependency order...');
+    modulesInitialized = true;
 
     // PHASE 1: Core Dependencies
     console.log('📋 Phase 1: Initializing core dependencies...');

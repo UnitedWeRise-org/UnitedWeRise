@@ -905,6 +905,11 @@ class OnboardingFlow {
         
         try {
             const API_BASE = 'https://api.unitedwerise.org/api';
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                console.log('No auth token found, skipping onboarding steps load');
+                return;
+            }
             const response = await fetch(`${API_BASE}/onboarding/steps`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
