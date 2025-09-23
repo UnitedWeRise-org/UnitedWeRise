@@ -11,6 +11,7 @@ const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
 const uuid_1 = require("uuid");
 const azureBlobService_1 = require("./azureBlobService");
+const environment_1 = require("../utils/environment");
 class PhotoService {
     /**
      * Initialize photo storage (Azure Blob Storage)
@@ -511,11 +512,9 @@ class PhotoService {
         });
         console.log(`📸 Found ${userPhotos.length} photos for user ${userId}`);
         // Get the backend URL for constructing absolute URLs
-        const backendUrl = process.env.NODE_ENV === 'production'
+        const backendUrl = (0, environment_1.isProduction)()
             ? 'https://api.unitedwerise.org'
-            : process.env.NODE_ENV === 'staging' || process.env.STAGING_ENVIRONMENT === 'true'
-                ? 'https://dev-api.unitedwerise.org'
-                : `http://localhost:${process.env.PORT || 3001}`;
+            : 'https://dev-api.unitedwerise.org';
         // Group photos by gallery and transform URLs
         const galleryMap = new Map();
         let totalSize = 0;

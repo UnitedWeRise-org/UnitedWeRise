@@ -81,11 +81,11 @@
     <script src="src/utils/advanced-caching.js"></script>
     <script src="src/utils/smart-loader.js"></script>
 
-    <!-- Core Application JavaScript -->
-    <script src="src/config/api.js"></script>
+    <!-- Core Application JavaScript - Modern ES6 Module System -->
+    <script type="module" src="src/js/main.js"></script>
+
+    <!-- Legacy utility scripts that aren't yet converted to modules -->
     <script src="src/js/api-manager.js"></script>
-    <script src="src/js/websocket-client.js"></script>
-    <script src="src/js/app-initialization.js"></script>
     <script src="src/js/force-optimization.js"></script>
     <script src="js/posting.js"></script>
 
@@ -186,16 +186,15 @@
     <script src="src/components/CandidateSystem.js"></script>
     <script src="src/components/PostComponent.js"></script>
     <script src="src/components/UserCard.js"></script>
-    <script src="src/components/Profile.js"></script>
-    <script src="src/integrations/backend-integration.js"></script>
+    <!-- ✅ ES6 MODULES: Profile, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
+
+    <!-- Legacy integration scripts (not yet converted to ES6 modules) -->
     <script src="src/integrations/candidate-system-integration.js"></script>
     <script src="src/integrations/officials-system-integration.js"></script>
     <script src="src/integrations/elections-system-integration.js"></script>
     <script src="src/integrations/trending-system-integration.js"></script>
     <script src="src/js/mobile-navigation.js"></script>
     <script src="src/js/map-dummy-data.js"></script>
-    <script src="src/js/map-maplibre.js"></script>
-    <script src="src/js/relationship-utils.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
     <script src="src/js/donation-system.js"></script>
     <!-- Inline Reputation System (Critical Path) -->

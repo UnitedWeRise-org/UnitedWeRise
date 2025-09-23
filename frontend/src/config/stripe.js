@@ -1,39 +1,21 @@
 // Stripe Configuration
 // This file handles environment-specific Stripe settings
 
+import { getEnvironment, getApiBaseUrl } from '../utils/environment.js';
+
 const STRIPE_CONFIG = {
     // Development/Staging
     development: {
         publishableKey: 'pk_test_[YOUR_TEST_PUBLISHABLE_KEY]',
-        backendUrl: 'https://api.unitedwerise.org/api'
+        backendUrl: getApiBaseUrl()
     },
-    
+
     // Production
     production: {
         publishableKey: 'pk_live_51Rv6pdI45l290VNEaZeT1tEHp0roeCyAVrQWNxpfjzaR1k3zxfWxp4Q6yrzbtriTPVohY9MiAXOjyrxasVevuJmX00Mwl1BcP1', // Live key
-        backendUrl: 'https://api.unitedwerise.org/api' // Production backend URL
+        backendUrl: getApiBaseUrl() // Production backend URL
     }
 };
-
-// Detect environment
-function getEnvironment() {
-    const hostname = window.location.hostname;
-    
-    if (hostname === 'localhost' || hostname.includes('127.0.0.1')) {
-        return 'development';
-    }
-    
-    if (hostname.includes('azurestaticapps.net')) {
-        return 'development'; // Staging environment
-    }
-    
-    if (hostname === 'www.unitedwerise.org' || hostname === 'unitedwerise.org') {
-        return 'production';
-    }
-    
-    // Default to development for safety
-    return 'development';
-}
 
 // Export configuration
 const env = getEnvironment();

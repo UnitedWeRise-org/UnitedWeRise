@@ -14,11 +14,12 @@ United We Rise reimagines social media for civic engagement. Instead of personal
 - **Users**: Growing organically
 
 ### 🏗️ Architecture
-- **Frontend**: Vanilla JavaScript + Azure Static Web Apps
-- **Backend**: Node.js + TypeScript + Azure Container Apps  
+- **Frontend**: Modern ES6 Modules + Vanilla JavaScript + Azure Static Web Apps
+- **Backend**: Node.js + TypeScript + Azure Container Apps
 - **Database**: PostgreSQL + Prisma ORM
 - **AI**: Azure OpenAI (GPT-3.5, Ada embeddings)
 - **Storage**: Azure Blob Storage for media
+- **Module System**: ES6 imports/exports with centralized dependency management
 
 ## 📚 Documentation
 
@@ -68,9 +69,13 @@ npm run dev
 ### Frontend Setup
 ```bash
 cd frontend
-# No build needed - vanilla JavaScript
+# Modern ES6 module system - no build needed
+# Serves directly from static files with module loading
 # Open index.html directly or serve with:
 python -m http.server 8080
+
+# Module system loads automatically via:
+# <script type="module" src="src/js/main.js"></script>
 ```
 
 ## 🌍 Key Features

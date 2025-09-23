@@ -3,7 +3,8 @@ import axios from 'axios';
 ;
 import { SentenceTransformersService } from './sentenceTransformersService';
 import { azureOpenAI } from './azureOpenAIService';
-import { getSemanticConfig, isProduction } from '../config/azureConfig';
+import { getSemanticConfig } from '../config/azureConfig';
+import { isProduction } from '../utils/environment';
 // import { QdrantService } from './qdrantService';  // Enable when Qdrant is available
 
 // Using singleton prisma from lib/prisma.ts

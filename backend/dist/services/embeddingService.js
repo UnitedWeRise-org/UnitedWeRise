@@ -6,6 +6,7 @@ const prisma_1 = require("../lib/prisma");
 const sentenceTransformersService_1 = require("./sentenceTransformersService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const azureConfig_1 = require("../config/azureConfig");
+const environment_1 = require("../utils/environment");
 class EmbeddingService {
     /**
      * Generate embedding using best available service (Azure OpenAI > Local)
@@ -17,7 +18,7 @@ class EmbeddingService {
             }
             const config = (0, azureConfig_1.getSemanticConfig)();
             // Use Azure OpenAI in production or if explicitly configured
-            if (config.provider === 'azure' || ((0, azureConfig_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
+            if (config.provider === 'azure' || ((0, environment_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
                 try {
                     const result = await azureOpenAIService_1.azureOpenAI.generateEmbedding(text);
                     console.log(`✓ Generated Azure OpenAI embedding (${result.processingTime}ms)`);
@@ -82,7 +83,7 @@ class EmbeddingService {
         try {
             const config = (0, azureConfig_1.getSemanticConfig)();
             // Use PostgreSQL vector operations if available (production)
-            if ((0, azureConfig_1.isProduction)() && process.env.ENABLE_VECTOR_SEARCH === 'true') {
+            if ((0, environment_1.isProduction)() && process.env.ENABLE_VECTOR_SEARCH === 'true') {
                 try {
                     // Use safe parameterized SQL for vector similarity search
                     const embeddingString = `[${targetEmbedding.join(',')}]`;

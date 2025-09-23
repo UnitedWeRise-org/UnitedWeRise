@@ -2,16 +2,16 @@
 // Reduces API calls on page load and implements smart caching
 // Now integrated with unified authentication manager for perfect sync
 
+import { isProduction } from '../utils/environment.js';
+
 class AppInitializer {
     // Production logging helper - only shows important messages
     static log(message, type = 'info') {
-        const isProduction = window.location.hostname !== 'localhost';
-        
         if (type === 'error') {
             console.error(message); // Always show errors
         } else if (type === 'warn') {
             console.warn(message); // Always show warnings
-        } else if (!isProduction) {
+        } else if (!isProduction()) {
             console.log(message); // Only show debug in development
         }
     }
@@ -542,4 +542,15 @@ window.checkVersions = () => {
     window.appInitializer.displayVersionInfo();
 };
 
-AppInitializer.log('🎯 App Initializer ready');
+// ES6 Module Exports
+export { AppInitializer };
+
+// Auto-initialize when module loads
+export async function initializeApp() {
+    return window.appInitializer.initialize();
+}
+
+// Auto-initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+AppInitializer.log('🎯 App Initializer loaded via ES6 module and ready for auto-initialization');

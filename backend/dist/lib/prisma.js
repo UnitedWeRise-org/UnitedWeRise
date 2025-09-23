@@ -10,6 +10,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
 const client_1 = require("@prisma/client");
+const environment_1 = require("../utils/environment");
 // Configure connection URL with proper pooling before creating client
 const connectionUrl = process.env.DATABASE_URL?.includes('connection_limit=')
     ? process.env.DATABASE_URL
@@ -22,9 +23,7 @@ const prismaClientSingleton = () => {
                 url: connectionUrl
             }
         },
-        log: process.env.NODE_ENV === 'development'
-            ? ['query', 'info', 'warn', 'error']
-            : ['warn', 'error'],
+        log: (0, environment_1.getDatabaseLogLevel)(),
     });
 };
 // Global store for the singleton (using globalThis for Node.js)
@@ -32,7 +31,7 @@ const globalForPrisma = globalThis;
 // Export the singleton instance
 exports.prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 // In development, store on global to preserve across hot reloads
-if (process.env.NODE_ENV !== 'production') {
+if (!(0, environment_1.isProduction)()) {
     globalForPrisma.prisma = exports.prisma;
 }
 // Graceful shutdown handling
@@ -48,6 +47,6 @@ process.on('SIGTERM', cleanup);
 console.log('🔗 Prisma singleton initialized with connection pooling:', {
     connectionLimit: 10,
     poolTimeout: 20,
-    environment: process.env.NODE_ENV || 'development'
+    environment: (0, environment_1.getEnvironment)()
 });
 //# sourceMappingURL=prisma.js.map

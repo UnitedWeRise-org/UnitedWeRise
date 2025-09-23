@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebSocketService = void 0;
 const socket_io_1 = require("socket.io");
+const environment_1 = require("../utils/environment");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
 const messaging_1 = require("../types/messaging");
@@ -14,7 +15,7 @@ class WebSocketService {
         this.userSockets = new Map();
         this.io = new socket_io_1.Server(httpServer, {
             cors: {
-                origin: process.env.NODE_ENV === 'production'
+                origin: (0, environment_1.isProduction)()
                     ? ['https://www.unitedwerise.org', 'https://yellow-mud-043d1ca0f.2.azurestaticapps.net']
                     : ['http://localhost:3000', 'http://localhost:8080'],
                 methods: ['GET', 'POST'],

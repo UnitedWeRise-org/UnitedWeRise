@@ -11,6 +11,7 @@
 import { apiClient } from './core/api/client.js';
 import { userState } from './core/state/user.js';
 import { unifiedAuthManager } from './core/auth/unified-manager.js';
+import { getWebSocketUrl } from '../utils/environment.js';
 
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
@@ -48,8 +49,17 @@ import {
  * 4. Feature modules (depend on auth and state)
  * 5. Event listeners (connect UI to modules)
  */
+let modulesInitialized = false;
+
 async function initializeModules() {
+    // Prevent duplicate initialization
+    if (modulesInitialized) {
+        console.log('📋 Modules already initialized, skipping...');
+        return;
+    }
+
     console.log('🚀 Initializing JavaScript modules in dependency order...');
+    modulesInitialized = true;
 
     // PHASE 1: Core Dependencies
     console.log('📋 Phase 1: Initializing core dependencies...');
@@ -162,9 +172,7 @@ async function testModularFunctionality() {
         test: async () => {
             try {
                 // Test using direct health endpoint (not through API config)
-                const healthUrl = window.location.hostname === 'dev.unitedwerise.org' 
-                    ? 'https://dev-api.unitedwerise.org/health'
-                    : 'https://api.unitedwerise.org/health';
+                const healthUrl = `${getWebSocketUrl()}/health`;
                 const response = await fetch(healthUrl);
                 const data = await response.json();
                 return data.status === 'healthy' ? 'API client responding' : 'API client not responding';

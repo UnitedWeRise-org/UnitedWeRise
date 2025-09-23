@@ -8,6 +8,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { getDatabaseLogLevel, getEnvironment, isProduction } from '../utils/environment';
 
 // Configure connection URL with proper pooling before creating client
 const connectionUrl = process.env.DATABASE_URL?.includes('connection_limit=') 
@@ -22,9 +23,7 @@ const prismaClientSingleton = () => {
         url: connectionUrl
       }
     },
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'info', 'warn', 'error'] 
-      : ['warn', 'error'],
+    log: getDatabaseLogLevel(),
   });
 };
 
@@ -40,7 +39,7 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
 // In development, store on global to preserve across hot reloads
-if (process.env.NODE_ENV !== 'production') {
+if (!isProduction()) {
   globalForPrisma.prisma = prisma;
 }
 
@@ -59,5 +58,5 @@ process.on('SIGTERM', cleanup);
 console.log('🔗 Prisma singleton initialized with connection pooling:', {
   connectionLimit: 10,
   poolTimeout: 20,
-  environment: process.env.NODE_ENV || 'development'
+  environment: getEnvironment()
 });

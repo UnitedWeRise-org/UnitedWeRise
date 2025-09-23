@@ -368,12 +368,14 @@ If ANY answer is uncertain, STOP and clarify with user.
 - **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
+- **Database**: unitedwerise-db.postgres.database.azure.com (PRODUCTION ONLY)
 - **Access**: Open to all registered users
 
 **Staging Environment (Admin-Only):**
-- **Backend**: https://dev-api.unitedwerise.org  
+- **Backend**: https://dev-api.unitedwerise.org
 - **Frontend**: https://dev.unitedwerise.org
 - **Admin Dashboard**: https://dev.unitedwerise.org/admin-dashboard.html
+- **Database**: unitedwerise-db-dev.postgres.database.azure.com (ISOLATED DEV DATABASE)
 - **Access**: Requires admin login for all protected routes
 - **Purpose**: Safe testing of development branch changes
 
@@ -574,23 +576,30 @@ echo "Container uptime: $UPTIME seconds"
 ```
 
 #### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
-**🚨 Shared database: schema changes affect BOTH staging and production immediately**
+**✅ DATABASES NOW ISOLATED: Changes to development database do NOT affect production**
 
 ```bash
-# Schema change deployment (script with manual fallback)
-./scripts/deploy-schema-change.sh "description" || {
-  # Manual schema deployment if script fails:
-  git checkout development
-  # 1. Update schema.prisma AND matching backend code together
-  # 2. Validate synchronization
-  cd backend && npx prisma validate && npx prisma generate && npm run build && cd ..
-  # 3. Deploy immediately to both environments (shared database)
-  git add . && git commit -m "schema: description" && git push origin development
-  # Deploy to staging first, then production within hours (not days)
-}
+# Development database schema changes (SAFE - affects staging only)
+cd backend
+
+# 1. Check which database you're connected to (CRITICAL SAFETY CHECK)
+echo "Connected to: $(echo $DATABASE_URL | grep -o '@[^.]*')"
+# Should show "@unitedwerise-db-dev" for safe development
+
+# 2. Apply schema changes safely to development database
+npx prisma migrate dev --name "description_of_change"
+npx prisma generate
+npm run build
+
+# 3. Deploy to staging (development branch) - uses dev database
+git add . && git commit -m "schema: description" && git push origin development
+
+# 4. Test thoroughly on staging before production deployment
+# 5. Production deployment requires explicit user approval (separate main branch merge)
 ```
 
-**❌ NEVER**: Apply database migrations without matching code deployment
+**🛡️ SAFETY**: Development schema changes are now isolated from production
+**🚨 PRODUCTION SCHEMA**: Only deploy to production after thorough staging testing
 
 ---
 
@@ -941,6 +950,104 @@ STRIPE_PUBLISHABLE_KEY=[LIVE_KEY]
 GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com
 ```
 
+### 🌍 Centralized Environment Detection (Added September 23, 2025)
+**ARCHITECTURE**: Single source of truth for environment detection across entire application
+
+**Frontend Environment Detection** (`frontend/src/utils/environment.js`):
+```javascript
+// Based on window.location.hostname
+export function getEnvironment() {
+    const hostname = window.location.hostname;
+    if (hostname === 'dev.unitedwerise.org' ||
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1') {
+        return 'development';
+    }
+    return 'production';
+}
+
+export function getApiBaseUrl() {
+    return isDevelopment() ? 'https://dev-api.unitedwerise.org/api' : 'https://api.unitedwerise.org/api';
+}
+```
+
+**Backend Environment Detection** (`backend/src/utils/environment.ts`):
+```typescript
+// Based on NODE_ENV
+export function getEnvironment(): 'development' | 'production' {
+    if (process.env.NODE_ENV === 'production') {
+        return 'production';
+    }
+    return 'development'; // Default for staging, test, undefined, etc.
+}
+
+export function requiresCaptcha(): boolean {
+    return isProduction(); // Only production requires captcha
+}
+```
+
+**Environment Mapping**:
+```
+Frontend Hostname          → Environment    → Backend NODE_ENV
+dev.unitedwerise.org       → development    → staging
+localhost/127.0.0.1        → development    → development
+www.unitedwerise.org       → production     → production
+```
+
+**CRITICAL**: All environment detection MUST use these centralized functions. Direct NODE_ENV or hostname checks are prohibited.
+
+### 🚀 ES6 Module System (Added September 23, 2025)
+**ARCHITECTURE**: Modern JavaScript module system with proper dependency management
+
+**Migration Completed**: Entire frontend converted from legacy script loading to ES6 modules
+
+#### Module Loading Architecture
+```html
+<!-- OLD: Legacy script loading (20+ individual scripts) -->
+<script src="src/config/api.js"></script>
+<script src="src/js/websocket-client.js"></script>
+<script src="src/components/Profile.js"></script>
+<!-- ... many more scripts with global pollution -->
+
+<!-- NEW: Modern ES6 module system -->
+<script type="module" src="src/js/main.js"></script>
+```
+
+#### Module Dependency Chain
+```javascript
+// main.js - Single entry point
+import '../utils/environment.js';           // Core utilities
+import '../config/api.js';                  // Configuration
+import '../integrations/backend-integration.js'; // Integration layer
+import '../components/Profile.js';          // Components
+import './app-initialization.js';           // Orchestration
+```
+
+#### ES6 Module Standards
+```javascript
+// Standard import pattern
+import { getEnvironment, getApiBaseUrl } from '../utils/environment.js';
+
+// Standard export pattern
+export { ClassName, functionName };
+
+// Legacy compatibility during transition
+window.ClassName = ClassName;
+```
+
+#### Key Benefits
+- ✅ **Proper Dependency Management**: Explicit import/export declarations
+- ✅ **No Global Pollution**: Clean module encapsulation
+- ✅ **Modern Standards**: Industry-standard JavaScript practices
+- ✅ **Better Performance**: Tree shaking and optimized loading
+- ✅ **Enhanced IDE Support**: Better autocomplete and error detection
+
+#### Development Guidelines
+1. **New modules**: Use ES6 import/export syntax
+2. **Import order**: Core → Config → Integration → Components → App
+3. **Legacy compatibility**: Maintain global exports during transition
+4. **File extensions**: Always include `.js` in import paths
+
 ### 📋 Daily Development Workflow (Streamlined)
 ```bash
 # Complete development session (script with manual fallback)
@@ -973,22 +1080,72 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 
 ### Common Development Patterns
 ```bash
-# After schema changes
+# MANDATORY: Daily database safety check
+bash scripts/check-database-safety.sh
+
+# After schema changes (development only)
+cd backend && node test-db-isolation.js  # Verify safe database
 npx prisma generate
 
-# Database migrations
-npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+# Database migrations (ISOLATED - safe for development)
+npx prisma migrate dev --name "description"
 
-# TypeScript compilation check (backend)
+# TypeScript compilation check (backend) - MANDATORY before deployment
 cd backend && npm run build
 
 # Find CSS usage
 grep -r "class-name" frontend/
 
-# Test auth manually
+# Test auth manually with environment-aware API
 fetch('/api/endpoint', {
   headers: {'Authorization': `Bearer ${localStorage.getItem('authToken')}`}
 })
+
+# Environment detection verification
+# Frontend: Check console for environment logs
+# Backend: Check /health endpoint for environment info
+
+# ES6 Module Development (NEW)
+# Create new module file
+touch frontend/src/components/NewComponent.js
+
+# Add ES6 module structure
+echo 'import { getEnvironment } from "../utils/environment.js";
+export class NewComponent {
+  // implementation
+}
+window.NewComponent = NewComponent; // Legacy compatibility' > frontend/src/components/NewComponent.js
+
+# Add to main.js dependency chain
+echo "import '../components/NewComponent.js';" >> frontend/src/js/main.js
+
+# Verify module loads correctly
+# Check browser console for module loading messages
+```
+
+### 🛡️ Database Safety (Added September 23, 2025)
+**CRITICAL**: Complete database isolation now implemented
+
+**Architecture:**
+```
+Production:  unitedwerise-db          (api.unitedwerise.org)
+Development: unitedwerise-db-dev      (dev-api.unitedwerise.org + local)
+```
+
+**Safety Commands:**
+```bash
+# Check isolation daily
+bash scripts/check-database-safety.sh
+
+# Verify local connection before migrations
+cd backend && node test-db-isolation.js
+
+# Emergency production restore (if ever needed)
+az postgres flexible-server restore \
+  --resource-group unitedwerise-rg \
+  --name unitedwerise-db-emergency \
+  --source-server unitedwerise-db \
+  --restore-time "YYYY-MM-DDTHH:MM:00Z"
 ```
 
 ### Performance Optimization Workflow

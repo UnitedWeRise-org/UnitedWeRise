@@ -57,6 +57,7 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
 const metricsService_1 = require("./services/metricsService");
 const performanceMonitor_1 = require("./middleware/performanceMonitor");
+const environment_1 = require("./utils/environment");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
@@ -121,7 +122,7 @@ app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         console.log('🔍 CORS - Request from origin:', origin);
         // In development, be more permissive
-        if (process.env.NODE_ENV === 'development') {
+        if ((0, environment_1.getEnvironment)() === 'development') {
             console.log('✅ CORS - Development mode, allowing all origins');
             callback(null, true);
             return;
@@ -160,7 +161,7 @@ app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie parsing middleware
 app.use((0, cookie_parser_1.default)());
 // Request logging (only in development)
-if (process.env.NODE_ENV === 'development') {
+if ((0, environment_1.enableRequestLogging)()) {
     app.use(errorHandler_1.requestLogger);
 }
 // Metrics middleware (must be early to capture all requests)
@@ -210,7 +211,7 @@ app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
 // API Documentation
-if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true') {
+if ((0, environment_1.enableApiDocs)()) {
     (0, swagger_1.setupSwagger)(app);
 }
 // Monitoring endpoints
@@ -279,7 +280,7 @@ app.get('/api/security-metrics', (req, res) => {
         },
         deployment: {
             version: process.env.npm_package_version || '1.0.0',
-            environment: process.env.NODE_ENV || 'development',
+            environment: (0, environment_1.getEnvironment)(),
             security_migration: 'httpOnly cookies + CSRF protection active'
         }
     };
@@ -300,7 +301,7 @@ app.get('/api/health/detailed', async (req, res) => {
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             version: process.env.npm_package_version || '1.0.0',
-            environment: process.env.NODE_ENV || 'development',
+            environment: (0, environment_1.getEnvironment)(),
             database: {
                 status: 'connected',
                 connectionTime: `${dbDuration}ms`

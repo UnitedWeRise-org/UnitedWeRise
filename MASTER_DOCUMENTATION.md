@@ -294,6 +294,231 @@ UnitedWeRise-Dev/
 └── docs/ (consolidated here)
 ```
 
+### 🌐 Environment Detection System
+
+**Centralized Environment Management**: Both frontend and backend now use centralized environment detection functions to ensure consistent behavior across all components.
+
+#### Frontend Environment Detection (`frontend/src/utils/environment.js`)
+```javascript
+// Core environment detection functions
+export function getEnvironment() {
+  return window.location.hostname.includes('dev.') ? 'development' : 'production';
+}
+
+export function isDevelopment() {
+  return getEnvironment() === 'development';
+}
+
+export function isProduction() {
+  return getEnvironment() === 'production';
+}
+
+// API URL configuration
+export function getApiBaseUrl() {
+  return isDevelopment()
+    ? 'https://dev-api.unitedwerise.org/api'
+    : 'https://api.unitedwerise.org/api';
+}
+
+export function getWebSocketUrl() {
+  if (isDevelopment()) {
+    // Special localhost handling for local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    return 'wss://dev-api.unitedwerise.org';
+  }
+  return 'wss://api.unitedwerise.org';
+}
+```
+
+#### Backend Environment Detection (`backend/src/utils/environment.ts`)
+```typescript
+// Core environment detection
+export function getEnvironment(): 'development' | 'production' {
+  return process.env.NODE_ENV === 'production' ? 'production' : 'development';
+}
+
+export function isDevelopment(): boolean {
+  return getEnvironment() === 'development';
+}
+
+export function isProduction(): boolean {
+  return getEnvironment() === 'production';
+}
+
+// Feature flags based on environment
+export function requiresCaptcha(): boolean {
+  return !isDevelopment(); // Bypass captcha in development/staging
+}
+
+export function requireSecureCookies(): boolean {
+  return isProduction(); // Secure cookies only in production
+}
+
+export function enableRequestLogging(): boolean {
+  return isDevelopment(); // Detailed logging in development
+}
+
+export function enableApiDocs(): boolean {
+  return isDevelopment() || process.env.ENABLE_DOCS === 'true';
+}
+
+export function getDatabaseLogLevel(): string[] {
+  return isDevelopment() ? ['query', 'error', 'warn'] : ['error'];
+}
+```
+
+#### Environment Mapping
+```
+Development Environment (includes staging and local):
+- Frontend Hostnames: localhost, 127.0.0.1, dev.unitedwerise.org
+- NODE_ENV: development, staging, test, or undefined
+- Behavior: Admin-only access, relaxed security, detailed logging
+- Features: Registration captcha bypass, API documentation enabled
+- Special Localhost Handling:
+  - WebSocket URL: http://localhost:3001 (for local development server)
+  - API Base: Determined by hostname detection
+  - Admin Dashboard: Local relative path (/admin-dashboard.html)
+
+Production Environment:
+- Frontend Hostname: www.unitedwerise.org
+- NODE_ENV: production
+- Behavior: Open access, full security, minimal logging
+- Features: Full captcha validation, secure cookies, optimized performance
+```
+
+#### Key Benefits
+1. **Single Source of Truth**: All environment checks use centralized functions
+2. **Consistent Behavior**: Same logic across all components
+3. **Simplified Debugging**: Environment-specific features clearly defined
+4. **Reduced Configuration**: No need for STAGING_ENVIRONMENT variable
+5. **Automatic Detection**: No manual environment configuration needed
+
+**Related Systems**: {#security-authentication}, {#api-reference}, {#deployment-infrastructure}
+
+---
+
+## 🚀 ES6 MODULE SYSTEM {#es6-module-system}
+**Last Updated**: September 23, 2025
+**Status**: ✅ PRODUCTION READY
+
+### Modern JavaScript Architecture
+
+**MAJOR UPGRADE**: Complete migration from legacy script loading to modern ES6 module system, implementing industry-standard JavaScript practices.
+
+#### Architecture Overview
+```html
+<!-- BEFORE: Legacy script loading (outdated) -->
+<script src="src/config/api.js"></script>
+<script src="src/js/websocket-client.js"></script>
+<script src="src/js/app-initialization.js"></script>
+<script src="src/components/Profile.js"></script>
+<!-- ... 20+ individual script tags -->
+
+<!-- AFTER: Modern ES6 module system -->
+<script type="module" src="src/js/main.js"></script>
+```
+
+#### Module Dependency Graph
+```
+main.js (Entry Point)
+├── utils/environment.js (Core - no dependencies)
+├── config/api.js (depends on environment)
+├── integrations/backend-integration.js (depends on api)
+├── js/websocket-client.js (depends on environment)
+├── components/Profile.js (depends on environment)
+├── js/map-maplibre.js (depends on environment)
+├── js/relationship-utils.js (depends on environment)
+└── js/app-initialization.js (orchestrates everything)
+```
+
+#### ES6 Module Files
+
+**Core Infrastructure:**
+- `src/js/main.js` - Module entry point and orchestration
+- `src/utils/environment.js` - Centralized environment detection
+
+**Configuration Layer:**
+- `src/config/api.js` - Environment-aware API configuration
+- `src/config/stripe.js` - Payment system configuration
+
+**Integration Layer:**
+- `src/integrations/backend-integration.js` - Backend API integration
+
+**Component Layer:**
+- `src/components/Profile.js` - User profile component
+- `src/js/websocket-client.js` - Real-time communication
+- `src/js/map-maplibre.js` - Map visualization component
+- `src/js/relationship-utils.js` - Social interaction utilities
+
+**Application Layer:**
+- `src/js/app-initialization.js` - Application startup and orchestration
+
+#### ES6 Import/Export Patterns
+
+**Standard Import Pattern:**
+```javascript
+// Import specific functions
+import { getEnvironment, isDevelopment, getApiBaseUrl } from '../utils/environment.js';
+
+// Import entire module
+import { API_CONFIG } from '../config/api.js';
+
+// Import classes
+import { Profile } from '../components/Profile.js';
+```
+
+**Standard Export Pattern:**
+```javascript
+// Named exports (preferred)
+export { ClassName, functionName, CONSTANT_NAME };
+
+// Default export (when appropriate)
+export default class ComponentName { }
+
+// Legacy compatibility during transition
+window.ComponentName = ComponentName;
+```
+
+#### Benefits Achieved
+
+1. **Proper Dependency Management**: Explicit import/export declarations
+2. **No Global Pollution**: Clean module encapsulation
+3. **Tree Shaking**: Only load what's needed
+4. **Better IDE Support**: Enhanced autocomplete and error detection
+5. **Modern Standards**: Industry-standard JavaScript practices
+6. **Maintainable Code**: Clear module boundaries and relationships
+
+#### Legacy Compatibility
+
+**Transition Strategy**: All modules maintain backward compatibility by exporting to global scope during the migration period.
+
+```javascript
+// ES6 Module Export
+export { ComponentName };
+
+// Legacy Global Export (during transition)
+window.ComponentName = ComponentName;
+```
+
+#### Development Guidelines
+
+**Adding New Modules:**
+1. Create file with proper ES6 imports/exports
+2. Add to `main.js` import chain in correct dependency order
+3. Maintain legacy global exports if needed
+4. Update this documentation
+
+**Import Order Rules:**
+1. Core utilities first (environment.js)
+2. Configuration second (api.js, stripe.js)
+3. Integration layer third (backend-integration.js)
+4. Components fourth (Profile.js, etc.)
+5. Application initialization last (app-initialization.js)
+
+**Related Systems**: {#environment-detection-system}, {#api-reference}, {#development-practices}
+
 ---
 
 ## 🔄 SYSTEM INTEGRATION WORKFLOWS {#system-integration-workflows}
@@ -900,6 +1125,32 @@ npx prisma generate
 ```
 
 Current migration status: ✅ All migrations applied
+
+### 🏗️ Database Architecture (Updated September 23, 2025)
+
+**🛡️ ISOLATED DATABASE SETUP:**
+- **Production**: `unitedwerise-db.postgres.database.azure.com` (Protected)
+- **Development/Staging**: `unitedwerise-db-dev.postgres.database.azure.com` (Safe Testing)
+
+**Benefits:**
+- ✅ **True Data Isolation**: Development changes never affect production
+- ✅ **Safe Schema Testing**: Migrations tested on development database first
+- ✅ **Independent Backups**: Separate backup and restore capabilities
+- ✅ **Risk Elimination**: No accidental production data loss during development
+
+**Connection Configuration:**
+```bash
+# Production Environment (api.unitedwerise.org)
+DATABASE_URL="postgresql://uwradmin:***@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+
+# Development/Staging Environment (dev-api.unitedwerise.org + local)
+DATABASE_URL="postgresql://uwradmin:***@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+```
+
+**Safety Checks:**
+- Daily verification script: `bash scripts/check-database-safety.sh`
+- Local connection test: `cd backend && node test-db-isolation.js`
+- Schema backup: `schema_backup_20250923_085118.prisma`
 
 ### 🔗 Related Systems
 
@@ -1616,6 +1867,80 @@ Response:
     blobStorage: "operational" | "degraded" | "down"
   }
 }
+```
+
+### Environment Utilities
+
+#### Frontend Environment Detection (`frontend/src/utils/environment.js`)
+**Centralized environment management for consistent behavior across all frontend components.**
+
+```javascript
+// Core environment detection
+import { getEnvironment, isDevelopment, isProduction, getApiBaseUrl, getWebSocketUrl } from './utils/environment.js';
+
+// Usage examples:
+if (isDevelopment()) {
+  console.log('Development mode - detailed logging enabled');
+}
+
+const apiUrl = getApiBaseUrl(); // Returns appropriate API URL for environment
+const wsUrl = getWebSocketUrl(); // Returns appropriate WebSocket URL for environment
+```
+
+**Available Functions:**
+- `getEnvironment()` → Returns 'development' or 'production'
+- `isDevelopment()` → Boolean check for development environment
+- `isProduction()` → Boolean check for production environment
+- `getApiBaseUrl()` → Returns environment-appropriate API base URL
+- `getWebSocketUrl()` → Returns environment-appropriate WebSocket URL
+
+#### Backend Environment Detection (`backend/src/utils/environment.ts`)
+**Centralized environment management for consistent server-side behavior.**
+
+```typescript
+// Import environment utilities
+import {
+  getEnvironment,
+  isDevelopment,
+  isProduction,
+  requiresCaptcha,
+  requireSecureCookies,
+  enableRequestLogging,
+  enableApiDocs,
+  getDatabaseLogLevel
+} from '../utils/environment.js';
+
+// Usage in routes and middleware
+if (requiresCaptcha()) {
+  // Validate hCaptcha token
+}
+
+if (enableRequestLogging()) {
+  console.log('API request:', req.method, req.path);
+}
+```
+
+**Available Functions:**
+- `getEnvironment()` → Returns 'development' or 'production'
+- `isDevelopment()` → Boolean check for development environment
+- `isProduction()` → Boolean check for production environment
+- `requiresCaptcha()` → Returns true for production (bypass in development)
+- `requireSecureCookies()` → Returns true for production only
+- `enableRequestLogging()` → Returns true for development environments
+- `enableApiDocs()` → Returns true for development or when ENABLE_DOCS=true
+- `getDatabaseLogLevel()` → Returns appropriate Prisma logging levels
+
+**Environment Detection Logic:**
+```
+Development Environment:
+- Frontend: hostname contains 'dev.' or is localhost
+- Backend: NODE_ENV !== 'production'
+- Features: Relaxed security, detailed logging, captcha bypass
+
+Production Environment:
+- Frontend: hostname is www.unitedwerise.org
+- Backend: NODE_ENV === 'production'
+- Features: Full security, minimal logging, all validations
 ```
 
 ### WebSocket Events
@@ -4962,7 +5287,7 @@ if (!window.currentUser) return showLogin(); // Reliable auth check
 |-----------|------------|-------------------|----------------|------------|
 | **Frontend** | HTML/CSS/JS | Azure Static Web Apps (main) | Azure Static Web Apps (dev) | ✅ **Auto via GitHub** |
 | **Backend** | Node.js/Express | Container App (production) | Container App (staging) | ⚠️ **Manual via Azure CLI** |
-| **Database** | PostgreSQL | Azure PostgreSQL Flexible | **Shared with Production** | Manual migrations + Enterprise cleanup tools |
+| **Database** | PostgreSQL | unitedwerise-db (Production) | unitedwerise-db-dev (Isolated Development) | Manual migrations + Enterprise cleanup tools |
 | **Storage** | Azure Blob | Always available | **Shared with Production** | N/A |
 
 #### GitHub Workflows & Automation
@@ -4988,10 +5313,11 @@ if (!window.currentUser) return showLogin(); // Reliable auth check
   - **Deployment**: Manual via Azure CLI from `main` branch
   
 - **🧪 Staging Container**: `unitedwerise-backend-staging`
-  - **URL**: https://dev-api.unitedwerise.org  
-  - **Environment**: `NODE_ENV=staging` + `STAGING_ENVIRONMENT=true`
+  - **URL**: https://dev-api.unitedwerise.org
+  - **Environment**: `NODE_ENV=staging` (detected as development environment)
   - **Access**: **Admin-only for all protected routes**
   - **Deployment**: Manual via Azure CLI from `development` branch
+  - **Note**: Uses centralized environment detection - no STAGING_ENVIRONMENT variable needed
 
 #### Critical Deployment Gap
 **⚠️ IMPORTANT**: Backend changes (like admin routes) do NOT auto-deploy!
@@ -5024,7 +5350,8 @@ az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" \
 az containerapp update --name unitedwerise-backend-staging \
   --resource-group unitedwerise-rg \
   --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG" \
-  --set-env-vars NODE_ENV=staging STAGING_ENVIRONMENT=true
+  --set-env-vars NODE_ENV=staging
+# Note: STAGING_ENVIRONMENT variable no longer needed with centralized environment detection
 ```
 
 #### Production Deployment (Main Branch - USER APPROVAL REQUIRED)
@@ -5060,7 +5387,8 @@ unitedwerise-rg/
 │   ├── yellow-mud-043d1ca0f (Production)
 │   └── delightful-smoke-097b2fa0f (Staging)
 ├── PostgreSQL Flexible Server
-│   └── unitedwerise-db (Shared)
+│   ├── unitedwerise-db (Production)
+│   └── unitedwerise-db-dev (Development/Staging)
 ├── Storage Account
 │   └── uwrstorage2425 (Shared)
 ├── Container Registry
@@ -5071,7 +5399,8 @@ unitedwerise-rg/
 
 **🎯 Key Architecture Decisions:**
 - **Dual Container Apps**: Separate staging and production backend containers
-- **Shared Resources**: Database, storage, and AI services shared for cost efficiency
+- **Isolated Databases**: Separate production and development databases for safety (September 2025)
+- **Shared Resources**: Storage and AI services shared for cost efficiency
 - **Environment Isolation**: Same codebase with environment-aware behavior
 - **Professional Domains**: Custom CNAME records for branded URLs
 
@@ -5201,14 +5530,16 @@ return 'https://api.unitedwerise.org/api';        // Production backend
 
 **Backend Environment-Aware Authentication**:
 ```javascript
-// Same code, different behavior based on NODE_ENV
+// Same code, different behavior using centralized environment detection
+import { isDevelopment } from '../utils/environment.js';
+
 export const requireStagingAuth = async (req, res, next) => {
-  if (process.env.NODE_ENV === 'staging') {
-    // Require admin access in staging
+  if (isDevelopment()) {
+    // Require admin access in development/staging
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'This is a staging environment - admin access required.',
-        environment: 'staging'
+        environment: 'development'
       });
     }
   }
@@ -7670,6 +8001,7 @@ CREATE INDEX idx_posts_geo_created ON posts(h3Index, createdAt DESC);
 ```typescript
 // NEW: Singleton Prisma Client (backend/src/lib/prisma.ts)
 import { PrismaClient } from '@prisma/client';
+import { getDatabaseLogLevel, getEnvironment, isProduction } from '../utils/environment';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -7688,7 +8020,10 @@ const prismaClientSingleton = () => {
 
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// In development, store on global to preserve across hot reloads
+if (!isProduction()) {
+  globalForPrisma.prisma = prisma;
+}
 
 // Graceful shutdown
 process.on('beforeExit', () => prisma.$disconnect());
@@ -10245,6 +10580,62 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Root Cause**: Frontend JavaScript debugging needed for messaging modal
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
 
+### 🚨 RECENTLY FIXED - September 23, 2025
+
+#### Environment Detection Consolidation (CRITICAL - FIXED)
+**Issue**: Inconsistent environment detection across 50+ components causing API URL mismatches and configuration bugs
+- **Problem**: Manual hostname checking and NODE_ENV usage scattered throughout codebase
+- **Root Cause**: No centralized environment detection system - each component implemented its own logic
+- **Solution**:
+  - Created centralized environment utilities (`frontend/src/utils/environment.js`, `backend/src/utils/environment.ts`)
+  - Updated all components to use centralized functions (`getEnvironment()`, `isDevelopment()`, `getApiBaseUrl()`, etc.)
+  - Eliminated STAGING_ENVIRONMENT variable dependency
+  - Implemented two-state system: development (includes staging/localhost) vs production
+- **Components Updated**: 50+ frontend and backend components now use centralized environment detection
+- **Key Benefits**:
+  - Single source of truth for environment detection
+  - Consistent API URL resolution across all components
+  - Registration hCaptcha bypass now works correctly on staging
+  - Simplified debugging and reduced environment-related bugs
+- **Files Created**: 2 new centralized utility files
+- **Files Modified**: 50+ components across frontend and backend
+- **Status**: ✅ Fixed and deployed - all environment detection now centralized
+- **Impact**: Eliminated environment detection inconsistencies and simplified development workflow
+
+#### ES6 Module System Migration (MAJOR UPGRADE - COMPLETED)
+**Issue**: Frontend using outdated script loading causing "Cannot use import statement outside a module" errors
+- **Problem**: Legacy `<script>` tag loading system unable to handle modern ES6 import/export statements
+- **Root Cause**: Frontend architecture was using global script loading instead of proper module system
+- **Solution**:
+  - Converted entire frontend to ES6 module architecture
+  - Created `main.js` module entry point with proper dependency management
+  - Updated HTML to use `<script type="module">` loading
+  - Converted 10+ core files to proper ES6 imports/exports
+  - Maintained legacy compatibility during transition
+- **Architecture Change**:
+  - **Before**: 20+ individual script tags with global pollution
+  - **After**: Single module entry point with clean dependency graph
+- **Files Converted**:
+  - `main.js` (NEW) - Module orchestration
+  - `environment.js` - ES6 exports
+  - `api.js` - ES6 imports/exports
+  - `backend-integration.js` - ES6 exports added
+  - `Profile.js` - ES6 exports added
+  - `websocket-client.js` - ES6 exports added
+  - `map-maplibre.js` - ES6 exports added
+  - `relationship-utils.js` - ES6 exports added
+  - `app-initialization.js` - ES6 exports + auto-init
+  - `index.html` - Updated to module loading
+- **Key Benefits**:
+  - Modern JavaScript standards implementation
+  - Proper dependency management with explicit imports
+  - Eliminated global script pollution
+  - Better IDE support and error detection
+  - Tree shaking and performance improvements
+  - Industry-standard development practices
+- **Status**: ✅ Completed and deployed - frontend now uses modern ES6 module system
+- **Impact**: Resolved module loading errors and established maintainable modern architecture
+
 ### 🚨 RECENTLY FIXED - September 22, 2025
 
 #### Authentication System Unification (CRITICAL - FIXED)
@@ -10570,6 +10961,85 @@ try {
 - ✅ `frontend/src/modules/core/auth/utils.js` - Unified authentication functions
 - ✅ Global `window.authUtils` object - Available after module loading
 - ✅ Global `window.apiCall()` function - Handles authentication automatically
+
+### 🌐 Environment Detection Standards (September 23, 2025)
+
+**MANDATORY ENVIRONMENT DETECTION PATTERNS** for all new components and features:
+
+#### Frontend Environment Detection (REQUIRED)
+```javascript
+// ✅ ALWAYS USE: Centralized environment utilities
+import { isDevelopment, isProduction, getApiBaseUrl, getWebSocketUrl } from '../utils/environment.js';
+
+// Environment-based behavior
+if (isDevelopment()) {
+  console.log('Debug mode enabled in development');
+}
+
+// API URL configuration
+const apiUrl = getApiBaseUrl(); // Automatically returns correct URL for environment
+const wsUrl = getWebSocketUrl(); // Automatically returns correct WebSocket URL
+
+// ❌ NEVER USE: Manual hostname checking
+// if (window.location.hostname.includes('dev.')) { ... }
+// if (location.hostname === 'www.unitedwerise.org') { ... }
+```
+
+#### Backend Environment Detection (REQUIRED)
+```typescript
+// ✅ ALWAYS USE: Centralized environment utilities
+import {
+  isDevelopment,
+  isProduction,
+  requiresCaptcha,
+  enableRequestLogging,
+  getDatabaseLogLevel
+} from '../utils/environment.js';
+
+// Environment-based features
+if (requiresCaptcha()) {
+  // Validate hCaptcha in production, bypass in development
+}
+
+if (enableRequestLogging()) {
+  console.log('API request logging enabled');
+}
+
+// ❌ NEVER USE: Direct NODE_ENV checking
+// if (process.env.NODE_ENV === 'production') { ... }
+// if (process.env.STAGING_ENVIRONMENT === 'true') { ... }
+```
+
+#### Environment-Specific Features
+```javascript
+// ✅ RECOMMENDED: Use environment utilities for feature flags
+import { isDevelopment, requiresCaptcha } from '../utils/environment.js';
+
+// Frontend feature flags
+if (isDevelopment()) {
+  // Show debug UI, skip validations, enable extra logging
+  window.debugMode = true;
+}
+
+// Backend feature flags
+if (!requiresCaptcha()) {
+  // Skip hCaptcha validation in development/staging
+  return { success: true };
+}
+```
+
+#### Environment Configuration Benefits
+1. **Single Source of Truth**: All environment checks use centralized functions
+2. **Consistent Logic**: Same behavior across all components
+3. **Simplified Testing**: Clear development vs production distinctions
+4. **Reduced Bugs**: No inconsistent environment detection across codebase
+5. **Maintainable Code**: Changes to environment logic happen in one place
+
+**Files to Import for Environment Detection:**
+- ✅ `frontend/src/utils/environment.js` - Frontend environment utilities
+- ✅ `backend/src/utils/environment.ts` - Backend environment utilities
+- ❌ **DEPRECATED**: Manual NODE_ENV or hostname checking in components
+- ❌ **REMOVED**: STAGING_ENVIRONMENT variable (no longer needed)
 
 ### 🧹 Repository Management (August 21, 2025)
 #### Development File Cleanup
@@ -12489,6 +12959,7 @@ POST /api/admin/candidates/:candidateId/messages // Send messages (backend worki
 ├── 💾 Data not saving, migration fails, connection timeouts → **Database Errors**
 ├── 🚀 Code not deploying, build fails, container issues → **Deployment Errors**
 ├── 🖼️ UI broken, content not loading, upload fails → **Frontend & Display Issues**
+├── 🌐 Wrong API URL, staging behavior in production → **Environment Detection Issues**
 └── 🛠️ Local dev setup, environment configuration → **Development Environment**
 
 🔍 STEP 2: Check Recent Fixes First
@@ -12681,6 +13152,170 @@ if (!window.currentUser) {
 - `frontend/src/modules/module-loader.js` - Fixed mobile feed loading auth check
 
 **Rule Established**: User-facing components use `window.currentUser`, auth infrastructure uses `userState.current`
+
+---
+
+## 🌐 **ENVIRONMENT DETECTION ISSUES**
+
+### Quick Environment Diagnosis
+```javascript
+// Test 1: Frontend environment detection
+console.log('Environment:', window.getEnvironment?.() || 'function not loaded');
+console.log('Is Development:', window.isDevelopment?.() || 'function not loaded');
+console.log('API Base URL:', window.getApiBaseUrl?.() || 'function not loaded');
+console.log('Current Hostname:', window.location.hostname);
+
+// Test 2: Backend environment verification (via API call)
+fetch('/health')
+  .then(r => r.json())
+  .then(health => {
+    console.log('Backend Environment:', health.environment);
+    console.log('Node Environment:', health.nodeEnv);
+  });
+
+// Test 3: API URL configuration verification
+const expectedApiUrl = window.location.hostname.includes('dev.')
+  ? 'https://dev-api.unitedwerise.org/api'
+  : 'https://api.unitedwerise.org/api';
+console.log('Expected API URL:', expectedApiUrl);
+console.log('Actual API URL:', window.getApiBaseUrl?.());
+```
+
+### Common Environment Detection Issues
+
+#### Wrong API URL (Frontend)
+**Symptoms**:
+- API calls returning 404 errors
+- Network tab shows wrong domain being called
+- Features work on one environment but not another
+
+**Diagnosis**:
+```javascript
+// Check if environment detection functions are loaded
+if (!window.getApiBaseUrl) {
+  console.error('❌ Environment utilities not loaded');
+  console.log('Check: frontend/src/utils/environment.js import');
+}
+
+// Verify API URL logic
+const hostname = window.location.hostname;
+const expectedEnv = hostname.includes('dev.') ? 'development' : 'production';
+console.log('Hostname:', hostname, '→ Expected Env:', expectedEnv);
+```
+
+**Fix**:
+```javascript
+// ✅ Import environment utilities in your component
+import { getApiBaseUrl } from '../utils/environment.js';
+
+// ✅ Use centralized API URL function
+const response = await fetch(`${getApiBaseUrl()}/endpoint`);
+
+// ❌ Avoid manual URL construction
+// const url = hostname.includes('dev.') ? 'https://dev-api...' : 'https://api...';
+```
+
+#### Registration hCaptcha Issues
+**Symptoms**:
+- hCaptcha validation fails on staging/localhost
+- Registration works in production but not development
+- Console shows hCaptcha errors
+
+**Diagnosis**:
+```javascript
+// Check captcha bypass logic
+fetch('/api/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'test@example.com',
+    username: 'testuser',
+    password: 'password123',
+    hcaptchaToken: 'dev-bypass-token' // Should work in development
+  })
+});
+```
+
+**Fix**: Ensure backend uses centralized environment detection:
+```typescript
+// ✅ Backend should use centralized captcha checking
+import { requiresCaptcha } from '../utils/environment.js';
+
+if (requiresCaptcha() && !isValidCaptcha(hcaptchaToken)) {
+  return res.status(400).json({ error: 'Invalid captcha' });
+}
+// In development, requiresCaptcha() returns false, bypassing validation
+```
+
+#### Environment Variable Issues
+**Symptoms**:
+- Features behave unexpectedly between environments
+- Logging levels incorrect
+- Security features inconsistent
+
+**Diagnosis**:
+```bash
+# Check environment variables (backend)
+curl -s "https://api.unitedwerise.org/health" | jq '.environment'
+curl -s "https://dev-api.unitedwerise.org/health" | jq '.environment'
+
+# Should show:
+# Production: { "environment": "production", "nodeEnv": "production" }
+# Development: { "environment": "development", "nodeEnv": "staging" }
+```
+
+**Fix**: Use centralized environment functions instead of direct env var checks:
+```typescript
+// ✅ Use centralized environment detection
+import { isDevelopment, enableRequestLogging } from '../utils/environment.js';
+
+// ❌ Avoid direct NODE_ENV checking
+// if (process.env.NODE_ENV === 'development') { ... }
+// if (process.env.STAGING_ENVIRONMENT === 'true') { ... }
+```
+
+### Environment Detection Debugging Steps
+
+1. **Verify Environment Utilities Are Loaded**
+```javascript
+// Frontend check
+console.log('Environment Utils:', {
+  getEnvironment: typeof window.getEnvironment,
+  isDevelopment: typeof window.isDevelopment,
+  getApiBaseUrl: typeof window.getApiBaseUrl
+});
+```
+
+2. **Check API URL Resolution**
+```javascript
+// Test all URL functions
+console.log('API URLs:', {
+  base: window.getApiBaseUrl?.(),
+  websocket: window.getWebSocketUrl?.(),
+  current: window.location.hostname
+});
+```
+
+3. **Verify Backend Environment Detection**
+```javascript
+// Check backend environment via health endpoint
+fetch('/health')
+  .then(r => r.json())
+  .then(health => console.log('Backend Environment:', health));
+```
+
+### Recently Resolved Environment Issues
+
+#### ✅ Environment Detection Consolidation (September 23, 2025)
+- **Issue**: Inconsistent environment detection across 50+ components
+- **Root Cause**: Manual hostname checks and NODE_ENV usage throughout codebase
+- **Solution**: Created centralized environment utilities
+- **Files Created**:
+  - `frontend/src/utils/environment.js` - Frontend environment functions
+  - `backend/src/utils/environment.ts` - Backend environment functions
+- **Components Updated**: All components now use centralized functions
+- **STAGING_ENVIRONMENT Variable**: Removed (no longer needed)
+- **Impact**: Consistent environment detection, simplified debugging, reduced bugs
 
 ---
 
@@ -13282,9 +13917,9 @@ az containerapp show \
 2. **Required Variables Checklist**
 ```bash
 # Critical environment variables:
-NODE_ENV=staging
-STAGING_ENVIRONMENT=true
+NODE_ENV=staging  # Detected as development environment
 RELEASE_SHA=$GIT_SHA
+# Note: STAGING_ENVIRONMENT variable no longer needed
 DATABASE_URL=<connection_string>
 AZURE_OPENAI_ENDPOINT=<endpoint>
 AZURE_STORAGE_ACCOUNT_NAME=uwrstorage2425

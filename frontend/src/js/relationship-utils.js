@@ -1,17 +1,16 @@
 /**
  * Relationship Utilities
- * 
+ *
  * Reusable client-side functions for managing follows and friendships
  * Can be used across different UI contexts: user profiles, post headers, user lists, etc.
  */
 
+import { getApiBaseUrl } from '../utils/environment.js';
+
 // API base URL helper
 function getApiBase() {
-    return (window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1' || 
-            window.location.protocol === 'file:')
-        ? 'http://localhost:3001/api' 
-        : 'https://api.unitedwerise.org/api';
+    // Use centralized environment detection
+    return getApiBaseUrl();
 }
 
 // Get auth token - legacy function for backwards compatibility
@@ -860,4 +859,7 @@ window.toggleUserSubscription = (userId, isSubscribed) => SubscriptionUtils.togg
 window.subscribeToUser = (userId) => SubscriptionUtils.subscribeToUser(userId);
 window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(userId);
 
-console.log('Relationship utilities loaded - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');
+// ES6 Module Exports
+export { FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils };
+
+console.log('🤝 Relationship utilities loaded via ES6 module - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');

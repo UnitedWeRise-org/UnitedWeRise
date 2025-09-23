@@ -10,6 +10,7 @@ import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import logger from '../utils/logger';
+import { getEnvironment } from '../utils/environment';
 
 const router = Router();
 // Using singleton prisma from lib/prisma.ts
@@ -72,7 +73,7 @@ function getDeploymentInfo() {
     uptime: process.uptime(),
     nodeVersion: process.version,
     platform: process.platform,
-    environment: process.env.NODE_ENV || 'development'
+    environment: getEnvironment()
   };
 }
 

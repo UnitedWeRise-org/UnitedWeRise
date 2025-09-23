@@ -17,7 +17,8 @@ import { QdrantService } from './qdrantService';
 // Qwen service deprecated - using Azure OpenAI instead
 import { azureOpenAI } from './azureOpenAIService';
 import { ProbabilityFeedService } from './probabilityFeedService';
-import { getSemanticConfig, isProduction } from '../config/azureConfig';
+import { getSemanticConfig } from '../config/azureConfig';
+import { isProduction } from '../utils/environment';
 import logger from '../utils/logger';
 
 // Using singleton prisma from lib/prisma.ts

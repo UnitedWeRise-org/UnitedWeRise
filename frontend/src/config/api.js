@@ -1,47 +1,44 @@
-// Centralized API configuration for United We Rise Frontend
-// This ensures all API calls use the correct backend URL
+/**
+ * API Configuration - ES6 Module
+ * Centralized API configuration with environment-specific settings
+ * Modern ES6 module with proper imports/exports
+ */
 
-// Detect environment and set appropriate backend URL
-function getBackendURL() {
-    const hostname = window.location.hostname;
-    
-    // Professional staging domain detection
-    if (hostname === 'dev.unitedwerise.org') {
-        return 'https://dev-api.unitedwerise.org/api';
-    }
-    
-    // Fallback staging detection for Azure direct URLs (during DNS transition)
-    if (hostname.includes('staging') || 
-        hostname.includes('development') || 
-        hostname.includes('dev') ||
-        hostname.includes('delightful-smoke-097b2fa0f')) {
-        return 'https://dev-api.unitedwerise.org/api';
-    }
-    
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:3001/api'; // Use local backend for development
-    }
-    
-    // Production (default)
-    return 'https://api.unitedwerise.org/api';
-}
+import { getApiBaseUrl, getEnvironment, isDevelopment, isProduction, logEnvironmentInfo } from '../utils/environment.js';
 
-const API_CONFIG = {
-    BASE_URL: getBackendURL(),
-    
+export const API_CONFIG = {
+    BASE_URL: getApiBaseUrl(),
+    ENVIRONMENT: getEnvironment().toUpperCase(),
+
     // Helper method to build full API URLs
     url(endpoint) {
         // Remove leading slash if present to avoid double slashes
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
         return `${this.BASE_URL}/${cleanEndpoint}`;
+    },
+
+    // Helper to check environment
+    isProduction() {
+        return isProduction();
+    },
+    isDevelopment() {
+        return isDevelopment();
+    },
+    // Legacy compatibility
+    isStaging() {
+        return isDevelopment();
+    },
+    isLocal() {
+        return isDevelopment();
     }
 };
 
-// Make it globally available
+// Make it globally available for legacy compatibility during transition
 window.API_CONFIG = API_CONFIG;
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = API_CONFIG;
-}
+// Display environment banner in console
+logEnvironmentInfo();
+
+console.log('🔗 API Configuration loaded via ES6 module');
+console.log('📊 API Base URL:', API_CONFIG.BASE_URL);
+console.log('🌍 Environment:', API_CONFIG.ENVIRONMENT);

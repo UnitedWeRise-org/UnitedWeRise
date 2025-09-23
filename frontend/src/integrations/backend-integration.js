@@ -2,10 +2,12 @@
 // This script enhances the existing frontend with new backend features
 // 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
+import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
+
 class BackendIntegration {
     constructor() {
         // Use centralized API configuration for environment detection
-        this.API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
+        this.API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : getApiBaseUrl();
         
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('BackendIntegration', 'Backend Integration API Base: ' + this.API_BASE);
@@ -39,11 +41,16 @@ class BackendIntegration {
                 return;
             }
 
-            // Add hCaptcha validation
-            const hcaptchaToken = this.getHCaptchaToken();
-            if (!hcaptchaToken) {
-                showAuthMessage('Please complete the captcha verification', 'error');
-                return;
+            // Add hCaptcha validation (skip for staging/dev environments)
+            let hcaptchaToken = null;
+            if (!isDevelopment()) {
+                hcaptchaToken = this.getHCaptchaToken();
+                if (!hcaptchaToken) {
+                    showAuthMessage('Please complete the captcha verification', 'error');
+                    return;
+                }
+            } else {
+                console.log('🔧 Development environment detected: Bypassing hCaptcha validation');
             }
 
             if (!email || !username || !password) {
@@ -502,3 +509,15 @@ window.onVerificationComplete = () => {
 //         }, 2000);
 //     };
 // }
+
+// Export the BackendIntegration class for ES6 module usage
+export { BackendIntegration };
+
+// Auto-initialize when module loads
+const backendIntegration = new BackendIntegration();
+
+// Make globally available for legacy compatibility
+window.BackendIntegration = BackendIntegration;
+window.backendIntegration = backendIntegration;
+
+console.log('🔗 Backend Integration loaded via ES6 module');

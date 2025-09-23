@@ -3,6 +3,7 @@
  * Simple logger utility for the backend
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const environment_1 = require("./environment");
 const logger = {
     info: (message, ...args) => {
         console.log(`[INFO] ${message}`, ...args);
@@ -14,7 +15,7 @@ const logger = {
         console.error(`[ERROR] ${message}`, ...args);
     },
     debug: (message, ...args) => {
-        if (process.env.NODE_ENV === 'development') {
+        if ((0, environment_1.isDevelopment)()) {
             console.debug(`[DEBUG] ${message}`, ...args);
         }
     }

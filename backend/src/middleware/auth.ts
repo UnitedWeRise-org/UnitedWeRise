@@ -4,6 +4,7 @@ import { verifyToken } from '../utils/auth';
 ;
 import { sessionManager } from '../services/sessionManager';
 import { metricsService } from '../services/metricsService';
+import { isDevelopment } from '../utils/environment';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -90,8 +91,8 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       await sessionManager.updateSessionActivity(sessionId);
     }
 
-    // Check if staging environment requires admin access
-    if (process.env.STAGING_ENVIRONMENT === 'true' && !req.user?.isAdmin) {
+    // Check if development environment requires admin access
+    if (isDevelopment() && !req.user?.isAdmin) {
       return res.status(403).json({
         error: 'This is a staging environment - admin access required.',
         environment: 'staging'
@@ -114,18 +115,18 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
 
 // Environment-aware authentication for staging
 export const requireStagingAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  // If not in staging environment, proceed with normal auth
-  if (process.env.NODE_ENV !== 'staging' && process.env.STAGING_ENVIRONMENT !== 'true') {
+  // If not in development environment, proceed with normal auth
+  if (!isDevelopment()) {
     return requireAuth(req, res, next);
   }
 
-  // In staging environment, require admin access for all protected routes
+  // In development environment, require admin access for all protected routes
   await requireAuth(req, res, async (authError?: any) => {
     if (authError) {
       return next(authError);
     }
 
-    // After successful auth, check for admin status in staging
+    // After successful auth, check for admin status in development
     if (!req.user?.isAdmin) {
       return res.status(403).json({
         error: 'This is a staging environment - admin access required.',

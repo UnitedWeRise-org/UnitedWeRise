@@ -2,6 +2,8 @@
  * Simple logger utility for the backend
  */
 
+import { isDevelopment } from './environment';
+
 interface Logger {
   info: (message: string, ...args: any[]) => void;
   warn: (message: string, ...args: any[]) => void;
@@ -20,7 +22,7 @@ const logger: Logger = {
     console.error(`[ERROR] ${message}`, ...args);
   },
   debug: (message: string, ...args: any[]) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopment()) {
       console.debug(`[DEBUG] ${message}`, ...args);
     }
   }

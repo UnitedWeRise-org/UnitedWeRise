@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { Server as HTTPServer } from 'http';
+import { isProduction } from '../utils/environment';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/messaging';
@@ -13,7 +14,7 @@ export class WebSocketService {
   constructor(httpServer: HTTPServer) {
     this.io = new Server(httpServer, {
       cors: {
-        origin: process.env.NODE_ENV === 'production' 
+        origin: isProduction()
           ? ['https://www.unitedwerise.org', 'https://yellow-mud-043d1ca0f.2.azurestaticapps.net']
           : ['http://localhost:3000', 'http://localhost:8080'],
         methods: ['GET', 'POST'],

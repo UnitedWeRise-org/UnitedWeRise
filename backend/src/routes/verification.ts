@@ -12,6 +12,7 @@ import { emailService } from '../services/emailService';
 import { smsService } from '../services/smsService';
 import { captchaService } from '../services/captchaService';
 import crypto from 'crypto';
+import { isDevelopment } from '../utils/environment';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -146,10 +147,10 @@ router.post('/phone/send', requireAuth, verificationLimiter, validatePhoneVerifi
     
     // Demo mode handling
     const demoPhones = ['+15551234567', '+15559876543', '+11234567890'];
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isDevEnvironment = isDevelopment();
     const isDemoPhone = demoPhones.includes(phoneNumber);
     
-    if (isDevelopment || isDemoPhone) {
+    if (isDevEnvironment || isDemoPhone) {
       console.log(`📱 DEMO MODE: Phone verification for ${phoneNumber}`);
       console.log(`📱 Use verification code: 123456`);
       

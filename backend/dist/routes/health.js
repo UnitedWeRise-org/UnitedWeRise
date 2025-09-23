@@ -14,6 +14,7 @@ const express_1 = require("express");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const logger_1 = __importDefault(require("../utils/logger"));
+const environment_1 = require("../utils/environment");
 const router = (0, express_1.Router)();
 // Using singleton prisma from lib/prisma.ts
 // Get deployment information from package.json
@@ -72,7 +73,7 @@ function getDeploymentInfo() {
         uptime: process.uptime(),
         nodeVersion: process.version,
         platform: process.platform,
-        environment: process.env.NODE_ENV || 'development'
+        environment: (0, environment_1.getEnvironment)()
     };
 }
 // Get database schema information
