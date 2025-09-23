@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const environment_1 = require("../utils/environment");
 class EmailService {
     constructor() {
         this.transporter = null;
@@ -23,7 +24,7 @@ class EmailService {
                         pass: process.env.SMTP_PASS,
                     },
                     tls: {
-                        rejectUnauthorized: process.env.NODE_ENV === 'production'
+                        rejectUnauthorized: (0, environment_1.isProduction)()
                     }
                 });
                 console.log('Email service initialized with SMTP');

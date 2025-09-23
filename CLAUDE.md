@@ -950,6 +950,52 @@ STRIPE_PUBLISHABLE_KEY=[LIVE_KEY]
 GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com
 ```
 
+### 🌍 Centralized Environment Detection (Added September 23, 2025)
+**ARCHITECTURE**: Single source of truth for environment detection across entire application
+
+**Frontend Environment Detection** (`frontend/src/utils/environment.js`):
+```javascript
+// Based on window.location.hostname
+export function getEnvironment() {
+    const hostname = window.location.hostname;
+    if (hostname === 'dev.unitedwerise.org' ||
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1') {
+        return 'development';
+    }
+    return 'production';
+}
+
+export function getApiBaseUrl() {
+    return isDevelopment() ? 'https://dev-api.unitedwerise.org/api' : 'https://api.unitedwerise.org/api';
+}
+```
+
+**Backend Environment Detection** (`backend/src/utils/environment.ts`):
+```typescript
+// Based on NODE_ENV
+export function getEnvironment(): 'development' | 'production' {
+    if (process.env.NODE_ENV === 'production') {
+        return 'production';
+    }
+    return 'development'; // Default for staging, test, undefined, etc.
+}
+
+export function requiresCaptcha(): boolean {
+    return isProduction(); // Only production requires captcha
+}
+```
+
+**Environment Mapping**:
+```
+Frontend Hostname          → Environment    → Backend NODE_ENV
+dev.unitedwerise.org       → development    → staging
+localhost/127.0.0.1        → development    → development
+www.unitedwerise.org       → production     → production
+```
+
+**CRITICAL**: All environment detection MUST use these centralized functions. Direct NODE_ENV or hostname checks are prohibited.
+
 ### 📋 Daily Development Workflow (Streamlined)
 ```bash
 # Complete development session (script with manual fallback)
@@ -992,16 +1038,20 @@ npx prisma generate
 # Database migrations (ISOLATED - safe for development)
 npx prisma migrate dev --name "description"
 
-# TypeScript compilation check (backend)
+# TypeScript compilation check (backend) - MANDATORY before deployment
 cd backend && npm run build
 
 # Find CSS usage
 grep -r "class-name" frontend/
 
-# Test auth manually
+# Test auth manually with environment-aware API
 fetch('/api/endpoint', {
   headers: {'Authorization': `Bearer ${localStorage.getItem('authToken')}`}
 })
+
+# Environment detection verification
+# Frontend: Check console for window.EnvironmentUtils.logInfo()
+# Backend: Check /health endpoint for environment info
 ```
 
 ### 🛡️ Database Safety (Added September 23, 2025)

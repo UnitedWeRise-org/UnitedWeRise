@@ -22,6 +22,7 @@ const qdrantService_1 = require("./qdrantService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
 const probabilityFeedService_1 = require("./probabilityFeedService");
 const azureConfig_1 = require("../config/azureConfig");
+const environment_1 = require("../utils/environment");
 const logger_1 = __importDefault(require("../utils/logger"));
 class TopicDiscoveryService {
     /**
@@ -145,7 +146,7 @@ Respond with JSON only:
             // Use Azure OpenAI in production, fallback to Qwen locally
             let response;
             const config = (0, azureConfig_1.getSemanticConfig)();
-            if (config.provider === 'azure' || ((0, azureConfig_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
+            if (config.provider === 'azure' || ((0, environment_1.isProduction)() && process.env.AZURE_OPENAI_ENDPOINT)) {
                 const azureSummary = await azureOpenAIService_1.azureOpenAI.generateTopicSummary(cluster.posts);
                 response = JSON.stringify({
                     title: azureSummary.title,

@@ -232,8 +232,8 @@ export declare class TopicService {
                 updatedAt: Date;
                 content: string;
                 parentId: string | null;
-                sentiment: number | null;
                 authorId: string;
+                sentiment: number | null;
                 topicId: string | null;
                 subTopicId: string | null;
                 hostilityScore: number;
@@ -257,8 +257,8 @@ export declare class TopicService {
             updatedAt: Date;
             content: string;
             parentId: string | null;
-            sentiment: number | null;
             authorId: string;
+            sentiment: number | null;
             topicId: string | null;
             subTopicId: string | null;
             hostilityScore: number;
@@ -284,8 +284,8 @@ export declare class TopicService {
                     updatedAt: Date;
                     content: string;
                     parentId: string | null;
-                    sentiment: number | null;
                     authorId: string;
+                    sentiment: number | null;
                     topicId: string | null;
                     subTopicId: string | null;
                     hostilityScore: number;
@@ -309,8 +309,8 @@ export declare class TopicService {
                 updatedAt: Date;
                 content: string;
                 parentId: string | null;
-                sentiment: number | null;
                 authorId: string;
+                sentiment: number | null;
                 topicId: string | null;
                 subTopicId: string | null;
                 hostilityScore: number;
@@ -372,8 +372,8 @@ export declare class TopicService {
         updatedAt: Date;
         content: string;
         parentId: string | null;
-        sentiment: number | null;
         authorId: string;
+        sentiment: number | null;
         topicId: string | null;
         subTopicId: string | null;
         hostilityScore: number;

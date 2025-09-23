@@ -5,7 +5,7 @@
  * Author: Claude Code Assistant
  */
 
-import { isDevelopment } from '../utils/environment.js';
+import { isDevelopment, getAdminDashboardUrl } from '../utils/environment.js';
 
 class Profile {
     constructor() {
@@ -1501,21 +1501,7 @@ class Profile {
 
         try {
             // Use centralized environment detection for admin dashboard URL
-            let adminDashboardURL;
-
-            if (isDevelopment()) {
-                // Development environment (staging or localhost)
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    // Local development
-                    adminDashboardURL = '/admin-dashboard.html';
-                } else {
-                    // Staging environment
-                    adminDashboardURL = 'https://dev.unitedwerise.org/admin-dashboard.html';
-                }
-            } else {
-                // Production environment
-                adminDashboardURL = 'https://www.unitedwerise.org/admin-dashboard.html';
-            }
+            const adminDashboardURL = getAdminDashboardUrl();
 
             // Log admin dashboard access for security monitoring
             console.log(`Admin ${this.userProfile.username} accessing admin dashboard from ${currentHostname}`);

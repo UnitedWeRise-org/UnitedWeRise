@@ -25,8 +25,6 @@ export declare function validateAzureConfig(): {
     valid: boolean;
     errors: string[];
 };
-export declare const isDevelopment: () => boolean;
-export declare const isProduction: () => boolean;
 export declare const getSemanticConfig: () => {
     enabled: boolean;
     provider: string;

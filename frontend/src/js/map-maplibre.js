@@ -1,7 +1,9 @@
-/* 
+/*
  * MapLibre GL Implementation for United We Rise
  * Replacing Leaflet for better responsive behavior
  */
+
+import { getApiBaseUrl } from '../utils/environment.js';
 
 class UWRMapLibre {
     constructor(containerId = 'map') {
@@ -1257,9 +1259,7 @@ class UWRMapLibre {
 
         // Try to fetch real posts with geographic data first
         try {
-            const apiUrl = window.location.hostname.includes('dev') ?
-                'https://dev-api.unitedwerise.org' :
-                'https://api.unitedwerise.org';
+            const apiUrl = getApiBaseUrl().replace('/api', '');
 
             const response = await fetch(`${apiUrl}/api/posts/map-data?scope=${jurisdiction}&count=9`, {
                 headers: {
@@ -1302,9 +1302,7 @@ class UWRMapLibre {
 
         // Try legacy trending topics API as secondary fallback
         try {
-            const apiUrl = window.location.hostname.includes('dev') ?
-                'https://dev-api.unitedwerise.org' :
-                'https://api.unitedwerise.org';
+            const apiUrl = getApiBaseUrl().replace('/api', '');
 
             const response = await fetch(`${apiUrl}/api/trending/map-topics?count=9&scope=${jurisdiction}`, {
                 headers: {

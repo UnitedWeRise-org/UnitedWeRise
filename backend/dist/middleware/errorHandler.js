@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createError = exports.securityLogger = exports.requestLogger = exports.notFoundHandler = exports.errorHandler = void 0;
+const environment_1 = require("../utils/environment");
 // Global error handler
 const errorHandler = (err, req, res, next) => {
     // Log error details
@@ -25,7 +26,7 @@ const errorHandler = (err, req, res, next) => {
         path: req.url
     };
     // In development, include full error details
-    if (process.env.NODE_ENV === 'development') {
+    if ((0, environment_1.isDevelopment)()) {
         errorResponse.message = err.message;
         errorResponse.stack = err.stack;
     }

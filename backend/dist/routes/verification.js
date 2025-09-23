@@ -13,6 +13,7 @@ const emailService_1 = require("../services/emailService");
 const smsService_1 = require("../services/smsService");
 const captchaService_1 = require("../services/captchaService");
 const crypto_1 = __importDefault(require("crypto"));
+const environment_1 = require("../utils/environment");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Send email verification
@@ -119,9 +120,9 @@ router.post('/phone/send', auth_1.requireAuth, rateLimiting_1.verificationLimite
         const { phoneNumber, hcaptchaToken } = req.body;
         // Demo mode handling
         const demoPhones = ['+15551234567', '+15559876543', '+11234567890'];
-        const isDevelopment = process.env.NODE_ENV === 'development';
+        const isDevEnvironment = (0, environment_1.isDevelopment)();
         const isDemoPhone = demoPhones.includes(phoneNumber);
-        if (isDevelopment || isDemoPhone) {
+        if (isDevEnvironment || isDemoPhone) {
             console.log(`📱 DEMO MODE: Phone verification for ${phoneNumber}`);
             console.log(`📱 Use verification code: 123456`);
             // Store demo code (in production, this would be stored in a phoneVerification table)

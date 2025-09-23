@@ -13,6 +13,6 @@ export declare const prisma: PrismaClient<{
             url: string;
         };
     };
-    log: ("info" | "query" | "warn" | "error")[];
-}, "info" | "query" | "warn" | "error", import("@prisma/client/runtime/library").DefaultArgs>;
+    log: ("query" | "info" | "warn" | "error")[];
+}, "query" | "info" | "warn" | "error", import("@prisma/client/runtime/library").DefaultArgs>;
 //# sourceMappingURL=prisma.d.ts.map

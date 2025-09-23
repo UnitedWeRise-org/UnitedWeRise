@@ -6,6 +6,7 @@ const auth_1 = require("../utils/auth");
 ;
 const sessionManager_1 = require("../services/sessionManager");
 const metricsService_1 = require("../services/metricsService");
+const environment_1 = require("../utils/environment");
 const requireAuth = async (req, res, next) => {
     try {
         // Get token from cookie first, fallback to header for transition period
@@ -59,8 +60,8 @@ const requireAuth = async (req, res, next) => {
         if (sessionId) {
             await sessionManager_1.sessionManager.updateSessionActivity(sessionId);
         }
-        // Check if staging environment requires admin access
-        if (process.env.STAGING_ENVIRONMENT === 'true' && !req.user?.isAdmin) {
+        // Check if development environment requires admin access
+        if ((0, environment_1.isDevelopment)() && !req.user?.isAdmin) {
             return res.status(403).json({
                 error: 'This is a staging environment - admin access required.',
                 environment: 'staging'
@@ -83,16 +84,16 @@ const requireAdmin = async (req, res, next) => {
 exports.requireAdmin = requireAdmin;
 // Environment-aware authentication for staging
 const requireStagingAuth = async (req, res, next) => {
-    // If not in staging environment, proceed with normal auth
-    if (process.env.NODE_ENV !== 'staging' && process.env.STAGING_ENVIRONMENT !== 'true') {
+    // If not in development environment, proceed with normal auth
+    if (!(0, environment_1.isDevelopment)()) {
         return (0, exports.requireAuth)(req, res, next);
     }
-    // In staging environment, require admin access for all protected routes
+    // In development environment, require admin access for all protected routes
     await (0, exports.requireAuth)(req, res, async (authError) => {
         if (authError) {
             return next(authError);
         }
-        // After successful auth, check for admin status in staging
+        // After successful auth, check for admin status in development
         if (!req.user?.isAdmin) {
             return res.status(403).json({
                 error: 'This is a staging environment - admin access required.',

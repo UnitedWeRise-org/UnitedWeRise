@@ -5,11 +5,12 @@
  * Centralizes Azure service configuration and environment detection
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSemanticConfig = exports.isProduction = exports.isDevelopment = void 0;
+exports.getSemanticConfig = void 0;
 exports.getAzureConfig = getAzureConfig;
 exports.validateAzureConfig = validateAzureConfig;
+const environment_1 = require("../utils/environment");
 function getAzureConfig() {
-    const environment = (process.env.NODE_ENV || 'development');
+    const environment = (0, environment_1.getEnvironment)();
     // Azure OpenAI Configuration
     const openaiEnabled = !!(process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
     const openai = {
@@ -52,15 +53,11 @@ function validateAzureConfig() {
         errors
     };
 }
-// Environment-specific configuration
-const isDevelopment = () => process.env.NODE_ENV === 'development';
-exports.isDevelopment = isDevelopment;
-const isProduction = () => process.env.NODE_ENV === 'production';
-exports.isProduction = isProduction;
+// Environment-specific configuration (now using centralized functions)
 // Semantic features configuration
 const getSemanticConfig = () => ({
     enabled: process.env.ENABLE_SEMANTIC_TOPICS === 'true',
-    provider: process.env.SEMANTIC_PROVIDER || ((0, exports.isProduction)() ? 'azure' : 'local'),
+    provider: process.env.SEMANTIC_PROVIDER || ((0, environment_1.isProduction)() ? 'azure' : 'local'),
     batchSize: parseInt(process.env.SEMANTIC_BATCH_SIZE || '10'),
     similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || '0.60'),
     maxTopicsPerDiscovery: parseInt(process.env.MAX_TOPICS_PER_DISCOVERY || '10')
