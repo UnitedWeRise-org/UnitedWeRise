@@ -904,7 +904,7 @@ class OnboardingFlow {
         }
         
         try {
-            const API_BASE = 'https://api.unitedwerise.org/api';
+            const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             const token = localStorage.getItem('authToken');
             if (!token) {
                 console.log('No auth token found, skipping onboarding steps load');
@@ -931,7 +931,7 @@ class OnboardingFlow {
 
     async loadInterests() {
         try {
-            const API_BASE = 'https://api.unitedwerise.org/api';
+            const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/interests`);
             if (response.ok) {
                 const data = await response.json();
@@ -994,7 +994,7 @@ class OnboardingFlow {
         btn.textContent = 'Finding representatives...';
 
         try {
-            const API_BASE = 'https://api.unitedwerise.org/api';
+            const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/location/validate`, {
                 method: 'POST',
                 headers: {
@@ -1216,7 +1216,7 @@ class OnboardingFlow {
         }
 
         try {
-            const API_BASE = 'https://api.unitedwerise.org/api';
+            const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             await fetch(`${API_BASE}/onboarding/skip-step`, {
                 method: 'POST',
                 headers: {
@@ -1365,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('authToken');
     if (token) {
         try {
-            const API_BASE = 'https://api.unitedwerise.org/api';
+            const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/progress`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
