@@ -79,14 +79,15 @@ class BackendIntegration {
 
                 const response = await fetch(`${this.API_BASE}/auth/register`, {
                     method: 'POST',
+                    credentials: 'include', // Essential for cookie-based auth
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ 
-                        email, 
-                        username, 
-                        password, 
-                        firstName, 
+                    body: JSON.stringify({
+                        email,
+                        username,
+                        password,
+                        firstName,
                         lastName,
                         phoneNumber,
                         hcaptchaToken,
@@ -96,11 +97,11 @@ class BackendIntegration {
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    // Store CSRF token and user data (auth token now in httpOnly cookie)
+                if (response.ok && data.user) {
+                    // Store CSRF token (auth token now in httpOnly cookie set by backend)
                     window.csrfToken = data.csrfToken;
-                    authToken = data.token || 'cookie-based-auth'; // Keep for compatibility
-                    
+                    // No longer store JWT token in localStorage - using httpOnly cookies
+
                     // Show verification modal instead of immediately logging in
                     if (data.user.requiresEmailVerification || data.user.requiresPhoneVerification) {
                         closeAuthModal();
@@ -111,8 +112,8 @@ class BackendIntegration {
                         showAuthMessage('Registration successful!', 'success');
                     }
                 } else {
-                    showAuthMessage(data.error || 'Registration failed', 'error');
-                    
+                    showAuthMessage(data.error || data.message || 'Registration failed', 'error');
+
                     // Reset hCaptcha
                     this.resetHCaptcha();
                 }
