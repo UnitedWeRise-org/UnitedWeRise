@@ -2352,6 +2352,446 @@
             color: #333;
         }
 
+        /* External Candidates-specific styles */
+        .external-analytics {
+            margin-bottom: 2rem;
+        }
+
+        .external-analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .external-candidates-tabs-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .external-candidates-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            overflow-x: auto;
+        }
+
+        .external-tab-content {
+            padding: 2rem;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .real-time-controls {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ff4444;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .toggle-slider {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        input[type="checkbox"]:checked + .toggle-slider {
+            background: #ff4444;
+        }
+
+        input[type="checkbox"]:checked + .toggle-slider::before {
+            transform: translateX(26px);
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .data-source-health {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .health-item {
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #ddd;
+        }
+
+        .health-item.healthy {
+            border-left-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .health-item.warning {
+            border-left-color: #ffc107;
+            background: #fffdf8;
+        }
+
+        .health-item.error {
+            border-left-color: #dc3545;
+            background: #fff8f8;
+        }
+
+        .health-item.offline {
+            border-left-color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        .external-filter-controls {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .external-quick-actions {
+            margin-top: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-top: 3px solid #007bff;
+        }
+
+        .external-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .external-table th,
+        .external-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .external-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .external-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .vote-tracking-row {
+            border-left: 3px solid transparent;
+        }
+
+        .vote-tracking-row:hover {
+            border-left-color: #007bff;
+        }
+
+        .campaign-finance-row {
+            border-left: 3px solid transparent;
+        }
+
+        .campaign-finance-row:hover {
+            border-left-color: #28a745;
+        }
+
+        .news-tracking-row {
+            border-left: 3px solid transparent;
+        }
+
+        .news-tracking-row:hover {
+            border-left-color: #ffc107;
+        }
+
+        .polling-data-row {
+            border-left: 3px solid transparent;
+        }
+
+        .polling-data-row:hover {
+            border-left-color: #6f42c1;
+        }
+
+        .tab-badge.realtime {
+            background: linear-gradient(45deg, #ff4444, #ff6666);
+            animation: pulse-realtime 2s infinite;
+        }
+
+        @keyframes pulse-realtime {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .votes-col,
+        .percentage-col,
+        .amount-col {
+            text-align: right;
+        }
+
+        .vote-count {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .current-votes {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .vote-change {
+            font-size: 0.85em;
+        }
+
+        .vote-change.up {
+            color: #28a745;
+        }
+
+        .vote-change.down {
+            color: #dc3545;
+        }
+
+        .vote-percentage {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .percentage-value {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .percentage-bar {
+            width: 60px;
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .percentage-fill {
+            height: 100%;
+            background: linear-gradient(to right, #007bff, #0056b3);
+            transition: width 0.3s ease;
+        }
+
+        .sentiment-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .sentiment-badge.positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .sentiment-badge.negative {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .sentiment-badge.neutral {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .engagement-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .engagement-badge.high {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .engagement-badge.medium {
+            background: #feca57;
+            color: #333;
+        }
+
+        .engagement-badge.low {
+            background: #a4b0be;
+            color: white;
+        }
+
+        .topic-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .topic-tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.125rem 0.375rem;
+            border-radius: 8px;
+            font-size: 0.75em;
+        }
+
+        .more-topics {
+            background: #6c757d;
+            color: white;
+            padding: 0.125rem 0.375rem;
+            border-radius: 8px;
+            font-size: 0.75em;
+        }
+
+        .verification.verified {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .verification.disputed {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .verification.unverified {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .verification.pending {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .compliance-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .compliance-badge.compliant {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .compliance-badge.non-compliant {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .last-check {
+            font-size: 0.75em;
+            color: #6c757d;
+        }
+
+        .fec-btn {
+            background: #17a2b8;
+            border-color: #17a2b8;
+        }
+
+        .fec-btn:hover {
+            background: #138496;
+            border-color: #117a8b;
+        }
+
+        .news-btn {
+            background: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .news-btn:hover {
+            background: #e0a800;
+            border-color: #d39e00;
+        }
+
+        .polling-btn {
+            background: #6f42c1;
+            border-color: #6f42c1;
+        }
+
+        .polling-btn:hover {
+            background: #5a32a3;
+            border-color: #512e91;
+        }
+
+        .alert-btn {
+            background: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .alert-btn:hover {
+            background: #c82333;
+            border-color: #bd2130;
+        }
+
+        .compliance-btn {
+            background: #fd7e14;
+            border-color: #fd7e14;
+        }
+
+        .compliance-btn:hover {
+            background: #e66100;
+            border-color: #d35400;
+        }
+
         /* Modal styles for verification and profile editing */
         .modal-overlay {
             position: fixed;
@@ -3665,6 +4105,108 @@
                 flex-wrap: wrap;
             }
         }
+        /* AI Insights Specific Styles */
+        .ai-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .ai-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .ai-panel h3 {
+            margin: 0 0 1rem 0;
+            color: #1f2937;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .filter-group select {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .toggle-slider {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #d1d5db;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: #3b82f6;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        @media (max-width: 768px) {
+            .ai-insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -3714,10 +4256,13 @@
             <button class="nav-button" data-section="content">Content</button>
             <button class="nav-button" data-section="reports">Reports</button>
             <button class="nav-button" data-section="candidates">Candidates</button>
+            <button class="nav-button" data-section="external-candidates">🌐 External Candidates</button>
             <button class="nav-button" data-section="analytics">Analytics</button>
+            <button class="nav-button" data-section="ai-insights">🤖 AI Insights</button>
             <button class="nav-button" data-section="motd">MOTD</button>
             <button class="nav-button" data-section="deployment">🚀 Deployment</button>
             <button class="nav-button" data-section="system">System</button>
+            <button class="nav-button" data-section="errors">🚨 Errors</button>
         </div>
 
         <!-- Overview Section -->
@@ -4194,6 +4739,170 @@
             <div id="candidatesError" class="error-message" style="display: none;"></div>
         </div>
 
+        <!-- External Candidates Section -->
+        <div id="external-candidates" class="dashboard-section">
+            <div class="section-header">
+                <h2>🌐 External Candidate Tracking</h2>
+                <div class="section-actions">
+                    <button id="refreshExternalCandidatesBtn" class="action-btn primary">🔄 Refresh External Data</button>
+                    <button id="syncAllDataSourcesBtn" class="action-btn secondary">🔗 Sync All Sources</button>
+                    <button id="exportExternalDataBtn" class="action-btn secondary">📊 Export Data</button>
+                    <button id="validateExternalDataBtn" class="action-btn secondary">✅ Validate Data</button>
+                    <span id="externalCandidatesLastRefreshTime" class="last-refresh">Last updated: --</span>
+                </div>
+            </div>
+
+            <!-- Real-time Updates Toggle -->
+            <div class="real-time-controls">
+                <label class="toggle-container">
+                    <input type="checkbox" id="realTimeUpdatesToggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">🔴 Real-time Updates</span>
+                </label>
+            </div>
+
+            <!-- External Candidates Analytics Dashboard -->
+            <div id="externalCandidatesAnalytics" class="external-analytics">
+                <!-- Analytics will be populated by ExternalCandidatesController -->
+            </div>
+
+            <!-- Data Source Health Status -->
+            <div id="dataSourceHealthStatus" class="data-source-health">
+                <!-- Health status will be populated by ExternalCandidatesController -->
+            </div>
+
+            <!-- Multi-Tab Navigation -->
+            <div id="externalCandidatesTabContainer" class="external-candidates-tabs-container">
+                <div class="external-candidates-tabs">
+                    <button class="tab-button active" data-tab="vote-tracking">
+                        🗳️ Vote Tracking
+                        <span class="tab-badge realtime" id="voteTrackingBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="campaign-finance">
+                        💰 Campaign Finance
+                        <span class="tab-badge" id="campaignFinanceBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="news-tracking">
+                        📰 News Tracking
+                        <span class="tab-badge" id="newsTrackingBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="polling-data">
+                        📊 Polling Data
+                        <span class="tab-badge" id="pollingDataBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="data-sources">
+                        🔌 Data Sources
+                        <span class="tab-badge" id="dataSourcesBadge">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="external-filter-controls">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="externalOfficeFilter">Office:</label>
+                        <select id="externalOfficeFilter">
+                            <option value="all">All Offices</option>
+                            <option value="president">President</option>
+                            <option value="senate">Senate</option>
+                            <option value="house">House</option>
+                            <option value="governor">Governor</option>
+                            <option value="state-legislature">State Legislature</option>
+                            <option value="local">Local</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalStateFilter">State:</label>
+                        <select id="externalStateFilter">
+                            <option value="all">All States</option>
+                            <option value="AL">Alabama</option>
+                            <option value="CA">California</option>
+                            <option value="FL">Florida</option>
+                            <option value="TX">Texas</option>
+                            <option value="NY">New York</option>
+                            <!-- Add more states as needed -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalPartyFilter">Party:</label>
+                        <select id="externalPartyFilter">
+                            <option value="all">All Parties</option>
+                            <option value="democratic">Democratic</option>
+                            <option value="republican">Republican</option>
+                            <option value="independent">Independent</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalDataSourceFilter">Data Source:</label>
+                        <select id="externalDataSourceFilter">
+                            <option value="all">All Sources</option>
+                            <option value="fec">FEC</option>
+                            <option value="news">News APIs</option>
+                            <option value="polling">Polling Organizations</option>
+                            <option value="election-offices">Election Offices</option>
+                            <option value="social-media">Social Media</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalCandidatesSearch">Search:</label>
+                        <input type="text" id="externalCandidatesSearch" placeholder="Search candidates, offices, or sources...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content Containers -->
+            <div class="external-tab-content">
+                <!-- Vote Tracking Tab -->
+                <div id="voteTrackingContent" class="tab-content active">
+                    <div id="voteTrackingTable" class="table-container">
+                        <!-- Vote tracking table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Campaign Finance Tab -->
+                <div id="campaignFinanceContent" class="tab-content">
+                    <div id="campaignFinanceTable" class="table-container">
+                        <!-- Campaign finance table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- News Tracking Tab -->
+                <div id="newsTrackingContent" class="tab-content">
+                    <div id="newsTrackingTable" class="table-container">
+                        <!-- News tracking table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Polling Data Tab -->
+                <div id="pollingDataContent" class="tab-content">
+                    <div id="pollingDataTable" class="table-container">
+                        <!-- Polling data table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Data Sources Tab -->
+                <div id="dataSourcesContent" class="tab-content">
+                    <div id="dataSourcesTable" class="table-container">
+                        <!-- Data sources table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="external-quick-actions">
+                <button id="syncFECBtn" class="action-btn fec-btn">📋 Sync FEC Data</button>
+                <button id="syncNewsBtn" class="action-btn news-btn">📰 Sync News Data</button>
+                <button id="syncPollingBtn" class="action-btn polling-btn">📊 Sync Polling Data</button>
+                <button id="generateAlertBtn" class="action-btn alert-btn">🚨 Generate Alerts</button>
+                <button id="complianceCheckBtn" class="action-btn compliance-btn">⚖️ Compliance Check</button>
+            </div>
+
+            <!-- Error Display -->
+            <div id="externalCandidatesError" class="error-message" style="display: none;"></div>
+        </div>
+
         <!-- Analytics Section -->
         <div id="analytics" class="dashboard-section">
             <div class="analytics-header">
@@ -4417,6 +5126,185 @@
 
             <!-- Error Display -->
             <div id="analyticsError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- AI Insights Section -->
+        <div id="ai-insights" class="dashboard-section">
+            <div class="section-header">
+                <h2>🤖 AI Insights & Analytics</h2>
+                <div class="section-controls">
+                    <button id="runAIAnalysis" class="action-btn primary">⚡ Run Analysis</button>
+                    <button id="generateAIReport" class="action-btn secondary">📊 Generate Report</button>
+                    <button id="refreshAIInsights" class="action-btn">🔄 Refresh</button>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="aiRealTimeToggle">
+                        <span class="toggle-slider"></span>
+                        Real-time
+                    </label>
+                </div>
+            </div>
+
+            <!-- AI Metrics Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalSuggestions">-</div>
+                    <div class="stat-label">User Suggestions</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="implementedSuggestions">-</div>
+                    <div class="stat-label">Implemented</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="aiModerationActions">-</div>
+                    <div class="stat-label">AI Moderation Actions</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="aiAccuracy">-</div>
+                    <div class="stat-label">AI Accuracy</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="topicsDiscovered">-</div>
+                    <div class="stat-label">Topics Discovered</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="sentimentScore">-</div>
+                    <div class="stat-label">Avg Sentiment</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="predictionAccuracy">-</div>
+                    <div class="stat-label">Prediction Accuracy</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="contentClassified">-</div>
+                    <div class="stat-label">Content Classified</div>
+                    <div class="metric-trend"></div>
+                </div>
+            </div>
+
+            <!-- AI Insights Filter Controls -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="suggestionCategoryFilter">Category:</label>
+                    <select id="suggestionCategoryFilter">
+                        <option value="all">All Categories</option>
+                        <option value="ui_ux">UI/UX Improvements</option>
+                        <option value="features">Feature Requests</option>
+                        <option value="performance">Performance Issues</option>
+                        <option value="bugs">Bug Reports</option>
+                        <option value="moderation">Moderation Feedback</option>
+                        <option value="content">Content Strategy</option>
+                        <option value="engagement">User Engagement</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="suggestionStatusFilter">Status:</label>
+                    <select id="suggestionStatusFilter">
+                        <option value="all">All Status</option>
+                        <option value="new">New</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="implemented">Implemented</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="in_progress">In Progress</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="aiTimeRange">Time Range:</label>
+                    <select id="aiTimeRange">
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d" selected>Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
+                        <option value="1y">Last year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="aiAnalysisType">Analysis Type:</label>
+                    <select id="aiAnalysisType">
+                        <option value="all">All Types</option>
+                        <option value="content">Content Analysis</option>
+                        <option value="sentiment">Sentiment Analysis</option>
+                        <option value="topics">Topic Discovery</option>
+                        <option value="predictions">Predictive Analytics</option>
+                        <option value="recommendations">AI Recommendations</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- AI Insights Dashboard Grid -->
+            <div class="ai-insights-grid">
+                <!-- Content Analysis Panel -->
+                <div class="ai-panel">
+                    <h3>📊 Content Analysis</h3>
+                    <div id="contentAnalysisContainer">
+                        <div class="loading">Loading content analysis...</div>
+                    </div>
+                    <canvas id="contentClassificationChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Topic Discovery Panel -->
+                <div class="ai-panel">
+                    <h3>🎯 Topic Discovery</h3>
+                    <div id="topicDiscoveryContainer">
+                        <div class="loading">Loading topic discovery...</div>
+                    </div>
+                    <canvas id="topicChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Sentiment Analysis Panel -->
+                <div class="ai-panel">
+                    <h3>📈 Sentiment Analysis</h3>
+                    <div id="sentimentAnalysisContainer">
+                        <div class="loading">Loading sentiment analysis...</div>
+                    </div>
+                    <canvas id="sentimentChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Predictive Analytics Panel -->
+                <div class="ai-panel">
+                    <h3>🔮 Predictive Analytics</h3>
+                    <div id="predictiveAnalyticsContainer">
+                        <div class="loading">Loading predictive analytics...</div>
+                    </div>
+                    <canvas id="engagementPredictionChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- AI Recommendations Panel -->
+                <div class="ai-panel">
+                    <h3>💡 AI Recommendations</h3>
+                    <div id="aiRecommendationsContainer">
+                        <div class="loading">Loading AI recommendations...</div>
+                    </div>
+                </div>
+
+                <!-- AI Model Performance Panel -->
+                <div class="ai-panel">
+                    <h3>🎯 Model Performance</h3>
+                    <div id="aiModelPerformanceContainer">
+                        <div class="loading">Loading model performance...</div>
+                    </div>
+                    <canvas id="aiAccuracyChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- AI Insights Report Container -->
+            <div id="aiReportContainer" style="margin-top: 2rem;">
+                <!-- Generated reports will appear here -->
+            </div>
+
+            <!-- Last Refresh Info -->
+            <div class="section-footer">
+                <span>Last refreshed: <span id="aiLastRefreshTime">-</span></span>
+                <span>Real-time updates: <span id="aiRealTimeStatus">Disabled</span></span>
+            </div>
+
+            <!-- Error Display -->
+            <div id="aiInsightsError" class="error-message" style="display: none;"></div>
         </div>
 
         <!-- MOTD Section -->
@@ -4832,8 +5720,320 @@ Loading deployment status...
 
         <!-- System Section -->
         <div id="system" class="dashboard-section">
-            <h2>System Administration</h2>
-            <p>System administration features will be implemented by SystemController module.</p>
+            <h2>🖥️ System Administration</h2>
+
+            <!-- System Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">System Status</div>
+                    <div class="stat-number" id="systemStatus">Unknown</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">System Uptime</div>
+                    <div class="stat-number" id="systemUptime">0h</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Maintenance Mode</div>
+                    <div class="stat-number" id="maintenanceStatus">Inactive</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Update</div>
+                    <div class="stat-number" id="lastSystemUpdate">Never</div>
+                </div>
+            </div>
+
+            <!-- System Administration Controls -->
+            <div class="admin-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+                <!-- Configuration Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">⚙️ Configuration Management</h3>
+                    <button id="configUpdateBtn" class="action-btn" style="margin-bottom: 0.5rem;">Update Configuration</button>
+                    <button id="configAuditBtn" class="action-btn" style="margin-bottom: 0.5rem;">Configuration Audit</button>
+                    <button id="configBackupBtn" class="action-btn">Backup Configuration</button>
+                </div>
+
+                <!-- Database Administration -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">💾 Database Administration</h3>
+                    <button id="dbManagementBtn" class="action-btn" style="margin-bottom: 0.5rem;">Database Management</button>
+                    <button id="dbOptimizeBtn" class="action-btn" style="margin-bottom: 0.5rem;">Optimize Database</button>
+                    <button id="dbBackupBtn" class="action-btn">Database Backup</button>
+                </div>
+
+                <!-- Cache Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🚀 Cache Management</h3>
+                    <button id="cacheControlBtn" class="action-btn" style="margin-bottom: 0.5rem;">Cache Control</button>
+                    <button id="cacheInvalidateBtn" class="action-btn" style="margin-bottom: 0.5rem;">Invalidate Cache</button>
+                    <button id="cacheWarmBtn" class="action-btn">Warm Cache</button>
+                </div>
+
+                <!-- System Monitoring -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📊 System Monitoring</h3>
+                    <button id="systemHealthBtn" class="action-btn" style="margin-bottom: 0.5rem;">System Health</button>
+                    <button id="resourceMonitorBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resource Monitor</button>
+                    <button id="systemDiagnosticsBtn" class="action-btn">System Diagnostics</button>
+                </div>
+
+                <!-- Maintenance & Backup -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🛠️ Maintenance & Backup</h3>
+                    <button id="maintenanceModeBtn" class="action-btn" style="margin-bottom: 0.5rem;">Enable Maintenance</button>
+                    <button id="backupRestoreBtn" class="action-btn" style="margin-bottom: 0.5rem;">Backup & Restore</button>
+                    <button id="performanceTuningBtn" class="action-btn">Performance Tuning</button>
+                </div>
+
+                <!-- System Actions -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🔄 System Actions</h3>
+                    <button id="refreshSystemBtn" class="action-btn" style="margin-bottom: 0.5rem;">🔄 Refresh Status</button>
+                    <button id="systemRestartBtn" class="action-btn danger" style="margin-bottom: 0.5rem;">⚠️ System Restart</button>
+                    <button id="emergencyModeBtn" class="action-btn danger">🚨 Emergency Mode</button>
+                </div>
+            </div>
+
+            <!-- System Status Displays -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+                <!-- System Health Status -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🏥 System Health</h3>
+                    <div id="systemHealthStatus" style="font-family: monospace; font-size: 0.9rem;">
+                        <div style="color: #666;">Loading system health data...</div>
+                    </div>
+                </div>
+
+                <!-- Configuration Status -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">⚙️ Configuration</h3>
+                    <div id="systemConfigStatus" style="font-family: monospace; font-size: 0.9rem;">
+                        <div style="color: #666;">Loading configuration data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics Display -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📈 Performance Metrics</h3>
+                <div id="systemPerformanceStatus" style="font-family: monospace; font-size: 0.9rem;">
+                    <div style="color: #666;">Loading performance metrics...</div>
+                </div>
+            </div>
+
+            <!-- System Console -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">💻 System Console</h3>
+                <div id="systemConsole" style="background: #1e1e1e; color: #00ff00; font-family: 'Courier New', monospace; font-size: 0.9rem; padding: 1rem; border-radius: 4px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
+                    🖥️ System Administration Console
+================================
+
+📅 Initializing system administration interface...
+⚡ SystemController loading...
+🔄 Waiting for system data...
+
+Use system action buttons for detailed management
+Auto-refresh enabled every 60 seconds
+                </div>
+            </div>
+        </div>
+
+        <!-- Errors Section -->
+        <div id="errors" class="dashboard-section">
+            <h2>🚨 Error Monitoring & Tracking</h2>
+
+            <!-- Error Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Errors (24h)</div>
+                    <div class="stat-number" id="totalErrors">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Critical Errors</div>
+                    <div class="stat-number" id="criticalErrors" style="color: #d32f2f;">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Error Rate</div>
+                    <div class="stat-number" id="errorRate">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Error</div>
+                    <div class="stat-number" id="lastErrorTime" style="font-size: 0.9rem;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Error Management Controls -->
+            <div class="admin-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+                <!-- Error Filtering -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #d32f2f;">🔍 Error Filtering</h3>
+                    <div style="display: grid; gap: 0.5rem;">
+                        <select id="errorSeverityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <select id="errorTypeFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Types</option>
+                            <option value="client">Client-side</option>
+                            <option value="server">Server-side</option>
+                            <option value="api">API</option>
+                            <option value="database">Database</option>
+                            <option value="auth">Authentication</option>
+                            <option value="network">Network</option>
+                        </select>
+                        <select id="errorTimeframeFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="1h">Last Hour</option>
+                            <option value="6h">Last 6 Hours</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                        <select id="errorStatusFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Statuses</option>
+                            <option value="new">New</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <button id="errorSeverityFilterBtn" class="action-btn">Apply Filters</button>
+                    </div>
+                </div>
+
+                <!-- Error Analysis -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #ff9800;">📊 Error Analysis</h3>
+                    <button id="errorDetailsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Detailed Analysis</button>
+                    <button id="errorTrendsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Trends & Patterns</button>
+                    <button id="errorClassificationBtn" class="action-btn" style="margin-bottom: 0.5rem;">Auto Classification</button>
+                    <button id="errorImpactBtn" class="action-btn">Impact Assessment</button>
+                </div>
+
+                <!-- Error Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🛠️ Error Management</h3>
+                    <button id="errorResolutionBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resolve Selected</button>
+                    <button id="errorWorkflowBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resolution Workflow</button>
+                    <button id="errorAlertsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Alert Configuration</button>
+                    <button id="errorReportBtn" class="action-btn">Generate Report</button>
+                </div>
+
+                <!-- Advanced Analytics -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #9c27b0;">🔬 Advanced Analytics</h3>
+                    <button id="errorPerformanceBtn" class="action-btn" style="margin-bottom: 0.5rem;">Performance Correlation</button>
+                    <button id="errorUserCorrelationBtn" class="action-btn" style="margin-bottom: 0.5rem;">User Correlation</button>
+                    <button id="realTimeToggleBtn" class="action-btn" style="margin-bottom: 0.5rem; background-color: #1976d2;">Enable Real-time</button>
+                    <button id="refreshErrorsBtn" class="action-btn">Refresh Data</button>
+                </div>
+
+            </div>
+
+            <!-- Error Dashboard Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+                <!-- Error Analytics Panel -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📈 Error Analytics</h3>
+                    <div id="errorAnalyticsStatus" style="font-size: 0.9rem;">
+                        Loading error analytics...
+                    </div>
+                </div>
+
+                <!-- Error Trends Panel -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #ff9800;">📊 Error Trends</h3>
+                    <div id="errorTrendsStatus" style="font-size: 0.9rem;">
+                        Loading error trends...
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Error Logs Table -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #d32f2f;">📋 Recent Error Logs</h3>
+                <div id="errorLogsTable" style="overflow-x: auto;">
+                    Loading error logs...
+                </div>
+            </div>
+
+            <!-- Error Console -->
+            <div style="background: #1e1e1e; color: #f0f0f0; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #4fc3f7;">💻 Error Monitoring Console</h3>
+                <pre id="errorsConsole" style="background: transparent; border: none; color: inherit; margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4;">Loading error monitoring console...</pre>
+            </div>
+
+            <!-- Error Classification Legend -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🏷️ Error Classification Guide</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="border-left: 4px solid #d32f2f; padding-left: 1rem;">
+                        <strong style="color: #d32f2f;">🚨 Critical</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">System down, data loss, security breach</p>
+                    </div>
+                    <div style="border-left: 4px solid #ff9800; padding-left: 1rem;">
+                        <strong style="color: #ff9800;">⚠️ High</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">Core features broken, significant user impact</p>
+                    </div>
+                    <div style="border-left: 4px solid #1976d2; padding-left: 1rem;">
+                        <strong style="color: #1976d2;">⚡ Medium</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">Minor features affected, some users impacted</p>
+                    </div>
+                    <div style="border-left: 4px solid #388e3c; padding-left: 1rem;">
+                        <strong style="color: #388e3c;">ℹ️ Low</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">UI glitches, minimal user impact</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Monitoring Features -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🎯 Available Features</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #d32f2f;">Error Classification</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Automated error categorization</li>
+                            <li>Stack trace analysis</li>
+                            <li>Error pattern recognition</li>
+                            <li>Browser & device correlation</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #ff9800;">Real-time Monitoring</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Live error stream</li>
+                            <li>Instant notifications</li>
+                            <li>Threshold-based alerts</li>
+                            <li>Geographic error tracking</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1976d2;">Impact Analysis</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>User experience impact</li>
+                            <li>Performance correlation</li>
+                            <li>Business impact assessment</li>
+                            <li>Resolution time tracking</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #9c27b0;">Advanced Analytics</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Error trend analysis</li>
+                            <li>Predictive error modeling</li>
+                            <li>Root cause analysis</li>
+                            <li>Resolution workflow optimization</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -4852,9 +6052,13 @@ Loading deployment status...
     <script src="src/modules/admin/controllers/SecurityController.js"></script>
     <script src="src/modules/admin/controllers/ReportsController.js"></script>
     <script src="src/modules/admin/controllers/CandidatesController.js"></script>
+    <script src="src/modules/admin/controllers/ExternalCandidatesController.js"></script>
     <script src="src/modules/admin/controllers/AnalyticsController.js"></script>
+    <script src="src/modules/admin/controllers/AIInsightsController.js"></script>
     <script src="src/modules/admin/controllers/MOTDController.js"></script>
     <script src="src/modules/admin/controllers/DeploymentController.js"></script>
+    <script src="src/modules/admin/controllers/SystemController.js"></script>
+    <script src="src/modules/admin/controllers/ErrorsController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script src="src/modules/admin/AdminModuleLoader.js"></script>

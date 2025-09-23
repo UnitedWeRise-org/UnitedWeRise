@@ -20,8 +20,12 @@ class AdminModuleLoader {
             'ReportsController',
             'CandidatesController',
             'AnalyticsController',
+            'AIInsightsController',
             'MOTDController',
-            'DeploymentController'
+            'DeploymentController',
+            'SystemController',
+            'ErrorsController',
+            'ExternalCandidatesController'
         ];
         this.isInitialized = false;
         this.dependencies = {
@@ -35,8 +39,12 @@ class AdminModuleLoader {
             'ReportsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'CandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'AnalyticsController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
+            'AIInsightsController': ['AdminAPI', 'AdminState', 'adminDebugLog'],
             'MOTDController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'DeploymentController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'DeploymentController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'SystemController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'ErrorsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
         };
 
         // Bind methods
@@ -230,6 +238,15 @@ class AdminModuleLoader {
                 this.modules.set('AnalyticsController', window.analyticsController);
                 break;
 
+            case 'AIInsightsController':
+                if (!window.AIInsightsController) {
+                    throw new Error('AIInsightsController class not found in global scope');
+                }
+                window.aiInsightsController = new window.AIInsightsController();
+                await window.aiInsightsController.init();
+                this.modules.set('AIInsightsController', window.aiInsightsController);
+                break;
+
             case 'MOTDController':
                 if (!window.MOTDController) {
                     throw new Error('MOTDController class not found in global scope');
@@ -246,6 +263,33 @@ class AdminModuleLoader {
                 window.deploymentController = new window.DeploymentController();
                 await window.deploymentController.init();
                 this.modules.set('DeploymentController', window.deploymentController);
+                break;
+
+            case 'SystemController':
+                if (!window.SystemController) {
+                    throw new Error('SystemController class not found in global scope');
+                }
+                window.systemController = new window.SystemController();
+                await window.systemController.init();
+                this.modules.set('SystemController', window.systemController);
+                break;
+
+            case 'ErrorsController':
+                if (!window.ErrorsController) {
+                    throw new Error('ErrorsController class not found in global scope');
+                }
+                window.errorsController = new window.ErrorsController();
+                await window.errorsController.init();
+                this.modules.set('ErrorsController', window.errorsController);
+                break;
+
+            case 'ExternalCandidatesController':
+                if (!window.ExternalCandidatesController) {
+                    throw new Error('ExternalCandidatesController class not found in global scope');
+                }
+                window.externalCandidatesController = new window.ExternalCandidatesController();
+                await window.externalCandidatesController.init();
+                this.modules.set('ExternalCandidatesController', window.externalCandidatesController);
                 break;
 
             default:
