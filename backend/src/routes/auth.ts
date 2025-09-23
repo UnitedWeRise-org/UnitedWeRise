@@ -212,6 +212,27 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
 
     const token = generateToken(user.id);
 
+    // Set httpOnly authentication cookie (matching login pattern)
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: requireSecureCookies(),
+      sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/',
+      domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
+    });
+
+    // Generate and set CSRF token
+    const csrfToken = require('crypto').randomBytes(32).toString('hex');
+    res.cookie('csrf-token', csrfToken, {
+      httpOnly: false, // CSRF token needs to be readable by JavaScript
+      secure: requireSecureCookies(),
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/',
+      domain: '.unitedwerise.org'
+    });
+
     // Track user registration metrics
     metricsService.trackUserRegistration(user.id);
     if (emailSent) {
@@ -225,7 +246,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
         requiresEmailVerification: !user.emailVerified,
         requiresPhoneVerification: !!phoneNumber && !user.phoneVerified
       },
-      token
+      csrfToken // Return CSRF token for frontend use (not JWT token)
     });
   } catch (error) {
     console.error('Registration error:', error);

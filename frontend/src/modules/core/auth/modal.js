@@ -268,17 +268,19 @@ export async function handleRegister() {
             body: JSON.stringify(requestBody)
         });
         
-        if (response.success && response.user) {
+        if (response.user) {
+            // Registration now uses cookie-based auth (matching login pattern)
+            // The backend has already set the httpOnly authToken cookie
             // Use unified auth manager for registration success
             unifiedAuthManager.setAuthenticatedUser(response.user, response.csrfToken);
-            
+
             showAuthMessage('Account created successfully!', 'success', 'register');
-            
+
             // Close modal after short delay
             setTimeout(() => {
                 closeAuthModal();
             }, 1000);
-            
+
             console.log('✅ Registration successful via unified manager:', response.user.username);
         } else {
             showAuthMessage(response.message || 'Registration failed', 'error', 'register');
