@@ -211,37 +211,61 @@ export async function handleRegister() {
     const email = document.getElementById('registerEmail')?.value;
     const password = document.getElementById('registerPassword')?.value;
     const firstName = document.getElementById('registerFirstName')?.value;
+    const lastName = document.getElementById('registerLastName')?.value;
     const username = document.getElementById('registerUsername')?.value;
-    
+
     if (!email || !password || !firstName || !username) {
         showAuthMessage('Please fill in all fields', 'error', 'register');
         return;
     }
-    
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         showAuthMessage('Please enter a valid email address', 'error', 'register');
         return;
     }
-    
+
     // Password strength validation
     if (password.length < 8) {
         showAuthMessage('Password must be at least 8 characters long', 'error', 'register');
         return;
     }
-    
+
+    // Get hCaptcha token
+    let hcaptchaToken = null;
+    try {
+        if (typeof hcaptcha !== 'undefined') {
+            hcaptchaToken = hcaptcha.getResponse('hcaptcha-register');
+        }
+    } catch (captchaError) {
+        console.log('hCaptcha not available or local development mode');
+    }
+
+    // Check if we need captcha (skip for local development)
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalDev && !hcaptchaToken) {
+        showAuthMessage('Please complete the captcha verification', 'error', 'register');
+        return;
+    }
+
     try {
         showAuthMessage('Creating account...', 'info', 'register');
-        
+
+        const requestBody = {
+            email,
+            password,
+            firstName,
+            username
+        };
+
+        // Add optional fields
+        if (lastName) requestBody.lastName = lastName;
+        if (hcaptchaToken) requestBody.hcaptchaToken = hcaptchaToken;
+
         const response = await apiClient.call('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({
-                email,
-                password,
-                firstName,
-                username
-            })
+            body: JSON.stringify(requestBody)
         });
         
         if (response.success && response.user) {
