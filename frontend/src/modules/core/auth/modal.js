@@ -237,7 +237,15 @@ export async function handleRegister() {
     let hcaptchaToken = null;
     try {
         if (typeof hcaptcha !== 'undefined') {
-            hcaptchaToken = hcaptcha.getResponse('hcaptcha-register');
+            // Try to get widget ID first, then fall back to no parameters
+            const widget = document.getElementById('hcaptcha-register');
+            const widgetId = widget ? widget.getAttribute('data-hcaptcha-widget-id') : null;
+
+            if (widgetId) {
+                hcaptchaToken = hcaptcha.getResponse(widgetId);
+            } else {
+                hcaptchaToken = hcaptcha.getResponse();
+            }
         }
     } catch (captchaError) {
         console.log('hCaptcha not available or local development mode');
