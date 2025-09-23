@@ -996,6 +996,58 @@ www.unitedwerise.org       → production     → production
 
 **CRITICAL**: All environment detection MUST use these centralized functions. Direct NODE_ENV or hostname checks are prohibited.
 
+### 🚀 ES6 Module System (Added September 23, 2025)
+**ARCHITECTURE**: Modern JavaScript module system with proper dependency management
+
+**Migration Completed**: Entire frontend converted from legacy script loading to ES6 modules
+
+#### Module Loading Architecture
+```html
+<!-- OLD: Legacy script loading (20+ individual scripts) -->
+<script src="src/config/api.js"></script>
+<script src="src/js/websocket-client.js"></script>
+<script src="src/components/Profile.js"></script>
+<!-- ... many more scripts with global pollution -->
+
+<!-- NEW: Modern ES6 module system -->
+<script type="module" src="src/js/main.js"></script>
+```
+
+#### Module Dependency Chain
+```javascript
+// main.js - Single entry point
+import '../utils/environment.js';           // Core utilities
+import '../config/api.js';                  // Configuration
+import '../integrations/backend-integration.js'; // Integration layer
+import '../components/Profile.js';          // Components
+import './app-initialization.js';           // Orchestration
+```
+
+#### ES6 Module Standards
+```javascript
+// Standard import pattern
+import { getEnvironment, getApiBaseUrl } from '../utils/environment.js';
+
+// Standard export pattern
+export { ClassName, functionName };
+
+// Legacy compatibility during transition
+window.ClassName = ClassName;
+```
+
+#### Key Benefits
+- ✅ **Proper Dependency Management**: Explicit import/export declarations
+- ✅ **No Global Pollution**: Clean module encapsulation
+- ✅ **Modern Standards**: Industry-standard JavaScript practices
+- ✅ **Better Performance**: Tree shaking and optimized loading
+- ✅ **Enhanced IDE Support**: Better autocomplete and error detection
+
+#### Development Guidelines
+1. **New modules**: Use ES6 import/export syntax
+2. **Import order**: Core → Config → Integration → Components → App
+3. **Legacy compatibility**: Maintain global exports during transition
+4. **File extensions**: Always include `.js` in import paths
+
 ### 📋 Daily Development Workflow (Streamlined)
 ```bash
 # Complete development session (script with manual fallback)
@@ -1050,8 +1102,25 @@ fetch('/api/endpoint', {
 })
 
 # Environment detection verification
-# Frontend: Check console for window.EnvironmentUtils.logInfo()
+# Frontend: Check console for environment logs
 # Backend: Check /health endpoint for environment info
+
+# ES6 Module Development (NEW)
+# Create new module file
+touch frontend/src/components/NewComponent.js
+
+# Add ES6 module structure
+echo 'import { getEnvironment } from "../utils/environment.js";
+export class NewComponent {
+  // implementation
+}
+window.NewComponent = NewComponent; // Legacy compatibility' > frontend/src/components/NewComponent.js
+
+# Add to main.js dependency chain
+echo "import '../components/NewComponent.js';" >> frontend/src/js/main.js
+
+# Verify module loads correctly
+# Check browser console for module loading messages
 ```
 
 ### 🛡️ Database Safety (Added September 23, 2025)

@@ -399,6 +399,128 @@ Production Environment:
 
 ---
 
+## 🚀 ES6 MODULE SYSTEM {#es6-module-system}
+**Last Updated**: September 23, 2025
+**Status**: ✅ PRODUCTION READY
+
+### Modern JavaScript Architecture
+
+**MAJOR UPGRADE**: Complete migration from legacy script loading to modern ES6 module system, implementing industry-standard JavaScript practices.
+
+#### Architecture Overview
+```html
+<!-- BEFORE: Legacy script loading (outdated) -->
+<script src="src/config/api.js"></script>
+<script src="src/js/websocket-client.js"></script>
+<script src="src/js/app-initialization.js"></script>
+<script src="src/components/Profile.js"></script>
+<!-- ... 20+ individual script tags -->
+
+<!-- AFTER: Modern ES6 module system -->
+<script type="module" src="src/js/main.js"></script>
+```
+
+#### Module Dependency Graph
+```
+main.js (Entry Point)
+├── utils/environment.js (Core - no dependencies)
+├── config/api.js (depends on environment)
+├── integrations/backend-integration.js (depends on api)
+├── js/websocket-client.js (depends on environment)
+├── components/Profile.js (depends on environment)
+├── js/map-maplibre.js (depends on environment)
+├── js/relationship-utils.js (depends on environment)
+└── js/app-initialization.js (orchestrates everything)
+```
+
+#### ES6 Module Files
+
+**Core Infrastructure:**
+- `src/js/main.js` - Module entry point and orchestration
+- `src/utils/environment.js` - Centralized environment detection
+
+**Configuration Layer:**
+- `src/config/api.js` - Environment-aware API configuration
+- `src/config/stripe.js` - Payment system configuration
+
+**Integration Layer:**
+- `src/integrations/backend-integration.js` - Backend API integration
+
+**Component Layer:**
+- `src/components/Profile.js` - User profile component
+- `src/js/websocket-client.js` - Real-time communication
+- `src/js/map-maplibre.js` - Map visualization component
+- `src/js/relationship-utils.js` - Social interaction utilities
+
+**Application Layer:**
+- `src/js/app-initialization.js` - Application startup and orchestration
+
+#### ES6 Import/Export Patterns
+
+**Standard Import Pattern:**
+```javascript
+// Import specific functions
+import { getEnvironment, isDevelopment, getApiBaseUrl } from '../utils/environment.js';
+
+// Import entire module
+import { API_CONFIG } from '../config/api.js';
+
+// Import classes
+import { Profile } from '../components/Profile.js';
+```
+
+**Standard Export Pattern:**
+```javascript
+// Named exports (preferred)
+export { ClassName, functionName, CONSTANT_NAME };
+
+// Default export (when appropriate)
+export default class ComponentName { }
+
+// Legacy compatibility during transition
+window.ComponentName = ComponentName;
+```
+
+#### Benefits Achieved
+
+1. **Proper Dependency Management**: Explicit import/export declarations
+2. **No Global Pollution**: Clean module encapsulation
+3. **Tree Shaking**: Only load what's needed
+4. **Better IDE Support**: Enhanced autocomplete and error detection
+5. **Modern Standards**: Industry-standard JavaScript practices
+6. **Maintainable Code**: Clear module boundaries and relationships
+
+#### Legacy Compatibility
+
+**Transition Strategy**: All modules maintain backward compatibility by exporting to global scope during the migration period.
+
+```javascript
+// ES6 Module Export
+export { ComponentName };
+
+// Legacy Global Export (during transition)
+window.ComponentName = ComponentName;
+```
+
+#### Development Guidelines
+
+**Adding New Modules:**
+1. Create file with proper ES6 imports/exports
+2. Add to `main.js` import chain in correct dependency order
+3. Maintain legacy global exports if needed
+4. Update this documentation
+
+**Import Order Rules:**
+1. Core utilities first (environment.js)
+2. Configuration second (api.js, stripe.js)
+3. Integration layer third (backend-integration.js)
+4. Components fourth (Profile.js, etc.)
+5. Application initialization last (app-initialization.js)
+
+**Related Systems**: {#environment-detection-system}, {#api-reference}, {#development-practices}
+
+---
+
 ## 🔄 SYSTEM INTEGRATION WORKFLOWS {#system-integration-workflows}
 
 > **Purpose**: Document complete end-to-end processes showing how multiple systems interact to deliver features
@@ -10479,6 +10601,40 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Files Modified**: 50+ components across frontend and backend
 - **Status**: ✅ Fixed and deployed - all environment detection now centralized
 - **Impact**: Eliminated environment detection inconsistencies and simplified development workflow
+
+#### ES6 Module System Migration (MAJOR UPGRADE - COMPLETED)
+**Issue**: Frontend using outdated script loading causing "Cannot use import statement outside a module" errors
+- **Problem**: Legacy `<script>` tag loading system unable to handle modern ES6 import/export statements
+- **Root Cause**: Frontend architecture was using global script loading instead of proper module system
+- **Solution**:
+  - Converted entire frontend to ES6 module architecture
+  - Created `main.js` module entry point with proper dependency management
+  - Updated HTML to use `<script type="module">` loading
+  - Converted 10+ core files to proper ES6 imports/exports
+  - Maintained legacy compatibility during transition
+- **Architecture Change**:
+  - **Before**: 20+ individual script tags with global pollution
+  - **After**: Single module entry point with clean dependency graph
+- **Files Converted**:
+  - `main.js` (NEW) - Module orchestration
+  - `environment.js` - ES6 exports
+  - `api.js` - ES6 imports/exports
+  - `backend-integration.js` - ES6 exports added
+  - `Profile.js` - ES6 exports added
+  - `websocket-client.js` - ES6 exports added
+  - `map-maplibre.js` - ES6 exports added
+  - `relationship-utils.js` - ES6 exports added
+  - `app-initialization.js` - ES6 exports + auto-init
+  - `index.html` - Updated to module loading
+- **Key Benefits**:
+  - Modern JavaScript standards implementation
+  - Proper dependency management with explicit imports
+  - Eliminated global script pollution
+  - Better IDE support and error detection
+  - Tree shaking and performance improvements
+  - Industry-standard development practices
+- **Status**: ✅ Completed and deployed - frontend now uses modern ES6 module system
+- **Impact**: Resolved module loading errors and established maintainable modern architecture
 
 ### 🚨 RECENTLY FIXED - September 22, 2025
 
