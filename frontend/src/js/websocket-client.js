@@ -349,7 +349,14 @@ window.sendUserCandidateMessage = (candidateId, content, conversationId) => {
     return window.unifiedMessaging.sendMessage('USER_CANDIDATE', candidateId, content, conversationId);
 };
 
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = UnifiedMessagingClient;
-}
+// ES6 Module Exports
+export { UnifiedMessagingClient };
+
+// Auto-initialize global instance
+const unifiedMessaging = new UnifiedMessagingClient();
+window.unifiedMessaging = unifiedMessaging;
+
+// Export global instance too
+export { unifiedMessaging };
+
+console.log('📡 WebSocket client loaded via ES6 module');

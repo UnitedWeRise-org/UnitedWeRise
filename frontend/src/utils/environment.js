@@ -57,50 +57,44 @@ export function getApiBaseUrl() {
  */
 export function getWebSocketUrl() {
     if (isDevelopment()) {
-        // Check if running on localhost specifically
+        // Special localhost handling for local development
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return 'http://localhost:3001';
         }
-        return 'https://dev-api.unitedwerise.org';
+        return 'wss://dev-api.unitedwerise.org';
     }
-    return 'https://api.unitedwerise.org';
+    return 'wss://api.unitedwerise.org';
 }
 
 /**
- * Log environment information to console
+ * Get admin dashboard URL for current environment
+ * @returns {string} The appropriate admin dashboard URL
+ */
+export function getAdminDashboardUrl() {
+    if (isDevelopment()) {
+        // Special localhost handling for local development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return '/admin-dashboard.html';
+        }
+        return 'https://dev.unitedwerise.org/admin-dashboard.html';
+    }
+    return 'https://www.unitedwerise.org/admin-dashboard.html';
+}
+
+/**
+ * Log environment information to console (for debugging)
  */
 export function logEnvironmentInfo() {
     const env = getEnvironment();
-    const apiUrl = getApiBaseUrl();
-
-    console.log(`🌍 ENVIRONMENT: ${env.toUpperCase()}`);
-    console.log(`🔗 API Backend: ${apiUrl}`);
+    console.log(`🌍 FRONTEND ENVIRONMENT: ${env.toUpperCase()}`);
     console.log(`📍 Hostname: ${window.location.hostname}`);
-
-    // Environment-specific banner
-    console.log(`
-╔════════════════════════════════════════════╗
-║  🚀 United We Rise - ${env.toUpperCase().padEnd(11)} Environment  ║
-║  Backend: ${apiUrl.padEnd(36)} ║
-║  Database: ${isDevelopment() ? 'unitedwerise-db-dev (DEV)'.padEnd(30) : 'unitedwerise-db (PROD)'.padEnd(30)} ║
-╚════════════════════════════════════════════╝
-`);
+    console.log(`🔗 API Base URL: ${getApiBaseUrl()}`);
+    console.log(`📡 WebSocket URL: ${getWebSocketUrl()}`);
+    console.log(`👥 Admin Dashboard: ${getAdminDashboardUrl()}`);
 }
 
-// Make functions globally available for backward compatibility
-if (typeof window !== 'undefined') {
-    window.getEnvironment = getEnvironment;
-    window.isDevelopment = isDevelopment;
-    window.isProduction = isProduction;
-    window.getApiBaseUrl = getApiBaseUrl;
-    window.getWebSocketUrl = getWebSocketUrl;
+// Auto-log environment info when loaded in development
+if (isDevelopment()) {
+    console.log('🌍 Environment detection system loaded');
+    logEnvironmentInfo();
 }
-
-export default {
-    getEnvironment,
-    isDevelopment,
-    isProduction,
-    getApiBaseUrl,
-    getWebSocketUrl,
-    logEnvironmentInfo
-};

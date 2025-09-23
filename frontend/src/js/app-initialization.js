@@ -542,4 +542,15 @@ window.checkVersions = () => {
     window.appInitializer.displayVersionInfo();
 };
 
-AppInitializer.log('🎯 App Initializer ready');
+// ES6 Module Exports
+export { AppInitializer };
+
+// Auto-initialize when module loads
+export async function initializeApp() {
+    return window.appInitializer.initialize();
+}
+
+// Auto-initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+AppInitializer.log('🎯 App Initializer loaded via ES6 module and ready for auto-initialization');

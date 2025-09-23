@@ -4447,10 +4447,16 @@ function toggleProfile() {
     }
 }
 
-// Export functions for global use and module system
+// ES6 Module Exports
+export { Profile, showProfile, showUserProfile, showProfileFromUrl, toggleProfile };
+
+// Legacy global exports for compatibility during transition
 if (typeof window !== 'undefined') {
+    window.Profile = Profile;
     window.showProfile = showProfile;
     window.showUserProfile = showUserProfile;
     window.showProfileFromUrl = showProfileFromUrl;
     window.toggleProfile = toggleProfile;
 }
+
+console.log('👤 Profile component loaded via ES6 module');

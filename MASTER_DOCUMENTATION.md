@@ -321,9 +321,14 @@ export function getApiBaseUrl() {
 }
 
 export function getWebSocketUrl() {
-  return isDevelopment()
-    ? 'wss://dev-api.unitedwerise.org'
-    : 'wss://api.unitedwerise.org';
+  if (isDevelopment()) {
+    // Special localhost handling for local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    return 'wss://dev-api.unitedwerise.org';
+  }
+  return 'wss://api.unitedwerise.org';
 }
 ```
 
@@ -366,11 +371,15 @@ export function getDatabaseLogLevel(): string[] {
 
 #### Environment Mapping
 ```
-Development Environment (staging):
-- Frontend Hostnames: localhost, dev.unitedwerise.org
-- NODE_ENV: development, staging, or undefined
+Development Environment (includes staging and local):
+- Frontend Hostnames: localhost, 127.0.0.1, dev.unitedwerise.org
+- NODE_ENV: development, staging, test, or undefined
 - Behavior: Admin-only access, relaxed security, detailed logging
 - Features: Registration captcha bypass, API documentation enabled
+- Special Localhost Handling:
+  - WebSocket URL: http://localhost:3001 (for local development server)
+  - API Base: Determined by hostname detection
+  - Admin Dashboard: Local relative path (/admin-dashboard.html)
 
 Production Environment:
 - Frontend Hostname: www.unitedwerise.org
@@ -7870,6 +7879,7 @@ CREATE INDEX idx_posts_geo_created ON posts(h3Index, createdAt DESC);
 ```typescript
 // NEW: Singleton Prisma Client (backend/src/lib/prisma.ts)
 import { PrismaClient } from '@prisma/client';
+import { getDatabaseLogLevel, getEnvironment, isProduction } from '../utils/environment';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -7888,7 +7898,10 @@ const prismaClientSingleton = () => {
 
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// In development, store on global to preserve across hot reloads
+if (!isProduction()) {
+  globalForPrisma.prisma = prisma;
+}
 
 // Graceful shutdown
 process.on('beforeExit', () => prisma.$disconnect());

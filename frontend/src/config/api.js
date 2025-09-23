@@ -1,9 +1,12 @@
-// Centralized API configuration for United We Rise Frontend
-// This ensures all API calls use the correct backend URL
+/**
+ * API Configuration - ES6 Module
+ * Centralized API configuration with environment-specific settings
+ * Modern ES6 module with proper imports/exports
+ */
 
 import { getApiBaseUrl, getEnvironment, isDevelopment, isProduction, logEnvironmentInfo } from '../utils/environment.js';
 
-const API_CONFIG = {
+export const API_CONFIG = {
     BASE_URL: getApiBaseUrl(),
     ENVIRONMENT: getEnvironment().toUpperCase(),
 
@@ -30,13 +33,12 @@ const API_CONFIG = {
     }
 };
 
-// Make it globally available
+// Make it globally available for legacy compatibility during transition
 window.API_CONFIG = API_CONFIG;
 
 // Display environment banner in console
 logEnvironmentInfo();
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = API_CONFIG;
-}
+console.log('🔗 API Configuration loaded via ES6 module');
+console.log('📊 API Base URL:', API_CONFIG.BASE_URL);
+console.log('🌍 Environment:', API_CONFIG.ENVIRONMENT);

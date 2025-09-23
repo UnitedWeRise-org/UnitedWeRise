@@ -509,3 +509,15 @@ window.onVerificationComplete = () => {
 //         }, 2000);
 //     };
 // }
+
+// Export the BackendIntegration class for ES6 module usage
+export { BackendIntegration };
+
+// Auto-initialize when module loads
+const backendIntegration = new BackendIntegration();
+
+// Make globally available for legacy compatibility
+window.BackendIntegration = BackendIntegration;
+window.backendIntegration = backendIntegration;
+
+console.log('🔗 Backend Integration loaded via ES6 module');

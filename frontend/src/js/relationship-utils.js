@@ -859,4 +859,7 @@ window.toggleUserSubscription = (userId, isSubscribed) => SubscriptionUtils.togg
 window.subscribeToUser = (userId) => SubscriptionUtils.subscribeToUser(userId);
 window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(userId);
 
-console.log('Relationship utilities loaded - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');
+// ES6 Module Exports
+export { FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils };
+
+console.log('🤝 Relationship utilities loaded via ES6 module - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');

@@ -2690,5 +2690,10 @@ window.goBackToFeed = function() {
     }
 };
 
-// Export UWRMapLibre class for use in other modules
+// ES6 Module Exports
+export { UWRMapLibre };
+
+// Legacy global export for compatibility
 window.UWRMapLibre = UWRMapLibre;
+
+console.log('🗺️ MapLibre component loaded via ES6 module');
