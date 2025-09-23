@@ -368,12 +368,14 @@ If ANY answer is uncertain, STOP and clarify with user.
 - **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
+- **Database**: unitedwerise-db.postgres.database.azure.com (PRODUCTION ONLY)
 - **Access**: Open to all registered users
 
 **Staging Environment (Admin-Only):**
-- **Backend**: https://dev-api.unitedwerise.org  
+- **Backend**: https://dev-api.unitedwerise.org
 - **Frontend**: https://dev.unitedwerise.org
 - **Admin Dashboard**: https://dev.unitedwerise.org/admin-dashboard.html
+- **Database**: unitedwerise-db-dev.postgres.database.azure.com (ISOLATED DEV DATABASE)
 - **Access**: Requires admin login for all protected routes
 - **Purpose**: Safe testing of development branch changes
 
@@ -574,23 +576,30 @@ echo "Container uptime: $UPTIME seconds"
 ```
 
 #### 3️⃣ Database Schema Changes (`prisma/schema.prisma`)
-**🚨 Shared database: schema changes affect BOTH staging and production immediately**
+**✅ DATABASES NOW ISOLATED: Changes to development database do NOT affect production**
 
 ```bash
-# Schema change deployment (script with manual fallback)
-./scripts/deploy-schema-change.sh "description" || {
-  # Manual schema deployment if script fails:
-  git checkout development
-  # 1. Update schema.prisma AND matching backend code together
-  # 2. Validate synchronization
-  cd backend && npx prisma validate && npx prisma generate && npm run build && cd ..
-  # 3. Deploy immediately to both environments (shared database)
-  git add . && git commit -m "schema: description" && git push origin development
-  # Deploy to staging first, then production within hours (not days)
-}
+# Development database schema changes (SAFE - affects staging only)
+cd backend
+
+# 1. Check which database you're connected to (CRITICAL SAFETY CHECK)
+echo "Connected to: $(echo $DATABASE_URL | grep -o '@[^.]*')"
+# Should show "@unitedwerise-db-dev" for safe development
+
+# 2. Apply schema changes safely to development database
+npx prisma migrate dev --name "description_of_change"
+npx prisma generate
+npm run build
+
+# 3. Deploy to staging (development branch) - uses dev database
+git add . && git commit -m "schema: description" && git push origin development
+
+# 4. Test thoroughly on staging before production deployment
+# 5. Production deployment requires explicit user approval (separate main branch merge)
 ```
 
-**❌ NEVER**: Apply database migrations without matching code deployment
+**🛡️ SAFETY**: Development schema changes are now isolated from production
+**🚨 PRODUCTION SCHEMA**: Only deploy to production after thorough staging testing
 
 ---
 
@@ -973,11 +982,15 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 
 ### Common Development Patterns
 ```bash
-# After schema changes
+# MANDATORY: Daily database safety check
+bash scripts/check-database-safety.sh
+
+# After schema changes (development only)
+cd backend && node test-db-isolation.js  # Verify safe database
 npx prisma generate
 
-# Database migrations
-npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+# Database migrations (ISOLATED - safe for development)
+npx prisma migrate dev --name "description"
 
 # TypeScript compilation check (backend)
 cd backend && npm run build
@@ -989,6 +1002,31 @@ grep -r "class-name" frontend/
 fetch('/api/endpoint', {
   headers: {'Authorization': `Bearer ${localStorage.getItem('authToken')}`}
 })
+```
+
+### 🛡️ Database Safety (Added September 23, 2025)
+**CRITICAL**: Complete database isolation now implemented
+
+**Architecture:**
+```
+Production:  unitedwerise-db          (api.unitedwerise.org)
+Development: unitedwerise-db-dev      (dev-api.unitedwerise.org + local)
+```
+
+**Safety Commands:**
+```bash
+# Check isolation daily
+bash scripts/check-database-safety.sh
+
+# Verify local connection before migrations
+cd backend && node test-db-isolation.js
+
+# Emergency production restore (if ever needed)
+az postgres flexible-server restore \
+  --resource-group unitedwerise-rg \
+  --name unitedwerise-db-emergency \
+  --source-server unitedwerise-db \
+  --restore-time "YYYY-MM-DDTHH:MM:00Z"
 ```
 
 ### Performance Optimization Workflow

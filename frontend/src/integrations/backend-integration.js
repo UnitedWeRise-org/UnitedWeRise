@@ -2,10 +2,12 @@
 // This script enhances the existing frontend with new backend features
 // 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
+import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
+
 class BackendIntegration {
     constructor() {
         // Use centralized API configuration for environment detection
-        this.API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
+        this.API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : getApiBaseUrl();
         
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('BackendIntegration', 'Backend Integration API Base: ' + this.API_BASE);
@@ -40,12 +42,8 @@ class BackendIntegration {
             }
 
             // Add hCaptcha validation (skip for staging/dev environments)
-            const isDevEnvironment = window.location.hostname === 'dev.unitedwerise.org' ||
-                                    window.location.hostname === 'localhost' ||
-                                    window.location.hostname === '127.0.0.1';
-
             let hcaptchaToken = null;
-            if (!isDevEnvironment) {
+            if (!isDevelopment()) {
                 hcaptchaToken = this.getHCaptchaToken();
                 if (!hcaptchaToken) {
                     showAuthMessage('Please complete the captcha verification', 'error');

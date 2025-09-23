@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { isProduction } from '../utils/environment';
 
 export interface EmailTemplate {
   to: string;
@@ -27,7 +28,7 @@ class EmailService {
             pass: process.env.SMTP_PASS,
           },
           tls: {
-            rejectUnauthorized: process.env.NODE_ENV === 'production'
+            rejectUnauthorized: isProduction()
           }
         });
         console.log('Email service initialized with SMTP');

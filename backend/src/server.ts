@@ -51,6 +51,7 @@ import { errorHandler, notFoundHandler, requestLogger } from './middleware/error
 import { setupSwagger } from './swagger';
 import { metricsService } from './services/metricsService';
 import { performanceMiddleware } from './middleware/performanceMonitor';
+import { enableRequestLogging, enableApiDocs, getEnvironment } from './utils/environment';
 
 dotenv.config();
 
@@ -129,7 +130,7 @@ app.use(cors({
     console.log('🔍 CORS - Request from origin:', origin);
     
     // In development, be more permissive
-    if (process.env.NODE_ENV === 'development') {
+    if (getEnvironment() === 'development') {
       console.log('✅ CORS - Development mode, allowing all origins');
       callback(null, true);
       return;
@@ -171,7 +172,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Request logging (only in development)
-if (process.env.NODE_ENV === 'development') {
+if (enableRequestLogging()) {
   app.use(requestLogger);
 }
 
@@ -226,7 +227,7 @@ app.use('/health', healthRoutes);
 app.use('/uploads', express.static('uploads'));
 
 // API Documentation
-if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true') {
+if (enableApiDocs()) {
   setupSwagger(app);
 }
 
@@ -301,7 +302,7 @@ app.get('/api/security-metrics', (req, res) => {
     },
     deployment: {
       version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      environment: getEnvironment(),
       security_migration: 'httpOnly cookies + CSRF protection active'
     }
   };
@@ -326,7 +327,7 @@ app.get('/api/health/detailed', async (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      environment: getEnvironment(),
       database: {
         status: 'connected',
         connectionTime: `${dbDuration}ms`

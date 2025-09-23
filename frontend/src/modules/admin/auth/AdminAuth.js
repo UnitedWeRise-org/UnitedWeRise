@@ -6,6 +6,8 @@
  * Phase 2.1 of comprehensive modularization project
  */
 
+import { getApiBaseUrl } from '../../../utils/environment.js';
+
 class AdminAuth {
     constructor() {
         this.currentUser = null;
@@ -26,23 +28,15 @@ class AdminAuth {
     }
 
     /**
-     * Get API base URL with environment detection
+     * Get API base URL with centralized environment detection
      */
     getApiBase() {
         if (window.API_CONFIG && window.API_CONFIG.BASE_URL) {
             return window.API_CONFIG.BASE_URL;
         }
 
-        // Environment-aware URL detection
-        const hostname = window.location.hostname;
-        if (hostname.includes('dev.unitedwerise.org')) {
-            return 'https://dev-api.unitedwerise.org/api';
-        } else if (hostname.includes('unitedwerise.org')) {
-            return 'https://api.unitedwerise.org/api';
-        } else {
-            // Local development
-            return 'http://localhost:3001/api';
-        }
+        // Use centralized environment detection
+        return getApiBaseUrl();
     }
 
     /**

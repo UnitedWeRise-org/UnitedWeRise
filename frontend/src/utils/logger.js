@@ -1,9 +1,8 @@
 // Production-safe logging utility
+import { isDevelopment } from './environment.js';
 class Logger {
     constructor() {
-        this.isDevelopment = window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1' ||
-                           window.location.search.includes('debug=true');
+        this.isDevelopment = isDevelopment() || window.location.search.includes('debug=true');
     }
 
     log(message, ...args) {

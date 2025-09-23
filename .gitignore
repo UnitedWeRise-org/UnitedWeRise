@@ -6,8 +6,10 @@ node_modules/
 .env
 .env.local
 .env.production
+.env.production.backup
 .env.staging
 backend/.env
+backend/.env.production.backup
 frontend/.env
 
 # Database

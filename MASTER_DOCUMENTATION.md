@@ -901,6 +901,32 @@ npx prisma generate
 
 Current migration status: ✅ All migrations applied
 
+### 🏗️ Database Architecture (Updated September 23, 2025)
+
+**🛡️ ISOLATED DATABASE SETUP:**
+- **Production**: `unitedwerise-db.postgres.database.azure.com` (Protected)
+- **Development/Staging**: `unitedwerise-db-dev.postgres.database.azure.com` (Safe Testing)
+
+**Benefits:**
+- ✅ **True Data Isolation**: Development changes never affect production
+- ✅ **Safe Schema Testing**: Migrations tested on development database first
+- ✅ **Independent Backups**: Separate backup and restore capabilities
+- ✅ **Risk Elimination**: No accidental production data loss during development
+
+**Connection Configuration:**
+```bash
+# Production Environment (api.unitedwerise.org)
+DATABASE_URL="postgresql://uwradmin:***@unitedwerise-db.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+
+# Development/Staging Environment (dev-api.unitedwerise.org + local)
+DATABASE_URL="postgresql://uwradmin:***@unitedwerise-db-dev.postgres.database.azure.com:5432/postgres?schema=public&sslmode=require"
+```
+
+**Safety Checks:**
+- Daily verification script: `bash scripts/check-database-safety.sh`
+- Local connection test: `cd backend && node test-db-isolation.js`
+- Schema backup: `schema_backup_20250923_085118.prisma`
+
 ### 🔗 Related Systems
 
 **Database Schema integrates with:**
@@ -4962,7 +4988,7 @@ if (!window.currentUser) return showLogin(); // Reliable auth check
 |-----------|------------|-------------------|----------------|------------|
 | **Frontend** | HTML/CSS/JS | Azure Static Web Apps (main) | Azure Static Web Apps (dev) | ✅ **Auto via GitHub** |
 | **Backend** | Node.js/Express | Container App (production) | Container App (staging) | ⚠️ **Manual via Azure CLI** |
-| **Database** | PostgreSQL | Azure PostgreSQL Flexible | **Shared with Production** | Manual migrations + Enterprise cleanup tools |
+| **Database** | PostgreSQL | unitedwerise-db (Production) | unitedwerise-db-dev (Isolated Development) | Manual migrations + Enterprise cleanup tools |
 | **Storage** | Azure Blob | Always available | **Shared with Production** | N/A |
 
 #### GitHub Workflows & Automation
@@ -5060,7 +5086,8 @@ unitedwerise-rg/
 │   ├── yellow-mud-043d1ca0f (Production)
 │   └── delightful-smoke-097b2fa0f (Staging)
 ├── PostgreSQL Flexible Server
-│   └── unitedwerise-db (Shared)
+│   ├── unitedwerise-db (Production)
+│   └── unitedwerise-db-dev (Development/Staging)
 ├── Storage Account
 │   └── uwrstorage2425 (Shared)
 ├── Container Registry
@@ -5071,7 +5098,8 @@ unitedwerise-rg/
 
 **🎯 Key Architecture Decisions:**
 - **Dual Container Apps**: Separate staging and production backend containers
-- **Shared Resources**: Database, storage, and AI services shared for cost efficiency
+- **Isolated Databases**: Separate production and development databases for safety (September 2025)
+- **Shared Resources**: Storage and AI services shared for cost efficiency
 - **Environment Isolation**: Same codebase with environment-aware behavior
 - **Professional Domains**: Custom CNAME records for branded URLs
 

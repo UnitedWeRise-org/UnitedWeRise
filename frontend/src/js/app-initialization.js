@@ -2,16 +2,16 @@
 // Reduces API calls on page load and implements smart caching
 // Now integrated with unified authentication manager for perfect sync
 
+import { isProduction } from '../utils/environment.js';
+
 class AppInitializer {
     // Production logging helper - only shows important messages
     static log(message, type = 'info') {
-        const isProduction = window.location.hostname !== 'localhost';
-        
         if (type === 'error') {
             console.error(message); // Always show errors
         } else if (type === 'warn') {
             console.warn(message); // Always show warnings
-        } else if (!isProduction) {
+        } else if (!isProduction()) {
             console.log(message); // Only show debug in development
         }
     }

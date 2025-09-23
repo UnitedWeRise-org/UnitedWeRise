@@ -1,4 +1,5 @@
 // Unified WebSocket messaging client for both USER_USER and ADMIN_CANDIDATE messaging
+import { getWebSocketUrl } from '../utils/environment.js';
 class UnifiedMessagingClient {
     constructor() {
         this.socket = null;
@@ -33,14 +34,10 @@ class UnifiedMessagingClient {
             return;
         }
 
-        // Connect to backend WebSocket server
-        const backendUrl = window.API_CONFIG 
+        // Connect to backend WebSocket server using centralized URL detection
+        const socketUrl = window.API_CONFIG
             ? window.API_CONFIG.BASE_URL.replace(/\/api$/, '') // Use centralized config - only remove trailing /api
-            : (window.location.hostname === 'localhost' 
-                ? 'http://localhost:3001'  // Local development fallback
-                : 'https://api.unitedwerise.org'); // Production fallback
-        
-        const socketUrl = backendUrl;
+            : getWebSocketUrl(); // Use centralized environment detection
         
         try {
             // NEW: WebSocket auth needs special handling since it can't access httpOnly cookies

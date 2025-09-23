@@ -1,8 +1,10 @@
 /**
  * Azure Configuration for UnitedWeRise Platform
- * 
+ *
  * Centralizes Azure service configuration and environment detection
  */
+
+import { isDevelopment, isProduction, getEnvironment } from '../utils/environment';
 
 interface AzureOpenAIConfig {
   endpoint: string;
@@ -25,7 +27,7 @@ interface AzureConfig {
 }
 
 export function getAzureConfig(): AzureConfig {
-  const environment = (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'staging';
+  const environment = getEnvironment();
   
   // Azure OpenAI Configuration
   const openaiEnabled = !!(process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
@@ -77,9 +79,7 @@ export function validateAzureConfig(): { valid: boolean; errors: string[] } {
   };
 }
 
-// Environment-specific configuration
-export const isDevelopment = () => process.env.NODE_ENV === 'development';
-export const isProduction = () => process.env.NODE_ENV === 'production';
+// Environment-specific configuration (now using centralized functions)
 
 // Semantic features configuration
 export const getSemanticConfig = () => ({

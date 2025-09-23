@@ -5,6 +5,8 @@
  * Author: Claude Code Assistant
  */
 
+import { isDevelopment } from '../utils/environment.js';
+
 class Profile {
     constructor() {
         this.currentTab = 'activity'; // Default to activity tab
@@ -1215,7 +1217,7 @@ class Profile {
             } catch (error) {
                 adminDebugError('Post creation error:', error);
                 if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                    alert('Network error: Cannot connect to server. Please check if the backend server is running on localhost:3001');
+                    alert('Network error: Cannot connect to server. Please check your connection and try again.');
                 } else {
                     alert(`Error creating post: ${error.message}`);
                 }
@@ -1498,27 +1500,21 @@ class Profile {
         }
 
         try {
-            // Secure environment detection based on current page hostname
-            const currentHostname = window.location.hostname;
+            // Use centralized environment detection for admin dashboard URL
             let adminDashboardURL;
 
-            // Environment-aware URL generation
-            if (currentHostname.includes('dev.unitedwerise.org') ||
-                currentHostname.includes('delightful-smoke-097b2fa0f.3.azurestaticapps.net')) {
-                // Development/Staging environment
-                adminDashboardURL = 'https://dev.unitedwerise.org/admin-dashboard.html';
-            } else if (currentHostname.includes('www.unitedwerise.org') ||
-                       currentHostname.includes('unitedwerise.org')) {
+            if (isDevelopment()) {
+                // Development environment (staging or localhost)
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    // Local development
+                    adminDashboardURL = '/admin-dashboard.html';
+                } else {
+                    // Staging environment
+                    adminDashboardURL = 'https://dev.unitedwerise.org/admin-dashboard.html';
+                }
+            } else {
                 // Production environment
                 adminDashboardURL = 'https://www.unitedwerise.org/admin-dashboard.html';
-            } else if (currentHostname.includes('localhost') ||
-                       currentHostname.includes('127.0.0.1')) {
-                // Local development
-                adminDashboardURL = '/admin-dashboard.html';
-            } else {
-                // Unknown environment - use relative path as fallback
-                console.warn('Unknown environment, using relative path');
-                adminDashboardURL = '/admin-dashboard.html';
             }
 
             // Log admin dashboard access for security monitoring

@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { AzureBlobService } from './azureBlobService';
+import { isProduction } from '../utils/environment';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -661,11 +662,9 @@ export class PhotoService {
     console.log(`📸 Found ${userPhotos.length} photos for user ${userId}`);
 
     // Get the backend URL for constructing absolute URLs
-    const backendUrl = process.env.NODE_ENV === 'production'
+    const backendUrl = isProduction()
       ? 'https://api.unitedwerise.org'
-      : process.env.NODE_ENV === 'staging' || process.env.STAGING_ENVIRONMENT === 'true'
-      ? 'https://dev-api.unitedwerise.org'
-      : `http://localhost:${process.env.PORT || 3001}`;
+      : 'https://dev-api.unitedwerise.org';
 
     // Group photos by gallery and transform URLs
     const galleryMap = new Map<string, any[]>();

@@ -12,6 +12,7 @@ import { apiClient } from '../api/client.js';
 import { userState } from '../state/user.js';
 import { setUserLoggedIn } from './session.js';
 import { unifiedAuthManager } from './unified-manager.js';
+import { isDevelopment } from '../../../utils/environment.js';
 
 /**
  * Open authentication modal
@@ -242,9 +243,8 @@ export async function handleRegister() {
         console.log('hCaptcha not available or local development mode');
     }
 
-    // Check if we need captcha (skip for local development)
-    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocalDev && !hcaptchaToken) {
+    // Check if we need captcha (skip for development environment)
+    if (!isDevelopment() && !hcaptchaToken) {
         showAuthMessage('Please complete the captcha verification', 'error', 'register');
         return;
     }

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { isDevelopment } from '../utils/environment';
 
 export interface CustomError extends Error {
   statusCode?: number;
@@ -37,7 +38,7 @@ export const errorHandler = (
   };
 
   // In development, include full error details
-  if (process.env.NODE_ENV === 'development') {
+  if (isDevelopment()) {
     errorResponse.message = err.message;
     errorResponse.stack = err.stack;
   } else {

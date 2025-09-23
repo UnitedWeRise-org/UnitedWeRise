@@ -6,6 +6,8 @@
  * Phase 2.2 of comprehensive modularization project
  */
 
+import { getWebSocketUrl } from '../../../utils/environment.js';
+
 class AdminAPI {
     constructor() {
         this.totpVerified = false;
@@ -21,23 +23,15 @@ class AdminAPI {
     }
 
     /**
-     * Get backend URL with environment detection
+     * Get backend URL with centralized environment detection
      */
     getBackendUrl() {
         if (window.API_CONFIG && window.API_CONFIG.BASE_URL) {
             return window.API_CONFIG.BASE_URL.replace(/\/api$/, '');
         }
 
-        // Environment-aware URL detection
-        const hostname = window.location.hostname;
-        if (hostname.includes('dev.unitedwerise.org')) {
-            return 'https://dev-api.unitedwerise.org';
-        } else if (hostname.includes('unitedwerise.org')) {
-            return 'https://api.unitedwerise.org';
-        } else {
-            // Local development
-            return 'http://localhost:3001';
-        }
+        // Use centralized environment detection
+        return getWebSocketUrl();
     }
 
     /**
@@ -367,7 +361,7 @@ class AdminAPI {
     /**
      * Set TOTP verification status (called by authentication system)
      */
-    setTotpStatus(verified, token = null) {
+    async setTotpStatus(verified, token = null) {
         this.totpVerified = verified;
         this.totpToken = token;
 

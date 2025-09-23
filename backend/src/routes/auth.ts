@@ -11,6 +11,7 @@ import { emailService } from '../services/emailService';
 import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
+import { requiresCaptcha, requireSecureCookies, enableRequestLogging } from '../utils/environment';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
@@ -99,19 +100,8 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
   try {
     const { email, username, password, firstName, lastName, phoneNumber, hcaptchaToken, deviceFingerprint } = req.body;
 
-    // Check if running in local development or staging environment
-    const isLocalDevelopment = process.env.NODE_ENV === 'development' ||
-                              process.env.NODE_ENV === 'staging' ||
-                              process.env.STAGING_ENVIRONMENT === 'true' ||
-                              req.ip === '127.0.0.1' ||
-                              req.ip === '::1' ||
-                              req.ip?.startsWith('192.168.') ||
-                              req.ip?.startsWith('10.') ||
-                              req.ip?.startsWith('172.16.') ||
-                              req.hostname === 'localhost';
-
-    // Verify captcha (skip for local development)
-    if (!isLocalDevelopment) {
+    // Verify captcha (skip for development environment)
+    if (requiresCaptcha()) {
       const captchaResult = await captchaService.verifyCaptcha(hcaptchaToken, req.ip);
       if (!captchaResult.success) {
         return res.status(400).json({ 
@@ -119,9 +109,9 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
           captchaError: captchaResult.error 
         });
       }
-    } else {
-      console.log('🔧 Local development detected: Bypassing hCaptcha verification');
-      console.log(`   IP: ${req.ip}, NODE_ENV: ${process.env.NODE_ENV}`);
+    } else if (enableRequestLogging()) {
+      console.log('🔧 Development environment detected: Bypassing hCaptcha verification');
+      console.log(`   IP: ${req.ip}`);
     }
 
     // Process device fingerprint for anti-bot protection
@@ -407,7 +397,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           // Set httpOnly cookie for auth token
           res.cookie('authToken', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: requireSecureCookies(),
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             path: '/',
@@ -418,7 +408,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           const csrfToken = require('crypto').randomBytes(32).toString('hex');
           res.cookie('csrf-token', csrfToken, {
             httpOnly: false, // Needs to be readable by JS
-            secure: process.env.NODE_ENV === 'production',
+            secure: requireSecureCookies(),
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 30 * 24 * 60 * 60 * 1000,
             path: '/',
@@ -428,7 +418,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           // Set TOTP session token as httpOnly cookie
           res.cookie('totpSessionToken', newSessionToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: requireSecureCookies(),
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/',
@@ -438,7 +428,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
           // Set TOTP verified flag as httpOnly cookie
           res.cookie('totpVerified', 'true', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: requireSecureCookies(),
             sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             path: '/',
@@ -511,7 +501,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       // Set httpOnly cookie for auth token
       res.cookie('authToken', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         path: '/',
@@ -522,7 +512,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       const csrfToken = require('crypto').randomBytes(32).toString('hex');
       res.cookie('csrf-token', csrfToken, {
         httpOnly: false, // Needs to be readable by JS
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/',
@@ -532,7 +522,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       // Set TOTP session token as httpOnly cookie
       res.cookie('totpSessionToken', sessionToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/'
@@ -541,7 +531,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       // Set TOTP verified flag as httpOnly cookie
       res.cookie('totpVerified', 'true', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/'
@@ -572,7 +562,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     // Set httpOnly cookie for auth token
     res.cookie('authToken', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: requireSecureCookies(),
       sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
@@ -583,7 +573,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     const csrfToken = require('crypto').randomBytes(32).toString('hex');
     res.cookie('csrf-token', csrfToken, {
       httpOnly: false, // Needs to be readable by JS
-      secure: process.env.NODE_ENV === 'production',
+      secure: requireSecureCookies(),
       sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/',
@@ -739,7 +729,7 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
     // Clear all authentication cookies with the same options they were set with
     const httpOnlyCookieOptions = {
       httpOnly: true, // MUST match login cookie settings for authToken
-      secure: process.env.NODE_ENV === 'production',
+      secure: requireSecureCookies(),
       sameSite: 'lax' as 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
       path: '/',
       domain: '.unitedwerise.org' // MUST match login cookie settings
@@ -747,7 +737,7 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
 
     const nonHttpOnlyCookieOptions = {
       httpOnly: false, // MUST match login cookie settings for csrf-token
-      secure: process.env.NODE_ENV === 'production',
+      secure: requireSecureCookies(),
       sameSite: 'lax' as 'lax',
       path: '/',
       domain: '.unitedwerise.org'
@@ -795,7 +785,7 @@ router.post('/refresh', async (req, res) => {
       // Set new httpOnly cookie
       res.cookie('authToken', newToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         path: '/',
@@ -806,7 +796,7 @@ router.post('/refresh', async (req, res) => {
       const csrfToken = require('crypto').randomBytes(32).toString('hex');
       res.cookie('csrf-token', csrfToken, {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: requireSecureCookies(),
         sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/',
@@ -829,7 +819,7 @@ router.post('/refresh', async (req, res) => {
 // Debug endpoint to check test user data (local development only)
 router.get('/debug-test-user', async (req, res) => {
   // Only allow in development
-  if (process.env.NODE_ENV !== 'development' && req.ip !== '127.0.0.1' && req.ip !== '::1') {
+  if (requiresCaptcha()) {
     return res.status(403).json({ error: 'Not allowed in production' });
   }
 
@@ -909,7 +899,7 @@ router.post('/verify-password', requireAuth, async (req: AuthRequest, res) => {
 // Create test user endpoint (local development only)
 router.post('/create-test-user', async (req, res) => {
   // Only allow in development
-  if (process.env.NODE_ENV !== 'development' && req.ip !== '127.0.0.1' && req.ip !== '::1') {
+  if (requiresCaptcha()) {
     return res.status(403).json({ error: 'Not allowed in production' });
   }
 
