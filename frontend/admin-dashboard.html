@@ -3025,15 +3025,17 @@ Current Status: Use deploymentStatus.check() for real-time status
             `;
             
             users.forEach(user => {
-                const role = user.isSuperAdmin ? 'Super-Admin' : user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
+                const roleText = user.isSuperAdmin ? 'Super-Admin' : user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
+                const roleClass = user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user';
+                const roleIcon = user.isSuperAdmin ? '⚡' : user.isAdmin ? '👑' : user.isModerator ? '🛡️' : '👤';
                 const status = user.isSuspended ? 'Suspended' : 'Active';
                 const date = new Date(user.createdAt).toLocaleDateString();
-                
+
                 html += `
                     <tr>
                         <td>${user.username}</td>
                         <td>${user.email}</td>
-                        <td>${role}</td>
+                        <td><span class="role-badge ${roleClass}">${roleIcon} ${roleText}</span></td>
                         <td>${status}</td>
                         <td>${date}</td>
                         <td>${user.stats.posts}</td>
