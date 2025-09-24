@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 22, 2025
-**Version**: 5.7.0 (13-Section Admin Dashboard Complete & MOTD System Integration)
+**Last Updated**: September 23, 2025
+**Version**: 5.8.0 (Super-Admin Role System & Production Security Enhancements)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -881,6 +881,12 @@ model User {
   phoneVerified         Boolean   @default(false)
   accountStatus         AccountStatus @default(ACTIVE)
   moderationStatus      ModerationStatus @default(GOOD_STANDING)
+
+  // Role & Permission System
+  isModerator           Boolean   @default(false)
+  isAdmin               Boolean   @default(false)
+  isSuperAdmin          Boolean   @default(false)
+  isSuspended           Boolean   @default(false)
   
   // Timestamps
   createdAt             DateTime  @default(now())
@@ -4863,6 +4869,101 @@ credentials: 'include' // All API calls include this
 - 🔗 **Session Management**: See sessionManager service in backend/src/services/
 - 🔗 **Metrics Monitoring**: See metricsService in backend/src/services/
 
+### **🛡️ SUPER-ADMIN ROLE SYSTEM (September 23, 2025)**
+
+**ENTERPRISE-GRADE PRIVILEGE MANAGEMENT**: Complete hierarchical role system with Super-Admin capabilities for production system control and advanced administrative functions.
+
+#### **📋 Role Hierarchy**
+```
+User → Moderator → Admin → Super-Admin
+├── User: Basic platform access
+├── Moderator: Content moderation privileges
+├── Admin: Administrative dashboard access
+└── Super-Admin: Full system control & user management
+```
+
+#### **🚀 Super-Admin Privileges**
+- ✅ **Full Administrative Access**: Complete admin dashboard functionality
+- ✅ **User Management**: Create/modify/suspend user accounts
+- ✅ **System Configuration**: Production settings and environment control
+- ✅ **Database Management**: Direct database access via secure scripts
+- ✅ **Advanced Debugging**: Production system monitoring and diagnostics
+- ✅ **Role Management**: Grant/revoke Admin and Moderator privileges
+- ✅ **Production Control**: Deployment oversight and system maintenance
+
+#### **🔐 Database Schema Integration**
+```prisma
+model User {
+  // Role & Permission System
+  isModerator           Boolean   @default(false)    // Content moderation access
+  isAdmin               Boolean   @default(false)    // Admin dashboard access
+  isSuperAdmin          Boolean   @default(false)    // Full system control
+  isSuspended           Boolean   @default(false)    // Account suspension status
+}
+```
+
+#### **⚡ Super-Admin Assignment**
+```javascript
+// Production Super-Admin assignment script
+node backend/scripts/create-super-admin.js jeffrey@unitedwerise.org
+
+// Script functionality:
+// ✅ Verifies user exists in database
+// ✅ Displays current role status
+// ✅ Promotes to both Admin and Super-Admin
+// ✅ Provides comprehensive privilege confirmation
+// ✅ Supports production and development environments
+```
+
+#### **🛠️ Implementation Details**
+
+**Backend Integration:**
+```javascript
+// Authentication middleware checks
+const requireSuperAdmin = (req, res, next) => {
+  if (!req.user?.isSuperAdmin) {
+    return res.status(403).json({
+      error: 'Super-Admin access required',
+      required: 'isSuperAdmin: true'
+    });
+  }
+  next();
+};
+
+// API endpoint protection
+app.use('/api/admin/users', requireSuperAdmin);
+app.use('/api/admin/system', requireSuperAdmin);
+```
+
+**Frontend Integration:**
+```javascript
+// Admin dashboard Super-Admin features
+if (window.authUtils.getCurrentUser()?.isSuperAdmin) {
+  // Display Super-Admin exclusive features
+  // - User management panel
+  // - System configuration access
+  // - Advanced debugging tools
+}
+```
+
+#### **📊 Security & Audit Trail**
+- 🔒 **Privilege Escalation Prevention**: Super-Admin status can only be granted via secure backend scripts
+- 📝 **Access Logging**: All Super-Admin actions logged for security monitoring
+- 🚨 **Production Safety**: Role verification at every privileged operation
+- 🔐 **Authentication Required**: Full authentication stack integration
+
+#### **🎯 Current Super-Admin Account**
+- **Email**: `jeffrey@unitedwerise.org`
+- **Status**: ✅ Super-Admin privileges active
+- **Environment**: Production (https://api.unitedwerise.org)
+- **Assignment Date**: September 23, 2025
+
+#### **🔗 Related Systems:**
+- **Admin Dashboard**: Enhanced with Super-Admin exclusive features
+- **User Management**: Super-Admin controlled user role assignments
+- **Security Monitoring**: Super-Admin activity tracking and audit logs
+- **Database Scripts**: Secure privilege management via backend/scripts/
+
 #### Password Security
 - **Hashing**: bcrypt with 10 rounds
 - **Requirements**: 8+ characters minimum
@@ -5265,6 +5366,276 @@ if (!userState.current) return showLogin(); // May be null when user is logged i
 // ✅ SAFE: Using global state in user-facing components
 if (!window.currentUser) return showLogin(); // Reliable auth check
 ```
+
+---
+
+## 🌟 ONBOARDING SYSTEM {#onboarding-system}
+**Last Updated**: January 13, 2025
+**Status**: ✅ Fully Operational with Event-Driven Architecture
+
+### Overview
+Complete user onboarding system that introduces new users to platform features after account creation, with intelligent triggering and progress tracking.
+
+### System Architecture
+
+#### OnboardingTrigger Class
+**Location**: `frontend/src/integrations/backend-integration.js`
+
+```javascript
+class OnboardingTrigger {
+    constructor() {
+        this.initializeOnboardingTriggers();
+    }
+
+    async initializeOnboardingTriggers() {
+        // Listen for authentication events from unified auth manager
+        if (window.unifiedAuthManager) {
+            window.unifiedAuthManager.subscribe((authState) => {
+                if (authState.isAuthenticated && authState.user) {
+                    this.checkOnboardingStatus(authState.user);
+                }
+            });
+        }
+
+        // Listen for app initialization complete event
+        document.addEventListener('appInitializationComplete', () => {
+            this.checkInitialOnboarding();
+        });
+
+        // Listen for direct login events
+        document.addEventListener('userLogin', (event) => {
+            if (event.detail?.user) {
+                this.checkOnboardingStatus(event.detail.user);
+            }
+        });
+    }
+
+    async checkOnboardingStatus(user) {
+        if (!user?.id) return;
+
+        try {
+            // Use environment-aware API client with cookie authentication
+            const response = await window.apiClient.call('/onboarding/progress', {
+                method: 'GET'
+            });
+
+            if (response.ok && response.data) {
+                const progress = response.data;
+
+                // Show onboarding if user is new (< 7 days) and hasn't completed it
+                const userAge = Date.now() - new Date(user.createdAt).getTime();
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+                if (userAge < sevenDays && !progress.completed) {
+                    this.showOnboarding(progress);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to check onboarding status:', error);
+        }
+    }
+
+    async checkInitialOnboarding() {
+        // Check if user is authenticated and trigger onboarding check
+        if (window.authUtils?.isUserAuthenticated()) {
+            const user = window.authUtils.getCurrentUser();
+            if (user) {
+                await this.checkOnboardingStatus(user);
+            }
+        }
+    }
+
+    showOnboarding(progress) {
+        if (window.OnboardingFlow) {
+            window.OnboardingFlow.show(progress);
+        } else {
+            console.warn('OnboardingFlow component not available');
+        }
+    }
+}
+
+// Initialize onboarding trigger
+window.onboardingTrigger = new OnboardingTrigger();
+```
+
+#### Integration with Unified Authentication
+**Location**: `frontend/src/modules/core/auth/unified-manager.js`
+
+```javascript
+// Enhanced to dispatch app initialization event after authentication setup
+async initialize() {
+    await this.setupAuthentication();
+
+    // Dispatch app initialization complete event for onboarding trigger
+    document.dispatchEvent(new CustomEvent('appInitializationComplete', {
+        detail: { timestamp: Date.now() }
+    }));
+}
+```
+
+### API Integration
+
+#### Onboarding Progress Endpoint
+**Endpoint**: `GET /api/onboarding/progress`
+**Authentication**: Required (httpOnly cookies)
+**Response Format**:
+```javascript
+{
+    "ok": true,
+    "data": {
+        "completed": boolean,
+        "currentStep": string,
+        "steps": {
+            "welcome": boolean,
+            "profile": boolean,
+            "connections": boolean,
+            "features": boolean
+        },
+        "lastUpdated": "ISO date string"
+    }
+}
+```
+
+#### Onboarding Update Endpoint
+**Endpoint**: `POST /api/onboarding/update`
+**Authentication**: Required (httpOnly cookies)
+**Request Body**:
+```javascript
+{
+    "step": "welcome|profile|connections|features",
+    "completed": boolean
+}
+```
+
+### Event-Driven Architecture
+
+#### Authentication Event Flow
+```
+User Login/Registration
+        ↓
+Unified Auth Manager Updates State
+        ↓
+OnboardingTrigger Receives Auth Event
+        ↓
+Check User Age & Onboarding Status
+        ↓
+Show Onboarding Flow (if applicable)
+```
+
+#### App Initialization Flow
+```
+Page Load
+        ↓
+Authentication System Initializes
+        ↓
+App Initialization Complete Event Fired
+        ↓
+OnboardingTrigger Checks Current User
+        ↓
+Show Onboarding Flow (if applicable)
+```
+
+### Triggering Conditions
+
+#### New User Criteria
+- **User Age**: Account created < 7 days ago
+- **Onboarding Status**: Not completed (`progress.completed === false`)
+- **Authentication**: User must be authenticated with valid session
+
+#### Safety Checks
+- **API Client**: Uses environment-aware `window.apiClient.call()` with automatic cookie authentication
+- **Error Handling**: Graceful degradation if onboarding API fails
+- **Component Availability**: Checks for `window.OnboardingFlow` before attempting to show
+- **Rate Limiting**: Only triggers once per authentication event
+
+### Integration Points
+
+#### Files Modified for Onboarding System
+- **`frontend/src/integrations/backend-integration.js`**: OnboardingTrigger class implementation
+- **`frontend/src/modules/core/auth/unified-manager.js`**: App initialization event dispatch
+- **`frontend/src/modules/core/api/client.js`**: Environment-aware API client with enhanced error handling
+
+#### Dependencies
+- **Unified Authentication System**: Requires `window.authUtils` and `window.unifiedAuthManager`
+- **API Client**: Requires `window.apiClient.call()` for backend communication
+- **OnboardingFlow Component**: Requires `window.OnboardingFlow` for UI display
+
+### Error Handling & Debugging
+
+#### Common Issues
+1. **Onboarding Not Triggering**: Check if `OnboardingTrigger` is properly initialized
+2. **API Errors**: Verify authentication and API endpoint availability
+3. **Component Missing**: Ensure `OnboardingFlow` component is loaded
+
+#### Debug Commands
+```javascript
+// Check onboarding trigger status
+console.log('Onboarding Trigger:', window.onboardingTrigger);
+
+// Manual onboarding check
+if (window.onboardingTrigger) {
+    const user = window.authUtils?.getCurrentUser();
+    if (user) {
+        window.onboardingTrigger.checkOnboardingStatus(user);
+    }
+}
+
+// Check API connectivity
+window.apiClient.call('/onboarding/progress').then(console.log);
+```
+
+### Security Features
+
+#### Authentication Integration
+- **Cookie-Based Authentication**: Uses httpOnly cookies for secure API communication
+- **CSRF Protection**: Automatic CSRF token handling via `window.apiClient`
+- **User Context Validation**: Verifies user authentication before triggering onboarding
+
+#### Privacy Considerations
+- **Minimal Data Collection**: Only tracks completion status and current step
+- **User Control**: Users can skip or dismiss onboarding flow
+- **Secure Storage**: Onboarding progress stored server-side with authenticated requests
+
+### Performance Optimizations
+
+#### Efficient Triggering
+- **Event-Driven**: Only checks onboarding when authentication state changes
+- **Debounced Checks**: Prevents multiple simultaneous onboarding checks
+- **Conditional Loading**: Only loads onboarding flow when needed
+
+#### Resource Management
+- **Lazy Initialization**: OnboardingTrigger only activates when authentication is ready
+- **Error Resilience**: Graceful degradation if components unavailable
+- **Memory Efficient**: Event listeners properly managed and cleaned up
+
+### Related Systems
+
+**Onboarding System integrates with:**
+- **{#security-authentication}** - Uses unified authentication system and httpOnly cookies
+- **{#api-reference}** - Onboarding progress and update endpoints
+- **{#ui-ux-components}** - OnboardingFlow component for user interface
+- **{#es6-module-system}** - Modern JavaScript architecture with proper imports
+- **{#system-integration-workflows}** - Event-driven architecture patterns
+- **{#troubleshooting}** - Debug procedures and error handling
+
+### Known Issues & Resolutions
+
+#### Recently Fixed (January 13, 2025)
+- **✅ Broken Trigger Logic**: Fixed `this.API_BASE` reference outside class context
+- **✅ Authentication Race Conditions**: Added multiple event listeners for reliable triggering
+- **✅ API Integration**: Migrated to environment-aware API client with cookie authentication
+- **✅ Error Visibility**: Enhanced error handling and logging for better debugging
+
+#### Current Limitations
+- Requires manual initialization of `OnboardingFlow` component
+- No automatic onboarding flow progression (user must manually advance steps)
+- Limited customization options for onboarding content
+
+### Future Enhancements
+- **Progressive Onboarding**: Multi-session onboarding with intelligent timing
+- **Personalized Content**: Customized onboarding based on user interests
+- **Analytics Integration**: Track onboarding completion rates and drop-off points
+- **A/B Testing**: Test different onboarding flows for optimization
 
 ---
 
@@ -10581,6 +10952,27 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
 
 ### 🚨 RECENTLY FIXED - September 23, 2025
+
+#### TOTP Status Refresh Race Condition (FIXED)
+**Issue**: Two-Factor Authentication status required page refresh to show as enabled after setup completion
+- **Problem**: UI called `loadTOTPStatus()` immediately after backend TOTP operations, but timing race condition prevented immediate status update
+- **Root Cause**: No delay between backend database update and status API call
+- **Solution**:
+  - Added 500ms delay before calling `loadTOTPStatus()` in all TOTP functions
+  - Applied to `verifyTOTPSetup()`, `regenerateBackupCodes()`, and `disableTOTP()` functions
+  - Prevents race condition while allowing backend to process changes
+- **Files Modified**: `frontend/src/components/Profile.js` (3 function updates)
+- **Status**: ✅ Fixed - TOTP status now updates immediately without refresh required
+- **Impact**: Improved user experience - immediate visual feedback for 2FA changes
+
+#### Admin Dashboard Button Reference Error (FIXED)
+**Issue**: "Open Admin Dashboard" button threw `ReferenceError: currentHostname is not defined`
+- **Problem**: Profile component referenced undefined `currentHostname` variable in admin dashboard access logging
+- **Root Cause**: Incorrect variable reference in `openAdminDashboard()` function
+- **Solution**: Changed `currentHostname` to `window.location.hostname` for proper hostname detection
+- **Files Modified**: `frontend/src/components/Profile.js` (line 1507)
+- **Status**: ✅ Fixed - Admin Dashboard button now opens correctly without errors
+- **Impact**: Restored admin dashboard access functionality for admin users
 
 #### Environment Detection Consolidation (CRITICAL - FIXED)
 **Issue**: Inconsistent environment detection across 50+ components causing API URL mismatches and configuration bugs

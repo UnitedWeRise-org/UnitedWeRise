@@ -26,8 +26,8 @@ United We Rise reimagines social media for civic engagement. Instead of personal
 ### 📖 Complete Reference
 **[MASTER_DOCUMENTATION.md](./MASTER_DOCUMENTATION.md)** - Comprehensive documentation covering:
 - Complete API reference (40+ endpoints)
-- 13-section professional admin dashboard system
-- Database schema and models
+- 13-section professional admin dashboard system with Super-Admin controls
+- Database schema and models including hierarchical role system
 - UI/UX components and patterns
 - Deployment and infrastructure
 - Security and authentication with TOTP
@@ -107,10 +107,12 @@ python -m http.server 8080
 
 - **Enterprise-grade authentication**: httpOnly cookies with CSRF protection (Facebook/Google-level security)
 - **TOTP 2FA**: Optional two-factor authentication with backup codes
+- **Hierarchical Role System**: User → Moderator → Admin → Super-Admin with enterprise privilege management
 - **OAuth Integration**: Google, Microsoft, Apple social login support
 - **XSS Prevention**: httpOnly cookies prevent JavaScript access to auth tokens
 - **Azure OpenAI**: Content analysis with no data retention
 - **Rate Limiting**: Comprehensive anti-bot protection and request throttling
+- **Privileged Access Management**: Super-Admin controls for production system management
 - **Reputation System**: Behavior-based scoring (not content censorship)
 - **Privacy Controls**: Photo tagging approvals, friend-only messaging, content visibility settings
 
