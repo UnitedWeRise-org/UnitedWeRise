@@ -151,7 +151,7 @@ class ContentController {
     /**
      * Display content data in the UI
      */
-    displayContentData(data) {
+    async displayContentData(data) {
         try {
             // Load user reports by default
             this.loadUserReports();

@@ -163,7 +163,7 @@ class OverviewController {
 
             // Display performance metrics if available
             if (data.performance) {
-                this.displayPerformanceMetrics(data.performance);
+                await this.displayPerformanceMetrics(data.performance);
             }
 
             // Update last refresh time
@@ -218,7 +218,7 @@ class OverviewController {
     /**
      * Display performance metrics
      */
-    displayPerformanceMetrics(metrics) {
+    async displayPerformanceMetrics(metrics) {
         try {
             const metricsContainer = document.getElementById('performanceMetrics');
             if (!metricsContainer) {

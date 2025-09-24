@@ -242,7 +242,7 @@ class ErrorsController {
     /**
      * Display error monitoring data in the UI
      */
-    displayErrorsData(data) {
+    async displayErrorsData(data) {
         try {
             if (!data) {
                 await adminDebugLog('ErrorsController', 'No error data available');

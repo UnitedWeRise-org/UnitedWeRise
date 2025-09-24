@@ -494,7 +494,7 @@ class DeploymentController {
     /**
      * Display deployment data in the UI
      */
-    displayDeploymentData(data) {
+    async displayDeploymentData(data) {
         try {
             if (!data) {
                 console.warn('No deployment data available');

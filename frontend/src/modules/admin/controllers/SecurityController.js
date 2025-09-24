@@ -192,7 +192,7 @@ class SecurityController {
     /**
      * Display security data in the UI
      */
-    displaySecurityData(data) {
+    async displaySecurityData(data) {
         try {
             if (!data) {
                 console.warn('No security data available');

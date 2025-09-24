@@ -448,7 +448,7 @@ class AdminState {
     /**
      * Set up auto-refresh for dashboard
      */
-    setupAutoRefresh(intervalMs = 300000) { // 5 minutes default
+    async setupAutoRefresh(intervalMs = 300000) { // 5 minutes default
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
         }

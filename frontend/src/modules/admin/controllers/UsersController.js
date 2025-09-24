@@ -364,7 +364,7 @@ class UsersController {
     /**
      * Display users data in the UI
      */
-    displayUsersData(data) {
+    async displayUsersData(data) {
         try {
             if (!data || !data.users) {
                 console.warn('No users data available');

@@ -97,6 +97,234 @@
             100% { transform: scale(1); }
         }
 
+        /* Civic Engagement Styles */
+        .engagement-tabs {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #666;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover, .tab-button.active {
+            color: #4b5c09;
+            border-bottom-color: #4b5c09;
+        }
+
+        .engagement-tab {
+            display: none;
+        }
+
+        .engagement-tab.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .badge-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .badge-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge-image {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin: 0 auto 1rem auto;
+            display: block;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .analytics-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .requirement-builder, .criteria-builder, .reward-builder {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #f9f9f9;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4b5c09;
+            box-shadow: 0 0 0 2px rgba(75, 92, 9, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #4b5c09;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #3a4607;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        #image-preview {
+            margin-top: 1rem;
+        }
+
+        #image-preview img {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 8px;
+        }
+
         .stat-number {
             font-size: 2.5rem;
             font-weight: bold;
@@ -4260,6 +4488,7 @@
             <button class="nav-button" data-section="analytics">Analytics</button>
             <button class="nav-button" data-section="ai-insights">🤖 AI Insights</button>
             <button class="nav-button" data-section="motd">MOTD</button>
+            <button class="nav-button" data-section="civic-engagement">🏛️ Civic Engagement</button>
             <button class="nav-button" data-section="deployment">🚀 Deployment</button>
             <button class="nav-button" data-section="system">System</button>
             <button class="nav-button" data-section="errors">🚨 Errors</button>
@@ -6035,6 +6264,310 @@ Auto-refresh enabled every 60 seconds
             </div>
 
         </div>
+
+        <!-- Civic Engagement Section -->
+        <div id="civic-engagement" class="dashboard-section">
+            <h2>🏛️ Civic Engagement Management</h2>
+
+            <!-- Engagement Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showSubSection('quest-stats')">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-number" id="total-quests">-</div>
+                    <div class="stat-label">Active Quests</div>
+                </div>
+                <div class="stat-card" onclick="showSubSection('badge-stats')">
+                    <div class="stat-icon">🏅</div>
+                    <div class="stat-number" id="total-badges">-</div>
+                    <div class="stat-label">Available Badges</div>
+                </div>
+                <div class="stat-card" onclick="showSubSection('engagement-stats')">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-number" id="avg-quest-completion">-</div>
+                    <div class="stat-label">Avg. Completion Rate</div>
+                </div>
+                <div class="stat-card" onclick="showSubSection('streak-stats')">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-number" id="active-streaks">-</div>
+                    <div class="stat-label">Active Streaks</div>
+                </div>
+            </div>
+
+            <!-- Civic Engagement Tab Navigation -->
+            <div class="engagement-tabs">
+                <button class="tab-button active" onclick="switchEngagementTab('quests')">Quest Management</button>
+                <button class="tab-button" onclick="switchEngagementTab('badges')">Badge Management</button>
+                <button class="tab-button" onclick="switchEngagementTab('analytics')">Engagement Analytics</button>
+            </div>
+
+            <!-- Quest Management Tab -->
+            <div id="quest-tab" class="engagement-tab active">
+                <div class="section-header">
+                    <h3>Quest Management</h3>
+                    <button class="btn btn-primary" onclick="showCreateQuestModal()">+ Create Quest</button>
+                </div>
+
+                <!-- Quest List -->
+                <div class="quest-list">
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Quest</th>
+                                    <th>Type</th>
+                                    <th>Timeframe</th>
+                                    <th>Completions</th>
+                                    <th>Active</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quest-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading quests...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badge Management Tab -->
+            <div id="badge-tab" class="engagement-tab">
+                <div class="section-header">
+                    <h3>Badge Management</h3>
+                    <button class="btn btn-primary" onclick="showCreateBadgeModal()">+ Create Badge</button>
+                </div>
+
+                <!-- Badge Grid -->
+                <div class="badge-grid" id="badge-grid">
+                    <div class="loading-badge">Loading badges...</div>
+                </div>
+            </div>
+
+            <!-- Engagement Analytics Tab -->
+            <div id="analytics-tab" class="engagement-tab">
+                <h3>Engagement Analytics</h3>
+
+                <!-- Analytics Charts Placeholder -->
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h4>Quest Completion Trends</h4>
+                        <div id="quest-completion-chart" class="chart-placeholder">
+                            Chart will be implemented
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Badge Award Distribution</h4>
+                        <div id="badge-distribution-chart" class="chart-placeholder">
+                            Chart will be implemented
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quest Creation Modal -->
+    <div id="quest-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="quest-modal-title">Create New Quest</h3>
+                <span class="close" onclick="closeQuestModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="quest-form">
+                    <!-- Basic Quest Info -->
+                    <div class="form-group">
+                        <label for="quest-title">Quest Title *</label>
+                        <input type="text" id="quest-title" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quest-description">Description *</label>
+                        <textarea id="quest-description" name="description" required rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quest-short-description">Short Description (for quest cards)</label>
+                        <input type="text" id="quest-short-description" name="shortDescription" placeholder="e.g., Read 3 posts from your feed">
+                    </div>
+
+                    <!-- Quest Configuration -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quest-type">Quest Type *</label>
+                            <select id="quest-type" name="type" required>
+                                <option value="DAILY_HABIT">Daily Habit</option>
+                                <option value="DAILY_CIVIC">Daily Civic</option>
+                                <option value="WEEKLY_ENGAGEMENT">Weekly Engagement</option>
+                                <option value="MONTHLY_CONSISTENCY">Monthly Consistency</option>
+                                <option value="SPECIAL_EVENT">Special Event</option>
+                                <option value="CIVIC_ACTION">Civic Action</option>
+                                <option value="EDUCATIONAL">Educational</option>
+                                <option value="SOCIAL_ENGAGEMENT">Social Engagement</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quest-category">Category *</label>
+                            <select id="quest-category" name="category" required>
+                                <option value="INFORMATION">Information</option>
+                                <option value="PARTICIPATION">Participation</option>
+                                <option value="COMMUNITY">Community</option>
+                                <option value="ADVOCACY">Advocacy</option>
+                                <option value="EDUCATION">Education</option>
+                                <option value="SOCIAL">Social</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quest-timeframe">Timeframe *</label>
+                            <select id="quest-timeframe" name="timeframe" required onchange="toggleLimitedTimeFields()">
+                                <option value="DAILY">Daily</option>
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="ONGOING">Ongoing</option>
+                                <option value="LIMITED_TIME">Limited Time</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Requirements Section (Flexible JSON) -->
+                    <div class="form-group">
+                        <label>Quest Requirements</label>
+                        <div class="requirement-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="requirement-type">Requirement Type *</label>
+                                    <select id="requirement-type" onchange="updateRequirementFields()">
+                                        <option value="LOGIN">Login</option>
+                                        <option value="READ_POSTS">Read Posts</option>
+                                        <option value="CIVIC_ACTION">Civic Action</option>
+                                        <option value="SOCIAL_INTERACTION">Social Interaction</option>
+                                        <option value="COMPLETE_QUESTS">Complete Other Quests</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="requirement-target">Target Number *</label>
+                                    <input type="number" id="requirement-target" min="1" value="1">
+                                </div>
+                            </div>
+
+                            <!-- Dynamic requirement fields -->
+                            <div id="dynamic-requirement-fields"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rewards Section -->
+                    <div class="form-group">
+                        <label>Quest Rewards</label>
+                        <div class="reward-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="reputation-points">Reputation Points</label>
+                                    <input type="number" id="reputation-points" min="0" value="2">
+                                </div>
+                                <div class="form-group">
+                                    <label for="experience-points">Experience Points</label>
+                                    <input type="number" id="experience-points" min="0" value="10">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="reward-badges">Badge Rewards (comma-separated IDs)</label>
+                                <input type="text" id="reward-badges" placeholder="badge_id_1,badge_id_2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="quest-active" checked> Quest is Active
+                        </label>
+                    </div>
+
+                    <!-- Limited Time Settings -->
+                    <div id="limited-time-fields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-date">Start Date</label>
+                                <input type="datetime-local" id="start-date" name="startDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="end-date">End Date</label>
+                                <input type="datetime-local" id="end-date" name="endDate">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeQuestModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveQuest()">Save Quest</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Badge Creation Modal -->
+    <div id="badge-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Badge</h3>
+                <span class="close" onclick="closeBadgeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="badge-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="badge-name">Badge Name *</label>
+                        <input type="text" id="badge-name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="badge-description">Description *</label>
+                        <textarea id="badge-description" name="description" required rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="badge-image">Badge Image *</label>
+                        <input type="file" id="badge-image" name="image" accept="image/*" required>
+                        <div id="image-preview"></div>
+                    </div>
+
+                    <!-- Badge Qualification Criteria -->
+                    <div class="form-group">
+                        <label>Qualification Criteria</label>
+                        <div class="criteria-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="criteria-type">Criteria Type *</label>
+                                    <select id="criteria-type" onchange="updateCriteriaFields()">
+                                        <option value="QUEST_COMPLETION">Quest Completion</option>
+                                        <option value="USER_ACTIVITY">User Activity</option>
+                                        <option value="CIVIC_ACTION">Civic Action</option>
+                                        <option value="SOCIAL_METRIC">Social Metric</option>
+                                        <option value="CUSTOM_ENDPOINT">Custom Criteria</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic criteria fields -->
+                            <div id="dynamic-criteria-fields"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="auto-awarded" checked> Automatically Award
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeBadgeModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveBadge()">Create Badge</button>
+            </div>
+        </div>
     </div>
 
     <!-- Load Core Dependencies -->
@@ -6064,6 +6597,7 @@ Auto-refresh enabled every 60 seconds
     <script type="module" src="src/modules/admin/controllers/DeploymentController.js"></script>
     <script type="module" src="src/modules/admin/controllers/SystemController.js"></script>
     <script type="module" src="src/modules/admin/controllers/ErrorsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/CivicEngagementController.js"></script>
 
     <!-- Load Module Loader (orchestrates everything) -->
     <script type="module" src="src/modules/admin/AdminModuleLoader.js"></script>
