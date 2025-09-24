@@ -1504,7 +1504,7 @@ class Profile {
             const adminDashboardURL = getAdminDashboardUrl();
 
             // Log admin dashboard access for security monitoring
-            console.log(`Admin ${this.userProfile.username} accessing admin dashboard from ${currentHostname}`);
+            console.log(`Admin ${this.userProfile.username} accessing admin dashboard from ${window.location.hostname}`);
 
             // Open in new tab for better security isolation
             const newWindow = window.open(adminDashboardURL, '_blank', 'noopener,noreferrer');
@@ -1780,7 +1780,8 @@ class Profile {
                 adminDebugLog('🔒 TOTP verify response data:', verifyData);
                 this.showBackupCodesModal(verifyData?.backupCodes);
                 document.querySelector('.totp-modal-simple').remove(); // Use correct selector
-                this.loadTOTPStatus(); // Refresh status
+                // Add delay to ensure backend has processed the change
+                setTimeout(() => this.loadTOTPStatus(), 500); // Refresh status after 500ms
             } else {
                 adminDebugError('🔒 TOTP verify failed:', response);
                 alert(response.data?.error || 'Invalid verification code. Please try again.');
@@ -1882,7 +1883,7 @@ class Profile {
 
             if (response.ok) {
                 this.showBackupCodesModal(response.data.backupCodes);
-                this.loadTOTPStatus(); // Refresh status
+                setTimeout(() => this.loadTOTPStatus(), 500); // Refresh status after delay
             } else {
                 alert(response.data?.error || 'Failed to regenerate backup codes');
             }
@@ -1908,7 +1909,7 @@ class Profile {
 
             if (response.ok) {
                 alert('Two-Factor Authentication has been disabled.');
-                this.loadTOTPStatus(); // Refresh status
+                setTimeout(() => this.loadTOTPStatus(), 500); // Refresh status after delay
             } else {
                 alert(response.data?.error || 'Failed to disable 2FA');
             }

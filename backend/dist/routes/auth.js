@@ -232,6 +232,25 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
             // Don't fail registration if email fails, but log it
         }
         const token = (0, auth_1.generateToken)(user.id);
+        // Set httpOnly authentication cookie (matching login pattern)
+        res.cookie('authToken', token, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/',
+            domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
+        });
+        // Generate and set CSRF token
+        const csrfToken = require('crypto').randomBytes(32).toString('hex');
+        res.cookie('csrf-token', csrfToken, {
+            httpOnly: false, // CSRF token needs to be readable by JavaScript
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'lax',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
         // Track user registration metrics
         metricsService_1.metricsService.trackUserRegistration(user.id);
         if (emailSent) {
@@ -244,7 +263,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
                 requiresEmailVerification: !user.emailVerified,
                 requiresPhoneVerification: !!phoneNumber && !user.phoneVerified
             },
-            token
+            csrfToken // Return CSRF token for frontend use (not JWT token)
         });
     }
     catch (error) {
@@ -871,6 +890,42 @@ router.post('/create-test-user', async (req, res) => {
     catch (error) {
         console.error('Error creating test user:', error);
         res.status(500).json({ error: 'Failed to create test user' });
+    }
+});
+// Check username availability
+router.post('/check-username', async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username || username.length < 3) {
+            return res.status(400).json({ error: 'Username must be at least 3 characters' });
+        }
+        // Check if username exists
+        const existingUser = await prisma_1.prisma.user.findUnique({
+            where: { username }
+        });
+        res.json({ available: !existingUser });
+    }
+    catch (error) {
+        console.error('Username check error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Check email availability
+router.post('/check-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+        // Check if email exists
+        const existingUser = await prisma_1.prisma.user.findUnique({
+            where: { email }
+        });
+        res.json({ available: !existingUser });
+    }
+    catch (error) {
+        console.error('Email check error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 exports.default = router;
