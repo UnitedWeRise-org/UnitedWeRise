@@ -133,39 +133,64 @@
                 adminDebugError('LoadingSystem', 'Main optimization scripts failed to load, using emergency override');
             }
             
-            // Create minimal API manager
+            // Create minimal API manager (matching api-manager.js format)
             window.apiCall = async (endpoint, options = {}) => {
-                const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
-                const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
-                
-                const headers = {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                };
-                
-                // Add CSRF token for state-changing requests
-                if (window.csrfToken && options.method && options.method !== 'GET') {
-                    headers['X-CSRF-Token'] = window.csrfToken;
+                try {
+                    const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
+                    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    };
+
+                    // Add CSRF token for state-changing requests
+                    if (window.csrfToken && options.method && options.method !== 'GET') {
+                        headers['X-CSRF-Token'] = window.csrfToken;
+                    }
+
+                    if (typeof adminDebugLog !== 'undefined') {
+                        adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
+                    }
+
+                    // Smart body handling to prevent double JSON stringification
+                    let body = undefined;
+                    if (options.body) {
+                        if (options.body instanceof FormData) {
+                            body = options.body;
+                            // Remove Content-Type to let browser set boundary for FormData
+                            delete headers['Content-Type'];
+                        } else if (typeof options.body === 'string') {
+                            body = options.body;
+                        } else {
+                            body = JSON.stringify(options.body);
+                        }
+                    }
+
+                    const response = await fetch(url, {
+                        method: options.method || 'GET',
+                        headers,
+                        credentials: 'include',
+                        body
+                    });
+
+                    const data = await response.json();
+
+                    // Return in same format as api-manager.js
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: data
+                    };
+
+                } catch (error) {
+                    // Return error in consistent format
+                    return {
+                        ok: false,
+                        status: 0,
+                        data: { error: error.message }
+                    };
                 }
-                
-                // Authentication handled by httpOnly cookies automatically
-                
-                
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
-                }
-                const response = await fetch(url, {
-                    method: options.method || 'GET',
-                    headers,
-                    credentials: 'include', // Include cookies
-                    body: options.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : undefined
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                return await response.json();
             };
             
             // initializeApp will be provided by app-initialization.js
@@ -197,7 +222,7 @@
     <script src="src/js/mobile-navigation.js"></script>
     <script src="src/js/map-dummy-data.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
-    <script src="src/js/donation-system.js"></script>
+    <!-- donation-system.js now loaded via ES6 modules in main.js -->
     <!-- Inline Reputation System (Critical Path) -->
     <script>
         // Essential reputation badge functions

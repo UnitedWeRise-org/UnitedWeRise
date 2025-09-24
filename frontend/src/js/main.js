@@ -23,12 +23,22 @@ import './websocket-client.js';
 // Phase 5: Component layer
 import '../components/Profile.js';
 
+// Phase 5b: Payment systems (require Stripe.js and API integration)
+import { initializeDonationSystem } from './donation-system.js';
+
 // Phase 6: Map and visualization
 import './map-maplibre.js';
 import './relationship-utils.js';
 
 // Phase 7: Application initialization (orchestrates everything)
 import './app-initialization.js';
+
+// Phase 8: Service initialization (after DOM and dependencies are ready)
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize payment systems
+    initializeDonationSystem();
+    console.log('💳 Payment systems initialized');
+});
 
 console.log('✅ ES6 Module system loaded successfully');
 console.log('📋 All dependencies loaded in correct order');

@@ -17,10 +17,9 @@ class BundleOptimizer {
                 'src/js/map-maplibre.js'
             ],
 
-            // Payments - Load only when user wants to donate/pay
+            // Payments - Now handled by ES6 module system (Stripe.js loaded in index.html, donation-system.js in main.js)
+            // Only candidate-registration-payment.js remains for lazy loading
             payments: [
-                'https://js.stripe.com/v3/',
-                'src/js/donation-system.js',
                 'src/js/candidate-registration-payment.js'
             ],
 
@@ -99,17 +98,15 @@ smartLoader.loadOnClick('/src/js/social-bundle.js', '[data-feature="social"]', '
                 console.log('🗺️ Map system ready!');
             `,
 
-            // Example: Create payment bundle
-            'payment-bundle.js': `
-                // Combine all payment-related scripts
+            // Example: Create candidate payment bundle
+            'candidate-payment-bundle.js': `
+                // Candidate-specific payment functionality
+                // (Core donation system now always available via ES6 modules)
 
-                // Load Stripe
-                await loadScript('https://js.stripe.com/v3/');
+                // Load candidate payment code
+                await loadScript('src/js/candidate-registration-payment.js');
 
-                // Load your payment code
-                await loadScript('src/js/donation-system.js');
-
-                console.log('💳 Payment system ready!');
+                console.log('💳 Candidate payment system ready!');
             `
         };
     }

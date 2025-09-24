@@ -1,9 +1,10 @@
 /**
  * Donation System - Stripe Integration for United We Rise
  * Handles tax-deductible donations through Stripe Checkout
+ * ES6 Module Version
  */
 
-class DonationSystem {
+export class DonationSystem {
     constructor() {
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('DonationSystem', 'DonationSystem constructor called');
@@ -797,13 +798,16 @@ class DonationSystem {
     }
 }
 
-// Initialize donation system when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// Auto-initialization function for ES6 module system
+export function initializeDonationSystem() {
+    if (!window.donationSystem) {
         window.donationSystem = new DonationSystem();
-    });
-} else {
-    window.donationSystem = new DonationSystem();
+        console.log('💝 Donation system initialized via ES6 module');
+    }
+    return window.donationSystem;
 }
 
-console.log('💝 Donation system module loaded');
+// Legacy compatibility - maintain global access
+window.DonationSystem = DonationSystem;
+
+console.log('💝 Donation system ES6 module loaded');

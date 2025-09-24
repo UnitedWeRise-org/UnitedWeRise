@@ -149,8 +149,7 @@ const smartLoader = new SmartLoader();
 // 1. 🗺️ MAPS - Only load when user clicks "View Map" or goes to map page
 smartLoader.loadOnClick('/src/js/map-maplibre.js', '[data-action="show-map"], .map-toggle, #map-view-btn', 'Map System');
 
-// 2. 💳 PAYMENTS - Only load when user clicks "Donate" or "Pay"
-smartLoader.loadOnClick('/src/js/donation-system.js', '[data-action="donate"], .donate-btn, #donation-button', 'Payment System');
+// 2. 💳 PAYMENTS - Now handled by ES6 module system (donation-system.js loaded in main.js)
 
 // 3. 👨‍💼 CANDIDATE SYSTEM - Only load on candidate registration page
 smartLoader.loadWhenNeeded('/src/components/CandidateSystem.js', '#candidate-registration, .candidate-form', 'Candidate Registration');

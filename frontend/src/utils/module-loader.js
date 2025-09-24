@@ -124,16 +124,11 @@ class ModuleLoader {
                 type: 'component',
                 dependencies: ['auth']
             },
-            'payments': {
-                path: '/src/js/donation-system.js',
-                type: 'script',
-                globalName: 'DonationSystem',
-                dependencies: ['auth']
-            },
+            // 'payments' now handled by ES6 module system in main.js
             'candidate-system': {
                 path: '/src/components/CandidateSystem.js',
                 type: 'component',
-                dependencies: ['auth', 'payments']
+                dependencies: ['auth']
             },
             'map': {
                 path: '/src/js/map-maplibre.js',
@@ -269,8 +264,8 @@ class ModuleLoader {
         const routeToModules = {
             '/admin': ['admin'],
             '/admin-dashboard.html': ['admin'],
-            '/donate': ['payments'],
-            '/candidate-registration': ['candidate-system', 'payments'],
+            // '/donate' - donation system now always available via ES6 modules
+            '/candidate-registration': ['candidate-system'],
             '/candidate-profile': ['candidate-system'],
             '/map': ['map'],
             '/my-profile': ['profile', 'photo-system'],
