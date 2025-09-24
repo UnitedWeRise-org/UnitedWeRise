@@ -244,11 +244,11 @@ class UsersController {
      */
     async changeUserRole(userId, username, currentRole) {
         try {
-            const roles = ['user', 'moderator', 'admin'];
+            const roles = ['user', 'moderator', 'admin', 'super-admin'];
             const currentIndex = roles.indexOf(currentRole);
             const nextRole = roles[(currentIndex + 1) % roles.length];
 
-            const roleEmojis = { user: '👤', moderator: '🛡️', admin: '👑' };
+            const roleEmojis = { user: '👤', moderator: '🛡️', admin: '👑', 'super-admin': '⚡' };
 
             if (!confirm(`Change role for @${username}?\n\n${roleEmojis[currentRole]} ${currentRole} → ${roleEmojis[nextRole]} ${nextRole}\n\nThis action requires TOTP verification.`)) {
                 return;
@@ -259,10 +259,11 @@ class UsersController {
                 `Change user role for @${username} to ${nextRole}`
             );
 
-            const isAdmin = nextRole === 'admin';
-            const isModerator = nextRole === 'moderator';
+            const isAdmin = nextRole === 'admin' || nextRole === 'super-admin';
+            const isModerator = nextRole === 'moderator' || nextRole === 'admin' || nextRole === 'super-admin';
+            const isSuperAdmin = nextRole === 'super-admin';
 
-            const response = await window.AdminAPI.updateUserRole(userId, isAdmin, isModerator);
+            const response = await window.AdminAPI.updateUserRole(userId, isAdmin, isModerator, isSuperAdmin);
 
             if (response.success) {
                 alert(`✅ Role updated: @${username} is now ${roleEmojis[nextRole]} ${nextRole}`);
@@ -434,9 +435,10 @@ class UsersController {
      * Render individual user row
      */
     renderUserRow(user) {
-        const roleIcon = user.isAdmin ? '👑' : user.isModerator ? '🛡️' : '👤';
-        const roleText = user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
-        const currentRole = user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user';
+        // Role hierarchy: Super-Admin > Admin > Moderator > User
+        const roleIcon = user.isSuperAdmin ? '⚡' : user.isAdmin ? '👑' : user.isModerator ? '🛡️' : '👤';
+        const roleText = user.isSuperAdmin ? 'Super-Admin' : user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
+        const currentRole = user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user';
 
         return `
             <tr data-user-id="${user.id}">

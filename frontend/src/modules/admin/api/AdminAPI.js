@@ -210,10 +210,19 @@ class AdminAPI {
         return response.json();
     }
 
-    async updateUserRole(userId, isAdmin, isModerator) {
-        const response = await this.put(`${this.BACKEND_URL}/api/admin/users/${userId}/role`, {
-            isAdmin,
-            isModerator
+    async updateUserRole(userId, isAdmin, isModerator, isSuperAdmin = false) {
+        // Convert boolean flags to role string for backend API
+        let role = 'user';
+        if (isSuperAdmin) {
+            role = 'super-admin';
+        } else if (isAdmin) {
+            role = 'admin';
+        } else if (isModerator) {
+            role = 'moderator';
+        }
+
+        const response = await this.post(`${this.BACKEND_URL}/api/admin/users/${userId}/role`, {
+            role
         });
         if (!response.ok) {
             throw new Error(`Failed to update user role: ${response.status}`);

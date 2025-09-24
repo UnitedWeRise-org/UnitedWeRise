@@ -279,6 +279,25 @@
         .status-revoked { background: #f8d7da; color: #721c24; }
         .status-banned { background: #f5c6cb; color: #721c24; }
         .status-withdrawn { background: #e2e3e5; color: #41464b; }
+
+        /* Role Badge Styles */
+        .role-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .role-badge.user { background: #e9ecef; color: #495057; }
+        .role-badge.moderator { background: #d1ecf1; color: #0c5460; }
+        .role-badge.admin { background: #fff3cd; color: #856404; }
+        .role-badge.super-admin {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -3006,7 +3025,7 @@ Current Status: Use deploymentStatus.check() for real-time status
             `;
             
             users.forEach(user => {
-                const role = user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
+                const role = user.isSuperAdmin ? 'Super-Admin' : user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
                 const status = user.isSuspended ? 'Suspended' : 'Active';
                 const date = new Date(user.createdAt).toLocaleDateString();
                 
@@ -3527,6 +3546,7 @@ Current Status: Use deploymentStatus.check() for real-time status
                 
                 // Helper function to format role display
                 const getRoleDisplay = (user) => {
+                    if (user.isSuperAdmin) return '⚡ Super-Admin';
                     if (user.isAdmin) return '👑 Admin';
                     if (user.isModerator) return '🛡️ Moderator';
                     return '👤 User';
@@ -3696,7 +3716,7 @@ Current Status: Use deploymentStatus.check() for real-time status
                                         </button>
                                     `}
 
-                                    <button onclick="changeUserRole('${user.id}', '${user.username}', '${user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user'}')" class="nav-button" style="background: #9b59b6; white-space: nowrap;">
+                                    <button onclick="changeUserRole('${user.id}', '${user.username}', '${user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user'}')" class="nav-button" style="background: #9b59b6; white-space: nowrap;">
                                         👑 Change Role
                                     </button>
 
@@ -3871,12 +3891,12 @@ Current Status: Use deploymentStatus.check() for real-time status
 
         async function changeUserRole(userId, username, currentRole) {
             try {
-                const roles = ['user', 'moderator', 'admin'];
-                const roleNames = { user: 'User', moderator: 'Moderator', admin: 'Admin' };
+                const roles = ['user', 'moderator', 'admin', 'super-admin'];
+                const roleNames = { user: 'User', moderator: 'Moderator', admin: 'Admin', 'super-admin': 'Super-Admin' };
 
-                let selection = prompt(`Change role for @${username}\n\nCurrent role: ${roleNames[currentRole]}\n\nEnter new role:\n1 = User\n2 = Moderator\n3 = Admin\n\nEnter number (1-3):`);
+                let selection = prompt(`Change role for @${username}\n\nCurrent role: ${roleNames[currentRole]}\n\nEnter new role:\n1 = User\n2 = Moderator\n3 = Admin\n4 = Super-Admin\n\nEnter number (1-4):`);
 
-                if (!selection || !['1', '2', '3'].includes(selection)) {
+                if (!selection || !['1', '2', '3', '4'].includes(selection)) {
                     return;
                 }
 

@@ -426,7 +426,7 @@ router.post('/users/:userId/role',
   requireTOTPForAdmin,
   requireFreshTOTP,
   [
-    body('role').isIn(['user', 'moderator', 'admin']).withMessage('Invalid role'),
+    body('role').isIn(['user', 'moderator', 'admin', 'super-admin']).withMessage('Invalid role'),
     handleValidationErrors
   ],
   async (req: AuthRequest, res) => {
@@ -439,12 +439,19 @@ router.post('/users/:userId/role',
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Safety check: Prevent removing admin privileges if this is the last admin
-      if (user.isAdmin && role !== 'admin') {
-        const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+      // Safety check: Prevent removing admin privileges if this is the last admin or super-admin
+      if ((user.isAdmin || user.isSuperAdmin) && role !== 'admin' && role !== 'super-admin') {
+        const adminCount = await prisma.user.count({
+          where: {
+            OR: [
+              { isAdmin: true },
+              { isSuperAdmin: true }
+            ]
+          }
+        });
         if (adminCount <= 1) {
-          return res.status(400).json({ 
-            error: 'Cannot remove admin privileges from the last admin user' 
+          return res.status(400).json({
+            error: 'Cannot remove admin privileges from the last admin/super-admin user'
           });
         }
       }
@@ -455,15 +462,22 @@ router.post('/users/:userId/role',
       // Set moderator status
       if (role === 'user') {
         updates.isModerator = false;
-      } else if (role === 'moderator' || role === 'admin') {
+      } else if (role === 'moderator' || role === 'admin' || role === 'super-admin') {
         updates.isModerator = true;
       }
 
       // Set admin status (only modify if needed)
-      if (role === 'admin' && !user.isAdmin) {
+      if ((role === 'admin' || role === 'super-admin') && !user.isAdmin) {
         updates.isAdmin = true;
-      } else if (role !== 'admin' && user.isAdmin) {
+      } else if (role !== 'admin' && role !== 'super-admin' && user.isAdmin) {
         updates.isAdmin = false;
+      }
+
+      // Set super-admin status
+      if (role === 'super-admin' && !user.isSuperAdmin) {
+        updates.isSuperAdmin = true;
+      } else if (role !== 'super-admin' && user.isSuperAdmin) {
+        updates.isSuperAdmin = false;
       }
 
       await prisma.user.update({
