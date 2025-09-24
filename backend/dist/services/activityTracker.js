@@ -3,10 +3,14 @@
  * Activity Tracker Service
  * Automatically tracks user activities for accountability and activity logs
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityTracker = void 0;
 const prisma_1 = require("../lib/prisma");
 const client_1 = require("@prisma/client");
+const quest_service_1 = __importDefault(require("./quest.service"));
 class ActivityTracker {
     /**
      * Track a user activity
@@ -23,6 +27,14 @@ class ActivityTracker {
                 },
             });
             console.log(`📊 Activity tracked: ${activityType} by user ${userId}`);
+            // Update quest progress based on activity type
+            try {
+                await quest_service_1.default.updateQuestProgress(userId, activityType, metadata);
+            }
+            catch (questError) {
+                console.error('Failed to update quest progress:', questError);
+                // Don't throw - quest tracking shouldn't break main functionality
+            }
         }
         catch (error) {
             console.error('Failed to track activity:', error);

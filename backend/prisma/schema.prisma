@@ -143,6 +143,9 @@ model User {
   suspensions                 UserSuspension[]          @relation("UserSuspensions")
   issuedWarnings              UserWarning[]             @relation("IssuedWarnings")
   receivedWarnings            UserWarning[]             @relation("ReceivedWarnings")
+  questProgress               UserQuestProgress[]
+  questStreak                 UserQuestStreak?
+  userBadges                  UserBadge[]
 
   @@index([username])
   @@index([createdAt])
@@ -2575,4 +2578,129 @@ enum AgreementLevel {
   DISAGREE
   PARTIAL
   UNCLEAR
+}
+
+// Civic Engagement Quest System
+model Quest {
+  id                String              @id @default(cuid())
+  type              QuestType
+  category          QuestCategory
+  title             String
+  description       String              @db.Text
+  shortDescription  String?             // For display in quest lists
+  requirements      Json                // Flexible requirement definition
+  rewards           Json                // Points, badges, reputation
+  timeframe         QuestTimeframe
+  displayOrder      Int                 @default(0)
+  isActive          Boolean             @default(true)
+  startDate         DateTime?           // For special events
+  endDate           DateTime?           // For limited-time quests
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdBy         String?             // Admin who created it
+  userProgress      UserQuestProgress[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([startDate, endDate])
+}
+
+model UserQuestProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  questId     String
+  progress    Json      // Current progress state
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  startedAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@index([userId])
+  @@index([questId])
+  @@index([completed])
+}
+
+model UserQuestStreak {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  currentDailyStreak Int      @default(0)
+  longestDailyStreak Int      @default(0)
+  currentWeeklyStreak Int     @default(0)
+  longestWeeklyStreak Int     @default(0)
+  lastCompletedDate  DateTime?
+  totalQuestsCompleted Int    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Badge System
+model Badge {
+  id                    String      @id @default(cuid())
+  name                  String      @unique
+  description           String      @db.Text
+  imageUrl              String      // URL to badge image in Azure Storage
+  qualificationCriteria Json        // Flexible criteria object
+  displayOrder          Int         @default(0)
+  isActive              Boolean     @default(true)
+  isAutoAwarded         Boolean     @default(true) // Whether system auto-awards or admin manual only
+  maxAwards             Int?        // Optional limit on how many can be awarded
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  createdBy             String?     // Admin who created it
+  userBadges            UserBadge[]
+
+  @@index([isActive])
+  @@index([name])
+}
+
+model UserBadge {
+  id           String   @id @default(cuid())
+  userId       String
+  badgeId      String
+  earnedAt     DateTime @default(now())
+  isDisplayed  Boolean  @default(false) // Whether user chose to display it
+  displayOrder Int?     // User's personal ordering for displayed badges
+  awardedBy    String?  // Admin ID if manually awarded
+  awardReason  String?  // Optional reason for manual awards
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+  @@index([isDisplayed])
+}
+
+enum QuestType {
+  DAILY_HABIT
+  DAILY_CIVIC
+  WEEKLY_ENGAGEMENT
+  MONTHLY_CONSISTENCY
+  SPECIAL_EVENT
+  CIVIC_ACTION
+  EDUCATIONAL
+  SOCIAL_ENGAGEMENT
+}
+
+enum QuestCategory {
+  INFORMATION
+  PARTICIPATION
+  COMMUNITY
+  ADVOCACY
+  EDUCATION
+  SOCIAL
+}
+
+enum QuestTimeframe {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ONGOING
+  LIMITED_TIME
 }

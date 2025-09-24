@@ -5,6 +5,7 @@
 
 import { prisma } from '../lib/prisma';
 import { ActivityType } from '@prisma/client';
+import questService from './quest.service';
 
 interface ActivityMetadata {
   title?: string;
@@ -39,6 +40,14 @@ export class ActivityTracker {
       });
 
       console.log(`📊 Activity tracked: ${activityType} by user ${userId}`);
+
+      // Update quest progress based on activity type
+      try {
+        await questService.updateQuestProgress(userId, activityType, metadata);
+      } catch (questError) {
+        console.error('Failed to update quest progress:', questError);
+        // Don't throw - quest tracking shouldn't break main functionality
+      }
     } catch (error) {
       console.error('Failed to track activity:', error);
       // Don't throw - activity tracking shouldn't break main functionality

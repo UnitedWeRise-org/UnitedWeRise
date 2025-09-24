@@ -44,6 +44,8 @@ import totpRoutes from './routes/totp';
 import candidateVerificationRoutes from './routes/candidateVerification';
 import externalCandidatesRoutes from './routes/externalCandidates';
 import motdRoutes from './routes/motd';
+import badgeRoutes from './routes/badges';
+import questRoutes from './routes/quests';
 import WebSocketService from './services/WebSocketService';
 import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
@@ -221,6 +223,8 @@ app.use('/api/candidate-policy-platform', candidatePolicyPlatformRoutes);
 app.use('/api/candidate-verification', candidateVerificationRoutes);
 app.use('/api/external-candidates', externalCandidatesRoutes);
 app.use('/api/motd', motdRoutes);
+app.use('/api/badges', badgeRoutes);
+app.use('/api/quests', questRoutes);
 app.use('/health', healthRoutes);
 
 // Serve uploaded photos statically

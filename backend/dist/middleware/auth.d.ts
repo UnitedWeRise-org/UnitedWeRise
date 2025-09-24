@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
         lastName?: string;
         isModerator?: boolean;
         isAdmin?: boolean;
+        isSuperAdmin?: boolean;
     };
     sensitiveAction?: {
         description: string;

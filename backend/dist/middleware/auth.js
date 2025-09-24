@@ -31,7 +31,7 @@ const requireAuth = async (req, res, next) => {
         }
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, lastSeenAt: true }
+            select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
         });
         if (!user) {
             return res.status(401).json({ error: 'User not found.' });

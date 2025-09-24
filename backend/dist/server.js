@@ -50,6 +50,8 @@ const totp_1 = __importDefault(require("./routes/totp"));
 const candidateVerification_1 = __importDefault(require("./routes/candidateVerification"));
 const externalCandidates_1 = __importDefault(require("./routes/externalCandidates"));
 const motd_1 = __importDefault(require("./routes/motd"));
+const badges_1 = __importDefault(require("./routes/badges"));
+const quests_1 = __importDefault(require("./routes/quests"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
@@ -207,6 +209,8 @@ app.use('/api/candidate-policy-platform', candidatePolicyPlatform_1.default);
 app.use('/api/candidate-verification', candidateVerification_1.default);
 app.use('/api/external-candidates', externalCandidates_1.default);
 app.use('/api/motd', motd_1.default);
+app.use('/api/badges', badges_1.default);
+app.use('/api/quests', quests_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
 app.use('/uploads', express_1.default.static('uploads'));
