@@ -1973,6 +1973,12 @@ Loading deployment status...
 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('🔍 DEBUG: Full API response data:', data);
+                    console.log('🔍 DEBUG: Users array:', data.users);
+                    if (data.users && data.users.length > 0) {
+                        console.log('🔍 DEBUG: First user data:', data.users[0]);
+                        console.log('🔍 DEBUG: Jeffrey user role fields:', data.users.find(u => u.email === 'jeffrey@unitedwerise.org'));
+                    }
                     displayUsersTable(data.users);
                 } else {
                     throw new Error('Failed to load users');
@@ -3025,9 +3031,18 @@ Current Status: Use deploymentStatus.check() for real-time status
             `;
             
             users.forEach(user => {
+                // DEBUG: Log each user's role data
+                console.log(`🔍 DEBUG: Processing user ${user.email}:`, {
+                    isSuperAdmin: user.isSuperAdmin,
+                    isAdmin: user.isAdmin,
+                    isModerator: user.isModerator
+                });
+
                 const roleText = user.isSuperAdmin ? 'Super-Admin' : user.isAdmin ? 'Admin' : user.isModerator ? 'Moderator' : 'User';
                 const roleClass = user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user';
                 const roleIcon = user.isSuperAdmin ? '⚡' : user.isAdmin ? '👑' : user.isModerator ? '🛡️' : '👤';
+
+                console.log(`🔍 DEBUG: ${user.email} role result:`, {roleText, roleClass, roleIcon});
                 const status = user.isSuspended ? 'Suspended' : 'Active';
                 const date = new Date(user.createdAt).toLocaleDateString();
 
