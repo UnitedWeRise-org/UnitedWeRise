@@ -377,40 +377,91 @@ window.onVerificationComplete = () => {
     }, 1500);
 };
 
-// Handle successful login to check onboarding status
-// DISABLED: This was causing issues with the login flow by using incorrect API_BASE
-// const originalSetUserLoggedInEnhanced = window.setUserLoggedIn;
-// if (originalSetUserLoggedInEnhanced) {
-//     window.setUserLoggedIn = (user) => {
-//         originalSetUserLoggedInEnhanced(user);
-//         
-//         // Check onboarding status after login
-//         setTimeout(async () => {
-//             try {
-//                 // BUG: this.API_BASE doesn't exist here - this code is outside the class
-//                 const response = await fetch(`${this.API_BASE}/onboarding/progress`, {
-//                     headers: {
-//                         'Authorization': `Bearer ${authToken}`
-//                     }
-//                 });
-//                 
-//                 if (response.ok) {
-//                     const progress = await response.json();
-//                     
-//                     // Show onboarding if not complete and user has been registered for less than 7 days
-//                     const userAge = Date.now() - new Date(user.createdAt).getTime();
-//                     const weekInMs = 7 * 24 * 60 * 60 * 1000;
-//                     
-//                     if (!progress.isComplete && userAge < weekInMs && window.onboardingFlow) {
-//                         onboardingFlow.show();
-//                     }
-//                 }
-//             } catch (error) {
-//                 console.error('Failed to check onboarding status:', error);
-//             }
-//         }, 2000);
-//     };
-// }
+// Handle successful login to check onboarding status - FIXED VERSION
+class OnboardingTrigger {
+    constructor() {
+        this.initializeOnboardingTriggers();
+    }
+
+    async initializeOnboardingTriggers() {
+        // Listen for authentication events from unified auth manager
+        if (window.unifiedAuthManager) {
+            window.unifiedAuthManager.subscribe((authState) => {
+                if (authState.isAuthenticated && authState.user) {
+                    this.checkOnboardingStatus(authState.user);
+                }
+            });
+        }
+
+        // Also listen for direct login events as fallback
+        window.addEventListener('userLoggedIn', (event) => {
+            if (event.detail && event.detail.user) {
+                this.checkOnboardingStatus(event.detail.user);
+            }
+        });
+
+        // Listen for app initialization complete event (ensures onboarding triggers after full app load)
+        window.addEventListener('appInitializationComplete', (event) => {
+            if (event.detail && event.detail.user) {
+                console.log('🎯 App initialization complete, checking onboarding...');
+                this.checkOnboardingStatus(event.detail.user);
+            }
+        });
+    }
+
+    async checkOnboardingStatus(user) {
+        try {
+            // Use environment-aware API client with cookie authentication
+            const progress = await window.apiClient.call('/onboarding/progress');
+
+            console.log('🔍 Onboarding progress check:', {
+                userAge: Date.now() - new Date(user.createdAt).getTime(),
+                isComplete: progress.isComplete,
+                currentStep: progress.currentStep,
+                totalSteps: progress.totalSteps
+            });
+
+            // Show onboarding if not complete and user has been registered for less than 7 days
+            const userAge = Date.now() - new Date(user.createdAt).getTime();
+            const weekInMs = 7 * 24 * 60 * 60 * 1000;
+
+            const shouldShowOnboarding = !progress.isComplete && userAge < weekInMs;
+
+            if (shouldShowOnboarding && window.onboardingFlow) {
+                console.log('🎯 Triggering onboarding flow for user:', user.firstName || user.username);
+                // Small delay to let the page finish loading
+                setTimeout(() => {
+                    window.onboardingFlow.show();
+                }, 1500);
+            } else if (shouldShowOnboarding) {
+                console.warn('⚠️ Should show onboarding but OnboardingFlow not available');
+            } else {
+                console.log('✅ Onboarding not needed:', {
+                    complete: progress.isComplete,
+                    userAge: Math.round(userAge / (24 * 60 * 60 * 1000)),
+                    weekLimit: 7
+                });
+            }
+        } catch (error) {
+            console.error('Failed to check onboarding status:', error);
+
+            // Fallback: Show onboarding for very new users (created in last hour)
+            // This covers edge cases where API might fail
+            const userAge = Date.now() - new Date(user.createdAt).getTime();
+            const oneHourMs = 60 * 60 * 1000;
+
+            if (userAge < oneHourMs && window.onboardingFlow) {
+                console.log('🔄 API failed, showing onboarding for very new user');
+                setTimeout(() => {
+                    window.onboardingFlow.show();
+                }, 2000);
+            }
+        }
+    }
+}
+
+// Initialize the onboarding trigger system
+const onboardingTrigger = new OnboardingTrigger();
 
 // Export the BackendIntegration class for ES6 module usage
 export { BackendIntegration };

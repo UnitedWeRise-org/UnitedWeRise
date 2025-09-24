@@ -288,6 +288,15 @@ class UnifiedAuthManager {
                 } else {
                     console.warn('⚠️ initializeApp() function not available');
                 }
+
+                // Trigger onboarding check after app initialization completes
+                if (this._currentAuthState.isAuthenticated && this._currentAuthState.user) {
+                    console.log('🎯 Triggering onboarding check post-initialization...');
+                    // Dispatch event to trigger onboarding check
+                    window.dispatchEvent(new CustomEvent('appInitializationComplete', {
+                        detail: { user: this._currentAuthState.user }
+                    }));
+                }
             } catch (error) {
                 console.error('❌ App reinitialization failed:', error);
             } finally {
