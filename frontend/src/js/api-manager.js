@@ -243,29 +243,40 @@ class APIRequestManager {
         const headers = {
             ...options.headers
         };
-        
+
         // Only set Content-Type for JSON requests (not multipart uploads)
         if (!options.skipContentType && !(options.body instanceof FormData)) {
             headers['Content-Type'] = 'application/json';
         }
-        
+
         // NEW: Add CSRF token for state-changing requests
         const csrfToken = this.getCSRFToken();
         if (csrfToken && options.method && options.method !== 'GET') {
             headers['X-CSRF-Token'] = csrfToken;
         }
-        
+
         // Authentication handled by httpOnly cookies automatically
-        
-        
-        return {
+
+        // Build the fetch options object
+        // IMPORTANT: Don't spread ...options at the end to avoid overriding the stringified body
+        const fetchOptions = {
             method: options.method || 'GET',
             headers,
             credentials: 'include', // CRITICAL: Include cookies
-            body: options.body instanceof FormData ? options.body : 
-                  (options.body ? JSON.stringify(options.body) : undefined),
-            ...options
         };
+
+        // Add body if present, ensuring proper JSON stringification
+        if (options.body) {
+            fetchOptions.body = options.body instanceof FormData
+                ? options.body
+                : JSON.stringify(options.body);
+        }
+
+        // Add any other options that aren't method, headers, credentials, or body
+        const { method, headers: _h, credentials, body, ...otherOptions } = options;
+        Object.assign(fetchOptions, otherOptions);
+
+        return fetchOptions;
     }
 
     // Get CSRF token from memory or cookie

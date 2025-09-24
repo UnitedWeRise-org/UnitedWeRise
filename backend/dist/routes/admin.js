@@ -134,9 +134,12 @@ router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPFor
             where.isModerator = true;
         if (role === 'admin')
             where.isAdmin = true;
+        if (role === 'super-admin')
+            where.isSuperAdmin = true;
         if (role === 'user') {
             where.isModerator = false;
             where.isAdmin = false;
+            where.isSuperAdmin = false;
         }
         const [users, total] = await Promise.all([
             prisma_1.prisma.user.findMany({
@@ -151,6 +154,7 @@ router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPFor
                     phoneVerified: true,
                     isModerator: true,
                     isAdmin: true,
+                    isSuperAdmin: true,
                     isSuspended: true,
                     createdAt: true,
                     lastSeenAt: true,
@@ -386,7 +390,7 @@ router.post('/users/:userId/unsuspend', auth_1.requireAuth, requireAdmin, totpAu
 });
 // Promote/demote user roles
 router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, totpAuth_1.requireFreshTOTP, [
-    (0, express_validator_1.body)('role').isIn(['user', 'moderator', 'admin']).withMessage('Invalid role'),
+    (0, express_validator_1.body)('role').isIn(['user', 'moderator', 'admin', 'super-admin']).withMessage('Invalid role'),
     handleValidationErrors
 ], async (req, res) => {
     try {
@@ -396,12 +400,19 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // Safety check: Prevent removing admin privileges if this is the last admin
-        if (user.isAdmin && role !== 'admin') {
-            const adminCount = await prisma_1.prisma.user.count({ where: { isAdmin: true } });
+        // Safety check: Prevent removing admin privileges if this is the last admin or super-admin
+        if ((user.isAdmin || user.isSuperAdmin) && role !== 'admin' && role !== 'super-admin') {
+            const adminCount = await prisma_1.prisma.user.count({
+                where: {
+                    OR: [
+                        { isAdmin: true },
+                        { isSuperAdmin: true }
+                    ]
+                }
+            });
             if (adminCount <= 1) {
                 return res.status(400).json({
-                    error: 'Cannot remove admin privileges from the last admin user'
+                    error: 'Cannot remove admin privileges from the last admin/super-admin user'
                 });
             }
         }
@@ -411,15 +422,22 @@ router.post('/users/:userId/role', auth_1.requireAuth, requireAdmin, totpAuth_1.
         if (role === 'user') {
             updates.isModerator = false;
         }
-        else if (role === 'moderator' || role === 'admin') {
+        else if (role === 'moderator' || role === 'admin' || role === 'super-admin') {
             updates.isModerator = true;
         }
         // Set admin status (only modify if needed)
-        if (role === 'admin' && !user.isAdmin) {
+        if ((role === 'admin' || role === 'super-admin') && !user.isAdmin) {
             updates.isAdmin = true;
         }
-        else if (role !== 'admin' && user.isAdmin) {
+        else if (role !== 'admin' && role !== 'super-admin' && user.isAdmin) {
             updates.isAdmin = false;
+        }
+        // Set super-admin status
+        if (role === 'super-admin' && !user.isSuperAdmin) {
+            updates.isSuperAdmin = true;
+        }
+        else if (role !== 'super-admin' && user.isSuperAdmin) {
+            updates.isSuperAdmin = false;
         }
         await prisma_1.prisma.user.update({
             where: { id: userId },
