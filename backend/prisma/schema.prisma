@@ -51,6 +51,7 @@ model User {
   lastSeenAt                  DateTime                  @default(now())
   isModerator                 Boolean                   @default(false)
   isAdmin                     Boolean                   @default(false)
+  isSuperAdmin                Boolean                   @default(false)
   isSuspended                 Boolean                   @default(false)
   onboardingData              Json?
   onboardingCompleted         Boolean                   @default(false)
