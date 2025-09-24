@@ -4244,7 +4244,7 @@
                 <button id="refreshAllBtn" class="nav-button">
                     <span id="refreshIcon">🔄</span> Refresh
                 </button>
-                <button onclick="logout()" class="nav-button">Logout</button>
+                <button data-action="logout" class="nav-button">Logout</button>
             </div>
         </div>
 
@@ -5428,7 +5428,7 @@
                 <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
                     <div class="modal-header">
                         <h3 id="motdEditorTitle">Create New MOTD</h3>
-                        <button class="modal-close" onclick="window.motdController.hideMOTDEditor()">✕</button>
+                        <button class="modal-close" data-action="close-motd-editor">✕</button>
                     </div>
 
                     <div class="modal-body">
@@ -5550,7 +5550,7 @@
 
                             <!-- Form Actions -->
                             <div class="form-actions">
-                                <button type="button" class="btn-secondary" onclick="window.motdController.hideMOTDEditor()">
+                                <button type="button" class="btn-secondary" data-action="cancel-motd-editor">
                                     Cancel
                                 </button>
                                 <button type="submit" class="btn-primary">
@@ -5567,7 +5567,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>📅 Schedule MOTD</h3>
-                        <button class="modal-close" onclick="document.getElementById('scheduleModal').style.display='none'">✕</button>
+                        <button class="modal-close" data-action="close-schedule-modal">✕</button>
                     </div>
 
                     <div class="modal-body">
@@ -5604,7 +5604,7 @@
                             </div>
 
                             <div class="form-actions">
-                                <button type="button" class="btn-secondary" onclick="document.getElementById('scheduleModal').style.display='none'">
+                                <button type="button" class="btn-secondary" data-action="cancel-schedule-modal">
                                     Cancel
                                 </button>
                                 <button type="submit" class="btn-primary">
@@ -6042,7 +6042,12 @@ Auto-refresh enabled every 60 seconds
     <script src="js/unifiedAuth.js"></script>
     <script src="src/js/deployment-status.js"></script>
 
-    <!-- Load Admin Modules -->
+    <!-- Load Admin Utility Modules First -->
+    <script type="module" src="src/modules/admin/utils/AdminGlobalUtils.js"></script>
+    <script type="module" src="src/modules/admin/utils/AdminTOTPModal.js"></script>
+    <script type="module" src="src/modules/admin/utils/AdminTabsManager.js"></script>
+
+    <!-- Load Admin Core Modules -->
     <script type="module" src="src/modules/admin/api/AdminAPI.js"></script>
     <script type="module" src="src/modules/admin/auth/AdminAuth.js"></script>
     <script type="module" src="src/modules/admin/state/AdminState.js"></script>
@@ -6064,190 +6069,8 @@ Auto-refresh enabled every 60 seconds
     <script type="module" src="src/modules/admin/AdminModuleLoader.js"></script>
 
     <!-- Analytics Tab Functionality -->
-    <script>
-        // Analytics tab switching functionality
-        function setupAnalyticsTabs() {
-            const tabs = document.querySelectorAll('.analytics-tab');
-            const panels = document.querySelectorAll('.tab-panel');
+    <!-- Analytics tab functionality now handled by AdminTabsManager module -->
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const targetTab = tab.dataset.tab;
-
-                    // Remove active class from all tabs and panels
-                    tabs.forEach(t => t.classList.remove('active'));
-                    panels.forEach(p => p.classList.remove('active'));
-
-                    // Add active class to clicked tab
-                    tab.classList.add('active');
-
-                    // Show corresponding panel
-                    const targetPanel = document.getElementById(targetTab + 'Tab');
-                    if (targetPanel) {
-                        targetPanel.classList.add('active');
-                    }
-                });
-            });
-
-            // Handle custom date range visibility
-            const dateRangeSelect = document.getElementById('analyticsDateRange');
-            const customDateRange = document.querySelector('.custom-date-range');
-
-            if (dateRangeSelect && customDateRange) {
-                dateRangeSelect.addEventListener('change', function() {
-                    if (this.value === 'custom') {
-                        customDateRange.style.display = 'flex';
-                    } else {
-                        customDateRange.style.display = 'none';
-                    }
-                });
-            }
-        }
-
-        // Initialize analytics tabs when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupAnalyticsTabs);
-        } else {
-            setupAnalyticsTabs();
-        }
-    </script>
-
-    <!-- Legacy compatibility -->
-    <script>
-        // Global variables for API configuration
-        window.API_CONFIG = {
-            BASE_URL: (() => {
-                const hostname = window.location.hostname;
-                if (hostname.includes('dev.unitedwerise.org')) {
-                    return 'https://dev-api.unitedwerise.org/api';
-                } else if (hostname.includes('unitedwerise.org')) {
-                    return 'https://api.unitedwerise.org/api';
-                } else {
-                    return 'http://localhost:3001/api';
-                }
-            })()
-        };
-
-        // Legacy global functions for backward compatibility
-        window.logout = function() {
-            if (window.adminAuth) {
-                window.adminAuth.logout();
-            }
-        };
-
-        // TOTP confirmation function for admin actions
-        window.requestTOTPConfirmation = async function(actionDescription, options = {}) {
-            return new Promise((resolve, reject) => {
-                const modal = document.createElement('div');
-                modal.style.cssText = `
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(0,0,0,0.7); z-index: 2000;
-                    display: flex; align-items: center; justify-content: center;
-                `;
-
-                let countdownInterval;
-                let timeLeft = 30;
-
-                const updateCountdown = () => {
-                    const countdownElement = modal.querySelector('#totp-countdown');
-                    if (countdownElement) {
-                        countdownElement.textContent = timeLeft;
-                        if (timeLeft <= 10) {
-                            countdownElement.style.color = '#e74c3c';
-                        }
-                    }
-                    timeLeft--;
-                    if (timeLeft < 0) {
-                        clearInterval(countdownInterval);
-                        cleanup();
-                        reject(new Error('TOTP timeout'));
-                    }
-                };
-
-                const cleanup = () => {
-                    if (countdownInterval) clearInterval(countdownInterval);
-                    const totpInput = modal.querySelector('#totp-input');
-                    if (totpInput) totpInput.value = '';
-                    if (modal.parentNode) modal.parentNode.removeChild(modal);
-                };
-
-                modal.innerHTML = `
-                    <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 450px; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-                        <div style="text-align: center; margin-bottom: 1.5rem;">
-                            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔐</div>
-                            <h2 style="margin: 0; color: #2c3e50;">Security Verification Required</h2>
-                        </div>
-                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid #e74c3c;">
-                            <p style="margin: 0; font-weight: 600; color: #2c3e50;">Action: ${actionDescription}</p>
-                            ${options.additionalInfo ? `<p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #7f8c8d;">${options.additionalInfo}</p>` : ''}
-                        </div>
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #2c3e50;">
-                                Enter your current TOTP code:
-                            </label>
-                            <input type="text" id="totp-input" placeholder="000000" maxlength="6"
-                                   style="width: 100%; padding: 0.75rem; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 1.2rem; text-align: center; font-family: monospace;">
-                            <div style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem; color: #7f8c8d;">
-                                Time remaining: <span id="totp-countdown" style="font-weight: 600;">30</span>s
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 1rem; justify-content: center;">
-                            <button id="totp-cancel" class="nav-button" style="background: #95a5a6; flex: 1;">Cancel</button>
-                            <button id="totp-confirm" class="nav-button" style="background: #e74c3c; flex: 1;">Confirm Action</button>
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(modal);
-                const input = modal.querySelector('#totp-input');
-                const confirmBtn = modal.querySelector('#totp-confirm');
-                const cancelBtn = modal.querySelector('#totp-cancel');
-
-                input.focus();
-                countdownInterval = setInterval(updateCountdown, 1000);
-
-                confirmBtn.onclick = () => {
-                    const totpCode = input.value.trim();
-                    if (totpCode.length !== 6) {
-                        alert('Please enter a 6-digit TOTP code');
-                        return;
-                    }
-                    cleanup();
-                    resolve({ totpToken: totpCode });
-                };
-
-                cancelBtn.onclick = () => {
-                    cleanup();
-                    reject(new Error('TOTP cancelled'));
-                };
-
-                input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter' && input.value.length === 6) {
-                        confirmBtn.click();
-                    }
-                });
-            });
-        };
-
-        // Error handling
-        window.addEventListener('error', (event) => {
-            console.error('Global error:', event.error);
-            if (typeof adminDebugError === 'function') {
-                adminDebugError('GlobalError', 'Unhandled error occurred', {
-                    message: event.error?.message,
-                    filename: event.filename,
-                    lineno: event.lineno,
-                    colno: event.colno
-                });
-            }
-        });
-
-        // Initialization status
-        console.log('🚀 Modular Admin Dashboard loading...');
-        console.log('📦 Core dependencies:', {
-            adminDebugger: typeof adminDebugLog === 'function',
-            unifiedAuth: typeof unifiedLogin === 'function'
-        });
-    </script>
+    <!-- Global utilities, TOTP modal, and error handling now handled by AdminGlobalUtils module -->
 </body>
 </html>

@@ -10,6 +10,9 @@ class AdminModuleLoader {
     constructor() {
         this.modules = new Map();
         this.loadOrder = [
+            'AdminGlobalUtils',
+            'AdminTOTPModal',
+            'AdminTabsManager',
             'AdminAPI',
             'AdminAuth',
             'AdminState',
@@ -29,6 +32,9 @@ class AdminModuleLoader {
         ];
         this.isInitialized = false;
         this.dependencies = {
+            'AdminGlobalUtils': [],
+            'AdminTOTPModal': [],
+            'AdminTabsManager': [],
             'AdminAuth': ['unifiedLogin', 'adminDebugLog'],
             'AdminAPI': ['adminDebugLog'],
             'AdminState': ['AdminAPI', 'adminDebugLog'],
@@ -153,6 +159,29 @@ class AdminModuleLoader {
         // Module should already be loaded via script tags
         // We just need to initialize them
         switch (moduleName) {
+            case 'AdminGlobalUtils':
+                if (!window.AdminGlobalUtils) {
+                    throw new Error('AdminGlobalUtils not found in global scope');
+                }
+                this.modules.set('AdminGlobalUtils', window.adminGlobalUtils);
+                break;
+
+            case 'AdminTOTPModal':
+                if (!window.AdminTOTPModal) {
+                    throw new Error('AdminTOTPModal not found in global scope');
+                }
+                this.modules.set('AdminTOTPModal', window.adminTOTPModal || new window.AdminTOTPModal());
+                break;
+
+            case 'AdminTabsManager':
+                if (!window.AdminTabsManager) {
+                    throw new Error('AdminTabsManager not found in global scope');
+                }
+                window.adminTabsManager = new window.AdminTabsManager();
+                await window.adminTabsManager.init();
+                this.modules.set('AdminTabsManager', window.adminTabsManager);
+                break;
+
             case 'AdminAPI':
                 if (!window.AdminAPI) {
                     throw new Error('AdminAPI not found in global scope');
@@ -336,9 +365,8 @@ class AdminModuleLoader {
         }
 
         // Global logout button
-        const logoutBtn = document.querySelector('button[onclick="logout()"]');
+        const logoutBtn = document.querySelector('button[data-action="logout"]');
         if (logoutBtn) {
-            logoutBtn.removeAttribute('onclick');
             logoutBtn.addEventListener('click', () => {
                 if (window.adminAuth) {
                     window.adminAuth.logout();
@@ -346,10 +374,41 @@ class AdminModuleLoader {
             });
         }
 
+        // Modal close buttons
+        this.setupModalHandlers();
+
         // Section navigation
         this.setupSectionNavigation();
 
         console.log('✅ Global handlers set up');
+    }
+
+    /**
+     * Set up modal handlers
+     */
+    setupModalHandlers() {
+        // MOTD Editor close buttons
+        const motdCloseButtons = document.querySelectorAll('[data-action="close-motd-editor"], [data-action="cancel-motd-editor"]');
+        motdCloseButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (window.motdController && window.motdController.hideMOTDEditor) {
+                    window.motdController.hideMOTDEditor();
+                }
+            });
+        });
+
+        // Schedule modal close buttons
+        const scheduleCloseButtons = document.querySelectorAll('[data-action="close-schedule-modal"], [data-action="cancel-schedule-modal"]');
+        scheduleCloseButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const scheduleModal = document.getElementById('scheduleModal');
+                if (scheduleModal) {
+                    scheduleModal.style.display = 'none';
+                }
+            });
+        });
+
+        console.log('✅ Modal handlers set up');
     }
 
     /**

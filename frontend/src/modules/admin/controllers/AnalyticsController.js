@@ -47,6 +47,12 @@ class AnalyticsController {
         try {
             await adminDebugLog('AnalyticsController', 'Starting initialization');
 
+            // Initialize tabs manager if available
+            if (window.adminTabsManager) {
+                // Analytics-specific tab functionality will be handled by AdminTabsManager
+                console.log('✅ AnalyticsController integrating with AdminTabsManager');
+            }
+
             // Check for Chart.js dependency
             if (typeof Chart === 'undefined') {
                 await this.loadChartJS();

@@ -835,76 +835,215 @@ graph TD
 ### Core Models
 
 #### User Model
+**Complete Schema - 145+ Fields & Relationships**
 ```prisma
 model User {
-  id                    String    @id @default(cuid())
-  email                 String    @unique
-  username              String    @unique
-  password              String
-  
-  // Profile Information
-  firstName             String?
-  lastName              String?
-  avatar                String?
-  backgroundImage       String?
-  bio                   String?
-  website               String?
-  location              String?
-  
-  // Address & Location
-  streetAddress         String?
-  streetAddress2        String?  // Added: 2-line address support (optional)
-  city                  String?
-  state                 String?
-  zipCode               String?
-  latitude              Float?
-  longitude             Float?
-  h3Index               String?
-  
-  // Political Profile
-  politicalProfileType  PoliticalType @default(CITIZEN)
-  verificationStatus    VerificationStatus @default(UNVERIFIED)
-  office                String?
-  officialTitle         String?
-  campaignWebsite       String?
-  
-  // Reputation System
-  reputation            Int       @default(70)
-  reputationLastUpdated DateTime?
-  
-  // Social Metrics
-  followersCount        Int       @default(0)
-  followingCount        Int       @default(0)
-  
-  // Account Status
-  emailVerified         Boolean   @default(false)
-  phoneVerified         Boolean   @default(false)
-  accountStatus         AccountStatus @default(ACTIVE)
-  moderationStatus      ModerationStatus @default(GOOD_STANDING)
+  id                          String                    @id @default(cuid())
+  email                       String                    @unique
+  username                    String                    @unique
+  password                    String?                   // Nullable for OAuth-only accounts
+
+  // Basic Profile Information
+  firstName                   String?
+  lastName                    String?
+  displayName                 String?
+  avatar                      String?
+  backgroundImage             String?
+  bio                         String?
+  website                     String?
+  location                    String?
+
+  // Complete Address & Geographic System
+  streetAddress               String?
+  streetAddress2              String?
+  city                        String?
+  state                       String?
+  zipCode                     String?
+  h3Index                     String?                   // H3 geographic indexing
+  embedding                   Float[]                   @default([])
+
+  // Political Profile & Verification
+  politicalProfileType        PoliticalProfileType      @default(CITIZEN)
+  verificationStatus          VerificationStatus        @default(PENDING)
+  verificationDocuments       String[]                  @default([])
+  office                      String?
+  campaignWebsite             String?
+  officialTitle               String?
+  termStart                   DateTime?
+  termEnd                     DateTime?
+  politicalExperience         String?
+
+  // Email & Phone Verification
+  emailVerified               Boolean                   @default(false)
+  emailVerifyToken            String?                   @unique
+  emailVerifyExpiry           DateTime?
+  phoneNumber                 String?
+  phoneVerified               Boolean                   @default(false)
+  phoneVerifyCode             String?
+  phoneVerifyExpiry           DateTime?
+
+  // Privacy & Preferences
+  profilePrivacySettings      Json?                     @default("{\"bio\": \"public\", \"city\": \"followers\", \"state\": \"followers\", \"website\": \"public\", \"phoneNumber\": \"private\", \"maritalStatus\": \"friends\"}")
+  notificationPreferences     Json?
+  maritalStatus               String?
+  interests                   String[]                  @default([])
+  onboardingData              Json?
+  onboardingCompleted         Boolean                   @default(false)
+
+  // Password Reset & Recovery
+  resetToken                  String?
+  resetExpiry                 DateTime?
+
+  // Activity & Status
+  isOnline                    Boolean                   @default(false)
+  lastSeenAt                  DateTime                  @default(now())
+  lastLoginAt                 DateTime?
+  lastLoginIp                 String?
 
   // Role & Permission System
-  isModerator           Boolean   @default(false)
-  isAdmin               Boolean   @default(false)
-  isSuperAdmin          Boolean   @default(false)
-  isSuspended           Boolean   @default(false)
-  
+  isModerator                 Boolean                   @default(false)
+  isAdmin                     Boolean                   @default(false)
+  isSuperAdmin                Boolean                   @default(false)
+  isSuspended                 Boolean                   @default(false)
+
+  // Security & Account Protection
+  lockedUntil                 DateTime?
+  loginAttempts               Int                       @default(0)
+  passwordChangedAt           DateTime?                 @default(now())
+  deviceFingerprint           Json?
+  riskScore                   Int                       @default(0)
+  suspiciousActivityCount     Int                       @default(0)
+
+  // TOTP Two-Factor Authentication System
+  totpSecret                  String?
+  totpEnabled                 Boolean                   @default(false)
+  totpSetupAt                 DateTime?
+  totpLastUsedAt              DateTime?
+  totpBackupCodes             String[]                  @default([])
+
+  // Social Metrics & Reputation
+  followingCount              Int                       @default(0)
+  followersCount              Int                       @default(0)
+  reputationScore             Int?                      @default(70)
+  reputationUpdatedAt         DateTime?
+
+  // Photo Tagging Preferences
+  allowTagsByFriendsOnly      Boolean                   @default(false)
+  photoTaggingEnabled         Boolean                   @default(true)
+  requireTagApproval          Boolean                   @default(true)
+
   // Timestamps
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  // Relations
-  posts                 Post[]
-  comments              Comment[]
-  likes                 Like[]
-  notifications         Notification[]
-  followers             Follow[]   @relation("UserFollowers")
-  following             Follow[]   @relation("UserFollowing")
-  friendshipsInitiated  Friendship[] @relation("FriendshipInitiator")
-  friendshipsReceived   Friendship[] @relation("FriendshipReceiver")
-  photos                Photo[]
-  photoTags             PhotoTag[] @relation("TaggedUser")
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+
+  // Comprehensive Relationship System (40+ Relations)
+  // Civic Engagement
+  eventsCreated               CivicEvent[]              @relation("EventCreator")
+  eventRSVPs                  EventRSVP[]               @relation("EventRSVPs")
+  petitionsCreated            Petition[]                @relation("PetitionCreator")
+  petitionSignatures          PetitionSignature[]       @relation("PetitionSignatures")
+
+  // Legislative & Crowdsourcing
+  addressMappingVerifications AddressDistrictMapping[]  @relation("AddressMappingVerifications")
+  crowdsourceVotes            CrowdsourceVote[]         @relation("CrowdsourceVotes")
+  officialSubmissions         CrowdsourcedOfficial[]    @relation("OfficialSubmissions")
+  officialVerifications       CrowdsourcedOfficial[]    @relation("OfficialVerifications")
+  conflictReports             DistrictConflict[]        @relation("ConflictReports")
+  conflictResolutions         DistrictConflict[]        @relation("ConflictResolutions")
+  officeSubmissions           DistrictOffice[]          @relation("OfficeSubmissions")
+  officeVerifications         DistrictOffice[]          @relation("OfficeVerifications")
+  districtSubmissions         ElectoralDistrict[]       @relation("DistrictSubmissions")
+  districtVerifications       ElectoralDistrict[]       @relation("DistrictVerifications")
+
+  // Moderation & Appeals System
+  reviewedAppeals             Appeal[]                  @relation("ReviewedAppeals")
+  appeals                     Appeal[]                  @relation("UserAppeals")
+  moderatorSuspensions        UserSuspension[]          @relation("ModeratorSuspensions")
+  suspensions                 UserSuspension[]          @relation("UserSuspensions")
+  issuedWarnings              UserWarning[]             @relation("IssuedWarnings")
+  receivedWarnings            UserWarning[]             @relation("ReceivedWarnings")
+
+  // Candidate & Campaign System
+  candidateProfile            Candidate?
+  candidateRegistrations      CandidateRegistration[]
+  candidateStaffRoles         CandidateStaff[]
+  readAdminMessages           CandidateAdminMessage[]   @relation("ReadAdminMessages")
+  sentAdminMessages           CandidateAdminMessage[]   @relation("SentAdminMessages")
+
+  // Core Social Features
+  posts                       Post[]
+  comments                    Comment[]
+  likes                       Like[]
+  reactions                   Reaction[]
+  shares                      Share[]
+
+  // Social Relationships
+  following                   Follow[]                  @relation("Follower")
+  followers                   Follow[]                  @relation("Following")
+  receivedFriendRequests      Friendship[]              @relation("FriendshipRecipient")
+  sentFriendRequests          Friendship[]              @relation("FriendshipRequester")
+  subscribers                 Subscription[]            @relation("Subscribed")
+  subscriptions               Subscription[]            @relation("Subscriber")
+
+  // Media & Photo System
+  photos                      Photo[]
+  flaggedPhotos               Photo[]                   @relation("FlaggedPhotos")
+  photoTagsCreated            PhotoTag[]                @relation("PhotoTagsCreated")
+  photoTagsReceived           PhotoTag[]                @relation("PhotoTagsReceived")
+  photoPrivacyRequests        PhotoPrivacyRequest[]
+
+  // Messaging & Communication
+  conversations               ConversationParticipant[]
+  sentMessages                Message[]                 @relation("SentMessages")
+  receivedNotifications       Notification[]            @relation("NotificationReceiver")
+  sentNotifications           Notification[]            @relation("NotificationSender")
+
+  // System Administration
+  createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
+  dismissedMOTDs              MOTDDismissal[]           @relation("DismissedMOTDs")
+  viewedMOTDs                 MOTDView[]                @relation("ViewedMOTDs")
+  motdActions                 MOTDLog[]                 @relation("MOTDActions")
+
+  // Content Moderation
+  reports                     Report[]                  @relation("UserReports")
+  moderatedReports            Report[]                  @relation("ModeratedReports")
+  resolvedFlags               ContentFlag[]             @relation("ResolvedFlags")
+  moderationLogs              ModerationLog[]           @relation("ModerationLogs")
+
+  // Security & Activity Tracking
+  securityEvents              SecurityEvent[]
+  activities                  UserActivity[]
+  reputationEvents            ReputationEvent[]
+
+  // OAuth & Authentication
+  oauthProviders              UserOAuthProvider[]
+
+  // Political & Civic Engagement
+  endorsements                Endorsement[]
+  politicalInquiries          PoliticalInquiry[]        @relation("PoliticalInquiries")
+  publicQAVotes               PublicQAVote[]            @relation("PublicQAVotes")
+  topicComments               TopicComment[]
+
+  // Payment & Commerce
+  payments                    Payment[]
+  stripeCustomer              StripeCustomer?
+
+  @@index([username])
+  @@index([createdAt])
+  @@index([h3Index])
 }
 ```
+
+**Key Features:**
+- **Complete TOTP 2FA System** with backup codes and session management
+- **Comprehensive Geographic System** with H3 indexing and privacy controls
+- **Advanced Security** with risk scoring, device fingerprinting, and activity tracking
+- **Full Civic Engagement** with petitions, events, legislative tracking, and crowdsourcing
+- **Professional Moderation** with appeals, warnings, suspensions, and comprehensive logging
+- **Sophisticated Photo System** with tagging, privacy requests, and approval workflows
+- **OAuth Integration** with Google and Microsoft providers
+- **Payment Integration** with Stripe customer management
+- **Real-time Features** with WebSocket support for messaging and notifications
 
 #### Post Model
 ```prisma
@@ -1186,6 +1325,714 @@ DATABASE_URL="postgresql://uwradmin:***@unitedwerise-db-dev.postgres.database.az
 - **Social Graph** ↔ **Feed Algorithm** ↔ **Content Distribution**
 
 ---
+
+### Legislative Tracking System Models
+
+**Complete Legislative & Government Data System**
+
+The UnitedWeRise platform includes a comprehensive legislative tracking system that monitors bills, votes, legislators, and news coverage across federal, state, and local government levels.
+
+#### Legislature Model
+```prisma
+model Legislature {
+  id          String                  @id @default(cuid())
+  name        String                  // e.g., "117th Congress", "2023 Texas Legislature"
+  level       LegislatureLevel        // FEDERAL, STATE, LOCAL
+  state       String?                 @db.Char(2)  // State code (null for federal)
+  chamber     Chamber?                // HOUSE, SENATE, UNICAMERAL
+  session     String                  // Session identifier
+  startDate   DateTime                // Session start date
+  endDate     DateTime?               // Session end date (null if ongoing)
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  // Relations
+  bills       Bill[]                  // All bills in this legislature
+  memberships LegislativeMembership[] // All member assignments
+  votes       Vote[]                  // All votes taken
+}
+```
+
+#### Legislative Membership Model
+```prisma
+model LegislativeMembership {
+  id            String               @id @default(cuid())
+  legislatorId  String               // Reference to elected official
+  legislatureId String               // Reference to legislature body
+  district      String?              // District number/name
+  party         String?              // Political party affiliation
+  leadership    String?              // Leadership position if any
+  startDate     DateTime             // Term start
+  endDate       DateTime?            // Term end (null if current)
+  isActive      Boolean              @default(true)
+
+  // External ID mappings for data integration
+  bioguideId    String?              // Biographical Directory ID
+  openStatesId  String?              // Open States API ID
+  thomasId      String?              // Library of Congress ID
+  opensecrets   String?              // OpenSecrets.org ID
+  votesmartId   String?              // Vote Smart ID
+  govtrackId    String?              // GovTrack.us ID
+
+  // Relations
+  legislature   Legislature          @relation(fields: [legislatureId], references: [id])
+  sponsorships  BillSponsorship[]    // Bills sponsored
+  votes         LegislatorVote[]     // Individual vote records
+  votingSummary VotingRecordSummary? // Aggregated voting statistics
+
+  @@unique([legislatorId, legislatureId])
+  @@index([legislatureId, isActive])
+  @@index([legislatorId])
+}
+```
+
+#### Bill Tracking Model
+```prisma
+model Bill {
+  id             String            @id @default(cuid())
+  externalId     String            // External system ID (e.g., OpenStates)
+  number         String            // Bill number (e.g., "HR 1234", "SB 567")
+  title          String            // Official bill title
+  summary        String?           // Bill summary
+  fullText       String?           // Complete bill text
+  status         BillStatus        @default(INTRODUCED) // Current status
+  introducedDate DateTime          // Date bill was introduced
+  lastActionDate DateTime?         // Date of most recent action
+  chamber        Chamber           // Originating chamber
+  level          LegislatureLevel  // FEDERAL, STATE, LOCAL
+  state          String?           @db.Char(2) // State (null for federal)
+  subjects       String[]          @default([]) // Subject categories
+  policyAreas    String[]          @default([]) // Policy areas covered
+  embedding      Float[]           @default([]) // Vector for semantic search
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  // Relations
+  legislature    Legislature       @relation(fields: [legislatureId], references: [id])
+  sponsorships   BillSponsorship[] // Primary and co-sponsors
+  votes          Vote[]            // Votes on this bill
+
+  @@unique([externalId, level, state])
+  @@index([status, level])
+  @@index([introducedDate])
+}
+```
+
+#### Bill Sponsorship Model
+```prisma
+model BillSponsorship {
+  id           String                @id @default(cuid())
+  billId       String
+  membershipId String                // Legislative membership
+  isPrimary    Boolean               @default(false) // Primary sponsor vs co-sponsor
+  dateSigned   DateTime             // Date of sponsorship
+  createdAt    DateTime             @default(now())
+
+  // Relations
+  bill         Bill                  @relation(fields: [billId], references: [id], onDelete: Cascade)
+  membership   LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([billId, membershipId])
+  @@index([membershipId, isPrimary])
+}
+```
+
+#### Vote Tracking Model
+```prisma
+model Vote {
+  id               String           @id @default(cuid())
+  externalId       String           // External system vote ID
+  number           String           // Vote number
+  question         String           // Question being voted on
+  description      String?          // Additional context
+  date             DateTime         // Vote date
+  chamber          Chamber          // Chamber where vote occurred
+  yesCount         Int              @default(0)
+  noCount          Int              @default(0)
+  presentCount     Int              @default(0)
+  notVotingCount   Int              @default(0)
+  abstainCount     Int              @default(0)
+  passed           Boolean          // Whether vote passed
+  requiredMajority String?          // Type of majority required
+  billId           String?          // Associated bill (if any)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  legislature      Legislature      @relation(fields: [legislatureId], references: [id])
+  bill             Bill?            @relation(fields: [billId], references: [id])
+  legislators      LegislatorVote[] // Individual legislator votes
+
+  @@unique([externalId, chamber])
+  @@index([date, chamber])
+  @@index([billId])
+}
+```
+
+#### Individual Vote Records Model
+```prisma
+model LegislatorVote {
+  id           String                @id @default(cuid())
+  voteId       String
+  membershipId String
+  position     VotePosition          // YES, NO, PRESENT, NOT_VOTING, ABSTAIN
+  createdAt    DateTime              @default(now())
+
+  // Relations
+  membership   LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  vote         Vote                  @relation(fields: [voteId], references: [id], onDelete: Cascade)
+
+  @@unique([voteId, membershipId])
+  @@index([membershipId, position])
+  @@index([voteId])
+}
+```
+
+#### Voting Record Summary Model
+```prisma
+model VotingRecordSummary {
+  id                String                @id @default(cuid())
+  membershipId      String                @unique
+  totalVotes        Int                   @default(0)
+  yesVotes          Int                   @default(0)
+  noVotes           Int                   @default(0)
+  presentVotes      Int                   @default(0)
+  notVotingCount    Int                   @default(0)
+  abstainVotes      Int                   @default(0)
+  participationRate Float                 @default(0.0) // Percentage of votes participated in
+  partyUnityScore   Float?                // How often voted with party
+  bipartisanScore   Float?                // How often voted across party lines
+  topicVoting       Json?                 // Voting patterns by topic
+  periodStart       DateTime              // Period covered by summary
+  periodEnd         DateTime
+  lastCalculated    DateTime              @default(now())
+
+  // Relations
+  membership        LegislativeMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([participationRate])
+  @@index([partyUnityScore])
+}
+```
+
+#### News Article Tracking Model
+```prisma
+model NewsArticle {
+  id                 String            @id @default(cuid())
+  title              String
+  aiSummary          String?           // AI-generated summary
+  url                String            @unique
+  publishedAt        DateTime
+  sourceName         String            // News outlet name
+  sourceType         NewsSourceType    // MAINSTREAM, LOCAL, OPINION, etc.
+  author             String?
+  sentiment          ArticleSentiment  @default(NEUTRAL)
+  sentimentScore     Float             @default(0.0)
+  keywords           String[]          @default([])
+  politicalTopics    String[]          @default([])
+  embedding          Float[]           @default([]) // Vector for semantic search
+  relevanceScore     Float             @default(0.0)
+  positionKeywords   String[]          @default([])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  // Relations
+  mentions           OfficialMention[] // Officials mentioned in article
+
+  @@index([publishedAt, sourceName])
+  @@index([sentiment, relevanceScore])
+}
+```
+
+#### Official Mention Tracking Model
+```prisma
+model OfficialMention {
+  id              String      @id @default(cuid())
+  articleId       String
+  officialName    String      // Name as mentioned in article
+  officialId      String?     // Linked official ID (if identified)
+  districtId      String?     // Electoral district
+  mentionContext  String?     // Context of mention
+  sentimentScore  Float?      // Sentiment toward this official
+  prominenceScore Float       @default(0.0) // How prominently featured
+  firstMention    Int?        // Character position of first mention
+  mentionCount    Int         @default(1) // Number of times mentioned
+  createdAt       DateTime    @default(now())
+
+  // Relations
+  article         NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([officialId, articleId])
+  @@index([districtId])
+  @@index([prominenceScore])
+}
+```
+
+**System Features:**
+- **Multi-Level Tracking**: Federal, state, and local legislative bodies
+- **Complete Vote Records**: Individual legislator positions on every vote
+- **Bill Lifecycle Monitoring**: From introduction through final passage
+- **News Integration**: Automated tracking of official mentions in news
+- **Performance Analytics**: Participation rates, party unity scores, bipartisan voting
+- **Semantic Search**: Vector embeddings for bill and article similarity
+- **External API Integration**: OpenStates, GovTrack, and other data sources
+- **Real-Time Updates**: Continuous monitoring of legislative activity
+
+### Appeals and Moderation System Models
+
+**Professional Content Moderation & Appeals Framework**
+
+The UnitedWeRise platform implements a comprehensive moderation system with formal appeals processes, ensuring fair and transparent community governance.
+
+#### Report Model
+```prisma
+model Report {
+  id                String            @id @default(cuid())
+  reporterId        String            // User filing the report
+  targetType        ReportTargetType  // POST, COMMENT, USER, PHOTO, etc.
+  targetId          String            // ID of reported content/user
+  reason            ReportReason      // SPAM, HARASSMENT, MISINFORMATION, etc.
+  description       String?           // Additional context from reporter
+  status            ReportStatus      @default(PENDING) // PENDING, UNDER_REVIEW, RESOLVED, DISMISSED
+  priority          ReportPriority    @default(LOW) // LOW, MEDIUM, HIGH, URGENT
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Moderation Handling
+  moderatedAt       DateTime?         // When moderation action was taken
+  moderatorId       String?           // Moderator who handled the report
+  moderatorNotes    String?           // Internal moderation notes
+  actionTaken       ModerationAction? // WARNING, SUSPENSION, CONTENT_REMOVAL, etc.
+
+  // Geographic Context (for political reports)
+  reporterDistrict  String?           // Reporter's electoral district
+  candidateDistrict String?           // Candidate's district (if applicable)
+  geographicWeight  Float?            @default(1.0) // Weight based on geographic relevance
+
+  // AI Assessment Integration
+  aiAssessmentScore Float?            // AI confidence score for violation
+  aiUrgencyLevel    String?           // AI-determined urgency level
+  aiAnalysisNotes   String?           // AI analysis details
+  aiAssessedAt      DateTime?         // When AI assessment was completed
+
+  // Relations
+  moderator         User?             @relation("ModeratedReports", fields: [moderatorId], references: [id])
+  reporter          User              @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status, priority])
+  @@index([createdAt])
+}
+```
+
+#### Content Flag Model
+```prisma
+model ContentFlag {
+  id          String      @id @default(cuid())
+  contentType ContentType // POST, COMMENT, PHOTO, USER_PROFILE
+  contentId   String      // ID of flagged content
+  flagType    FlagType    // SPAM, HATE_SPEECH, MISINFORMATION, INAPPROPRIATE
+  confidence  Float       // AI confidence score (0.0 - 1.0)
+  source      FlagSource  // AI_DETECTION, USER_REPORT, MANUAL_REVIEW
+  details     Json?       // Additional flag details/metadata
+  resolved    Boolean     @default(false)
+  resolvedBy  String?     // Moderator who resolved the flag
+  resolvedAt  DateTime?   // When flag was resolved
+  createdAt   DateTime    @default(now())
+
+  // Relations
+  resolver    User?       @relation("ResolvedFlags", fields: [resolvedBy], references: [id])
+
+  @@index([contentType, contentId])
+  @@index([flagType, resolved])
+  @@index([confidence])
+  @@index([createdAt])
+}
+```
+
+#### User Warning Model
+```prisma
+model UserWarning {
+  id             String          @id @default(cuid())
+  userId         String          // User receiving warning
+  moderatorId    String          // Moderator issuing warning
+  reason         String          // Detailed reason for warning
+  severity       WarningSeverity // MINOR, MODERATE, SEVERE
+  notes          String?         // Additional moderator notes
+  acknowledged   Boolean         @default(false) // Has user acknowledged warning
+  acknowledgedAt DateTime?       // When user acknowledged warning
+  expiresAt      DateTime?       // When warning expires (null = permanent)
+  createdAt      DateTime        @default(now())
+
+  // Relations
+  moderator      User            @relation("IssuedWarnings", fields: [moderatorId], references: [id], onDelete: Cascade)
+  user           User            @relation("ReceivedWarnings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([severity, expiresAt])
+  @@index([createdAt])
+}
+```
+
+#### User Suspension Model
+```prisma
+model UserSuspension {
+  id          String         @id @default(cuid())
+  userId      String         // User being suspended
+  moderatorId String         // Moderator issuing suspension
+  reason      String         // Detailed suspension reason
+  type        SuspensionType // TEMPORARY, PERMANENT, FEATURE_RESTRICTION
+  startsAt    DateTime       @default(now())
+  endsAt      DateTime?      // End time (null for permanent)
+  notes       String?        // Additional moderator notes
+  appealed    Boolean        @default(false) // Has suspension been appealed
+  appealedAt  DateTime?      // When appeal was filed
+  isActive    Boolean        @default(true) // Is suspension currently active
+  createdAt   DateTime       @default(now())
+
+  // Relations
+  appeal      Appeal?        // Associated appeal (if any)
+  moderator   User           @relation("ModeratorSuspensions", fields: [moderatorId], references: [id], onDelete: Cascade)
+  user        User           @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([endsAt])
+  @@index([createdAt])
+}
+```
+
+#### Appeal Model
+```prisma
+model Appeal {
+  id             String         @id @default(cuid())
+  userId         String         // User filing the appeal
+  suspensionId   String         @unique // Suspension being appealed
+  reason         String         // User's appeal reasoning
+  additionalInfo String?        // Additional supporting information
+  status         AppealStatus   @default(PENDING) // PENDING, UNDER_REVIEW, APPROVED, DENIED
+  reviewNotes    String?        // Admin review notes
+  reviewedBy     String?        // Admin who reviewed the appeal
+  reviewedAt     DateTime?      // When appeal was reviewed
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  reviewedByUser User?          @relation("ReviewedAppeals", fields: [reviewedBy], references: [id])
+  suspension     UserSuspension @relation(fields: [suspensionId], references: [id], onDelete: Cascade)
+  user           User           @relation("UserAppeals", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+```
+
+#### Moderation Log Model
+```prisma
+model ModerationLog {
+  id          String           @id @default(cuid())
+  moderatorId String           // Moderator taking action
+  targetType  ReportTargetType // Type of content/user moderated
+  targetId    String           // ID of moderated content/user
+  action      ModerationAction // WARNING, SUSPENSION, CONTENT_REMOVAL, etc.
+  reason      String           // Reason for action
+  notes       String?          // Additional notes
+  metadata    Json?            // Additional action metadata
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  moderator   User             @relation("ModerationLogs", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([moderatorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
+}
+```
+
+**System Features:**
+- **Multi-Tier Warning System**: Progressive enforcement with escalating consequences
+- **Formal Appeals Process**: Due process for suspended users with admin review
+- **AI-Assisted Moderation**: Automated content flagging with confidence scoring
+- **Geographic Context**: Political content moderation considers district relevance
+- **Comprehensive Logging**: Full audit trail of all moderation actions
+- **Democratic Reporting**: Community-driven content reporting system
+- **Professional Workflow**: Admin dashboard integration for efficient moderation
+- **Transparent Process**: Clear status tracking and notification system
+
+**Moderation Workflow:**
+1. **Report/Flag**: Users report content or AI systems flag violations
+2. **Assessment**: AI provides initial severity scoring and urgency classification
+3. **Review**: Human moderators review reports with AI assistance
+4. **Action**: Appropriate consequences applied (warnings, suspensions, content removal)
+5. **Appeal**: Users can appeal moderation decisions through formal process
+6. **Resolution**: Senior administrators review appeals and make final decisions
+7. **Documentation**: All actions logged for accountability and analysis
+
+### Civic Engagement System Models
+
+**Complete Civic Participation & Organizing Platform**
+
+The UnitedWeRise platform includes a comprehensive civic engagement system that enables users to create and participate in petitions, organize events, and mobilize communities around political and social issues.
+
+#### Petition Model
+```prisma
+model Petition {
+  id                String              @id @default(cuid())
+  title             String              // Petition title
+  description       String              // Detailed petition content
+  petitionType      PetitionType        @default(PETITION) // PETITION, BOYCOTT, PLEDGE
+  category          IssueCategory       // CLIMATE, HEALTHCARE, EDUCATION, etc.
+  geographicScope   GeographicScope     // LOCAL, DISTRICT, STATE, FEDERAL
+  targetOfficials   String[]            @default([]) // Officials being petitioned
+  signatureGoal     Int                 // Target number of signatures
+  currentSignatures Int                 @default(0)  // Current signature count
+  status            PetitionStatus      @default(ACTIVE) // ACTIVE, CLOSED, FULFILLED
+  location          Json?               // Geographic targeting data
+  createdBy         String              // Petition creator
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  expiresAt         DateTime?           // Optional expiration date
+
+  // Relations
+  creator           User                @relation("PetitionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  signatures        PetitionSignature[] // All petition signatures
+
+  @@index([category, geographicScope])
+  @@index([status, createdAt])
+  @@index([currentSignatures])
+}
+```
+
+#### Petition Signature Model
+```prisma
+model PetitionSignature {
+  id         String   @id @default(cuid())
+  petitionId String   // Associated petition
+  userId     String   // User signing petition
+  signedAt   DateTime @default(now()) // When signature was added
+  isVerified Boolean  @default(false) // Has signature been verified
+  ipAddress  String?  // IP for fraud detection
+
+  // Relations
+  petition   Petition @relation(fields: [petitionId], references: [id], onDelete: Cascade)
+  user       User     @relation("PetitionSignatures", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([petitionId, userId]) // One signature per user per petition
+  @@index([petitionId])
+  @@index([userId])
+  @@index([signedAt])
+}
+```
+
+#### Civic Event Model
+```prisma
+model CivicEvent {
+  id            String        @id @default(cuid())
+  title         String        // Event title
+  description   String        // Event description
+  eventType     EventType     // RALLY, TOWN_HALL, PROTEST, VOLUNTEER, etc.
+  category      EventCategory // CAMPAIGN, ADVOCACY, COMMUNITY_SERVICE, etc.
+  scheduledDate DateTime      // Event start date/time
+  endDate       DateTime?     // Event end date/time (optional)
+  timeZone      String?       @default("America/New_York") // Event timezone
+  location      Json          // Event location details (address, coordinates)
+  capacity      Int?          // Maximum attendance (optional)
+  isVirtual     Boolean       @default(false) // Is this a virtual event
+  virtualLink   String?       // Virtual meeting link
+  organizerInfo Json          // Organizer contact and details
+  requirements  String?       // Special requirements or instructions
+  status        EventStatus   @default(SCHEDULED) // SCHEDULED, CANCELLED, COMPLETED
+  isPublic      Boolean       @default(true) // Public or private event
+  rsvpRequired  Boolean       @default(false) // RSVP requirement
+  currentRSVPs  Int           @default(0) // Current RSVP count
+  createdBy     String        // Event creator
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  creator       User          @relation("EventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  rsvps         EventRSVP[]   // Event RSVPs
+
+  @@index([eventType, category])
+  @@index([scheduledDate, status])
+  @@index([isPublic, status])
+}
+```
+
+#### Event RSVP Model
+```prisma
+model EventRSVP {
+  id         String     @id @default(cuid())
+  eventId    String     // Associated event
+  userId     String     // User RSVPing
+  rsvpStatus RSVPStatus @default(ATTENDING) // ATTENDING, NOT_ATTENDING, MAYBE
+  rsvpedAt   DateTime   @default(now()) // When RSVP was made
+
+  // Relations
+  event      CivicEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User       @relation("EventRSVPs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId]) // One RSVP per user per event
+  @@index([eventId])
+  @@index([userId])
+  @@index([rsvpStatus])
+}
+```
+
+**System Features:**
+- **Petition Management**: Create, sign, and track petitions with signature goals and geographic targeting
+- **Event Organization**: Schedule and manage civic events with RSVP tracking and capacity management
+- **Geographic Targeting**: Scope petitions and events by district, state, or federal level
+- **Virtual Event Support**: Hybrid in-person and virtual event capabilities
+- **Signature Verification**: Anti-fraud measures with IP tracking and verification systems
+- **Progress Tracking**: Real-time signature counts and RSVP tracking with goal monitoring
+- **Multi-Category Support**: Climate, healthcare, education, campaign, advocacy, and community service
+- **Official Targeting**: Direct petition delivery to relevant elected officials
+- **Time Management**: Event scheduling with timezone support and expiration handling
+
+**Civic Engagement Workflow:**
+1. **Petition Creation**: Users create petitions targeting specific issues and officials
+2. **Community Mobilization**: Petitions shared across social networks and geographic areas
+3. **Signature Collection**: Verified signature collection with anti-fraud measures
+4. **Goal Tracking**: Real-time progress toward signature goals
+5. **Official Delivery**: Completed petitions delivered to targeted officials
+6. **Event Organization**: Civic events organized around petition topics and causes
+7. **RSVP Management**: Event attendance tracking and capacity management
+8. **Follow-up Actions**: Event outcomes tracked and additional actions organized
+
+**Integration Points:**
+- **User Profiles**: Civic activity displayed on user profiles and achievements
+- **Geographic System**: H3 indexing for location-based petition and event targeting
+- **Notification System**: Updates on petition progress and event reminders
+- **Social Features**: Petition sharing and event promotion through social feed
+- **Admin Dashboard**: Moderation tools for petition and event oversight
+
+### Policy Platform System Models
+
+**Comprehensive Political Position & Comparison Framework**
+
+The UnitedWeRise platform includes an advanced policy platform system that enables candidates to articulate detailed positions on issues and provides voters with sophisticated policy comparison tools.
+
+#### Policy Category Model
+```prisma
+model PolicyCategory {
+  id           String           @id @default(cuid())
+  name         String           // Category name (e.g., "Healthcare", "Climate")
+  description  String?          // Detailed category description
+  icon         String?          // Icon identifier for UI display
+  displayOrder Int              @default(0) // Order for category display
+  isActive     Boolean          @default(true) // Is category currently active
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  positions    PolicyPosition[] // All policy positions in this category
+
+  @@index([displayOrder])
+  @@index([isActive])
+}
+```
+
+#### Policy Position Model
+```prisma
+model PolicyPosition {
+  id                  String             @id @default(cuid())
+  candidateId         String             // Candidate who owns this position
+  categoryId          String             // Policy category
+  title               String             // Position title
+  summary             String             // Executive summary
+  content             String             // Full position details
+  stance              PolicyStance?      // PRO, AGAINST, NEUTRAL, MIXED
+  priority            Int                @default(5) // Priority level (1-10)
+  evidenceLinks       String[]           @default([]) // Supporting evidence URLs
+  keyPoints           String[]           @default([]) // Key bullet points
+  embedding           Float[]            @default([]) // Vector for policy similarity
+  isPublished         Boolean            @default(false) // Publication status
+  publishedAt         DateTime?          // Publication timestamp
+  version             Int                @default(1) // Version control
+  previousVersionId   String?            // Previous version reference
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  // AI Analysis Fields
+  aiExtractedKeywords String[]           @default([]) // AI-identified keywords
+  aiExtractedCategory String?            // AI-suggested category
+  aiExtractedStance   String?            // AI-determined stance
+
+  // Relations
+  candidate           Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  category            PolicyCategory     @relation(fields: [categoryId], references: [id])
+  comparisons1        PolicyComparison[] @relation("Position1")
+  comparisons2        PolicyComparison[] @relation("Position2")
+
+  @@unique([candidateId, categoryId]) // One position per candidate per category
+  @@index([categoryId, isPublished])
+  @@index([priority, publishedAt])
+}
+```
+
+#### Policy Comparison Model
+```prisma
+model PolicyComparison {
+  id              String          @id @default(cuid())
+  position1Id     String          // First policy position
+  position2Id     String          // Second policy position
+  similarityScore Float           // Computed similarity (0.0 - 1.0)
+  agreementLevel  AgreementLevel? // HIGH_AGREEMENT, SOME_AGREEMENT, DISAGREEMENT
+  keyDifferences  String[]        @default([]) // Major differences identified
+  analysisNotes   String?         // Additional analysis details
+  lastAnalyzed    DateTime        @default(now()) // When comparison was computed
+
+  // Relations
+  position1       PolicyPosition  @relation("Position1", fields: [position1Id], references: [id], onDelete: Cascade)
+  position2       PolicyPosition  @relation("Position2", fields: [position2Id], references: [id], onDelete: Cascade)
+
+  @@unique([position1Id, position2Id]) // One comparison per position pair
+  @@index([similarityScore])
+  @@index([agreementLevel])
+}
+```
+
+**System Features:**
+- **Structured Policy Categories**: Organized taxonomy of political issues and topics
+- **Comprehensive Position Details**: Full policy positions with evidence and key points
+- **Version Control**: Track policy evolution with complete version history
+- **AI-Powered Analysis**: Automated keyword extraction and stance classification
+- **Semantic Comparison**: Vector-based similarity matching for policy positions
+- **Voter Tools**: Advanced comparison interfaces for policy analysis
+- **Priority Weighting**: Candidates can prioritize their most important positions
+- **Evidence Integration**: Link to supporting research, reports, and documentation
+- **Publication Management**: Draft/published workflows for position development
+
+**Policy Development Workflow:**
+1. **Category Selection**: Choose from structured policy categories
+2. **Position Drafting**: Create detailed positions with evidence and key points
+3. **AI Analysis**: Automated keyword extraction and stance classification
+4. **Review Process**: Internal review and refinement of policy positions
+5. **Publication**: Make positions public for voter access
+6. **Comparison Generation**: Automatic similarity analysis with other candidates
+7. **Voter Interface**: Sophisticated comparison tools for voter decision-making
+8. **Version Management**: Track policy evolution and changes over time
+
+**Voter Experience Features:**
+- **Side-by-Side Comparisons**: Compare candidate positions on specific issues
+- **Similarity Scoring**: Quantitative analysis of policy alignment
+- **Key Differences**: Highlighted areas of disagreement between candidates
+- **Evidence Access**: Direct links to supporting research and documentation
+- **Priority-Weighted Views**: See candidates' most important policy positions
+- **Search and Filter**: Find positions by keyword, category, or stance
+- **Issue-Based Voting**: Make decisions based on specific policy areas
+
+**Integration Points:**
+- **Candidate Profiles**: Policy positions prominently featured on candidate pages
+- **Search System**: Full-text search across all policy content
+- **AI Systems**: Semantic analysis and automated categorization
+- **Social Features**: Share and discuss specific policy positions
+- **Notification System**: Updates when candidates publish new positions
+- **Admin Dashboard**: Content moderation and category management tools
 
 ## 🔌 API REFERENCE {#api-reference}
 
@@ -5086,12 +5933,11 @@ POST /api/totp/regenerate-backup-codes  // Generate new backup codes
 
 ### OAuth Social Login System
 
-**Status**: ✅ **FULLY IMPLEMENTED** - Complete OAuth social authentication with Google, Microsoft, and Apple
+**Status**: ✅ **FULLY IMPLEMENTED** - Complete OAuth social authentication with Google and Microsoft
 
 #### OAuth Provider Support
 - **Google**: Google Identity Services (GSI) with ID token verification
 - **Microsoft**: Microsoft Authentication Library (MSAL) with Graph API profile access
-- **Apple**: Sign in with Apple using identity tokens and user data
 
 #### Authentication Flow
 ```javascript
@@ -5112,7 +5958,7 @@ const result = await OAuthService.handleOAuthLogin(profile);
 #### Database Schema
 ```sql
 -- OAuth provider enum
-CREATE TYPE "OAuthProvider" AS ENUM ('GOOGLE', 'MICROSOFT', 'APPLE');
+CREATE TYPE "OAuthProvider" AS ENUM ('GOOGLE', 'MICROSOFT');
 
 -- User OAuth connections
 model UserOAuthProvider {
@@ -5147,8 +5993,7 @@ model User {
 ```javascript
 // OAuth Authentication
 POST /api/oauth/google      // Google OAuth login/register
-POST /api/oauth/microsoft   // Microsoft OAuth login/register  
-POST /api/oauth/apple       // Apple OAuth login/register
+POST /api/oauth/microsoft   // Microsoft OAuth login/register
 
 // OAuth Management
 POST /api/oauth/link/:provider     // Link provider to existing account

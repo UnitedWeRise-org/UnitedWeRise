@@ -24,34 +24,29 @@ az containerapp update --name unitedwerise-backend --resource-group unitedwerise
 ```
 
 ### **⚡ DAILY ESSENTIALS (Copy-Paste Ready)**
+**For comprehensive workflow see: [Daily Development Workflow](#daily-development-workflow-streamlined)**
+
 ```bash
-# Start development session
-./scripts/dev-start.sh || {
-  git checkout development && git pull origin development
-}
+# Quick start development session
+git checkout development && git pull origin development
 
-# Deploy to staging with validation
-./scripts/quick-deploy-staging.sh "feat: your changes" || {
-  ./scripts/validate-before-commit.sh
-  git add . && git commit -m "feat: your changes" && git push origin development
-}
+# Deploy to staging
+git add . && git commit -m "feat: your changes" && git push origin development
 
-# Monitor deployment status
-./scripts/deployment-status.sh || {
-  curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
-}
+# Check deployment status
+curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ```
 
 ### **📋 SECTION QUICK REFERENCE**
-| Section | Lines | When to Use |
-|---------|-------|-------------|
-| **🚨 Development Protocols** | 96-258 | Before starting any development work |
-| **🚨 Scope Prevention** | 259-344 | When implementing new features |
-| **🚀 Deployment Guide** | 345-810 | When deploying to staging/production |
-| **🛡️ Security & Standards** | 893-922 | For authentication/admin debugging |
-| **🔧 Development Essentials** | 923-1068 | For environment setup and common patterns |
-| **🤖 Multi-Agent Coordination** | 1069-1245 | For complex features or emergency response |
-| **🚨 Critical Failure Prevention** | 1246-1302 | When troubleshooting deployment issues |
+| Section | Anchor | When to Use |
+|---------|--------|-------------|
+| **🚨 Development Protocols** | [#critical-development-protocols](#critical-development-protocols) | Before starting any development work |
+| **🚨 Scope Prevention** | [#scope-creep-prevention-protocol](#scope-creep-prevention-protocol) | When implementing new features |
+| **🚀 Deployment Guide** | [#comprehensive-deployment-guide](#comprehensive-deployment-guide) | When deploying to staging/production |
+| **🛡️ Security & Standards** | [#security--standards](#security--standards) | For authentication/admin debugging |
+| **🔧 Development Essentials** | [#development-essentials](#development-essentials) | For environment setup and common patterns |
+| **🤖 Multi-Agent Coordination** | [#multi-agent-coordination](#multi-agent-coordination) | For complex features or emergency response |
+| **🚨 Critical Failure Prevention** | [#critical-failure-patterns-to-avoid](#critical-failure-patterns-to-avoid) | When troubleshooting deployment issues |
 
 ### **🔍 FIND ANYTHING FAST**
 ```bash
@@ -157,12 +152,30 @@ git checkout -b feature/feature-name development
 # git branch -d feature/feature-name
 ```
 
+**Branch Strategy:**
+```
+main           # Production code (ONLY merge from development with user approval)
+development    # Staging code (ALL development work happens here)
+├── feature/*  # New features (feature/user-profiles) - branch from development
+├── fix/*      # Bug fixes (fix/auth-timeout) - branch from development
+└── hotfix/*   # Emergency fixes (hotfix/security-patch) - branch from development
+```
+
 #### Step 3: Development and Testing on Development Branch
 ```bash
 # Make changes, commit to development branch
 git add .
 git commit -m "feat/fix: Description of changes"
 git push origin development  # Deploys to staging automatically
+```
+
+**Commit Message Format:**
+```
+feat: Add new feature
+fix: Fix specific bug
+docs: Update documentation
+refactor: Code cleanup
+schema: Database changes
 ```
 
 #### Step 4: Verify on Staging Before Main Merge
@@ -172,11 +185,24 @@ git push origin development  # Deploys to staging automatically
 - **STAGING BEHAVIOR**: Requires admin login for all protected routes
 - **REQUIRED**: User approval that staging deployment works correctly
 
+**Deployment Mapping:**
+```
+development branch → STAGING
+  - Frontend: https://dev.unitedwerise.org
+  - Backend:  https://dev-api.unitedwerise.org
+  - Access:   Admin-only for protected routes
+
+main branch → PRODUCTION
+  - Frontend: https://www.unitedwerise.org
+  - Backend:  https://api.unitedwerise.org
+  - Access:   Open to all registered users
+```
+
 #### Step 5: Production Deployment (FORBIDDEN WITHOUT EXPLICIT USER APPROVAL)
 **❌ THESE COMMANDS ARE FORBIDDEN WITHOUT USER SAYING "DEPLOY TO PRODUCTION":**
 ```bash
 # git checkout main
-# git pull origin main  
+# git pull origin main
 # git merge development
 # git push origin main
 ```
@@ -186,8 +212,9 @@ git push origin development  # Deploys to staging automatically
 - ❌ **NEVER** work directly on main branch
 - ❌ **NEVER** push to main without explicit user approval
 - ❌ **NEVER** merge to main "while we're at it"
-- ✅ **ALWAYS** test on staging (development branch) first
-- ✅ **ALWAYS** get user approval before production deployment
+- ✅ **ALWAYS** start work on development branch
+- ✅ **ALWAYS** test on staging before requesting production merge
+- ✅ **ALWAYS** get user approval: "Ready to deploy to production?"
 
 ### Pre-Implementation Requirements (MANDATORY)
 **Before ANY code changes:**
@@ -271,85 +298,36 @@ grep -n "Coordination.*Infrastructure" CLAUDE.md
 
 ### THE CARDINAL RULE: SOLVE THE SPECIFIC PROBLEM ONLY
 
-**BEFORE making ANY code changes:**
+**Pre-Implementation Checklist:**
+1. **Define Problem**: Write in ONE sentence, identify exact user-facing behavior change
+2. **Minimum Solution**: Can this be solved by changing ≤3 functions/endpoints?
+3. **Working Code**: If existing code works correctly, DO NOT TOUCH IT
+4. **No Architecture Changes** without explicit user permission
 
-#### Step 1: Define the Specific Problem
-- Write the problem in ONE sentence
-- Identify EXACTLY which user-facing behavior needs to change
-- List ONLY the endpoints/functions that serve that behavior
+**🚨 BANNED SCOPE CREEP PHRASES:**
+- "While we're at it..." | "This would be a good time to..." | "For consistency, I'll update..."
 
-#### Step 2: Minimum Viable Solution Check
-- Can this be solved by changing 3 or fewer functions/endpoints?
-- If not, STOP and get user approval for broader changes
-- If yes, proceed with ONLY those specific changes
+**🚨 BANNED WORKAROUND APPROACHES (ZERO TOLERANCE):**
+- "Let me create a workaround..." | "I'll add a temporary fix..." | "I'll hardcode this for now..."
 
-#### Step 3: No Architecture Changes Without Explicit Permission
-- **NEVER** create new services/classes unless explicitly requested
-- **NEVER** "improve consistency" across unrelated code  
-- **NEVER** refactor working code that isn't causing the specific problem
-- **NEVER** replace working implementations with "better" ones
+**⚡ FUNDAMENTAL PRINCIPLE: NO WORKAROUNDS EVER**
 
-#### Step 4: Working Code is Sacred
-- If existing code works correctly, DO NOT TOUCH IT
-- "Could be better" ≠ "should be changed"
-- Optimization requests must be explicit from user
+**Only Two Acceptable Responses:**
+1. **"This is the wrong approach"** - Stop and reassess strategy
+2. **"Fix it the right way"** - Implement correct, permanent, industry-standard solution
 
-### 🚨 BANNED PHRASES THAT TRIGGER SCOPE CREEP:
-- "While we're at it, let's also..."
-- "This would be a good time to..."
-- "I noticed we could improve..."
-- "For consistency, I'll update..."
-- "Let me fix this other issue I found..."
+**Required Mindset:**
+- ✅ "What is the industry-standard way to solve this?"
+- ✅ "How would a senior engineer implement this properly?"
+- ❌ Create "quick fixes" to move forward
 
-### 🚨 BANNED SOLUTION APPROACHES (ZERO TOLERANCE):
-- "Let me create a workaround for..."
-- "I'll add a temporary fix..."
-- "For now, I'll implement a quick solution..."
-- "I can patch this by..."
-- "Let me bypass this issue by..."
-- "I'll put in a band-aid solution..."
-- "This is a temporary implementation..."
-- "I'll hardcode this for now..."
+**Mandatory Scope Check Before Any Implementation:**
+1. Am I solving the exact problem stated?
+2. Am I changing the minimum code necessary?
+3. Have I gotten explicit permission for architectural changes?
+4. Will this change break any working functionality?
 
-### ⚡ THE FUNDAMENTAL PRINCIPLE: NO WORKAROUNDS EVER
-
-**ONLY TWO ACCEPTABLE RESPONSES TO ANY PROBLEM:**
-
-1. **"This is the wrong approach"** - Stop and reassess the entire strategy
-2. **"Fix it the right way"** - Implement the correct, permanent, industry-standard solution
-
-**ZERO TOLERANCE POLICY:**
-- ❌ **NEVER** implement workarounds, patches, or temporary fixes
-- ❌ **NEVER** bypass proper error handling or validation
-- ❌ **NEVER** hardcode values to "make it work for now"
-- ❌ **NEVER** skip proper testing because "it's temporary"
-- ❌ **NEVER** compromise architecture for quick fixes
-
-**REQUIRED MINDSET:**
-- ✅ **"What is the industry-standard way to solve this?"**
-- ✅ **"How would a senior engineer implement this properly?"**
-- ✅ **"Is this solution maintainable and scalable?"**
-- ✅ **"Does this follow established patterns in the codebase?"**
-
-**WHEN STUCK:**
-- ✅ Research proper implementation patterns
-- ✅ Ask user for guidance on the correct approach
-- ✅ Propose stopping current approach if it's fundamentally flawed
-- ❌ Create a "quick fix" to move forward
-
-### ✅ ALLOWED APPROACH:
-- "I will change exactly these 2 endpoints to solve the specific problem"
-- "This change only affects the reported behavior"
-- "I'm leaving all other working code unchanged"
-
-### 🚨 MANDATORY SCOPE CHECK:
-Before proceeding with ANY implementation:
-1. **"Am I solving the exact problem stated?"**
-2. **"Am I changing the minimum code necessary?"**  
-3. **"Have I gotten explicit permission for any architectural changes?"**
-4. **"Will this change break any working functionality?"**
-
-If ANY answer is uncertain, STOP and clarify with user.
+**If ANY answer is uncertain, STOP and clarify with user.**
 
 ---
 
@@ -603,41 +581,18 @@ git add . && git commit -m "schema: description" && git push origin development
 
 ---
 
-### 🔍 QUICK FAILURE DIAGNOSIS - IMPROVED
+### 🔍 QUICK FAILURE DIAGNOSIS - CHECKLIST
 
 **When changes don't appear in production, check in order:**
 
-```bash
-# 1. Are changes committed?
-git status  # If shows modified files = NOT COMMITTED
-
-# 2. Are changes pushed to development?
-git log origin/development..HEAD  # If shows commits = NOT PUSHED TO DEVELOPMENT
-
-# 3. Did TypeScript compile?
-cd backend && npm run build  # If errors = FIX FIRST
-
-# 4. Did Docker build succeed?
-az acr task list-runs --registry uwracr2425 --output table | head -3
-# If Status = "Failed" = BUILD FAILED
-
-# 5. Is correct release SHA deployed? (PREVENTS CACHE CONFUSION)
-GIT_SHA=$(git rev-parse --short HEAD)
-curl -s "https://api.unitedwerise.org/version" | grep releaseSha
-# Should show your current commit SHA
-
-# 6. Is new container running?
-curl -s "https://api.unitedwerise.org/health" | grep uptime
-# If uptime > 300 seconds = OLD CONTAINER
-
-# 7. Check revision status (if Multi-revision enabled)
-az containerapp revision list --name unitedwerise-backend --resource-group unitedwerise-rg -o table
-# Newest revision should be Active with TrafficWeight=100
-
-# 8. Verify image digest matches deployment
-az containerapp show --name unitedwerise-backend --resource-group unitedwerise-rg --query "properties.template.containers[0].image"
-# Should show uwracr2425.azurecr.io/unitedwerise-backend@sha256:...
-```
+- [ ] **Changes committed?** → `git status` (should show no modified files)
+- [ ] **Changes pushed to development?** → `git log origin/development..HEAD` (should show no commits)
+- [ ] **TypeScript compiled?** → `cd backend && npm run build` (should show no errors)
+- [ ] **Docker build succeeded?** → `az acr task list-runs --registry uwracr2425 --output table | head -3` (Status = "Succeeded")
+- [ ] **Correct SHA deployed?** → `curl -s "https://api.unitedwerise.org/version" | grep releaseSha` (matches local commit)
+- [ ] **New container running?** → `curl -s "https://api.unitedwerise.org/health" | grep uptime` (< 300 seconds)
+- [ ] **Active revision correct?** → `az containerapp revision list --name unitedwerise-backend --resource-group unitedwerise-rg -o table`
+- [ ] **Image digest matches?** → `az containerapp show --name unitedwerise-backend --resource-group unitedwerise-rg --query "properties.template.containers[0].image"`
 
 ---
 
@@ -776,45 +731,6 @@ deploymentStatus.check()
 
 ---
 
-### 📝 Git Workflow Standards - DEVELOPMENT BRANCH MANDATORY
-
-**Branch Strategy:**
-```
-main           # Production code (ONLY merge from development with user approval)
-development    # Staging code (ALL development work happens here)
-├── feature/*  # New features (feature/user-profiles) - branch from development
-├── fix/*      # Bug fixes (fix/auth-timeout) - branch from development  
-└── hotfix/*   # Emergency fixes (hotfix/security-patch) - branch from development
-```
-
-**🚨 CRITICAL BRANCH RULES:**
-- ❌ **NEVER** work directly on main branch
-- ❌ **NEVER** push to main without explicit user approval
-- ✅ **ALWAYS** start work on development branch
-- ✅ **ALWAYS** test on staging before requesting production merge
-- ✅ **ALWAYS** get user approval: "Ready to deploy to production?"
-
-**Deployment Mapping:**
-```
-development branch → STAGING 
-  - Frontend: https://dev.unitedwerise.org
-  - Backend:  https://dev-api.unitedwerise.org
-  - Access:   Admin-only for protected routes
-
-main branch → PRODUCTION
-  - Frontend: https://www.unitedwerise.org
-  - Backend:  https://api.unitedwerise.org  
-  - Access:   Open to all registered users
-```
-
-**Commit Message Format:**
-```
-feat: Add new feature
-fix: Fix specific bug
-docs: Update documentation
-refactor: Code cleanup
-schema: Database changes
-```
 
 ---
 
@@ -1477,17 +1393,11 @@ git checkout development && git revert HEAD && git push origin development
 ```
 
 ### ⚡ Daily Development
+**See: [Daily Development Workflow](#daily-development-workflow-streamlined) for comprehensive version**
 ```bash
-# Session start
+# Quick commands
 git checkout development && git pull origin development
-
-# Validate before commit
-bash scripts/validate-before-commit.sh
-
-# Deploy to staging
 git add . && git commit -m "feat/fix: Description" && git push origin development
-
-# Check staging deployment
 curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ```
 
