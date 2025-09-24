@@ -147,9 +147,11 @@ router.get('/users', requireAuth, requireAdmin, requireTOTPForAdmin, async (req:
 
     if (role === 'moderator') where.isModerator = true;
     if (role === 'admin') where.isAdmin = true;
+    if (role === 'super-admin') where.isSuperAdmin = true;
     if (role === 'user') {
       where.isModerator = false;
       where.isAdmin = false;
+      where.isSuperAdmin = false;
     }
 
     const [users, total] = await Promise.all([
@@ -165,6 +167,7 @@ router.get('/users', requireAuth, requireAdmin, requireTOTPForAdmin, async (req:
           phoneVerified: true,
           isModerator: true,
           isAdmin: true,
+          isSuperAdmin: true,
           isSuspended: true,
           createdAt: true,
           lastSeenAt: true,
