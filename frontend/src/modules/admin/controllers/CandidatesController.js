@@ -1990,7 +1990,7 @@ class CandidatesController {
     /**
      * Cleanup method for proper module shutdown
      */
-    destroy() {
+    async destroy() {
         // Clear auto-refresh interval
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);

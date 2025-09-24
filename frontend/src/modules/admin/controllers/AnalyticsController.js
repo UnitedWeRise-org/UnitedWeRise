@@ -64,7 +64,7 @@ class AnalyticsController {
             }
 
             // Set up event listeners
-            this.setupEventListeners();
+            await this.setupEventListeners();
 
             // Initialize charts containers
             this.setupCharts();
@@ -111,7 +111,7 @@ class AnalyticsController {
     /**
      * Set up event listeners for analytics section
      */
-    setupEventListeners() {
+    async setupEventListeners() {
         try {
             // Date range selector
             const dateRangeSelect = document.getElementById('analyticsDateRange');

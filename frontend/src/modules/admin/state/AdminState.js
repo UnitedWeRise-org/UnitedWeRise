@@ -335,7 +335,7 @@ class AdminState {
      * Refresh all data for current section
      * Extracted from refreshAllData function
      */
-    refreshAllData() {
+    async refreshAllData() {
         // Clear cache for fresh data
         this.clearCache();
 

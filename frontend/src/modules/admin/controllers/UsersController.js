@@ -36,7 +36,7 @@ class UsersController {
             }
 
             // Set up event listeners
-            this.setupEventListeners();
+            await this.setupEventListeners();
 
             // Load initial data
             await this.loadData();
@@ -53,7 +53,7 @@ class UsersController {
     /**
      * Set up event listeners for users section
      */
-    setupEventListeners() {
+    async setupEventListeners() {
         // Search functionality
         const searchInput = document.getElementById('userSearch');
         const searchBtn = document.querySelector('#users button[onclick="searchUsers()"]');

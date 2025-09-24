@@ -42,7 +42,7 @@ class ContentController {
             }
 
             // Set up event listeners
-            this.setupEventListeners();
+            await this.setupEventListeners();
 
             // Load initial data
             await this.loadData();
@@ -59,7 +59,7 @@ class ContentController {
     /**
      * Set up event listeners for content section
      */
-    setupEventListeners() {
+    async setupEventListeners() {
         // Tab switching
         const userReportsTab = document.getElementById('userReportsTab');
         const aiFlagsTab = document.getElementById('aiFlagsTab');

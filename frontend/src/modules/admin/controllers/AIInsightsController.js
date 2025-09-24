@@ -42,7 +42,7 @@ class AIInsightsController {
         this.runAIAnalysis = this.runAIAnalysis.bind(this);
         this.setupCharts = this.setupCharts.bind(this);
         this.updateChart = this.updateChart.bind(this);
-        this.refreshAIInsights = this.refreshAIInsights.bind(this);
+        // refreshAIInsights handled by loadData method
     }
 
     /**

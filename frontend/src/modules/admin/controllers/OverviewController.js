@@ -131,7 +131,7 @@ class OverviewController {
     async loadDataFallback() {
         try {
             const data = await window.AdminAPI.getDashboardStats();
-            this.displayOverviewData(data);
+            await this.displayOverviewData(data);
 
             const health = await window.AdminAPI.healthCheck();
             if (health.healthy) {
@@ -146,7 +146,7 @@ class OverviewController {
     /**
      * Display overview data in the UI
      */
-    displayOverviewData(data) {
+    async displayOverviewData(data) {
         try {
             if (!data || !data.overview) {
                 console.warn('No overview data available');

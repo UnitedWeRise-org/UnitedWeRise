@@ -41,7 +41,7 @@ class SecurityController {
             }
 
             // Set up event listeners
-            this.setupEventListeners();
+            await this.setupEventListeners();
 
             // Load initial data
             await this.loadData();
@@ -61,7 +61,7 @@ class SecurityController {
     /**
      * Set up event listeners for security section
      */
-    setupEventListeners() {
+    async setupEventListeners() {
         // Refresh button
         const refreshBtn = document.getElementById('refreshSecurityBtn');
         if (refreshBtn) {
