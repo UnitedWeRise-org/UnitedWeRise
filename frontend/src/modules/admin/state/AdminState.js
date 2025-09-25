@@ -537,23 +537,8 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            let data;
-            try {
-                data = await window.AdminAPI.getMOTDSettings();
-            } catch (apiError) {
-                // Handle 404 - return default MOTD structure
-                if (apiError.message.includes('404')) {
-                    data = {
-                        id: 'default',
-                        title: 'Welcome to Admin Dashboard',
-                        content: 'System ready for administration.',
-                        isActive: false,
-                        priority: 'low'
-                    };
-                } else {
-                    throw apiError;
-                }
-            }
+            // getMOTDSettings now returns mock data directly, no error handling needed
+            const data = await window.AdminAPI.getMOTDSettings();
 
             this.displayMOTDData(data);
             this.setCache(cacheKey, data);
@@ -634,26 +619,8 @@ class AdminState {
             // Use existing endpoints to gather system information
             const healthData = await window.AdminAPI.healthCheck();
 
-            let auditLogs;
-            try {
-                auditLogs = await window.AdminAPI.getAuditLogs(params);
-            } catch (auditError) {
-                // Handle 404 - return default audit structure
-                if (auditError.message.includes('404')) {
-                    auditLogs = {
-                        logs: [],
-                        total: 0,
-                        pagination: {
-                            page: 1,
-                            limit: 50,
-                            total: 0,
-                            pages: 0
-                        }
-                    };
-                } else {
-                    throw auditError;
-                }
-            }
+            // getAuditLogs now returns mock data directly, no error handling needed
+            const auditLogs = await window.AdminAPI.getAuditLogs(params);
 
             const systemData = {
                 health: healthData,

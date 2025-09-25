@@ -158,31 +158,10 @@ class MOTDController {
      * Load MOTD templates
      */
     async loadTemplates() {
-        try {
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/motd/templates`, {
-                method: 'GET'
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.templates = data.templates || [];
-                this.displayTemplates();
-
-                await adminDebugLog('MOTDController', 'Templates loaded successfully', {
-                    templateCount: this.templates.length
-                });
-            } else if (response.status === 404) {
-                // Endpoint not implemented yet - use default templates
-                await adminDebugLog('MOTDController', 'Templates endpoint not available, using defaults');
-                this.templates = this.getDefaultTemplates();
-                this.displayTemplates();
-            }
-        } catch (error) {
-            await adminDebugError('MOTDController', 'Failed to load templates', error);
-            // Continue without templates
-            this.templates = this.getDefaultTemplates();
-            this.displayTemplates();
-        }
+        // Use default templates directly to prevent 404 network logs
+        await adminDebugLog('MOTDController', 'Using default templates (endpoint not implemented)');
+        this.templates = this.getDefaultTemplates();
+        this.displayTemplates();
     }
 
     /**
