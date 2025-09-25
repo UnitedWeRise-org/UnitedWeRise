@@ -392,7 +392,7 @@ class AdminAPI {
      */
     async healthCheck() {
         try {
-            const response = await this.get(`${this.BACKEND_URL}/api/health`);
+            const response = await this.get(`${this.BACKEND_URL}/health`);
             return {
                 healthy: response.ok,
                 status: response.status,

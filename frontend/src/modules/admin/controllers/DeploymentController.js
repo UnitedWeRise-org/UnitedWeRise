@@ -589,7 +589,7 @@ class DeploymentController {
      * Update basic deployment info fallback
      * Extracted from updateBasicDeploymentInfo function
      */
-    updateBasicDeploymentInfo(health) {
+    async updateBasicDeploymentInfo(health) {
         try {
             const uptimeElement = document.getElementById('backendUptime');
             if (uptimeElement) {

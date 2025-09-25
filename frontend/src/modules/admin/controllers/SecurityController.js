@@ -310,7 +310,7 @@ class SecurityController {
     /**
      * Display failed logins table
      */
-    displayFailedLogins(failedLogins) {
+    async displayFailedLogins(failedLogins) {
         try {
             const container = document.getElementById('failedLoginsTable');
             if (!container) {

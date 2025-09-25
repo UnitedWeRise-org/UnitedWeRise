@@ -351,7 +351,7 @@ class ContentController {
      * Display user report statistics
      * Extracted from displayUserReportStats function
      */
-    displayUserReportStats(reports) {
+    async displayUserReportStats(reports) {
         try {
             const container = document.getElementById('userReportStats');
 

@@ -1575,7 +1575,7 @@ class ErrorsController {
     /**
      * Cleanup method for proper module shutdown
      */
-    destroy() {
+    async destroy() {
         // Clear refresh interval
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);

@@ -28,7 +28,8 @@ class AdminModuleLoader {
             'DeploymentController',
             'SystemController',
             'ErrorsController',
-            'ExternalCandidatesController'
+            'ExternalCandidatesController',
+            'CivicEngagementController'
         ];
         this.isInitialized = false;
         this.dependencies = {
