@@ -285,7 +285,7 @@ DonationCampaign {
         "description": "Donation to United We Rise"
       }
     ],
-    "taxMessage": "United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: XX-XXXXXXX"
+    "taxMessage": "United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: 99-2862201"
   }
 }
 ```
@@ -541,7 +541,7 @@ ORDER BY processedAt ASC;
 ```
 
 #### Tax-Deductible Statement:
-> "United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: XX-XXXXXXX"
+> "United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: 99-2862201"
 
 ---
 
@@ -577,7 +577,7 @@ Payment {
 # Production secrets (Azure Key Vault managed)
 STRIPE_SECRET_KEY="sk_live_xxx"           # Live secret key
 STRIPE_WEBHOOK_SECRET="whsec_xxx"         # Webhook signature verification
-TAX_EIN="XX-XXXXXXX"                      # 501(c)(3) EIN
+TAX_EIN="99-2862201"                      # 501(c)(3) EIN
 ```
 
 ### Authentication & Authorization
@@ -629,7 +629,7 @@ az containerapp update \
     "STRIPE_SECRET_KEY=sk_live_YOUR_LIVE_SECRET_KEY" \
     "STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_LIVE_PUBLISHABLE_KEY" \
     "STRIPE_WEBHOOK_SECRET=whsec_YOUR_LIVE_WEBHOOK_SECRET" \
-    "TAX_EIN=XX-XXXXXXX" \
+    "TAX_EIN=99-2862201" \
     "FRONTEND_URL=https://www.unitedwerise.org" \
     "SUCCESS_URL=https://www.unitedwerise.org/donation-success.html"
 ```

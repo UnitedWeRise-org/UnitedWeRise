@@ -1410,7 +1410,7 @@ router.get('/candidates/profiles', auth_1.requireAuth, requireAdmin, totpAuth_1.
         const { status, page = 1, limit = 50, search } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
         const where = {};
-        if (status)
+        if (status && status !== 'all')
             where.status = status;
         if (search) {
             where.OR = [

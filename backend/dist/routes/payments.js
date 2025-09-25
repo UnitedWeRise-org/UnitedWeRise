@@ -271,7 +271,7 @@ router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
                     receiptNumber: d.receiptNumber,
                     description: d.description
                 })),
-                taxMessage: 'United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: XX-XXXXXXX'
+                taxMessage: 'United We Rise is a registered 501(c)(3) nonprofit organization. Your donations are tax-deductible to the extent allowed by law. EIN: 99-2862201'
             }
         });
     }

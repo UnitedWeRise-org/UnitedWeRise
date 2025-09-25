@@ -148,7 +148,7 @@ export class DonationSystem {
                         <div class="tax-info">
                             <small>
                                 🎫 You'll receive a tax-deductible receipt via email<br>
-                                EIN: XX-XXXXXXX | All donations are tax-deductible to the extent allowed by law
+                                EIN: 99-2862201 | All donations are tax-deductible to the extent allowed by law
                             </small>
                         </div>
                     </div>

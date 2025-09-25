@@ -13184,7 +13184,7 @@ SUCCESS_URL=https://www.unitedwerise.org/donation-success.html
 CANCEL_URL=https://www.unitedwerise.org/donation-cancelled.html
 
 # Nonprofit Information
-TAX_EIN=XX-XXXXXXX  # 501(c)(3) EIN number
+TAX_EIN=99-2862201  # 501(c)(3) EIN number
 ```
 
 #### Stripe Webhook Events
