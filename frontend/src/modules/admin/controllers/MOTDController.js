@@ -30,6 +30,9 @@ class MOTDController {
         this.initializeRichTextEditor = this.initializeRichTextEditor.bind(this);
         this.sanitizeContent = this.sanitizeContent.bind(this);
         this.validateMOTDContent = this.validateMOTDContent.bind(this);
+        this.closeScheduleModal = this.closeScheduleModal.bind(this);
+        this.closeMOTDEditor = this.closeMOTDEditor.bind(this);
+        this.closeAllModals = this.closeAllModals.bind(this);
     }
 
     /**
@@ -106,10 +109,91 @@ class MOTDController {
             // Auto-save functionality
             this.setupAutoSave();
 
+            // Modal close button event listeners
+            this.setupModalCloseListeners();
+
             await adminDebugLog('MOTDController', 'Event listeners set up successfully');
         } catch (error) {
             await adminDebugError('MOTDController', 'Failed to setup event listeners', error);
         }
+    }
+
+    /**
+     * Set up modal close button event listeners
+     */
+    setupModalCloseListeners() {
+        try {
+            // Handle all modal close actions via event delegation
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                const action = target.getAttribute('data-action');
+
+                switch (action) {
+                    case 'close-schedule-modal':
+                    case 'cancel-schedule-modal':
+                        this.closeScheduleModal();
+                        break;
+                    case 'close-motd-editor':
+                    case 'cancel-motd-editor':
+                        this.closeMOTDEditor();
+                        break;
+                }
+            });
+
+            // Also handle clicking outside the modal to close it
+            document.addEventListener('click', (event) => {
+                if (event.target.classList.contains('modal-overlay')) {
+                    // Close any open modals
+                    this.closeAllModals();
+                }
+            });
+
+            // Handle ESC key to close modals
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    this.closeAllModals();
+                }
+            });
+
+        } catch (error) {
+            console.error('Error setting up modal close listeners:', error);
+        }
+    }
+
+    /**
+     * Close the schedule modal
+     */
+    closeScheduleModal() {
+        const modal = document.getElementById('scheduleModal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Clear form data
+            const form = document.getElementById('scheduleForm');
+            if (form) {
+                form.reset();
+            }
+        }
+    }
+
+    /**
+     * Close the MOTD editor modal
+     */
+    closeMOTDEditor() {
+        const modal = document.getElementById('motdEditorModal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Clear editor data if needed
+            this.isEditing = false;
+            this.activeEditor = null;
+        }
+    }
+
+    /**
+     * Close all MOTD modals
+     */
+    closeAllModals() {
+        this.closeScheduleModal();
+        this.closeMOTDEditor();
     }
 
     /**
