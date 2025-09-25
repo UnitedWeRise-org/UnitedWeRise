@@ -328,6 +328,15 @@ class AdminModuleLoader {
                 this.modules.set('ExternalCandidatesController', window.externalCandidatesController);
                 break;
 
+            case 'CivicEngagementController':
+                if (!window.CivicEngagementController) {
+                    throw new Error('CivicEngagementController class not found in global scope');
+                }
+                window.civicEngagementController = new window.CivicEngagementController();
+                await window.civicEngagementController.init();
+                this.modules.set('CivicEngagementController', window.civicEngagementController);
+                break;
+
             default:
                 throw new Error(`Unknown module: ${moduleName}`);
         }

@@ -616,7 +616,7 @@ class DeploymentController {
                 componentDiv.innerHTML = `
                     <div><strong>🏥 Backend:</strong> ${health.status}</div>
                     <div><strong>💾 Database:</strong> ${health.database}</div>
-                    <div><strong>📊 Error Rate:</strong> ${health.requests.errorRate.toFixed(2)}%</div>
+                    <div><strong>📊 Error Rate:</strong> ${(health.requests?.errorRate || 0).toFixed(2)}%</div>
                 `;
             }
 

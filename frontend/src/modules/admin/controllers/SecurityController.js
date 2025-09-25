@@ -279,7 +279,7 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>🌍 Unique IPs</h3>
                         </div>
-                        <div class="metric-value">${metrics.uniqueIPs || 0}</div>
+                        <div class="metric-value">${safeMetrics.uniqueIPs}</div>
                         <div class="metric-subtext">Attempting access</div>
                     </div>
 
