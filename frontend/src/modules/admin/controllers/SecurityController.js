@@ -403,7 +403,7 @@ class SecurityController {
     /**
      * Display blocked IPs list
      */
-    displayBlockedIPs(blockedIPs) {
+    async displayBlockedIPs(blockedIPs) {
         try {
             const container = document.getElementById('blockedIPsList');
             if (!container) {
