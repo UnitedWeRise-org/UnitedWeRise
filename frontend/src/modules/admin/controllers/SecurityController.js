@@ -243,14 +243,21 @@ class SecurityController {
             }
 
             // Handle undefined/null metrics with default values
-            const safeMetrics = metrics || {
+            const defaultMetrics = {
                 failedLogins: 0,
                 highRiskEvents: 0,
                 uniqueIPs: 0,
                 totalEvents: 0,
                 lockedAccounts: 0,
-                avgRiskScore: 0
+                avgRiskScore: 0,
+                bruteForceAttempts: 0,
+                blockedIPs: 0,
+                geographicAlerts: 0,
+                failedLoginsTrend: 0
             };
+
+            // Merge actual metrics with defaults to handle partially defined metrics
+            const safeMetrics = { ...defaultMetrics, ...(metrics || {}) };
 
             const threatLevel = this.calculateThreatLevel(safeMetrics);
             const threatClass = this.getThreatLevelClass(threatLevel);
@@ -287,7 +294,7 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>⚡ Brute Force Attempts</h3>
                         </div>
-                        <div class="metric-value">${metrics.bruteForceAttempts || 0}</div>
+                        <div class="metric-value">${safeMetrics.bruteForceAttempts || 0}</div>
                         <div class="metric-subtext">Last 1 hour</div>
                     </div>
 
@@ -295,7 +302,7 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>🔒 Blocked IPs</h3>
                         </div>
-                        <div class="metric-value">${metrics.blockedIPs || 0}</div>
+                        <div class="metric-value">${safeMetrics.blockedIPs || 0}</div>
                         <div class="metric-subtext">Currently active</div>
                     </div>
 
@@ -303,7 +310,7 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>📍 Geographic Alerts</h3>
                         </div>
-                        <div class="metric-value">${metrics.geographicAlerts || 0}</div>
+                        <div class="metric-value">${safeMetrics.geographicAlerts || 0}</div>
                         <div class="metric-subtext">Suspicious locations</div>
                     </div>
                 </div>
