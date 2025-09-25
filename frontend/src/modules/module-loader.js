@@ -171,8 +171,10 @@ async function testModularFunctionality() {
         name: 'API Client',
         test: async () => {
             try {
-                // Test using direct health endpoint (not through API config)
-                const healthUrl = `${getApiBaseUrl()}/health`;
+                // Health endpoint is at root level, not under /api
+                // Extract base URL from API URL by removing the /api path
+                const apiUrl = getApiBaseUrl();
+                const healthUrl = apiUrl.replace('/api', '') + '/health';
                 const response = await fetch(healthUrl);
                 const data = await response.json();
                 return data.status === 'healthy' ? 'API client responding' : 'API client not responding';
