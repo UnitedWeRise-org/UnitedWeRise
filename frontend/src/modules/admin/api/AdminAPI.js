@@ -261,7 +261,7 @@ class AdminAPI {
     async getComments(params = {}) {
         // Comments require postId - this method needs to be redesigned
         // For now, return empty array since admin comments need post context
-        console.warn('Admin getComments needs postId - use /api/posts/:id/comments instead');
+        await adminDebugLog('AdminAPI', 'getComments called - requires postId, returning empty array');
         return { ok: true, comments: [] };
     }
 
