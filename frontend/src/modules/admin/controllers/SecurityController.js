@@ -135,7 +135,8 @@ class SecurityController {
         } catch (error) {
             console.error('Error loading security data:', error);
             this.showError('Failed to load security data');
-            throw error;
+            // Don't throw error - allow controller to initialize with empty data
+            return { success: false, error: error.message };
         }
     }
 

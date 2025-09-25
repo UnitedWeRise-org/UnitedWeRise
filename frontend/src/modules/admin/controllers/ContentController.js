@@ -130,7 +130,8 @@ class ContentController {
         } catch (error) {
             console.error('Error loading content data:', error);
             this.showError('Failed to load content data');
-            throw error;
+            // Don't throw error - allow controller to initialize with empty data
+            return { success: false, error: error.message };
         }
     }
 
