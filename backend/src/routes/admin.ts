@@ -1565,7 +1565,7 @@ router.get('/candidates/profiles', requireAuth, requireAdmin, requireTOTPForAdmi
     const skip = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
-    if (status) where.status = status;
+    if (status && status !== 'all') where.status = status;
     if (search) {
       where.OR = [
         { name: { contains: search as string, mode: 'insensitive' } },

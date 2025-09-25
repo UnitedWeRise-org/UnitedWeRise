@@ -37,40 +37,41 @@ Do NOT create separate documentation files. This consolidation was created after
 4. [🏗️ SYSTEM ARCHITECTURE](#system-architecture)
 5. [🔄 SYSTEM INTEGRATION WORKFLOWS](#system-integration-workflows)
 6. [💾 DATABASE SCHEMA](#database-schema)
-7. [🔌 API REFERENCE](#api-reference)
-8. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
-9. [🎨 UI/UX COMPONENTS](#ui-ux-components)
-10. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
-11. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
-12. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
-13. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
-14. [📊 MONITORING & ADMIN](#monitoring-admin)
-15. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
-16. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
-17. [🔐 GEOGRAPHIC PRIVACY PROTECTION](#geographic-privacy-protection)
-18. [📱 SOCIAL FEATURES](#social-features)
-19. [🏆 REPUTATION SYSTEM](#reputation-system)
-20. [📸 MEDIA & PHOTOS](#media-photos)
-21. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
-22. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
-23. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
-24. [🎯 CIVIC ENGAGEMENT QUEST & BADGE SYSTEM](#civic-engagement-quest-badge-system)
-25. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-26. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-27. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
-28. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-29. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-30. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-31. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
-32. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
-33. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-34. [📝 DEVELOPMENT PRACTICES](#development-practices)
-35. [📜 SESSION HISTORY](#session-history)
-36. [🔮 FUTURE ROADMAP](#future-roadmap)
-37. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
-38. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
-39. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
-40. [🆘 TROUBLESHOOTING](#troubleshooting)
+7. [📊 CRITICAL DATABASE MODELS](#critical-database-models)
+8. [🔌 API REFERENCE](#api-reference)
+9. [🔮 PROPOSED FEED ALGORITHM REDESIGN](#proposed-feed-algorithm-redesign)
+10. [🎨 UI/UX COMPONENTS](#ui-ux-components)
+11. [📱 MOBILE UI SYSTEM](#mobile-ui-system)
+12. [⚙️ JAVASCRIPT MODULARIZATION](#javascript-modularization)
+13. [🔐 SECURITY & AUTHENTICATION](#security-authentication)
+14. [☁️ DEPLOYMENT & INFRASTRUCTURE](#deployment-infrastructure)
+15. [📊 MONITORING & ADMIN](#monitoring-admin)
+16. [🤖 AI & SEMANTIC FEATURES](#ai-semantic-features)
+17. [🗺️ MAP & CIVIC FEATURES](#map-civic-features)
+18. [🔐 GEOGRAPHIC PRIVACY PROTECTION](#geographic-privacy-protection)
+19. [📱 SOCIAL FEATURES](#social-features)
+20. [🏆 REPUTATION SYSTEM](#reputation-system)
+21. [📸 MEDIA & PHOTOS](#media-photos)
+22. [⚡ PERFORMANCE OPTIMIZATIONS](#performance-optimizations)
+23. [🔍 ENHANCED SEARCH SYSTEM](#enhanced-search-system)
+24. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
+25. [🎯 CIVIC ENGAGEMENT QUEST & BADGE SYSTEM](#civic-engagement-quest-badge-system)
+26. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
+27. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+28. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+29. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+30. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+31. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+32. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
+33. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
+34. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+35. [📝 DEVELOPMENT PRACTICES](#development-practices)
+36. [📜 SESSION HISTORY](#session-history)
+37. [🔮 FUTURE ROADMAP](#future-roadmap)
+38. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
+39. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
+40. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
+41. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -2034,6 +2035,827 @@ model PolicyComparison {
 - **Social Features**: Share and discuss specific policy positions
 - **Notification System**: Updates when candidates publish new positions
 - **Admin Dashboard**: Content moderation and category management tools
+
+### 📊 CRITICAL DATABASE MODELS (COMPREHENSIVE DOCUMENTATION) {#critical-database-models}
+
+## 🚨 CANDIDATE MESSAGING SYSTEM MODELS (CRITICAL)
+
+### 1. CandidateInbox Model
+**Location:** Lines 917-931 in schema.prisma
+**Purpose:** Core messaging system for candidate-citizen communication
+
+```prisma
+model CandidateInbox {
+  id           String           @id @default(cuid())
+  candidateId  String           @unique
+  isActive     Boolean          @default(true)
+  allowPublicQ Boolean          @default(true)
+  autoResponse String?
+  staffEmails  String[]         @default([])
+  categories   String[]         @default([])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  candidate    Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  staffMembers CandidateStaff[]
+}
+```
+
+**Key Features:**
+- **One-to-One with Candidate**: Each candidate has exactly one inbox
+- **Staff Management**: Links to CandidateStaff for multi-person inbox management
+- **Public Q&A Toggle**: Controls whether inquiries can be converted to public Q&A
+- **Auto-Response System**: Optional automated responses to incoming inquiries
+- **Category System**: Organizes inquiries by policy topics (Healthcare, Education, etc.)
+- **Staff Email Integration**: Array of staff emails for notification purposes
+
+**Business Logic:**
+- Created automatically when candidate profile is established
+- `isActive` controls whether new inquiries are accepted
+- `allowPublicQ` determines if responses can be made public
+- Categories align with InquiryCategory enum (21 policy areas)
+
+### 2. CandidateStaff Model
+**Location:** Lines 1351-1368 in schema.prisma
+**Purpose:** Staff permission management for candidate inbox system
+
+```prisma
+model CandidateStaff {
+  id                String             @id @default(cuid())
+  inboxId           String
+  userId            String
+  role              StaffRole          @default(VOLUNTEER)
+  permissions       StaffPermission[]
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  inbox             CandidateInbox     @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses         InquiryResponse[]
+  assignedInquiries PoliticalInquiry[] @relation("AssignedStaff")
+}
+```
+
+**Staff Role Hierarchy:**
+- `CAMPAIGN_MANAGER` - Full inbox management authority
+- `COMMUNICATIONS_DIRECTOR` - Response oversight and public Q&A decisions
+- `POLICY_ADVISOR` - Specialized policy question handling
+- `VOLUNTEER_COORDINATOR` - Staff management within volunteer scope
+- `VOLUNTEER` - Basic inquiry response capabilities
+- `INTERN` - Limited permissions, typically supervised
+
+**Permission System (7 Levels):**
+- `READ_INQUIRIES` - View incoming messages
+- `RESPOND_INQUIRIES` - Send responses to citizens
+- `ASSIGN_INQUIRIES` - Distribute inquiries to staff members
+- `MANAGE_STAFF` - Add/remove staff, modify permissions
+- `MANAGE_SETTINGS` - Modify inbox settings and categories
+- `PUBLISH_QA` - Convert private responses to public Q&A
+- `MODERATE_QA` - Edit/delete public Q&A content
+
+### 3. PoliticalInquiry Model
+**Location:** Lines 1370-1401 in schema.prisma
+**Purpose:** Core model for citizen-to-candidate inquiries
+
+```prisma
+model PoliticalInquiry {
+  id               String            @id @default(cuid())
+  candidateId      String
+  inquirerId       String?
+  subject          String
+  content          String
+  category         InquiryCategory   @default(GENERAL)
+  priority         InquiryPriority   @default(NORMAL)
+  status           InquiryStatus     @default(OPEN)
+  isPublic         Boolean           @default(false)
+  isAnonymous      Boolean           @default(false)
+  contactEmail     String?
+  contactName      String?
+  policyTopic      String?
+  specificQuestion String?
+  respondedAt      DateTime?
+  assignedAt       DateTime?
+  assignedTo       String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+```
+
+**Inquiry Categories (21 Policy Areas):**
+- GENERAL, HEALTHCARE, EDUCATION, ECONOMY, ENVIRONMENT
+- IMMIGRATION, FOREIGN_POLICY, CRIMINAL_JUSTICE, INFRASTRUCTURE
+- HOUSING, LABOR, TECHNOLOGY, CIVIL_RIGHTS, BUDGET_TAXES
+- ENERGY, AGRICULTURE, VETERANS, SENIORS, YOUTH, FAMILY_VALUES, OTHER
+
+**Status Workflow:**
+- `OPEN` → `IN_PROGRESS` → `WAITING_FOR_CANDIDATE` → `RESOLVED` → `CLOSED` → `ARCHIVED`
+
+**Priority Levels:**
+- `LOW` - General information requests
+- `NORMAL` - Standard policy questions
+- `HIGH` - Constituent service requests
+- `URGENT` - Time-sensitive issues requiring immediate attention
+
+### 4. InquiryResponse Model
+**Location:** Lines 1403-1420 in schema.prisma
+**Purpose:** Staff and candidate responses to citizen inquiries
+
+```prisma
+model InquiryResponse {
+  id              String           @id @default(cuid())
+  inquiryId       String
+  responderId     String
+  content         String
+  responseType    ResponseType     @default(DIRECT)
+  isPublic        Boolean          @default(false)
+  isFromCandidate Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+```
+
+**Response Types:**
+- `DIRECT` - Private response to inquirer only
+- `PUBLIC_QA` - Response published as public Q&A
+- `POLICY_STATEMENT` - Official policy position statement
+- `REFERRAL` - Redirect to appropriate resource/office
+
+### 5. PublicQA Model
+**Location:** Lines 1422-1443 in schema.prisma
+**Purpose:** Public Q&A system derived from private inquiries
+
+```prisma
+model PublicQA {
+  id              String            @id @default(cuid())
+  candidateId     String
+  question        String
+  answer          String
+  category        InquiryCategory   @default(GENERAL)
+  isVisible       Boolean           @default(true)
+  isPinned        Boolean           @default(false)
+  upvotes         Int               @default(0)
+  views           Int               @default(0)
+  sourceInquiryId String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+```
+
+**Key Features:**
+- **Source Tracking**: Links back to original PoliticalInquiry if converted
+- **Voting System**: Citizens can upvote helpful Q&A entries
+- **Pinning System**: Important Q&As can be featured prominently
+- **View Tracking**: Analytics for popular questions
+- **Category Organization**: Same 21-category system as inquiries
+
+### 6. PublicQAVote Model
+**Location:** Lines 1445-1457 in schema.prisma
+**Purpose:** Voting system for public Q&A entries
+
+```prisma
+model PublicQAVote {
+  id        String   @id @default(cuid())
+  qaId      String
+  userId    String
+  voteType  VoteType
+  createdAt DateTime @default(now())
+}
+```
+
+**Vote Types:**
+- `UPVOTE` - Indicates helpful/relevant Q&A
+- `DOWNVOTE` - Indicates unhelpful/irrelevant Q&A
+- `REPORT` - Flags inappropriate content
+
+---
+
+## 💰 STRIPE PAYMENT SYSTEM MODELS (CRITICAL)
+
+### 7. Payment Model
+**Location:** Lines 1685-1724 in schema.prisma
+**Purpose:** Core payment processing with Stripe integration
+
+```prisma
+model Payment {
+  id                      String                 @id @default(cuid())
+  userId                  String
+  amount                  Int
+  currency                String                 @default("USD")
+  type                    PaymentType
+  status                  PaymentStatus          @default(PENDING)
+  stripePaymentIntentId   String?                @unique
+  stripeChargeId          String?                @unique
+  stripeCustomerId        String?
+  paymentMethodType       String?
+  taxDeductible           Boolean                @default(false)
+  taxYear                 Int?
+  description             String?
+  metadata                Json?
+  failureReason           String?
+  feeType                 FeeType?
+  candidateRegistrationId String?                @unique
+  donationType            DonationType?
+  campaignId              String?
+  isRecurring             Boolean                @default(false)
+  recurringInterval       RecurringInterval?
+  receiptUrl              String?
+  receiptNumber           String?                @unique
+  receiptSent             Boolean                @default(false)
+  receiptSentAt           DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  processedAt             DateTime?
+  refundedAt              DateTime?
+}
+```
+
+**Payment Types:**
+- `DONATION` - Tax-deductible donations to platform/candidates
+- `FEE` - Non-deductible fees for services
+
+**Fee Types:**
+- `CANDIDATE_REGISTRATION` - Candidate registration fees
+- `VERIFICATION_FEE` - Identity verification processing
+- `PREMIUM_FEATURES` - Enhanced platform features
+- `EVENT_HOSTING` - Event creation and promotion
+- `ADVERTISING` - Campaign advertising fees
+- `OTHER` - Miscellaneous services
+
+**Donation Types:**
+- `ONE_TIME` - Single donations
+- `RECURRING` - Automated recurring donations
+- `CAMPAIGN_SPECIFIC` - Donations to specific candidate campaigns
+- `GENERAL_SUPPORT` - Platform operational support
+- `MEMORIAL` - Donations in memory of someone
+- `HONOR` - Donations in honor of someone
+
+**Recurring Intervals:**
+- `WEEKLY`, `MONTHLY`, `QUARTERLY`, `YEARLY`
+
+**Status Workflow:**
+- `PENDING` → `PROCESSING` → `COMPLETED`
+- `PENDING` → `FAILED` (with failureReason)
+- `COMPLETED` → `REFUNDED` or `PARTIAL_REFUNDED`
+
+### 8. StripeCustomer Model
+**Location:** Lines 1726-1741 in schema.prisma
+**Purpose:** Stripe customer relationship management
+
+```prisma
+model StripeCustomer {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  stripeCustomerId String   @unique
+  email            String
+  name             String?
+  phone            String?
+  address          Json?
+  taxId            String?
+  taxExempt        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+```
+
+**Purpose & Features:**
+- **One-to-One User Mapping**: Each user can have one Stripe customer record
+- **Tax Management**: Stores tax ID for business/organization donations
+- **Address Storage**: Full address information for tax receipts
+- **Tax Exemption Tracking**: For qualified nonprofit organizations
+
+### 9. PaymentWebhook Model
+**Location:** Lines 1778-1790 in schema.prisma
+**Purpose:** Stripe webhook processing and idempotency
+
+```prisma
+model PaymentWebhook {
+  id            String    @id @default(cuid())
+  stripeEventId String    @unique
+  eventType     String
+  processed     Boolean   @default(false)
+  payload       Json
+  error         String?
+  createdAt     DateTime  @default(now())
+  processedAt   DateTime?
+}
+```
+
+**Webhook Event Types Handled:**
+- `payment_intent.succeeded` - Payment completion
+- `payment_intent.payment_failed` - Payment failure
+- `customer.created` - New customer creation
+- `invoice.payment_succeeded` - Recurring payment success
+- `charge.dispute.created` - Payment dispute initiation
+
+**Idempotency System:**
+- `stripeEventId` ensures each Stripe event is processed exactly once
+- `processed` flag prevents duplicate processing
+- `error` field stores processing failure details for retry logic
+
+### 10. Refund Model
+**Location:** Lines 1761-1776 in schema.prisma
+**Purpose:** Payment refund processing and tracking
+
+```prisma
+model Refund {
+  id             String       @id @default(cuid())
+  paymentId      String
+  amount         Int
+  reason         RefundReason
+  status         RefundStatus @default(PENDING)
+  stripeRefundId String?      @unique
+  notes          String?
+  processedBy    String?
+  createdAt      DateTime     @default(now())
+  processedAt    DateTime?
+}
+```
+
+**Refund Reasons:**
+- `DUPLICATE` - Accidental duplicate payment
+- `FRAUDULENT` - Fraudulent transaction detected
+- `REQUESTED_BY_CUSTOMER` - Customer-initiated refund request
+- `CAMPAIGN_CANCELLED` - Candidate campaign cancellation
+- `ERROR` - Platform processing error
+- `OTHER` - Miscellaneous reasons
+
+**Refund Status Workflow:**
+- `PENDING` → `PROCESSING` → `COMPLETED`
+- `PENDING` → `FAILED` → `CANCELLED`
+
+---
+
+## 🏛️ ADMINISTRATIVE MODELS (HIGH PRIORITY)
+
+### 11. CandidateAdminMessage Model
+**Location:** Lines 933-960 in schema.prisma
+**Purpose:** Communication channel between administrators and candidates
+
+```prisma
+model CandidateAdminMessage {
+  id          String                  @id @default(cuid())
+  candidateId String
+  senderId    String?
+  isFromAdmin Boolean                 @default(false)
+  messageType AdminMessageType        @default(GENERAL)
+  priority    AdminMessagePriority    @default(NORMAL)
+  subject     String?
+  content     String
+  attachments String[]                @default([])
+  isRead      Boolean                 @default(false)
+  readAt      DateTime?
+  readBy      String?
+  threadId    String?
+  replyToId   String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @default(now()) @updatedAt
+}
+```
+
+**Message Types:**
+- `SUPPORT_REQUEST` - Technical or platform support
+- `STATUS_INQUIRY` - Account/campaign status questions
+- `TECHNICAL_ISSUE` - Bug reports and technical problems
+- `POLICY_QUESTION` - Platform policy clarifications
+- `FEATURE_REQUEST` - New feature suggestions
+- `APPEAL_MESSAGE` - Appeals of moderation actions
+- `GENERAL` - General communication
+
+**Priority Levels:**
+- `LOW` - General inquiries, non-urgent
+- `NORMAL` - Standard support requests
+- `HIGH` - Account issues affecting campaign
+- `URGENT` - Critical issues requiring immediate attention
+
+**Threading System:**
+- `threadId` - Groups related messages together
+- `replyToId` - Links direct replies to specific messages
+- Enables conversation-style communication
+
+### 12. SecurityEvent Model
+**Location:** Lines 1544-1560 in schema.prisma
+**Purpose:** Security monitoring and threat detection
+
+```prisma
+model SecurityEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  eventType String
+  ipAddress String?
+  userAgent String?
+  details   Json?
+  riskScore Int      @default(0)
+  createdAt DateTime @default(now())
+}
+```
+
+**Event Types Tracked:**
+- Failed login attempts
+- Suspicious IP address activity
+- Multiple account access patterns
+- Password reset requests
+- Two-factor authentication events
+- Profile modification attempts
+- Payment processing anomalies
+
+**Risk Scoring System:**
+- 0-25: Low risk (normal activity)
+- 26-50: Moderate risk (requires monitoring)
+- 51-75: High risk (automated restrictions possible)
+- 76-100: Critical risk (immediate action required)
+
+### 13. ModerationLog Model
+**Location:** Lines 750-766 in schema.prisma
+**Purpose:** Audit trail for all moderation actions
+
+```prisma
+model ModerationLog {
+  id          String           @id @default(cuid())
+  moderatorId String
+  targetType  ReportTargetType
+  targetId    String
+  action      ModerationAction
+  reason      String
+  notes       String?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+}
+```
+
+**Target Types:**
+- `POST` - Social media posts
+- `COMMENT` - Post comments
+- `USER` - User accounts
+- `MESSAGE` - Private messages
+- `CANDIDATE` - Candidate profiles
+
+**Moderation Actions:**
+- `NO_ACTION` - Report reviewed, no action needed
+- `WARNING_ISSUED` - Formal warning to user
+- `CONTENT_HIDDEN` - Content hidden from public view
+- `CONTENT_DELETED` - Content permanently removed
+- `USER_WARNED` - User account warning issued
+- `USER_SUSPENDED` - Temporary account suspension
+- `USER_BANNED` - Permanent account ban
+- `APPEAL_APPROVED` - User appeal accepted
+- `APPEAL_DENIED` - User appeal rejected
+
+---
+
+## 🗳️ ELECTION & CIVIC MODELS (HIGH PRIORITY)
+
+### 14. BallotMeasure Model
+**Location:** Lines 477-496 in schema.prisma
+**Purpose:** Ballot measure and proposition tracking
+
+```prisma
+model BallotMeasure {
+  id           String            @id @default(cuid())
+  title        String
+  description  String
+  type         BallotMeasureType
+  number       String?
+  fullText     String?
+  fiscalImpact String?
+  arguments    Json?
+  state        String
+  county       String?
+  city         String?
+  electionId   String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+```
+
+**Ballot Measure Types:**
+- `PROPOSITION` - State/local ballot propositions
+- `BOND_MEASURE` - Municipal bond funding measures
+- `CONSTITUTIONAL_AMENDMENT` - State constitution changes
+- `INITIATIVE` - Citizen-initiated measures
+- `REFERENDUM` - Legislative referendum measures
+
+**Geographic Scope:**
+- State-level: affects entire state
+- County-level: specific county measures
+- City-level: municipal measures
+
+### 15. LegislativeMembership Model
+**Location:** Lines 1149-1177 in schema.prisma
+**Purpose:** Legislative body membership tracking
+
+```prisma
+model LegislativeMembership {
+  id            String               @id @default(cuid())
+  legislatorId  String
+  legislatureId String
+  district      String?
+  party         String?
+  leadership    String?
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean              @default(true)
+  bioguideId    String?
+  openStatesId  String?
+  thomasId      String?
+  opensecrets   String?
+  votesmartId   String?
+  govtrackId    String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+```
+
+**External ID Integration:**
+- `bioguideId` - Congress Bioguide Database ID
+- `openStatesId` - Open States API identifier
+- `thomasId` - THOMAS legislative database ID
+- `opensecrets` - OpenSecrets.org tracking ID
+- `votesmartId` - Vote Smart database ID
+- `govtrackId` - GovTrack.us tracking ID
+
+**Leadership Positions:**
+- Speaker, Majority/Minority Leader
+- Committee Chairs, Ranking Members
+- Whips, Assistant Leaders
+
+### 16. LegislatorVote Model
+**Location:** Lines 1259-1271 in schema.prisma
+**Purpose:** Individual legislator voting records
+
+```prisma
+model LegislatorVote {
+  id           String                @id @default(cuid())
+  voteId       String
+  membershipId String
+  position     VotePosition
+  createdAt    DateTime              @default(now())
+}
+```
+
+**Vote Positions:**
+- `YEA` - Voted in favor
+- `NAY` - Voted against
+- `PRESENT` - Voted present (no position)
+- `NOT_VOTING` - Did not participate in vote
+- `ABSTAIN` - Formally abstained
+
+### 17. Bill Model
+**Location:** Lines 1179-1211 in schema.prisma
+**Purpose:** Legislative bill tracking and analysis
+
+```prisma
+model Bill {
+  id             String            @id @default(cuid())
+  externalId     String
+  number         String
+  title          String
+  summary        String?
+  fullText       String?
+  status         BillStatus        @default(INTRODUCED)
+  introducedDate DateTime
+  lastActionDate DateTime?
+  chamber        Chamber
+  level          LegislatureLevel
+  state          String?           @db.Char(2)
+  subjects       String[]          @default([])
+  policyAreas    String[]          @default([])
+  embedding      Float[]           @default([])
+  dataSource     String
+  apiUrl         String?
+  lastSynced     DateTime          @default(now())
+  legislatureId  String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+```
+
+**Bill Status Progression:**
+- `INTRODUCED` → `COMMITTEE` → `FLOOR_VOTE` → `PASSED_CHAMBER`
+- `SENT_TO_OTHER_CHAMBER` → `PASSED_BOTH` → `SENT_TO_EXECUTIVE`
+- `SIGNED` | `VETOED` → `BECAME_LAW` | `DIED`
+
+**AI Integration:**
+- `embedding` field stores vector embeddings for semantic search
+- `subjects` and `policyAreas` arrays store AI-classified topics
+- Enables intelligent bill recommendation and similarity analysis
+
+### 18. NewsArticle Model
+**Location:** Lines 1273-1305 in schema.prisma
+**Purpose:** News article aggregation and analysis
+
+```prisma
+model NewsArticle {
+  id                 String            @id @default(cuid())
+  title              String
+  aiSummary          String?
+  url                String            @unique
+  publishedAt        DateTime
+  sourceName         String
+  sourceType         NewsSourceType
+  author             String?
+  sentiment          ArticleSentiment  @default(NEUTRAL)
+  sentimentScore     Float             @default(0.0)
+  keywords           String[]          @default([])
+  politicalTopics    String[]          @default([])
+  embedding          Float[]           @default([])
+  relevanceScore     Float             @default(0.0)
+  positionKeywords   String[]          @default([])
+  contradictionFlags String[]          @default([])
+  externalId         String?
+  dataSource         String
+  lastSynced         DateTime          @default(now())
+  cacheExpiry        DateTime?
+  isHistorical       Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+```
+
+**News Source Types:**
+- `NEWSPAPER`, `MAGAZINE`, `BLOG`, `PRESS_RELEASE`
+- `GOVERNMENT`, `SOCIAL_MEDIA`, `WIRE_SERVICE`, `BROADCAST`
+
+**AI Analysis Features:**
+- `aiSummary` - AI-generated article summary
+- `sentiment` - Overall article sentiment analysis
+- `keywords` - Extracted key terms and phrases
+- `politicalTopics` - Classified political subject areas
+- `embedding` - Vector embedding for semantic search
+- `contradictionFlags` - Identifies potentially conflicting information
+
+---
+
+## 🎯 CIVIC ENGAGEMENT MODELS (RECENTLY DOCUMENTED)
+
+### 19. Quest Model
+**Location:** Lines 2584-2606 in schema.prisma
+**Purpose:** Gamification system for civic engagement
+
+```prisma
+model Quest {
+  id                String              @id @default(cuid())
+  type              QuestType
+  category          QuestCategory
+  title             String
+  description       String              @db.Text
+  shortDescription  String?
+  requirements      Json
+  rewards           Json
+  timeframe         QuestTimeframe
+  displayOrder      Int                 @default(0)
+  isActive          Boolean             @default(true)
+  startDate         DateTime?
+  endDate           DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdBy         String?
+}
+```
+
+**Quest Types:**
+- `DAILY_HABIT` - Daily civic engagement activities
+- `DAILY_CIVIC` - Daily civic actions (contacting officials, etc.)
+- `WEEKLY_ENGAGEMENT` - Weekly community participation
+- `MONTHLY_CONSISTENCY` - Monthly sustained engagement
+- `SPECIAL_EVENT` - Event-specific challenges
+- `CIVIC_ACTION` - Specific civic actions (voting, volunteering)
+- `EDUCATIONAL` - Learning-focused activities
+- `SOCIAL_ENGAGEMENT` - Community building activities
+
+**Quest Categories:**
+- `INFORMATION` - Learning and research activities
+- `PARTICIPATION` - Active civic participation
+- `COMMUNITY` - Community building and networking
+- `ADVOCACY` - Advocacy and awareness campaigns
+- `EDUCATION` - Educational content and sharing
+- `SOCIAL` - Social engagement and interaction
+
+### 20. Badge Model
+**Location:** Lines 2643-2660 in schema.prisma
+**Purpose:** Achievement badge system for user recognition
+
+```prisma
+model Badge {
+  id                    String      @id @default(cuid())
+  name                  String      @unique
+  description           String      @db.Text
+  imageUrl              String
+  qualificationCriteria Json
+  displayOrder          Int         @default(0)
+  isActive              Boolean     @default(true)
+  isAutoAwarded         Boolean     @default(true)
+  maxAwards             Int?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  createdBy             String?
+}
+```
+
+**Badge System Features:**
+- **Asset-Based Design**: Images stored in Azure Storage
+- **Flexible Criteria**: JSON-based qualification rules
+- **Auto-Award System**: Automatic badge awarding based on user activities
+- **Limited Editions**: Optional maximum award limits for special badges
+- **Display Management**: User-controlled badge display preferences
+
+**Qualification Criteria Examples:**
+```json
+{
+  "type": "completion_count",
+  "target": "quests_completed",
+  "threshold": 10,
+  "timeframe": "monthly"
+}
+```
+
+---
+
+## 🔗 MODEL RELATIONSHIPS SUMMARY
+
+### **Core Relationship Chains:**
+
+**Candidate Messaging Chain:**
+```
+User → Candidate → CandidateInbox → CandidateStaff
+                                 → PoliticalInquiry → InquiryResponse
+                                                   → PublicQA → PublicQAVote
+```
+
+**Payment Processing Chain:**
+```
+User → Payment → StripeCustomer
+             → PaymentWebhook
+             → Refund
+             → CandidateRegistration (for candidate fees)
+```
+
+**Legislative Tracking Chain:**
+```
+Legislature → LegislativeMembership → LegislatorVote
+           → Bill → BillSponsorship
+                 → Vote → LegislatorVote
+```
+
+**Civic Engagement Chain:**
+```
+User → UserQuestProgress → Quest
+    → UserBadge → Badge
+    → UserQuestStreak
+```
+
+### **Cross-System Integration Points:**
+
+1. **User Model** (lines 10-155) - Central hub connecting all systems
+2. **Candidate Model** (lines 414-469) - Links messaging, admin, and civic systems
+3. **Payment Model** (lines 1685-1724) - Integrates with candidate registration and donations
+4. **SecurityEvent Model** (lines 1544-1560) - Monitors all system activities
+
+---
+
+## 📈 BUSINESS IMPACT ASSESSMENT
+
+### **High-Impact Models (Immediate Documentation Priority):**
+1. **CandidateInbox** - Core platform feature serving active candidates
+2. **Payment** - Live financial transactions with legal compliance requirements
+3. **StripeCustomer** - Payment processing and tax reporting foundation
+4. **PoliticalInquiry** - Citizen engagement and democratic participation
+
+### **Medium-Impact Models (Near-term Priority):**
+5. **SecurityEvent** - Platform security and fraud prevention
+6. **ModerationLog** - Content moderation and community standards
+7. **NewsArticle** - Information aggregation and analysis features
+8. **Bill** - Legislative tracking and voter information
+
+### **System-Critical Models (Technical Priority):**
+9. **PaymentWebhook** - Payment processing reliability and data consistency
+10. **PublicQA** - Public information sharing and transparency
+
+---
+
+## 🚀 IMPLEMENTATION RECOMMENDATIONS
+
+### **Immediate Actions:**
+1. **API Documentation**: Create comprehensive API endpoint documentation for candidate messaging system
+2. **Admin Interface**: Document admin dashboard controls for inbox management and staff permissions
+3. **Payment Integration**: Document Stripe webhook configuration and error handling
+4. **Security Monitoring**: Document security event classification and response procedures
+
+### **Development Guidelines:**
+1. **Model Relationships**: Always verify foreign key constraints before database operations
+2. **Enum Validation**: Use TypeScript enums consistently with database enum definitions
+3. **JSON Fields**: Document expected JSON structure for flexible fields (`metadata`, `requirements`, etc.)
+4. **Index Usage**: Leverage existing database indexes for optimal query performance
+
+### **Quality Assurance:**
+1. **Data Integrity**: Implement proper cascade deletion rules for related models
+2. **Migration Safety**: Test all schema changes against development database isolation
+3. **API Security**: Ensure proper authentication for all admin and candidate-specific endpoints
+4. **Error Handling**: Implement comprehensive error handling for payment and messaging systems
+
+---
+
+**Critical Models Documentation Complete**: September 25, 2025
+**Integration Status**: Now integrated into MASTER_DOCUMENTATION.md
+**Cross-Reference**: Links to related API endpoints and admin dashboard procedures
 
 ## 🔌 API REFERENCE {#api-reference}
 

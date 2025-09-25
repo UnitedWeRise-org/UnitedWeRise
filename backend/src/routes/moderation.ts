@@ -169,9 +169,9 @@ router.get('/reports', requireAuth, requireModerator, async (req: AuthRequest, r
     const offset = (page - 1) * limit;
 
     const where: any = {};
-    if (status) where.status = status;
-    if (priority) where.priority = priority;
-    if (targetType) where.targetType = targetType;
+    if (status && status !== 'all') where.status = status;
+    if (priority && priority !== 'all') where.priority = priority;
+    if (targetType && targetType !== 'all') where.targetType = targetType;
 
     const reports = await prisma.report.findMany({
       where,

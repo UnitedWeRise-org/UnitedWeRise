@@ -259,7 +259,7 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>🚫 Failed Logins (24h)</h3>
                         </div>
-                        <div class="metric-value">${metrics.failedLoginsLast24h || 0}</div>
+                        <div class="metric-value">${metrics.failedLogins || 0}</div>
                         <div class="metric-trend ${(metrics.failedLoginsTrend || 0) > 0 ? 'up' : 'down'}">
                             ${(metrics.failedLoginsTrend || 0) > 0 ? '↗️' : '↘️'} ${Math.abs(metrics.failedLoginsTrend || 0)}%
                         </div>
@@ -761,9 +761,10 @@ Request Headers: ${login.suspiciousHeaders ? 'Suspicious detected' : 'Normal'}
     // Utility methods for UI formatting
 
     calculateThreatLevel(metrics) {
-        const score = (metrics.failedLoginsLast24h || 0) * 2 +
-                     (metrics.bruteForceAttempts || 0) * 5 +
-                     (metrics.geographicAlerts || 0) * 3;
+        if (!metrics) return 'LOW';
+        const score = (metrics.failedLogins || 0) * 2 +
+                     (metrics.highRiskEvents || 0) * 5 +
+                     (metrics.uniqueIPs || 0) * 0.5;
 
         if (score >= 50) return 'HIGH';
         if (score >= 20) return 'MEDIUM';
