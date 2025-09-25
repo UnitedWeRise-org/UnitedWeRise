@@ -75,14 +75,20 @@ class AdminModuleLoader {
             // Wait for core dependencies
             await this.waitForCoreDependencies();
 
-            // Load modules in dependency order
-            await this.loadModulesInOrder();
-
-            // Set up global event handlers
-            this.setupGlobalHandlers();
-
-            // Initialize authentication flow
+            // Initialize authentication flow FIRST - before loading data-dependent modules
             await this.initializeAuthFlow();
+
+            // Only load modules if authentication is successful
+            // This prevents controllers from trying to load data before login
+            if (this.shouldLoadModules()) {
+                // Load modules in dependency order
+                await this.loadModulesInOrder();
+
+                // Set up global event handlers
+                this.setupGlobalHandlers();
+            } else {
+                console.log('🔒 Authentication required - modules will load after login');
+            }
 
             this.isInitialized = true;
 
@@ -491,6 +497,48 @@ class AdminModuleLoader {
 
             // Initialize authentication check
             await window.adminAuth.init();
+        }
+    }
+
+    /**
+     * Check if modules should be loaded (user is authenticated)
+     */
+    shouldLoadModules() {
+        // Check if user is authenticated and is admin
+        if (window.adminAuth && window.adminAuth.currentUser && window.adminAuth.currentUser.isAdmin) {
+            return true;
+        }
+
+        // Check if dashboard is visible (indicates successful auth)
+        const dashboardMain = document.getElementById('dashboardMain');
+        if (dashboardMain && dashboardMain.style.display !== 'none') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Load modules after successful authentication (called by AdminAuth)
+     */
+    async loadModulesAfterAuth() {
+        if (!this.isInitialized) {
+            console.warn('AdminModuleLoader not initialized yet');
+            return;
+        }
+
+        try {
+            console.log('🔓 User authenticated - loading admin modules...');
+
+            // Load modules in dependency order
+            await this.loadModulesInOrder();
+
+            // Set up global event handlers
+            this.setupGlobalHandlers();
+
+            console.log('✅ Admin modules loaded after authentication');
+        } catch (error) {
+            console.error('❌ Failed to load modules after authentication:', error);
         }
     }
 

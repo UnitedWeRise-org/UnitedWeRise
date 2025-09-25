@@ -271,10 +271,15 @@ class AdminAuth {
     }
 
     /**
-     * Trigger dashboard data loading (to be overridden by AdminState)
+     * Trigger dashboard data loading after authentication
      */
-    triggerDashboardLoad() {
-        // This will be overridden by AdminState module
+    async triggerDashboardLoad() {
+        // First, load the admin modules if they weren't loaded yet
+        if (window.adminModuleLoader && typeof window.adminModuleLoader.loadModulesAfterAuth === 'function') {
+            await window.adminModuleLoader.loadModulesAfterAuth();
+        }
+
+        // Then trigger data loading (will be overridden by AdminState module)
         if (window.AdminState && window.AdminState.loadOverviewData) {
             window.AdminState.loadOverviewData();
         } else if (typeof loadOverviewData === 'function') {
