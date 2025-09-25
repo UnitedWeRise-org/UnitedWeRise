@@ -23,7 +23,6 @@ class UsersController {
         this.displayUsersTable = this.displayUsersTable.bind(this);
         this.showUserProfile = this.showUserProfile.bind(this);
         this.closeUserProfile = this.closeUserProfile.bind(this);
-        this.loadUserPosts = this.loadUserPosts.bind(this);
     }
 
     /**
