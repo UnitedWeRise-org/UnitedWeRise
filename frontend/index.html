@@ -63,6 +63,8 @@
     <link rel="stylesheet" href="src/styles/posts.css">
     <link rel="stylesheet" href="src/styles/candidate-system.css">
     <link rel="stylesheet" href="src/styles/badges.css">
+    <link rel="stylesheet" href="src/styles/quests.css">
+    <link rel="stylesheet" href="src/styles/badge-vault.css">
     <link rel="stylesheet" href="src/styles/elections-system.css">
     <link rel="stylesheet" href="src/styles/officials-system.css">
     <link rel="stylesheet" href="src/styles/trending-system.css">
@@ -212,6 +214,8 @@
     <script src="src/components/ContentReporting.js"></script>
     <script src="src/components/CandidateSystem.js"></script>
     <script src="src/components/PostComponent.js"></script>
+    <script src="src/components/QuestProgressTracker.js"></script>
+    <script src="src/components/BadgeVault.js"></script>
     <script src="src/components/UserCard.js"></script>
     <!-- ✅ ES6 MODULES: Profile, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
 
@@ -760,6 +764,21 @@
                 <h1>Welcome to United We Rise</h1>
                 <p>Connect with candidates, elected officials, and fellow citizens. Join the conversation about the issues that matter.</p>
                 <p>We are still in active development. We are excited for you to join us, and if you see anything that needs addressing, just write it as a post</p>
+
+                <!-- Quest Progress Container (shows when user is logged in) -->
+                <div id="quest-progress-container" style="display: none;"></div>
+
+                <!-- Quick Access Buttons for Authenticated Users -->
+                <div id="user-quick-actions" class="quick-actions" style="display: none;">
+                    <button class="quick-action-btn badge-vault-btn" onclick="badgeVault.showVault()" title="Manage your badge collection">
+                        <span class="action-icon">🏆</span>
+                        <span class="action-label">Badge Vault</span>
+                    </button>
+                    <button class="quick-action-btn quests-btn" onclick="document.getElementById('quest-progress-container').scrollIntoView({behavior: 'smooth'})" title="View your civic challenges">
+                        <span class="action-icon">🎯</span>
+                        <span class="action-label">Daily Quests</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

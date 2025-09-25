@@ -94,7 +94,24 @@ router.get('/trending', async (req, res) => {
                         firstName: true,
                         lastName: true,
                         avatar: true,
-                        verified: true
+                        verified: true,
+                        userBadges: {
+                            where: { isDisplayed: true },
+                            take: 5,
+                            orderBy: { displayOrder: 'asc' },
+                            select: {
+                                badge: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        description: true,
+                                        imageUrl: true
+                                    }
+                                },
+                                earnedAt: true,
+                                displayOrder: true
+                            }
+                        }
                     }
                 },
                 _count: {

@@ -163,10 +163,7 @@ export class ProbabilityFeedService {
                                         id: true,
                                         name: true,
                                         description: true,
-                                        imageUrl: true,
-                                        animatedUrl: true,
-                                        rarity: true,
-                                        category: true
+                                        imageUrl: true
                                     }
                                 },
                                 earnedAt: true,

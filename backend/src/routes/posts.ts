@@ -1303,10 +1303,7 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
                                         id: true,
                                         name: true,
                                         description: true,
-                                        imageUrl: true,
-                                        animatedUrl: true,
-                                        rarity: true,
-                                        category: true
+                                        imageUrl: true
                                     }
                                 },
                                 earnedAt: true,
