@@ -274,7 +274,7 @@ class AdminAPI {
     }
 
     async getReports(params = {}) {
-        const response = await this.get(`${this.BACKEND_URL}/api/admin/moderation/reports`, params);
+        const response = await this.get(`${this.BACKEND_URL}/api/moderation/reports`, params);
         if (!response.ok) {
             throw new Error(`Failed to fetch reports: ${response.status}`);
         }

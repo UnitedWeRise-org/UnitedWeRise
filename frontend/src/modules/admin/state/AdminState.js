@@ -158,10 +158,10 @@ class AdminState {
                 const stats = await statsResponse.json();
                 securityData.stats = stats;
 
-                document.getElementById('failedLogins').textContent = stats.failedLogins || '0';
-                document.getElementById('suspiciousActivity').textContent = stats.highRiskEvents || '0';
-                document.getElementById('blockedIPs').textContent = stats.lockedAccounts || '0';
-                document.getElementById('securityScore').textContent = Math.max(100 - stats.avgRiskScore, 0);
+                // Let SecurityController handle displaying the metrics instead of updating non-existent elements
+                if (window.securityController && window.securityController.displaySecurityMetrics) {
+                    await window.securityController.displaySecurityMetrics(stats);
+                }
             }
 
             if (eventsResponse.ok) {
@@ -169,8 +169,10 @@ class AdminState {
                 securityData.events = eventsData.events;
                 this.displaySecurityEvents(eventsData.events);
             } else {
-                document.getElementById('securityEventsList').innerHTML =
-                    '<p>Unable to load security events. Check admin permissions.</p>';
+                // Let SecurityController handle displaying the error message instead of updating non-existent element
+                if (window.securityController && window.securityController.displaySecurityEvents) {
+                    await window.securityController.displaySecurityEvents([], 'Unable to load security events. Check admin permissions.');
+                }
             }
 
             this.setCache(cacheKey, securityData);
@@ -178,8 +180,10 @@ class AdminState {
 
         } catch (error) {
             console.error('Error loading security data:', error);
-            document.getElementById('securityEventsList').innerHTML =
-                '<div class="error">Failed to load security data</div>';
+            // Let SecurityController handle displaying the error message instead of updating non-existent element
+            if (window.securityController && window.securityController.displaySecurityEvents) {
+                await window.securityController.displaySecurityEvents([], 'Failed to load security data');
+            }
             throw error;
         } finally {
             this.isLoading = false;

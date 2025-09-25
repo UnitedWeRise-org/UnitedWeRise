@@ -1,3 +1,8 @@
+CRITICAL - MANDATORY: If you are asked a direct question YOU WILL PROVIDE A DIRECT ANSWER. EVERY TIME. WITHOUT FAIL.
+CRITICAL - MANDATORY: YOU ARE FORBIDDEN FROM PROPOSING OR CREATING NEW API ENDPOINTS WITHOUT DOING A COMPLETE AUDIT OF THE CODE BASE AND DOCUMENTATION.
+CRITICAL - MANDATORY: YOU WILL CONSIDER THE LIST OF CRITICAL DOCUMENTS AND REVIEW THE APPROPRIATE ONES AT THE BEGINNING OF EVERY TASK
+CRITICAL - MANDATORY: YOU WILL UPDATE THE RELEVANT DOCUMENTATION AT THE END OF EVERY TASK, COMPLIANT WITH THE HIGHEST STANDARDS OF PROFESSIONALISM AND GUIDELINES SET OUT HEREIN.
+
 # Claude Code Development Reference
 
 ## 📑 QUICK NAVIGATION & EMERGENCY ACCESS
@@ -36,6 +41,19 @@ git add . && git commit -m "feat: your changes" && git push origin development
 # Check deployment status
 curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ```
+
+### **📋 CRITICAL DOCUMENTATION PROTECTIONS**
+
+**🚨 PROTECTED DOCUMENTATION FILES** (Referenced to prevent obsolescence)
+These files are explicitly referenced here to ensure they remain active and maintained:
+
+- **MASTER_DOCUMENTATION.md** ✅ Primary system documentation
+- **CHANGELOG.md** ✅ Version history and release notes
+- **README.md** ✅ Project overview and getting started
+- **SYSTEM-ARCHITECTURE-DESIGN.md** ✅ Architecture reference
+- **INCIDENT_RESPONSE.md** ✅ Security procedures
+- **PERFORMANCE_BASELINE.md** ✅ Performance monitoring reference
+- **PRODUCTION-ENV-TEMPLATE.md** ✅ Environment configuration templates
 
 ### **📋 SECTION QUICK REFERENCE**
 | Section | Anchor | When to Use |
@@ -1454,6 +1472,50 @@ grep -n "Multi-Agent\|coordination" CLAUDE.md
 
 # Find environment URLs
 grep -n "https://" CLAUDE.md
+```
+
+---
+
+## 🚨 CRITICAL DOCUMENTATION PROTECTION SAFEGUARDS
+
+### **⚠️ PROTECTED FILES - NEVER OBSOLETE OR ARCHIVE**
+
+**These files are PERMANENTLY PROTECTED from lifecycle cleanup:**
+
+- **MASTER_DOCUMENTATION.md** ✅ Core system documentation - ALWAYS KEEP
+- **API_Quick_Reference.md** ✅ Essential API lookup reference - ALWAYS KEEP
+- **CHANGELOG.md** ✅ Version history - ALWAYS KEEP
+- **README.md** ✅ Project overview - ALWAYS KEEP
+- **CLAUDE.md** ✅ Development reference (this file) - ALWAYS KEEP
+- **INCIDENT_RESPONSE.md** ✅ Security procedures - ALWAYS KEEP
+- **PERFORMANCE_BASELINE.md** ✅ Performance monitoring - ALWAYS KEEP
+- **PRODUCTION-ENV-TEMPLATE.md** ✅ Environment templates - ALWAYS KEEP
+
+### **❌ FORBIDDEN CLEANUP ACTIONS ON PROTECTED FILES**
+
+**NEVER do any of the following to protected files:**
+- Mark as obsolete in any document cleanup process
+- Move to archive directories or delete from repository
+- Remove references to these files from CLAUDE.md
+- Exclude from active documentation lists
+- Consider these files "stale" regardless of modification date
+
+### **✅ REQUIRED PROTECTIONS**
+
+**All protected files MUST:**
+1. Remain in root directory of repository
+2. Be explicitly referenced in CLAUDE.md (this file)
+3. Be excluded from all cleanup scripts and procedures
+4. Be maintained as active documentation regardless of age
+5. Have their critical status preserved in any future updates
+
+### **🛡️ SAFEGUARD VALIDATION**
+
+Before any major cleanup or documentation changes:
+```bash
+# Verify all protected files exist and are referenced
+ls -la MASTER_DOCUMENTATION.md CHANGELOG.md README.md SYSTEM-ARCHITECTURE-DESIGN.md INCIDENT_RESPONSE.md PERFORMANCE_BASELINE.md PRODUCTION-ENV-TEMPLATE.md
+grep -q "MASTER_DOCUMENTATION.md" CLAUDE.md && echo "✅ Protected files referenced in CLAUDE.md" || echo "❌ CRITICAL: Protected file references missing"
 ```
 
 ---
