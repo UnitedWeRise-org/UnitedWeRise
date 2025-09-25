@@ -30,12 +30,27 @@ class AdminDebugger {
         }
 
         try {
-            // Use regular apiCall function available on main site
-            if (typeof window.apiCall !== 'function') {
-                console.warn('🔧 AdminDebugger: apiCall not available');
-                this.adminVerified = false;
+            // Use AdminAPI for modular admin system
+            if (!window.AdminAPI || typeof window.AdminAPI.call !== 'function') {
+                // Fall back to regular apiCall for non-admin pages
+                if (typeof window.apiCall !== 'function') {
+                    this.adminVerified = false;
+                    this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+                    return false;
+                }
+
+                // Check if user is logged in first
+                if (!window.currentUser) {
+                    this.adminVerified = false;
+                    this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+                    return false;
+                }
+
+                // Use regular apiCall for main site
+                const response = await window.apiCall('/admin/users?limit=1');
+                this.adminVerified = response.ok;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return false;
+                return this.adminVerified;
             }
 
             // Check if user is logged in first
@@ -46,8 +61,8 @@ class AdminDebugger {
                 return false;
             }
 
-            // Try a simple admin endpoint that doesn't require TOTP - check users with limit 1
-            const response = await window.apiCall('/admin/users?limit=1');
+            // Use AdminAPI for admin dashboard - try a simple admin endpoint that doesn't require TOTP
+            const response = await window.AdminAPI.get(`${window.AdminAPI.BACKEND_URL}/api/admin/users`, { limit: 1 });
             this.adminVerified = response.ok;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
             

@@ -117,11 +117,26 @@ class AdminAPI {
                     url: url
                 });
             } else {
-                await adminDebugWarn('AdminAPI', `API call failed: ${options.method || 'GET'} ${url}`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: url
-                });
+                // Don't log 404s for known missing endpoints that are handled gracefully
+                const knownMissingEndpoints = [
+                    '/api/admin/motd/templates',
+                    '/api/admin/system/database/health',
+                    '/api/admin/system/cache/health',
+                    '/api/admin/system/external/health',
+                    '/api/admin/motd',
+                    '/api/admin/audit'
+                ];
+
+                const shouldSuppressLogging = response.status === 404 &&
+                    knownMissingEndpoints.some(endpoint => url.includes(endpoint));
+
+                if (!shouldSuppressLogging) {
+                    await adminDebugWarn('AdminAPI', `API call failed: ${options.method || 'GET'} ${url}`, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: url
+                    });
+                }
             }
 
             return response;
