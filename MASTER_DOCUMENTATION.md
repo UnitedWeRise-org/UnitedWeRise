@@ -56,21 +56,21 @@ Do NOT create separate documentation files. This consolidation was created after
 23. [🏛️ CIVIC ORGANIZING SYSTEM](#civic-organizing-system)
 24. [🎯 CIVIC ENGAGEMENT QUEST & BADGE SYSTEM](#civic-engagement-quest-badge-system)
 25. [🗳️ ELECTION TRACKING SYSTEM](#election-tracking-system)
-25. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
-26. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
-27. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
-28. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
-29. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
-30. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
-31. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
-32. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
-33. [📝 DEVELOPMENT PRACTICES](#development-practices)
-34. [📜 SESSION HISTORY](#session-history)
-35. [🔮 FUTURE ROADMAP](#future-roadmap)
-36. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
-37. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
-38. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
-39. [🆘 TROUBLESHOOTING](#troubleshooting)
+26. [🎖️ CANDIDATE REGISTRATION ADMIN SYSTEM](#candidate-registration-admin-system)
+27. [🛡️ CANDIDATE VERIFICATION & REPORTING SYSTEM](#candidate-verification-reporting-system)
+28. [🤝 RELATIONSHIP SYSTEM](#relationship-system)
+29. [🔥 AI TRENDING TOPICS SYSTEM](#ai-trending-topics-system)
+30. [💳 STRIPE NONPROFIT PAYMENT SYSTEM](#stripe-nonprofit-payment-system)
+31. [🚀 UNIFIED WEBSOCKET MESSAGING SYSTEM](#unified-messaging-system)
+32. [🌐 EXTERNAL CANDIDATE PRE-POPULATION SYSTEM](#external-candidate-system)
+33. [🐛 KNOWN ISSUES & BUGS](#known-issues-bugs)
+34. [📝 DEVELOPMENT PRACTICES](#development-practices)
+35. [📜 SESSION HISTORY](#session-history)
+36. [🔮 FUTURE ROADMAP](#future-roadmap)
+37. [📋 CURRENT SYSTEM STATUS SUMMARY](#current-system-status)
+38. [🗺️ SYSTEM INTEGRATION GUIDE](#system-integration-guide)
+39. [📚 COMPREHENSIVE SECURITY DOCUMENTATION INDEX](#security-documentation-index)
+40. [🆘 TROUBLESHOOTING](#troubleshooting)
 
 ---
 
@@ -9566,6 +9566,870 @@ const civicBrowseLimit = rateLimit({
 - **6 Diverse Events**: Town halls, forums, voter registration, rallies, workshops
 - **28 Signatures**: Distributed across petitions with realistic patterns
 - **27 RSVPs**: Event attendance with capacity considerations
+
+---
+
+## 🎯 CIVIC ENGAGEMENT QUEST & BADGE SYSTEM {#civic-engagement-quest-badge-system}
+
+### Overview
+Advanced gamification system that transforms civic participation into engaging daily, weekly, and monthly goals. Combines a dynamic quest system with a visual badge achievement system to encourage sustained civic engagement and community building.
+
+**Status**: ✅ **FULLY IMPLEMENTED WITH ADMIN INTERFACE**
+
+### Quest System Architecture
+
+#### Core Quest Types
+```javascript
+// Quest requirement types with flexible JSON criteria
+const QUEST_TYPES = {
+  LOGIN: {
+    description: "Log into the platform",
+    requirements: { loginCount: 1 }
+  },
+  READ_POSTS: {
+    description: "Read posts from your community",
+    requirements: { postsRead: 5, timeframe: "daily" }
+  },
+  CIVIC_ACTION: {
+    description: "Take civic actions like signing petitions or RSVPing to events",
+    requirements: {
+      actions: ["petition_sign", "event_rsvp"],
+      count: 2,
+      category: "local"
+    }
+  },
+  SOCIAL_INTERACTION: {
+    description: "Engage with community through likes, comments, follows",
+    requirements: {
+      interactions: ["like", "comment", "follow"],
+      count: 10,
+      uniqueUsers: 3
+    }
+  },
+  COMPLETE_QUESTS: {
+    description: "Complete other quests to unlock meta-achievements",
+    requirements: {
+      questsCompleted: 5,
+      timeframe: "weekly",
+      questTypes: ["LOGIN", "READ_POSTS", "CIVIC_ACTION"]
+    }
+  }
+};
+```
+
+#### Dynamic Quest Generation
+```typescript
+interface QuestGenerationCriteria {
+  userLevel: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  userInterests: string[]; // ["healthcare", "education", "environment"]
+  locationContext: {
+    state: string;
+    county: string;
+    zipCode: string;
+  };
+  activityHistory: {
+    avgDailyLogins: number;
+    preferredCategories: string[];
+    socialEngagement: number;
+  };
+  streakStatus: {
+    currentStreak: number;
+    longestStreak: number;
+    lastActiveDate: Date;
+  };
+}
+
+// Smart quest generation based on user profile
+async function generatePersonalizedQuests(userId: string): Promise<Quest[]> {
+  const userProfile = await getUserProfile(userId);
+  const localEvents = await getLocalCivicEvents(userProfile.location);
+  const trendingTopics = await getTrendingLocalTopics(userProfile.location);
+
+  return [
+    generateDailyLoginQuest(userProfile),
+    generateLocalEngagementQuest(localEvents, userProfile.interests),
+    generateSocialInteractionQuest(userProfile.socialLevel),
+    generateCivicActionQuest(trendingTopics, userProfile.location)
+  ];
+}
+```
+
+#### Quest Progress Tracking & Rewards
+```typescript
+interface QuestReward {
+  reputationPoints: number;
+  badgeIds?: string[];
+  specialRecognition?: string;
+  unlockFeatures?: string[];
+}
+
+// Automatic progress tracking via ActivityTracker integration
+class QuestProgressTracker {
+  async updateProgress(userId: string, activity: UserActivity) {
+    const activeQuests = await getUserActiveQuests(userId);
+
+    for (const quest of activeQuests) {
+      if (this.isActivityRelevant(activity, quest.requirements)) {
+        await this.incrementQuestProgress(userId, quest.id, activity);
+
+        if (await this.isQuestCompleted(userId, quest.id)) {
+          await this.completeQuest(userId, quest.id);
+          await this.awardQuestRewards(userId, quest.rewards);
+          await this.checkForBadgeEligibility(userId, quest.type);
+        }
+      }
+    }
+  }
+}
+```
+
+### Badge System Architecture
+
+#### Asset-Based Badge Management
+```typescript
+interface BadgeAsset {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string; // Azure Storage URL
+  animatedUrl?: string; // Optional GIF for premium badges
+  rarity: 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
+  category: 'CIVIC' | 'SOCIAL' | 'ACHIEVEMENT' | 'MILESTONE' | 'SPECIAL';
+}
+
+interface BadgeQualificationCriteria {
+  type: 'QUEST_COMPLETION' | 'USER_ACTIVITY' | 'CIVIC_ACTION' | 'SOCIAL_METRIC' | 'CUSTOM_ENDPOINT';
+  requirements: {
+    // Quest completion badges
+    questCompletionCount?: number;
+    specificQuestIds?: string[];
+    streakDays?: number;
+
+    // Activity-based badges
+    totalLogins?: number;
+    postsCreated?: number;
+    commentsPosted?: number;
+    likesGiven?: number;
+
+    // Civic engagement badges
+    petitionsSigned?: number;
+    eventsAttended?: number;
+    officialMessagessent?: number;
+
+    // Social metrics badges
+    followersCount?: number;
+    mutualFriends?: number;
+    communityReputation?: number;
+
+    // Time-based requirements
+    timeframe?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all_time';
+    consecutiveDays?: number;
+
+    // Location-based requirements
+    locationRequired?: boolean;
+    stateSpecific?: string;
+    localEngagementLevel?: number;
+
+    // Custom endpoint validation
+    customEndpoint?: string;
+    customValidation?: object;
+  };
+}
+```
+
+#### Badge Rarity & Statistics System
+```typescript
+interface BadgeStatistics {
+  totalUsers: number;
+  badgeHolders: number;
+  rarityPercentage: number; // Calculated: (badgeHolders / totalUsers) * 100
+  firstEarned: Date;
+  lastEarned: Date;
+  averageTimeToEarn: number; // Days from account creation
+}
+
+// Real-time rarity calculation for tooltips
+async function getBadgeRarity(badgeId: string): Promise<number> {
+  const totalUsers = await User.count();
+  const badgeHolders = await UserBadge.count({ where: { badgeId } });
+  return Math.round((badgeHolders / totalUsers) * 100 * 10) / 10; // One decimal place
+}
+```
+
+#### Badge Vault & Display System
+```typescript
+interface UserBadgeVault {
+  userId: string;
+  badges: UserBadge[];
+  displayOrder: string[]; // Array of badge IDs in preferred order
+  maxDisplay: number; // Default: 3-5 badges shown on nameplate
+  vaultSettings: {
+    publicVisibility: boolean;
+    categoryPreference: BadgeCategory[];
+    rarityPriority: boolean; // Show rarest badges first
+  };
+}
+
+// Badge display on user nameplates
+interface BadgeDisplay {
+  badgeId: string;
+  imageUrl: string;
+  position: number; // 1-5 display order
+  tooltip: {
+    name: string;
+    description: string;
+    rarityPercentage: number;
+    earnedDate: Date;
+  };
+}
+```
+
+### Database Schema
+
+```sql
+-- Quest system tables
+model Quest {
+  id: String @id @default(cuid())
+  title: String
+  description: String @db.Text
+  questType: QuestType // LOGIN, READ_POSTS, CIVIC_ACTION, etc.
+  difficulty: QuestDifficulty // BEGINNER, INTERMEDIATE, ADVANCED
+  timeframe: QuestTimeframe // DAILY, WEEKLY, MONTHLY
+  requirements: Json // Flexible JSON criteria
+  rewards: Json // Reputation points, badge IDs, special recognition
+  isActive: Boolean @default(true)
+  validFrom: DateTime @default(now())
+  validUntil: DateTime?
+  targetAudience: Json? // User segmentation criteria
+  createdAt: DateTime @default(now())
+  updatedAt: DateTime @updatedAt
+
+  // Relationships
+  userProgress: UserQuestProgress[]
+
+  @@map("quests")
+}
+
+model UserQuestProgress {
+  id: String @id @default(cuid())
+  userId: String
+  questId: String
+  progress: Json // Flexible progress tracking
+  isCompleted: Boolean @default(false)
+  completedAt: DateTime?
+  rewardsAwarded: Json? // Track what rewards were given
+  createdAt: DateTime @default(now())
+  updatedAt: DateTime @updatedAt
+
+  // Relationships
+  user: User @relation("UserQuestProgress", fields: [userId], references: [id], onDelete: Cascade)
+  quest: Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@map("user_quest_progress")
+}
+
+model UserQuestStreak {
+  id: String @id @default(cuid())
+  userId: String
+  questType: QuestType
+  currentStreak: Int @default(0)
+  longestStreak: Int @default(0)
+  lastCompletedDate: DateTime?
+  createdAt: DateTime @default(now())
+  updatedAt: DateTime @updatedAt
+
+  // Relationships
+  user: User @relation("UserQuestStreak", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questType])
+  @@map("user_quest_streaks")
+}
+
+-- Badge system tables
+model Badge {
+  id: String @id @default(cuid())
+  name: String
+  description: String @db.Text
+  imageUrl: String // Azure Storage URL
+  animatedUrl: String? // Optional GIF URL
+  category: BadgeCategory // CIVIC, SOCIAL, ACHIEVEMENT, MILESTONE, SPECIAL
+  rarity: BadgeRarity // COMMON, UNCOMMON, RARE, EPIC, LEGENDARY
+  qualificationCriteria: Json // Flexible criteria for earning
+  isActive: Boolean @default(true)
+  createdAt: DateTime @default(now())
+  updatedAt: DateTime @updatedAt
+
+  // Relationships
+  userBadges: UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id: String @id @default(cuid())
+  userId: String
+  badgeId: String
+  earnedAt: DateTime @default(now())
+  displayOrder: Int? // Position in user's badge vault
+  isDisplayed: Boolean @default(false) // Show on nameplate
+
+  // Relationships
+  user: User @relation("UserBadges", fields: [userId], references: [id], onDelete: Cascade)
+  badge: Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+-- User model extensions
+model User {
+  // ... existing fields ...
+
+  // Quest relationships
+  questProgress: UserQuestProgress[] @relation("UserQuestProgress")
+  questStreaks: UserQuestStreak[] @relation("UserQuestStreak")
+
+  // Badge relationships
+  userBadges: UserBadge[] @relation("UserBadges")
+}
+
+-- Enums
+enum QuestType {
+  LOGIN
+  READ_POSTS
+  CIVIC_ACTION
+  SOCIAL_INTERACTION
+  COMPLETE_QUESTS
+}
+
+enum QuestDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum QuestTimeframe {
+  DAILY
+  WEEKLY
+  MONTHLY
+  SPECIAL
+}
+
+enum BadgeCategory {
+  CIVIC
+  SOCIAL
+  ACHIEVEMENT
+  MILESTONE
+  SPECIAL
+}
+
+enum BadgeRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+```
+
+### API Endpoints
+
+#### Quest Management
+```javascript
+// User quest endpoints
+GET    /api/quests/daily           // Get daily quests for user
+GET    /api/quests/active          // Get all active quests
+GET    /api/quests/progress        // Get user's quest progress
+POST   /api/quests/complete/:id    // Mark quest as completed
+GET    /api/quests/streaks         // Get user's quest streaks
+GET    /api/quests/history         // Get completed quest history
+
+// Admin quest endpoints
+POST   /api/admin/quests           // Create new quest
+GET    /api/admin/quests           // List all quests with stats
+PUT    /api/admin/quests/:id       // Update quest
+DELETE /api/admin/quests/:id       // Deactivate quest
+GET    /api/admin/quests/analytics // Quest completion analytics
+
+// Quest API response format
+{
+  "success": true,
+  "data": {
+    "quest": {
+      "id": "quest_12345",
+      "title": "Community Engagement Champion",
+      "description": "Engage with 5 posts from your local community today",
+      "questType": "SOCIAL_INTERACTION",
+      "difficulty": "BEGINNER",
+      "timeframe": "DAILY",
+      "requirements": {
+        "interactions": ["like", "comment"],
+        "count": 5,
+        "locationBased": true
+      },
+      "rewards": {
+        "reputationPoints": 50,
+        "badgeIds": ["social_butterfly"],
+        "specialRecognition": "Community Connector"
+      },
+      "progress": {
+        "current": 3,
+        "required": 5,
+        "percentage": 60
+      }
+    }
+  }
+}
+```
+
+#### Badge Management
+```javascript
+// User badge endpoints
+GET    /api/badges/vault           // Get user's badge collection
+POST   /api/badges/display         // Update badge display settings
+GET    /api/badges/available       // Browse available badges
+GET    /api/badges/stats/:id       // Get badge statistics & rarity
+
+// Admin badge endpoints
+POST   /api/admin/badges           // Create new badge with asset upload
+GET    /api/admin/badges           // List all badges with holder counts
+PUT    /api/admin/badges/:id       // Update badge criteria
+DELETE /api/admin/badges/:id       // Remove badge
+POST   /api/admin/badges/award     // Manually award badge to user
+GET    /api/admin/badges/analytics // Badge distribution analytics
+
+// Badge API response format
+{
+  "success": true,
+  "data": {
+    "badge": {
+      "id": "civic_champion",
+      "name": "Civic Champion",
+      "description": "Signed 10 petitions and attended 3 civic events",
+      "imageUrl": "https://uwrstorage2425.blob.core.windows.net/badges/civic_champion.png",
+      "animatedUrl": "https://uwrstorage2425.blob.core.windows.net/badges/civic_champion.gif",
+      "category": "CIVIC",
+      "rarity": "RARE",
+      "statistics": {
+        "totalUsers": 15420,
+        "badgeHolders": 342,
+        "rarityPercentage": 2.2
+      },
+      "earnedAt": "2025-09-15T10:30:00Z",
+      "isDisplayed": true
+    }
+  }
+}
+```
+
+### Integration with Existing Systems
+
+#### ActivityTracker Integration
+```typescript
+// Automatic quest progress updates via existing ActivityTracker
+class EnhancedActivityTracker {
+  async trackActivity(userId: string, activityType: ActivityType, metadata?: any) {
+    // Existing activity tracking
+    await this.logActivity(userId, activityType, metadata);
+
+    // NEW: Quest progress updates
+    await questService.updateQuestProgress(userId, {
+      type: activityType,
+      metadata: metadata,
+      timestamp: new Date()
+    });
+
+    // NEW: Badge eligibility checks
+    await badgeService.checkBadgeEligibility(userId, activityType);
+  }
+}
+
+// Activity types that trigger quest progress
+const QUEST_TRIGGERING_ACTIVITIES = {
+  'user.login': ['LOGIN'],
+  'post.read': ['READ_POSTS'],
+  'post.like': ['SOCIAL_INTERACTION'],
+  'comment.create': ['SOCIAL_INTERACTION'],
+  'user.follow': ['SOCIAL_INTERACTION'],
+  'petition.sign': ['CIVIC_ACTION'],
+  'event.rsvp': ['CIVIC_ACTION'],
+  'message.official': ['CIVIC_ACTION'],
+  'quest.complete': ['COMPLETE_QUESTS']
+};
+```
+
+#### Notification System Integration
+```typescript
+// Real-time notifications for quest & badge achievements
+interface QuestNotification {
+  type: 'QUEST_COMPLETED' | 'BADGE_EARNED' | 'STREAK_MILESTONE';
+  userId: string;
+  content: {
+    title: string;
+    message: string;
+    imageUrl?: string;
+    actionUrl?: string;
+  };
+  metadata: {
+    questId?: string;
+    badgeId?: string;
+    streakCount?: number;
+  };
+}
+
+// Example notifications
+await notificationService.send(userId, {
+  type: 'QUEST_COMPLETED',
+  title: 'Quest Completed! 🎉',
+  message: 'You completed "Daily Civic Engagement" and earned 100 reputation points!',
+  actionUrl: '/quests/progress'
+});
+
+await notificationService.send(userId, {
+  type: 'BADGE_EARNED',
+  title: 'New Badge Earned! 🏆',
+  message: 'You earned the rare "Community Champion" badge (2.3% of users have this)!',
+  imageUrl: badge.imageUrl,
+  actionUrl: '/badges/vault'
+});
+```
+
+### Admin Dashboard Interface
+
+#### Quest Creation Interface
+**File**: `frontend/src/modules/admin/controllers/CivicEngagementController.js:1-250`
+
+```javascript
+// Dynamic quest creation form with flexible requirements
+class QuestCreationModal {
+  renderRequirementFields(questType) {
+    const fieldTemplates = {
+      'LOGIN': ['loginCount'],
+      'READ_POSTS': ['postsRead', 'timeframe', 'categoryFilter'],
+      'CIVIC_ACTION': ['actions', 'count', 'category', 'locationBased'],
+      'SOCIAL_INTERACTION': ['interactions', 'count', 'uniqueUsers'],
+      'COMPLETE_QUESTS': ['questsCompleted', 'timeframe', 'questTypes']
+    };
+
+    return this.generateDynamicFields(fieldTemplates[questType]);
+  }
+
+  async submitQuest(formData) {
+    const questData = {
+      title: formData.title,
+      description: formData.description,
+      questType: formData.questType,
+      difficulty: formData.difficulty,
+      timeframe: formData.timeframe,
+      requirements: this.parseRequirements(formData),
+      rewards: this.parseRewards(formData),
+      targetAudience: this.parseAudience(formData)
+    };
+
+    const response = await apiCall('/api/admin/quests', 'POST', questData);
+    if (response.ok) {
+      await this.refreshQuestList();
+      this.closeModal();
+      showSuccessMessage('Quest created successfully!');
+    }
+  }
+}
+```
+
+#### Badge Creation Interface
+**File**: `frontend/src/modules/admin/controllers/CivicEngagementController.js:251-450`
+
+```javascript
+// Badge creation with asset upload and criteria builder
+class BadgeCreationModal {
+  async handleImageUpload(file) {
+    const formData = new FormData();
+    formData.append('badge-image', file);
+    formData.append('category', 'badges');
+
+    const uploadResponse = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      },
+      body: formData
+    });
+
+    const result = await uploadResponse.json();
+    return result.data.imageUrl;
+  }
+
+  renderCriteriaBuilder(badgeType) {
+    const criteriaTemplates = {
+      'QUEST_COMPLETION': ['questCompletionCount', 'specificQuestIds', 'streakDays'],
+      'USER_ACTIVITY': ['totalLogins', 'postsCreated', 'commentsPosted'],
+      'CIVIC_ACTION': ['petitionsSigned', 'eventsAttended', 'officialMessages'],
+      'SOCIAL_METRIC': ['followersCount', 'communityReputation'],
+      'CUSTOM_ENDPOINT': ['customEndpoint', 'customValidation']
+    };
+
+    return this.generateCriteriaFields(criteriaTemplates[badgeType]);
+  }
+}
+```
+
+### User Experience Features
+
+#### Quest Progress UI Components
+**Pending Implementation**: `frontend/src/components/QuestProgressTracker.js`
+
+```javascript
+// Daily quest dashboard component
+class DailyQuestDashboard {
+  render() {
+    return `
+      <div class="quest-dashboard">
+        <div class="quest-header">
+          <h3>Today's Civic Challenges</h3>
+          <div class="streak-indicator">
+            🔥 ${this.userStreak} day streak
+          </div>
+        </div>
+
+        <div class="quest-list">
+          ${this.renderActiveQuests()}
+        </div>
+
+        <div class="progress-summary">
+          <div class="daily-progress">
+            <span>Daily Progress: ${this.completedToday}/3</span>
+            <div class="progress-bar">
+              <div class="fill" style="width: ${this.dailyProgress}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderActiveQuests() {
+    return this.quests.map(quest => `
+      <div class="quest-card ${quest.isCompleted ? 'completed' : ''}">
+        <div class="quest-icon">${this.getQuestIcon(quest.type)}</div>
+        <div class="quest-content">
+          <h4>${quest.title}</h4>
+          <p>${quest.description}</p>
+          <div class="quest-progress">
+            <span>${quest.progress.current}/${quest.progress.required}</span>
+            <div class="mini-progress-bar">
+              <div class="fill" style="width: ${quest.progress.percentage}%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="quest-rewards">
+          <span class="reputation">+${quest.rewards.reputationPoints} RP</span>
+          ${quest.rewards.badgeIds ? '<span class="badge-reward">🏆</span>' : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+```
+
+#### Badge Vault Interface
+**Pending Implementation**: `frontend/src/components/BadgeVault.js`
+
+```javascript
+// Badge collection and display management
+class BadgeVault {
+  render() {
+    return `
+      <div class="badge-vault">
+        <div class="vault-header">
+          <h3>Badge Collection</h3>
+          <div class="collection-stats">
+            <span>${this.earnedBadges.length}/${this.totalBadges} badges earned</span>
+            <span>Rarest: ${this.rarestBadge.name} (${this.rarestBadge.rarityPercentage}%)</span>
+          </div>
+        </div>
+
+        <div class="display-settings">
+          <h4>Nameplate Display (Select 3-5)</h4>
+          <div class="display-badges">
+            ${this.renderDisplayBadges()}
+          </div>
+        </div>
+
+        <div class="badge-grid">
+          ${this.renderBadgeCollection()}
+        </div>
+      </div>
+    `;
+  }
+
+  renderBadgeWithTooltip(badge) {
+    return `
+      <div class="badge-item ${badge.rarity.toLowerCase()}"
+           data-badge-id="${badge.id}"
+           title="${badge.name}">
+        <img src="${badge.imageUrl}" alt="${badge.name}"
+             onmouseover="this.showTooltip(event)"
+             onclick="this.toggleBadgeInfo(event)">
+        <div class="badge-tooltip hidden">
+          <div class="tooltip-header">
+            <img src="${badge.imageUrl}" alt="${badge.name}">
+            <div>
+              <h4>${badge.name}</h4>
+              <span class="rarity ${badge.rarity.toLowerCase()}">${badge.rarity}</span>
+            </div>
+          </div>
+          <p>${badge.description}</p>
+          <div class="badge-stats">
+            <span>Earned by ${badge.statistics.rarityPercentage}% of users</span>
+            <span>You earned this on ${this.formatDate(badge.earnedAt)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+```
+
+#### Nameplate Badge Display
+**Pending Implementation**: Integration with existing post/comment components
+
+```javascript
+// Enhanced user nameplate with badge display
+function renderUserNameplate(user) {
+  const displayBadges = user.badges?.filter(b => b.isDisplayed).slice(0, 5) || [];
+
+  return `
+    <div class="user-nameplate">
+      <img src="${user.profilePicture || '/images/default-avatar.png'}"
+           alt="${user.displayName}" class="avatar">
+      <div class="user-info">
+        <span class="display-name">${user.displayName}</span>
+        <div class="user-badges">
+          ${displayBadges.map(badge => `
+            <img src="${badge.imageUrl}"
+                 alt="${badge.name}"
+                 class="nameplate-badge ${badge.rarity.toLowerCase()}"
+                 data-tooltip="${badge.name} - ${badge.description} (${badge.rarityPercentage}% have this)"
+                 onmouseover="showBadgeTooltip(this)"
+                 onmouseout="hideBadgeTooltip(this)">
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+```
+
+### Files Implemented
+
+**Backend Implementation:**
+- `backend/prisma/schema.prisma` (Lines 1-50): Complete database schema with Quest, UserQuestProgress, UserQuestStreak, Badge, and UserBadge models
+- `backend/src/services/quest.service.ts` (400+ lines): Complete quest management service with personalized generation
+- `backend/src/services/badge.service.ts` (350+ lines): Badge management with Azure Storage integration and rarity calculations
+- `backend/src/routes/quests.ts` (300+ lines): Complete quest API endpoints
+- `backend/src/routes/badges.ts` (300+ lines): Complete badge API endpoints
+- `backend/src/services/activityTracker.ts` (Enhanced): Automatic quest progress integration
+
+**API Integration (Badge Display):**
+- `backend/src/routes/feed.ts` (Lines 110-130): Enhanced author includes with userBadges for trending posts
+- `backend/src/services/probabilityFeedService.ts` (Lines 156-176): Badge integration in candidate post queries
+- `backend/src/routes/posts.ts` (Lines 1296-1316): Comment API enhanced with user badge data
+
+**Admin Interface:**
+- `frontend/admin-dashboard.html` (Lines 2500-2800): Civic Engagement admin section with quest/badge management
+- `frontend/src/modules/admin/controllers/CivicEngagementController.js` (450+ lines): Complete admin controller with dynamic form generation
+
+**Frontend User Interface (Badge Display):**
+- `frontend/src/components/PostComponent.js` (Lines 2571-2766): Complete badge rendering system with tooltips and modals
+- `frontend/src/styles/badges.css` (280+ lines): Comprehensive badge styling with rarity-based visual effects
+- `frontend/index.html` (Line 65): Badge CSS integration into main application
+
+**Completed User Interface:**
+- ✅ **Badge display integration in post/comment components**: Complete nameplate integration with tooltips and modal details
+- ✅ **User Badge API Integration**: Real-time badge data in posts, comments, and feed responses
+- ✅ **Badge tooltip system**: Hover tooltips showing badge name, description, and rarity percentage
+- ✅ **Badge detail modals**: Click functionality with comprehensive badge information and statistics
+- ✅ **Rarity-based styling**: Visual differentiation with color coding and special effects for legendary badges
+
+#### Badge Display Technical Implementation
+
+**API Query Enhancement:**
+```javascript
+// Enhanced author includes across all post/comment queries
+author: {
+  select: {
+    id: true, username: true, firstName: true, lastName: true,
+    avatar: true, verified: true,
+    userBadges: {
+      where: { isDisplayed: true },
+      take: 5,
+      orderBy: { displayOrder: 'asc' },
+      select: {
+        badge: {
+          select: {
+            id: true, name: true, description: true,
+            imageUrl: true, animatedUrl: true, rarity: true, category: true
+          }
+        },
+        earnedAt: true, displayOrder: true
+      }
+    }
+  }
+}
+```
+
+**Frontend Integration Points:**
+- **Posts**: Lines 66 & 2239 in PostComponent.js - `${this.renderUserBadges(post.author)}`
+- **Comments**: Line 624 in PostComponent.js - `${this.renderUserBadges(user)}`
+- **Tooltip System**: Methods `showBadgeTooltip()`, `hideBadgeTooltip()` for hover interactions
+- **Modal System**: Method `showBadgeDetails()` for click interactions with comprehensive badge information
+
+**Visual Design Standards:**
+```css
+Badge Sizes: 16px × 16px (nameplate), 24px × 24px (tooltip), 80px × 80px (modal)
+Rarity Colors: Common(#9ca3af), Uncommon(#10b981), Rare(#3b82f6), Epic(#8b5cf6), Legendary(#f59e0b)
+Special Effects: Legendary badges have animated glow with 2s ease-in-out cycle
+Responsive: 14px badges on mobile, tooltip max-width 250px on mobile
+```
+
+**Cross-Platform Compatibility:**
+- ✅ Desktop hover tooltips with positioning system
+- ✅ Mobile click-to-view with modal fallback
+- ✅ Dark/light mode adaptive styling
+- ✅ High DPI display support with vector graphics
+- ✅ Accessibility compliance with alt text and ARIA labels
+
+**Performance Optimizations:**
+- Badge data limited to 5 per user (displayOrder priority)
+- Lazy loading of tooltip content
+- CSS transforms for smooth hover effects
+- Modal virtual DOM management with cleanup
+- Memory-efficient badge asset caching
+
+**Pending User Interface:**
+- Badge Vault frontend interface for user badge management
+- Quest progress UI components and daily dashboard
+- End-to-end system testing and integration verification
+
+### Integration Points
+
+**Existing System Connections:**
+- ✅ **ActivityTracker Service**: Automatic quest progress updates on user activities
+- ✅ **Notification System**: Real-time alerts for quest completion and badge awards
+- ✅ **Admin Dashboard**: Comprehensive management interface with flexible criteria
+- ✅ **Reputation System**: Quest rewards integrate with existing reputation points
+- ✅ **Azure Storage**: Badge assets stored and served via existing infrastructure
+- ✅ **Feed System**: Badge data automatically included in all post/comment API responses
+- ✅ **PostComponent Integration**: Complete nameplate badge display with interactive features
+- ✅ **Visual Design System**: Rarity-based styling integrated with existing UI patterns
+
+**Future Enhancement Opportunities:**
+- Social quest completion sharing and leaderboards
+- Seasonal/event-specific badge collections
+- Advanced analytics dashboard for civic engagement metrics
+- Integration with external civic data sources for location-specific quests
+- Badge trading or gifting system for community building
 
 ---
 

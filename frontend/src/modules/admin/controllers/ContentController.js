@@ -167,7 +167,7 @@ class ContentController {
      * Show content tab (userReports or aiFlags)
      * Extracted from showContentTab function
      */
-    showContentTab(tab) {
+    async showContentTab(tab) {
         try {
             this.activeTab = tab;
 
@@ -427,7 +427,7 @@ class ContentController {
      * Display AI flagged content
      * Extracted from displayFlaggedContent function
      */
-    displayFlaggedContent(flags) {
+    async displayFlaggedContent(flags) {
         try {
             const container = document.getElementById('flaggedContent');
 

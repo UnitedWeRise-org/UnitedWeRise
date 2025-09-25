@@ -1,0 +1,305 @@
+/* Badge Display Styles */
+.user-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.nameplate-badge {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    vertical-align: middle;
+}
+
+.nameplate-badge:hover {
+    transform: scale(1.1);
+    filter: brightness(1.1);
+}
+
+/* Badge Rarity Colors */
+.nameplate-badge.common {
+    border-color: #9ca3af;
+    box-shadow: 0 0 3px rgba(156, 163, 175, 0.3);
+}
+
+.nameplate-badge.uncommon {
+    border-color: #10b981;
+    box-shadow: 0 0 3px rgba(16, 185, 129, 0.4);
+}
+
+.nameplate-badge.rare {
+    border-color: #3b82f6;
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+.nameplate-badge.epic {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.6);
+}
+
+.nameplate-badge.legendary {
+    border-color: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+    animation: legendary-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendary-glow {
+    from {
+        box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+    }
+    to {
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.9);
+    }
+}
+
+/* Badge Tooltip Styles */
+.badge-tooltip-hover {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    max-width: 300px;
+    z-index: 10000;
+    pointer-events: none;
+    display: none;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badge-tooltip-hover .tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.badge-tooltip-hover .tooltip-header img {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+}
+
+.badge-tooltip-hover .tooltip-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.badge-tooltip-hover .rarity {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-tooltip-hover .rarity.common { color: #9ca3af; }
+.badge-tooltip-hover .rarity.uncommon { color: #10b981; }
+.badge-tooltip-hover .rarity.rare { color: #3b82f6; }
+.badge-tooltip-hover .rarity.epic { color: #8b5cf6; }
+.badge-tooltip-hover .rarity.legendary { color: #f59e0b; }
+
+.badge-tooltip-hover p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.badge-tooltip-hover .badge-stats {
+    font-size: 12px;
+    color: #d1d5db;
+    margin-top: 8px;
+}
+
+.badge-tooltip-hover .badge-stats span {
+    display: block;
+    margin: 2px 0;
+}
+
+/* Badge Details Modal Styles */
+.badge-details-modal {
+    z-index: 10000;
+}
+
+.badge-details-modal .modal {
+    max-width: 500px;
+    width: 90vw;
+}
+
+.badge-detail-view {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.badge-image-large {
+    flex-shrink: 0;
+}
+
+.badge-image-large img {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.badge-info {
+    flex: 1;
+}
+
+.badge-info h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.rarity-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.rarity-tag.common {
+    background-color: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+.rarity-tag.uncommon {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.rarity-tag.rare {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.rarity-tag.epic {
+    background-color: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.rarity-tag.legendary {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-info .description {
+    line-height: 1.6;
+    margin: 12px 0;
+    color: #d1d5db;
+}
+
+.badge-statistics {
+    margin-top: 16px;
+}
+
+.badge-statistics .stat {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badge-statistics .stat:last-child {
+    border-bottom: none;
+}
+
+.badge-statistics .label {
+    font-weight: 500;
+    color: #9ca3af;
+}
+
+.badge-statistics .value {
+    font-weight: 400;
+    color: #f3f4f6;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .badge-detail-view {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .badge-image-large img {
+        width: 60px;
+        height: 60px;
+    }
+
+    .nameplate-badge {
+        width: 14px;
+        height: 14px;
+    }
+
+    .badge-tooltip-hover {
+        max-width: 250px;
+        font-size: 12px;
+    }
+
+    .badge-statistics .stat {
+        flex-direction: column;
+        gap: 4px;
+        text-align: left;
+    }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+    .badge-tooltip-hover {
+        background: rgba(17, 24, 39, 0.95);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .badge-details-modal .modal {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+}
+
+/* Light Mode Adjustments */
+@media (prefers-color-scheme: light) {
+    .badge-tooltip-hover {
+        background: rgba(255, 255, 255, 0.95);
+        color: #1f2937;
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .badge-tooltip-hover .badge-stats {
+        color: #6b7280;
+    }
+
+    .badge-details-modal .modal {
+        background: #ffffff;
+        color: #1f2937;
+    }
+
+    .badge-info .description {
+        color: #6b7280;
+    }
+
+    .badge-statistics .label {
+        color: #6b7280;
+    }
+
+    .badge-statistics .value {
+        color: #1f2937;
+    }
+}

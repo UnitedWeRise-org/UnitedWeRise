@@ -63,6 +63,7 @@ class PostComponent {
                                  title="Click to view profile">
                                 ${authorName}
                                 ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
+                                ${this.renderUserBadges(post.author)}
                             </div>
                             ${settings.showTimestamp ? `
                                 <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
@@ -620,7 +621,7 @@ class PostComponent {
         let commentHtml = `
             <div class="comment${flattenedClass}" data-comment-id="${comment.id}" data-depth="${actualDepth}" style="margin-left: ${marginLeft}px;">
                 <div class="comment-header">
-                    <span class="comment-author">${displayName}</span>
+                    <span class="comment-author">${displayName}${this.renderUserBadges(user)}</span>
                     <span class="comment-time">${this.getTimeAgo(new Date(comment.createdAt))}</span>
                     ${isFlattened ? '<span class="flattened-indicator">↳</span>' : ''}
                 </div>
@@ -2235,6 +2236,7 @@ class PostComponent {
                                  title="Click to view profile">
                                 ${authorName}
                                 ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
+                                ${this.renderUserBadges(post.author)}
                             </div>
                             <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
                         </div>
@@ -2562,8 +2564,204 @@ class PostComponent {
                 }
             }
         `;
-        
+
         document.head.appendChild(styles);
+    }
+
+    /**
+     * Render user badges for display in nameplates
+     * @param {Object} user - User object containing userBadges array
+     * @return {string} HTML string for badges
+     */
+    renderUserBadges(user) {
+        if (!user?.userBadges || !Array.isArray(user.userBadges) || user.userBadges.length === 0) {
+            return '';
+        }
+
+        // Sort badges by display order and limit to 5
+        const displayBadges = user.userBadges
+            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            .slice(0, 5);
+
+        return `
+            <div class="user-badges">
+                ${displayBadges.map(userBadge => {
+                    const badge = userBadge.badge;
+                    if (!badge) return '';
+
+                    return `
+                        <img src="${badge.imageUrl || badge.animatedUrl}"
+                             alt="${badge.name}"
+                             class="nameplate-badge ${badge.rarity?.toLowerCase() || 'common'}"
+                             title="${badge.name} - ${badge.description} (${this.getBadgeRarityText(badge.rarity)})"
+                             onmouseover="postComponent.showBadgeTooltip(this, ${JSON.stringify(badge).replace(/"/g, '&quot;')}, '${userBadge.earnedAt}')"
+                             onmouseout="postComponent.hideBadgeTooltip(this)"
+                             onclick="postComponent.showBadgeDetails(event, ${JSON.stringify(badge).replace(/"/g, '&quot;')}, '${userBadge.earnedAt}')">
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    /**
+     * Get human-readable text for badge rarity
+     * @param {string} rarity - Badge rarity enum value
+     * @return {string} Human-readable rarity text
+     */
+    getBadgeRarityText(rarity) {
+        const rarityMap = {
+            'COMMON': 'Common badge',
+            'UNCOMMON': 'Uncommon badge',
+            'RARE': 'Rare badge',
+            'EPIC': 'Epic badge',
+            'LEGENDARY': 'Legendary badge'
+        };
+        return rarityMap[rarity] || 'Badge';
+    }
+
+    /**
+     * Show badge tooltip on hover
+     * @param {HTMLElement} element - Badge image element
+     * @param {Object} badge - Badge data
+     * @param {string} earnedAt - Date when badge was earned
+     */
+    showBadgeTooltip(element, badge, earnedAt) {
+        // Create or get existing tooltip
+        let tooltip = document.querySelector('.badge-tooltip-hover');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.className = 'badge-tooltip-hover';
+            document.body.appendChild(tooltip);
+        }
+
+        // Get rarity percentage (placeholder for now - would come from API)
+        const rarityPercentage = this.getRarityPercentage(badge.rarity);
+
+        tooltip.innerHTML = `
+            <div class="tooltip-header">
+                <img src="${badge.imageUrl || badge.animatedUrl}" alt="${badge.name}">
+                <div>
+                    <h4>${badge.name}</h4>
+                    <span class="rarity ${badge.rarity?.toLowerCase() || 'common'}">${badge.rarity || 'COMMON'}</span>
+                </div>
+            </div>
+            <p>${badge.description}</p>
+            <div class="badge-stats">
+                <span>Earned by ${rarityPercentage}% of users</span>
+                <span>Earned on ${new Date(earnedAt).toLocaleDateString()}</span>
+            </div>
+        `;
+
+        // Position tooltip near element
+        const rect = element.getBoundingClientRect();
+        tooltip.style.left = rect.left + 'px';
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+        tooltip.style.display = 'block';
+    }
+
+    /**
+     * Hide badge tooltip
+     * @param {HTMLElement} element - Badge image element
+     */
+    hideBadgeTooltip(element) {
+        const tooltip = document.querySelector('.badge-tooltip-hover');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+        }
+    }
+
+    /**
+     * Show badge details modal on click
+     * @param {Event} event - Click event
+     * @param {Object} badge - Badge data
+     * @param {string} earnedAt - Date when badge was earned
+     */
+    showBadgeDetails(event, badge, earnedAt) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Hide any existing tooltip
+        this.hideBadgeTooltip();
+
+        // Create modal for badge details
+        const modal = document.createElement('div');
+        modal.className = 'badge-details-modal modal-overlay';
+
+        const rarityPercentage = this.getRarityPercentage(badge.rarity);
+
+        modal.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Badge Details</h3>
+                    <button class="close-modal" onclick="this.closest('.modal-overlay').remove()">×</button>
+                </div>
+                <div class="modal-content">
+                    <div class="badge-detail-view">
+                        <div class="badge-image-large">
+                            <img src="${badge.imageUrl || badge.animatedUrl}" alt="${badge.name}">
+                        </div>
+                        <div class="badge-info">
+                            <h2>${badge.name}</h2>
+                            <span class="rarity-tag ${badge.rarity?.toLowerCase() || 'common'}">${badge.rarity || 'COMMON'} BADGE</span>
+                            <p class="description">${badge.description}</p>
+                            <div class="badge-statistics">
+                                <div class="stat">
+                                    <span class="label">Rarity:</span>
+                                    <span class="value">${rarityPercentage}% of users have this badge</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="label">Earned:</span>
+                                    <span class="value">${new Date(earnedAt).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="label">Category:</span>
+                                    <span class="value">${badge.category || 'General'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
+        // Add escape key handler
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+    }
+
+    /**
+     * Get estimated rarity percentage for a badge
+     * @param {string} rarity - Badge rarity enum
+     * @return {number} Estimated percentage
+     */
+    getRarityPercentage(rarity) {
+        // Placeholder percentages - in a real app, this would come from the API
+        const rarityPercentages = {
+            'COMMON': 45,
+            'UNCOMMON': 25,
+            'RARE': 15,
+            'EPIC': 5,
+            'LEGENDARY': 1
+        };
+        return rarityPercentages[rarity] || 30;
     }
 }
 

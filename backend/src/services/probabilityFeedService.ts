@@ -152,7 +152,27 @@ export class ProbabilityFeedService {
                         firstName: true,
                         lastName: true,
                         avatar: true,
-                        verified: true
+                        verified: true,
+                        userBadges: {
+                            where: { isDisplayed: true },
+                            take: 5,
+                            orderBy: { displayOrder: 'asc' },
+                            select: {
+                                badge: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        description: true,
+                                        imageUrl: true,
+                                        animatedUrl: true,
+                                        rarity: true,
+                                        category: true
+                                    }
+                                },
+                                earnedAt: true,
+                                displayOrder: true
+                            }
+                        }
                     }
                 },
                 _count: {

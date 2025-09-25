@@ -355,7 +355,7 @@ class SecurityController {
     /**
      * Display suspicious activity alerts
      */
-    displaySuspiciousActivity(suspiciousActivity) {
+    async displaySuspiciousActivity(suspiciousActivity) {
         try {
             const container = document.getElementById('suspiciousActivityPanel');
             if (!container) {

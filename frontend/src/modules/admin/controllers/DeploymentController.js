@@ -636,7 +636,7 @@ class DeploymentController {
      * Update deployment console with formatted output
      * Extracted from updateDeploymentConsole function
      */
-    updateDeploymentConsole(status) {
+    async updateDeploymentConsole(status) {
         try {
             const consoleDiv = document.getElementById('deploymentConsole');
             if (!consoleDiv) return;
