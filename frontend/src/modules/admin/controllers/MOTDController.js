@@ -15,6 +15,7 @@ class MOTDController {
         this.activeEditor = null;
         this.isEditing = false;
         this.previewMode = false;
+        this.modalListenersAdded = false;
 
         // Bind methods to preserve context
         this.init = this.init.bind(this);
@@ -22,6 +23,8 @@ class MOTDController {
         this.displayMOTDData = this.displayMOTDData.bind(this);
         this.handleCreateMOTD = this.handleCreateMOTD.bind(this);
         this.handleUpdateMOTD = this.handleUpdateMOTD.bind(this);
+        this.showScheduleMOTDModal = this.showScheduleMOTDModal.bind(this);
+        this.populateScheduleMOTDDropdown = this.populateScheduleMOTDDropdown.bind(this);
         this.handleScheduleMOTD = this.handleScheduleMOTD.bind(this);
         this.handleDeleteMOTD = this.handleDeleteMOTD.bind(this);
         this.displayMOTDHistory = this.displayMOTDHistory.bind(this);
@@ -80,11 +83,11 @@ class MOTDController {
                 createBtn.addEventListener('click', this.handleCreateMOTD);
             }
 
-            // Schedule MOTD button
+            // Schedule MOTD button (shows modal)
             const scheduleBtn = document.getElementById('scheduleMOTDBtn');
             if (scheduleBtn) {
                 scheduleBtn.removeAttribute('onclick');
-                scheduleBtn.addEventListener('click', this.handleScheduleMOTD);
+                scheduleBtn.addEventListener('click', this.showScheduleMOTDModal);
             }
 
             // Preview toggle button
@@ -122,38 +125,49 @@ class MOTDController {
      * Set up modal close button event listeners
      */
     setupModalCloseListeners() {
+        // Prevent duplicate event listeners
+        if (this.modalListenersAdded) {
+            return;
+        }
+
         try {
             // Handle all modal close actions via event delegation
-            document.addEventListener('click', (event) => {
+            this.modalClickHandler = (event) => {
                 const target = event.target;
                 const action = target.getAttribute('data-action');
 
                 switch (action) {
                     case 'close-schedule-modal':
                     case 'cancel-schedule-modal':
+                        event.preventDefault();
+                        event.stopPropagation();
                         this.closeScheduleModal();
                         break;
                     case 'close-motd-editor':
                     case 'cancel-motd-editor':
+                        event.preventDefault();
+                        event.stopPropagation();
                         this.closeMOTDEditor();
                         break;
                 }
-            });
 
-            // Also handle clicking outside the modal to close it
-            document.addEventListener('click', (event) => {
+                // Also handle clicking outside the modal to close it
                 if (event.target.classList.contains('modal-overlay')) {
-                    // Close any open modals
                     this.closeAllModals();
                 }
-            });
+            };
 
             // Handle ESC key to close modals
-            document.addEventListener('keydown', (event) => {
+            this.modalKeyHandler = (event) => {
                 if (event.key === 'Escape') {
                     this.closeAllModals();
                 }
-            });
+            };
+
+            document.addEventListener('click', this.modalClickHandler);
+            document.addEventListener('keydown', this.modalKeyHandler);
+
+            this.modalListenersAdded = true;
 
         } catch (error) {
             console.error('Error setting up modal close listeners:', error);
@@ -605,7 +619,54 @@ class MOTDController {
     }
 
     /**
-     * Handle schedule MOTD
+     * Show the Schedule MOTD modal
+     */
+    async showScheduleMOTDModal() {
+        try {
+            // Populate the MOTD selection dropdown
+            await this.populateScheduleMOTDDropdown();
+
+            // Show the schedule modal
+            const modal = document.getElementById('scheduleModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                await adminDebugLog('MOTDController', 'Schedule MOTD modal shown');
+            } else {
+                console.error('Schedule modal not found');
+            }
+        } catch (error) {
+            console.error('Error showing schedule modal:', error);
+            await adminDebugError('MOTDController', 'Failed to show schedule modal', error);
+        }
+    }
+
+    /**
+     * Populate the Schedule MOTD dropdown with available MOTDs
+     */
+    async populateScheduleMOTDDropdown() {
+        try {
+            const dropdown = document.getElementById('scheduleMOTDSelect');
+            if (!dropdown) return;
+
+            // Clear existing options except the first one
+            dropdown.innerHTML = '<option value="">Choose a MOTD to schedule...</option>';
+
+            // Populate with current MOTDs
+            if (this.currentMOTDs && this.currentMOTDs.length > 0) {
+                this.currentMOTDs.forEach(motd => {
+                    const option = document.createElement('option');
+                    option.value = motd.id;
+                    option.textContent = `${motd.title || 'Untitled'} (${motd.status})`;
+                    dropdown.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error populating schedule dropdown:', error);
+        }
+    }
+
+    /**
+     * Handle schedule MOTD (form submission)
      */
     async handleScheduleMOTD() {
         try {
@@ -624,6 +685,9 @@ class MOTDController {
             if (response.ok) {
                 const data = await response.json();
                 alert(`✅ MOTD scheduled successfully!\n\nSchedule: ${this.formatDateRange(scheduleData.startDate, scheduleData.endDate)}`);
+
+                // Close the modal after successful scheduling
+                this.closeScheduleModal();
 
                 await this.loadData(false); // Refresh data
 
