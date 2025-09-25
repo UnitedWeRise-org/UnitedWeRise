@@ -171,6 +171,11 @@ class MOTDController {
                 await adminDebugLog('MOTDController', 'Templates loaded successfully', {
                     templateCount: this.templates.length
                 });
+            } else if (response.status === 404) {
+                // Endpoint not implemented yet - use default templates
+                await adminDebugLog('MOTDController', 'Templates endpoint not available, using defaults');
+                this.templates = this.getDefaultTemplates();
+                this.displayTemplates();
             }
         } catch (error) {
             await adminDebugError('MOTDController', 'Failed to load templates', error);

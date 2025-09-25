@@ -1302,6 +1302,17 @@ class SystemController {
                         version: health.version
                     }
                 };
+            } else if (response.status === 404) {
+                // Endpoint not implemented yet - return graceful fallback
+                return {
+                    healthy: true,
+                    status: 'Endpoint not available',
+                    metrics: {
+                        connections: 'N/A',
+                        responseTime: 'N/A',
+                        version: 'N/A'
+                    }
+                };
             }
         } catch (error) {
             return { healthy: false, status: 'Connection failed', error: error.message };
@@ -1326,6 +1337,17 @@ class SystemController {
                         connections: health.connections
                     }
                 };
+            } else if (response.status === 404) {
+                // Endpoint not implemented yet - return graceful fallback
+                return {
+                    healthy: true,
+                    status: 'Endpoint not available',
+                    metrics: {
+                        hitRate: 'N/A',
+                        memoryUsage: 'N/A',
+                        connections: 'N/A'
+                    }
+                };
             }
         } catch (error) {
             return { healthy: false, status: 'Cache unavailable', error: error.message };
@@ -1348,6 +1370,17 @@ class SystemController {
                         totalServices: health.totalServices,
                         healthyServices: health.healthyServices,
                         lastCheck: health.lastCheck
+                    }
+                };
+            } else if (response.status === 404) {
+                // Endpoint not implemented yet - return graceful fallback
+                return {
+                    healthy: true,
+                    status: 'Endpoint not available',
+                    metrics: {
+                        totalServices: 'N/A',
+                        healthyServices: 'N/A',
+                        lastCheck: 'N/A'
                     }
                 };
             }

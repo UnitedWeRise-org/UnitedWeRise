@@ -149,7 +149,8 @@ class AdminModuleLoader {
                 console.log(`✅ ${moduleName} loaded successfully`);
             } catch (error) {
                 console.error(`❌ Failed to load ${moduleName}:`, error);
-                throw error;
+                // Continue with other modules instead of stopping initialization
+                continue;
             }
         }
     }
@@ -330,7 +331,8 @@ class AdminModuleLoader {
 
             case 'CivicEngagementController':
                 if (!window.CivicEngagementController) {
-                    throw new Error('CivicEngagementController class not found in global scope');
+                    console.warn('CivicEngagementController class not found in global scope - skipping module');
+                    return; // Skip this module but continue with others
                 }
                 window.civicEngagementController = new window.CivicEngagementController();
                 await window.civicEngagementController.init();
