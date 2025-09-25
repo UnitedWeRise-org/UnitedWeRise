@@ -601,7 +601,30 @@ router.get('/by-username/:username', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        res.json({ user });
+        // Check if user is a candidate
+        const candidateProfile = await prisma.candidate.findUnique({
+            where: { userId: user.id },
+            select: {
+                id: true,
+                name: true,
+                party: true,
+                office: true,
+                campaignWebsite: true,
+                platformSummary: true,
+                isVerified: true,
+                keyIssues: true,
+                isIncumbent: true,
+                status: true
+            }
+        });
+
+        // Attach candidate profile to user object if exists
+        const userWithCandidate = {
+            ...user,
+            candidateProfile: candidateProfile || null
+        };
+
+        res.json({ user: userWithCandidate });
     } catch (error) {
         console.error('Get user profile error:', error);
         res.status(500).json({ error: 'Internal server error' });

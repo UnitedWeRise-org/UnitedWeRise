@@ -23,6 +23,9 @@ import './websocket-client.js';
 // Phase 5: Component layer
 import '../components/Profile.js';
 
+// Phase 5a: URL routing system (depends on Profile component)
+import '../utils/username-router.js';
+
 // Phase 5b: Payment systems (require Stripe.js and API integration)
 import { initializeDonationSystem } from './donation-system.js';
 
