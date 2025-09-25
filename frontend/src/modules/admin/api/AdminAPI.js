@@ -242,7 +242,8 @@ class AdminAPI {
     }
 
     async getPosts(params = {}) {
-        const response = await this.get(`${this.BACKEND_URL}/api/admin/posts`, params);
+        // Use standard feed endpoint for admin post viewing
+        const response = await this.get(`${this.BACKEND_URL}/api/feed`, params);
         if (!response.ok) {
             throw new Error(`Failed to fetch posts: ${response.status}`);
         }
@@ -258,11 +259,10 @@ class AdminAPI {
     }
 
     async getComments(params = {}) {
-        const response = await this.get(`${this.BACKEND_URL}/api/admin/comments`, params);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch comments: ${response.status}`);
-        }
-        return response.json();
+        // Comments require postId - this method needs to be redesigned
+        // For now, return empty array since admin comments need post context
+        console.warn('Admin getComments needs postId - use /api/posts/:id/comments instead');
+        return { ok: true, comments: [] };
     }
 
     async deleteComment(commentId) {
@@ -274,7 +274,7 @@ class AdminAPI {
     }
 
     async getReports(params = {}) {
-        const response = await this.get(`${this.BACKEND_URL}/api/admin/reports`, params);
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/moderation/reports`, params);
         if (!response.ok) {
             throw new Error(`Failed to fetch reports: ${response.status}`);
         }

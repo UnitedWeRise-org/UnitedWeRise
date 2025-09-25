@@ -178,8 +178,7 @@ class ReportsController {
         } catch (error) {
             console.error('Error loading reports data:', error);
             this.showError('Failed to load reports data');
-            // Don't throw error - allow controller to initialize with empty data
-            return { success: false, error: error.message };
+            throw error;
         }
     }
 
