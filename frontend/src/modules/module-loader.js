@@ -11,7 +11,7 @@
 import { apiClient } from './core/api/client.js';
 import { userState } from './core/state/user.js';
 import { unifiedAuthManager } from './core/auth/unified-manager.js';
-import { getWebSocketUrl } from '../utils/environment.js';
+import { getApiBaseUrl } from '../utils/environment.js';
 
 // Import authentication modules
 import { openAuthModal, closeAuthModal, handleLogin, handleRegister } from './core/auth/modal.js';
@@ -172,7 +172,7 @@ async function testModularFunctionality() {
         test: async () => {
             try {
                 // Test using direct health endpoint (not through API config)
-                const healthUrl = `${getWebSocketUrl()}/health`;
+                const healthUrl = `${getApiBaseUrl()}/health`;
                 const response = await fetch(healthUrl);
                 const data = await response.json();
                 return data.status === 'healthy' ? 'API client responding' : 'API client not responding';

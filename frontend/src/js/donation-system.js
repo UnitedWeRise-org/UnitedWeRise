@@ -601,6 +601,9 @@ export class DonationSystem {
         
         this.modalElement.style.display = 'block';
         console.log('💝 Donation modal opened');
+
+        // Inform users about ad blocker compatibility (Stripe analytics may be blocked)
+        console.info('💡 If using an ad blocker: Stripe analytics may be blocked (normal), payments work fine');
     }
 
     closeDonationModal() {

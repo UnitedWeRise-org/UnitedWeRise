@@ -6,7 +6,7 @@
  * Phase 2.2 of comprehensive modularization project
  */
 
-import { getWebSocketUrl } from '../../../utils/environment.js';
+import { getApiBaseUrl } from '../../../utils/environment.js';
 
 class AdminAPI {
     constructor() {
@@ -30,8 +30,8 @@ class AdminAPI {
             return window.API_CONFIG.BASE_URL.replace(/\/api$/, '');
         }
 
-        // Use centralized environment detection
-        return getWebSocketUrl();
+        // Use centralized environment detection for API base URL
+        return getApiBaseUrl().replace('/api', '');
     }
 
     /**
