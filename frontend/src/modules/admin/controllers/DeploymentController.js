@@ -524,7 +524,7 @@ class DeploymentController {
      * Update deployment UI with comprehensive status
      * Extracted from updateDeploymentUI function
      */
-    updateDeploymentUI(status) {
+    async updateDeploymentUI(status) {
         try {
             // Update stats cards
             if (status.backend && status.backend.uptime) {

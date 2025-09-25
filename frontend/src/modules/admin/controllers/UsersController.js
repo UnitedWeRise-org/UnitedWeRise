@@ -389,7 +389,7 @@ class UsersController {
      * Display users table
      * Extracted from displayUsersTable function (assuming it exists)
      */
-    displayUsersTable(users) {
+    async displayUsersTable(users) {
         try {
             const container = document.getElementById('usersTable');
             if (!container) {

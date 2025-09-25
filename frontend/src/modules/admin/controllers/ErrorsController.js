@@ -1563,7 +1563,7 @@ class ErrorsController {
     /**
      * Show error message
      */
-    showError(message) {
+    async showError(message) {
         await adminDebugError('ErrorsController', 'Error message', { message });
 
         const consoleDiv = document.getElementById('errorsConsole');

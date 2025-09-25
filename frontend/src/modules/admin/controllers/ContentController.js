@@ -240,7 +240,7 @@ class ContentController {
      * Display user reports table
      * Extracted from displayUserReports function
      */
-    displayUserReports(reports) {
+    async displayUserReports(reports) {
         try {
             const container = document.getElementById('userReportsTable');
 

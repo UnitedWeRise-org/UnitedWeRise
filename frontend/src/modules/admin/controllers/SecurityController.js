@@ -234,7 +234,7 @@ class SecurityController {
     /**
      * Display security metrics dashboard
      */
-    displaySecurityMetrics(metrics) {
+    async displaySecurityMetrics(metrics) {
         try {
             const metricsContainer = document.getElementById('securityMetrics');
             if (!metricsContainer) {
