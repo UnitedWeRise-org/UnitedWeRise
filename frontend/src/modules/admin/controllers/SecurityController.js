@@ -242,7 +242,17 @@ class SecurityController {
                 return;
             }
 
-            const threatLevel = this.calculateThreatLevel(metrics);
+            // Handle undefined/null metrics with default values
+            const safeMetrics = metrics || {
+                failedLogins: 0,
+                highRiskEvents: 0,
+                uniqueIPs: 0,
+                totalEvents: 0,
+                lockedAccounts: 0,
+                avgRiskScore: 0
+            };
+
+            const threatLevel = this.calculateThreatLevel(safeMetrics);
             const threatClass = this.getThreatLevelClass(threatLevel);
 
             const metricsHtml = `
@@ -259,9 +269,9 @@ class SecurityController {
                         <div class="metric-header">
                             <h3>🚫 Failed Logins (24h)</h3>
                         </div>
-                        <div class="metric-value">${metrics.failedLogins || 0}</div>
-                        <div class="metric-trend ${(metrics.failedLoginsTrend || 0) > 0 ? 'up' : 'down'}">
-                            ${(metrics.failedLoginsTrend || 0) > 0 ? '↗️' : '↘️'} ${Math.abs(metrics.failedLoginsTrend || 0)}%
+                        <div class="metric-value">${safeMetrics.failedLogins}</div>
+                        <div class="metric-trend ${(safeMetrics.failedLoginsTrend || 0) > 0 ? 'up' : 'down'}">
+                            ${(safeMetrics.failedLoginsTrend || 0) > 0 ? '↗️' : '↘️'} ${Math.abs(safeMetrics.failedLoginsTrend || 0)}%
                         </div>
                     </div>
 

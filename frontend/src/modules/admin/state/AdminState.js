@@ -430,7 +430,25 @@ class AdminState {
     }
 
     displayReportsData(data) {
-        // To be implemented by ReportsController
+        // Transform API response to match frontend expectations
+        if (data && typeof data === 'object') {
+            const transformedData = {
+                reports: data.reports || [],
+                queue: data.reports || [],
+                analytics: {
+                    totalReports: data.pagination?.total || 0,
+                    pendingReports: data.reports?.filter(r => r.status === 'PENDING')?.length || 0,
+                    resolvedReports: data.reports?.filter(r => r.status === 'RESOLVED')?.length || 0,
+                    avgResolutionTime: 0, // Could be calculated if timestamps are available
+                    reportsTrend: 0 // Could be calculated with historical data
+                }
+            };
+
+            // Call ReportsController display method if available
+            if (window.reportsController && window.reportsController.displayReportsData) {
+                window.reportsController.displayReportsData(transformedData);
+            }
+        }
         console.log('Displaying reports data:', data);
     }
 
@@ -488,6 +506,293 @@ class AdminState {
      */
     getCurrentSection() {
         return this.currentSection;
+    }
+
+    /**
+     * Load MOTD data
+     */
+    async loadMOTDData(params = {}, useCache = false) {
+        const cacheKey = `motd_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayMOTDData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            const data = await window.AdminAPI.getMOTDSettings();
+            this.displayMOTDData(data);
+
+            this.setCache(cacheKey, data);
+            return data;
+
+        } catch (error) {
+            console.error('Error loading MOTD:', error);
+            this.showError('Failed to load MOTD data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load deployment data
+     */
+    async loadDeploymentData(params = {}, useCache = false) {
+        const cacheKey = `deployment_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayDeploymentData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // Use health check and dashboard data for deployment info
+            const [healthData, dashboardData] = await Promise.all([
+                window.AdminAPI.healthCheck(),
+                window.AdminAPI.getDashboardStats()
+            ]);
+
+            const deploymentData = {
+                health: healthData,
+                dashboard: dashboardData,
+                timestamp: new Date().toISOString()
+            };
+
+            this.displayDeploymentData(deploymentData);
+            this.setCache(cacheKey, deploymentData);
+            return deploymentData;
+
+        } catch (error) {
+            console.error('Error loading deployment data:', error);
+            this.showError('Failed to load deployment data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load system data
+     */
+    async loadSystemData(params = {}, useCache = false) {
+        const cacheKey = `system_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displaySystemData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // Use existing endpoints to gather system information
+            const [healthData, auditLogs] = await Promise.all([
+                window.AdminAPI.healthCheck(),
+                window.AdminAPI.getAuditLogs(params)
+            ]);
+
+            const systemData = {
+                health: healthData,
+                auditLogs: auditLogs,
+                timestamp: new Date().toISOString()
+            };
+
+            this.displaySystemData(systemData);
+            this.setCache(cacheKey, systemData);
+            return systemData;
+
+        } catch (error) {
+            console.error('Error loading system data:', error);
+            this.showError('Failed to load system data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load external candidates data
+     */
+    async loadExternalCandidatesData(params = {}, useCache = false) {
+        const cacheKey = `external_candidates_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayExternalCandidatesData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // For now, return empty data structure - this can be expanded later
+            const data = {
+                externalCandidates: [],
+                total: 0,
+                pagination: {
+                    page: 1,
+                    limit: 50,
+                    total: 0,
+                    pages: 0
+                }
+            };
+
+            this.displayExternalCandidatesData(data);
+            this.setCache(cacheKey, data);
+            return data;
+
+        } catch (error) {
+            console.error('Error loading external candidates:', error);
+            this.showError('Failed to load external candidates data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load analytics data
+     */
+    async loadAnalyticsData(params = {}, useCache = false) {
+        const cacheKey = `analytics_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayAnalyticsData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // Use dashboard stats for analytics
+            const data = await window.AdminAPI.getDashboardStats();
+
+            this.displayAnalyticsData(data);
+            this.setCache(cacheKey, data);
+            return data;
+
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            this.showError('Failed to load analytics data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load AI insights data
+     */
+    async loadAIInsightsData(params = {}, useCache = false) {
+        const cacheKey = `ai_insights_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayAIInsightsData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // For now, return empty data structure - this can be expanded later
+            const data = {
+                insights: [],
+                trends: [],
+                recommendations: []
+            };
+
+            this.displayAIInsightsData(data);
+            this.setCache(cacheKey, data);
+            return data;
+
+        } catch (error) {
+            console.error('Error loading AI insights:', error);
+            this.showError('Failed to load AI insights data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Load errors data
+     */
+    async loadErrorsData(params = {}, useCache = false) {
+        const cacheKey = `errors_${JSON.stringify(params)}`;
+
+        if (useCache && this.isCacheValid(cacheKey)) {
+            const cached = this.getCache(cacheKey);
+            this.displayErrorsData(cached);
+            return cached;
+        }
+
+        try {
+            this.isLoading = true;
+
+            // For now, return empty data structure - this can be expanded later
+            const data = {
+                errors: [],
+                total: 0,
+                pagination: {
+                    page: 1,
+                    limit: 50,
+                    total: 0,
+                    pages: 0
+                }
+            };
+
+            this.displayErrorsData(data);
+            this.setCache(cacheKey, data);
+            return data;
+
+        } catch (error) {
+            console.error('Error loading errors:', error);
+            this.showError('Failed to load errors data');
+            throw error;
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    /**
+     * Display methods for new data types
+     */
+    displayMOTDData(data) {
+        console.log('Displaying MOTD data:', data);
+    }
+
+    displayDeploymentData(data) {
+        console.log('Displaying deployment data:', data);
+    }
+
+    displaySystemData(data) {
+        console.log('Displaying system data:', data);
+    }
+
+    displayExternalCandidatesData(data) {
+        console.log('Displaying external candidates data:', data);
+    }
+
+    displayAnalyticsData(data) {
+        console.log('Displaying analytics data:', data);
+    }
+
+    displayAIInsightsData(data) {
+        console.log('Displaying AI insights data:', data);
+    }
+
+    displayErrorsData(data) {
+        console.log('Displaying errors data:', data);
     }
 
     /**
