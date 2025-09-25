@@ -260,7 +260,7 @@ class OverviewController {
     /**
      * Display health status
      */
-    displayHealthStatus(health) {
+    async displayHealthStatus(health) {
         try {
             const healthContainer = document.getElementById('healthStatus');
             if (!healthContainer) {

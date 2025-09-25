@@ -79,6 +79,20 @@ class APIClient {
                     ...options.headers
                 }
             };
+
+            // Handle body serialization to prevent "[object Object]" errors
+            if (options.body) {
+                if (options.body instanceof FormData) {
+                    fetchOptions.body = options.body;
+                    // Remove Content-Type to let browser set boundary for FormData
+                    delete fetchOptions.headers['Content-Type'];
+                } else if (typeof options.body === 'string') {
+                    fetchOptions.body = options.body;
+                } else {
+                    // Serialize objects to JSON
+                    fetchOptions.body = JSON.stringify(options.body);
+                }
+            }
             
             // Add CSRF token if available - check both instance and global tokens
             const csrfToken = this.csrfToken || window.csrfToken;
