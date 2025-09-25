@@ -331,7 +331,7 @@ class AdminModuleLoader {
 
             case 'CivicEngagementController':
                 if (!window.CivicEngagementController) {
-                    console.warn('CivicEngagementController class not found in global scope - skipping module');
+                    await adminDebugLog('AdminModuleLoader', 'CivicEngagementController not available - module skipped (non-critical)');
                     return; // Skip this module but continue with others
                 }
                 window.civicEngagementController = new window.CivicEngagementController();
