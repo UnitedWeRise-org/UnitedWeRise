@@ -30,6 +30,25 @@ router.get('/progress', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+// Get user's quest streaks
+router.get('/streaks', auth_1.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const progress = await quest_service_1.default.getUserQuestProgress(userId);
+        // Extract just the streak data from the progress response
+        const streakData = {
+            dailyStreak: progress.streak?.currentDailyStreak || 0,
+            weeklyStreak: progress.streak?.currentWeeklyStreak || 0,
+            longestStreak: progress.streak?.longestDailyStreak || 0,
+            totalCompleted: progress.streak?.totalQuestsCompleted || 0,
+            lastCompletedDate: progress.streak?.lastCompletedDate
+        };
+        res.json({ success: true, data: streakData });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 // Update quest progress (called by other services)
 router.post('/update-progress', auth_1.requireAuth, async (req, res) => {
     try {
