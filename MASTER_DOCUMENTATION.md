@@ -5082,25 +5082,25 @@ input, textarea, select {
 
 ### 🎯 **Quick Overview**
 
-**Status**: ✅ PHASE 7 COMPLETE - Social Relationship System Modularization (September 26, 2025)
-**Impact**: 9,500+ lines transformed into professional module system + Complete social features architecture
-**Result**: Improved maintainability, performance, and developer experience + comprehensive social interaction system
+**Status**: ✅ PHASE 8 COMPLETE - Civic & Map Systems Modularization (September 26, 2025)
+**Impact**: 10,300+ lines transformed into professional module system + Complete civic engagement and interactive map architecture
+**Result**: Improved maintainability, performance, and developer experience + comprehensive civic and geographic visualization systems
 
 > **📋 Detailed Implementation**: See [JavaScript Architecture Details](#javascript-architecture-details) below for complete technical documentation
 
-### 🎉 **PHASE 7 IMPLEMENTATION (September 26, 2025)**
+### 🎉 **PHASE 8 IMPLEMENTATION (September 26, 2025)**
 
-The JavaScript Modularization Project has reached **Phase 7 completion** with the addition of comprehensive social relationship system modularization. Building on Phase 6's handler architecture, we've now extracted and organized all social interaction functionality including follow systems, friend requests, status badges, and messaging integration.
+The JavaScript Modularization Project has reached **Phase 8 completion** with the addition of comprehensive civic engagement and interactive map system modularization. Building on Phase 7's social relationship architecture, we've now extracted and organized all civic officials loading, geographic visualization, and map control functionality.
 
-**✅ PHASE 7 DEPLOYMENT STATUS**: Social relationship modules successfully deployed with complete feature parity. All follow/unfollow functionality, friend request systems, social status indicators, and messaging integration working correctly on staging environment.
+**✅ PHASE 8 DEPLOYMENT STATUS**: Civic and map modules successfully deployed with complete feature parity. All elected officials loading, map initialization (Leaflet & MapLibre), layer controls, and view switching working correctly on staging environment.
 
-**🎯 PHASE 7 ACHIEVEMENTS**:
-- **Social System Architecture**: Complete follow/unfollow and friend request management
-- **Status Badge System**: Dynamic social relationship indicators throughout the platform
-- **Event Delegation**: Replaced 15+ inline social interaction handlers with modern patterns
-- **Messaging Integration**: Seamless social connections with private messaging system
-- **Comprehensive Testing**: Verified functionality on staging with admin authentication
-- **Clean Legacy Removal**: 600+ lines of relationship code extracted and organized
+**🎯 PHASE 8 ACHIEVEMENTS**:
+- **Map System Architecture**: Complete Leaflet and MapLibre GL initialization with interactive topic popups
+- **Civic Engagement System**: Representatives loading, officials panel rendering, radio button state management
+- **Nested Function Conversion**: Successfully extracted 3 nested functions (createTopicPopup, updateLeafletMapTopics, showRandomPopups) to class methods
+- **Event Delegation**: Replaced 8+ inline map and civic handlers with modern data attribute patterns
+- **Comprehensive Planning**: Three-stage workflow with pre-planning documentation, real-time tracking, and post-verification
+- **Clean Legacy Removal**: 800+ lines of map and civic code extracted and organized (120 functions → 106 functions)
 
 ---
 
@@ -5126,9 +5126,9 @@ The JavaScript Modularization Project has reached **Phase 7 completion** with th
 - **Debugging authentication**: See Authentication System implementation
 - **Performance optimization**: Review caching and state management patterns
 
-### 📊 **PHASE 7 MIGRATION SUMMARY**
+### 📊 **PHASE 8 MIGRATION SUMMARY**
 
-**✅ EXTRACTION COMPLETE (All Phases 1-7)**:
+**✅ EXTRACTION COMPLETE (All Phases 1-8)**:
 - **Authentication Module**: 600+ lines → `frontend/src/modules/core/auth/`
 - **My Feed System**: 1,500+ lines → `frontend/src/modules/features/feed/`
 - **Global Search**: 700+ lines → `frontend/src/modules/features/search/`
@@ -5139,9 +5139,11 @@ The JavaScript Modularization Project has reached **Phase 7 completion** with th
 - **Search Handlers**: 200+ lines → `frontend/src/handlers/search-handlers.js`
 - **Modal Handlers**: 250+ lines → `frontend/src/handlers/modal-handlers.js`
 - **Content Handlers**: 600+ lines → `frontend/src/handlers/content-handlers.js`
-- **🆕 Relationship Handlers**: 600+ lines → `frontend/src/handlers/relationship-handlers.js`
+- **Relationship Handlers**: 600+ lines → `frontend/src/handlers/relationship-handlers.js`
+- **🆕 Map Handlers**: 420+ lines → `frontend/src/handlers/map-handlers.js`
+- **🆕 Civic Handlers**: 380+ lines → `frontend/src/handlers/civic-handlers.js`
 
-**🏗️ PHASE 7 ARCHITECTURE ACHIEVED**:
+**🏗️ PHASE 8 ARCHITECTURE ACHIEVED**:
 ```
 frontend/src/
 ├── modules/                       # Original modular architecture
@@ -5161,7 +5163,9 @@ frontend/src/
 │   ├── search-handlers.js         # Search UI, filters, results (200+ lines)
 │   ├── modal-handlers.js          # About, Volunteer modals (250+ lines)
 │   ├── content-handlers.js        # MOTD, trending, officials, conversations (600+ lines)
-│   └── relationship-handlers.js   # 🆕 Phase 7: Social relationships, friends, follows (600+ lines)
+│   ├── relationship-handlers.js   # Phase 7: Social relationships, friends, follows (600+ lines)
+│   ├── map-handlers.js            # 🆕 Phase 8: Map initialization, layers, visualization (420+ lines)
+│   └── civic-handlers.js          # 🆕 Phase 8: Elected officials, profile, radio controls (380+ lines)
 ├── js/main.js                     # ES6 module orchestration entry point
 ├── utils/
 │   ├── environment.js             # Centralized environment detection
