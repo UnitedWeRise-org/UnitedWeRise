@@ -354,6 +354,15 @@ export async function handlePostMediaUpload(input) {
     // Store selected file
     selectedPostMedia = file;
 
+    // DEBUG: Log file at selection time
+    console.log('📁 File at SELECTION time:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        instanceof: file instanceof File,
+        constructor: file.constructor.name
+    });
+
     // Show preview
     const previewArea = document.getElementById('feedMediaPreview');
     if (!previewArea) {
@@ -589,19 +598,66 @@ export async function createPostFromFeed() {
         // Upload media first if selected
         if (selectedPostMedia) {
             console.log('📁 Selected media file:', selectedPostMedia);
-            console.log('📁 File details:', {
+            console.log('📁 File details at UPLOAD time:', {
                 name: selectedPostMedia.name,
                 size: selectedPostMedia.size,
-                type: selectedPostMedia.type
+                type: selectedPostMedia.type,
+                instanceof: selectedPostMedia instanceof File,
+                constructor: selectedPostMedia.constructor.name
             });
+
+            // Check if File object is still valid
+            if (!(selectedPostMedia instanceof File)) {
+                console.error('❌ selectedPostMedia is no longer a File object!');
+                alert('File selection error: Please reselect your image.');
+                return false;
+            }
 
             console.log('🖼️ Uploading media for post using EXACT Profile.js pattern...');
 
+            // EXPERIMENT: Try getting fresh file from input (like Profile.js does)
+            const uploadInput = document.getElementById('feedMediaUpload');
+            const freshFile = uploadInput && uploadInput.files && uploadInput.files[0];
+            console.log('🆚 Comparison - stored vs fresh:', {
+                storedFile: selectedPostMedia,
+                freshFile: freshFile,
+                inputHasFiles: uploadInput && uploadInput.files && uploadInput.files.length,
+                areTheSame: selectedPostMedia === freshFile
+            });
+
             // Use EXACT same pattern as working Profile.js
             const formData = new FormData();
-            formData.append('photos', selectedPostMedia); // Backend expects 'photos' array
+            // Try fresh file first, fall back to stored file
+            const fileToUse = freshFile || selectedPostMedia;
+            console.log('📎 Using file:', fileToUse === freshFile ? 'FRESH from input' : 'STORED in variable');
+
+            formData.append('photos', fileToUse); // Backend expects 'photos' array
             formData.append('photoType', 'POST_MEDIA'); // Must match PhotoType enum
             formData.append('purpose', 'PERSONAL'); // Required field
+
+            // COMPREHENSIVE FormData debugging
+            console.log('🔍 DETAILED FormData inspection:');
+            console.log('📂 FormData has entries:', formData.has('photos'));
+            console.log('📂 FormData.get("photos"):', formData.get('photos'));
+            console.log('📂 File instance check:', fileToUse instanceof File);
+            console.log('📂 File constructor:', fileToUse.constructor.name);
+            console.log('📂 File details expanded:', {
+                name: fileToUse.name,
+                size: fileToUse.size,
+                type: fileToUse.type,
+                lastModified: fileToUse.lastModified,
+                webkitRelativePath: fileToUse.webkitRelativePath
+            });
+
+            // Log ALL FormData entries
+            console.log('📂 All FormData entries:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+                } else {
+                    console.log(`  ${key}: ${value}`);
+                }
+            }
 
             const mediaResponse = await window.apiCall('/photos/upload', {
                 method: 'POST',
