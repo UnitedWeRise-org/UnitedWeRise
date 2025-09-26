@@ -87,12 +87,18 @@ const upload = PhotoService.getMulterConfig();
  *       429:
  *         $ref: '#/components/responses/RateLimitError'
  */
-// DEBUG middleware - logs BEFORE Multer processes
+// EXTREME DEBUG middleware - impossible to miss
 router.post('/upload', uploadLimiter, requireAuth, (req, res, next) => {
-  console.log('⚠️⚠️⚠️ UPLOAD ROUTE HIT - BEFORE MULTER ⚠️⚠️⚠️');
-  console.log('Content-Type:', req.headers['content-type']);
-  console.log('Content-Length:', req.headers['content-length']);
-  console.log('req.body before Multer:', req.body);
+  console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥');
+  console.log('🔥 PHOTOS UPLOAD ROUTE HIT AT:', new Date().toISOString());
+  console.log('🔥 METHOD:', req.method);
+  console.log('🔥 URL:', req.url);
+  console.log('🔥 Content-Type:', req.headers['content-type']);
+  console.log('🔥 Content-Length:', req.headers['content-length']);
+  console.log('🔥 User-Agent:', req.headers['user-agent']);
+  console.log('🔥 Origin:', req.headers['origin']);
+  console.log('🔥 req.body before Multer:', req.body);
+  console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥');
   next();
 }, upload.array('photos', 5), async (req: AuthRequest, res) => {
   try {
