@@ -659,10 +659,31 @@ export async function createPostFromFeed() {
                 }
             }
 
+            // DEBUG: Log the exact API call being made
+            console.log('🌐 About to make API call with:', {
+                endpoint: '/photos/upload',
+                method: 'POST',
+                bodyType: formData.constructor.name,
+                skipContentType: true
+            });
+
+            console.warn('⚠️ CHECK NETWORK TAB NOW - Look for /api/photos/upload request');
+            console.warn('⚠️ Verify Content-Type header includes multipart/form-data');
+            console.warn('⚠️ Verify Request Payload shows file data');
+
             const mediaResponse = await window.apiCall('/photos/upload', {
                 method: 'POST',
                 body: formData,
                 skipContentType: true // Let browser set multipart boundary
+            });
+
+            console.log('✅ Network request completed - check Network tab for details');
+
+            // DEBUG: Log raw response details
+            console.log('🌐 API call completed:', {
+                ok: mediaResponse.ok,
+                status: mediaResponse.status,
+                dataKeys: mediaResponse.data ? Object.keys(mediaResponse.data) : 'No data'
             });
 
             console.log('📸 Upload response:', mediaResponse);
