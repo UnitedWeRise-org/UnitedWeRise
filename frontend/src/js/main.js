@@ -38,6 +38,12 @@ import '../handlers/content-handlers.js';
 // Phase 4f: Relationship handlers (friends, following, social connections)
 import '../handlers/relationship-handlers.js';
 
+// Phase 4g: Map handlers (map initialization, controls, visualization)
+import '../handlers/map-handlers.js';
+
+// Phase 4h: Civic handlers (officials, profile, radio controls)
+import '../handlers/civic-handlers.js';
+
 // Phase 5: Component layer
 import '../components/Profile.js';
 
