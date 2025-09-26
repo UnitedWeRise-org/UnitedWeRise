@@ -457,6 +457,66 @@ export async function createPostFromTextarea(textareaId, onSuccess = null, optio
 }
 
 /**
+ * Prepend user's newly created post to the top of My Feed for instant gratification
+ * This doesn't affect the feed algorithm - just shows the post immediately
+ */
+function prependUserPostToFeed(post, user) {
+    const feedContainer = document.getElementById('myFeedPosts');
+    if (!feedContainer) return;
+
+    // Format the post with user data for display
+    const postWithUser = {
+        ...post,
+        author: {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName || user.username,
+            lastName: user.lastName || '',
+            avatar: user.avatar || null,
+            verified: user.verified || false
+        },
+        likesCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        // Use the standard PostComponent if available
+        if (window.postComponent) {
+            const postHtml = window.postComponent.renderPost(postWithUser, {
+                showActions: true,
+                showComments: true,
+                showAuthor: true,
+                showTimestamp: true,
+                compactView: false
+            });
+
+            // Add a subtle indicator that this is a newly created post
+            const postWithIndicator = postHtml.replace(
+                '<div class="post-component"',
+                '<div class="post-component newly-created-post" style="border-left: 3px solid #4CAF50;"'
+            );
+
+            feedContainer.insertAdjacentHTML('afterbegin', postWithIndicator);
+
+            // Remove the indicator after a few seconds
+            setTimeout(() => {
+                const newPost = feedContainer.querySelector('.newly-created-post');
+                if (newPost) {
+                    newPost.classList.remove('newly-created-post');
+                    newPost.style.borderLeft = '';
+                }
+            }, 3000);
+        } else {
+            console.warn('PostComponent not available for displaying new post');
+        }
+    } catch (error) {
+        console.error('Error prepending new post to feed:', error);
+    }
+}
+
+/**
  * Wrapper function for My Feed posting box
  * Extracted from index.html line 4959
  */
@@ -492,16 +552,16 @@ export async function createPostFromFeed() {
                 const mediaPreview = document.getElementById('media-preview');
                 if (mediaPreview) mediaPreview.style.display = 'none';
             }
-            
+
             // Update character counter
             const charCount = document.getElementById('feedPostCharCount');
             if (charCount) charCount.textContent = '0/5000';
-            
-            // Refresh feed
-            if (typeof window.showMyFeedInMain === 'function') {
-                window.showMyFeedInMain();
+
+            // Show user's new post immediately at top of feed for instant gratification
+            if (result.post && window.currentUser) {
+                prependUserPostToFeed(result.post, window.currentUser);
             }
-            
+
             return true;
         } else {
             alert('Error creating post: ' + (result.error || 'Unknown error'));
