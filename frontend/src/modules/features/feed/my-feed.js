@@ -595,8 +595,19 @@ export async function createPostFromFeed() {
                 type: selectedPostMedia.type
             });
 
-            console.log('🖼️ Uploading media for post using unified upload function...');
-            const mediaResponse = await uploadMediaFiles(selectedPostMedia, 'POST_MEDIA', 'PERSONAL');
+            console.log('🖼️ Uploading media for post using EXACT Profile.js pattern...');
+
+            // Use EXACT same pattern as working Profile.js
+            const formData = new FormData();
+            formData.append('photos', selectedPostMedia); // Backend expects 'photos' array
+            formData.append('photoType', 'POST_MEDIA'); // Must match PhotoType enum
+            formData.append('purpose', 'PERSONAL'); // Required field
+
+            const mediaResponse = await window.apiCall('/photos/upload', {
+                method: 'POST',
+                body: formData,
+                skipContentType: true // Let browser set multipart boundary
+            });
 
             console.log('📸 Upload response:', mediaResponse);
 
