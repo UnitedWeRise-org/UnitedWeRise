@@ -139,6 +139,10 @@ class AdminAuth {
                 if (result.totpVerified) {
                     this.totpVerified = true;
                     console.log('🔐 TOTP session established from secure httpOnly cookies');
+
+                    // Brief delay to ensure backend session processing completes
+                    console.log('⏳ Waiting for session establishment...');
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                 }
 
                 // Verify admin privileges
