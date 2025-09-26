@@ -430,9 +430,9 @@ class PhotoService {
         if (photoType === 'CAMPAIGN') {
             return false; // Require moderation for campaign materials
         }
-        // Post media needs content screening
+        // Post media needs content screening in production only
         if (photoType === 'POST_MEDIA') {
-            return false; // Require moderation for public post content
+            return !(0, environment_1.isProduction)(); // Auto-approve in staging/development, require moderation in production
         }
         // Personal gallery photos can be auto-approved for regular users
         // (they're not public until used as profile pic or in posts)
@@ -455,8 +455,12 @@ class PhotoService {
                 return { approved: false, reason: 'GIF file too large (max 5MB for GIFs)' };
             }
         }
-        // For public content (POST_MEDIA), require manual review
+        // For public content (POST_MEDIA), auto-approve in staging, require review in production
         if (photoType === 'POST_MEDIA') {
+            if (!(0, environment_1.isProduction)()) {
+                // Auto-approve in staging/development for testing
+                return { approved: true };
+            }
             return { approved: false, reason: 'Post media requires moderation review' };
         }
         // Auto-approve personal photos

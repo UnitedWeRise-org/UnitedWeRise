@@ -552,9 +552,9 @@ export class PhotoService {
       return false; // Require moderation for campaign materials
     }
 
-    // Post media needs content screening
+    // Post media needs content screening in production only
     if (photoType === 'POST_MEDIA') {
-      return false; // Require moderation for public post content
+      return !isProduction(); // Auto-approve in staging/development, require moderation in production
     }
 
     // Personal gallery photos can be auto-approved for regular users
@@ -585,8 +585,12 @@ export class PhotoService {
       }
     }
 
-    // For public content (POST_MEDIA), require manual review
+    // For public content (POST_MEDIA), auto-approve in staging, require review in production
     if (photoType === 'POST_MEDIA') {
+      if (!isProduction()) {
+        // Auto-approve in staging/development for testing
+        return { approved: true };
+      }
       return { approved: false, reason: 'Post media requires moderation review' };
     }
 
