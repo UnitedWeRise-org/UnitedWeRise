@@ -530,6 +530,13 @@ export async function createPostFromFeed() {
 
     const content = textarea.value.trim();
 
+    console.log('🔍 Pre-upload debug:', {
+        content: content.substring(0, 50) + '...',
+        hasSelectedPostMedia: !!selectedPostMedia,
+        selectedPostMediaType: selectedPostMedia?.type,
+        selectedPostMediaName: selectedPostMedia?.name
+    });
+
     // Check if we have content or media
     if (!content && !selectedPostMedia) {
         alert('Please enter some content or attach media for your post');
@@ -547,10 +554,22 @@ export async function createPostFromFeed() {
 
         // Upload media first if selected
         if (selectedPostMedia) {
+            console.log('📁 Selected media file:', selectedPostMedia);
+            console.log('📁 File details:', {
+                name: selectedPostMedia.name,
+                size: selectedPostMedia.size,
+                type: selectedPostMedia.type
+            });
+
             const formData = new FormData();
             formData.append('photos', selectedPostMedia);
             formData.append('photoType', 'POST_MEDIA');
             formData.append('purpose', 'PERSONAL');
+
+            console.log('📦 FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}:`, value);
+            }
 
             console.log('🖼️ Uploading media for post...');
             const mediaResponse = await apiCall('/photos/upload', {
