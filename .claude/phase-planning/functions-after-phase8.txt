@@ -1,0 +1,106 @@
+1211:        function displaySearchResults(users, query) {
+1293:        function updateTrendingTopicsPanel(topics) {
+1356:        function startTrendingRefresh() {
+1369:        function stopTrendingRefresh() {
+1432:        function getCurrentGeographicScope() {
+1477:        function exitTopicMode() {
+1493:        function showTopicModeHeader(topic) {
+1528:        function displayTopicFilteredFeed(topic, posts) {
+1577:        function updateTrendingTopicsPanel(topics) {
+1661:        function updateTrendingUpdatesPanel(posts) {
+1702:        function toggleTrendingExpansion() {
+1807:        function updateMyFeedWithTopic(topic, posts) {
+1868:        function updateTrendingWithTopicMode() {
+1924:        function getCurrentMapTopics() {
+1936:        function convertTopicsToMapBubbles(aiTopics) {
+2039:        function getFallbackMapTopics() {
+2051:        function syncMapWithTrendingTopics() {
+2072:        function getGeographicLayeredTopics(aiTopics, zoomLevel = 'national') {
+2183:        function getCoordinatesByZoomLevel(zoomLevel) {
+2214:        function getUserStateCoordinates() {
+2245:        function getUserLocalCoordinates() {
+2269:        function startGeographicTopicBalancing() {
+2288:        function openFullTrending() {
+2295:        function viewTrendingPost(postId) {
+2302:        function updateTrendingPanel(posts) {
+2338:        function getTimeAgo(date) {
+2440:        function showNewConversationForm() {
+2502:        function showConversationView(conversationId, username, messages) {
+2561:        function backToConversations() {
+2565:        function handleMessageKeyPress(event, conversationId) {
+2601:        function toggleProfile() {
+2727:                function updateCharCounter() {
+2842:        function displayMyFeedPosts(posts, appendMode = false) {
+2878:        function displayMyFeedPostsFallback(posts, container, appendMode = false) {
+2995:        function setupMyFeedInfiniteScroll() {
+3288:        function displayUserProfile(user) {
+3338:        function editProfile() {
+3482:        function getVerificationStatusColor(status) {
+3491:        function getVerificationStatusText(status) {
+3501:        function updatePoliticalFields() {
+3579:        function cancelEditProfile() {
+3685:        function updateLikeCount(postId, isLiked) {
+3696:        function showTrendingCommentBox(postId) {
+3704:        function hideTrendingCommentBox(postId) {
+3736:        function updateCommentCount(postId) {
+3748:        function showCommentBox(postId) {
+3752:        function hideCommentBox(postId) {
+3836:        function displayPosts(posts, containerId = 'postsFeed', appendMode = false) {
+3890:        function displayPostsFallback(posts, containerId, appendMode = false) {
+4016:        function showCommentsInline(postId, comments) {
+4078:        function hideComments(postId) {
+4119:        function renderFollowButton(userId, containerElement) {
+4175:        function displayAllSearchResults() {
+4223:        function displayFilteredSearchResults(type) {
+4266:        function renderSearchSection(title, results, renderFunction) {
+4281:        function renderUserResult(user) {
+4313:        function renderPostResult(post) {
+4340:        function renderOfficialResult(official) {
+4370:        function renderCandidateResult(candidate) {
+4399:        function renderTopicResult(topic) {
+4529:        function displayOfficialProfile(official) {
+4606:        function contactOfficial(officialId) {
+4610:        function viewOfficialProfile(officialId) {
+4614:        function viewVotingRecords(bioguideId) {
+4622:        function viewOfficialNews(officialName) {
+4778:        function showMainFeed() {
+4949:        function setMapInstance(map) {
+5246:        function calculateGeometryCenter(geojsonData) {
+5291:        function updateLocationPlaceholder() {
+5309:        function validatePassword(password) {
+5349:        function updateRequirement(elementId, met) {
+5469:        function checkHCaptchaStatus() {
+5621:        function applyUserBackground(backgroundImageUrl) {
+5647:        function applyBackgroundForUser(user) {
+5660:        function initializeUserBackground() {
+5677:        function showToast(message) {
+5710:        function createNotificationDropdown() {
+5751:        function closeNotifications() {
+5775:        function displayNotifications() {
+5837:        function getNotificationIcon(type) {
+5853:        function getNotificationTitle(notification) {
+5972:        function updateNotificationBadge() {
+5987:        function updateNotificationUI(notification) {
+6006:        function showNotificationToast(notification) {
+6044:        function initializeNotifications() {
+6105:        function getCachedRelationshipStatus(userId) {
+6127:        function addFriendStatusToPost(postElement, authorId) {
+6275:        function addFriendStatusToExistingPosts(containerId, posts) {
+6293:        function backToConversations() {
+6303:        function createOnlineStatusIndicator(lastActiveAt, size = 'small') {
+6344:        function displayFriendsForMessaging(friends) {
+6423:        function startActivityTracking() {
+6497:        function closeCivicOrganizing() {
+6502:        function updateCivicOrganizingForSidebarState() {
+6513:        function setupCivicOrganizingSidebarMonitoring() {
+6531:        function showDefaultOrganizingView() {
+6551:        function showPetitionCreator() {
+6662:        function showEventCreator() {
+6939:        function showCivicBrowser() {
+7066:        function displayMockCivicResults(filters = {}) {
+7227:        function showMyOrganizing() {
+7275:        function rsvpToEvent(eventTitle) {
+7279:        function shareEvent(eventTitle) {
+7291:        function signPetition(petitionTitle) {
+7295:        function sharePetition(petitionTitle) {
+7388:        function hidePageLoadingOverlay() {
