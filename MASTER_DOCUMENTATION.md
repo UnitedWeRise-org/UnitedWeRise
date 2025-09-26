@@ -8095,8 +8095,9 @@ adminDebug.clearCache()
 - **POST /api/admin/users/:userId/suspend**: Comprehensive user suspension system
 - **POST /api/admin/users/:userId/unsuspend**: Remove user suspensions
 - **POST /api/admin/users/:userId/role**: Promote/demote user roles (user/moderator/admin)
-- **DELETE /api/admin/users/:userId**: 🆕 **NEW** - User account deletion with impact analysis
-- **POST /api/admin/merge-accounts**: 🆕 **NEW** - Merge user accounts with data preservation and TOTP security
+- **POST /api/admin/users/:userId/resend-verification**: 🆕 **NEW** - Resend email verification for unverified users (September 26, 2025)
+- **DELETE /api/admin/users/:userId**: User account deletion with impact analysis
+- **POST /api/admin/merge-accounts**: Merge user accounts with data preservation and TOTP security
 
 ##### 🔐 **ENHANCED SECURITY ARCHITECTURE** (September 21, 2025) {#admin-security-enhancements}
 **Status**: ✅ **PRODUCTION READY** - Enterprise-grade TOTP security implementation
@@ -8139,6 +8140,44 @@ adminDebug.clearCache()
 **API Endpoint**: `DELETE /api/admin/users/:userId`
 **Required Fields**: `totpToken`, `actionDescription`, `deletionType`, `reason`
 **Response**: Includes audit ID and impact summary for tracking
+
+###### 🆕 **Email Verification Resend** (September 26, 2025)
+**Admin action to resend verification emails for unverified users:**
+
+**Features**:
+- **Unverified User Support**: Only works for users with `emailVerified = false`
+- **Fresh Token Generation**: Creates new 24-hour verification token
+- **Existing Email Infrastructure**: Uses same email service as signup flow
+- **TOTP Security**: Requires fresh TOTP verification for execution
+- **Admin Action Logging**: Logs admin ID and timestamp for audit trail
+- **Error Handling**: Validates user exists and email is unverified
+
+**API Endpoint**: `POST /api/admin/users/:userId/resend-verification`
+**Required Fields**: `totpToken` (in request body)
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Verification email resent to user@example.com",
+  "expiresIn": "24 hours",
+  "sentBy": "adminUserId",
+  "sentAt": "2025-09-26T15:10:00.000Z"
+}
+```
+
+**Admin Dashboard Integration**:
+- Button appears in user profile modal for unverified users only
+- Shows "📧 Resend Verification" action in Admin Actions section
+- Requires TOTP confirmation before sending
+- Displays success message with email address and expiry time
+
+**Use Cases**:
+- User didn't receive original verification email
+- Verification token expired (24 hours)
+- User requested new verification email
+- Admin needs to manually trigger verification for inactive accounts
+
+**Note**: Requires SMTP to be configured (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_PORT` environment variables). If SMTP is not configured, endpoint will return 500 error.
 
 ###### 🆕 **Account Merging System** (September 2025)
 **Professional account consolidation with data preservation:**
