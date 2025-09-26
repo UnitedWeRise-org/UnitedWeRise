@@ -433,6 +433,110 @@ export class RelationshipHandlers {
     }
 
     /**
+     * Show followers list for a user
+     * Extracted from index.html line 4724
+     */
+    async showFollowersList(userId) {
+        try {
+            const response = await window.apiCall(`/users/${userId}/followers`);
+
+            if (response.ok) {
+                this.displayUsersList(response.data.followers, 'Followers');
+            } else {
+                alert('Failed to load followers');
+            }
+        } catch (error) {
+            console.error('Failed to load followers:', error);
+            alert('Error loading followers');
+        }
+    }
+
+    /**
+     * Show following list for a user
+     * Extracted from index.html line 4739
+     */
+    async showFollowingList(userId) {
+        try {
+            const response = await window.apiCall(`/users/${userId}/following`);
+
+            if (response.ok) {
+                this.displayUsersList(response.data.following, 'Following');
+            } else {
+                alert('Failed to load following list');
+            }
+        } catch (error) {
+            console.error('Failed to load following list:', error);
+            alert('Error loading following list');
+        }
+    }
+
+    /**
+     * Display users list in modal
+     * Extracted from index.html line 4754
+     */
+    displayUsersList(users, title) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        `;
+
+        modal.innerHTML = `
+            <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1vh; padding: 1vh; min-height: 2vh;">
+                    <h3 style="margin: 0;">${title}</h3>
+                    <button data-modal-close-custom style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                </div>
+                <div>
+                    ${users.length === 0 ?
+                        `<p style="text-align: center; color: #666; padding: 2rem;">No ${title.toLowerCase()} yet</p>` :
+                        users.map(user => `
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #eee;">
+                                <div style="display: flex; align-items: center;">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem; font-weight: bold;">
+                                        ${user.firstName ? user.firstName.charAt(0).toUpperCase() : '?'}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 500;">${user.firstName} ${user.lastName}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">@${user.username}</div>
+                                    </div>
+                                </div>
+                                <button data-profile-view="${user.id}" style="background: #4b5c09; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                    View Profile
+                                </button>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        `;
+
+        // Add event delegation for modal interactions
+        modal.addEventListener('click', (event) => {
+            const target = event.target;
+
+            // Close modal on background click or close button
+            if (target === modal || target.hasAttribute('data-modal-close-custom')) {
+                modal.remove();
+                return;
+            }
+
+            // Handle profile view buttons
+            if (target.hasAttribute('data-profile-view')) {
+                const userId = target.getAttribute('data-profile-view');
+                if (window.showProfile) {
+                    window.showProfile(userId);
+                }
+                modal.remove();
+                return;
+            }
+        });
+
+        document.body.appendChild(modal);
+    }
+
+    /**
      * Display friends for messaging
      * Extracted from index.html line 7154
      */
