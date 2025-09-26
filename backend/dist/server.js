@@ -146,20 +146,22 @@ app.use((0, cors_1.default)({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
-// Basic middleware - Apply JSON parsing only when content-type is application/json
+// Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {
-    // Check if this is actually a JSON request
     const contentType = req.headers['content-type'] || '';
     // Only parse as JSON if content-type indicates JSON
     if (contentType.includes('application/json')) {
         express_1.default.json({ limit: '10mb' })(req, res, next);
     }
+    // Only parse URL-encoded if content-type indicates it
+    else if (contentType.includes('application/x-www-form-urlencoded')) {
+        express_1.default.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+    }
+    // Skip parsing for multipart/form-data (handled by Multer) and other content types
     else {
-        // Skip JSON parsing for multipart and other content types
         next();
     }
 });
-app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie parsing middleware
 app.use((0, cookie_parser_1.default)());
 // Request logging (only in development)
