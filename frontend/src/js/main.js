@@ -20,6 +20,9 @@ import '../integrations/backend-integration.js';
 // Phase 4: WebSocket and real-time services
 import './websocket-client.js';
 
+// Phase 4a: Authentication handlers (depends on API integration)
+import '../handlers/auth-handlers.js';
+
 // Phase 5: Component layer
 import '../components/Profile.js';
 
