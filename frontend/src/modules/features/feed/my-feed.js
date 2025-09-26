@@ -464,6 +464,8 @@ function prependUserPostToFeed(post, user) {
     const feedContainer = document.getElementById('myFeedPosts');
     if (!feedContainer) return;
 
+    console.log('📝 Prepending new post to feed:', post);
+
     // Format the post with user data for display
     const postWithUser = {
         ...post,
@@ -475,10 +477,12 @@ function prependUserPostToFeed(post, user) {
             avatar: user.avatar || null,
             verified: user.verified || false
         },
-        likesCount: 0,
-        commentsCount: 0,
+        likesCount: post.likesCount || 0,
+        commentsCount: post.commentsCount || 0,
         isLiked: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        // Ensure photos array exists (backend might not include it immediately)
+        photos: post.photos || []
     };
 
     try {
