@@ -4246,7 +4246,7 @@ class Profile {
         alert(`Viewing deleted ${type} content: ${targetId}\n\nThis feature will show the full deleted content in a modal.`);
     }
 
-    async navigateToPost(postId) {
+    navigateToPost(postId) {
         if (!postId) {
             if (typeof adminDebugWarn !== 'undefined') {
                 adminDebugWarn('Profile', 'Cannot navigate: postId is missing');
@@ -4259,45 +4259,48 @@ class Profile {
             this.closeModal();
         }
 
-        // Fetch and display the specific post
-        try {
-            const response = await apiCall(`/posts/${postId}`, {
-                method: 'GET'
-            });
+        // For own profile, switch to Posts tab instead of My Feed (own posts aren't in My Feed)
+        if (this.isOwnProfile) {
+            this.switchTab('posts');
 
-            if (response.ok && response.data?.post) {
-                const post = response.data.post;
-
-                // Create and show post modal
-                this.showPostModal(post);
-            } else {
-                // Fallback: Try to find post in current feed
-                if (typeof showMyFeedInMain === 'function') {
-                    showMyFeedInMain();
+            // Wait for posts to load, then scroll to and highlight the post
+            setTimeout(() => {
+                const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                if (postElement) {
+                    postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    postElement.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        postElement.style.backgroundColor = '';
+                    }, 3000);
                 } else {
-                    window.location.hash = 'my-feed';
-                }
-
-                setTimeout(() => {
-                    const postElement = document.querySelector(`[data-post-id="${postId}"]`);
-                    if (postElement) {
-                        postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        postElement.style.backgroundColor = '#fff3cd';
-                        setTimeout(() => {
-                            postElement.style.backgroundColor = '';
-                        }, 3000);
-                    } else {
-                        if (typeof adminDebugWarn !== 'undefined') {
-                            adminDebugWarn('Profile', `Post ${postId} not found`);
-                        }
+                    if (typeof adminDebugWarn !== 'undefined') {
+                        adminDebugWarn('Profile', `Post ${postId} not found in posts tab - may need to load more posts`);
                     }
-                }, 500);
+                }
+            }, 500);
+        } else {
+            // For other profiles, try My Feed (where their posts might appear)
+            if (typeof showMyFeedInMain === 'function') {
+                showMyFeedInMain();
+            } else {
+                window.location.hash = 'my-feed';
             }
-        } catch (error) {
-            console.error('Error fetching post:', error);
-            if (typeof adminDebugError !== 'undefined') {
-                adminDebugError('Profile', 'Failed to fetch post', error);
-            }
+
+            // Wait for feed to load, then scroll to and highlight the post
+            setTimeout(() => {
+                const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                if (postElement) {
+                    postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    postElement.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        postElement.style.backgroundColor = '';
+                    }, 3000);
+                } else {
+                    if (typeof adminDebugWarn !== 'undefined') {
+                        adminDebugWarn('Profile', `Post ${postId} not found in current feed view`);
+                    }
+                }
+            }, 500);
         }
     }
 
