@@ -18,6 +18,38 @@ let currentFeedOffset = 0;
 let selectedPostMedia = null;
 
 /**
+ * Unified media upload function that works consistently across the platform
+ * @param {File|File[]} files - Single file or array of files to upload
+ * @param {string} photoType - Type: 'POST_MEDIA', 'AVATAR', 'GALLERY', etc.
+ * @param {string} purpose - Purpose: 'PERSONAL', 'CIVIC', etc.
+ * @param {string} caption - Optional caption for photos
+ * @returns {Promise<Object>} Upload response from backend
+ */
+async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '') {
+    const formData = new FormData();
+
+    // Handle single file or array of files
+    if (Array.isArray(files)) {
+        files.forEach(file => formData.append('photos', file));
+    } else {
+        formData.append('photos', files);
+    }
+
+    formData.append('photoType', photoType);
+    formData.append('purpose', purpose);
+
+    if (caption.trim()) {
+        formData.append('caption', caption.substring(0, 200));
+    }
+
+    return await window.apiCall('/photos/upload', {
+        method: 'POST',
+        body: formData,
+        skipContentType: true // Essential for FormData uploads
+    });
+}
+
+/**
  * Load My Feed posts with infinite scroll support
  * Extracted from index.html line 4550
  */
@@ -296,6 +328,8 @@ export function attachMediaToPost() {
     }
 }
 
+export { uploadMediaFiles };
+
 export async function handlePostMediaUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -561,21 +595,8 @@ export async function createPostFromFeed() {
                 type: selectedPostMedia.type
             });
 
-            const formData = new FormData();
-            formData.append('photos', selectedPostMedia);
-            formData.append('photoType', 'POST_MEDIA');
-            formData.append('purpose', 'PERSONAL');
-
-            console.log('📦 FormData contents:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}:`, value);
-            }
-
-            console.log('🖼️ Uploading media for post...');
-            const mediaResponse = await apiCall('/photos/upload', {
-                method: 'POST',
-                body: formData
-            });
+            console.log('🖼️ Uploading media for post using unified upload function...');
+            const mediaResponse = await uploadMediaFiles(selectedPostMedia, 'POST_MEDIA', 'PERSONAL');
 
             console.log('📸 Upload response:', mediaResponse);
 
@@ -697,6 +718,7 @@ if (typeof window !== 'undefined') {
     window.clearMediaAttachment = clearMediaAttachment;
     window.createPostFromTextarea = createPostFromTextarea;
     window.createPostFromFeed = createPostFromFeed;
+    window.uploadMediaFiles = uploadMediaFiles; // Unified media upload function
 }
 
 export default {
@@ -709,5 +731,6 @@ export default {
     handlePostMediaUpload,
     clearMediaAttachment,
     createPostFromTextarea,
-    createPostFromFeed
+    createPostFromFeed,
+    uploadMediaFiles
 };
