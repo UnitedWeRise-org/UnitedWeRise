@@ -558,6 +558,8 @@ export async function createPostFromFeed() {
                 body: formData
             });
 
+            console.log('📸 Upload response:', mediaResponse);
+
             if (!mediaResponse.ok) {
                 const errorData = mediaResponse.data || {};
                 const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
@@ -565,9 +567,19 @@ export async function createPostFromFeed() {
                 return false;
             }
 
+            // Debug the response structure
+            console.log('📸 Upload response data:', mediaResponse.data);
+            console.log('📸 Photos array:', mediaResponse.data?.photos);
+
             // Get the uploaded photo ID
-            mediaId = mediaResponse.data.photos[0]?.id;
-            console.log('✅ Media uploaded successfully:', mediaId);
+            mediaId = mediaResponse.data?.photos?.[0]?.id;
+            console.log('✅ Media uploaded successfully, ID:', mediaId);
+
+            if (!mediaId) {
+                console.error('❌ No media ID returned from upload');
+                alert('Media upload succeeded but no ID returned. Please try again.');
+                return false;
+            }
         }
 
         // Create the post using unified system

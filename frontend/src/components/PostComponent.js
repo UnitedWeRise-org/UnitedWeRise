@@ -1793,28 +1793,80 @@ class PostComponent {
     }
 
     /**
-     * Render post media attachments (photos/GIFs)
+     * Render post media inline like modern social media (Twitter, Instagram, etc.)
      */
     renderPostMedia(photos) {
         if (!photos || photos.length === 0) return '';
 
+        // For single photo - full width, natural aspect ratio
+        if (photos.length === 1) {
+            const photo = photos[0];
+            const isGif = photo.mimeType === 'image/gif';
+            return `
+                <div class="post-media-inline single-photo" style="margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative;">
+                    <img src="${photo.url}"
+                         alt="Post image"
+                         loading="lazy"
+                         onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                         style="width: 100%; max-height: 500px; object-fit: cover; cursor: pointer; display: block;">
+                    ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">GIF</div>' : ''}
+                </div>
+            `;
+        }
+
+        // For multiple photos - grid layout like Twitter/Instagram
+        const gridTemplate = this.getPhotoGridTemplate(photos.length);
         return `
-            <div class="post-media">
-                ${photos.map(photo => {
+            <div class="post-media-inline multi-photo" style="margin-top: 12px; display: grid; gap: 2px; border-radius: 12px; overflow: hidden; max-height: 400px; ${gridTemplate}">
+                ${photos.slice(0, 4).map((photo, index) => {
                     const isGif = photo.mimeType === 'image/gif';
+                    const gridStyle = this.getPhotoGridStyle(photos.length, index);
                     return `
-                        <div class="post-media-item">
-                            <img src="${photo.url}" 
-                                 alt="Post attachment" 
+                        <div class="post-media-item" style="${gridStyle}; position: relative; overflow: hidden;">
+                            <img src="${photo.url}"
+                                 alt="Post image ${index + 1}"
                                  loading="lazy"
                                  onclick="postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
-                                 style="max-width: 100%; height: auto; border-radius: 8px; cursor: pointer;">
-                            ${isGif ? '<div class="media-type-badge gif-badge">GIF</div>' : ''}
+                                 style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;">
+                            ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">GIF</div>' : ''}
+                            ${photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${photos.length - 4}</div>` : ''}
                         </div>
                     `;
                 }).join('')}
             </div>
         `;
+    }
+
+    /**
+     * Get CSS grid template for photo layouts
+     */
+    getPhotoGridTemplate(totalCount) {
+        if (totalCount === 2) {
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 250px;';
+        } else if (totalCount === 3) {
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 199px 199px;';
+        } else { // 4 or more
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 199px 199px;';
+        }
+    }
+
+    /**
+     * Get CSS grid styles for photo layouts like modern social media
+     */
+    getPhotoGridStyle(totalCount, index) {
+        if (totalCount === 2) {
+            return `grid-column: ${index + 1}; grid-row: 1;`;
+        } else if (totalCount === 3) {
+            if (index === 0) {
+                return 'grid-column: 1; grid-row: 1 / 3;';
+            } else {
+                return `grid-column: 2; grid-row: ${index};`;
+            }
+        } else { // 4 or more
+            const col = (index % 2) + 1;
+            const row = Math.floor(index / 2) + 1;
+            return `grid-column: ${col}; grid-row: ${row};`;
+        }
     }
 
     /**
