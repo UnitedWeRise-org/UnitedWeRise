@@ -271,7 +271,7 @@ class MOTDController {
      * Close the MOTD editor modal
      */
     closeMOTDEditor() {
-        const modal = document.getElementById('motdEditorModal');
+        const modal = document.getElementById('motdEditor');
         if (modal) {
             // Use class-based hiding to override CSS !important rules
             modal.classList.add('modal-hidden');
@@ -1442,7 +1442,9 @@ class MOTDController {
     showMOTDEditor() {
         const editor = document.getElementById('motdEditor');
         if (editor) {
-            editor.style.display = 'block';
+            // Remove hidden class and set display
+            editor.classList.remove('modal-hidden');
+            editor.style.display = 'flex';
             editor.scrollIntoView({ behavior: 'smooth' });
         }
     }
@@ -1450,6 +1452,8 @@ class MOTDController {
     hideMOTDEditor() {
         const editor = document.getElementById('motdEditor');
         if (editor) {
+            // Use class-based hiding to override CSS !important rules
+            editor.classList.add('modal-hidden');
             editor.style.display = 'none';
             delete editor.dataset.motdId;
         }
