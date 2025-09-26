@@ -920,28 +920,8 @@
         // }
         
         // Utility function to fix auth-related localStorage issues without clearing everything
-        function fixAuthStorageIssues() {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('AuthSystem', 'Fixing auth storage issues');
-            }
-            localStorage.removeItem('authToken'); // Clear any legacy tokens
-            localStorage.removeItem('currentUser');
-            currentUser = null;
-            window.currentUser = null;
-            
-            // Reset UI to logged out state
-            document.getElementById('authSection').style.display = 'flex';
-            document.getElementById('userSection').style.display = 'none';
-            document.getElementById('userGreeting').textContent = '';
-            
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('AuthSystem', 'Auth storage cleared. Please log in again.');
-            }
-            return 'Auth storage cleared. Please refresh the page and log in again.';
-        }
-        
-        // Make function available in console for easy debugging
-        window.fixAuthStorageIssues = fixAuthStorageIssues;
+        // fixAuthStorageIssues() moved to /src/handlers/civic-handlers.js
+        // Available globally via window.fixAuthStorageIssues for console debugging
 
         // Setup collapse button handler function
         // setupCollapseButton function moved to NavigationHandlers module
@@ -951,68 +931,8 @@
         // Setup sidebar map button handler function
         // setupSidebarMapButton function moved to NavigationHandlers module
 
-        // Map layer toggle function
-        function toggleMapLayer(layerName) {
-            console.log(`🔧 Toggling map layer: ${layerName}`);
-            
-            if (window.map && typeof window.map.toggleLayer === 'function') {
-                window.map.toggleLayer(layerName);
-            } else {
-                console.warn('Map layer toggle not available - map may not be initialized yet');
-            }
-        }
-
-        // Layer dropdown toggle function
-        function toggleLayerDropdown() {
-            const dropdown = document.getElementById('layerDropdown');
-            const btn = document.querySelector('.layer-dropdown-btn');
-            
-            if (dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
-                btn.textContent = 'Layers ▼';
-            } else {
-                dropdown.classList.add('show');
-                btn.textContent = 'Layers ▲';
-            }
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('layerDropdown');
-            const dropdownContainer = document.querySelector('.map-layer-dropdown');
-            
-            if (dropdown && dropdownContainer && !dropdownContainer.contains(event.target)) {
-                dropdown.classList.remove('show');
-                const btn = document.querySelector('.layer-dropdown-btn');
-                if (btn) btn.textContent = 'Layers ▼';
-            }
-        });
-
-        // Map view toggle function
-        function toggleMapView(jurisdiction) {
-            console.log(`🔧 Switching map view to: ${jurisdiction}`);
-            
-            // Update active button styling
-            const buttons = document.querySelectorAll('.zoom-buttons-group .map-action-btn');
-            buttons.forEach(btn => {
-                if (btn.textContent.toLowerCase() === jurisdiction.toLowerCase()) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-            
-            if (window.map && typeof window.map.setJurisdiction === 'function') {
-                window.map.setJurisdiction(jurisdiction);
-            } else {
-                console.warn('Map jurisdiction change not available - map may not be initialized yet');
-            }
-            
-            // Refresh map topics for new scope
-            if (typeof updateMapTopics === 'function') {
-                updateMapTopics().catch(console.error);
-            }
-        }
+        // Map functions moved to /src/handlers/map-handlers.js
+        // - toggleMapLayer(), toggleLayerDropdown(), toggleMapView()
 
         // Check for existing auth on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1100,33 +1020,7 @@
         // setUserLoggedOut() moved to /src/modules/core/auth/session.js
         // Now exposed globally by session.js module
 
-        // Enable/disable radio buttons based on available location data
-        function updateRadioButtonAvailability() {
-            const stateRadio = document.querySelector('input[name="zoomLevel"][value="state"]');
-            const localRadio = document.querySelector('input[name="zoomLevel"][value="local"]');
-            const stateLabel = stateRadio?.parentElement;
-            const localLabel = localRadio?.parentElement;
-            
-            // Check if user has location data
-            const hasState = currentUser && currentUser.state;
-            const hasAddress = currentUser && (currentUser.zipCode || currentUser.city) && currentUser.state;
-            
-            // Enable/disable state radio
-            if (stateRadio && stateLabel) {
-                stateRadio.disabled = !hasState;
-                stateLabel.style.opacity = hasState ? '1' : '0.5';
-                stateLabel.style.cursor = hasState ? 'pointer' : 'not-allowed';
-            }
-            
-            // Enable/disable local radio
-            if (localRadio && localLabel) {
-                localRadio.disabled = !hasAddress;
-                localLabel.style.opacity = hasAddress ? '1' : '0.5';
-                localLabel.style.cursor = hasAddress ? 'pointer' : 'not-allowed';
-            }
-            
-            console.log(`Radio button availability - State: ${hasState}, Local: ${hasAddress}`);
-        }
+        // updateRadioButtonAvailability() moved to /src/handlers/civic-handlers.js
 
         // logout() moved to /src/modules/core/auth/session.js
 
@@ -1150,229 +1044,15 @@
 
         // OAuth SDK Loading Functions moved to /src/handlers/auth-handlers.js
 
-        async function loadUserContent() {
-            // Load user's elected officials if they have an address
-            try {
-                const response = await window.apiCall('/users/profile');
+        // loadUserContent() moved to /src/handlers/civic-handlers.js
 
-                if (response.ok) {
-                    const data = response.data;
-                    
-                    // UPDATE: Merge the complete profile data into currentUser
-                    if (data.user) {
-                        // Debug: Check what's in the profile data
-                        console.log('🔍 Profile data before merge:', data.user);
-                        console.log('🔍 currentUser before merge:', currentUser);
-                        
-                        // Only merge non-null values to avoid overwriting good data with undefined
-                        const mergedUser = { ...currentUser };
-                        for (const [key, value] of Object.entries(data.user)) {
-                            if (value !== null && value !== undefined) {
-                                mergedUser[key] = value;
-                            }
-                        }
-                        currentUser = mergedUser;
-                        window.currentUser = mergedUser;
-                        console.log('User profile data merged into currentUser:', currentUser);
-                        
-                        // Re-update the greeting if it got cleared
-                        const displayName = currentUser.firstName || currentUser.username || 'User';
-                        const greetingElement = document.getElementById('userGreeting');
-                        if (greetingElement) {
-                            greetingElement.textContent = `Hello, ${displayName}!`;
-                            console.log('🔧 Re-set greeting after profile merge to:', greetingElement.textContent);
-                        }
-                        
-                        // Update radio button availability now that we have address data
-                        updateRadioButtonAvailability();
-                        
-                        // Load representatives if we have address
-                        if (data.user.zipCode && data.user.state) {
-                            loadElectedOfficials(data.user.zipCode, data.user.state);
-                        }
-                        
-                        // Update map location if we have address
-                        if (mapInstance && currentUser.state) {
-                            getCurrentUserLocation();
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load user content:', error);
-            }
-        }
+        // loadElectedOfficials() moved to /src/handlers/civic-handlers.js
 
-        async function loadElectedOfficials(zipCode, state) {
-            try {
-                const response = await window.apiCall('/political/representatives');
-                
-                if (response.ok && response.data) {
-                    const representatives = response.data.representatives;
-                    updateOfficialsPanel(representatives);
-                    
-                    // Extract district information for boundary loading
-                    console.log('Representatives data received:', representatives);
-                    
-                    if (representatives && representatives.federal) {
-                        console.log('Federal representatives:', representatives.federal);
-                        
-                        const districtRep = representatives.federal.find(rep => 
-                            rep.office && rep.office.includes('Representative')
-                        );
-                        
-                        console.log('Found district rep:', districtRep);
-                        
-                        if (districtRep) {
-                            let districtNumber = null;
-                            let stateAbbr = null;
-                            
-                            // First try to use the district field directly
-                            if (districtRep.district) {
-                                console.log('District field found:', districtRep.district);
-                                
-                                // District field might be like "IL-10" or just "10"  
-                                const districtMatch = districtRep.district.match(/(?:(\w{2})-)?(\d+)/);
-                                if (districtMatch) {
-                                    stateAbbr = districtMatch[1] || (currentUser && currentUser.state);
-                                    districtNumber = districtMatch[2];
-                                }
-                            }
-                            
-                            // Fallback: try to extract from office title
-                            if (!districtNumber && districtRep.office) {
-                                console.log('Fallback: parsing office title:', districtRep.office);
-                                const officeMatch = districtRep.office.match(/(\w{2})-(\d+)/);
-                                if (officeMatch) {
-                                    stateAbbr = officeMatch[1];
-                                    districtNumber = officeMatch[2];
-                                }
-                            }
-                            
-                            if (districtNumber && stateAbbr) {
-                                // Store district info for boundary loading
-                                if (!currentUser) {
-                                    currentUser = {};
-                                    window.currentUser = {};
-                                }
-                                currentUser.district = districtNumber;
-                                currentUser.state = stateAbbr;
-                                if (window.currentUser) {
-                                    window.currentUser.district = districtNumber;
-                                    window.currentUser.state = stateAbbr;
-                                }
-                                
-                                console.log(`District info extracted: ${currentUser.state}-${currentUser.district}`);
-                                
-                                // Load boundary if currently at local zoom
-                                if (currentZoomLevel === 'local' && boundaryManager && currentLocation) {
-                                    console.log('Loading district boundary...');
-                                    boundaryManager.loadBoundary('district', currentUser.district, currentUser.state);
-                                }
-                            } else {
-                                console.warn('Could not extract district information from representative data');
-                            }
-                        } else {
-                            console.warn('No district representative found in federal representatives');
-                        }
-                    } else {
-                        console.warn('No federal representatives found in response');
-                    }
-                } else {
-                    console.log('No representatives data available yet - may need address in profile');
-                }
-            } catch (error) {
-                console.error('Failed to load representatives:', error);
-            }
-        }
-
-        function updateOfficialsPanel(representatives) {
-            const content = document.getElementById('officialsContent');
-            
-            // Check if representatives object has any data
-            const totalReps = (representatives.federal || []).length + 
-                            (representatives.state || []).length + 
-                            (representatives.local || []).length;
-            
-            if (totalReps === 0) {
-                content.innerHTML = '<p>No representatives found. Please add your complete address in your profile.</p>';
-                return;
-            }
-
-            let html = '<div>';
-            
-            // Federal representatives
-            if (representatives.federal && representatives.federal.length > 0) {
-                html += '<h4>Federal Representatives</h4>';
-                representatives.federal.forEach(rep => {
-                    html += `
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
-                                ${rep.photoUrl ? `<img src="${rep.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 50%; background: #4b5c09; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">' + rep.name.charAt(0) + '</div>'}
-                                <div>
-                                    <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
-                                    <em>${rep.office}</em>
-                                </div>
-                            </div>
-                            ${rep.phones && rep.phones.length > 0 ? `<div>📞 ${rep.phones[0]}</div>` : ''}
-                            ${rep.urls && rep.urls.length > 0 ? `<div>🌐 <a href="${rep.urls[0]}" target="_blank">Website</a></div>` : ''}
-                            ${rep.social && rep.social.twitter ? `<div>🐦 @${rep.social.twitter}</div>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            // State representatives
-            if (representatives.state && representatives.state.length > 0) {
-                html += '<h4>State Representatives</h4>';
-                representatives.state.forEach(rep => {
-                    html += `
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5;">
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
-                                ${rep.photoUrl ? `<img src="${rep.photoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8E23; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">' + rep.name.charAt(0) + '</div>'}
-                                <div>
-                                    <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
-                                    <em>${rep.office}</em>
-                                </div>
-                            </div>
-                            ${rep.phones && rep.phones.length > 0 ? `<div>📞 ${rep.phones[0]}</div>` : ''}
-                            ${rep.urls && rep.urls.length > 0 ? `<div>🌐 <a href="${rep.urls[0]}" target="_blank">Website</a></div>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            // Local representatives
-            if (representatives.local && representatives.local.length > 0) {
-                html += '<h4>Local Representatives</h4>';
-                representatives.local.forEach(rep => {
-                    html += `
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #f0f8f0;">
-                            <strong>${rep.name}</strong> ${rep.party ? `(${rep.party})` : ''}<br>
-                            <em>${rep.office}</em><br>
-                            ${rep.phones && rep.phones.length > 0 ? `📞 ${rep.phones[0]}<br>` : ''}
-                            ${rep.urls && rep.urls.length > 0 ? `🌐 <a href="${rep.urls[0]}" target="_blank">Website</a>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            html += '</div>';
-            content.innerHTML = html;
-        }
+        // updateOfficialsPanel() moved to /src/handlers/civic-handlers.js
+        // openDetail() moved to /src/handlers/civic-handlers.js
+        // closeDetail() moved to /src/handlers/civic-handlers.js
 
         // Panel management functions moved to NavigationHandlers module
-
-        function openDetail(title, offset) {
-            const panel = document.getElementById('detail-panel');
-            document.getElementById('detail-title').innerText = title;
-            document.getElementById('detail-content').innerText = `Placeholder content for ${title}.`;
-            panel.dataset.offset = offset;
-            panel.classList.remove('hidden');
-        }
-
-        function closeDetail() {
-            document.getElementById('detail-panel').classList.add('hidden');
-        }
 
         // Sidebar toggle
         document.getElementById('toggleSidebar').addEventListener('click', () => {
@@ -1415,204 +1095,10 @@
         // Map initialization - Toggle between Leaflet and MapLibre
         const USE_MAPLIBRE = true; // Set to false to use Leaflet during migration
         
-        function initializeMap() {
-            if (USE_MAPLIBRE) {
-                // Use new MapLibre implementation
-                initializeMapLibreLocal();
-                return;
-            }
-            
-            // Original Leaflet implementation (fallback)
-            const map = L.map('map', {
-                center: [37.8283, -98.5795],
-                zoom: 5,
-                zoomControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                boxZoom: false,
-                keyboard: false,
-                tap: false,
-                touchZoom: false
-            });
+        // initializeMap() moved to /src/handlers/map-handlers.js
+        // Includes nested functions: createTopicPopup(), updateLeafletMapTopics(), showRandomPopups()
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '', // Remove attribution
-                subdomains: 'abcd',
-            }).addTo(map);
-
-            // Dynamic topics array - will be updated with AI-generated content
-            let topics = [
-                { coords: [40.7128, -74.0060], text: '📢 Rent control in NYC gaining momentum!' },
-                { coords: [34.0522, -118.2437], text: '🚗 EV subsidies debated in California legislature.' },
-                { coords: [41.8781, -87.6298], text: '⚖️ Chicago voters discuss criminal justice reform.' },
-                { coords: [29.7604, -95.3698], text: '🗳️ Texas push for open primaries gaining traction.' },
-                { coords: [47.6062, -122.3321], text: '🌳 Seattle community organizing for green zoning laws.' },
-                { coords: [39.7392, -104.9903], text: '🏡 Denver debates housing-first initiatives.' },
-                { coords: [33.4484, -112.0740], text: '🚁 Phoenix drone delivery regulations spark debate.' },
-                { coords: [25.7617, -80.1918], text: '🏖️ Miami climate resiliency bonds trending.' },
-                { coords: [32.7767, -96.7970], text: '💼 Dallas campaign finance reform gaining traction.' },
-                { coords: [42.3601, -71.0589], text: '📚 Boston pushes universal childcare ballot measure.' }
-            ];
-            
-            // Enhanced popup creation with topic mode integration
-            function createTopicPopup(topicData, map) {
-                const popupOptions = {
-                    closeButton: false,
-                    autoClose: false,
-                    closeOnClick: false,
-                    autoPan: false
-                };
-                
-                let popupContent = topicData.text;
-                
-                // Add click functionality for AI topics
-                if (topicData.topicId) {
-                    popupContent += `<br><div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: rgba(255,107,53,0.9); color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; text-align: center;" onclick="enterTopicMode('${topicData.topicId}')">💬 Join Discussion</div>`;
-                }
-                
-                const popup = L.popup(popupOptions)
-                    .setLatLng(topicData.coords)
-                    .setContent(popupContent)
-                    .openOn(map);
-                    
-                return popup;
-            }
-            
-            // Function to update Leaflet map topics dynamically
-            function updateLeafletMapTopics(newTopics) {
-                if (newTopics && newTopics.length > 0) {
-                    topics = newTopics.map(bubble => ({
-                        coords: bubble.coords,
-                        text: bubble.text,
-                        topicId: bubble.topicId || null,
-                        priority: bubble.priority || 'normal'
-                    }));
-                    console.log('Updated Leaflet map topics with', topics.length, 'AI-generated topics');
-                }
-            }
-            
-            // Make update function globally accessible
-            window.updateMapTopics = updateLeafletMapTopics;
-
-            let usedTopics = new Map();
-
-            function showRandomPopups() {
-                const count = Math.floor(Math.random() * 2) + 1;
-                const now = Date.now();
-
-                const availableTopics = topics.filter(t => {
-                    const lastShown = usedTopics.has(t.text) ? usedTopics.get(t.text) : 0;
-                    return now - lastShown > 180000;
-                });
-
-                const shuffled = availableTopics.sort(() => 0.5 - Math.random());
-                const selected = shuffled.slice(0, count);
-
-                selected.forEach(topic => {
-                    const popup = createTopicPopup(topic, map);
-
-                    usedTopics.set(topic.text, now);
-                    setTimeout(() => map.closePopup(popup), 30000);
-                });
-
-                const nextDelay = Math.floor(Math.random() * 3000) + 13000;
-                setTimeout(showRandomPopups, nextDelay);
-            }
-
-            showRandomPopups();
-
-
-            // Set map instance for zoom controls
-            setMapInstance(map);
-
-            return map;
-        }
-
-        // MapLibre initialization function
-        function initializeMapLibreLocal() {
-            console.log('initializeMapLibreLocal() called');
-            
-            // Set loading start time for minimum loading duration
-            window.mapLoadStartTime = Date.now();
-            
-            // CRITICAL FIX: Show the map container BEFORE initializing MapLibre
-            // MapLibre needs the container to be visible to measure dimensions correctly
-            const mapContainer = document.getElementById('mapContainer');
-            const loadingState = document.getElementById('mapLoadingState');
-            
-            console.log('Showing map container for MapLibre initialization...');
-            if (mapContainer && loadingState) {
-                // Hide loading state and show map container immediately
-                loadingState.classList.add('hidden');
-                mapContainer.style.display = 'block';
-                console.log('Map container is now visible');
-            }
-            
-            // Initialize MapLibre through the class in map-maplibre.js
-            console.log('🔍 Checking for external initializeMapLibre function...');
-            console.log('🔍 typeof window.initializeMapLibre:', typeof window.initializeMapLibre);
-            console.log('🔍 window.initializeMapLibre === initializeMapLibreLocal?', window.initializeMapLibre === initializeMapLibreLocal);
-            console.log('🔍 window.initializeMapLibre !== initializeMapLibreLocal?', window.initializeMapLibre !== initializeMapLibreLocal);
-            
-            if (typeof window.initializeMapLibre === 'function' && window.initializeMapLibre !== initializeMapLibreLocal) {
-                console.log('✅ Found external initializeMapLibre function, calling it...');
-                window.initializeMapLibre();
-            } else {
-                console.error('❌ External initializeMapLibre function not found - map-maplibre.js may not have loaded correctly');
-                
-                // Fallback: Initialize directly if the function isn't available
-                if (typeof UWRMapLibre !== 'undefined') {
-                    console.log('UWRMapLibre class found, initializing directly...');
-                    const mapInstance = new UWRMapLibre('map');
-                    mapInstance.initialize().then(map => {
-                        console.log('Direct MapLibre initialization complete');
-                        
-                        // Create window.map object manually since initializeMapLibre() wasn't called
-                        window.map = {
-                            // Wrapper methods for Leaflet compatibility
-                            setView: (center, zoom) => mapInstance.setView(center, zoom),
-                            invalidateSize: () => mapInstance.invalidateSize(),
-                            closePopup: () => mapInstance.closeAllPopups(),
-                            fitBounds: (bounds) => mapInstance.fitBounds(bounds),
-                            // New MapLibre-specific methods
-                            toggleCollapsed: () => {
-                                console.log('window.map.toggleCollapsed called');
-                                return mapInstance.toggleCollapsed();
-                            },
-                            closeMap: () => mapInstance.closeMap(),
-                            showMap: () => mapInstance.showMap(),
-                            // Transition methods for smooth bubble handling
-                            hideBubbles: () => mapInstance.hideAllBubblesDuringTransition(),
-                            showBubbles: () => mapInstance.showAllBubblesAfterTransition(),
-                            // Map container state adjustment
-                            adjustForContainerState: (isCollapsed) => mapInstance.adjustForContainerState(isCollapsed),
-                            setZoomLevel: (level) => {
-                                mapInstance.setZoomLevel(level);
-                                // Update button states
-                                updateMapViewButtons(level);
-                            },
-                            geocodeAndZoom: () => mapInstance.geocodeAndZoom(),
-                            // Layer management system
-                            toggleLayer: (layerName) => mapInstance.toggleLayer(layerName),
-                            setJurisdiction: (jurisdiction) => mapInstance.setJurisdiction(jurisdiction),
-                            // MapLibre instance for advanced use
-                            _maplibre: map,
-                            _uwrMap: mapInstance
-                        };
-                        
-                        console.log('window.map object created with adjustForContainerState:', !!window.map.adjustForContainerState);
-                    }).catch(error => {
-                        console.error('Direct MapLibre initialization failed:', error);
-                    });
-                } else {
-                    console.error('UWRMapLibre class not found - falling back to Leaflet');
-                    // Fall back to Leaflet if MapLibre fails completely
-                    USE_MAPLIBRE = false;
-                    initializeMap();
-                }
-            }
-        }
+        // initializeMapLibreLocal() moved to /src/handlers/map-handlers.js
 
         // MOTD dismiss handler
         document.getElementById('motd-close-btn').addEventListener('click', function() {
@@ -5669,13 +5155,7 @@
             }
         }
         
-        function updateRadioButtonState(level) {
-            // Update radio button to match current zoom level
-            const radios = document.querySelectorAll('input[name="zoomLevel"]');
-            radios.forEach(radio => {
-                radio.checked = radio.value === level;
-            });
-        }
+        // updateRadioButtonState() moved to /src/handlers/civic-handlers.js
 
         // Helper function to get state center coordinates
         async function getStateCenterCoordinates(stateAbbr) {
