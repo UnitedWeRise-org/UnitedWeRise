@@ -93,6 +93,16 @@ export function logEnvironmentInfo() {
     console.log(`👥 Admin Dashboard: ${getAdminDashboardUrl()}`);
 }
 
+// Export functions globally for backward compatibility with legacy code
+if (typeof window !== 'undefined') {
+    window.getEnvironment = getEnvironment;
+    window.isDevelopment = isDevelopment;
+    window.isProduction = isProduction;
+    window.getApiBaseUrl = getApiBaseUrl;
+    window.getWebSocketUrl = getWebSocketUrl;
+    window.getAdminDashboardUrl = getAdminDashboardUrl;
+}
+
 // Auto-log environment info when loaded in development
 if (isDevelopment()) {
     console.log('🌍 Environment detection system loaded');
