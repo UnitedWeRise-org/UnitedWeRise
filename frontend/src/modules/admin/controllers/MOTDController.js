@@ -17,6 +17,12 @@ class MOTDController {
         this.previewMode = false;
         this.modalListenersAdded = false;
 
+        // Store handler functions to prevent duplicate listeners
+        this.scheduleCloseHandler = null;
+        this.scheduleCancelHandler = null;
+        this.editorCloseHandler = null;
+        this.editorCancelHandler = null;
+
         // Bind methods to preserve context
         this.init = this.init.bind(this);
         this.loadData = this.loadData.bind(this);
@@ -33,6 +39,7 @@ class MOTDController {
         this.initializeRichTextEditor = this.initializeRichTextEditor.bind(this);
         this.sanitizeContent = this.sanitizeContent.bind(this);
         this.validateMOTDContent = this.validateMOTDContent.bind(this);
+        this.attachModalCloseButtons = this.attachModalCloseButtons.bind(this);
         this.closeScheduleModal = this.closeScheduleModal.bind(this);
         this.closeMOTDEditor = this.closeMOTDEditor.bind(this);
         this.closeAllModals = this.closeAllModals.bind(this);
@@ -131,31 +138,8 @@ class MOTDController {
         }
 
         try {
-            // Handle all modal close actions via event delegation
-            this.modalClickHandler = (event) => {
-                const target = event.target;
-                const action = target.getAttribute('data-action');
-
-                switch (action) {
-                    case 'close-schedule-modal':
-                    case 'cancel-schedule-modal':
-                        event.preventDefault();
-                        event.stopPropagation();
-                        this.closeScheduleModal();
-                        break;
-                    case 'close-motd-editor':
-                    case 'cancel-motd-editor':
-                        event.preventDefault();
-                        event.stopPropagation();
-                        this.closeMOTDEditor();
-                        break;
-                }
-
-                // Also handle clicking outside the modal to close it
-                if (event.target.classList.contains('modal-overlay')) {
-                    this.closeAllModals();
-                }
-            };
+            // Find and attach listeners to specific modal close buttons
+            this.attachModalCloseButtons();
 
             // Handle ESC key to close modals
             this.modalKeyHandler = (event) => {
@@ -164,13 +148,105 @@ class MOTDController {
                 }
             };
 
-            document.addEventListener('click', this.modalClickHandler);
             document.addEventListener('keydown', this.modalKeyHandler);
+
+            // Handle clicking outside modal to close (using document delegation for this)
+            this.modalOverlayHandler = (event) => {
+                if (event.target.classList.contains('modal-overlay')) {
+                    this.closeAllModals();
+                }
+            };
+
+            document.addEventListener('click', this.modalOverlayHandler);
 
             this.modalListenersAdded = true;
 
         } catch (error) {
             console.error('Error setting up modal close listeners:', error);
+        }
+    }
+
+    /**
+     * Attach event listeners directly to modal close buttons
+     */
+    attachModalCloseButtons() {
+        try {
+            // Create handlers once and store them as instance properties
+            if (!this.scheduleCloseHandler) {
+                this.scheduleCloseHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Schedule modal close button clicked');
+                    this.closeScheduleModal();
+                };
+            }
+
+            if (!this.scheduleCancelHandler) {
+                this.scheduleCancelHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Schedule modal cancel button clicked');
+                    this.closeScheduleModal();
+                };
+            }
+
+            if (!this.editorCloseHandler) {
+                this.editorCloseHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Editor modal close button clicked');
+                    this.closeMOTDEditor();
+                };
+            }
+
+            if (!this.editorCancelHandler) {
+                this.editorCancelHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Editor modal cancel button clicked');
+                    this.closeMOTDEditor();
+                };
+            }
+
+            // Schedule modal close buttons
+            const scheduleCloseBtn = document.querySelector('[data-action="close-schedule-modal"]');
+            const scheduleCancelBtn = document.querySelector('[data-action="cancel-schedule-modal"]');
+
+            if (scheduleCloseBtn) {
+                // Remove existing listeners to prevent duplicates
+                scheduleCloseBtn.removeEventListener('click', this.scheduleCloseHandler);
+                scheduleCloseBtn.addEventListener('click', this.scheduleCloseHandler);
+            }
+
+            if (scheduleCancelBtn) {
+                // Remove existing listeners to prevent duplicates
+                scheduleCancelBtn.removeEventListener('click', this.scheduleCancelHandler);
+                scheduleCancelBtn.addEventListener('click', this.scheduleCancelHandler);
+            }
+
+            // MOTD editor close buttons
+            const editorCloseBtn = document.querySelector('[data-action="close-motd-editor"]');
+            const editorCancelBtn = document.querySelector('[data-action="cancel-motd-editor"]');
+
+            if (editorCloseBtn) {
+                editorCloseBtn.removeEventListener('click', this.editorCloseHandler);
+                editorCloseBtn.addEventListener('click', this.editorCloseHandler);
+            }
+
+            if (editorCancelBtn) {
+                editorCancelBtn.removeEventListener('click', this.editorCancelHandler);
+                editorCancelBtn.addEventListener('click', this.editorCancelHandler);
+            }
+
+            console.log('Modal close buttons attached:', {
+                scheduleClose: !!scheduleCloseBtn,
+                scheduleCancel: !!scheduleCancelBtn,
+                editorClose: !!editorCloseBtn,
+                editorCancel: !!editorCancelBtn
+            });
+
+        } catch (error) {
+            console.error('Error attaching modal close buttons:', error);
         }
     }
 
@@ -630,6 +706,12 @@ class MOTDController {
             const modal = document.getElementById('scheduleModal');
             if (modal) {
                 modal.style.display = 'flex';
+
+                // Re-attach close button listeners now that modal is visible
+                setTimeout(() => {
+                    this.attachModalCloseButtons();
+                }, 100);
+
                 await adminDebugLog('MOTDController', 'Schedule MOTD modal shown');
             } else {
                 console.error('Schedule modal not found');
