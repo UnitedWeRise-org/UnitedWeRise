@@ -90,6 +90,7 @@
 
     <!-- Legacy utility scripts that aren't yet converted to modules -->
     <script src="src/js/api-manager.js"></script>
+    <script src="src/js/reputation-badges.js"></script>
     <script src="src/js/force-optimization.js"></script>
     <script src="js/posting.js"></script>
 
@@ -122,92 +123,6 @@
     });
     </script>
 
-    <!-- Inline Optimization Override (Backup) -->
-    <script>
-    // Emergency inline optimization override
-    if (typeof adminDebugLog !== 'undefined') {
-        adminDebugLog('InlineOptimization', 'Performance optimization system loading...');
-    }
-    
-    // Check if main scripts loaded
-    setTimeout(() => {
-        if (!window.apiManager || !window.appInitializer) {
-            if (typeof adminDebugError !== 'undefined') {
-                adminDebugError('LoadingSystem', 'Main optimization scripts failed to load, using emergency override');
-            }
-            
-            // Create minimal API manager (matching api-manager.js format)
-            window.apiCall = async (endpoint, options = {}) => {
-                try {
-                    const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
-                    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
-
-                    const headers = {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    };
-
-                    // Add CSRF token for state-changing requests
-                    if (window.csrfToken && options.method && options.method !== 'GET') {
-                        headers['X-CSRF-Token'] = window.csrfToken;
-                    }
-
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('EmergencyAPI', 'Emergency API Request', endpoint);
-                    }
-
-                    // Smart body handling to prevent double JSON stringification
-                    let body = undefined;
-                    if (options.body) {
-                        if (options.body instanceof FormData) {
-                            body = options.body;
-                            // Remove Content-Type to let browser set boundary for FormData
-                            delete headers['Content-Type'];
-                        } else if (typeof options.body === 'string') {
-                            body = options.body;
-                        } else {
-                            body = JSON.stringify(options.body);
-                        }
-                    }
-
-                    const response = await fetch(url, {
-                        method: options.method || 'GET',
-                        headers,
-                        credentials: 'include',
-                        body
-                    });
-
-                    const data = await response.json();
-
-                    // Return in same format as api-manager.js
-                    return {
-                        ok: response.ok,
-                        status: response.status,
-                        data: data
-                    };
-
-                } catch (error) {
-                    // Return error in consistent format
-                    return {
-                        ok: false,
-                        status: 0,
-                        data: { error: error.message }
-                    };
-                }
-            };
-            
-            // initializeApp will be provided by app-initialization.js
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('LoadingSystem', 'Deferring to app-initialization.js for auth logic');
-                adminDebugLog('LoadingSystem', 'Emergency optimization override ready');
-            }
-        } else {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('LoadingSystem', 'Main optimization scripts loaded successfully');
-            }
-        }
-    }, 500);
-    </script>
     
     <script src="src/components/AddressForm.js"></script>
     <script src="src/components/VerificationFlow.js"></script>
@@ -228,73 +143,6 @@
     <script src="src/js/map-dummy-data.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
     <!-- donation-system.js now loaded via ES6 modules in main.js -->
-    <!-- Inline Reputation System (Critical Path) -->
-    <script>
-        // Essential reputation badge functions
-        function getReputationBadge(score) {
-            if (score >= 95) {
-                return { color: 'green', text: 'Trusted', class: 'reputation-badge-green', show: true };
-            } else if (score >= 50) {
-                return { color: null, text: null, class: null, show: false };
-            } else if (score >= 30) {
-                return { color: 'yellow', text: 'Mixed', class: 'reputation-badge-yellow', show: true };
-            } else {
-                return { color: 'brown', text: 'Low Trust', class: 'reputation-badge-brown', show: true };
-            }
-        }
-        
-        function createReputationBadgeElement(score, options = {}) {
-            const badge = getReputationBadge(score);
-            if (!badge.show) return null;
-            
-            const element = document.createElement('span');
-            element.className = `reputation-badge ${badge.class}`;
-            element.textContent = badge.text;
-            element.title = `Reputation: ${score}/100`;
-            return element;
-        }
-        
-        // Basic integration with posts
-        function addReputationBadgeToPost(postElement, reputation) {
-            if (!postElement || reputation === undefined) return;
-            
-            const authorElement = postElement.querySelector('.post-author-name, .post-author, .comment-author');
-            if (authorElement && !authorElement.querySelector('.reputation-badge')) {
-                const badgeElement = createReputationBadgeElement(reputation);
-                if (badgeElement) {
-                    authorElement.appendChild(badgeElement);
-                }
-            }
-        }
-        
-        // Global reputation functions
-        window.ReputationBadges = {
-            getReputationBadge,
-            createReputationBadgeElement,
-            addReputationBadgeToPost: addReputationBadgeToPost,
-            updateAllPostBadges: function() {
-                document.querySelectorAll('[data-author-reputation]').forEach(post => {
-                    const reputation = parseInt(post.getAttribute('data-author-reputation'));
-                    if (reputation) {
-                        addReputationBadgeToPost(post, reputation);
-                    }
-                });
-            },
-            updateProfileBadge: function(reputation) {
-                const profileElement = document.querySelector('.my-profile .profile-header, .user-profile .profile-header');
-                if (profileElement && !profileElement.querySelector('.reputation-badge')) {
-                    const badgeElement = createReputationBadgeElement(reputation);
-                    if (badgeElement) {
-                        profileElement.appendChild(badgeElement);
-                    }
-                }
-            }
-        };
-        
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('ReputationBadges', 'Reputation badge system loaded (inline)');
-        }
-    </script>
     <script src="js/adminDebugger.js"></script>
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
