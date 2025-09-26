@@ -939,6 +939,17 @@
             // Declare variables that are used later in the script
             let trendingRefreshInterval = null;
 
+            // Map and location tracking variables (must be declared before any functions use them)
+            let mapInstance = null;
+            let currentLocation = null;
+            let currentZoomLevel = 'national'; // Track current zoom level (default to match radio button)
+            let boundaryManager = null;
+
+            // Expose map variables globally for cross-module access
+            window.currentZoomLevel = currentZoomLevel;
+            window.currentLocation = currentLocation;
+            window.boundaryManager = boundaryManager;
+
             // Use new optimized initialization system
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('AppInit', 'Starting optimized app initialization...');
@@ -2763,8 +2774,8 @@
                 applyUserBackground(currentUser.backgroundImage);
             }
         }
-        window.toggleMyFeed = toggleMyFeed; // Make globally accessible
-        
+        // toggleMyFeed is already exported globally from navigation-handlers.js
+
         // Make function globally available
         window.showMyFeedInMain = showMyFeedInMain;
 
@@ -4785,11 +4796,7 @@
             // TODO: Implement friend request functionality
         }
 
-        // Map zoom and location functionality
-        let mapInstance = null;
-        let currentLocation = null;
-        let currentZoomLevel = 'national'; // Track current zoom level (default to match radio button)
-        let boundaryManager = null;
+        // Map zoom and location functionality variables now declared at top of DOMContentLoaded handler
 
         // Boundary management class
         class BoundaryManager {

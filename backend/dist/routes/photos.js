@@ -88,7 +88,14 @@ const upload = photoService_1.PhotoService.getMulterConfig();
  *       429:
  *         $ref: '#/components/responses/RateLimitError'
  */
-router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.array('photos', 5), async (req, res) => {
+// DEBUG middleware - logs BEFORE Multer processes
+router.post('/upload', uploadLimiter, auth_1.requireAuth, (req, res, next) => {
+    console.log('⚠️⚠️⚠️ UPLOAD ROUTE HIT - BEFORE MULTER ⚠️⚠️⚠️');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Content-Length:', req.headers['content-length']);
+    console.log('req.body before Multer:', req.body);
+    next();
+}, upload.array('photos', 5), async (req, res) => {
     try {
         const { user } = req;
         const files = req.files;

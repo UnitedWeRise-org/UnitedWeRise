@@ -11,6 +11,8 @@
  * - loadUserContent() [lines 1153-1204]
  */
 
+import { getApiBaseUrl } from '../utils/environment.js';
+
 export class ContentHandlers {
     constructor() {
         this.currentMOTDData = null;
@@ -41,7 +43,8 @@ export class ContentHandlers {
             const headers = {};
             headers['X-Dismissal-Token'] = this.dismissalToken;
 
-            const API_BASE = window.getApiBaseUrl ? window.getApiBaseUrl().replace('/api', '') : 'https://api.unitedwerise.org';
+            // Use environment-aware API base URL (imported from environment.js)
+            const API_BASE = getApiBaseUrl().replace('/api', '');
             const response = await fetch(`${API_BASE}/motd/current`, {
                 credentials: 'include', // Include cookies for authentication
                 headers: headers
