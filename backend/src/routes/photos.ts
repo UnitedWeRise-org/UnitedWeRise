@@ -91,8 +91,17 @@ router.post('/upload', uploadLimiter, requireAuth, upload.array('photos', 5), as
   try {
     const { user } = req;
     const files = req.files as Express.Multer.File[];
-    
+
+    // DEBUG: Log what Multer actually received
+    console.log('🔍 BACKEND DEBUG - Upload endpoint hit');
+    console.log('📁 req.files type:', typeof req.files);
+    console.log('📁 req.files:', req.files);
+    console.log('📁 req.files array length:', Array.isArray(req.files) ? req.files.length : 'Not array');
+    console.log('📁 req.body:', req.body);
+    console.log('📁 Content-Type header:', req.headers['content-type']);
+
     if (!files || files.length === 0) {
+      console.log('❌ BACKEND: No files received by Multer');
       return res.status(400).json({
         error: 'No files provided',
         message: 'Please select at least one photo to upload'
@@ -135,7 +144,24 @@ router.post('/upload', uploadLimiter, requireAuth, upload.array('photos', 5), as
       caption: caption || undefined
     };
 
+    // DEBUG: Log before PhotoService call
+    console.log('📸 BEFORE PhotoService.uploadMultiplePhotos:');
+    console.log('  Files array length:', files.length);
+    console.log('  Files details:', files.map(f => ({
+      originalname: f.originalname,
+      mimetype: f.mimetype,
+      size: f.size,
+      fieldname: f.fieldname,
+      buffer: f.buffer ? `Buffer(${f.buffer.length} bytes)` : 'No buffer'
+    })));
+    console.log('  Upload options:', uploadOptions);
+
     const results = await PhotoService.uploadMultiplePhotos(files, uploadOptions);
+
+    // DEBUG: Log PhotoService results
+    console.log('📸 AFTER PhotoService.uploadMultiplePhotos:');
+    console.log('  Results length:', results.length);
+    console.log('  Results:', results);
 
     res.status(201).json({
       message: `Successfully uploaded ${results.length} photo(s)`,
