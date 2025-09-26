@@ -525,7 +525,12 @@ export async function createPostFromFeed() {
     if (!textarea) return false;
 
     const content = textarea.value.trim();
-    if (!content) return false;
+
+    // Check if we have content or media
+    if (!content && !selectedPostMedia) {
+        alert('Please enter some content or attach media for your post');
+        return false;
+    }
 
     // Check if content exceeds maximum limit (5000 chars)
     if (content.length > 5000) {
@@ -533,29 +538,50 @@ export async function createPostFromFeed() {
         return false;
     }
 
-    // Get media attachment if any
-    const mediaId = window.currentMediaId || null;
-    const imageUrl = null; // Handled by mediaId
-
     try {
-        const result = await window.createPostPublic(content, { 
-            mediaId,
-            imageUrl
-        });
+        let mediaId = null;
+
+        // Upload media first if selected
+        if (selectedPostMedia) {
+            const formData = new FormData();
+            formData.append('photos', selectedPostMedia);
+            formData.append('photoType', 'POST_MEDIA');
+            formData.append('purpose', 'PERSONAL');
+
+            console.log('🖼️ Uploading media for post...');
+            const mediaResponse = await apiCall('/photos/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!mediaResponse.ok) {
+                const errorData = mediaResponse.data || {};
+                const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
+                alert(`Media upload failed: ${errorMessage}`);
+                return false;
+            }
+
+            // Get the uploaded photo ID
+            mediaId = mediaResponse.data.photos[0]?.id;
+            console.log('✅ Media uploaded successfully:', mediaId);
+        }
+
+        // Create the post using unified system
+        const result = await window.createPostPublic(content, { mediaId });
 
         if (result.success) {
             textarea.value = '';
+
             // Clear media attachment
-            if (window.currentMediaId) {
-                window.currentMediaId = null;
-                // Clear media preview if exists
-                const mediaPreview = document.getElementById('media-preview');
-                if (mediaPreview) mediaPreview.style.display = 'none';
+            if (selectedPostMedia) {
+                clearMediaAttachment();
             }
 
             // Update character counter
             const charCount = document.getElementById('feedPostCharCount');
             if (charCount) charCount.textContent = '0/5000';
+
+            console.log('✅ Post created successfully');
 
             // Show user's new post immediately at top of feed for instant gratification
             if (result.post && window.currentUser) {
