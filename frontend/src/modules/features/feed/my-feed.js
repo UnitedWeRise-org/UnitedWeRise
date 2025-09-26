@@ -288,7 +288,12 @@ export async function showMyFeed() {
  * Media attachment functions
  */
 export function attachMediaToPost() {
-    document.getElementById('postMediaUpload').click();
+    const uploadInput = document.getElementById('feedMediaUpload');
+    if (uploadInput) {
+        uploadInput.click();
+    } else {
+        console.error('Feed media upload input not found');
+    }
 }
 
 export async function handlePostMediaUpload(input) {
@@ -316,8 +321,19 @@ export async function handlePostMediaUpload(input) {
     selectedPostMedia = file;
 
     // Show preview
-    const previewArea = document.getElementById('mediaPreview');
-    const previewContent = previewArea.querySelector('.media-preview-content');
+    const previewArea = document.getElementById('feedMediaPreview');
+    if (!previewArea) {
+        console.error('Feed media preview container not found');
+        return;
+    }
+
+    // Create or get the preview content container
+    let previewContent = previewArea.querySelector('.media-preview-content');
+    if (!previewContent) {
+        previewContent = document.createElement('div');
+        previewContent.className = 'media-preview-content';
+        previewArea.appendChild(previewContent);
+    }
     
     // Create preview element
     const fileURL = URL.createObjectURL(file);
@@ -333,14 +349,24 @@ export async function handlePostMediaUpload(input) {
             </div>
         </div>
     `;
-    
+
+    // Show the preview area
     previewArea.style.display = 'block';
 }
 
 export function clearMediaAttachment() {
     selectedPostMedia = null;
-    document.getElementById('mediaPreview').style.display = 'none';
-    document.getElementById('postMediaUpload').value = '';
+
+    const previewArea = document.getElementById('feedMediaPreview');
+    if (previewArea) {
+        previewArea.style.display = 'none';
+        previewArea.innerHTML = ''; // Clear the preview content
+    }
+
+    const uploadInput = document.getElementById('feedMediaUpload');
+    if (uploadInput) {
+        uploadInput.value = '';
+    }
 }
 
 /**
