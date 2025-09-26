@@ -204,7 +204,7 @@
 
     <div class="top-bar">
         <div class="top-bar-left">
-            <input class="search desktop-search" type="search" placeholder="Search Name or Location" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false" onfocus="openSearch()" oninput="performGlobalSearch(this.value)">
+            <input class="search desktop-search" type="search" placeholder="Search Name or Location" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
         
         <div class="top-bar-center">
@@ -237,7 +237,7 @@
             </div>
             
             <!-- Mobile Search Icon -->
-            <button class="mobile-search-btn" onclick="toggleMobileSearch()" style="display: none;">
+            <button class="mobile-search-btn" style="display: none;">
                 <span class="search-icon">🔍</span>
             </button>
         </div>
@@ -586,18 +586,18 @@
     <div class="container">
         <div class="sidebar" id="sidebar">
             <div class="thumbs">
-                <div class="thumb" onclick="toggleMyFeed()" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
-                <div class="thumb" onclick="toggleTrendingPanel()" title="Trending">🔥 <span class="label">Trending</span></div>
-                <div class="thumb" onclick="togglePanel('upcoming')" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
-                <div class="thumb" onclick="togglePanel('officials')" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
-                <div class="thumb" onclick="window.map && window.map.showMap ? window.map.showMap() : showMapFromSidebar()" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
-                <div class="thumb" onclick="toggleMessages()" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
+                <div class="thumb" data-nav-toggle="feed" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
+                <div class="thumb" data-nav-toggle="trending" title="Trending">🔥 <span class="label">Trending</span></div>
+                <div class="thumb" data-nav-toggle="panel-upcoming" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
+                <div class="thumb" data-nav-toggle="panel-officials" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+                <div class="thumb" data-nav-toggle="map" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
+                <div class="thumb" data-nav-toggle="messages" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" onclick="window.donationSystem ? window.donationSystem.openDonationModal() : alert('Donation system loading...')" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
-                <div class="thumb" onclick="openCivicOrganizing()" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
+                <div class="thumb" data-nav-toggle="organizing" title="Civic Organizing" id="organizingThumb" style="display: none;">📋 <span class="label">Organize</span></div>
                 <div class="thumb" onclick="window.toggleProfile ? window.toggleProfile() : alert('Profile system loading...')" title="My Profile" id="profileThumb">👤 <span class="label">My Profile</span></div>
             </div>
             <div class="sidebar-bottom">
-                <div class="thumb logout-thumb" onclick="logout()" title="Logout" id="logoutThumb" style="display: none;">
+                <div class="thumb logout-thumb" data-nav-toggle="logout" title="Logout" id="logoutThumb" style="display: none;">
                     🚪 <span class="label">Logout</span>
                 </div>
             </div>
@@ -634,34 +634,34 @@
     <div class="search-container" id="searchContainer" style="display: none;">
         <div class="search-header">
             <h3 style="margin: 0; color: #4b5c09;">Search Results</h3>
-            <button onclick="closeSearch()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+            <button id="closeSearchBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
         </div>
         
         <!-- Enhanced Search Filters -->
         <div class="search-filters" style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
             <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="all" checked onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="all" checked>
                     All
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="users" onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="users">
                     👤 Users
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="posts" onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="posts">
                     📝 Posts
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="officials" onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="officials">
                     🏛️ Officials
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="candidates" onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="candidates">
                     🗳️ Candidates
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.9rem;">
-                    <input type="radio" name="searchType" value="topics" onchange="updateSearchResults()">
+                    <input type="radio" name="searchType" value="topics">
                     🏷️ Topics
                 </label>
             </div>
@@ -670,7 +670,7 @@
             <div id="advancedFilters" style="margin-top: 1rem; display: none;">
                 <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                     <!-- Location Filter -->
-                    <select id="locationFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <select id="locationFilter" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
                         <option value="">All Locations</option>
                         <option value="local">My District</option>
                         <option value="state">My State</option>
@@ -678,7 +678,7 @@
                     </select>
                     
                     <!-- Time Filter -->
-                    <select id="timeFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <select id="timeFilter" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
                         <option value="">All Time</option>
                         <option value="24h">Last 24 Hours</option>
                         <option value="week">This Week</option>
@@ -687,7 +687,7 @@
                     </select>
                     
                     <!-- Topic Filter -->
-                    <select id="topicFilter" onchange="updateSearchResults()" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <select id="topicFilter" style="padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px;">
                         <option value="">All Topics</option>
                         <option value="healthcare">Healthcare</option>
                         <option value="economy">Economy</option>
@@ -702,7 +702,7 @@
                 </div>
             </div>
             
-            <button onclick="toggleAdvancedFilters()" style="background: none; border: none; color: #4b5c09; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem;">
+            <button id="advancedFiltersToggle" style="background: none; border: none; color: #4b5c09; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem;">
                 <span id="advancedFiltersToggle">▼ Advanced Filters</span>
             </button>
         </div>
@@ -717,7 +717,7 @@
     <div id="panel-trending" class="info-panel hidden" data-offset="1">
         <div class="panel-header">
             <span>Trending</span>
-            <button onclick="closePanel('trending')">X</button>
+            <button data-nav-action="close-trending">X</button>
         </div>
         <div class="panel-body">
             <div id="trendingContent">
@@ -747,7 +747,7 @@
     <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
         <div class="panel-header">
             <span>Upcoming Contests</span>
-            <button onclick="closePanel('upcoming')">X</button>
+            <button data-nav-action="close-upcoming">X</button>
         </div>
         <div class="panel-body">
             <details><summary>Local</summary>
@@ -775,7 +775,7 @@
     <div id="panel-officials" class="info-panel hidden" data-offset="1">
         <div class="panel-header">
             <span>Find Representatives</span>
-            <button onclick="closePanel('officials')">X</button>
+            <button data-nav-action="close-officials">X</button>
         </div>
         <div class="panel-body">
             <div id="officialsContent">
@@ -944,174 +944,12 @@
         window.fixAuthStorageIssues = fixAuthStorageIssues;
 
         // Setup collapse button handler function
-        function setupCollapseButton() {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('UISystem', 'Setting up collapse button handler');
-            }
-            
-            // Wait for DOM elements to be available
-            setTimeout(() => {
-                const mapContainer = document.getElementById('mapContainer');
-                const toggleBtn = document.getElementById('mapToggleBtn');
-                
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('UISystem', 'mapContainer found', !!mapContainer);
-                    adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
-                }
-                
-                if (toggleBtn && mapContainer) {
-                    // Remove any existing listeners
-                    toggleBtn.replaceWith(toggleBtn.cloneNode(true));
-                    const newToggleBtn = document.getElementById('mapToggleBtn');
-                    
-                    // Add click handler
-                    newToggleBtn.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        
-                        if (typeof adminDebugLog !== 'undefined') {
-                            adminDebugLog('UISystem', 'COLLAPSE BUTTON CLICKED');
-                        }
-                        
-                        // Debug current state
-                        const isCollapsed = mapContainer.classList.contains('collapsed');
-                        console.log('🔍 Current collapsed state:', isCollapsed);
-                        console.log('🔍 mapContainer classes before:', mapContainer.className);
-                        console.log('🔍 mapContainer computed width before:', getComputedStyle(mapContainer).width);
-                        
-                        // Hide bubbles before transition
-                        if (window.map && window.map.hideBubbles) {
-                            window.map.hideBubbles();
-                        }
-                        
-                        // Toggle the class
-                        mapContainer.classList.toggle('collapsed');
-                        const newIsCollapsed = mapContainer.classList.contains('collapsed');
-                        
-                        // Debug after toggle
-                        console.log('🔍 mapContainer classes after:', mapContainer.className);
-                        console.log('🔍 mapContainer computed width after:', getComputedStyle(mapContainer).width);
-                        
-                        // Update button text
-                        newToggleBtn.textContent = isCollapsed ? 'Collapse' : 'Expand';
-                        
-                        // Visual feedback
-                        newToggleBtn.style.transform = 'scale(0.95)';
-                        setTimeout(() => {
-                            newToggleBtn.style.transform = '';
-                        }, 150);
-                        
-                        console.log(`✅ Map should now be ${isCollapsed ? 'expanded' : 'collapsed'}`);
-                        
-                        // Force a style recalculation
-                        mapContainer.offsetHeight; // Trigger reflow
-                        
-                        // Adjust map for new container size with appropriate zoom
-                        if (window.map && window.map.adjustForContainerState) {
-                            window.map.adjustForContainerState(newIsCollapsed);
-                        }
-                        
-                        // Show bubbles after transition completes
-                        if (window.map && window.map.showBubbles) {
-                            window.map.showBubbles();
-                        }
-                    }, false);
-                    
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('UISystem', 'Collapse button handler attached successfully');
-                    }
-                } else {
-                    if (typeof adminDebugError !== 'undefined') {
-                        adminDebugError('UISystem', 'Could not find button or container elements');
-                    }
-                }
-            }, 2000); // Wait 2 seconds for map to fully load
-        }
+        // setupCollapseButton function moved to NavigationHandlers module
 
-        // Setup close button handler function
-        function setupCloseButton() {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('UISystem', 'Setting up close button handler');
-            }
-            
-            setTimeout(() => {
-                const closeBtn = document.querySelector('.map-action-btn.close-btn');
-                console.log('🔍 closeBtn found:', !!closeBtn);
-                
-                if (closeBtn) {
-                    // Remove existing onclick and replace with proper handler
-                    closeBtn.removeAttribute('onclick');
-                    closeBtn.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        
-                        console.log('🔥 CLOSE BUTTON CLICKED!');
-                        
-                        if (window.map && window.map.closeMap) {
-                            console.log('✅ Calling window.map.closeMap()');
-                            window.map.closeMap();
-                        } else {
-                            console.log('⚠️ Fallback: hiding map container directly');
-                            const mapContainer = document.getElementById('mapContainer');
-                            if (mapContainer) {
-                                mapContainer.style.display = 'none';
-                                localStorage.setItem('mapClosed', 'true');
-                                
-                                // Show sidebar button
-                                const mapThumb = document.getElementById('mapThumb');
-                                if (mapThumb) {
-                                    mapThumb.style.display = 'block';
-                                }
-                            }
-                        }
-                    });
-                    
-                    console.log('✅ Close button handler attached successfully');
-                } else {
-                    console.error('❌ Could not find close button element');
-                }
-            }, 2000);
-        }
+        // setupCloseButton function moved to NavigationHandlers module
 
         // Setup sidebar map button handler function
-        function setupSidebarMapButton() {
-            console.log('🔧 Setting up sidebar map button handler...');
-            
-            const mapThumb = document.getElementById('mapThumb');
-            console.log('🔍 mapThumb found:', !!mapThumb);
-            
-            if (mapThumb) {
-                // Remove existing onclick and replace with proper handler
-                mapThumb.removeAttribute('onclick');
-                mapThumb.addEventListener('click', function(event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    
-                    console.log('🔥 SIDEBAR MAP BUTTON CLICKED!');
-                    
-                    if (window.map && window.map.showMap) {
-                        console.log('✅ Calling window.map.showMap()');
-                        window.map.showMap();
-                    } else {
-                        console.log('⚠️ Fallback: showing map container directly');
-                        const mapContainer = document.getElementById('mapContainer');
-                        if (mapContainer) {
-                            mapContainer.style.display = 'block';
-                            localStorage.removeItem('mapClosed');
-                            
-                            // Hide sidebar button
-                            mapThumb.style.display = 'none';
-                            
-                            console.log('✅ Map restored via fallback method');
-                        }
-                    }
-                });
-                
-                console.log('✅ Sidebar map button handler attached successfully');
-            } else {
-                console.error('❌ Could not find sidebar map button element');
-            }
-        }
+        // setupSidebarMapButton function moved to NavigationHandlers module
 
         // Map layer toggle function
         function toggleMapLayer(layerName) {
@@ -1629,34 +1467,7 @@
             content.innerHTML = html;
         }
 
-        function resetPanelsToDefault() {
-            document.getElementById('officialsContent').innerHTML = '<p>Please log in and set your address to see your elected officials.</p>';
-        }
-
-        // Existing panel functions
-        function togglePanel(name) {
-            const panel = document.getElementById(`panel-${name}`);
-            const isHidden = panel.classList.contains('hidden');
-            
-            if (isHidden) {
-                // Panel is hidden, show it (close others first)
-                closeAllPanels();
-                panel.classList.remove('hidden');
-            } else {
-                // Panel is visible, hide it and show default view
-                panel.classList.add('hidden');
-                showDefaultView();
-            }
-        }
-
-        function closePanel(name) {
-            document.getElementById(`panel-${name}`).classList.add('hidden');
-        }
-
-        function closeAllPanels() {
-            document.querySelectorAll('.info-panel').forEach(p => p.classList.add('hidden'));
-            document.getElementById('detail-panel').classList.add('hidden');
-        }
+        // Panel management functions moved to NavigationHandlers module
 
         function openDetail(title, offset) {
             const panel = document.getElementById('detail-panel');
@@ -2648,16 +2459,7 @@
             updateTrendingUpdatesPanel(allTrendingPosts);
         }
 
-        function toggleTrendingPanel() {
-            const panel = document.getElementById('trendingUpdates');
-            if (panel.classList.contains('show')) {
-                panel.classList.remove('show');
-            } else {
-                loadTrendingUpdates(); // Load fresh data
-                panel.classList.add('show');
-            }
-        }
-        window.toggleTrendingPanel = toggleTrendingPanel; // Make globally accessible
+        // toggleTrendingPanel function moved to NavigationHandlers module
         
         // NEW: Topic Mode Functions for My Feed Integration
         async function enterTopicMode(topicId) {
@@ -3306,17 +3108,7 @@
         };
 
         // Messages Functions
-        function toggleMessages() {
-            const container = document.getElementById('messagesContainer');
-            if (container.style.display === 'none' || !container.style.display) {
-                container.style.display = 'block';
-                loadConversations();
-            } else {
-                container.style.display = 'none';
-                // Show default view when messages are closed
-                showDefaultView();
-            }
-        }
+        // toggleMessages function moved to NavigationHandlers module
 
         async function loadConversations() {
             if (!currentUser) return;
@@ -3557,57 +3349,10 @@
 
 
         // Function to show default view when all windows are closed
-        function showDefaultView() {
-            // Hide all side panels
-            document.getElementById('profilePanel').style.display = 'none';
-            document.getElementById('messagesContainer').style.display = 'none';
-            closeAllPanels();
-            
-            // Show My Feed in main content area as default, or map if user is not logged in
-            if (currentUser) {
-                showMyFeedInMain();
-            } else {
-                // For logged-out users, show the map or welcome screen
-                if (window.map && typeof window.map.showMap === 'function') {
-                    window.map.showMap();
-                } else {
-                    // Fallback to welcome screen
-                    document.getElementById('mainContent').innerHTML = `
-                        <div style="text-align: center; padding: 3rem;">
-                            <h2>Welcome to United We Rise</h2>
-                            <p>Connect with your community and engage in meaningful political discourse.</p>
-                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                            <button onclick="openAuthModal('register')" class="btn" style="margin-left: 1rem;">Sign Up</button>
-                        </div>
-                    `;
-                }
-            }
-        }
+        // showDefaultView function moved to NavigationHandlers module
         window.toggleProfile = toggleProfile; // Make globally accessible
 
-        // Toggle function for My Feed - shows/hides feed window in main content area
-        function toggleMyFeed() {
-            if (!currentUser) {
-                document.getElementById('mainContent').innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <h2>Please log in to view your feed</h2>
-                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                    </div>
-                `;
-                return;
-            }
-
-            const mainContent = document.getElementById('mainContent');
-            const isFeedCurrentlyShown = mainContent.querySelector('.my-feed') !== null;
-            
-            if (isFeedCurrentlyShown) {
-                // Feed is currently shown, hide it and show default view
-                showDefaultView();
-            } else {
-                // Feed is not shown, show it
-                showMyFeedInMain();
-            }
-        }
+        // toggleMyFeed function moved to NavigationHandlers module
 
         // Function to show My Feed in main content area (like Profile)
         async function showMyFeedInMain() {
@@ -5305,182 +5050,14 @@
             topics: []
         };
 
-        // Enhanced search functionality
-        function openSearch() {
-            document.getElementById('searchContainer').style.display = 'flex';
-            closeAllPanels(); // Close other panels
-            document.getElementById('searchInput').focus();
-            
-            // Initialize search if there's already a query
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput.value.length >= 2) {
-                performGlobalSearch(searchInput.value);
-            }
-        }
+        // Search functionality moved to SearchHandlers ES6 module
 
-        function closeSearch() {
-            document.getElementById('searchContainer').style.display = 'none';
-            document.getElementById('searchInput').value = '';
-            currentSearchQuery = '';
-            currentSearchResults = { users: [], posts: [], officials: [], topics: [] };
-            
-            // Reset filters
-            document.querySelector('input[name="searchType"][value="all"]').checked = true;
-            document.getElementById('locationFilter').value = '';
-            document.getElementById('timeFilter').value = '';
-            document.getElementById('topicFilter').value = '';
-            document.getElementById('advancedFilters').style.display = 'none';
-            document.getElementById('advancedFiltersToggle').textContent = '▼ Advanced Filters';
-            
-            document.getElementById('globalSearchResults').innerHTML = `
-                <div style="text-align: center; color: #666; padding: 2rem;">
-                    Start typing to search across users, posts, officials, and topics
-                </div>
-            `;
-        }
 
-        // Toggle advanced filters
-        function toggleAdvancedFilters() {
-            const filtersDiv = document.getElementById('advancedFilters');
-            const toggleSpan = document.getElementById('advancedFiltersToggle');
-            
-            if (filtersDiv.style.display === 'none') {
-                filtersDiv.style.display = 'block';
-                toggleSpan.textContent = '▲ Advanced Filters';
-            } else {
-                filtersDiv.style.display = 'none';
-                toggleSpan.textContent = '▼ Advanced Filters';
-            }
-        }
 
-        let globalSearchTimeout;
-        async function performGlobalSearch(query) {
-            clearTimeout(globalSearchTimeout);
-            currentSearchQuery = query;
-            
-            if (!query || query.length < 2) {
-                document.getElementById('globalSearchResults').innerHTML = `
-                    <div style="text-align: center; color: #666; padding: 2rem;">
-                        Type at least 2 characters to search
-                    </div>
-                `;
-                return;
-            }
 
-            // Show loading state
-            document.getElementById('globalSearchResults').innerHTML = `
-                <div style="text-align: center; color: #666; padding: 2rem;">
-                    <div style="margin-bottom: 1rem;">🔍 Searching...</div>
-                    <div style="font-size: 0.9rem;">Looking across users, posts, officials, and topics</div>
-                </div>
-            `;
 
-            globalSearchTimeout = setTimeout(async () => {
-                await executeEnhancedSearch(query);
-            }, 300);
-        }
 
-        // Update search results when filters change
-        async function updateSearchResults() {
-            if (currentSearchQuery && currentSearchQuery.length >= 2) {
-                await executeEnhancedSearch(currentSearchQuery);
-            }
-        }
-
-        // Enhanced search execution with multiple content types
-        async function executeEnhancedSearch(query) {
-            if (!currentUser) {
-                document.getElementById('globalSearchResults').innerHTML = `
-                    <div style="text-align: center; color: #666; padding: 2rem;">
-                        Please log in to search
-                    </div>
-                `;
-                return;
-            }
-
-            try {
-                // Get current filters
-                const searchType = document.querySelector('input[name="searchType"]:checked').value;
-                const locationFilter = document.getElementById('locationFilter').value;
-                const timeFilter = document.getElementById('timeFilter').value;
-                const topicFilter = document.getElementById('topicFilter').value;
-                
-                // Build search parameters
-                const searchParams = new URLSearchParams({
-                    q: query,
-                    limit: '20'
-                });
-                
-                if (locationFilter) searchParams.append('location', locationFilter);
-                if (timeFilter) searchParams.append('time', timeFilter);
-                if (topicFilter) searchParams.append('topic', topicFilter);
-
-                // Execute searches based on type
-                let searchPromises = [];
-                
-                if (searchType === 'all') {
-                    // 🎯 OPTIMIZED: Use unified search endpoint (1 call instead of 4)
-                    searchPromises = [
-                        window.apiCall(`/search/unified?${searchParams.toString()}&types=users,posts,officials,topics`).catch(() => ({ok: false, data: {users: [], posts: [], officials: [], topics: []}}))
-                    ];
-                } else if (searchType === 'candidates') {
-                    // For candidates filter, search officials but filter client-side
-                    const endpoint = `/search/unified?${searchParams.toString()}&types=officials`;
-                    searchPromises = [window.apiCall(endpoint)];
-                } else {
-                    // Search specific type - use unified endpoint with single type
-                    const endpoint = `/search/unified?${searchParams.toString()}&types=${searchType}`;
-                    searchPromises = [window.apiCall(endpoint)];
-                }
-
-                const results = await Promise.all(searchPromises);
-                
-                // 🎯 OPTIMIZED: Process unified search results (single response contains all data)
-                const result = results[0];
-                if (result.ok && result.data && result.data.data) {
-                    const searchData = result.data.data;
-                    currentSearchResults = {
-                        users: searchData.users || [],
-                        posts: searchData.posts || [],
-                        officials: searchData.officials || [],
-                        topics: searchData.topics || []
-                    };
-                    
-                    if (searchType === 'all') {
-                        displayAllSearchResults();
-                    } else {
-                        displayFilteredSearchResults(searchType);
-                    }
-                } else {
-                    // Fallback to empty results
-                    currentSearchResults = {
-                        users: [],
-                        posts: [],
-                        officials: [],
-                        topics: []
-                    };
-                    
-                    if (searchType === 'all') {
-                        displayAllSearchResults();
-                    } else {
-                        displayFilteredSearchResults(searchType);
-                    }
-                }
-
-            } catch (error) {
-                console.error('Enhanced search error:', error);
-                document.getElementById('globalSearchResults').innerHTML = `
-                    <div style="text-align: center; color: #d32f2f; padding: 2rem;">
-                        Search error occurred. Please try again.
-                    </div>
-                `;
-            }
-        }
-
-        /**
-         * ENHANCED SEARCH RESULT DISPLAY FUNCTIONS
-         * Support for users, posts, officials, topics with rich formatting
-         */
+        // Search display functions moved to SearchHandlers ES6 module
 
         // Display all search results with category sections
         function displayAllSearchResults() {
@@ -8132,48 +7709,7 @@
          */
 
         // Core organizing functions
-        function openCivicOrganizing() {
-            if (!currentUser) {
-                showToast('Please log in to access organizing tools');
-                return;
-            }
-            
-            // Hide other main view systems when opening
-            const electionsView = document.querySelector('.elections-main-view');
-            if (electionsView) {
-                electionsView.style.display = 'none';
-            }
-            
-            const officialsView = document.querySelector('.officials-main-view');
-            if (officialsView) {
-                officialsView.style.display = 'none';
-            }
-            
-            const candidatesView = document.querySelector('.candidates-main-view');
-            if (candidatesView) {
-                candidatesView.style.display = 'none';
-            }
-            
-            // Hide other detail panels
-            document.querySelectorAll('.detail-panel').forEach(panel => {
-                panel.classList.add('hidden');
-            });
-            
-            // Hide existing info panels
-            document.querySelectorAll('.info-panel').forEach(panel => {
-                panel.classList.add('hidden');
-            });
-            
-            const container = document.getElementById('civicOrganizingContainer');
-            container.style.display = 'flex';
-            
-            // Update sidebar state awareness
-            updateCivicOrganizingForSidebarState();
-            
-            closeAllPanels(); // Close other panels
-            showDefaultOrganizingView();
-        }
-        window.openCivicOrganizing = openCivicOrganizing; // Make globally accessible
+        // openCivicOrganizing function moved to NavigationHandlers module
 
         function closeCivicOrganizing() {
             document.getElementById('civicOrganizingContainer').style.display = 'none';

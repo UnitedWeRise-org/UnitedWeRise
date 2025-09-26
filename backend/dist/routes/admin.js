@@ -16,6 +16,7 @@ const metricsService_1 = require("../services/metricsService");
 const performanceMonitor_1 = require("../middleware/performanceMonitor");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const crypto_1 = __importDefault(require("crypto"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Admin-only middleware
@@ -2489,6 +2490,62 @@ router.get('/volunteers', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTO
     catch (error) {
         console.error('Get volunteer inquiries error:', error);
         res.status(500).json({ error: 'Failed to get volunteer inquiries' });
+    }
+});
+// Admin action: Resend email verification for any user
+router.post('/users/:userId/resend-verification', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const adminId = req.user.id;
+        // Get user details
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                emailVerified: true,
+                emailVerifyToken: true,
+                emailVerifyExpiry: true,
+                username: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        if (user.emailVerified) {
+            return res.status(400).json({ error: 'Email already verified' });
+        }
+        // Generate new verification token
+        const verifyToken = crypto_1.default.randomBytes(32).toString('hex');
+        const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        // Update user with verification token
+        await prisma_1.prisma.user.update({
+            where: { id: userId },
+            data: {
+                emailVerifyToken: verifyToken,
+                emailVerifyExpiry: verifyExpiry
+            }
+        });
+        // Send verification email
+        const emailTemplate = emailService_1.emailService.generateEmailVerificationTemplate(user.email, verifyToken, user.firstName || undefined);
+        const emailSent = await emailService_1.emailService.sendEmail(emailTemplate);
+        if (!emailSent) {
+            return res.status(500).json({ error: 'Failed to send verification email' });
+        }
+        // Log admin action
+        console.log(`Admin ${adminId} resent verification email for user ${userId} (@${user.username})`);
+        res.json({
+            success: true,
+            message: `Verification email resent to ${user.email}`,
+            expiresIn: '24 hours',
+            sentBy: adminId,
+            sentAt: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('Admin resend verification error:', error);
+        res.status(500).json({ error: 'Failed to resend verification email' });
     }
 });
 exports.default = router;

@@ -1,0 +1,541 @@
+/**
+ * Navigation Handler ES6 Module
+ * Manages all navigation functionality including panel toggles, sidebar controls, and view management
+ */
+
+import { getEnvironment } from '../utils/environment.js';
+
+class NavigationHandlers {
+    constructor() {
+        this.currentPanel = null;
+        this.mapContainer = null;
+        this.setupEventListeners();
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('NavigationHandlers', 'Navigation system initialized');
+        }
+    }
+
+    setupEventListeners() {
+        // Setup event delegation for navigation controls
+        document.addEventListener('click', this.handleNavigationClick.bind(this));
+
+        // Setup specific handlers that need initialization timing
+        this.setupCollapseButton();
+        this.setupCloseButton();
+        this.setupSidebarMapButton();
+        this.setupSidebarToggle();
+    }
+
+    handleNavigationClick(event) {
+        const target = event.target.closest('[data-nav-toggle], [data-nav-action]');
+        if (!target) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const action = target.dataset.navToggle || target.dataset.navAction;
+
+        switch (action) {
+            case 'feed':
+                this.toggleMyFeed();
+                break;
+            case 'trending':
+                this.toggleTrendingPanel();
+                break;
+            case 'messages':
+                this.toggleMessages();
+                break;
+            case 'organizing':
+                this.openCivicOrganizing();
+                break;
+            case 'map':
+                this.showMapFromSidebar();
+                break;
+            case 'logout':
+                this.logout();
+                break;
+            case 'close-trending':
+                this.closePanel('trending');
+                break;
+            case 'close-upcoming':
+                this.closePanel('upcoming');
+                break;
+            case 'close-officials':
+                this.closePanel('officials');
+                break;
+            default:
+                if (action.startsWith('panel-')) {
+                    this.togglePanel(action.replace('panel-', ''));
+                }
+                break;
+        }
+    }
+
+    // Panel Management Methods
+    togglePanel(name) {
+        const panel = document.getElementById(`panel-${name}`);
+        if (!panel) return;
+
+        const isHidden = panel.classList.contains('hidden');
+
+        if (isHidden) {
+            // Panel is hidden, show it (close others first)
+            this.closeAllPanels();
+            panel.classList.remove('hidden');
+            this.currentPanel = name;
+        } else {
+            // Panel is visible, hide it and show default view
+            panel.classList.add('hidden');
+            this.currentPanel = null;
+            this.showDefaultView();
+        }
+    }
+
+    closePanel(name) {
+        const panel = document.getElementById(`panel-${name}`);
+        if (panel) {
+            panel.classList.add('hidden');
+            if (this.currentPanel === name) {
+                this.currentPanel = null;
+            }
+        }
+    }
+
+    closeAllPanels() {
+        document.querySelectorAll('.info-panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById('detail-panel')?.classList.add('hidden');
+        this.currentPanel = null;
+    }
+
+    resetPanelsToDefault() {
+        const officialsContent = document.getElementById('officialsContent');
+        if (officialsContent) {
+            officialsContent.innerHTML = '<p>Please log in and set your address to see your elected officials.</p>';
+        }
+    }
+
+    // Core Navigation Functions
+    toggleMyFeed() {
+        if (!window.currentUser) {
+            document.getElementById('mainContent').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <h2>Please log in to view your feed</h2>
+                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                </div>
+            `;
+            return;
+        }
+
+        const mainContent = document.getElementById('mainContent');
+        const isFeedCurrentlyShown = mainContent.querySelector('.my-feed') !== null;
+
+        if (isFeedCurrentlyShown) {
+            // Feed is currently shown, hide it and show default view
+            this.showDefaultView();
+        } else {
+            // Feed is not shown, show it
+            this.showMyFeedInMain();
+        }
+    }
+
+    async showMyFeedInMain() {
+        console.log('🎯 Showing My Feed in main content area');
+
+        // Hide other main view systems
+        this.hideOtherMainViews();
+
+        const mainContent = document.getElementById('mainContent');
+        mainContent.innerHTML = `
+            <div class="my-feed">
+                <div class="my-feed-header">
+                    <h2>My Feed</h2>
+                    <div class="feed-controls">
+                        <!-- Feed controls will be added here -->
+                    </div>
+                </div>
+                <div class="feed-content" id="myFeedContainer">
+                    <div style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner">Loading your feed...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Load the actual feed content
+        if (typeof window.showMyFeed === 'function') {
+            await window.showMyFeed();
+        }
+    }
+
+    hideOtherMainViews() {
+        // Hide Civic Organizing container
+        const civicOrganizing = document.querySelector('.civic-organizing-container');
+        if (civicOrganizing) {
+            civicOrganizing.style.display = 'none';
+        }
+
+        // Hide other main view systems
+        const viewSelectors = [
+            '.elections-main-view',
+            '.officials-main-view',
+            '.candidates-main-view'
+        ];
+
+        viewSelectors.forEach(selector => {
+            const view = document.querySelector(selector);
+            if (view) {
+                view.style.display = 'none';
+            }
+        });
+    }
+
+    toggleTrendingPanel() {
+        const panel = document.getElementById('trendingUpdates');
+        if (!panel) return;
+
+        if (panel.classList.contains('show')) {
+            panel.classList.remove('show');
+        } else {
+            if (typeof window.loadTrendingUpdates === 'function') {
+                window.loadTrendingUpdates(); // Load fresh data
+            }
+            panel.classList.add('show');
+        }
+    }
+
+    toggleMessages() {
+        const container = document.getElementById('messagesContainer');
+        if (!container) return;
+
+        if (container.style.display === 'none' || !container.style.display) {
+            container.style.display = 'block';
+            if (typeof window.loadConversations === 'function') {
+                window.loadConversations();
+            }
+        } else {
+            container.style.display = 'none';
+            // Show default view when messages are closed
+            this.showDefaultView();
+        }
+    }
+
+    openCivicOrganizing() {
+        if (!window.currentUser) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Please log in to access organizing tools');
+            }
+            return;
+        }
+
+        // Hide other main view systems when opening
+        this.hideOtherMainViews();
+
+        // Hide other panels
+        document.querySelectorAll('.detail-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.info-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+
+        const container = document.getElementById('civicOrganizingContainer');
+        if (container) {
+            container.style.display = 'flex';
+        }
+
+        // Update sidebar state awareness
+        if (typeof window.updateCivicOrganizingForSidebarState === 'function') {
+            window.updateCivicOrganizingForSidebarState();
+        }
+
+        this.closeAllPanels(); // Close other panels
+
+        if (typeof window.showDefaultOrganizingView === 'function') {
+            window.showDefaultOrganizingView();
+        }
+    }
+
+    showDefaultView() {
+        // Hide all side panels
+        const profilePanel = document.getElementById('profilePanel');
+        if (profilePanel) {
+            profilePanel.style.display = 'none';
+        }
+
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.style.display = 'none';
+        }
+
+        this.closeAllPanels();
+
+        // Show My Feed in main content area as default, or map if user is not logged in
+        if (window.currentUser) {
+            this.showMyFeedInMain();
+        } else {
+            // For logged-out users, show the map or welcome screen
+            if (window.map && typeof window.map.showMap === 'function') {
+                window.map.showMap();
+            } else {
+                // Fallback to welcome screen
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <h2>Welcome to United We Rise</h2>
+                        <p>Connect with your community and engage in meaningful political discourse.</p>
+                        <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                        <button onclick="openAuthModal('register')" class="btn" style="margin-left: 1rem;">Sign Up</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    showMapFromSidebar() {
+        if (window.map && window.map.showMap) {
+            console.log('✅ Calling window.map.showMap()');
+            window.map.showMap();
+        } else {
+            console.log('⚠️ Fallback: showing map container directly');
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.style.display = 'block';
+                localStorage.removeItem('mapClosed');
+
+                // Hide sidebar button
+                const mapThumb = document.getElementById('mapThumb');
+                if (mapThumb) {
+                    mapThumb.style.display = 'none';
+                }
+            }
+        }
+    }
+
+    logout() {
+        // Use the existing logout function from the auth system
+        if (typeof window.logout === 'function') {
+            window.logout();
+        } else if (typeof window.Session?.logout === 'function') {
+            window.Session.logout();
+        } else {
+            console.error('❌ No logout function available');
+            if (typeof window.showToast === 'function') {
+                window.showToast('Logout failed - please refresh the page');
+            }
+        }
+    }
+
+    // Sidebar Setup Functions
+    setupCollapseButton() {
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('UISystem', 'Setting up collapse button handler');
+        }
+
+        // Wait for DOM elements to be available
+        setTimeout(() => {
+            this.mapContainer = document.getElementById('mapContainer');
+            const toggleBtn = document.getElementById('mapToggleBtn');
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('UISystem', 'mapContainer found', !!this.mapContainer);
+                adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
+            }
+
+            if (toggleBtn && this.mapContainer) {
+                // Remove any existing listeners
+                toggleBtn.replaceWith(toggleBtn.cloneNode(true));
+                const newToggleBtn = document.getElementById('mapToggleBtn');
+
+                // Add click handler
+                newToggleBtn.addEventListener('click', this.handleCollapseClick.bind(this), false);
+
+                if (typeof adminDebugLog !== 'undefined') {
+                    adminDebugLog('UISystem', 'Collapse button handler attached successfully');
+                }
+            } else {
+                if (typeof adminDebugError !== 'undefined') {
+                    adminDebugError('UISystem', 'Could not find button or container elements');
+                }
+            }
+        }, 2000); // Wait 2 seconds for map to fully load
+    }
+
+    handleCollapseClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('UISystem', 'COLLAPSE BUTTON CLICKED');
+        }
+
+        // Debug current state
+        const isCollapsed = this.mapContainer.classList.contains('collapsed');
+        console.log('🔍 Current collapsed state:', isCollapsed);
+        console.log('🔍 mapContainer classes before:', this.mapContainer.className);
+        console.log('🔍 mapContainer computed width before:', getComputedStyle(this.mapContainer).width);
+
+        // Hide bubbles before transition
+        if (window.map && window.map.hideBubbles) {
+            window.map.hideBubbles();
+        }
+
+        // Toggle the class
+        this.mapContainer.classList.toggle('collapsed');
+        const newIsCollapsed = this.mapContainer.classList.contains('collapsed');
+
+        // Debug after toggle
+        console.log('🔍 mapContainer classes after:', this.mapContainer.className);
+        console.log('🔍 mapContainer computed width after:', getComputedStyle(this.mapContainer).width);
+
+        // Update button text
+        const toggleBtn = document.getElementById('mapToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.textContent = isCollapsed ? 'Collapse' : 'Expand';
+
+            // Visual feedback
+            toggleBtn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                toggleBtn.style.transform = '';
+            }, 150);
+        }
+
+        console.log(`✅ Map should now be ${isCollapsed ? 'expanded' : 'collapsed'}`);
+
+        // Force a style recalculation
+        this.mapContainer.offsetHeight; // Trigger reflow
+
+        // Adjust map for new container size with appropriate zoom
+        if (window.map && window.map.adjustForContainerState) {
+            window.map.adjustForContainerState(newIsCollapsed);
+        }
+
+        // Show bubbles after transition completes
+        if (window.map && window.map.showBubbles) {
+            window.map.showBubbles();
+        }
+    }
+
+    setupCloseButton() {
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('UISystem', 'Setting up close button handler');
+        }
+
+        setTimeout(() => {
+            const closeBtn = document.querySelector('.map-action-btn.close-btn');
+            console.log('🔍 closeBtn found:', !!closeBtn);
+
+            if (closeBtn) {
+                // Remove existing onclick and replace with proper handler
+                closeBtn.removeAttribute('onclick');
+                closeBtn.addEventListener('click', this.handleCloseClick.bind(this));
+
+                console.log('✅ Close button handler attached successfully');
+            } else {
+                console.error('❌ Could not find close button element');
+            }
+        }, 2000);
+    }
+
+    handleCloseClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        console.log('🔥 CLOSE BUTTON CLICKED!');
+
+        if (window.map && window.map.closeMap) {
+            console.log('✅ Calling window.map.closeMap()');
+            window.map.closeMap();
+        } else {
+            console.log('⚠️ Fallback: hiding map container directly');
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.style.display = 'none';
+                localStorage.setItem('mapClosed', 'true');
+
+                // Show sidebar button
+                const mapThumb = document.getElementById('mapThumb');
+                if (mapThumb) {
+                    mapThumb.style.display = 'block';
+                }
+            }
+        }
+    }
+
+    setupSidebarMapButton() {
+        console.log('🔧 Setting up sidebar map button handler...');
+
+        const mapThumb = document.getElementById('mapThumb');
+        console.log('🔍 mapThumb found:', !!mapThumb);
+
+        if (mapThumb) {
+            // Remove existing onclick and replace with proper handler
+            mapThumb.removeAttribute('onclick');
+            mapThumb.addEventListener('click', this.handleSidebarMapClick.bind(this));
+
+            console.log('✅ Sidebar map button handler attached successfully');
+        } else {
+            console.error('❌ Could not find sidebar map button element');
+        }
+    }
+
+    handleSidebarMapClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        console.log('🔥 SIDEBAR MAP BUTTON CLICKED!');
+        this.showMapFromSidebar();
+    }
+
+    setupSidebarToggle() {
+        const toggleSidebar = document.getElementById('toggleSidebar');
+        if (toggleSidebar) {
+            // Don't replace existing handler, it's already properly set up
+            // Just ensure arrow state is correct on page load
+            this.initializeSidebarArrowState();
+        }
+    }
+
+    initializeSidebarArrowState() {
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('toggleSidebar');
+        const arrow = document.querySelector('.arrow-icon');
+
+        if (sidebar && toggleButton && arrow) {
+            if (sidebar.classList.contains('expanded')) {
+                arrow.textContent = '◀';
+                toggleButton.title = 'Collapse Sidebar';
+            } else {
+                arrow.textContent = '▶';
+                toggleButton.title = 'Expand Sidebar';
+            }
+            console.log('Initial sidebar state set');
+        }
+    }
+}
+
+// Initialize the navigation system
+const navigationHandlers = new NavigationHandlers();
+
+// Export for module use
+export default NavigationHandlers;
+
+// Legacy global compatibility
+window.NavigationHandlers = NavigationHandlers;
+
+// Export key functions for global access during transition
+window.toggleMyFeed = () => navigationHandlers.toggleMyFeed();
+window.toggleTrendingPanel = () => navigationHandlers.toggleTrendingPanel();
+window.togglePanel = (name) => navigationHandlers.togglePanel(name);
+window.closePanel = (name) => navigationHandlers.closePanel(name);
+window.closeAllPanels = () => navigationHandlers.closeAllPanels();
+window.toggleMessages = () => navigationHandlers.toggleMessages();
+window.openCivicOrganizing = () => navigationHandlers.openCivicOrganizing();
+window.showDefaultView = () => navigationHandlers.showDefaultView();
+window.resetPanelsToDefault = () => navigationHandlers.resetPanelsToDefault();
+window.showMapFromSidebar = () => navigationHandlers.showMapFromSidebar();
+window.setupCollapseButton = () => navigationHandlers.setupCollapseButton();
+window.setupCloseButton = () => navigationHandlers.setupCloseButton();
+window.setupSidebarMapButton = () => navigationHandlers.setupSidebarMapButton();
+
+// Note: logout is handled by the existing auth system, so we don't override it

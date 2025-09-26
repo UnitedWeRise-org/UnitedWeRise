@@ -699,6 +699,12 @@ class UsersController {
                                     🔑 Reset Password
                                 </button>
 
+                                ${!user.emailVerified ? `
+                                    <button onclick="window.usersController.resendEmailVerification('${user.id}', '${user.username}')" class="nav-button" style="background: #17a2b8; white-space: nowrap;">
+                                        📧 Resend Verification
+                                    </button>
+                                ` : ''}
+
                                 <button onclick="window.usersController.deleteUser('${user.id}', '${user.username}', {posts: ${user.stats?.posts || 0}, comments: ${user.stats?.comments || 0}, followers: ${user.stats?.followers || 0}})" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
                                     🗑️ Delete Account
                                 </button>
@@ -757,6 +763,48 @@ class UsersController {
     async resetUserPassword(userId, username) {
         // TODO: Implement password reset functionality
         alert(`Reset password functionality for ${username} (${userId}) needs to be implemented`);
+    }
+
+    /**
+     * Resend email verification for user
+     */
+    async resendEmailVerification(userId, username) {
+        try {
+            // Show confirmation dialog
+            if (!confirm(`🔄 RESEND EMAIL VERIFICATION\n\nUser: @${username}\nID: ${userId}\n\nThis will send a new verification email to the user's registered email address.\n\nContinue?`)) {
+                return;
+            }
+
+            // Request TOTP confirmation
+            const { totpToken } = await requestTOTPConfirmation(
+                `Resend email verification for @${username}`
+            );
+
+            // Make API call to resend verification
+            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/users/${userId}/resend-verification`, {
+                method: 'POST',
+                body: JSON.stringify({ totpToken })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(`✅ Verification email resent successfully!\n\n• Sent to: ${data.message.split(' to ')[1]}\n• Expires in: ${data.expiresIn}\n• Sent at: ${new Date(data.sentAt).toLocaleString()}`);
+
+                await adminDebugLog('UsersController', 'Email verification resent', {
+                    userId,
+                    username,
+                    sentAt: data.sentAt
+                });
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to resend verification email');
+            }
+
+        } catch (error) {
+            console.error('Error resending email verification:', error);
+            alert(`❌ Failed to resend verification email: ${error.message}`);
+            await adminDebugError('UsersController', 'Resend verification failed', error);
+        }
     }
 
     /**

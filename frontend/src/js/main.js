@@ -23,6 +23,12 @@ import './websocket-client.js';
 // Phase 4a: Authentication handlers (depends on API integration)
 import '../handlers/auth-handlers.js';
 
+// Phase 4b: Navigation handlers (depends on authentication)
+import '../handlers/navigation-handlers.js';
+
+// Phase 4c: Search handlers (depends on navigation and API integration)
+import '../handlers/search-handlers.js';
+
 // Phase 5: Component layer
 import '../components/Profile.js';
 
@@ -41,6 +47,12 @@ import './app-initialization.js';
 
 // Phase 8: Service initialization (after DOM and dependencies are ready)
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize search handlers
+    if (window.SearchHandlers) {
+        window.searchHandlers = new window.SearchHandlers();
+        console.log('🔍 Search handlers initialized');
+    }
+
     // Initialize payment systems
     initializeDonationSystem();
     console.log('💳 Payment systems initialized');
