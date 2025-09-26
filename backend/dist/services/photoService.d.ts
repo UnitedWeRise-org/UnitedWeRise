@@ -76,7 +76,7 @@ export declare class PhotoService {
     private static validateUserPermissions;
     private static shouldAutoApprove;
     /**
-     * Basic content moderation checks (can be enhanced with AI services)
+     * Azure OpenAI Vision-powered content moderation
      */
     private static performContentModeration;
     private static updateProfileAvatar;

@@ -7,6 +7,8 @@ import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { AzureBlobService } from './azureBlobService';
 import { isProduction } from '../utils/environment';
+import { imageContentModerationService } from './imageContentModerationService';
+import { ModerationCategory, VisionAnalysisRequest } from '../types/moderation';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -109,7 +111,7 @@ export class PhotoService {
       await this.validateStorageLimit(options.userId, file.size);
 
       // Perform content moderation
-      const moderationResult = await this.performContentModeration(file, options.photoType);
+      const moderationResult = await this.performContentModeration(file, options.photoType, options.userId);
       if (!moderationResult.approved) {
         throw new Error(moderationResult.reason || 'Content moderation failed');
       }
@@ -563,39 +565,102 @@ export class PhotoService {
   }
 
   /**
-   * Basic content moderation checks (can be enhanced with AI services)
+   * Azure OpenAI Vision-powered content moderation
    */
   private static async performContentModeration(
     file: Express.Multer.File,
-    photoType: PhotoType
+    photoType: PhotoType,
+    userId?: string
   ): Promise<{ approved: boolean; reason?: string }> {
-    // For now, implement basic file-based checks
-    // TODO: Integrate with Azure Content Moderator or similar service
-    
-    // Check file properties for obvious issues
-    if (file.size > this.MAX_FILE_SIZE) {
-      return { approved: false, reason: 'File too large' };
-    }
-
-    // GIF-specific checks (can be CPU intensive, so basic for now)
-    if (file.mimetype === 'image/gif') {
-      // Basic size check for GIFs (they can be very large)
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit for GIFs
-        return { approved: false, reason: 'GIF file too large (max 5MB for GIFs)' };
+    try {
+      // Basic file validation first
+      if (file.size > this.MAX_FILE_SIZE) {
+        return { approved: false, reason: 'File too large' };
       }
-    }
 
-    // For public content (POST_MEDIA), auto-approve in staging, require review in production
-    if (photoType === 'POST_MEDIA') {
+      // GIF-specific size checks
+      if (file.mimetype === 'image/gif') {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit for GIFs
+          return { approved: false, reason: 'GIF file too large (max 5MB for GIFs)' };
+        }
+      }
+
+      // For development/staging, perform lighter moderation
       if (!isProduction()) {
-        // Auto-approve in staging/development for testing
+        // Still perform AI analysis but with more lenient settings
+        const request: VisionAnalysisRequest = {
+          imageBuffer: file.buffer,
+          mimeType: file.mimetype,
+          photoType: photoType,
+          userId: userId || 'unknown',
+          config: {
+            strictMode: false,
+            allowNewsworthyContent: true,
+            allowMedicalContent: true
+          }
+        };
+
+        const moderationResult = await imageContentModerationService.analyzeImage(request);
+
+        console.log(`🔍 Content moderation (staging): ${photoType} - ${moderationResult.category} (${moderationResult.confidence})`);
+
+        // In staging, only block if explicitly flagged as BLOCK
+        return {
+          approved: moderationResult.category !== ModerationCategory.BLOCK,
+          reason: moderationResult.approved ? undefined : moderationResult.reason
+        };
+      }
+
+      // Production content moderation with Azure Vision
+      const request: VisionAnalysisRequest = {
+        imageBuffer: file.buffer,
+        mimeType: file.mimetype,
+        photoType: photoType,
+        userId: userId || 'unknown',
+        config: {
+          strictMode: true,
+          isProduction: true
+        }
+      };
+
+      const moderationResult = await imageContentModerationService.analyzeImage(request);
+
+      console.log(`🔍 Content moderation (production): ${photoType} - ${moderationResult.category} (${moderationResult.confidence})`);
+      console.log(`📋 Content details: ${moderationResult.description}`);
+
+      // Log detailed moderation results for audit trail
+      if (!moderationResult.approved) {
+        console.warn(`🚫 Content blocked:`, {
+          userId: userId,
+          photoType: photoType,
+          category: moderationResult.category,
+          contentType: moderationResult.contentType,
+          reason: moderationResult.reason,
+          confidence: moderationResult.confidence
+        });
+      }
+
+      return {
+        approved: moderationResult.approved,
+        reason: moderationResult.approved ? undefined : moderationResult.reason
+      };
+
+    } catch (error) {
+      console.error('Content moderation error:', error);
+
+      // Fallback behavior on moderation service failure
+      if (isProduction()) {
+        // In production, err on the side of caution
+        return {
+          approved: false,
+          reason: 'Content moderation service temporarily unavailable. Please try again later.'
+        };
+      } else {
+        // In staging/development, allow uploads to continue
+        console.warn('Content moderation failed in development - allowing upload');
         return { approved: true };
       }
-      return { approved: false, reason: 'Post media requires moderation review' };
     }
-
-    // Auto-approve personal photos
-    return { approved: true };
   }
 
   private static async updateProfileAvatar(

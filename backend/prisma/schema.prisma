@@ -114,6 +114,7 @@ model User {
   sentMessages                Message[]                 @relation("SentMessages")
   createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
+  moderationReviews           ImageModerationReview[]   @relation("ModerationReviews")
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
   sentNotifications           Notification[]            @relation("NotificationSender")
   payments                    Payment[]
@@ -841,41 +842,54 @@ model ElectionCache {
 }
 
 model Photo {
-  id              String                @id @default(cuid())
-  userId          String
-  filename        String
-  url             String
-  thumbnailUrl    String?
-  photoType       PhotoType
-  purpose         PhotoPurpose          @default(PERSONAL)
-  originalSize    Int
-  compressedSize  Int
-  width           Int
-  height          Int
-  mimeType        String
-  isApproved      Boolean               @default(false)
-  flaggedBy       String?
-  flagReason      String?
-  moderatedAt     DateTime?
-  candidateId     String?
-  isActive        Boolean               @default(true)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  caption         String?
-  gallery         String?               @default("My Photos")
-  postId          String?
-  candidate       Candidate?            @relation(fields: [candidateId], references: [id])
-  flaggedByUser   User?                 @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
-  post            Post?                 @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  privacyRequests PhotoPrivacyRequest[]
-  tags            PhotoTag[]
+  id                    String                    @id @default(cuid())
+  userId                String
+  filename              String
+  url                   String
+  thumbnailUrl          String?
+  photoType             PhotoType
+  purpose               PhotoPurpose              @default(PERSONAL)
+  originalSize          Int
+  compressedSize        Int
+  width                 Int
+  height                Int
+  mimeType              String
+  isApproved            Boolean                   @default(false)
+  flaggedBy             String?
+  flagReason            String?
+  moderatedAt           DateTime?
+  candidateId           String?
+  isActive              Boolean                   @default(true)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  caption               String?
+  gallery               String?                   @default("My Photos")
+  postId                String?
+  moderationStatus      ModerationStatus          @default(PENDING)
+  moderationScore       Float?                    @default(0.0)
+  requiresReview        Boolean                   @default(false)
+  autoModerationPassed  Boolean?                  @default(false)
+  humanReviewRequired   Boolean                   @default(false)
+  lastModerationAt      DateTime?
+  moderationMetadata    Json?
+  candidate             Candidate?                @relation(fields: [candidateId], references: [id])
+  flaggedByUser         User?                     @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
+  post                  Post?                     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  privacyRequests       PhotoPrivacyRequest[]
+  tags                  PhotoTag[]
+  moderationResults     ImageModerationResult[]
 
   @@index([userId])
   @@index([candidateId])
   @@index([photoType, purpose])
   @@index([isApproved, isActive])
   @@index([createdAt])
+  @@index([moderationStatus])
+  @@index([moderationScore])
+  @@index([requiresReview, humanReviewRequired])
+  @@index([lastModerationAt])
+  @@index([moderationStatus, createdAt])
 }
 
 model PhotoTag {
@@ -912,6 +926,68 @@ model PhotoPrivacyRequest {
   @@unique([photoId, userId])
   @@index([userId, status])
   @@index([status, createdAt])
+}
+
+model ImageModerationResult {
+  id                   String              @id @default(cuid())
+  photoId              String              @unique
+  moderationType       String              @default("AI_ANALYSIS")
+  aiAnalysisResults    Json?
+  overallConfidence    Float               @default(0.0)
+  categories           ModerationCategory[] @default([])
+  primaryCategory      ModerationCategory?
+  riskScore            Float               @default(0.0)
+  isSafe               Boolean             @default(true)
+  requiresHumanReview  Boolean             @default(false)
+  detectedObjects      String[]            @default([])
+  detectedText         String?
+  textAnalysis         Json?
+  faceCount            Int?                @default(0)
+  adultContentScore    Float?              @default(0.0)
+  violenceScore        Float?              @default(0.0)
+  racyScore            Float?              @default(0.0)
+  hateSpeechScore      Float?              @default(0.0)
+  spamScore            Float?              @default(0.0)
+  qualityScore         Float?              @default(0.0)
+  technicalMetadata    Json?
+  processingTime       Int?
+  aiModel              String?
+  modelVersion         String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  photo                Photo               @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  reviews              ImageModerationReview[]
+
+  @@index([moderationType])
+  @@index([primaryCategory])
+  @@index([riskScore])
+  @@index([isSafe, requiresHumanReview])
+  @@index([createdAt])
+  @@index([aiModel, modelVersion])
+}
+
+model ImageModerationReview {
+  id                  String            @id @default(cuid())
+  moderationResultId  String
+  reviewerId          String
+  decision            ModerationDecision
+  reason              String?
+  notes               String?
+  confidenceOverride  Float?
+  categoryOverride    ModerationCategory?
+  isAppeal            Boolean           @default(false)
+  originalDecision    ModerationDecision?
+  reviewedAt          DateTime          @default(now())
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  moderationResult    ImageModerationResult @relation(fields: [moderationResultId], references: [id], onDelete: Cascade)
+  reviewer            User              @relation("ModerationReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([moderationResultId])
+  @@index([reviewerId])
+  @@index([decision])
+  @@index([isAppeal])
+  @@index([reviewedAt])
 }
 
 model CandidateInbox {
@@ -2703,4 +2779,33 @@ enum QuestTimeframe {
   MONTHLY
   ONGOING
   LIMITED_TIME
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+  REVIEW_REQUIRED
+}
+
+enum ModerationCategory {
+  SAFE
+  INAPPROPRIATE
+  ADULT_CONTENT
+  VIOLENCE
+  HATE_SPEECH
+  SPAM
+  COPYRIGHT
+  POLITICAL_DISINFORMATION
+  PERSONAL_INFORMATION
+  OTHER
+}
+
+enum ModerationDecision {
+  APPROVE
+  REJECT
+  FLAG_FOR_REVIEW
+  REQUIRE_BLUR
+  REQUIRE_WARNING
 }

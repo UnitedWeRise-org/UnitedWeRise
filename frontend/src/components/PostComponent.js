@@ -7,7 +7,27 @@
 class PostComponent {
     constructor() {
         this.apiBase = window.API_BASE || '/api';
+        this.initializeContentModeration();
         this.initializeEventListeners();
+    }
+
+    /**
+     * Initialize content moderation system
+     */
+    initializeContentModeration() {
+        // Initialize content warning and sensitive content viewer components
+        if (typeof ContentWarningScreen !== 'undefined') {
+            this.contentWarning = new ContentWarningScreen();
+            this.contentWarning.initializeEventListeners();
+        } else {
+            console.warn('PostComponent: ContentWarningScreen not available');
+        }
+
+        if (typeof SensitiveContentViewer !== 'undefined') {
+            this.sensitiveViewer = new SensitiveContentViewer();
+        } else {
+            console.warn('PostComponent: SensitiveContentViewer not available');
+        }
     }
 
     /**
@@ -24,11 +44,15 @@ class PostComponent {
             showTimestamp: true,
             compactView: false
         };
-        
+
         const settings = { ...defaults, ...options };
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         const authorName = post.author?.firstName || post.author?.username || 'Anonymous';
         const authorInitial = authorName[0].toUpperCase();
+
+        // Check for content moderation flags
+        const hasContentFlags = post.contentFlags && typeof post.contentFlags === 'object' && Object.keys(post.contentFlags).length > 0;
+        const shouldShowWarning = hasContentFlags && this.contentWarning && this.contentWarning.shouldHideContent(post.contentFlags);
 
         // === COMPREHENSIVE POST AVATAR DEBUGGING ===
         adminDebugLog('PostAvatar', '=== POST AVATAR DIAGNOSTIC START ===');
@@ -43,7 +67,8 @@ class PostComponent {
         adminDebugLog('PostAvatar', '=== POST AVATAR DIAGNOSTIC END ===');
 
 
-        return `
+        // Generate the main post content
+        const mainPostContent = `
             <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
@@ -71,19 +96,19 @@ class PostComponent {
                         </div>
                     </div>
                 ` : ''}
-                
+
                 <div class="post-content" onclick="postComponent.openPostFocus('${post.id}')" style="cursor: pointer;">
                     ${this.formatPostContent(post.content, post)}
                 </div>
-                
+
                 ${post.imageUrl ? `
                     <div class="post-image">
                         <img src="${post.imageUrl}" alt="Post image" loading="lazy">
                     </div>
                 ` : ''}
-                
+
                 ${this.renderPostMedia(post.photos)}
-                
+
                 ${settings.showActions ? `
                     <div class="post-actions" data-post-id="${post.id}">
                         ${this.renderEnhancedReactions(post)}
@@ -108,20 +133,20 @@ class PostComponent {
                         ` : ''}
                     </div>
                 ` : ''}
-                
+
                 ${settings.showComments ? `
                     <div class="post-comments-section" id="comments-${post.id}" style="display: none;">
                         <div class="comment-input-wrapper">
-                            <textarea class="comment-input" 
-                                      id="comment-input-${post.id}" 
+                            <textarea class="comment-input"
+                                      id="comment-input-${post.id}"
                                       placeholder="Write a comment..."
                                       rows="2"></textarea>
                             <div class="comment-actions">
-                                <button class="btn btn-sm btn-primary" 
+                                <button class="btn btn-sm btn-primary"
                                         onclick="postComponent.addComment('${post.id}')">
                                     Post Comment
                                 </button>
-                                <button class="btn btn-sm btn-secondary" 
+                                <button class="btn btn-sm btn-secondary"
                                         onclick="postComponent.hideComments('${post.id}')">
                                     Cancel
                                 </button>
@@ -134,6 +159,18 @@ class PostComponent {
                 ` : ''}
             </div>
         `;
+
+        // Apply content moderation if needed
+        if (shouldShowWarning) {
+            // Show content warning screen instead of post content
+            const warningScreen = this.contentWarning.renderWarningScreen(post.contentFlags, post.id);
+            const sensitiveContentWrapper = this.sensitiveViewer.wrapSensitiveContent(mainPostContent, post.contentFlags, post.id);
+
+            return warningScreen + sensitiveContentWrapper;
+        } else {
+            // Return normal post content
+            return mainPostContent;
+        }
     }
 
     /**

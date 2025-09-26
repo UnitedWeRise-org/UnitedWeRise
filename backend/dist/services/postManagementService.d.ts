@@ -151,6 +151,13 @@ export declare class PostManagementService {
                 moderatedAt: Date | null;
                 caption: string | null;
                 gallery: string | null;
+                moderationStatus: import(".prisma/client").$Enums.ModerationStatus;
+                moderationScore: number | null;
+                requiresReview: boolean;
+                autoModerationPassed: boolean | null;
+                humanReviewRequired: boolean;
+                lastModerationAt: Date | null;
+                moderationMetadata: import("@prisma/client/runtime/library").JsonValue | null;
             }[];
         };
         deleteReason: string;
