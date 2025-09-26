@@ -256,6 +256,8 @@ class MOTDController {
     closeScheduleModal() {
         const modal = document.getElementById('scheduleModal');
         if (modal) {
+            // Use class-based hiding to override CSS !important rules
+            modal.classList.add('modal-hidden');
             modal.style.display = 'none';
             // Clear form data
             const form = document.getElementById('scheduleForm');
@@ -271,6 +273,8 @@ class MOTDController {
     closeMOTDEditor() {
         const modal = document.getElementById('motdEditorModal');
         if (modal) {
+            // Use class-based hiding to override CSS !important rules
+            modal.classList.add('modal-hidden');
             modal.style.display = 'none';
             // Clear editor data if needed
             this.isEditing = false;
@@ -705,6 +709,8 @@ class MOTDController {
             // Show the schedule modal
             const modal = document.getElementById('scheduleModal');
             if (modal) {
+                // Remove hidden class and set display
+                modal.classList.remove('modal-hidden');
                 modal.style.display = 'flex';
 
                 // Re-attach close button listeners now that modal is visible

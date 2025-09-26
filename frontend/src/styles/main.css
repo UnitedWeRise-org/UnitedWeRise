@@ -177,6 +177,11 @@
     z-index: 10003 !important;
 }
 
+/* Override for modal hiding - must come after modal-overlay rule */
+.modal-overlay.modal-hidden {
+    display: none !important;
+}
+
 .modal {
     background: white;
     border-radius: 8px;

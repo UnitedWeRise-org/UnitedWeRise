@@ -4246,7 +4246,7 @@ class Profile {
         alert(`Viewing deleted ${type} content: ${targetId}\n\nThis feature will show the full deleted content in a modal.`);
     }
 
-    navigateToPost(postId) {
+    async navigateToPost(postId) {
         if (!postId) {
             if (typeof adminDebugWarn !== 'undefined') {
                 adminDebugWarn('Profile', 'Cannot navigate: postId is missing');
@@ -4259,29 +4259,46 @@ class Profile {
             this.closeModal();
         }
 
-        // Switch to My Feed tab and highlight the post
-        if (typeof showMyFeedInMain === 'function') {
-            showMyFeedInMain();
-        } else {
-            window.location.hash = 'my-feed';
-        }
+        // Fetch and display the specific post
+        try {
+            const response = await apiCall(`/posts/${postId}`, {
+                method: 'GET'
+            });
 
-        // Wait for feed to load, then scroll to and highlight the post
-        setTimeout(() => {
-            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
-            if (postElement) {
-                postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                postElement.style.backgroundColor = '#fff3cd';
-                setTimeout(() => {
-                    postElement.style.backgroundColor = '';
-                }, 3000);
+            if (response.ok && response.data?.post) {
+                const post = response.data.post;
+
+                // Create and show post modal
+                this.showPostModal(post);
             } else {
-                // Post might not be loaded in current feed view, could implement search/fetch here
-                if (typeof adminDebugWarn !== 'undefined') {
-                    adminDebugWarn('Profile', `Post ${postId} not found in current feed view`);
+                // Fallback: Try to find post in current feed
+                if (typeof showMyFeedInMain === 'function') {
+                    showMyFeedInMain();
+                } else {
+                    window.location.hash = 'my-feed';
                 }
+
+                setTimeout(() => {
+                    const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                    if (postElement) {
+                        postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        postElement.style.backgroundColor = '#fff3cd';
+                        setTimeout(() => {
+                            postElement.style.backgroundColor = '';
+                        }, 3000);
+                    } else {
+                        if (typeof adminDebugWarn !== 'undefined') {
+                            adminDebugWarn('Profile', `Post ${postId} not found`);
+                        }
+                    }
+                }, 500);
             }
-        }, 500);
+        } catch (error) {
+            console.error('Error fetching post:', error);
+            if (typeof adminDebugError !== 'undefined') {
+                adminDebugError('Profile', 'Failed to fetch post', error);
+            }
+        }
     }
 
     navigateToComment(commentId, postId) {

@@ -1,10 +1,33 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: September 23, 2025
+**Last Updated**: September 26, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## 2025-09-26 - Admin Console Modal Fix
+
+### 🐛 CRITICAL BUG FIX: MOTD Modal Close Functionality
+- **Issue**: MOTD section modals could not be closed when opened in admin console
+- **Root Cause**: CSS `!important` rules in main.css were preventing JavaScript `modal.style.display = 'none'` from working
+- **Solution**: Implemented class-based modal hiding approach with CSS override
+  - **CSS**: Added `.modal-overlay.modal-hidden { display: none !important; }` rule
+  - **JavaScript**: Modified modal close methods to use `modal.classList.add('modal-hidden')`
+  - **JavaScript**: Modified modal show methods to use `modal.classList.remove('modal-hidden')`
+- **Files Modified**:
+  - `frontend/src/modules/admin/controllers/MOTDController.js` (3 methods updated)
+  - `frontend/src/styles/main.css` (CSS override rule added)
+- **Testing**: Console logs confirmed click handlers were working, issue was CSS conflict
+- **Impact**: Admin users can now properly close MOTD schedule and editor modals
+
+### 🔧 TECHNICAL DETAILS
+- **Problem Pattern**: CSS `!important` rules overriding inline JavaScript styles
+- **Solution Pattern**: Class-based approach with higher CSS specificity
+- **Affected Modals**: Schedule MOTD modal (`#scheduleModal`), MOTD Editor modal (`#motdEditorModal`)
+- **Browser Compatibility**: Works across all modern browsers using standard CSS and JavaScript
 
 ---
 
