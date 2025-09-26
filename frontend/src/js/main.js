@@ -29,6 +29,15 @@ import '../handlers/navigation-handlers.js';
 // Phase 4c: Search handlers (depends on navigation and API integration)
 import '../handlers/search-handlers.js';
 
+// Phase 4d: Modal handlers (About and Volunteer modals)
+import '../handlers/modal-handlers.js';
+
+// Phase 4e: Content handlers (MOTD, trending, officials, conversations)
+import '../handlers/content-handlers.js';
+
+// Phase 4f: Relationship handlers (friends, following, social connections)
+import '../handlers/relationship-handlers.js';
+
 // Phase 5: Component layer
 import '../components/Profile.js';
 

@@ -221,7 +221,7 @@
             <!-- Desktop/Tablet Navigation -->
             <div class="desktop-nav">
                 <givebutter-widget id="p75ZaL" class="donation-widget"></givebutter-widget>
-                <a href="#" class="nav-link" onclick="openAboutModal()">About UWR</a>
+                <a href="#" class="nav-link" data-modal-about>About UWR</a>
                 <div id="notificationSection" class="notification-section" style="display: none;">
                     <button onclick="toggleNotifications()" class="notification-btn">
                         <span class="notification-icon">🔔</span>
@@ -411,7 +411,7 @@
         <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
             <div class="modal-header">
                 <h2>About United We Rise</h2>
-                <button onclick="closeAboutModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                <button data-modal-close="about" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Hero Section -->
@@ -514,15 +514,15 @@
                     <p style="font-size: 1.1rem; margin-bottom: 1.5rem; font-weight: bold;">This platform is only as powerful as the people who use it.</p>
                     
                     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem;">
-                        <button onclick="closeAboutModal(); document.getElementById('loginModal').style.display='block';" style="background: #4b5c09; color: white; padding: 0.75rem 2rem; border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; font-weight: bold;">
+                        <button data-modal-action="join-community" style="background: #4b5c09; color: white; padding: 0.75rem 2rem; border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; font-weight: bold;">
                             Join the Community
                         </button>
-                        <button onclick="closeAboutModal(); window.location.href='/donate.html';" style="background: white; color: #4b5c09; padding: 0.75rem 2rem; border: 2px solid #4b5c09; border-radius: 4px; font-size: 1.1rem; cursor: pointer; font-weight: bold;">
+                        <button data-modal-action="support-mission" style="background: white; color: #4b5c09; padding: 0.75rem 2rem; border: 2px solid #4b5c09; border-radius: 4px; font-size: 1.1rem; cursor: pointer; font-weight: bold;">
                             Support Our Mission
                         </button>
                     </div>
                     
-                    <button onclick="closeAboutModal(); openVolunteerModal();" style="background: none; border: none; color: #4b5c09; text-decoration: underline; font-size: 0.9rem; cursor: pointer; padding: 0;">Volunteer your skills</button>
+                    <button data-modal-action="volunteer-skills" style="background: none; border: none; color: #4b5c09; text-decoration: underline; font-size: 0.9rem; cursor: pointer; padding: 0;">Volunteer your skills</button>
                 </div>
 
                 <div style="border-top: 1px solid #dee2e6; padding-top: 1rem; text-align: center; color: #6c757d; font-size: 0.9rem;">
@@ -537,7 +537,7 @@
     <!-- Volunteer Modal -->
     <div id="volunteerModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" onclick="closeVolunteerModal()">&times;</span>
+            <span class="close" data-modal-close="volunteer">&times;</span>
             <div id="volunteerModalContent">
                 <div style="padding: 2rem; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #2c3e50; margin-bottom: 1.5rem; text-align: center;">Volunteer Your Skills</h2>
@@ -1132,118 +1132,11 @@
 
         // showAuthMessage() moved to /src/modules/core/auth/modal.js
 
-        // About Modal Functions
-        function openAboutModal() {
-            document.getElementById('aboutModal').style.display = 'block';
-        }
-
-        function closeAboutModal() {
-            document.getElementById('aboutModal').style.display = 'none';
-        }
-
-        // Add click-outside-to-close functionality for About modal
-        document.addEventListener('DOMContentLoaded', function() {
-            const aboutModal = document.getElementById('aboutModal');
-            if (aboutModal) {
-                aboutModal.addEventListener('click', (e) => {
-                    if (e.target === aboutModal) {
-                        closeAboutModal();
-                    }
-                });
-            }
-        });
-
-        // Volunteer Modal Functions
-        function openVolunteerModal() {
-            const modal = document.getElementById('volunteerModal');
-            const emailSection = document.getElementById('emailSection');
-            
-            // Show email field if user is not logged in
-            const emailInput = document.getElementById('volunteerEmail');
-            if (!currentUser) {
-                emailSection.style.display = 'block';
-                emailInput.required = true;
-            } else {
-                emailSection.style.display = 'none';
-                emailInput.required = false; // Remove required attribute for logged-in users
-            }
-            
-            modal.style.display = 'block';
-            
-            // Set up character counter
-            const messageTextarea = document.getElementById('volunteerMessage');
-            const charCount = document.getElementById('charCount');
-            
-            messageTextarea.addEventListener('input', function() {
-                charCount.textContent = this.value.length;
-            });
-        }
-
-        function closeVolunteerModal() {
-            document.getElementById('volunteerModal').style.display = 'none';
-            // Reset form
-            document.getElementById('volunteerForm').reset();
-            document.getElementById('charCount').textContent = '0';
-        }
-
-        // Add click-outside-to-close functionality for Volunteer modal
-        document.addEventListener('DOMContentLoaded', function() {
-            const volunteerModal = document.getElementById('volunteerModal');
-            if (volunteerModal) {
-                volunteerModal.addEventListener('click', (e) => {
-                    if (e.target === volunteerModal) {
-                        closeVolunteerModal();
-                    }
-                });
-            }
-
-            // Handle volunteer form submission
-            const volunteerForm = document.getElementById('volunteerForm');
-            if (volunteerForm) {
-                volunteerForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    const submitBtn = document.getElementById('volunteerSubmitBtn');
-                    const originalText = submitBtn.textContent;
-                    submitBtn.textContent = 'Sending...';
-                    submitBtn.disabled = true;
-
-                    try {
-                        const message = document.getElementById('volunteerMessage').value.trim();
-                        const email = document.getElementById('volunteerEmail').value.trim();
-                        
-                        if (!message) {
-                            alert('Please enter your message.');
-                            return;
-                        }
-
-                        // Check if user is logged in
-                        // For non-logged in users, require email
-                        if (!currentUser && !email) {
-                            alert('Please enter your email address.');
-                            return;
-                        }
-
-                        // Create post using unified volunteer system
-                        const result = await createPostVolunteer(message, email);
-
-                        if (result.success) {
-                            alert('Thank you! Your volunteer inquiry has been submitted. We\'ll review it and get back to you soon.');
-                            closeVolunteerModal();
-                        } else {
-                            throw new Error(result.error || 'Failed to submit inquiry');
-                        }
-
-                    } catch (error) {
-                        console.error('Error submitting volunteer inquiry:', error);
-                        alert('Error submitting your inquiry. Please try again.');
-                    } finally {
-                        submitBtn.textContent = originalText;
-                        submitBtn.disabled = false;
-                    }
-                });
-            }
-        });
+        // Modal Functions moved to /src/handlers/modal-handlers.js
+        // - openAboutModal() and closeAboutModal()
+        // - openVolunteerModal() and closeVolunteerModal()
+        // - Click-outside-to-close functionality
+        // - Volunteer form submission handler
 
         // OAuth Authentication Functions moved to /src/handlers/auth-handlers.js
 
@@ -1878,131 +1771,9 @@
             mainContent.innerHTML = html;
         }
 
-        // MOTD Functions
-        let currentMOTDData = null;
-        let dismissalToken = null;
-
-        async function loadMOTD() {
-            try {
-                // Get dismissal token for anonymous users
-                dismissalToken = localStorage.getItem('motd-dismissal-token') || generateDismissalToken();
-
-                const headers = {};
-                headers['X-Dismissal-Token'] = dismissalToken;
-
-                const response = await fetch(`${API_BASE}/motd/current`, {
-                    credentials: 'include', // Include cookies for authentication
-                    headers: headers
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.data.motd) {
-                        currentMOTDData = data.data.motd;
-                        dismissalToken = data.data.dismissalToken;
-
-                        // Store dismissal token for future use
-                        localStorage.setItem('motd-dismissal-token', dismissalToken);
-
-                        // Check if this MOTD was already dismissed locally
-                        const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
-                        if (!dismissedMOTDs.includes(currentMOTDData.id)) {
-                            displayMOTD(currentMOTDData);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load MOTD:', error);
-            }
-        }
-
-        function generateDismissalToken() {
-            return `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        }
-
-        function displayMOTD(motd) {
-            const panel = document.getElementById('motd-panel');
-            const title = document.getElementById('motd-title');
-            const body = document.getElementById('motd-body');
-            
-            if (motd.title) {
-                title.textContent = motd.title;
-                title.style.display = 'block';
-            } else {
-                title.style.display = 'none';
-            }
-            
-            body.innerHTML = motd.content;
-            panel.style.display = 'block';
-        }
-
-        async function dismissCurrentMOTD() {
-            if (!currentMOTDData) return;
-
-            const panel = document.getElementById('motd-panel');
-
-            try {
-                // Add dismissed animation class
-                panel.classList.add('dismissed');
-
-                // Add admin debug logging if available
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MOTD', `Dismissing MOTD: ${currentMOTDData.id} with token: ${dismissalToken}`);
-                }
-
-                const headers = {};
-                headers['X-Dismissal-Token'] = dismissalToken;
-
-                const response = await fetch(`${API_BASE}/motd/dismiss/${currentMOTDData.id}`, {
-                    method: 'POST',
-                    credentials: 'include', // Include cookies for authentication
-                    headers: headers
-                });
-
-                if (response.ok) {
-                    // Store dismissal locally to prevent re-showing on refresh
-                    const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
-                    if (!dismissedMOTDs.includes(currentMOTDData.id)) {
-                        dismissedMOTDs.push(currentMOTDData.id);
-                        // Keep only the last 20 dismissed MOTDs to prevent localStorage bloat
-                        if (dismissedMOTDs.length > 20) {
-                            dismissedMOTDs.shift();
-                        }
-                        localStorage.setItem('dismissed-motds', JSON.stringify(dismissedMOTDs));
-                    }
-
-                    // Wait for animation to complete before hiding
-                    setTimeout(() => {
-                        panel.style.display = 'none';
-                        panel.classList.remove('dismissed');
-                    }, 200);
-
-                    if (typeof adminDebugLog !== 'undefined') {
-                        adminDebugLog('MOTD', 'MOTD dismissed successfully');
-                    }
-                    currentMOTDData = null;
-                } else {
-                    if (typeof adminDebugError !== 'undefined') {
-                        adminDebugError('MOTD', 'Failed to dismiss MOTD on server');
-                    }
-                    // Still hide panel but remove animation class
-                    setTimeout(() => {
-                        panel.style.display = 'none';
-                        panel.classList.remove('dismissed');
-                    }, 200);
-                }
-            } catch (error) {
-                console.error('Failed to dismiss MOTD:', error);
-                if (typeof adminDebugError !== 'undefined') {
-                    adminDebugError('MOTD', `MOTD dismissal error: ${error.message}`);
-                }
-                // Still hide the panel on error with animation
-                setTimeout(() => {
-                    panel.style.display = 'none';
-                    panel.classList.remove('dismissed');
-                }, 200);
-            }
-        }
+        // MOTD Functions moved to /src/handlers/content-handlers.js
+        // - loadMOTD(), displayMOTD(), generateDismissalToken()
+        // - dismissCurrentMOTD() function and MOTD state management
 
         // Load trending topics for the trending panel (AI-powered)
         async function loadTrendingPosts() {
