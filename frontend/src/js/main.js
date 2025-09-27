@@ -48,7 +48,10 @@ import '../handlers/civic-handlers.js';
 import '../components/PostComponent.js';
 import '../components/Profile.js';
 
-// Phase 5a: URL routing system (depends on Profile component)
+// Phase 5a: Feed modules (post creation and display - requires PostComponent)
+import '../modules/features/feed/my-feed.js';
+
+// Phase 5b: URL routing system (depends on Profile component)
 import '../utils/username-router.js';
 
 // Phase 5b: Payment systems (require Stripe.js and API integration)
