@@ -46,7 +46,14 @@ class NavigationHandlers {
             case 'handle-post-media-upload':
                 console.log('🔧 Media upload event detected, calling UnifiedPostCreator');
                 if (typeof window.unifiedPostCreator !== 'undefined') {
-                    window.unifiedPostCreator.handleMediaSelection(target);
+                    // Find the file input element - target might be the label or input itself
+                    const fileInput = target.type === 'file' ? target : target.querySelector('input[type="file"]') || document.getElementById(target.getAttribute('for'));
+                    if (fileInput) {
+                        console.log('📷 Found file input element:', fileInput.id);
+                        window.unifiedPostCreator.handleMediaSelection(fileInput);
+                    } else {
+                        console.error('🔧 Could not find file input element for media upload');
+                    }
                 } else {
                     console.error('🔧 UnifiedPostCreator not available on window');
                 }

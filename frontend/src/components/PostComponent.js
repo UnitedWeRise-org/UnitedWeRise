@@ -2141,6 +2141,11 @@ class PostComponent {
                                 this.addCommentFromFocus(postId);
                             }
                             break;
+                        case 'handle-post-media-upload':
+                            // Media upload is handled by navigation-handlers.js on 'change' event
+                            // This case prevents "unhandled data-action" warnings
+                            console.log('📷 PostComponent: Media upload click detected, handled by navigation-handlers');
+                            break;
                         default:
                             console.warn('🚨 PostComponent: Unhandled data-action:', action);
                     }
