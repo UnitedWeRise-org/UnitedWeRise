@@ -193,10 +193,19 @@ class QuestService {
         }
         return quest;
     }
-    // Assign quest to user
+    // Assign quest to user (with upsert to prevent duplicate key errors)
     async assignQuestToUser(userId, questId) {
-        return await prisma.userQuestProgress.create({
-            data: {
+        return await prisma.userQuestProgress.upsert({
+            where: {
+                userId_questId: {
+                    userId,
+                    questId
+                }
+            },
+            update: {
+            // Don't update existing progress, just return existing record
+            },
+            create: {
                 userId,
                 questId,
                 progress: { completed: 0, target: 0 }
