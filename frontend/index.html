@@ -3797,88 +3797,11 @@
             }
         }
 
-        // Posts Functions
-        async function createPost() {
-            const content = document.getElementById('postContent').value.trim();
+        // Legacy createPost() function removed - unused (no postContent element exists)
+        // All posting now handled by frontend/js/posting.js unified system
 
-            if (!content) {
-                alert('Please enter some content for your post');
-                return;
-            }
-
-            try {
-                const response = await window.apiCall('/posts', {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        content
-                    })
-                });
-
-                if (response.ok) {
-                    document.getElementById('postContent').value = '';
-                    loadUserPosts();
-                } else {
-                    const error = await response.json();
-                    alert(error.error || 'Failed to create post');
-                }
-            } catch (error) {
-                console.error('Failed to create post:', error);
-                alert('Network error. Please try again.');
-            }
-        }
-
-        // Public post creation function (used by my-feed.js)
-        async function createPostPublic(content, options = {}) {
-            try {
-                const { mediaId, refreshFeed = true } = options;
-
-                // Prepare post data
-                const postData = { content };
-                if (mediaId) {
-                    postData.mediaId = mediaId;
-                }
-
-                console.log('🌐 createPostPublic called with:', { content: content.substring(0, 50) + '...', mediaId, refreshFeed });
-
-                const response = await window.apiCall('/posts', {
-                    method: 'POST',
-                    body: JSON.stringify(postData)
-                });
-
-                if (response.ok) {
-                    console.log('✅ Post created successfully via createPostPublic');
-
-                    // Refresh feed if requested
-                    if (refreshFeed && window.loadMyFeed) {
-                        try {
-                            await window.loadMyFeed();
-                        } catch (error) {
-                            console.warn('Failed to refresh feed after post creation:', error);
-                        }
-                    }
-
-                    return {
-                        success: true,
-                        post: response.data.post
-                    };
-                } else {
-                    console.error('❌ Post creation failed:', response.data);
-                    return {
-                        success: false,
-                        error: response.data?.error || 'Failed to create post'
-                    };
-                }
-            } catch (error) {
-                console.error('❌ createPostPublic error:', error);
-                return {
-                    success: false,
-                    error: 'Network error creating post'
-                };
-            }
-        }
-
-        // Make function globally available
-        window.createPostPublic = createPostPublic;
+        // NOTE: createPostPublic is now provided by frontend/js/posting.js
+        // Removed redundant implementation to consolidate posting systems
 
         async function loadUserPosts() {
             if (!currentUser) return;

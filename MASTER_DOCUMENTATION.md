@@ -13834,6 +13834,40 @@ res.json({ ...dashboardData, performance: performanceData });
 - **Root Cause**: Frontend JavaScript debugging needed for messaging modal
 - **Impact**: Low - Backend messaging endpoints verified working, UI needs final testing
 
+### 🚨 RECENTLY FIXED - September 26, 2025
+
+#### Image Uploads Not Displaying in Feed (FIXED)
+**Issue**: Photo uploads succeeded with AI moderation approval but images didn't appear in My Feed posts
+- **Problem**: Feed API queries (`ProbabilityFeedService` and trending feed) missing `photos` include clause
+- **Root Cause Analysis**:
+  - ✅ Photo upload system working correctly (AI moderation auto-approval)
+  - ✅ Post creation system working correctly (photo-post linking in database)
+  - ✅ Individual post display working (images visible when clicked into post)
+  - ❌ Feed APIs returning `photos: []` instead of populated photo arrays
+- **Technical Details**:
+  - Feed used `ProbabilityFeedService.generateFeed()` with incomplete data inclusion
+  - Trending feed endpoint had similar incomplete `include` clause
+  - Post creation API correctly included photos, causing inconsistent behavior
+- **Solution**:
+  - Added `photos` include to `ProbabilityFeedService` query (lines 175-188)
+  - Added `photos` include to trending feed API (lines 129-142)
+  - Both APIs now return complete photo data (URL, thumbnails, metadata)
+- **Files Modified**:
+  - `backend/src/services/probabilityFeedService.ts`
+  - `backend/src/routes/feed.ts`
+- **Status**: ✅ Fixed - Images now display properly in feed posts
+- **Impact**: Complete image upload and display workflow now functional with AI content moderation
+
+#### Redundant Posting Systems Identified (CLEANUP NEEDED)
+**Discovery**: Multiple overlapping post creation systems found during image upload debugging
+- **Systems Found**:
+  1. ✅ Modern ES6 system: `frontend/js/posting.js` (September 2025, well-structured)
+  2. ❌ Legacy HTML system: `createPost()` in `index.html` (text-only, possibly unused)
+  3. ❌ Duplicate system: Redundant `createPostPublic` added during debugging
+- **Analysis**: ES6 module system is primary, handles media uploads via `my-feed.js`
+- **Status**: 🟡 Partial fix - API issue resolved, code cleanup needed
+- **Next Steps**: Remove redundant functions and consolidate to single posting system
+
 ### 🚨 RECENTLY FIXED - September 23, 2025
 
 #### TOTP Status Refresh Race Condition (FIXED)
