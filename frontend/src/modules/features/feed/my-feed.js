@@ -146,9 +146,19 @@ export function displayMyFeedPosts(posts, appendMode = false) {
     }
     
     console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
-    
+
+    // Debug PostComponent availability
+    console.log('🔍 PostComponent check:', {
+        'window.postComponent exists': !!window.postComponent,
+        'window.postComponent type': typeof window.postComponent,
+        'renderPost method exists': !!(window.postComponent?.renderPost),
+        'first post has photos': !!(posts[0]?.photos?.length),
+        'first post photos count': posts[0]?.photos?.length || 0
+    });
+
     // Use PostComponent directly for proper photo rendering
     if (window.postComponent) {
+        console.log('✅ Using PostComponent.renderPost for My Feed display');
         let html = '';
 
         posts.forEach(post => {
@@ -178,6 +188,12 @@ export function displayMyFeedPosts(posts, appendMode = false) {
  */
 function displayMyFeedPostsFallback(posts, container, appendMode = false) {
     console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
+    console.log('🔍 Fallback - Posts with photos:', posts.map(p => ({
+        id: p.id,
+        hasPhotos: !!(p.photos?.length),
+        photoCount: p.photos?.length || 0,
+        photoUrls: p.photos?.map(ph => ph.url) || []
+    })));
 
     let html = '';
     posts.forEach(post => {
