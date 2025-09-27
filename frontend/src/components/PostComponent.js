@@ -143,7 +143,7 @@ class PostComponent {
                                       rows="2"></textarea>
                             <div class="comment-actions">
                                 <button class="btn btn-sm btn-primary"
-                                        onclick="postComponent.addComment('${post.id}')">
+                                        data-action="addComment" data-post-id="${post.id}">
                                     Post Comment
                                 </button>
                                 <button class="btn btn-sm btn-secondary"
@@ -768,77 +768,53 @@ class PostComponent {
      * Add a comment to a post
      */
     async addComment(postId) {
-        // Check authentication using current user data
-        const currentUser = window.currentUser;
-        if (!currentUser) {
-            alert('Please log in to comment');
-            return;
-        }
+        console.log('🎯 PostComponent.addComment called for postId:', postId);
 
-        const input = document.getElementById(`comment-input-${postId}`);
-        if (!input || !input.value.trim()) return;
-
-        const content = input.value.trim();
-        input.disabled = true;
-
+        // Use UnifiedPostCreator for comment creation
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
-                method: 'POST',
-                body: JSON.stringify({ content })
+            const result = await window.unifiedPostCreator.create({
+                type: 'comment',
+                textareaId: `comment-input-${postId}`,
+                postId: postId,
+                onSuccess: (response) => {
+                    console.log('✅ Comment created successfully:', response);
+
+                    // Reload comments after successful creation
+                    setTimeout(async () => {
+                        await this.loadComments(postId, true); // Force cache bypass
+                    }, 500);
+
+                    // Update comment count in UI
+                    const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
+                    if (commentBtn) {
+                        const currentCount = parseInt(commentBtn.textContent) || 0;
+                        commentBtn.textContent = currentCount + 1;
+                    }
+
+                    // Show success feedback
+                    this.showToast('Comment added successfully!');
+                },
+                onError: (error) => {
+                    console.error('❌ Comment creation failed:', error);
+
+                    // Handle staging environment restriction
+                    if (error.error?.includes('staging') || error.error?.includes('admin')) {
+                        this.showToast('Staging environment: Admin access required for comments');
+                    } else {
+                        const errorMsg = error.error || 'Failed to add comment';
+                        alert(`Failed to add comment: ${errorMsg}`);
+                    }
+                },
+                clearAfterSuccess: true
             });
 
-            console.log('Comment submission response:', {
-                ok: response.ok,
-                status: response.status,
-                data: response.data
-            });
-
-            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
-                // Check if this is a staging environment restriction
-                if (response.data?.environment === 'staging' && response.status === 403) {
-                    console.warn('Staging environment: Comment creation restricted to admin users');
-                    this.showToast('Staging environment: Admin access required for comments');
-                    input.disabled = false;
-                    return;
-                }
-
-                input.value = '';
-                console.log('Comment added successfully, reloading comments...');
-                // Delay to ensure the comment is saved on the server, then reload with cache bypass
-                setTimeout(async () => {
-                    await this.loadComments(postId, true); // Force cache bypass
-                }, 500);
-                
-                // Update comment count
-                const commentBtn = document.querySelector(`[data-post-id="${postId}"] .comment-btn .action-count`);
-                if (commentBtn) {
-                    const currentCount = parseInt(commentBtn.textContent) || 0;
-                    commentBtn.textContent = currentCount + 1;
-                }
-                
-                // Show success feedback
-                this.showToast('Comment added successfully!');
-            } else {
-                console.error('Comment submission failed:', response);
-                console.error('Full response data:', response.data);
-                // Check for error in different possible locations
-                let errorMsg = 'Failed to add comment';
-                if (response.data?.error) {
-                    errorMsg = response.data.error;
-                } else if (response.data?.message) {
-                    errorMsg = response.data.message;
-                } else if (response.data?.errors) {
-                    // Handle validation errors array
-                    errorMsg = response.data.errors.map(e => e.msg || e.message).join(', ');
-                }
-                console.error('Error details:', errorMsg);
-                alert(`Failed to add comment: ${errorMsg}`);
+            if (!result.success) {
+                console.warn('🚨 UnifiedPostCreator returned failure:', result);
             }
+
         } catch (error) {
-            console.error('Error adding comment:', error);
+            console.error('❌ Error in addComment:', error);
             alert('Error adding comment');
-        } finally {
-            input.disabled = false;
         }
     }
 
@@ -2143,6 +2119,36 @@ class PostComponent {
                 }
             }
         });
+
+        // Event delegation for data-action attributes
+        document.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (action) {
+                const postId = e.target.dataset.postId;
+                const commentId = e.target.dataset.commentId;
+
+                console.log('🎯 PostComponent event delegation:', action, { postId, commentId });
+
+                try {
+                    switch (action) {
+                        case 'addComment':
+                            if (postId) {
+                                this.addComment(postId);
+                            }
+                            break;
+                        case 'addCommentFromFocus':
+                            if (postId) {
+                                this.addCommentFromFocus(postId);
+                            }
+                            break;
+                        default:
+                            console.warn('🚨 PostComponent: Unhandled data-action:', action);
+                    }
+                } catch (error) {
+                    console.error('❌ PostComponent event delegation error:', error);
+                }
+            }
+        });
     }
 
     /**
@@ -2368,7 +2374,7 @@ class PostComponent {
                         <textarea class="comment-input" id="focus-comment-input-${post.id}" 
                                   placeholder="Write a comment..." rows="3" 
                                   style="width: 100%; margin-bottom: 0.5rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
-                        <button class="btn btn-primary" onclick="postComponent.addCommentFromFocus('${post.id}')">
+                        <button class="btn btn-primary" data-action="addCommentFromFocus" data-post-id="${post.id}">
                             Post Comment
                         </button>
                     </div>
@@ -2457,32 +2463,40 @@ class PostComponent {
      * @param {string} postId - Post ID
      */
     async addCommentFromFocus(postId) {
-        const textarea = document.getElementById(`focus-comment-input-${postId}`);
-        const content = textarea.value.trim();
-        
-        if (!content) {
-            alert('Please enter a comment');
-            return;
-        }
-        
+        console.log('🎯 PostComponent.addCommentFromFocus called for postId:', postId);
+
+        // Use UnifiedPostCreator for focus comment creation
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content })
+            const result = await window.unifiedPostCreator.create({
+                type: 'comment',
+                textareaId: `focus-comment-input-${postId}`,
+                postId: postId,
+                onSuccess: (response) => {
+                    console.log('✅ Focus comment created successfully:', response);
+
+                    // Refresh the modal with updated comments
+                    this.openPostFocus(postId);
+                },
+                onError: (error) => {
+                    console.error('❌ Focus comment creation failed:', error);
+
+                    // Handle staging environment restriction
+                    if (error.error?.includes('staging') || error.error?.includes('admin')) {
+                        alert('Staging environment: Admin access required for comments');
+                    } else {
+                        const errorMsg = error.error || 'Failed to post comment';
+                        alert(`Failed to post comment: ${errorMsg}`);
+                    }
+                },
+                clearAfterSuccess: true
             });
-            
-            if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
-                // Clear textarea
-                textarea.value = '';
-                
-                // Refresh the modal with updated comments
-                this.openPostFocus(postId);
-            } else {
-                throw new Error('Failed to post comment');
+
+            if (!result.success) {
+                console.warn('🚨 UnifiedPostCreator returned failure:', result);
             }
+
         } catch (error) {
-            console.error('Error posting comment:', error);
+            console.error('❌ Error in addCommentFromFocus:', error);
             alert('Failed to post comment. Please try again.');
         }
     }
@@ -3030,7 +3044,7 @@ class PostComponent {
                     <div id="comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
                         <textarea id="comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
                         <div style="margin-top: 0.5rem;">
-                            <button onclick="addComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
+                            <button data-action="addComment" data-post-id="${post.id}" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
                             <button onclick="hideCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
                         </div>
                     </div>

@@ -36,13 +36,13 @@ export class MyFeedHandlers {
      * Handle click events for my feed actions
      */
     handleFeedClick(event) {
-        const target = event.target.closest('[data-feed-action]');
+        const target = event.target.closest('[data-feed-action], [data-action]');
         if (!target) return;
 
         event.preventDefault();
         event.stopPropagation();
 
-        const action = target.dataset.feedAction;
+        const action = target.dataset.feedAction || target.dataset.action;
 
         switch (action) {
             case 'show-my-feed':
@@ -53,6 +53,13 @@ export class MyFeedHandlers {
                 break;
             case 'load-more-posts':
                 this.loadMoreMyFeedPosts();
+                break;
+            case 'create-post-from-feed':
+                if (typeof window.createPostFromFeed === 'function') {
+                    window.createPostFromFeed();
+                } else {
+                    console.error('❌ createPostFromFeed function not available');
+                }
                 break;
         }
     }
@@ -127,7 +134,7 @@ export class MyFeedHandlers {
                                 <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                             </div>
                             <div>
-                                <button onclick="createPostFromFeed()" class="btn">Post</button>
+                                <button data-action="create-post-from-feed" class="btn">Post</button>
                             </div>
                         </div>
                     </div>
