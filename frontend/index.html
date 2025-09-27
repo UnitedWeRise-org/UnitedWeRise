@@ -128,11 +128,11 @@
     <script src="src/components/VerificationFlow.js"></script>
     <script src="src/components/ContentReporting.js"></script>
     <script src="src/components/CandidateSystem.js"></script>
-    <script src="src/components/PostComponent.js"></script>
+    <!-- ✅ PostComponent.js removed - already loaded via ES6 module in main.js -->
     <script src="src/components/QuestProgressTracker.js"></script>
     <script src="src/components/BadgeVault.js"></script>
     <script src="src/components/UserCard.js"></script>
-    <!-- ✅ ES6 MODULES: Profile, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
+    <!-- ✅ ES6 MODULES: Profile, PostComponent, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
 
     <!-- Legacy integration scripts (not yet converted to ES6 modules) -->
     <script src="src/integrations/candidate-system-integration.js"></script>
@@ -2900,6 +2900,15 @@
                             </span>
                         </div>
                         <div style="margin-bottom: 1rem;">${post.content || ''}</div>
+                        ${post.photos && post.photos.length > 0 ? `
+                            <div style="margin-bottom: 1rem;">
+                                ${post.photos.map(photo => `
+                                    <img src="${photo.url}" alt="Post image"
+                                         style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 0.5rem; display: block;"
+                                         onclick="window.open('${photo.url}', '_blank')">
+                                `).join('')}
+                            </div>
+                        ` : ''}
                         <div style="color: #666; font-size: 0.9rem;">
                             👍 ${post.likesCount || 0} likes • 💬 ${post.commentsCount || 0} comments
                         </div>
