@@ -383,8 +383,15 @@ export function attachMediaToPost() {
 export { uploadMediaFiles };
 
 export async function handlePostMediaUpload(input) {
+    console.log('🔧 handlePostMediaUpload called with input:', input);
+    console.log('🔧 Input element type:', input.type);
+    console.log('🔧 Files selected:', input.files?.length || 0);
+
     const file = input.files[0];
-    if (!file) return;
+    if (!file) {
+        console.log('🔧 No file selected, returning early');
+        return;
+    }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];

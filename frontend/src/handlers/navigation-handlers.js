@@ -31,11 +31,17 @@ class NavigationHandlers {
     }
 
     handleNavigationChange(event) {
+        console.log('🔧 Navigation change event fired:', event.type, event.target);
+
         const target = event.target.closest('[data-action]');
-        if (!target) return;
+        if (!target) {
+            console.log('🔧 No target with data-action found');
+            return;
+        }
 
         const action = target.dataset.action;
         const layer = target.dataset.layer;
+        console.log('🔧 Action detected:', action);
 
         switch (action) {
             case 'toggle-map-layer':
@@ -44,8 +50,13 @@ class NavigationHandlers {
                 }
                 break;
             case 'handle-post-media-upload':
+                console.log('🔧 Navigation handler caught handle-post-media-upload event');
+                console.log('🔧 Target element:', target);
+                console.log('🔧 Function available:', typeof window.handlePostMediaUpload);
                 if (typeof window.handlePostMediaUpload === 'function') {
                     window.handlePostMediaUpload(target);
+                } else {
+                    console.error('🔧 handlePostMediaUpload function not available on window');
                 }
                 break;
             case 'update-civic-results':
