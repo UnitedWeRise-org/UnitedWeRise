@@ -147,16 +147,27 @@ export function displayMyFeedPosts(posts, appendMode = false) {
     
     console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
     
-    // Use the existing displayPosts function with fallback
-    try {
-        if (typeof window.displayPosts === 'function') {
-            window.displayPosts(posts, 'myFeedPosts', appendMode);
+    // Use PostComponent directly for proper photo rendering
+    if (window.postComponent) {
+        let html = '';
+
+        posts.forEach(post => {
+            html += window.postComponent.renderPost(post, {
+                showActions: true,
+                showComments: true,
+                showAuthor: true,
+                showTimestamp: true,
+                compactView: false
+            });
+        });
+
+        if (appendMode) {
+            container.insertAdjacentHTML('beforeend', html);
         } else {
-            console.warn('⚠️ displayPosts function not available, using fallback');
-            displayMyFeedPostsFallback(posts, container, appendMode);
+            container.innerHTML = html;
         }
-    } catch (error) {
-        console.error('❌ Error displaying posts:', error);
+    } else {
+        console.warn('⚠️ PostComponent not available, using fallback');
         displayMyFeedPostsFallback(posts, container, appendMode);
     }
 }
