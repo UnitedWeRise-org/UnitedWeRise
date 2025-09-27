@@ -11,7 +11,7 @@
  */
 
 // Import dependencies
-import { apiCall } from '../config/api.js';
+import { apiClient } from '../modules/core/api/client.js';
 
 console.log('📱 Loading messaging handlers...');
 

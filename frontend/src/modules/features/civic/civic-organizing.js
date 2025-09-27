@@ -11,7 +11,7 @@
  */
 
 // Import dependencies
-import { apiCall } from '../../../config/api.js';
+import { apiClient } from '../../core/api/client.js';
 
 console.log('🏛️ Loading civic organizing module...');
 

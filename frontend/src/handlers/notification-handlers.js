@@ -28,7 +28,7 @@
  */
 
 // Import dependencies
-import { apiCall } from '../config/api.js';
+import { apiClient } from '../modules/core/api/client.js';
 import { getTimeAgo } from '../utils/date-helpers.js';
 
 console.log('🔔 Loading notification handlers...');
