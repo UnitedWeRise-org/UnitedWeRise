@@ -20,6 +20,9 @@ class NavigationHandlers {
         // Setup event delegation for navigation controls
         document.addEventListener('click', this.handleNavigationClick.bind(this));
 
+        // Setup change event delegation for checkboxes and form elements
+        document.addEventListener('change', this.handleNavigationChange.bind(this));
+
         // Setup specific handlers that need initialization timing
         this.setupCollapseButton();
         this.setupCloseButton();
@@ -27,16 +30,43 @@ class NavigationHandlers {
         this.setupSidebarToggle();
     }
 
+    handleNavigationChange(event) {
+        const target = event.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const layer = target.dataset.layer;
+
+        switch (action) {
+            case 'toggle-map-layer':
+                if (typeof window.toggleMapLayer === 'function' && layer) {
+                    window.toggleMapLayer(layer);
+                }
+                break;
+            case 'handle-post-media-upload':
+                if (typeof window.handlePostMediaUpload === 'function') {
+                    window.handlePostMediaUpload(target);
+                }
+                break;
+            case 'update-civic-results':
+                if (typeof window.updateCivicResults === 'function') {
+                    window.updateCivicResults();
+                }
+                break;
+        }
+    }
+
     handleNavigationClick(event) {
-        const target = event.target.closest('[data-nav-toggle], [data-nav-action]');
+        const target = event.target.closest('[data-nav-toggle], [data-nav-action], [data-action]');
         if (!target) return;
 
         event.preventDefault();
         event.stopPropagation();
 
-        const action = target.dataset.navToggle || target.dataset.navAction;
+        const action = target.dataset.navToggle || target.dataset.navAction || target.dataset.action;
 
         switch (action) {
+            // Existing navigation actions
             case 'feed':
                 this.toggleMyFeed();
                 break;
@@ -64,6 +94,180 @@ class NavigationHandlers {
             case 'close-officials':
                 this.closePanel('officials');
                 break;
+
+            // Authentication actions
+            case 'open-auth-login':
+                if (typeof window.openAuthModal === 'function') {
+                    window.openAuthModal('login');
+                }
+                break;
+            case 'open-auth-register':
+                if (typeof window.openAuthModal === 'function') {
+                    window.openAuthModal('register');
+                }
+                break;
+            case 'close-auth-modal':
+                if (typeof window.closeAuthModal === 'function') {
+                    window.closeAuthModal();
+                }
+                break;
+            case 'switch-to-login':
+                if (typeof window.switchToLogin === 'function') {
+                    window.switchToLogin();
+                }
+                break;
+            case 'switch-to-register':
+                if (typeof window.switchToRegister === 'function') {
+                    window.switchToRegister();
+                }
+                break;
+            case 'handle-login':
+                if (typeof window.handleLogin === 'function') {
+                    window.handleLogin();
+                }
+                break;
+            case 'handle-register':
+                if (typeof window.handleRegister === 'function') {
+                    window.handleRegister();
+                }
+                break;
+
+            // Modal actions
+            case 'close-legal-modal':
+                if (typeof window.closeLegalModal === 'function') {
+                    window.closeLegalModal();
+                }
+                break;
+            case 'open-legal-terms':
+                event.preventDefault();
+                if (typeof window.openLegalModal === 'function') {
+                    window.openLegalModal('terms');
+                }
+                break;
+            case 'open-legal-privacy':
+                event.preventDefault();
+                if (typeof window.openLegalModal === 'function') {
+                    window.openLegalModal('privacy');
+                }
+                break;
+
+            // Notification actions
+            case 'toggle-notifications':
+                if (typeof window.toggleNotifications === 'function') {
+                    window.toggleNotifications();
+                }
+                break;
+
+            // Profile actions
+            case 'toggle-profile':
+                if (typeof window.toggleProfile === 'function') {
+                    window.toggleProfile();
+                }
+                break;
+
+            // Donation actions
+            case 'open-donation':
+                if (window.donationSystem && window.donationSystem.openDonationModal) {
+                    window.donationSystem.openDonationModal();
+                } else {
+                    alert('Donation system loading...');
+                }
+                break;
+
+            // Navigation to home
+            case 'navigate-home':
+                window.location.href = '/';
+                break;
+
+            // Mobile navigation
+            case 'mobile-feed':
+                if (typeof window.showMobileFeed === 'function') {
+                    window.showMobileFeed();
+                }
+                break;
+            case 'mobile-search':
+                if (typeof window.showMobileSearch === 'function') {
+                    window.showMobileSearch();
+                }
+                break;
+            case 'mobile-map':
+                if (typeof window.showMobileMap === 'function') {
+                    window.showMobileMap();
+                }
+                break;
+            case 'mobile-profile':
+                if (typeof window.showMobileProfile === 'function') {
+                    window.showMobileProfile();
+                }
+                break;
+
+            // Detail panel actions
+            case 'close-detail':
+                if (typeof window.closeDetail === 'function') {
+                    window.closeDetail();
+                }
+                break;
+
+            // Messages toggle (duplicate action for compatibility)
+            case 'toggle-messages':
+                this.toggleMessages();
+                break;
+
+            // Map actions
+            case 'toggle-map-view':
+                const view = target.dataset.view;
+                if (typeof window.toggleMapView === 'function' && view) {
+                    window.toggleMapView(view);
+                }
+                break;
+            case 'close-map':
+                if (window.map && window.map.closeMap) {
+                    window.map.closeMap();
+                } else if (typeof window.closeMap === 'function') {
+                    window.closeMap();
+                }
+                break;
+            case 'toggle-layer-dropdown':
+                if (typeof window.toggleLayerDropdown === 'function') {
+                    window.toggleLayerDropdown();
+                }
+                break;
+            case 'toggle-map-layer':
+                const layer = target.dataset.layer;
+                if (typeof window.toggleMapLayer === 'function' && layer) {
+                    window.toggleMapLayer(layer);
+                }
+                break;
+
+            // Trending actions
+            case 'toggle-trending-expansion':
+                if (typeof window.toggleTrendingExpansion === 'function') {
+                    window.toggleTrendingExpansion();
+                }
+                break;
+
+            // Badge and Quest actions
+            case 'show-badge-vault':
+                if (typeof window.badgeVault?.showVault === 'function') {
+                    window.badgeVault.showVault();
+                }
+                break;
+            case 'scroll-to-quests':
+                const questContainer = document.getElementById('quest-progress-container');
+                if (questContainer) {
+                    questContainer.scrollIntoView({behavior: 'smooth'});
+                }
+                break;
+
+            // Detail panel actions
+            case 'open-detail':
+                const detailTitle = target.dataset.detailTitle;
+                const detailLevel = target.dataset.detailLevel;
+                if (typeof window.openDetail === 'function' && detailTitle && detailLevel) {
+                    window.openDetail(detailTitle, parseInt(detailLevel));
+                }
+                break;
+
             default:
                 if (action.startsWith('panel-')) {
                     this.togglePanel(action.replace('panel-', ''));

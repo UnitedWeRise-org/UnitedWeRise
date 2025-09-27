@@ -493,10 +493,350 @@ class SearchHandlers {
         if (diffDays < 7) return `${diffDays}d ago`;
         return date.toLocaleDateString();
     }
+
+    /**
+     * Display all search results with category sections
+     * Migrated from index.html line 2737
+     */
+    displayAllSearchResults() {
+        const resultsContainer = document.getElementById('globalSearchResults');
+        const { users, posts, officials, topics } = this.currentSearchResults;
+
+        // Separate candidates from officials
+        const candidates = officials ? officials.filter(o => o.politicalProfileType === 'CANDIDATE') : [];
+        const actualOfficials = officials ? officials.filter(o => o.politicalProfileType === 'ELECTED_OFFICIAL') : [];
+
+        const totalResults = users.length + posts.length + candidates.length + actualOfficials.length + topics.length;
+
+        if (totalResults === 0) {
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+                    <h3>No Results Found</h3>
+                    <p>Try different keywords or adjust your filters</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <div style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9; font-weight: bold; color: #4b5c09;">
+                Found ${totalResults} results for "${this.currentQuery}"
+            </div>
+        `;
+
+        // Display each category with results
+        if (users.length > 0) {
+            html += this.renderSearchSection('👤 Users', users, this.renderUserResult.bind(this));
+        }
+        if (candidates.length > 0) {
+            html += this.renderSearchSection('🗳️ Candidates', candidates, this.renderCandidateResult.bind(this));
+        }
+        if (actualOfficials.length > 0) {
+            html += this.renderSearchSection('🏛️ Officials', actualOfficials, this.renderOfficialResult.bind(this));
+        }
+        if (posts.length > 0) {
+            html += this.renderSearchSection('📝 Posts', posts, this.renderPostResult.bind(this));
+        }
+        if (topics.length > 0) {
+            html += this.renderSearchSection('🏷️ Topics', topics, this.renderTopicResult.bind(this));
+        }
+
+        resultsContainer.innerHTML = html;
+    }
+
+    /**
+     * Display filtered results for a specific type
+     * Migrated from index.html line 2785
+     */
+    displayFilteredSearchResults(type) {
+        const resultsContainer = document.getElementById('globalSearchResults');
+        let results = this.currentSearchResults[type];
+
+        // Handle separation of candidates and officials
+        if (type === 'officials') {
+            results = this.currentSearchResults.officials ? this.currentSearchResults.officials.filter(o => o.politicalProfileType === 'ELECTED_OFFICIAL') : [];
+        } else if (type === 'candidates') {
+            results = this.currentSearchResults.officials ? this.currentSearchResults.officials.filter(o => o.politicalProfileType === 'CANDIDATE') : [];
+        }
+
+        if (results.length === 0) {
+            const typeLabels = {
+                users: '👤 Users',
+                posts: '📝 Posts',
+                officials: '🏛️ Officials',
+                candidates: '🗳️ Candidates',
+                topics: '🏷️ Topics'
+            };
+
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+                    <h3>No ${typeLabels[type]} Found</h3>
+                    <p>Try different keywords or remove filters</p>
+                </div>
+            `;
+            return;
+        }
+
+        const renderFunctions = {
+            users: this.renderUserResult.bind(this),
+            posts: this.renderPostResult.bind(this),
+            officials: this.renderOfficialResult.bind(this),
+            candidates: this.renderCandidateResult.bind(this),
+            topics: this.renderTopicResult.bind(this)
+        };
+
+        let html = results.map(result => renderFunctions[type](result)).join('');
+        resultsContainer.innerHTML = html;
+    }
+
+    /**
+     * Open user profile (enhanced version)
+     * Migrated from index.html line 2994
+     */
+    async openUserProfile(userId, username) {
+        try {
+            this.closeSearch();
+
+            // Show loading state
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Loading @${username}'s Profile</h2>
+                        <p>Loading profile and posts...</p>
+                    </div>
+                `;
+            }
+
+            // Load user's profile using the MyProfile component
+            if (window.Profile) {
+                await window.Profile.showUserProfile(userId);
+            } else {
+                // Fallback to basic profile view
+                await this.openUserFeed(userId, username);
+            }
+
+        } catch (error) {
+            console.error('Failed to open user profile:', error);
+            if (typeof showToast === 'function') {
+                showToast('Failed to load user profile');
+            }
+        }
+    }
+
+    /**
+     * Show specific post in feed
+     * Migrated from index.html line 3022
+     */
+    async showPostInFeed(postId) {
+        try {
+            this.closeSearch();
+
+            // Load single post and display in My Feed
+            const response = await window.apiCall(`/posts/${postId}`);
+            if (response.ok && response.data) {
+                // Show the post in main content
+                if (typeof showMyFeedInMain === 'function') {
+                    showMyFeedInMain();
+                }
+
+                // Highlight the specific post
+                setTimeout(() => {
+                    const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+                    if (postElement) {
+                        postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        postElement.style.border = '2px solid #4b5c09';
+                        postElement.style.borderRadius = '8px';
+                        setTimeout(() => {
+                            postElement.style.border = '';
+                            postElement.style.borderRadius = '';
+                        }, 3000);
+                    }
+                }, 1000);
+
+                if (typeof showToast === 'function') {
+                    showToast('Post found in feed');
+                }
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast('Post not found or not accessible');
+                }
+            }
+
+        } catch (error) {
+            console.error('Failed to show post:', error);
+            if (typeof showToast === 'function') {
+                showToast('Failed to load post');
+            }
+        }
+    }
+
+    /**
+     * Legacy function for compatibility
+     * Migrated from index.html line 3063
+     */
+    async openUserFeed(userId, username) {
+        try {
+            this.closeSearch();
+
+            // Show loading state
+            const feedElement = document.getElementById('postsFeed');
+            if (feedElement) {
+                feedElement.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h2>Loading @${username}'s Profile</h2>
+                        <p>Loading profile and posts...</p>
+                    </div>
+                `;
+            }
+
+            // Load user's profile and posts in parallel
+            const [profileResponse, postsResponse] = await Promise.all([
+                window.apiCall(`/users/${userId}`),
+                window.apiCall(`/posts/user/${userId}`)
+            ]);
+
+            if (profileResponse.ok && postsResponse.ok) {
+                const userProfile = profileResponse.data.user;
+                const posts = postsResponse.data.posts || [];
+
+                // Create profile header (simplified for space)
+                let html = `
+                    <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 2rem; margin-bottom: 1rem; border-radius: 8px;">
+                        <h1>${userProfile.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}` : userProfile.username}</h1>
+                        <p>@${userProfile.username} • ${userProfile.followersCount || 0} followers</p>
+                        ${userId !== window.currentUser?.id ? `
+                            <button onclick="toggleFollow('${userId}', this)" style="padding: 0.5rem 1rem; background: #fff; color: #4b5c09; border: none; border-radius: 4px;">Follow</button>
+                            <button onclick="startConversationWithUser('${userId}', '${username}')" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; margin-left: 0.5rem;">Message</button>
+                        ` : ''}
+                    </div>
+                    <div style="border-bottom: 2px solid #4b5c09; margin-bottom: 1rem; padding-bottom: 0.5rem;">
+                        <h2 style="margin: 0; color: #4b5c09;">Posts (${posts.length})</h2>
+                    </div>
+                `;
+
+                if (posts.length === 0) {
+                    html += `<div style="text-align: center; padding: 2rem; color: #666;"><p>This user hasn't posted anything yet.</p></div>`;
+                } else {
+                    posts.forEach(post => {
+                        html += `
+                            <div class="post-item" data-post-id="${post.id}" style="background: white; padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-weight: bold; margin-bottom: 0.5rem;">${post.author.firstName || post.author.username}</div>
+                                <div style="margin-bottom: 1rem;">${post.content}</div>
+                                <div style="color: #666; font-size: 0.9rem;">👍 ${post.likesCount || 0} • 💬 ${post.commentsCount || 0} • ${new Date(post.createdAt).toLocaleDateString()}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (feedElement) {
+                    feedElement.innerHTML = html;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading user feed:', error);
+        }
+    }
+
+    /**
+     * Add friend functionality
+     * Migrated from index.html line 3211
+     */
+    async addFriend(userId) {
+        console.log('Adding friend:', userId);
+
+        if (window.FriendUtils && typeof window.FriendUtils.sendFriendRequest === 'function') {
+            await window.FriendUtils.sendFriendRequest(userId);
+        } else {
+            // Fallback implementation
+            try {
+                const response = await window.apiCall('/friends/request', {
+                    method: 'POST',
+                    body: JSON.stringify({ targetUserId: userId })
+                });
+
+                if (response.ok) {
+                    if (typeof showToast === 'function') {
+                        showToast('Friend request sent!');
+                    }
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('Failed to send friend request');
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending friend request:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Error sending friend request');
+                }
+            }
+        }
+    }
+
+    /**
+     * Render follow button for users
+     * Migrated from index.html line 2688
+     */
+    renderFollowButton(userId, containerElement) {
+        if (!window.currentUser || userId === window.currentUser.id) return '';
+
+        try {
+            // Get follow status from CACHED data
+            const status = this.getCachedRelationshipStatus(userId);
+            const isFollowing = status.isFollowing;
+
+            const buttonHtml = `
+                <button onclick="toggleFollow('${userId}', this)"
+                    data-user-id="${userId}"
+                    data-following="${isFollowing}"
+                    style="padding: 0.25rem 0.5rem; background: ${isFollowing ? '#666' : '#4b5c09'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                    ${isFollowing ? 'Following' : 'Follow'}
+                </button>
+            `;
+
+            return buttonHtml;
+        } catch (error) {
+            console.error('Error loading cached follow status:', error);
+            return `
+                <button onclick="toggleFollow('${userId}', this)"
+                    data-user-id="${userId}"
+                    data-following="false"
+                    style="padding: 0.25rem 0.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                    Follow
+                </button>
+            `;
+        }
+    }
+
+    /**
+     * Get cached relationship status
+     */
+    getCachedRelationshipStatus(userId) {
+        if (window.getCachedRelationshipStatus) {
+            return window.getCachedRelationshipStatus(userId);
+        }
+        // Fallback
+        return { isFollowing: false, isFriend: false };
+    }
 }
 
 // Export the class as default
 export default SearchHandlers;
 
 // Create global instance for backward compatibility
+const searchHandlers = new SearchHandlers();
 window.SearchHandlers = SearchHandlers;
+window.searchHandlers = searchHandlers;
+
+// Make functions globally available for backward compatibility
+if (typeof window !== 'undefined') {
+    window.displayAllSearchResults = () => searchHandlers.displayAllSearchResults();
+    window.displayFilteredSearchResults = (type) => searchHandlers.displayFilteredSearchResults(type);
+    window.openUserProfile = (userId, username) => searchHandlers.openUserProfile(userId, username);
+    window.showPostInFeed = (postId) => searchHandlers.showPostInFeed(postId);
+    window.openUserFeed = (userId, username) => searchHandlers.openUserFeed(userId, username);
+    window.addFriend = (userId) => searchHandlers.addFriend(userId);
+    window.renderFollowButton = (userId, containerElement) => searchHandlers.renderFollowButton(userId, containerElement);
+}

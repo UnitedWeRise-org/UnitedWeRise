@@ -2852,11 +2852,295 @@ class PostComponent {
         };
         return rarityPercentages[rarity] || 30;
     }
+
+    // ==================== POST INTERACTION FUNCTIONS (Phase 2B-7) ====================
+
+    /**
+     * Update like count display for a specific post
+     * @param {string} postId - The ID of the post
+     * @param {boolean} isLiked - Whether the post was liked or unliked
+     */
+    updateLikeCount(postId, isLiked) {
+        // Find the like button for this post and update its count
+        const likeButtons = document.querySelectorAll(`[onclick*="likeTrendingPost('${postId}')"]`);
+        likeButtons.forEach(button => {
+            const currentText = button.textContent;
+            const currentCount = parseInt(currentText.match(/\d+/)?.[0] || '0');
+            const newCount = isLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+            button.innerHTML = `❤️ ${newCount}`;
+        });
+    }
+
+    /**
+     * Show trending comment box for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    showTrendingCommentBox(postId) {
+        if (!window.currentUser) {
+            alert('Please log in to comment');
+            return;
+        }
+        document.getElementById(`trending-comments-${postId}`).style.display = 'block';
+    }
+
+    /**
+     * Hide trending comment box for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    hideTrendingCommentBox(postId) {
+        document.getElementById(`trending-comments-${postId}`).style.display = 'none';
+        document.getElementById(`trending-comment-input-${postId}`).value = '';
+    }
+
+    /**
+     * Update comment count display for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    updateCommentCount(postId) {
+        // Find the comment button for this post and increment its count
+        const commentButtons = document.querySelectorAll(`[onclick*="showTrendingCommentBox('${postId}')"]`);
+        commentButtons.forEach(button => {
+            const currentText = button.textContent;
+            const currentCount = parseInt(currentText.match(/\d+/)?.[0] || '0');
+            const newCount = currentCount + 1;
+            button.innerHTML = `💬 ${newCount}`;
+        });
+    }
+
+    /**
+     * Show comment box for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    showCommentBox(postId) {
+        document.getElementById(`comments-${postId}`).style.display = 'block';
+    }
+
+    /**
+     * Hide comment box for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    hideCommentBox(postId) {
+        document.getElementById(`comments-${postId}`).style.display = 'none';
+        document.getElementById(`comment-input-${postId}`).value = '';
+    }
+
+    /**
+     * Display posts in a container using PostComponent rendering or fallback
+     * @param {Array} posts - Array of post objects
+     * @param {string} containerId - ID of the container element (default: 'postsFeed')
+     * @param {boolean} appendMode - Whether to append to existing content (default: false)
+     */
+    displayPosts(posts, containerId = 'postsFeed', appendMode = false) {
+        const feed = document.getElementById(containerId);
+        if (!feed) {
+            console.warn('Feed container not found:', containerId);
+            return;
+        }
+
+        if (posts.length === 0) {
+            if (!appendMode) {
+                feed.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <h2>Your Posts</h2>
+                        <p>You haven't posted anything yet. Share your thoughts above!</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        // Use the standardized PostComponent if available
+        if (window.postComponent) {
+            let html = '';
+
+            // Only add header in replace mode, not append mode
+            if (!appendMode) {
+                html += '<div class="posts-list">';
+            }
+
+            posts.forEach(post => {
+                html += window.postComponent.renderPost(post, {
+                    showActions: true,
+                    showComments: true,
+                    showAuthor: true,
+                    showTimestamp: true,
+                    compactView: false
+                });
+            });
+
+            if (!appendMode) {
+                html += '</div>';
+                feed.innerHTML = html;
+            } else {
+                // Append to existing content
+                feed.insertAdjacentHTML('beforeend', html);
+            }
+
+            // Add friend status indicators after posts are rendered
+            setTimeout(() => {
+                if (typeof addFriendStatusToExistingPosts === 'function') {
+                    addFriendStatusToExistingPosts(containerId, posts);
+                }
+            }, 500);
+        } else {
+            // Enhanced fallback with friend status indicators
+            if (typeof displayPostsWithFriendStatus === 'function') {
+                displayPostsWithFriendStatus(posts, containerId, appendMode);
+            } else {
+                this.displayPostsFallback(posts, containerId, appendMode);
+            }
+        }
+    }
+
+    /**
+     * Fallback post display function with basic HTML rendering
+     * @param {Array} posts - Array of post objects
+     * @param {string} containerId - ID of the container element
+     * @param {boolean} appendMode - Whether to append to existing content (default: false)
+     */
+    displayPostsFallback(posts, containerId, appendMode = false) {
+        const feed = document.getElementById(containerId);
+        if (!feed) return;
+
+        let html = '';
+        posts.forEach(post => {
+            const timeAgo = this.getTimeAgo(new Date(post.createdAt));
+
+            html += `
+                <div class="post-item" data-post-id="${post.id}">
+                    <div class="post-header">
+                        <div class="user-avatar">${(post.author.firstName?.[0] || post.author.username[0]).toUpperCase()}</div>
+                        <div>
+                            <strong>${post.author.firstName || post.author.username}</strong>
+                            ${post.author.verified ? '<span style="color: #1976d2;">✓</span>' : ''}
+                            <br>
+                            <small style="color: #666;">@${post.author.username} • ${timeAgo}</small>
+                        </div>
+                    </div>
+                    <div class="post-content">${post.content}</div>
+                    <div class="post-actions">
+                        <span class="post-action" onclick="likePost('${post.id}', event)" style="cursor: pointer; transition: transform 0.2s;">
+                            ${post.isLiked ? '❤️' : '👍'} ${post.likesCount || 0}
+                        </span>
+                        <span class="post-action" onclick="showCommentBox('${post.id}')">
+                            💬 Add Comment
+                        </span>
+                        ${post.commentsCount > 0 ? `<span class="post-action" onclick="viewComments('${post.id}')" style="color: #4b5c09;">👁️ View ${post.commentsCount} Comment${post.commentsCount === 1 ? '' : 's'}</span>` : ''}
+                    </div>
+                    <div id="comments-${post.id}" class="comments-section" style="display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
+                        <textarea id="comment-input-${post.id}" placeholder="Add a comment..." style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; box-sizing: border-box; resize: vertical;"></textarea>
+                        <div style="margin-top: 0.5rem;">
+                            <button onclick="addComment('${post.id}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Comment</button>
+                            <button onclick="hideCommentBox('${post.id}')" style="background: #666; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        if (appendMode) {
+            feed.insertAdjacentHTML('beforeend', html);
+        } else {
+            feed.innerHTML = html;
+        }
+    }
+
+    /**
+     * Show comments inline for a specific post
+     * @param {string} postId - The ID of the post
+     * @param {Array} comments - Array of comment objects
+     */
+    showCommentsInline(postId, comments) {
+        let commentsContainer = document.getElementById(`post-comments-${postId}`);
+
+        // Create comments container if it doesn't exist
+        if (!commentsContainer) {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            if (!postElement) return;
+
+            commentsContainer = document.createElement('div');
+            commentsContainer.id = `post-comments-${postId}`;
+            commentsContainer.style.cssText = 'margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; background: #f9f9f9; border-radius: 8px; padding: 1rem;';
+            postElement.appendChild(commentsContainer);
+        }
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0; color: #4b5c09;">Comments (${comments.length})</h4>
+                <button onclick="hideComments('${postId}')" style="background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+        `;
+
+        if (comments.length === 0) {
+            html += '<div style="text-align: center; color: #666; padding: 1rem;">No comments yet</div>';
+        } else {
+            comments.forEach(comment => {
+                html += `
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                            <img src="${comment.user.avatar || '/default-avatar.png'}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem;">
+                            <div>
+                                <div style="font-weight: bold; font-size: 0.85rem;">${comment.user.firstName || comment.user.username} ${comment.user.lastName || ''}</div>
+                                <div style="color: #666; font-size: 0.75rem;">@${comment.user.username}</div>
+                            </div>
+                            ${comment.user.verified ? '<span style="color: #1d9bf0; margin-left: 5px; font-size: 0.8rem;">✓</span>' : ''}
+                            <div style="margin-left: auto; color: #666; font-size: 0.75rem;">
+                                ${new Date(comment.createdAt).toLocaleString()}
+                            </div>
+                        </div>
+                        <div style="margin-left: 32px; line-height: 1.4;">
+                            ${comment.content}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Add comment form if user is logged in
+        if (window.currentUser) {
+            html += `
+                <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                    <textarea id="inline-comment-input-${postId}" placeholder="Add a comment..." style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
+                    <div style="margin-top: 0.75rem; text-align: right;">
+                        <button onclick="addInlineComment('${postId}')" style="background: #4b5c09; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Post Comment</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        commentsContainer.innerHTML = html;
+        commentsContainer.style.display = 'block';
+    }
+
+    /**
+     * Hide comments for a specific post
+     * @param {string} postId - The ID of the post
+     */
+    hideComments(postId) {
+        const commentsContainer = document.getElementById(`post-comments-${postId}`);
+        if (commentsContainer) {
+            commentsContainer.style.display = 'none';
+        }
+    }
 }
 
 // Initialize and export
 const postComponent = new PostComponent();
 window.postComponent = postComponent;
+
+// Global function exposure for backward compatibility (Phase 2B-7)
+window.updateLikeCount = (postId, isLiked) => postComponent.updateLikeCount(postId, isLiked);
+window.showTrendingCommentBox = (postId) => postComponent.showTrendingCommentBox(postId);
+window.hideTrendingCommentBox = (postId) => postComponent.hideTrendingCommentBox(postId);
+window.updateCommentCount = (postId) => postComponent.updateCommentCount(postId);
+window.showCommentBox = (postId) => postComponent.showCommentBox(postId);
+window.hideCommentBox = (postId) => postComponent.hideCommentBox(postId);
+window.displayPosts = (posts, containerId, appendMode) => postComponent.displayPosts(posts, containerId, appendMode);
+window.displayPostsFallback = (posts, containerId, appendMode) => postComponent.displayPostsFallback(posts, containerId, appendMode);
+window.showCommentsInline = (postId, comments) => postComponent.showCommentsInline(postId, comments);
+window.hideComments = (postId) => postComponent.hideComments(postId);
+
+console.log('PostComponent: Post interaction functions migrated and exposed globally (Phase 2B-7)');
 
 // For module systems
 if (typeof module !== 'undefined' && module.exports) {

@@ -552,6 +552,146 @@ export class AuthHandlers {
             return false;
         }
     }
+
+    /**
+     * Real-time username availability checking
+     * Migrated from index.html line 3741
+     */
+    async checkUsername(username) {
+        if (!username || username.length < 3) {
+            this.updateValidationUI('username', null);
+            return;
+        }
+
+        try {
+            const API_BASE = getApiBaseUrl();
+            const response = await fetch(`${API_BASE}/auth/check-username`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const data = await response.json();
+
+            if (data.available) {
+                this.updateValidationUI('username', {
+                    type: 'success',
+                    message: 'Username is available'
+                });
+            } else {
+                this.updateValidationUI('username', {
+                    type: 'error',
+                    message: 'Username is already taken'
+                });
+            }
+        } catch (error) {
+            console.log('Username check failed:', error);
+            this.updateValidationUI('username', null);
+        }
+    }
+
+    /**
+     * Real-time email availability checking
+     * Migrated from index.html line 3776
+     */
+    async checkEmail(email) {
+        if (!email || !email.includes('@')) {
+            this.updateValidationUI('email', null);
+            return;
+        }
+
+        try {
+            const API_BASE = getApiBaseUrl();
+            const response = await fetch(`${API_BASE}/auth/check-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+
+            if (data.available) {
+                this.updateValidationUI('email', {
+                    type: 'success',
+                    message: 'Email is available'
+                });
+            } else {
+                this.updateValidationUI('email', {
+                    type: 'error',
+                    message: 'Email is already registered'
+                });
+            }
+        } catch (error) {
+            console.log('Email check failed:', error);
+            this.updateValidationUI('email', null);
+        }
+    }
+
+    /**
+     * Update validation UI for username/email fields
+     */
+    updateValidationUI(fieldType, validation) {
+        const statusElement = document.getElementById(`${fieldType}-status`);
+        const errorElement = document.getElementById(`${fieldType}-error`);
+        const messageElement = document.getElementById(`${fieldType}-message`);
+
+        if (!statusElement || !errorElement || !messageElement) {
+            return; // Elements don't exist on this page
+        }
+
+        // Hide all first
+        statusElement.style.display = 'none';
+        errorElement.style.display = 'none';
+        messageElement.style.display = 'none';
+
+        if (validation) {
+            if (validation.type === 'success') {
+                statusElement.style.display = 'block';
+                messageElement.innerHTML = `<span style="color: #27ae60;">${validation.message}</span>`;
+                messageElement.style.display = 'block';
+            } else if (validation.type === 'error') {
+                errorElement.style.display = 'block';
+                messageElement.innerHTML = `<span style="color: #e74c3c;">${validation.message}</span>`;
+                messageElement.style.display = 'block';
+            }
+        }
+    }
+
+    /**
+     * Setup real-time validation for registration form
+     * Migrated from index.html DOMContentLoaded handler line 3812
+     */
+    setupRealtimeValidation() {
+        // Username field validation
+        const usernameField = document.getElementById('registerUsername');
+        if (usernameField) {
+            let usernameCheckTimeout;
+            usernameField.addEventListener('input', (event) => {
+                clearTimeout(usernameCheckTimeout);
+                usernameCheckTimeout = setTimeout(() => {
+                    this.checkUsername(event.target.value);
+                }, 500); // Debounce for 500ms
+            });
+        }
+
+        // Email field validation
+        const emailField = document.getElementById('registerEmail');
+        if (emailField) {
+            let emailCheckTimeout;
+            emailField.addEventListener('input', (event) => {
+                clearTimeout(emailCheckTimeout);
+                emailCheckTimeout = setTimeout(() => {
+                    this.checkEmail(event.target.value);
+                }, 500); // Debounce for 500ms
+            });
+        }
+
+        // Password field validation (if validation utility exists)
+        const passwordField = document.getElementById('registerPassword');
+        if (passwordField && typeof validatePassword === 'function') {
+            passwordField.addEventListener('input', (event) => {
+                validatePassword(event.target.value);
+            });
+        }
+    }
 }
 
 // Create and export singleton instance
@@ -567,6 +707,19 @@ if (typeof window !== 'undefined') {
     window.fixAuthStorageIssues = () => authHandlers.fixAuthStorageIssues();
     window.testGoogleDomainAuth = () => authHandlers.testGoogleDomainAuth();
     window.retryGoogleOAuth = () => authHandlers.retryGoogleOAuth();
+    window.checkUsername = (username) => authHandlers.checkUsername(username);
+    window.checkEmail = (email) => authHandlers.checkEmail(email);
+    window.setupRealtimeValidation = () => authHandlers.setupRealtimeValidation();
+
+    // Setup real-time validation when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            authHandlers.setupRealtimeValidation();
+        });
+    } else {
+        // DOM already loaded
+        authHandlers.setupRealtimeValidation();
+    }
 }
 
 export default authHandlers;

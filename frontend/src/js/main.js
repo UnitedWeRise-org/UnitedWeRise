@@ -44,12 +44,18 @@ import '../handlers/map-handlers.js';
 // Phase 4h: Civic handlers (officials, profile, radio controls)
 import '../handlers/civic-handlers.js';
 
+// Phase 4i: Notification handlers (notification system, badges, toasts)
+import '../handlers/notification-handlers.js';
+
 // Phase 5: Component layer
 import '../components/PostComponent.js';
 import '../components/Profile.js';
 
-// Phase 5a: Feed modules (post creation and display - requires PostComponent)
-import '../modules/features/feed/my-feed.js';
+// Phase 4j: My Feed handlers (personalized feed system)
+import '../handlers/my-feed.js';
+
+// Phase 4k: Trending handlers (topic mode, geographic scope, AI topics)
+import '../handlers/trending-handlers.js';
 
 // Phase 5b: URL routing system (depends on Profile component)
 import '../utils/username-router.js';
@@ -75,6 +81,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize payment systems
     initializeDonationSystem();
     console.log('💳 Payment systems initialized');
+
+    // Performance optimizations (migrated from index.html inline script)
+    console.log('🚀 Initializing performance optimizations...');
+
+    // Wrap apiCall with performance optimization if available
+    if (window.createOptimizedApiCall && window.apiCall) {
+        const originalApiCall = window.apiCall;
+        window.apiCall = window.createOptimizedApiCall(originalApiCall);
+        console.log('✅ API calls optimized with caching and retry');
+    }
+
+    // Wrap apiCall with error handling if available
+    if (window.createErrorAwareApiCall && window.apiCall) {
+        const currentApiCall = window.apiCall;
+        window.apiCall = window.createErrorAwareApiCall(currentApiCall);
+        console.log('✅ API calls enhanced with user-friendly error handling');
+    }
+
+    // Preload critical content
+    if (window.performanceOptimizer) {
+        window.performanceOptimizer.preloadCriticalContent();
+    }
+
+    console.log('🎉 Performance optimizations active!');
 });
 
 console.log('✅ ES6 Module system loaded successfully');

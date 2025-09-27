@@ -44,6 +44,36 @@ export class CivicHandlers {
                 // Radio button state is handled by the input itself
                 // Additional logic can be added here if needed
             }
+
+            // Civic organizing filter changes
+            if (e.target.matches('[data-action="update-civic-results"]')) {
+                e.preventDefault();
+                if (typeof window.updateCivicResults === 'function') {
+                    window.updateCivicResults();
+                }
+            }
+        });
+
+        // Form submission handlers
+        document.addEventListener('submit', (e) => {
+            const target = e.target.closest('[data-civic-action]');
+            if (!target) return;
+
+            e.preventDefault();
+            const action = target.dataset.civicAction;
+
+            switch (action) {
+                case 'submit-petition':
+                    if (typeof window.submitPetition === 'function') {
+                        window.submitPetition(e);
+                    }
+                    break;
+                case 'submit-event':
+                    if (typeof window.submitEvent === 'function') {
+                        window.submitEvent(e);
+                    }
+                    break;
+            }
         });
 
         console.log('🎯 Civic event delegation initialized');
@@ -391,6 +421,198 @@ export class CivicHandlers {
         console.log('✅ Auth storage cleared successfully');
         return 'Auth storage cleared. Please refresh the page and log in again.';
     }
+
+    // ========================================
+    // OFFICIALS & CIVIC FUNCTIONS (Phase 2B-8)
+    // ========================================
+
+    /**
+     * Display detailed official profile in main content area
+     * @param {Object} official - Official object with profile information
+     */
+    displayOfficialProfile(official) {
+        console.log('🏛️ Displaying official profile for:', official.name);
+
+        const mainContent = document.getElementById('mainContent');
+        if (!mainContent) {
+            console.error('Main content element not found');
+            return;
+        }
+
+        mainContent.innerHTML = `
+            <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+                <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: #1976d2; color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-right: 1.5rem;">
+                            🏛️
+                        </div>
+                        <div>
+                            <h1 style="margin: 0; font-size: 2rem; color: #333;">${official.name}</h1>
+                            <h2 style="margin: 0.5rem 0; font-size: 1.3rem; color: #666; font-weight: normal;">${official.office || official.title}</h2>
+                            <div style="color: #666; font-size: 1rem;">
+                                ${official.party ? `${official.party} • ` : ''}${official.state || official.district || 'Federal'}
+                                ${official.chamber ? ` • ${official.chamber}` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <div>
+                            <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Contact Information</h3>
+                            ${official.phone ? `<p><strong>Phone:</strong> ${official.phone}</p>` : ''}
+                            ${official.email ? `<p><strong>Email:</strong> ${official.email}</p>` : ''}
+                            ${official.website ? `<p><strong>Website:</strong> <a href="${official.website}" target="_blank">${official.website}</a></p>` : ''}
+                            ${official.address ? `<p><strong>Address:</strong> ${official.address}</p>` : ''}
+                        </div>
+                        <div>
+                            <h3 style="color: #4b5c09; border-bottom: 2px solid #4b5c09; padding-bottom: 0.5rem;">Political Information</h3>
+                            ${official.nextElection ? `<p><strong>Next Election:</strong> ${official.nextElection}</p>` : ''}
+                            ${official.termStart ? `<p><strong>Term Start:</strong> ${official.termStart}</p>` : ''}
+                            ${official.termEnd ? `<p><strong>Term End:</strong> ${official.termEnd}</p>` : ''}
+                            ${official.committees ? `<p><strong>Committees:</strong> ${official.committees.join(', ')}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        ${official.contactInfo ? `
+                            <button onclick="contactOfficial('${official.id}')" style="padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                                Contact ${official.name}
+                            </button>
+                        ` : ''}
+                        <button onclick="viewVotingRecords('${official.bioguideId || official.id}')" style="padding: 0.75rem 1.5rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                            View Voting Records
+                        </button>
+                        <button onclick="viewOfficialNews('${official.name}')" style="padding: 0.75rem 1.5rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+                            Recent News
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        console.log('✅ Official profile displayed successfully');
+    }
+
+    /**
+     * Load and display official details by ID
+     * @param {string} officialId - Unique identifier for the official
+     */
+    async showOfficialDetails(officialId) {
+        console.log('🔍 Loading official details for ID:', officialId);
+
+        try {
+            // Close search if open
+            if (typeof window.closeSearch === 'function') {
+                window.closeSearch();
+            }
+
+            // Load official information in main content
+            const mainContent = document.getElementById('mainContent');
+            if (!mainContent) {
+                console.error('Main content element not found');
+                return;
+            }
+
+            mainContent.innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <h2>Loading Official Information</h2>
+                    <p>Loading details...</p>
+                </div>
+            `;
+
+            const response = await window.apiCall(`/legislative/officials/${officialId}`);
+            if (response.ok && response.data) {
+                const official = response.data;
+                this.displayOfficialProfile(official);
+            } else {
+                mainContent.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #d32f2f;">
+                        <h2>Official Not Found</h2>
+                        <p>Could not load official information</p>
+                    </div>
+                `;
+            }
+
+        } catch (error) {
+            console.error('Failed to load official:', error);
+            if (typeof window.showToast === 'function') {
+                window.showToast('Failed to load official information');
+            }
+        }
+    }
+
+    /**
+     * Initiate contact with an official
+     * @param {string} officialId - Unique identifier for the official
+     */
+    contactOfficial(officialId) {
+        console.log('📞 Contact official requested for ID:', officialId);
+
+        if (typeof window.showToast === 'function') {
+            window.showToast('Contact feature coming soon!');
+        } else {
+            console.log('Contact feature coming soon!');
+        }
+    }
+
+    /**
+     * View official profile (wrapper for showOfficialDetails)
+     * @param {string} officialId - Unique identifier for the official
+     */
+    viewOfficialProfile(officialId) {
+        console.log('👁️ View official profile requested for ID:', officialId);
+        this.showOfficialDetails(officialId);
+    }
+
+    /**
+     * View voting records for an official
+     * @param {string} bioguideId - Bioguide ID for the official
+     */
+    viewVotingRecords(bioguideId) {
+        console.log('🗳️ View voting records requested for Bioguide ID:', bioguideId);
+
+        if (window.LegislativeIntegration) {
+            window.LegislativeIntegration.showVotingRecords(bioguideId);
+        } else {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Voting records feature coming soon!');
+            } else {
+                console.log('Voting records feature coming soon!');
+            }
+        }
+    }
+
+    /**
+     * View official news and updates
+     * @param {string} officialName - Name of the official
+     */
+    viewOfficialNews(officialName) {
+        console.log('📰 View official news requested for:', officialName);
+
+        if (window.LegislativeIntegration) {
+            window.LegislativeIntegration.showOfficialNews(officialName);
+        } else {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Official news feature coming soon!');
+            } else {
+                console.log('Official news feature coming soon!');
+            }
+        }
+    }
+
+    /**
+     * Show main feed view (reset to trending posts)
+     */
+    showMainFeed() {
+        console.log('🏠 Showing main feed...');
+
+        // Reset to main feed view - load trending posts
+        if (typeof window.loadTrendingPosts === 'function') {
+            window.loadTrendingPosts();
+        } else {
+            console.warn('loadTrendingPosts function not available');
+        }
+    }
 }
 
 // Create singleton instance
@@ -406,6 +628,15 @@ window.closeDetail = () => civicHandlers.closeDetail();
 window.updateRadioButtonAvailability = () => civicHandlers.updateRadioButtonAvailability();
 window.updateRadioButtonState = (level) => civicHandlers.updateRadioButtonState(level);
 window.fixAuthStorageIssues = () => civicHandlers.fixAuthStorageIssues();
+
+// Phase 2B-8 Officials & Civic Functions
+window.displayOfficialProfile = (official) => civicHandlers.displayOfficialProfile(official);
+window.showOfficialDetails = (officialId) => civicHandlers.showOfficialDetails(officialId);
+window.contactOfficial = (officialId) => civicHandlers.contactOfficial(officialId);
+window.viewOfficialProfile = (officialId) => civicHandlers.viewOfficialProfile(officialId);
+window.viewVotingRecords = (bioguideId) => civicHandlers.viewVotingRecords(bioguideId);
+window.viewOfficialNews = (officialName) => civicHandlers.viewOfficialNews(officialName);
+window.showMainFeed = () => civicHandlers.showMainFeed();
 
 console.log('✅ Civic handlers module loaded and exported globally');
 

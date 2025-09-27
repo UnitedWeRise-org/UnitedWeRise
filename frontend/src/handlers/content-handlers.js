@@ -18,6 +18,89 @@ export class ContentHandlers {
         this.currentMOTDData = null;
         this.dismissalToken = null;
         this.setupGlobalVariables();
+        this.setupEventListeners();
+    }
+
+    /**
+     * Setup event delegation for trending and content actions
+     */
+    setupEventListeners() {
+        document.addEventListener('click', this.handleContentClick.bind(this));
+    }
+
+    /**
+     * Handle click events for trending and content actions
+     */
+    handleContentClick(event) {
+        const target = event.target.closest('[data-trending-action], [data-content-action]');
+        if (!target) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const action = target.dataset.trendingAction || target.dataset.contentAction;
+        const topicId = target.dataset.topicId;
+        const postId = target.dataset.postId;
+
+        switch (action) {
+            case 'enter-topic-mode':
+                if (typeof window.enterTopicMode === 'function' && topicId) {
+                    window.enterTopicMode(topicId);
+                }
+                break;
+            case 'exit-topic-mode':
+                if (typeof window.exitTopicMode === 'function') {
+                    window.exitTopicMode();
+                }
+                break;
+            case 'like-trending-post':
+                if (typeof window.likeTrendingPost === 'function' && postId) {
+                    window.likeTrendingPost(postId);
+                }
+                break;
+            case 'show-trending-comment-box':
+                if (typeof window.showTrendingCommentBox === 'function' && postId) {
+                    window.showTrendingCommentBox(postId);
+                }
+                break;
+            case 'add-trending-comment':
+                if (typeof window.addTrendingComment === 'function' && postId) {
+                    window.addTrendingComment(postId);
+                }
+                break;
+            case 'hide-trending-comment-box':
+                if (typeof window.hideTrendingCommentBox === 'function' && postId) {
+                    window.hideTrendingCommentBox(postId);
+                }
+                break;
+            case 'view-comments':
+                if (typeof window.viewComments === 'function' && postId) {
+                    window.viewComments(postId);
+                }
+                break;
+            case 'load-trending-updates':
+                event.preventDefault();
+                if (typeof window.loadTrendingUpdates === 'function') {
+                    window.loadTrendingUpdates();
+                }
+                break;
+            case 'like-post':
+                if (typeof window.likePost === 'function' && postId) {
+                    window.likePost(postId);
+                }
+                break;
+            case 'toggle-comments':
+                if (typeof window.toggleComments === 'function' && postId) {
+                    window.toggleComments(postId);
+                }
+                break;
+            case 'load-trending-posts-show-main-feed':
+                if (typeof window.loadTrendingPosts === 'function' && typeof window.showMainFeed === 'function') {
+                    window.loadTrendingPosts();
+                    window.showMainFeed();
+                }
+                break;
+        }
     }
 
     /**
