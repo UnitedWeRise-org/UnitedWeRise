@@ -45,6 +45,7 @@ import '../handlers/map-handlers.js';
 import '../handlers/civic-handlers.js';
 
 // Phase 5: Component layer
+import '../components/PostComponent.js';
 import '../components/Profile.js';
 
 // Phase 5a: URL routing system (depends on Profile component)
