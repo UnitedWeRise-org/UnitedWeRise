@@ -119,6 +119,20 @@ class ProbabilityFeedService {
                         }
                     }
                 },
+                photos: {
+                    where: {
+                        isActive: true,
+                        photoType: 'POST_MEDIA'
+                    },
+                    select: {
+                        id: true,
+                        url: true,
+                        thumbnailUrl: true,
+                        width: true,
+                        height: true,
+                        mimeType: true
+                    }
+                },
                 _count: {
                     select: {
                         likes: true,
