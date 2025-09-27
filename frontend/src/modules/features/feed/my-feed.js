@@ -178,9 +178,48 @@ export function displayMyFeedPosts(posts, appendMode = false) {
  */
 function displayMyFeedPostsFallback(posts, container, appendMode = false) {
     console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
-    
+
     let html = '';
     posts.forEach(post => {
+        // Render post media/photos if they exist
+        let mediaHtml = '';
+        if (post.photos && post.photos.length > 0) {
+            if (post.photos.length === 1) {
+                const photo = post.photos[0];
+                const isGif = photo.mimeType === 'image/gif';
+                mediaHtml = `
+                    <div class="post-media-inline single-photo" style="margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative;">
+                        <img src="${photo.url}"
+                             alt="Post image"
+                             style="width: 100%; height: auto; display: block; max-height: 400px; object-fit: cover;"
+                             onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                             loading="lazy">
+                        ${isGif ? '<div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">GIF</div>' : ''}
+                    </div>
+                `;
+            } else {
+                // Multiple photos - simple grid layout
+                mediaHtml = `
+                    <div class="post-media-inline multi-photo" style="margin-top: 12px; display: grid; gap: 2px; border-radius: 12px; overflow: hidden; max-height: 400px; grid-template-columns: repeat(2, 1fr);">
+                        ${post.photos.slice(0, 4).map((photo, index) => {
+                            const isGif = photo.mimeType === 'image/gif';
+                            return `
+                                <div style="position: relative;">
+                                    <img src="${photo.url}"
+                                         alt="Post image ${index + 1}"
+                                         style="width: 100%; height: 200px; object-fit: cover; display: block;"
+                                         onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                                         loading="lazy">
+                                    ${isGif ? '<div style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px;">GIF</div>' : ''}
+                                    ${post.photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${post.photos.length - 4}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+        }
+
         html += `
             <div class="post-item" style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
                 <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
@@ -190,13 +229,14 @@ function displayMyFeedPostsFallback(posts, container, appendMode = false) {
                     </span>
                 </div>
                 <div style="margin-bottom: 1rem;">${post.content || ''}</div>
-                <div style="color: #666; font-size: 0.9rem;">
+                ${mediaHtml}
+                <div style="color: #666; font-size: 0.9rem; margin-top: 1rem;">
                     👍 ${post.likesCount || 0} likes • 💬 ${post.commentsCount || 0} comments
                 </div>
             </div>
         `;
     });
-    
+
     if (appendMode) {
         container.insertAdjacentHTML('beforeend', html);
     } else {
