@@ -119,12 +119,47 @@ class MOTDController {
             // Auto-save functionality
             this.setupAutoSave();
 
+            // Form submission event listeners
+            this.setupFormEventListeners();
+
             // Modal close button event listeners
             this.setupModalCloseListeners();
+
+            // Comprehensive event delegation for dynamic buttons
+            this.setupDynamicEventDelegation();
 
             await adminDebugLog('MOTDController', 'Event listeners set up successfully');
         } catch (error) {
             await adminDebugError('MOTDController', 'Failed to setup event listeners', error);
+        }
+    }
+
+    /**
+     * Set up form submission event listeners
+     */
+    setupFormEventListeners() {
+        try {
+            // MOTD creation/update form
+            const motdForm = document.getElementById('motdForm');
+            if (motdForm) {
+                motdForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleUpdateMOTD();
+                });
+            }
+
+            // MOTD scheduling form
+            const scheduleForm = document.getElementById('scheduleForm');
+            if (scheduleForm) {
+                scheduleForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleScheduleMOTD();
+                });
+            }
+
+            console.log('Form event listeners set up successfully');
+        } catch (error) {
+            console.error('Failed to setup form event listeners:', error);
         }
     }
 
@@ -291,6 +326,68 @@ class MOTDController {
     }
 
     /**
+     * Setup comprehensive event delegation for dynamic MOTD buttons
+     * Follows same pattern as CivicEngagementController for consistency
+     */
+    setupDynamicEventDelegation() {
+        try {
+            // Comprehensive event delegation for all data-action attributes
+            document.addEventListener('click', (e) => {
+                const action = e.target.getAttribute('data-action');
+                if (!action) return;
+
+                // Only handle MOTD-related actions
+                const motdActions = ['editMOTD', 'deleteMOTD', 'viewMOTD', 'duplicateMOTD'];
+                if (!motdActions.includes(action)) return;
+
+                // Prevent default behavior for buttons and links
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+                    e.preventDefault();
+                }
+
+                // Get MOTD ID from data attribute
+                const motdId = e.target.getAttribute('data-motd-id');
+                if (!motdId) {
+                    console.warn(`Missing data-motd-id for action: ${action}`);
+                    return;
+                }
+
+                try {
+                    switch (action) {
+                        case 'editMOTD':
+                            this.editMOTD(motdId);
+                            break;
+
+                        case 'deleteMOTD':
+                            this.handleDeleteMOTD(motdId);
+                            break;
+
+                        case 'viewMOTD':
+                            this.viewMOTD(motdId);
+                            break;
+
+                        case 'duplicateMOTD':
+                            this.duplicateMOTD(motdId);
+                            break;
+
+                        default:
+                            console.warn(`Unhandled MOTD data-action: ${action}`);
+                    }
+                } catch (error) {
+                    console.error(`Error handling MOTD action ${action}:`, error);
+                    if (window.AdminGlobalUtils) {
+                        window.AdminGlobalUtils.showToast(`Error: ${error.message}`, 'error');
+                    }
+                }
+            });
+
+            console.log('Dynamic event delegation setup completed for MOTD actions');
+        } catch (error) {
+            console.error('Error setting up dynamic event delegation:', error);
+        }
+    }
+
+    /**
      * Load MOTD data
      */
     async loadData(useCache = true) {
@@ -439,11 +536,11 @@ class MOTDController {
                         <span class="motd-priority">${priorityIcon} ${motd.priority || 'low'}</span>
                     </div>
                     <div class="motd-actions">
-                        <button onclick="window.motdController.editMOTD('${motd.id}')"
+                        <button data-action="editMOTD" data-motd-id="${motd.id}"
                                 class="action-btn edit-btn" title="Edit MOTD">
                             ✏️ Edit
                         </button>
-                        <button onclick="window.motdController.handleDeleteMOTD('${motd.id}')"
+                        <button data-action="deleteMOTD" data-motd-id="${motd.id}"
                                 class="action-btn delete-btn" title="Delete MOTD">
                             🗑️ Delete
                         </button>
@@ -548,19 +645,19 @@ class MOTDController {
                     </div>
                 </td>
                 <td class="actions">
-                    <button onclick="window.motdController.viewMOTD('${motd.id}')"
+                    <button data-action="viewMOTD" data-motd-id="${motd.id}"
                             class="action-btn view-btn" title="View MOTD">
                         👁️ View
                     </button>
-                    <button onclick="window.motdController.editMOTD('${motd.id}')"
+                    <button data-action="editMOTD" data-motd-id="${motd.id}"
                             class="action-btn edit-btn" title="Edit MOTD">
                         ✏️ Edit
                     </button>
-                    <button onclick="window.motdController.duplicateMOTD('${motd.id}')"
+                    <button data-action="duplicateMOTD" data-motd-id="${motd.id}"
                             class="action-btn duplicate-btn" title="Duplicate MOTD">
                         📋 Copy
                     </button>
-                    <button onclick="window.motdController.handleDeleteMOTD('${motd.id}')"
+                    <button data-action="deleteMOTD" data-motd-id="${motd.id}"
                             class="action-btn delete-btn" title="Delete MOTD">
                         🗑️ Delete
                     </button>
@@ -1544,26 +1641,10 @@ class MOTDController {
     }
 }
 
-// Export for module system
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = MOTDController;
-} else {
-    window.MOTDController = MOTDController;
-}
+// Initialize and export - following CivicEngagementController pattern
+const motdController = new MOTDController();
 
-// Auto-initialize if dependencies are available
-if (typeof window !== 'undefined' && document.readyState !== 'loading') {
-    setTimeout(() => {
-        if (window.AdminAPI && window.AdminState) {
-            window.motdController = new MOTDController();
-        }
-    }, 100);
-} else if (typeof window !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (window.AdminAPI && window.AdminState) {
-                window.motdController = new MOTDController();
-            }
-        }, 100);
-    });
-}
+// Legacy global functions removed - now using event delegation with data-action attributes
+// All dynamic button interactions are handled through the comprehensive event delegation system in setupDynamicEventDelegation()
+
+export { motdController };

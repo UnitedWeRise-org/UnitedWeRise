@@ -55,11 +55,7 @@ export class MyFeedHandlers {
                 this.loadMoreMyFeedPosts();
                 break;
             case 'create-post-from-feed':
-                if (typeof window.createPostFromFeed === 'function') {
-                    window.createPostFromFeed();
-                } else {
-                    console.error('❌ createPostFromFeed function not available');
-                }
+                this.createPostFromFeed();
                 break;
         }
     }
@@ -222,6 +218,105 @@ export class MyFeedHandlers {
 
             // Update on input
             feedPostTextarea.addEventListener('input', updateCharCounter);
+        }
+    }
+
+    /**
+     * Create post from My Feed composer using UnifiedPostCreator
+     * Migrated from /modules/features/feed/my-feed.js to resolve module conflict
+     */
+    async createPostFromFeed() {
+        console.log('🎯 createPostFromFeed() - using UnifiedPostCreator');
+
+        if (!window.unifiedPostCreator) {
+            console.error('❌ UnifiedPostCreator not available');
+            alert('Post creation system not loaded. Please refresh the page.');
+            return false;
+        }
+
+        const result = await window.unifiedPostCreator.create({
+            type: 'post',
+            textareaId: 'feedPostContent',
+            mediaInputId: 'feedMediaUpload',
+            destination: 'feed',
+            tags: ['Public Post'],
+            clearAfterSuccess: true,
+            onSuccess: (result) => {
+                console.log('✅ Post created successfully via UnifiedPostCreator');
+
+                // Update character counter
+                const charCount = document.getElementById('feedPostCharCount');
+                if (charCount) charCount.textContent = '0/5000';
+
+                // Prepend new post to feed for instant feedback
+                if (result.data?.post && window.currentUser) {
+                    this.prependUserPostToFeed(result.data.post, window.currentUser);
+                } else if (result.data && window.currentUser) {
+                    this.prependUserPostToFeed(result.data, window.currentUser);
+                }
+            },
+            onError: (error) => {
+                console.error('❌ Post creation failed:', error);
+                alert(error.error || 'Error creating post. Please try again.');
+            }
+        });
+
+        return result.success;
+    }
+
+    /**
+     * Prepend user's newly created post to the top of My Feed for instant gratification
+     * Migrated from /modules/features/feed/my-feed.js
+     */
+    prependUserPostToFeed(post, user) {
+        const feedContainer = document.getElementById('myFeedPosts');
+        if (!feedContainer) return;
+
+        console.log('📝 Prepending new post to feed:', {
+            id: post.id,
+            hasPhotos: !!(post.photos?.length),
+            photoCount: post.photos?.length || 0
+        });
+
+        // Format the post with user data for display
+        const postWithUser = {
+            ...post,
+            author: {
+                id: user.id,
+                username: user.username,
+                firstName: user.firstName || user.username,
+                lastName: user.lastName || '',
+                avatar: user.avatar || null,
+                verified: user.verified || false
+            },
+            likesCount: post.likesCount || 0,
+            commentsCount: post.commentsCount || 0,
+            isLiked: false,
+            createdAt: new Date().toISOString(),
+            // Ensure photos array exists (backend might not include it immediately)
+            photos: post.photos || []
+        };
+
+        try {
+            // Use the standard PostComponent if available
+            if (window.postComponent) {
+                const postHtml = window.postComponent.renderPost(postWithUser, {
+                    showActions: true,
+                    showComments: true,
+                    inFeed: true
+                });
+
+                // Insert at top of feed
+                feedContainer.insertAdjacentHTML('afterbegin', postHtml);
+                console.log('✅ Post prepended using PostComponent');
+            } else {
+                // Fallback rendering
+                this.displayMyFeedPostsFallback([postWithUser], feedContainer, false);
+                console.log('✅ Post prepended using fallback renderer');
+            }
+        } catch (error) {
+            console.error('❌ Error prepending post to feed:', error);
+            // Still show success message even if prepend fails
         }
     }
 

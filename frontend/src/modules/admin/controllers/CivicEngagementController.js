@@ -92,8 +92,8 @@ class CivicEngagementController {
                     </span>
                 </td>
                 <td>
-                    <button onclick="editQuest('${quest.id}')" class="btn-small">Edit</button>
-                    <button onclick="toggleQuestStatus('${quest.id}', ${!quest.isActive})" class="btn-small">
+                    <button data-action="editQuest" data-quest-id="${quest.id}" class="btn-small">Edit</button>
+                    <button data-action="toggleQuestStatus" data-quest-id="${quest.id}" data-active="${!quest.isActive}" class="btn-small">
                         ${quest.isActive ? 'Deactivate' : 'Activate'}
                     </button>
                 </td>
@@ -131,8 +131,8 @@ class CivicEngagementController {
                     <small>${badge._count?.userBadges || 0} awarded</small>
                 </div>
                 <div class="badge-actions">
-                    <button onclick="editBadge('${badge.id}')" class="btn-small">Edit</button>
-                    <button onclick="awardBadgeManually('${badge.id}')" class="btn-small">Award</button>
+                    <button data-action="editBadge" data-badge-id="${badge.id}" class="btn-small">Edit</button>
+                    <button data-action="awardBadgeManually" data-badge-id="${badge.id}" class="btn-small">Award</button>
                 </div>
             </div>
         `).join('');
@@ -141,7 +141,7 @@ class CivicEngagementController {
     switchEngagementTab(tabName) {
         // Update tab buttons
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`[onclick="switchEngagementTab('${tabName}')"]`).classList.add('active');
+        document.querySelector(`[data-action="switchEngagementTab"][data-tab="${tabName}"]`).classList.add('active');
 
         // Update tab content
         document.querySelectorAll('.engagement-tab').forEach(tab => tab.classList.remove('active'));
@@ -583,6 +583,126 @@ class CivicEngagementController {
     }
 
     setupEventListeners() {
+        // Comprehensive event delegation for all data-action attributes
+        document.addEventListener('click', (e) => {
+            const action = e.target.getAttribute('data-action');
+            if (!action) return;
+
+            // Prevent default behavior for buttons and links
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+                e.preventDefault();
+            }
+
+            try {
+                switch (action) {
+                    case 'showSubSection':
+                        const sectionId = e.target.getAttribute('data-section');
+                        if (sectionId) {
+                            this.showSubSection(sectionId);
+                        }
+                        break;
+
+                    case 'switchEngagementTab':
+                        const tabName = e.target.getAttribute('data-tab');
+                        if (tabName) {
+                            this.switchEngagementTab(tabName);
+                        }
+                        break;
+
+                    case 'showCreateQuestModal':
+                        this.showCreateQuestModal();
+                        break;
+
+                    case 'showCreateBadgeModal':
+                        this.showCreateBadgeModal();
+                        break;
+
+                    case 'closeQuestModal':
+                        this.closeQuestModal();
+                        break;
+
+                    case 'closeBadgeModal':
+                        this.closeBadgeModal();
+                        break;
+
+                    case 'saveQuest':
+                        this.saveQuest();
+                        break;
+
+                    case 'saveBadge':
+                        this.saveBadge();
+                        break;
+
+                    case 'editQuest':
+                        const questId = e.target.getAttribute('data-quest-id');
+                        if (questId) {
+                            this.editQuest(questId);
+                        }
+                        break;
+
+                    case 'toggleQuestStatus':
+                        const questIdToggle = e.target.getAttribute('data-quest-id');
+                        const activeStatus = e.target.getAttribute('data-active');
+                        if (questIdToggle && activeStatus !== null) {
+                            this.toggleQuestStatus(questIdToggle, activeStatus === 'true');
+                        }
+                        break;
+
+                    case 'editBadge':
+                        const badgeId = e.target.getAttribute('data-badge-id');
+                        if (badgeId) {
+                            this.editBadge(badgeId);
+                        }
+                        break;
+
+                    case 'awardBadgeManually':
+                        const badgeIdAward = e.target.getAttribute('data-badge-id');
+                        if (badgeIdAward) {
+                            this.awardBadgeManually(badgeIdAward);
+                        }
+                        break;
+
+                    default:
+                        console.warn(`Unhandled data-action: ${action}`);
+                }
+            } catch (error) {
+                console.error(`Error handling action ${action}:`, error);
+                if (window.AdminGlobalUtils) {
+                    window.AdminGlobalUtils.showToast(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+
+        // Event delegation for change events (select dropdowns)
+        document.addEventListener('change', (e) => {
+            const action = e.target.getAttribute('data-action');
+            if (!action) return;
+
+            try {
+                switch (action) {
+                    case 'toggleLimitedTimeFields':
+                        this.toggleLimitedTimeFields();
+                        break;
+
+                    case 'updateRequirementFields':
+                        this.updateRequirementFields();
+                        break;
+
+                    case 'updateCriteriaFields':
+                        this.updateCriteriaFields();
+                        break;
+
+                    default:
+                        console.warn(`Unhandled change data-action: ${action}`);
+                }
+            } catch (error) {
+                console.error(`Error handling change action ${action}:`, error);
+                if (window.AdminGlobalUtils) {
+                    window.AdminGlobalUtils.showToast(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+
         // Modal close on outside click
         document.getElementById('quest-modal').addEventListener('click', (e) => {
             if (e.target.id === 'quest-modal') this.closeQuestModal();
@@ -613,22 +733,63 @@ class CivicEngagementController {
             alert(message);
         }
     }
+
+    // Quest and Badge Management Methods (Event Delegation Handlers)
+    editQuest(questId) {
+        try {
+            // TODO: Implement quest editing functionality
+            console.log('Edit quest:', questId);
+            this.showErrorMessage('Quest editing is not yet implemented');
+        } catch (error) {
+            console.error('Error editing quest:', error);
+            this.showErrorMessage('Error editing quest: ' + error.message);
+        }
+    }
+
+    async toggleQuestStatus(questId, isActive) {
+        try {
+            const response = await AdminAPI.post(`/api/quests/${questId}/toggle`, { isActive });
+
+            if (response.success) {
+                await this.loadQuests();
+                await this.loadEngagementStatistics();
+                this.showSuccessMessage(`Quest ${isActive ? 'activated' : 'deactivated'} successfully`);
+            } else {
+                throw new Error(response.error || 'Failed to toggle quest status');
+            }
+        } catch (error) {
+            console.error('Error toggling quest status:', error);
+            this.showErrorMessage('Error toggling quest status: ' + error.message);
+        }
+    }
+
+    editBadge(badgeId) {
+        try {
+            // TODO: Implement badge editing functionality
+            console.log('Edit badge:', badgeId);
+            this.showErrorMessage('Badge editing is not yet implemented');
+        } catch (error) {
+            console.error('Error editing badge:', error);
+            this.showErrorMessage('Error editing badge: ' + error.message);
+        }
+    }
+
+    async awardBadgeManually(badgeId) {
+        try {
+            // TODO: Implement manual badge awarding with user selection
+            console.log('Award badge manually:', badgeId);
+            this.showErrorMessage('Manual badge awarding is not yet implemented');
+        } catch (error) {
+            console.error('Error awarding badge manually:', error);
+            this.showErrorMessage('Error awarding badge: ' + error.message);
+        }
+    }
 }
 
 // Initialize and export
 const civicEngagementController = new CivicEngagementController();
 
-// Make functions globally accessible for HTML onclick handlers
-window.switchEngagementTab = (tab) => civicEngagementController.switchEngagementTab(tab);
-window.showSubSection = (sectionId) => civicEngagementController.showSubSection(sectionId);
-window.showCreateQuestModal = () => civicEngagementController.showCreateQuestModal();
-window.closeQuestModal = () => civicEngagementController.closeQuestModal();
-window.showCreateBadgeModal = () => civicEngagementController.showCreateBadgeModal();
-window.closeBadgeModal = () => civicEngagementController.closeBadgeModal();
-window.saveQuest = () => civicEngagementController.saveQuest();
-window.saveBadge = () => civicEngagementController.saveBadge();
-window.updateRequirementFields = () => civicEngagementController.updateRequirementFields();
-window.updateCriteriaFields = () => civicEngagementController.updateCriteriaFields();
-window.toggleLimitedTimeFields = () => civicEngagementController.toggleLimitedTimeFields();
+// Legacy global functions removed - now using event delegation with data-action attributes
+// All interactions are handled through the comprehensive event delegation system in setupEventListeners()
 
 export { civicEngagementController };

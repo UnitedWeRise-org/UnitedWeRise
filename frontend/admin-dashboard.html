@@ -5661,7 +5661,7 @@
                     </div>
 
                     <div class="modal-body">
-                        <form id="motdForm" onsubmit="event.preventDefault(); window.motdController.handleUpdateMOTD();">
+                        <form id="motdForm" data-action="handle-update-motd">
                             <!-- Basic Information -->
                             <div class="form-section">
                                 <h4>📝 Basic Information</h4>
@@ -5800,7 +5800,7 @@
                     </div>
 
                     <div class="modal-body">
-                        <form id="scheduleForm" onsubmit="event.preventDefault(); window.motdController.handleScheduleMOTD();">
+                        <form id="scheduleForm" data-action="handle-schedule-motd">
                             <div class="form-group">
                                 <label for="scheduleMOTDSelect">Select MOTD</label>
                                 <select id="scheduleMOTDSelect" required class="form-control">
@@ -6423,7 +6423,7 @@ Auto-refresh enabled every 60 seconds
 
                         <div class="form-group">
                             <label for="quest-timeframe">Timeframe *</label>
-                            <select id="quest-timeframe" name="timeframe" required onchange="toggleLimitedTimeFields()">
+                            <select id="quest-timeframe" name="timeframe" required data-action="toggleLimitedTimeFields">
                                 <option value="DAILY">Daily</option>
                                 <option value="WEEKLY">Weekly</option>
                                 <option value="MONTHLY">Monthly</option>
@@ -6440,7 +6440,7 @@ Auto-refresh enabled every 60 seconds
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="requirement-type">Requirement Type *</label>
-                                    <select id="requirement-type" onchange="updateRequirementFields()">
+                                    <select id="requirement-type" data-action="updateRequirementFields">
                                         <option value="LOGIN">Login</option>
                                         <option value="READ_POSTS">Read Posts</option>
                                         <option value="CIVIC_ACTION">Civic Action</option>
@@ -6541,7 +6541,7 @@ Auto-refresh enabled every 60 seconds
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="criteria-type">Criteria Type *</label>
-                                    <select id="criteria-type" onchange="updateCriteriaFields()">
+                                    <select id="criteria-type" data-action="updateCriteriaFields">
                                         <option value="QUEST_COMPLETION">Quest Completion</option>
                                         <option value="USER_ACTIVITY">User Activity</option>
                                         <option value="CIVIC_ACTION">Civic Action</option>
