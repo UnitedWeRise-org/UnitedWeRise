@@ -472,71 +472,34 @@ export function clearMediaAttachment() {
 }
 
 /**
- * Reusable posting function - creates posts from any textarea
- * Extracted from index.html line 4875
+ * Reusable posting function - MIGRATED TO UNIFIED SYSTEM
+ * Creates posts from any textarea using UnifiedPostCreator
  */
 export async function createPostFromTextarea(textareaId, onSuccess = null, options = {}) {
-    const textarea = document.getElementById(textareaId);
-    if (!textarea) {
-        console.error(`Textarea with ID '${textareaId}' not found`);
+    console.log('🎯 createPostFromTextarea() - using UnifiedPostCreator');
+
+    if (!window.unifiedPostCreator) {
+        console.error('❌ UnifiedPostCreator not available');
+        alert('Post creation system not loaded. Please refresh the page.');
         return false;
     }
 
-    const content = textarea.value.trim();
-    
-    // Check if we have content or media
-    if (!content && !selectedPostMedia) {
-        alert('Please enter some content or attach media for your post');
-        return false;
-    }
+    const result = await window.unifiedPostCreator.create({
+        type: 'post',
+        textareaId: textareaId,
+        mediaInputId: options.mediaInputId,
+        destination: options.destination || 'feed',
+        tags: options.tags || ['Public Post'],
+        clearAfterSuccess: options.clearMedia !== false,
+        onSuccess: (result) => {
+            console.log('✅ Post created successfully via UnifiedPostCreator');
 
-    try {
-        let mediaId = null;
-
-        // Upload media first if selected
-        if (selectedPostMedia) {
-            const formData = new FormData();
-            formData.append('photos', selectedPostMedia);
-            formData.append('photoType', 'POST_MEDIA');
-            formData.append('purpose', 'PERSONAL');
-
-            console.log('🖼️ Uploading media for post...');
-            const mediaResponse = await apiClient.call('/photos/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!mediaResponse.ok) {
-                const errorData = mediaResponse.data || {};
-                const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
-                alert(`Media upload failed: ${errorMessage}`);
-                return false;
-            }
-
-            // Get the uploaded photo ID
-            mediaId = mediaResponse.data.photos[0]?.id;
-            console.log('✅ Media uploaded successfully:', mediaId);
-        }
-
-        // Create the post using unified system
-        const result = await window.createPostPublic(content, { mediaId });
-
-        if (result.success) {
-            // Clear the textarea
-            textarea.value = '';
-            
-            // Clear media if option is set (default true)
-            if (options.clearMedia !== false && selectedPostMedia) {
-                clearMediaAttachment();
-            }
-            
-            console.log('✅ Post created successfully');
-            
-            // Call the success callback if provided
+            // Call the user-provided success callback if provided
             if (onSuccess && typeof onSuccess === 'function') {
-                onSuccess(result.post);
+                const postData = result.data?.post || result.data;
+                onSuccess(postData);
             }
-            
+
             // Refresh feed if option is set
             if (options.refreshFeed) {
                 if (typeof showMyFeed === 'function') {
@@ -545,17 +508,14 @@ export async function createPostFromTextarea(textareaId, onSuccess = null, optio
                     loadMyFeedPosts();
                 }
             }
-            
-            return true;
-        } else {
-            alert(result.error || 'Failed to create post. Please try again.');
-            return false;
+        },
+        onError: (error) => {
+            console.error('❌ Post creation failed:', error);
+            alert(error.error || 'Error creating post. Please try again.');
         }
-    } catch (error) {
-        console.error('Post creation error:', error);
-        alert('Error creating post. Please check your connection and try again.');
-        return false;
-    }
+    });
+
+    return result.success;
 }
 
 /**
@@ -627,117 +587,46 @@ function prependUserPostToFeed(post, user) {
 }
 
 /**
- * Wrapper function for My Feed posting box
- * Extracted from index.html line 4959
+ * Wrapper function for My Feed posting box - MIGRATED TO UNIFIED SYSTEM
+ * Uses UnifiedPostCreator for consistent posting across entire platform
  */
 export async function createPostFromFeed() {
-    const textarea = document.getElementById('feedPostContent');
-    if (!textarea) return false;
+    console.log('🎯 createPostFromFeed() - using UnifiedPostCreator');
 
-    const content = textarea.value.trim();
-
-    console.log('🔍 Pre-upload debug:', {
-        content: content.substring(0, 50) + '...',
-        hasSelectedPostMedia: !!selectedPostMedia,
-        selectedPostMediaType: selectedPostMedia?.type,
-        selectedPostMediaName: selectedPostMedia?.name
-    });
-
-    // Check if we have content or media
-    if (!content && !selectedPostMedia) {
-        alert('Please enter some content or attach media for your post');
+    if (!window.unifiedPostCreator) {
+        console.error('❌ UnifiedPostCreator not available');
+        alert('Post creation system not loaded. Please refresh the page.');
         return false;
     }
 
-    // Check if content exceeds maximum limit (5000 chars)
-    if (content.length > 5000) {
-        alert('Post exceeds 5000 characters. Please shorten your post.');
-        return false;
-    }
-
-    try {
-        let mediaId = null;
-
-        // Upload media first if selected
-        let uploadedPhotoData = null;
-        if (selectedPostMedia) {
-            console.log('🖼️ Uploading media for post...');
-
-            const uploadInput = document.getElementById('feedMediaUpload');
-            const fileToUse = (uploadInput && uploadInput.files && uploadInput.files[0]) || selectedPostMedia;
-
-            const formData = new FormData();
-            formData.append('photos', fileToUse);
-            formData.append('photoType', 'POST_MEDIA');
-            formData.append('purpose', 'PERSONAL');
-
-            const mediaResponse = await window.apiCall('/photos/upload', {
-                method: 'POST',
-                body: formData,
-                skipContentType: true
-            });
-
-            if (!mediaResponse.ok) {
-                const errorData = mediaResponse.data || {};
-                const errorMessage = errorData.message || errorData.error || 'Failed to upload media';
-                alert(`Media upload failed: ${errorMessage}`);
-                return false;
-            }
-
-            // Store the uploaded photo data for manual prepending
-            uploadedPhotoData = mediaResponse.data?.photos?.[0];
-            mediaId = uploadedPhotoData?.id;
-
-            console.log('✅ Media uploaded successfully:', {
-                id: mediaId,
-                url: uploadedPhotoData?.url,
-                mimeType: uploadedPhotoData?.mimeType
-            });
-
-            if (!mediaId) {
-                console.error('❌ No media ID returned from upload');
-                alert('Media upload succeeded but no ID returned. Please try again.');
-                return false;
-            }
-        }
-
-        // Create the post using unified system
-        const result = await window.createPostPublic(content, { mediaId });
-
-        if (result.success) {
-            textarea.value = '';
-
-            // Clear media attachment
-            if (selectedPostMedia) {
-                clearMediaAttachment();
-            }
+    const result = await window.unifiedPostCreator.create({
+        type: 'post',
+        textareaId: 'feedPostContent',
+        mediaInputId: 'feedMediaUpload',
+        destination: 'feed',
+        tags: ['Public Post'],
+        clearAfterSuccess: true,
+        onSuccess: (result) => {
+            console.log('✅ Post created successfully via UnifiedPostCreator');
 
             // Update character counter
             const charCount = document.getElementById('feedPostCharCount');
             if (charCount) charCount.textContent = '0/5000';
 
-            console.log('✅ Post created successfully');
-
-            // Show user's new post immediately at top of feed for instant gratification
-            if (result.post && window.currentUser) {
-                // Manually add photo data since backend doesn't return it
-                if (uploadedPhotoData) {
-                    result.post.photos = [uploadedPhotoData];
-                    console.log('🔧 Manually added photo to post:', uploadedPhotoData);
-                }
-                prependUserPostToFeed(result.post, window.currentUser);
+            // Prepend new post to feed for instant feedback
+            if (result.data?.post && window.currentUser) {
+                prependUserPostToFeed(result.data.post, window.currentUser);
+            } else if (result.data && window.currentUser) {
+                prependUserPostToFeed(result.data, window.currentUser);
             }
-
-            return true;
-        } else {
-            alert('Error creating post: ' + (result.error || 'Unknown error'));
-            return false;
+        },
+        onError: (error) => {
+            console.error('❌ Post creation failed:', error);
+            alert(error.error || 'Error creating post. Please try again.');
         }
-    } catch (error) {
-        console.error('Feed post creation error:', error);
-        alert('Error creating post');
-        return false;
-    }
+    });
+
+    return result.success;
 }
 
 // Initialize when DOM is ready

@@ -157,6 +157,43 @@ class CivicEngagementController {
         }
     }
 
+    showSubSection(sectionId) {
+        try {
+            // Hide all subsections first
+            document.querySelectorAll('.subsection').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Show the requested subsection
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+
+                // Update any associated navigation buttons
+                document.querySelectorAll('.subsection-nav-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                const navButton = document.querySelector(`[data-action="showSubSection"][data-section="${sectionId}"]`);
+                if (navButton) {
+                    navButton.classList.add('active');
+                }
+
+                // Provide visual feedback
+                if (window.AdminGlobalUtils) {
+                    window.AdminGlobalUtils.showToast(`Viewing ${sectionId.replace('-', ' ')} section`, 'info');
+                }
+            } else {
+                console.warn(`Subsection with ID '${sectionId}' not found`);
+            }
+        } catch (error) {
+            console.error('Error showing subsection:', error);
+            if (window.AdminGlobalUtils) {
+                window.AdminGlobalUtils.showToast('Error loading section', 'error');
+            }
+        }
+    }
+
     showCreateQuestModal() {
         const modal = document.getElementById('quest-modal');
         modal.style.display = 'block';
@@ -583,6 +620,7 @@ const civicEngagementController = new CivicEngagementController();
 
 // Make functions globally accessible for HTML onclick handlers
 window.switchEngagementTab = (tab) => civicEngagementController.switchEngagementTab(tab);
+window.showSubSection = (sectionId) => civicEngagementController.showSubSection(sectionId);
 window.showCreateQuestModal = () => civicEngagementController.showCreateQuestModal();
 window.closeQuestModal = () => civicEngagementController.closeQuestModal();
 window.showCreateBadgeModal = () => civicEngagementController.showCreateBadgeModal();

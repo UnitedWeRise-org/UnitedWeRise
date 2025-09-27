@@ -47,6 +47,9 @@ import '../handlers/civic-handlers.js';
 // Phase 4i: Notification handlers (notification system, badges, toasts)
 import '../handlers/notification-handlers.js';
 
+// Phase 4j-unified: Unified Post Creator (consolidated posting system)
+import '../modules/features/content/UnifiedPostCreator.js';
+
 // Phase 5: Component layer
 import '../components/PostComponent.js';
 import '../components/Profile.js';

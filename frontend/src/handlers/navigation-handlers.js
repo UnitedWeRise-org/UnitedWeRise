@@ -52,11 +52,10 @@ class NavigationHandlers {
             case 'handle-post-media-upload':
                 console.log('🔧 Navigation handler caught handle-post-media-upload event');
                 console.log('🔧 Target element:', target);
-                console.log('🔧 Function available:', typeof window.handlePostMediaUpload);
-                if (typeof window.handlePostMediaUpload === 'function') {
-                    window.handlePostMediaUpload(target);
+                if (typeof window.unifiedPostCreator !== 'undefined') {
+                    window.unifiedPostCreator.handleMediaSelection(target);
                 } else {
-                    console.error('🔧 handlePostMediaUpload function not available on window');
+                    console.error('🔧 UnifiedPostCreator not available on window');
                 }
                 break;
             case 'update-civic-results':

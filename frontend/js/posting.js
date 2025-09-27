@@ -123,6 +123,7 @@ function getPostTypeLabel(post) {
 }
 
 // Make functions available globally for backward compatibility
+window.createPostWithTag = createPostWithTag;  // CRITICAL: Base function used by UnifiedPostCreator
 window.createPostPublic = createPostPublic;
 window.createPostVolunteer = createPostVolunteer;
 window.createPostCandidate = createPostCandidate;

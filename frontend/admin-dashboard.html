@@ -6271,22 +6271,22 @@ Auto-refresh enabled every 60 seconds
 
             <!-- Engagement Overview Cards -->
             <div class="stats-grid">
-                <div class="stat-card" onclick="showSubSection('quest-stats')">
+                <div class="stat-card" data-action="showSubSection" data-section="quest-stats">
                     <div class="stat-icon">🎯</div>
                     <div class="stat-number" id="total-quests">-</div>
                     <div class="stat-label">Active Quests</div>
                 </div>
-                <div class="stat-card" onclick="showSubSection('badge-stats')">
+                <div class="stat-card" data-action="showSubSection" data-section="badge-stats">
                     <div class="stat-icon">🏅</div>
                     <div class="stat-number" id="total-badges">-</div>
                     <div class="stat-label">Available Badges</div>
                 </div>
-                <div class="stat-card" onclick="showSubSection('engagement-stats')">
+                <div class="stat-card" data-action="showSubSection" data-section="engagement-stats">
                     <div class="stat-icon">📊</div>
                     <div class="stat-number" id="avg-quest-completion">-</div>
                     <div class="stat-label">Avg. Completion Rate</div>
                 </div>
-                <div class="stat-card" onclick="showSubSection('streak-stats')">
+                <div class="stat-card" data-action="showSubSection" data-section="streak-stats">
                     <div class="stat-icon">🔥</div>
                     <div class="stat-number" id="active-streaks">-</div>
                     <div class="stat-label">Active Streaks</div>
@@ -6295,16 +6295,16 @@ Auto-refresh enabled every 60 seconds
 
             <!-- Civic Engagement Tab Navigation -->
             <div class="engagement-tabs">
-                <button class="tab-button active" onclick="switchEngagementTab('quests')">Quest Management</button>
-                <button class="tab-button" onclick="switchEngagementTab('badges')">Badge Management</button>
-                <button class="tab-button" onclick="switchEngagementTab('analytics')">Engagement Analytics</button>
+                <button class="tab-button active" data-action="switchEngagementTab" data-tab="quests">Quest Management</button>
+                <button class="tab-button" data-action="switchEngagementTab" data-tab="badges">Badge Management</button>
+                <button class="tab-button" data-action="switchEngagementTab" data-tab="analytics">Engagement Analytics</button>
             </div>
 
             <!-- Quest Management Tab -->
             <div id="quest-tab" class="engagement-tab active">
                 <div class="section-header">
                     <h3>Quest Management</h3>
-                    <button class="btn btn-primary" onclick="showCreateQuestModal()">+ Create Quest</button>
+                    <button class="btn btn-primary" data-action="showCreateQuestModal">+ Create Quest</button>
                 </div>
 
                 <!-- Quest List -->
@@ -6335,7 +6335,7 @@ Auto-refresh enabled every 60 seconds
             <div id="badge-tab" class="engagement-tab">
                 <div class="section-header">
                     <h3>Badge Management</h3>
-                    <button class="btn btn-primary" onclick="showCreateBadgeModal()">+ Create Badge</button>
+                    <button class="btn btn-primary" data-action="showCreateBadgeModal">+ Create Badge</button>
                 </div>
 
                 <!-- Badge Grid -->
@@ -6373,7 +6373,7 @@ Auto-refresh enabled every 60 seconds
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="quest-modal-title">Create New Quest</h3>
-                <span class="close" onclick="closeQuestModal()">&times;</span>
+                <span class="close" data-action="closeQuestModal">&times;</span>
             </div>
             <div class="modal-body">
                 <form id="quest-form">
@@ -6503,8 +6503,8 @@ Auto-refresh enabled every 60 seconds
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeQuestModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveQuest()">Save Quest</button>
+                <button type="button" class="btn btn-secondary" data-action="closeQuestModal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="saveQuest">Save Quest</button>
             </div>
         </div>
     </div>
@@ -6514,7 +6514,7 @@ Auto-refresh enabled every 60 seconds
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Create New Badge</h3>
-                <span class="close" onclick="closeBadgeModal()">&times;</span>
+                <span class="close" data-action="closeBadgeModal">&times;</span>
             </div>
             <div class="modal-body">
                 <form id="badge-form" enctype="multipart/form-data">
@@ -6564,8 +6564,8 @@ Auto-refresh enabled every 60 seconds
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeBadgeModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveBadge()">Create Badge</button>
+                <button type="button" class="btn btn-secondary" data-action="closeBadgeModal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="saveBadge">Create Badge</button>
             </div>
         </div>
     </div>

@@ -1168,60 +1168,28 @@ class Profile {
 
     // Method to submit a quick post from the profile - NOW USES REUSABLE FUNCTION
     async submitQuickPost() {
-        // Use the reusable posting function from index.html
-        if (window.createPostFromTextarea) {
-            const success = await window.createPostFromTextarea('quickPostContent', (newPost) => {
-                // Success callback - add the new post to our list
-                if (newPost) {
-                    this.userPosts.unshift(newPost);
-                    // Smooth insertion without full re-render
-                    this.insertNewPostSmoothly(newPost);
-                }
-            }, { refreshFeed: false, clearMedia: true });
-            
-            if (!success) {
-                adminDebugLog('Post creation was not successful');
-            }
-        } else {
-            // Fallback to old method if reusable function not available
-            const textarea = document.getElementById('quickPostContent');
-            if (!textarea || !textarea.value.trim()) {
-                alert('Please enter some content for your post');
-                return;
-            }
+        // MIGRATED TO UNIFIED SYSTEM - uses createPostFromTextarea which now uses UnifiedPostCreator
+        if (!window.createPostFromTextarea) {
+            alert('Post creation system not available. Please refresh the page.');
+            return;
+        }
 
-            const content = textarea.value.trim();
-            
-            try {
-                const response = await window.apiCall('/posts', {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        content: content
-                    })
-                });
-
-                if (response.ok) {
-                    // Clear the textarea
-                    textarea.value = '';
-                    // Add the new post to the userPosts array
-                    const newPost = response.data.post;
-                    this.userPosts.unshift(newPost);
-                    
-                    // Smooth insertion without full re-render
-                    this.insertNewPostSmoothly(newPost);
-                } else {
-                    adminDebugError('Post creation failed:', response);
-                    const errorMsg = response.error || response.message || 'Failed to create post';
-                    alert(`Failed to create post: ${errorMsg}. Please try again.`);
-                }
-            } catch (error) {
-                adminDebugError('Post creation error:', error);
-                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                    alert('Network error: Cannot connect to server. Please check your connection and try again.');
-                } else {
-                    alert(`Error creating post: ${error.message}`);
-                }
+        const success = await window.createPostFromTextarea('quickPostContent', (newPost) => {
+            // Success callback - add the new post to our list
+            if (newPost) {
+                this.userPosts.unshift(newPost);
+                // Smooth insertion without full re-render
+                this.insertNewPostSmoothly(newPost);
             }
+        }, {
+            refreshFeed: false,
+            clearMedia: true,
+            destination: 'profile',
+            tags: ['Public Post']
+        });
+
+        if (!success) {
+            adminDebugLog('Post creation was not successful');
         }
     }
 
