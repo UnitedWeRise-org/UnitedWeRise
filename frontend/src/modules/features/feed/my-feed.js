@@ -147,15 +147,6 @@ export function displayMyFeedPosts(posts, appendMode = false) {
     
     console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
 
-    // Debug PostComponent availability
-    console.log('🔍 PostComponent check:', {
-        'window.postComponent exists': !!window.postComponent,
-        'window.postComponent type': typeof window.postComponent,
-        'renderPost method exists': !!(window.postComponent?.renderPost),
-        'first post has photos': !!(posts[0]?.photos?.length),
-        'first post photos count': posts[0]?.photos?.length || 0
-    });
-
     // Use PostComponent directly for proper photo rendering
     if (window.postComponent) {
         console.log('✅ Using PostComponent.renderPost for My Feed display');
@@ -188,12 +179,6 @@ export function displayMyFeedPosts(posts, appendMode = false) {
  */
 function displayMyFeedPostsFallback(posts, container, appendMode = false) {
     console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
-    console.log('🔍 Fallback - Posts with photos:', posts.map(p => ({
-        id: p.id,
-        hasPhotos: !!(p.photos?.length),
-        photoCount: p.photos?.length || 0,
-        photoUrls: p.photos?.map(ph => ph.url) || []
-    })));
 
     let html = '';
     posts.forEach(post => {
@@ -574,13 +559,10 @@ function prependUserPostToFeed(post, user) {
     const feedContainer = document.getElementById('myFeedPosts');
     if (!feedContainer) return;
 
-    console.log('📝 Prepending new post to feed:', post);
-    console.log('🔍 Post object details:', {
+    console.log('📝 Prepending new post to feed:', {
+        id: post.id,
         hasPhotos: !!(post.photos?.length),
-        photosProperty: post.photos,
-        postKeys: Object.keys(post),
-        mediaId: post.mediaId,
-        id: post.id
+        photoCount: post.photos?.length || 0
     });
 
     // Format the post with user data for display
@@ -601,12 +583,6 @@ function prependUserPostToFeed(post, user) {
         // Ensure photos array exists (backend might not include it immediately)
         photos: post.photos || []
     };
-
-    console.log('🔍 PostWithUser details:', {
-        hasPhotos: !!(postWithUser.photos?.length),
-        photosArray: postWithUser.photos,
-        postWithUserKeys: Object.keys(postWithUser)
-    });
 
     try {
         // Use the standard PostComponent if available
@@ -676,97 +652,23 @@ export async function createPostFromFeed() {
         let mediaId = null;
 
         // Upload media first if selected
+        let uploadedPhotoData = null;
         if (selectedPostMedia) {
-            console.log('📁 Selected media file:', selectedPostMedia);
-            console.log('📁 File details at UPLOAD time:', {
-                name: selectedPostMedia.name,
-                size: selectedPostMedia.size,
-                type: selectedPostMedia.type,
-                instanceof: selectedPostMedia instanceof File,
-                constructor: selectedPostMedia.constructor.name
-            });
+            console.log('🖼️ Uploading media for post...');
 
-            // Check if File object is still valid
-            if (!(selectedPostMedia instanceof File)) {
-                console.error('❌ selectedPostMedia is no longer a File object!');
-                alert('File selection error: Please reselect your image.');
-                return false;
-            }
-
-            console.log('🖼️ Uploading media for post using EXACT Profile.js pattern...');
-
-            // EXPERIMENT: Try getting fresh file from input (like Profile.js does)
             const uploadInput = document.getElementById('feedMediaUpload');
-            const freshFile = uploadInput && uploadInput.files && uploadInput.files[0];
-            console.log('🆚 Comparison - stored vs fresh:', {
-                storedFile: selectedPostMedia,
-                freshFile: freshFile,
-                inputHasFiles: uploadInput && uploadInput.files && uploadInput.files.length,
-                areTheSame: selectedPostMedia === freshFile
-            });
+            const fileToUse = (uploadInput && uploadInput.files && uploadInput.files[0]) || selectedPostMedia;
 
-            // Use EXACT same pattern as working Profile.js
             const formData = new FormData();
-            // Try fresh file first, fall back to stored file
-            const fileToUse = freshFile || selectedPostMedia;
-            console.log('📎 Using file:', fileToUse === freshFile ? 'FRESH from input' : 'STORED in variable');
-
-            formData.append('photos', fileToUse); // Backend expects 'photos' array
-            formData.append('photoType', 'POST_MEDIA'); // Must match PhotoType enum
-            formData.append('purpose', 'PERSONAL'); // Required field
-
-            // COMPREHENSIVE FormData debugging
-            console.log('🔍 DETAILED FormData inspection:');
-            console.log('📂 FormData has entries:', formData.has('photos'));
-            console.log('📂 FormData.get("photos"):', formData.get('photos'));
-            console.log('📂 File instance check:', fileToUse instanceof File);
-            console.log('📂 File constructor:', fileToUse.constructor.name);
-            console.log('📂 File details expanded:', {
-                name: fileToUse.name,
-                size: fileToUse.size,
-                type: fileToUse.type,
-                lastModified: fileToUse.lastModified,
-                webkitRelativePath: fileToUse.webkitRelativePath
-            });
-
-            // Log ALL FormData entries
-            console.log('📂 All FormData entries:');
-            for (let [key, value] of formData.entries()) {
-                if (value instanceof File) {
-                    console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
-                } else {
-                    console.log(`  ${key}: ${value}`);
-                }
-            }
-
-            // DEBUG: Log the exact API call being made
-            console.log('🌐 About to make API call with:', {
-                endpoint: '/photos/upload',
-                method: 'POST',
-                bodyType: formData.constructor.name,
-                skipContentType: true
-            });
-
-            console.warn('⚠️ CHECK NETWORK TAB NOW - Look for /api/photos/upload request');
-            console.warn('⚠️ Verify Content-Type header includes multipart/form-data');
-            console.warn('⚠️ Verify Request Payload shows file data');
+            formData.append('photos', fileToUse);
+            formData.append('photoType', 'POST_MEDIA');
+            formData.append('purpose', 'PERSONAL');
 
             const mediaResponse = await window.apiCall('/photos/upload', {
                 method: 'POST',
                 body: formData,
-                skipContentType: true // Let browser set multipart boundary
+                skipContentType: true
             });
-
-            console.log('✅ Network request completed - check Network tab for details');
-
-            // DEBUG: Log raw response details
-            console.log('🌐 API call completed:', {
-                ok: mediaResponse.ok,
-                status: mediaResponse.status,
-                dataKeys: mediaResponse.data ? Object.keys(mediaResponse.data) : 'No data'
-            });
-
-            console.log('📸 Upload response:', mediaResponse);
 
             if (!mediaResponse.ok) {
                 const errorData = mediaResponse.data || {};
@@ -775,13 +677,15 @@ export async function createPostFromFeed() {
                 return false;
             }
 
-            // Debug the response structure
-            console.log('📸 Upload response data:', mediaResponse.data);
-            console.log('📸 Photos array:', mediaResponse.data?.photos);
+            // Store the uploaded photo data for manual prepending
+            uploadedPhotoData = mediaResponse.data?.photos?.[0];
+            mediaId = uploadedPhotoData?.id;
 
-            // Get the uploaded photo ID
-            mediaId = mediaResponse.data?.photos?.[0]?.id;
-            console.log('✅ Media uploaded successfully, ID:', mediaId);
+            console.log('✅ Media uploaded successfully:', {
+                id: mediaId,
+                url: uploadedPhotoData?.url,
+                mimeType: uploadedPhotoData?.mimeType
+            });
 
             if (!mediaId) {
                 console.error('❌ No media ID returned from upload');
@@ -809,6 +713,11 @@ export async function createPostFromFeed() {
 
             // Show user's new post immediately at top of feed for instant gratification
             if (result.post && window.currentUser) {
+                // Manually add photo data since backend doesn't return it
+                if (uploadedPhotoData) {
+                    result.post.photos = [uploadedPhotoData];
+                    console.log('🔧 Manually added photo to post:', uploadedPhotoData);
+                }
                 prependUserPostToFeed(result.post, window.currentUser);
             }
 
