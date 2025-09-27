@@ -575,6 +575,13 @@ function prependUserPostToFeed(post, user) {
     if (!feedContainer) return;
 
     console.log('📝 Prepending new post to feed:', post);
+    console.log('🔍 Post object details:', {
+        hasPhotos: !!(post.photos?.length),
+        photosProperty: post.photos,
+        postKeys: Object.keys(post),
+        mediaId: post.mediaId,
+        id: post.id
+    });
 
     // Format the post with user data for display
     const postWithUser = {
@@ -594,6 +601,12 @@ function prependUserPostToFeed(post, user) {
         // Ensure photos array exists (backend might not include it immediately)
         photos: post.photos || []
     };
+
+    console.log('🔍 PostWithUser details:', {
+        hasPhotos: !!(postWithUser.photos?.length),
+        photosArray: postWithUser.photos,
+        postWithUserKeys: Object.keys(postWithUser)
+    });
 
     try {
         // Use the standard PostComponent if available
