@@ -312,8 +312,8 @@ class UnifiedPostCreator {
                     { mediaId: data.mediaIds?.[0] } // Use first media ID
                 );
 
-                if (response.ok) {
-                    return { success: true, data: response.data };
+                if (response.success) {
+                    return { success: true, data: response.post };
                 } else {
                     return { success: false, error: response.error || 'Post creation failed' };
                 }
@@ -429,10 +429,12 @@ class UnifiedPostCreator {
      * Handle media file selection (for event delegation)
      */
     handleMediaSelection(inputElement) {
-        console.log('📷 Media selected:', inputElement.files);
+        console.log('📷 UnifiedPostCreator.handleMediaSelection called');
+        console.log('📷 Input element:', inputElement);
+        console.log('📷 Files:', inputElement?.files);
 
         if (!inputElement || !inputElement.files || inputElement.files.length === 0) {
-            console.log('No files selected');
+            console.log('📷 No files selected or input element invalid');
             return;
         }
 

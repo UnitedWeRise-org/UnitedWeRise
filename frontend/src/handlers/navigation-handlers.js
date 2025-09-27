@@ -31,17 +31,11 @@ class NavigationHandlers {
     }
 
     handleNavigationChange(event) {
-        console.log('🔧 Navigation change event fired:', event.type, event.target);
-
         const target = event.target.closest('[data-action]');
-        if (!target) {
-            console.log('🔧 No target with data-action found');
-            return;
-        }
+        if (!target) return;
 
         const action = target.dataset.action;
         const layer = target.dataset.layer;
-        console.log('🔧 Action detected:', action);
 
         switch (action) {
             case 'toggle-map-layer':
@@ -50,8 +44,7 @@ class NavigationHandlers {
                 }
                 break;
             case 'handle-post-media-upload':
-                console.log('🔧 Navigation handler caught handle-post-media-upload event');
-                console.log('🔧 Target element:', target);
+                console.log('🔧 Media upload event detected, calling UnifiedPostCreator');
                 if (typeof window.unifiedPostCreator !== 'undefined') {
                     window.unifiedPostCreator.handleMediaSelection(target);
                 } else {
