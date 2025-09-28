@@ -534,16 +534,27 @@ class Profile {
                 `}
         `;
 
-        // Use the standardized post component for consistency
+        // Use UnifiedPostRenderer for consistent display across platform
         this.userPosts.forEach(post => {
             // Add isOwner flag for menu options
             post.isOwner = true;
-            postsHtml += window.postComponent ? 
-                window.postComponent.renderPost(post, { 
+
+            if (window.unifiedPostRenderer) {
+                postsHtml += window.unifiedPostRenderer.render(post, {
+                    context: 'profile',
                     showAuthor: false, // Don't show author in own profile
-                    showTimestamp: true 
-                }) :
-                this.renderFallbackPost(post);
+                    showTimestamp: true,
+                    showActions: true,
+                    showComments: true
+                });
+            } else if (window.postComponent) {
+                postsHtml += window.postComponent.renderPost(post, {
+                    showAuthor: false, // Don't show author in own profile
+                    showTimestamp: true
+                });
+            } else {
+                postsHtml += this.renderFallbackPost(post);
+            }
         });
 
         if (this.userPosts.length > 0) {
@@ -563,9 +574,26 @@ class Profile {
     }
     
     /**
-     * Fallback post renderer in case PostComponent isn't loaded
+     * Fallback post renderer in case PostComponent and UnifiedPostRenderer aren't loaded
+     * UPDATED: Try UnifiedPostRenderer first as fallback
      */
     renderFallbackPost(post) {
+        // Try UnifiedPostRenderer as enhanced fallback
+        if (window.unifiedPostRenderer) {
+            try {
+                return window.unifiedPostRenderer.render(post, {
+                    context: 'profile',
+                    showAuthor: false,
+                    showTimestamp: true,
+                    showActions: true,
+                    showComments: true
+                });
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed in profile fallback:', error);
+            }
+        }
+
+        // Ultimate fallback with basic HTML
         const timeAgo = this.getTimeAgo(new Date(post.createdAt));
         return `
             <div class="post-card">
@@ -578,6 +606,14 @@ class Profile {
                 </div>
                 <div class="post-content">${post.content}</div>
                 ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-image">` : ''}
+                ${post.photos && post.photos.length > 0 ? `
+                    <div class="post-photos">
+                        ${post.photos.map(photo => `
+                            <img src="${photo.url}" alt="Post image" class="post-image"
+                                 onclick="window.open('${photo.url}', '_blank')">
+                        `).join('')}
+                    </div>
+                ` : ''}
                 <div class="post-stats">
                     <span>❤️ ${post.likesCount || 0} likes</span>
                     <span>💬 ${post.commentsCount || 0} comments</span>
@@ -1249,13 +1285,24 @@ class Profile {
         // Add isOwner flag for menu options
         newPost.isOwner = true;
         
-        // Create the post HTML
-        const postHtml = window.postComponent ? 
-            window.postComponent.renderPost(newPost, { 
+        // Create the post HTML using UnifiedPostRenderer
+        let postHtml;
+        if (window.unifiedPostRenderer) {
+            postHtml = window.unifiedPostRenderer.render(newPost, {
+                context: 'profile',
                 showAuthor: false,
-                showTimestamp: true 
-            }) :
-            this.renderFallbackPost(newPost);
+                showTimestamp: true,
+                showActions: true,
+                showComments: true
+            });
+        } else if (window.postComponent) {
+            postHtml = window.postComponent.renderPost(newPost, {
+                showAuthor: false,
+                showTimestamp: true
+            });
+        } else {
+            postHtml = this.renderFallbackPost(newPost);
+        }
         
         // Create a container for the new post
         const postContainer = document.createElement('div');

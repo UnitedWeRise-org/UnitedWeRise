@@ -37,6 +37,29 @@ class PostComponent {
      * @returns {string} HTML string for the post
      */
     renderPost(post, options = {}) {
+        // PRIORITY 1: Use UnifiedPostRenderer for consistent display platform-wide
+        if (window.unifiedPostRenderer) {
+            try {
+                console.log('✅ PostComponent: Using UnifiedPostRenderer for post', post.id);
+                const context = options.context || (options.inFeed ? 'feed' : 'focus');
+                return window.unifiedPostRenderer.render(post, {
+                    context: context,
+                    showActions: options.showActions !== false,
+                    showComments: options.showComments !== false,
+                    showAuthor: options.showAuthor !== false,
+                    showTimestamp: options.showTimestamp !== false,
+                    compactView: options.compactView || false,
+                    photoSize: options.photoSize || 'medium',
+                    showTopicIndicators: options.showTopicIndicators || false,
+                    ...options
+                });
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed in PostComponent, using legacy renderer:', error);
+            }
+        }
+
+        // Legacy renderer fallback (for compatibility during transition)
+        console.log('⚠️ PostComponent: Using legacy renderer for post', post.id);
         const defaults = {
             showActions: true,
             showComments: true,
@@ -2159,8 +2182,22 @@ class PostComponent {
 
     /**
      * Render a list of posts
+     * UPDATED: Now uses UnifiedPostRenderer for consistent display
      */
     renderPostsList(posts, containerId, options = {}) {
+        // Use UnifiedPostRenderer for consistent list rendering
+        if (window.unifiedPostRenderer) {
+            console.log('✅ PostComponent: Using UnifiedPostRenderer for posts list');
+            try {
+                const context = options.context || 'feed';
+                window.unifiedPostRenderer.renderPostsList(posts, containerId, { context, ...options });
+                return;
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed for posts list, using legacy:', error);
+            }
+        }
+
+        // Legacy fallback
         const container = document.getElementById(containerId);
         if (!container) return;
 

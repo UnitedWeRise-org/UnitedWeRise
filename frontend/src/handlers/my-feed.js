@@ -315,19 +315,24 @@ export class MyFeedHandlers {
         };
 
         try {
-            // Use the standard PostComponent if available
-            if (window.postComponent) {
+            // PRIORITY 1: Use UnifiedPostRenderer for consistent display
+            if (window.unifiedPostRenderer) {
+                const postHtml = window.unifiedPostRenderer.render(postWithUser, { context: 'feed' });
+                // Insert at top of feed
+                feedContainer.insertAdjacentHTML('afterbegin', postHtml);
+                console.log('✅ Post prepended using UnifiedPostRenderer');
+            } else if (window.postComponent) {
+                // Fallback to PostComponent
                 const postHtml = window.postComponent.renderPost(postWithUser, {
                     showActions: true,
                     showComments: true,
                     inFeed: true
                 });
-
                 // Insert at top of feed
                 feedContainer.insertAdjacentHTML('afterbegin', postHtml);
-                console.log('✅ Post prepended using PostComponent');
+                console.log('✅ Post prepended using PostComponent (fallback)');
             } else {
-                // Fallback rendering
+                // Ultimate fallback rendering
                 this.displayMyFeedPostsFallback([postWithUser], feedContainer, false);
                 console.log('✅ Post prepended using fallback renderer');
             }
@@ -413,6 +418,7 @@ export class MyFeedHandlers {
     /**
      * Display posts in My Feed
      * Migrated from index.html line 2813
+     * UPDATED: Now uses UnifiedPostRenderer for consistent display
      */
     displayMyFeedPosts(posts, appendMode = false) {
         const container = document.getElementById('myFeedPosts');
@@ -435,16 +441,21 @@ export class MyFeedHandlers {
 
         console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
 
-        // Use the existing displayPosts function with fallback
+        // PRIORITY 1: Use UnifiedPostRenderer for consistent display
         try {
-            if (typeof window.displayPosts === 'function') {
-                window.displayPosts(posts, 'myFeedPosts', appendMode);
+            if (window.unifiedPostRenderer) {
+                console.log('✅ Using UnifiedPostRenderer for My Feed display');
+                if (appendMode) {
+                    window.unifiedPostRenderer.appendPosts(posts, 'myFeedPosts', { context: 'feed' });
+                } else {
+                    window.unifiedPostRenderer.renderPostsList(posts, 'myFeedPosts', { context: 'feed' });
+                }
             } else {
-                console.warn('⚠️ displayPosts function not available, using fallback');
+                console.warn('⚠️ UnifiedPostRenderer not available, using legacy fallback');
                 this.displayMyFeedPostsFallback(posts, container, appendMode);
             }
         } catch (error) {
-            console.error('❌ Error displaying posts:', error);
+            console.error('❌ Error displaying posts with UnifiedPostRenderer:', error);
             this.displayMyFeedPostsFallback(posts, container, appendMode);
         }
     }
@@ -452,10 +463,31 @@ export class MyFeedHandlers {
     /**
      * Fallback display function for My Feed
      * Migrated from index.html line 2849
+     * UPDATED: Now uses UnifiedPostRenderer as fallback for better consistency
      */
     displayMyFeedPostsFallback(posts, container, appendMode = false) {
-        console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
+        console.log(`🔧 Using enhanced fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
 
+        // Try to use UnifiedPostRenderer even in fallback
+        if (window.unifiedPostRenderer) {
+            console.log('✅ UnifiedPostRenderer available in fallback mode');
+            try {
+                const postsHtml = posts.map(post =>
+                    window.unifiedPostRenderer.render(post, { context: 'feed' })
+                ).join('');
+
+                if (appendMode) {
+                    container.insertAdjacentHTML('beforeend', postsHtml);
+                } else {
+                    container.innerHTML = postsHtml;
+                }
+                return;
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed in fallback, using basic HTML:', error);
+            }
+        }
+
+        // Ultimate fallback with basic HTML
         let html = '';
         posts.forEach(post => {
             html += `

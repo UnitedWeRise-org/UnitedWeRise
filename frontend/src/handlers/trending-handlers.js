@@ -134,6 +134,7 @@ export class TrendingHandlers {
 
     /**
      * Update trending updates panel with posts (fallback)
+     * UPDATED: Now uses UnifiedPostRenderer for consistent display
      */
     updateTrendingUpdatesPanel(posts) {
         const content = document.getElementById('trendingContent');
@@ -144,6 +145,28 @@ export class TrendingHandlers {
             return;
         }
 
+        // Use UnifiedPostRenderer for consistent display
+        if (window.unifiedPostRenderer) {
+            console.log('✅ Using UnifiedPostRenderer for trending panel posts');
+            try {
+                const postsHtml = posts.slice(0, 5).map(post =>
+                    window.unifiedPostRenderer.render(post, {
+                        context: 'trending',
+                        compactView: true,
+                        showActions: false,
+                        showComments: false,
+                        photoSize: 'small'
+                    })
+                ).join('');
+
+                content.innerHTML = `<div class="trending-posts-list">${postsHtml}</div>`;
+                return;
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed for trending panel:', error);
+            }
+        }
+
+        // Fallback to basic HTML
         let html = '<div class="trending-posts-list">';
         posts.slice(0, 5).forEach(post => {
             const timeAgo = this.getTimeAgo(new Date(post.createdAt));
@@ -339,8 +362,28 @@ export class TrendingHandlers {
 
     /**
      * Create a post element for display
+     * UPDATED: Now uses UnifiedPostRenderer for consistent display
      */
     createPostElement(post) {
+        // Use UnifiedPostRenderer for consistent display
+        if (window.unifiedPostRenderer) {
+            console.log('✅ Using UnifiedPostRenderer for individual post element');
+            try {
+                const postHtml = window.unifiedPostRenderer.render(post, {
+                    context: 'trending',
+                    showTopicIndicators: true,
+                    compactView: false
+                });
+
+                const postElement = document.createElement('div');
+                postElement.innerHTML = postHtml;
+                return postElement.firstElementChild; // Return the actual post element
+            } catch (error) {
+                console.error('❌ UnifiedPostRenderer failed for post element:', error);
+            }
+        }
+
+        // Fallback to basic HTML
         const postElement = document.createElement('div');
         postElement.className = 'post-item';
         postElement.style.cssText = 'border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;';
