@@ -257,31 +257,22 @@ class UnifiedPostRenderer {
             `;
         }
 
-        // Multiple photos - grid layout like Twitter/Instagram
+        // Multiple photos - grid layout EXACTLY like working PostComponent
         const gridTemplate = this.getPhotoGridTemplate(photos.length);
-
         return `
-            <div class="post-media-inline multi-photo"
-                 style="margin-top: 12px; border-radius: 12px; overflow: hidden; display: grid; gap: 2px; max-height: ${sizeConfig.maxHeight}; ${gridTemplate}">
+            <div class="post-media-inline multi-photo" style="margin-top: 12px; display: grid; gap: 2px; border-radius: 12px; overflow: hidden; max-height: 400px; ${gridTemplate}">
                 ${photos.slice(0, 4).map((photo, index) => {
                     const isGif = photo.mimeType === 'image/gif';
-                    const isOverflow = photos.length > 4 && index === 3;
-
+                    const gridStyle = this.getPhotoGridStyle(photos.length, index);
                     return `
-                        <div class="photo-grid-item" style="position: relative; overflow: hidden;">
+                        <div class="post-media-item" style="${gridStyle}; position: relative; overflow: hidden;">
                             <img src="${photo.url}"
                                  alt="Post image ${index + 1}"
                                  ${settings.enableLazyLoading ? 'loading="lazy"' : ''}
-                                 onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
+                                 onclick="if(window.postComponent) window.postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
                                  style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;">
-                            ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">GIF</div>' : ''}
-                            ${isOverflow ? `
-                                <div class="more-photos-overlay"
-                                     style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold; cursor: pointer;"
-                                     onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')">
-                                    +${photos.length - 4}
-                                </div>
-                            ` : ''}
+                            ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">GIF</div>' : ''}
+                            ${photos.length > 4 && index === 3 ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">+${photos.length - 4}</div>` : ''}
                         </div>
                     `;
                 }).join('')}
@@ -290,19 +281,38 @@ class UnifiedPostRenderer {
     }
 
     /**
-     * Get CSS grid template for photo layout
-     * Based on PostComponent.getPhotoGridTemplate()
+     * Get CSS grid template for photo layouts
+     * EXACT COPY from working PostComponent.getPhotoGridTemplate()
      * @private
      */
-    getPhotoGridTemplate(photoCount) {
-        switch(photoCount) {
-            case 2:
-                return 'grid-template-columns: 1fr 1fr; grid-template-rows: 250px;';
-            case 3:
-                return 'grid-template-columns: 1fr 1fr; grid-template-rows: 125px 125px;';
-            case 4:
-            default:
-                return 'grid-template-columns: 1fr 1fr; grid-template-rows: 125px 125px;';
+    getPhotoGridTemplate(totalCount) {
+        if (totalCount === 2) {
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 250px;';
+        } else if (totalCount === 3) {
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 199px 199px;';
+        } else { // 4 or more
+            return 'grid-template-columns: 1fr 1fr; grid-template-rows: 199px 199px;';
+        }
+    }
+
+    /**
+     * Get CSS grid styles for photo layouts like modern social media
+     * EXACT COPY from working PostComponent.getPhotoGridStyle()
+     * @private
+     */
+    getPhotoGridStyle(totalCount, index) {
+        if (totalCount === 2) {
+            return `grid-column: ${index + 1}; grid-row: 1;`;
+        } else if (totalCount === 3) {
+            if (index === 0) {
+                return 'grid-column: 1; grid-row: 1 / 3;';
+            } else {
+                return `grid-column: 2; grid-row: ${index};`;
+            }
+        } else { // 4 or more
+            const col = (index % 2) + 1;
+            const row = Math.floor(index / 2) + 1;
+            return `grid-column: ${col}; grid-row: ${row};`;
         }
     }
 
