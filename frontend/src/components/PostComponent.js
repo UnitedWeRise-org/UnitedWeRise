@@ -2142,10 +2142,22 @@ class PostComponent {
                             }
                             break;
                         case 'handle-post-media-upload':
-                            // Media upload is handled by navigation-handlers.js on 'change' event
-                            // This case prevents "unhandled data-action" warnings
-                            console.log('📷 PostComponent: Media upload click detected, handled by navigation-handlers');
-                            break;
+                            // Media upload click needs to reach the file input to trigger change event
+                            // Let the event continue propagating so the file input can be triggered
+                            console.log('📷 PostComponent: Media upload click detected, allowing file input trigger');
+
+                            // Find the file input and trigger it directly if needed
+                            const fileInput = e.target.querySelector('input[type="file"]') ||
+                                            document.getElementById(e.target.getAttribute('for')) ||
+                                            e.target.closest('label').querySelector('input[type="file"]');
+
+                            if (fileInput) {
+                                console.log('📷 Triggering file input:', fileInput.id);
+                                fileInput.click(); // Trigger the file picker
+                            } else {
+                                console.error('❌ Could not find file input to trigger');
+                            }
+                            return; // Don't prevent default - let the event continue
                         default:
                             console.warn('🚨 PostComponent: Unhandled data-action:', action);
                     }
