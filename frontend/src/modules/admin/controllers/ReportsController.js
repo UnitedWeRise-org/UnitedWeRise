@@ -52,6 +52,9 @@ class ReportsController {
             // Set up event listeners
             await this.setupEventListeners();
 
+            // Set up data-action event delegation
+            await this.setupDataActionDelegation();
+
             // Load initial data
             await this.loadData();
 
@@ -148,6 +151,79 @@ class ReportsController {
         }
 
         await adminDebugLog('ReportsController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up comprehensive data-action event delegation system
+     * Professional architecture - centralized event handling
+     */
+    async setupDataActionDelegation() {
+        // Remove any existing delegation to prevent duplicates
+        document.removeEventListener('click', this.handleDataActionClick);
+
+        // Bind the handler to preserve context
+        this.handleDataActionClick = this.handleDataActionClick.bind(this);
+
+        // Set up global delegation for all data-action elements
+        document.addEventListener('click', this.handleDataActionClick);
+
+        await adminDebugLog('ReportsController', 'Data-action event delegation established successfully');
+    }
+
+    /**
+     * Centralized data-action click handler
+     * Routes all data-action events to appropriate methods
+     */
+    async handleDataActionClick(event) {
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
+
+        const action = button.getAttribute('data-action');
+        if (!action) return;
+
+        // Prevent default behavior and event bubbling
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+            switch (action) {
+                case 'review-report':
+                    await this.handleReportReview(button.getAttribute('data-report-id'));
+                    break;
+
+                case 'take-report-action':
+                    await this.takeReportAction(
+                        button.getAttribute('data-report-id'),
+                        button.getAttribute('data-report-action')
+                    );
+                    break;
+
+                case 'view-report-history':
+                    await this.viewReportHistory(button.getAttribute('data-report-id'));
+                    break;
+
+                case 'close-modal':
+                    this.handleCloseModal(button);
+                    break;
+
+                default:
+                    console.warn(`Unknown data-action: ${action}`);
+                    await adminDebugWarn('ReportsController', `Unknown data-action encountered: ${action}`);
+            }
+        } catch (error) {
+            console.error(`Error handling data-action ${action}:`, error);
+            await adminDebugError('ReportsController', `Data-action ${action} failed`, error);
+        }
+    }
+
+    /**
+     * Handle modal closure
+     */
+    handleCloseModal(button) {
+        const modal = button.closest('.report-details-modal, .modal-overlay');
+        if (modal) {
+            modal.remove();
+        }
     }
 
     /**
@@ -512,25 +588,25 @@ class ReportsController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.reportsController.handleReportReview('${report.id}')"
+                        <button data-action="review-report" data-report-id="${report.id}"
                                 class="action-btn review-btn" title="Review Report">
                             🔍 Review
                         </button>
                         ${report.status === 'pending' ? `
-                            <button onclick="window.reportsController.takeReportAction('${report.id}', 'dismiss')"
+                            <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="dismiss"
                                     class="action-btn dismiss-btn" title="Dismiss Report">
                                 ❌ Dismiss
                             </button>
-                            <button onclick="window.reportsController.takeReportAction('${report.id}', 'warn')"
+                            <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="warn"
                                     class="action-btn warn-btn" title="Issue Warning">
                                 ⚠️ Warn
                             </button>
-                            <button onclick="window.reportsController.takeReportAction('${report.id}', 'suspend')"
+                            <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="suspend"
                                     class="action-btn suspend-btn" title="Suspend User">
                                 🚫 Suspend
                             </button>
                         ` : ''}
-                        <button onclick="window.reportsController.viewReportHistory('${report.id}')"
+                        <button data-action="view-report-history" data-report-id="${report.id}"
                                 class="action-btn history-btn" title="View History">
                             📋 History
                         </button>
@@ -618,7 +694,7 @@ class ReportsController {
             <div class="report-details-modal">
                 <div class="modal-header">
                     <h3>🔍 Report Details</h3>
-                    <button class="close-modal" onclick="this.closest('.report-details-modal').remove()">✕</button>
+                    <button class="close-modal" data-action="close-modal">✕</button>
                 </div>
                 <div class="modal-content">
                     <div class="report-info-grid">
@@ -733,16 +809,16 @@ class ReportsController {
                 </div>
                 <div class="modal-actions">
                     ${report.status === 'pending' ? `
-                        <button onclick="window.reportsController.takeReportAction('${report.id}', 'dismiss')"
+                        <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="dismiss"
                                 class="action-btn dismiss-btn">❌ Dismiss</button>
-                        <button onclick="window.reportsController.takeReportAction('${report.id}', 'warn')"
+                        <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="warn"
                                 class="action-btn warn-btn">⚠️ Issue Warning</button>
-                        <button onclick="window.reportsController.takeReportAction('${report.id}', 'suspend')"
+                        <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="suspend"
                                 class="action-btn suspend-btn">🚫 Suspend User</button>
-                        <button onclick="window.reportsController.takeReportAction('${report.id}', 'escalate')"
+                        <button data-action="take-report-action" data-report-id="${report.id}" data-report-action="escalate"
                                 class="action-btn escalate-btn">🚨 Escalate</button>
                     ` : ''}
-                    <button onclick="this.closest('.report-details-modal').remove()"
+                    <button data-action="close-modal"
                             class="action-btn secondary-btn">Close</button>
                 </div>
             </div>
@@ -1277,6 +1353,11 @@ ${item.notes ? `Notes: ${item.notes}` : ''}
         const refreshBtn = document.getElementById('refreshReportsBtn');
         if (refreshBtn) {
             refreshBtn.removeEventListener('click', this.handleRefresh);
+        }
+
+        // Remove data-action event delegation
+        if (this.handleDataActionClick) {
+            document.removeEventListener('click', this.handleDataActionClick);
         }
 
         // Clear data

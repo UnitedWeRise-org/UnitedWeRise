@@ -104,7 +104,107 @@ class SecurityController {
             });
         }
 
+        // Enterprise-grade event delegation for security-critical actions
+        this.setupSecurityEventDelegation();
+
         await adminDebugLog('SecurityController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up enterprise-grade event delegation for security-critical actions
+     */
+    setupSecurityEventDelegation() {
+        // Remove any existing delegation listeners
+        document.removeEventListener('click', this.handleSecurityActions);
+
+        // Bind the handler to preserve context
+        this.handleSecurityActions = this.handleSecurityActions.bind(this);
+
+        // Set up unified event delegation for all security actions
+        document.addEventListener('click', this.handleSecurityActions);
+    }
+
+    /**
+     * Handle all security-related actions through professional event delegation
+     * with enhanced security validation
+     */
+    handleSecurityActions(event) {
+        const actionElement = event.target.closest('[data-action]');
+        if (!actionElement) return;
+
+        const action = actionElement.dataset.action;
+        const targetId = actionElement.dataset.target;
+        const ipAddress = actionElement.dataset.ipAddress;
+        const activityId = actionElement.dataset.activityId;
+        const loginId = actionElement.dataset.loginId;
+
+        // Prevent default action
+        event.preventDefault();
+
+        // Security validation - ensure user has appropriate permissions
+        if (!this.validateSecurityAction(action)) {
+            console.warn('Unauthorized security action attempted:', action);
+            return;
+        }
+
+        // Route to appropriate handler based on action
+        switch (action) {
+            case 'block-ip':
+                if (ipAddress) {
+                    this.handleIPBlock(ipAddress);
+                }
+                break;
+
+            case 'unblock-ip':
+                if (ipAddress) {
+                    this.unblockIP(ipAddress);
+                }
+                break;
+
+            case 'dismiss-alert':
+                if (activityId) {
+                    this.dismissAlert(activityId);
+                }
+                break;
+
+            case 'investigate-activity':
+                if (activityId) {
+                    this.investigateActivity(activityId);
+                }
+                break;
+
+            case 'view-login-details':
+                if (loginId) {
+                    this.viewLoginDetails(loginId);
+                }
+                break;
+
+            default:
+                console.warn('Unknown security action:', action);
+        }
+    }
+
+    /**
+     * Validate security action permissions
+     */
+    validateSecurityAction(action) {
+        // Check if user is authenticated and has admin privileges
+        if (!window.adminAuth?.getCurrentUser()?.isAdmin) {
+            alert('❌ Unauthorized: Admin privileges required for security actions');
+            return false;
+        }
+
+        // Additional validation for high-risk actions
+        const highRiskActions = ['block-ip', 'unblock-ip', 'dismiss-alert'];
+        if (highRiskActions.includes(action)) {
+            // Ensure user has super-admin privileges for critical security actions
+            if (!window.adminAuth?.getCurrentUser()?.isSuperAdmin) {
+                alert('❌ Unauthorized: Super-admin privileges required for critical security actions');
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -399,11 +499,11 @@ class SecurityController {
                         <span class="detail-item">📍 Location: ${activity.location || 'Unknown'}</span>
                     </div>
                     <div class="alert-actions">
-                        <button onclick="window.securityController.handleIPBlock('${activity.ipAddress}')"
+                        <button data-action="block-ip" data-ip-address="${activity.ipAddress}"
                                 class="action-btn block-btn">🚫 Block IP</button>
-                        <button onclick="window.securityController.dismissAlert('${activity.id}')"
+                        <button data-action="dismiss-alert" data-activity-id="${activity.id}"
                                 class="action-btn dismiss-btn">✅ Dismiss</button>
-                        <button onclick="window.securityController.investigateActivity('${activity.id}')"
+                        <button data-action="investigate-activity" data-activity-id="${activity.id}"
                                 class="action-btn investigate-btn">🔍 Investigate</button>
                     </div>
                 </div>
@@ -441,7 +541,7 @@ class SecurityController {
                         <span class="ip-timestamp">Blocked: ${this.formatTimestamp(ip.blockedAt)}</span>
                     </div>
                     <div class="ip-actions">
-                        <button onclick="window.securityController.unblockIP('${ip.address}')"
+                        <button data-action="unblock-ip" data-ip-address="${ip.address}"
                                 class="action-btn unblock-btn">✅ Unblock</button>
                     </div>
                 </div>
@@ -483,11 +583,11 @@ class SecurityController {
                     </span>
                 </td>
                 <td class="actions">
-                    <button onclick="window.securityController.handleIPBlock('${login.ipAddress}')"
+                    <button data-action="block-ip" data-ip-address="${login.ipAddress}"
                             class="action-btn block-btn" title="Block IP">
                         🚫 Block
                     </button>
-                    <button onclick="window.securityController.viewLoginDetails('${login.id}')"
+                    <button data-action="view-login-details" data-login-id="${login.id}"
                             class="action-btn details-btn" title="View Details">
                         🔍 Details
                     </button>
@@ -897,6 +997,11 @@ Request Headers: ${login.suspiciousHeaders ? 'Suspicious detected' : 'Normal'}
         const refreshBtn = document.getElementById('refreshSecurityBtn');
         if (refreshBtn) {
             refreshBtn.removeEventListener('click', this.handleRefresh);
+        }
+
+        // Remove event delegation listeners
+        if (this.handleSecurityActions) {
+            document.removeEventListener('click', this.handleSecurityActions);
         }
 
         // Clear data

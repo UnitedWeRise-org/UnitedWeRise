@@ -180,6 +180,9 @@ class AIInsightsController {
                 });
             }
 
+            // Setup event delegation for dynamic content
+            this.setupEventDelegation();
+
             adminDebugLog('AIInsightsController', 'Event listeners set up successfully');
         } catch (error) {
             adminDebugError('AIInsightsController', 'Error setting up event listeners', error);
@@ -955,13 +958,13 @@ class AIInsightsController {
             html += `
                     </div>
                     <div class="report-actions">
-                        <button onclick="window.aiInsightsController.exportReport('pdf')" class="btn btn-primary">
+                        <button data-action="export-report" data-format="pdf" class="btn btn-primary">
                             Export as PDF
                         </button>
-                        <button onclick="window.aiInsightsController.exportReport('csv')" class="btn btn-secondary">
+                        <button data-action="export-report" data-format="csv" class="btn btn-secondary">
                             Export Data as CSV
                         </button>
-                        <button onclick="window.aiInsightsController.shareReport()" class="btn btn-tertiary">
+                        <button data-action="share-report" class="btn btn-tertiary">
                             Share Report
                         </button>
                     </div>
@@ -1159,7 +1162,7 @@ class AIInsightsController {
                 <h4>🤖 AI Analysis Complete</h4>
                 <p>Processed ${results.itemsAnalyzed} items in ${results.processingTime}ms</p>
                 <p>New insights available in dashboard</p>
-                <button onclick="this.parentElement.parentElement.remove()" class="btn btn-sm">Close</button>
+                <button data-action="close-notification" class="btn btn-sm">Close</button>
             </div>
         `;
 
@@ -1290,7 +1293,7 @@ class AIInsightsController {
                 <div class="error-message">
                     <h3>🤖 AI Insights Unavailable</h3>
                     <p>${message}</p>
-                    <button onclick="window.aiInsightsController.loadData(false)" class="btn btn-primary">
+                    <button data-action="retry-load-data" class="btn btn-primary">
                         Retry
                     </button>
                 </div>
@@ -1331,6 +1334,198 @@ class AIInsightsController {
             chartInfo.chart.destroy();
             chartInfo.chart = null;
         }
+    }
+
+    /**
+     * Event delegation handler for AI insights actions
+     */
+    setupEventDelegation() {
+        const aiInsightsContent = document.getElementById('aiInsights');
+        if (!aiInsightsContent) return;
+
+        // Remove existing listeners to prevent duplicates
+        aiInsightsContent.removeEventListener('click', this.handleAIInsightsActions);
+
+        // Add event delegation
+        this.handleAIInsightsActions = this.handleAIInsightsActions.bind(this);
+        aiInsightsContent.addEventListener('click', this.handleAIInsightsActions);
+    }
+
+    /**
+     * Handle delegated AI insights action events
+     */
+    handleAIInsightsActions(event) {
+        const target = event.target;
+        const action = target.getAttribute('data-action');
+
+        if (!action) return;
+
+        switch (action) {
+            case 'export-report':
+                const format = target.getAttribute('data-format');
+                if (format) {
+                    this.exportReport(format);
+                }
+                break;
+            case 'share-report':
+                this.shareReport();
+                break;
+            case 'close-notification':
+                const notification = target.closest('.notification');
+                if (notification) {
+                    notification.remove();
+                }
+                break;
+            case 'retry-load-data':
+                this.loadData(false);
+                break;
+        }
+    }
+
+    /**
+     * Export AI insights report in specified format
+     */
+    async exportReport(format) {
+        try {
+            await adminDebugLog('AIInsightsController', `Exporting AI insights report as ${format}`);
+
+            // Mock implementation - would generate real export
+            const reportData = {
+                timestamp: new Date().toISOString(),
+                format: format,
+                insights: this.currentData || {},
+                totalItems: this.currentData?.insights?.length || 0
+            };
+
+            if (format === 'pdf') {
+                // Simulate PDF export
+                const blob = new Blob([`AI Insights Report - ${new Date().toLocaleString()}\n\nGenerated insights data would be here...`],
+                    { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ai-insights-report-${Date.now()}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } else if (format === 'csv') {
+                // Simulate CSV export
+                const csvContent = `Timestamp,Category,Insight,Confidence\n${new Date().toISOString()},Analysis,Sample insight,0.85`;
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ai-insights-data-${Date.now()}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            // Show success notification
+            this.showNotification(`Report exported successfully as ${format.toUpperCase()}`, 'success');
+
+        } catch (error) {
+            await adminDebugError('AIInsightsController', 'Failed to export AI insights report', error);
+            this.showNotification('Export failed. Please try again.', 'error');
+        }
+    }
+
+    /**
+     * Share AI insights report
+     */
+    async shareReport() {
+        try {
+            await adminDebugLog('AIInsightsController', 'Sharing AI insights report');
+
+            // Create modal for sharing options
+            const modal = document.createElement('div');
+            modal.className = 'share-report-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                    <h3>Share AI Insights Report</h3>
+                    <div style="margin: 1rem 0;">
+                        <label>Share with:</label>
+                        <select id="shareTarget" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0;">
+                            <option value="team">Team Members</option>
+                            <option value="stakeholders">Stakeholders</option>
+                            <option value="external">External Partners</option>
+                        </select>
+                    </div>
+                    <div style="margin: 1rem 0;">
+                        <label>Message (optional):</label>
+                        <textarea id="shareMessage" style="width: 100%; height: 100px; padding: 0.5rem; margin: 0.5rem 0;" placeholder="Add a message..."></textarea>
+                    </div>
+                    <div style="text-align: right;">
+                        <button data-action="close-modal" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">Cancel</button>
+                        <button data-action="send-share" style="background: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Share</button>
+                    </div>
+                </div>
+            `;
+
+            // Add modal functionality
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal || event.target.getAttribute('data-action') === 'close-modal') {
+                    modal.remove();
+                } else if (event.target.getAttribute('data-action') === 'send-share') {
+                    const target = document.getElementById('shareTarget').value;
+                    const message = document.getElementById('shareMessage').value;
+
+                    // Mock share implementation
+                    this.showNotification(`Report shared with ${target} successfully!`, 'success');
+                    modal.remove();
+                }
+            });
+
+            document.body.appendChild(modal);
+
+        } catch (error) {
+            await adminDebugError('AIInsightsController', 'Failed to share AI insights report', error);
+            this.showNotification('Share failed. Please try again.', 'error');
+        }
+    }
+
+    /**
+     * Show notification message
+     */
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            z-index: 10001;
+            max-width: 400px;
+        `;
+
+        notification.innerHTML = `
+            <div>${message}</div>
+            <button data-action="close-notification" style="background: none; border: none; color: white; float: right; font-size: 1.2rem; cursor: pointer; margin-left: 1rem;">&times;</button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
     }
 }
 

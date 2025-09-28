@@ -59,6 +59,9 @@ class ErrorsController {
             // Set up event listeners
             await this.setupEventListeners();
 
+            // Setup event delegation for error actions
+            this.setupEventDelegation();
+
             // Load initial data
             await this.loadData();
 
@@ -1162,8 +1165,8 @@ class ErrorsController {
                             ${log.status || 'New'}
                         </td>
                         <td style="padding: 0.5rem; border: 1px solid #ddd;">
-                            <button onclick="viewErrorDetails('${log.id}')" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; margin-right: 0.25rem;">View</button>
-                            <button onclick="resolveError('${log.id}')" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Resolve</button>
+                            <button data-action="view-error-details" data-error-id="${log.id}" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; margin-right: 0.25rem;">View</button>
+                            <button data-action="resolve-error" data-error-id="${log.id}" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Resolve</button>
                         </td>
                     </tr>
                 `;
@@ -1679,6 +1682,143 @@ class ErrorsController {
     async getSLATracking() { return { criticalCompliance: '95%', highCompliance: '89%', mediumCompliance: '92%', overdueErrors: 5 }; }
     async getEscalationTracking() { return { autoEscalated: 12, manualEscalated: 5, executiveEscalated: 1, successRate: '87%' }; }
     async getWorkflowEfficiency() { return { avgResolutionTime: '42 minutes', firstTimeRate: '78%', bottlenecks: ['Approval delays', 'Testing queue'], improvementScore: '82/100' }; }
+
+    /**
+     * Event delegation handler for error management actions
+     */
+    setupEventDelegation() {
+        const errorsContent = document.getElementById('errors');
+        if (!errorsContent) return;
+
+        // Remove existing listeners to prevent duplicates
+        errorsContent.removeEventListener('click', this.handleErrorActions);
+
+        // Add event delegation
+        this.handleErrorActions = this.handleErrorActions.bind(this);
+        errorsContent.addEventListener('click', this.handleErrorActions);
+    }
+
+    /**
+     * Handle delegated error action events
+     */
+    handleErrorActions(event) {
+        const target = event.target;
+        const action = target.getAttribute('data-action');
+        const errorId = target.getAttribute('data-error-id');
+
+        if (!action || !errorId) return;
+
+        switch (action) {
+            case 'view-error-details':
+                this.viewErrorDetails(errorId);
+                break;
+            case 'resolve-error':
+                this.resolveError(errorId);
+                break;
+        }
+    }
+
+    /**
+     * View detailed information about an error
+     */
+    async viewErrorDetails(errorId) {
+        try {
+            await adminDebugLog('ErrorsController', `Viewing error details for: ${errorId}`);
+
+            // Mock implementation - would fetch real error details
+            const errorDetails = {
+                id: errorId,
+                timestamp: new Date().toISOString(),
+                message: 'Detailed error information...',
+                severity: 'high',
+                type: 'TypeError',
+                stackTrace: 'Error stack trace...',
+                userAgent: 'Browser info...',
+                url: 'Error URL...',
+                userId: 'user_123'
+            };
+
+            // Create modal to display error details
+            const modal = document.createElement('div');
+            modal.className = 'error-details-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                    <h3>Error Details - ${errorId}</h3>
+                    <p><strong>Time:</strong> ${new Date(errorDetails.timestamp).toLocaleString()}</p>
+                    <p><strong>Severity:</strong> ${errorDetails.severity}</p>
+                    <p><strong>Type:</strong> ${errorDetails.type}</p>
+                    <p><strong>Message:</strong> ${errorDetails.message}</p>
+                    <p><strong>User ID:</strong> ${errorDetails.userId || 'Anonymous'}</p>
+                    <button data-action="close-modal" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                </div>
+            `;
+
+            // Add close functionality
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal || event.target.getAttribute('data-action') === 'close-modal') {
+                    modal.remove();
+                }
+            });
+
+            document.body.appendChild(modal);
+
+        } catch (error) {
+            await adminDebugError('ErrorsController', 'Failed to view error details', error);
+        }
+    }
+
+    /**
+     * Resolve an error by marking it as resolved
+     */
+    async resolveError(errorId) {
+        try {
+            await adminDebugLog('ErrorsController', `Resolving error: ${errorId}`);
+
+            // Mock implementation - would call real API
+            const result = await new Promise(resolve => {
+                setTimeout(() => resolve({ success: true }), 500);
+            });
+
+            if (result.success) {
+                // Show success notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #28a745;
+                    color: white;
+                    padding: 1rem;
+                    border-radius: 4px;
+                    z-index: 10001;
+                `;
+                notification.textContent = `Error ${errorId} has been resolved successfully.`;
+                document.body.appendChild(notification);
+
+                // Remove notification after 3 seconds
+                setTimeout(() => notification.remove(), 3000);
+
+                // Refresh the error logs display
+                this.loadData(false);
+            }
+
+        } catch (error) {
+            await adminDebugError('ErrorsController', 'Failed to resolve error', error);
+        }
+    }
 }
 
 // Export for module system

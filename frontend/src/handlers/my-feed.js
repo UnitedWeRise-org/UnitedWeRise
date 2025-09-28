@@ -123,10 +123,10 @@ export class MyFeedHandlers {
                         </div>
                         <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <label for="feedMediaUpload" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem;">
+                                <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;" data-action="handle-post-media-upload">
+                                <button onclick="document.getElementById('feedMediaUpload').click()" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem; border: none;">
                                     📷 Add Media
-                                    <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;" data-action="handle-post-media-upload">
-                                </label>
+                                </button>
                                 <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
                             </div>
                             <div>

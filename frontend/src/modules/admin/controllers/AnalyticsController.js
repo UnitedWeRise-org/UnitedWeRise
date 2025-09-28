@@ -182,6 +182,9 @@ class AnalyticsController {
                 refreshBtn.addEventListener('click', () => this.loadData(false));
             }
 
+            // Setup event delegation for dynamic content
+            this.setupEventDelegation();
+
             await adminDebugLog('AnalyticsController', 'Event listeners set up successfully');
         } catch (error) {
             await adminDebugError('AnalyticsController', 'Error setting up event listeners', error);
@@ -981,10 +984,10 @@ class AnalyticsController {
             html += `
                     </div>
                     <div class="report-actions">
-                        <button onclick="window.analyticsController.exportReport('pdf')" class="btn btn-primary">
+                        <button data-action="export-report" data-format="pdf" class="btn btn-primary">
                             Export as PDF
                         </button>
-                        <button onclick="window.analyticsController.exportReport('csv')" class="btn btn-secondary">
+                        <button data-action="export-report" data-format="csv" class="btn btn-secondary">
                             Export as CSV
                         </button>
                     </div>
@@ -1076,7 +1079,7 @@ class AnalyticsController {
                 <div class="error-message">
                     <h3>Analytics Unavailable</h3>
                     <p>${message}</p>
-                    <button onclick="window.analyticsController.loadData(false)" class="btn btn-primary">
+                    <button data-action="retry-load-data" class="btn btn-primary">
                         Retry
                     </button>
                 </div>
@@ -1186,6 +1189,43 @@ class AnalyticsController {
             adminDebugLog('AnalyticsController', 'Controller destroyed successfully');
         } catch (error) {
             adminDebugError('AnalyticsController', 'Error during cleanup', error);
+        }
+    }
+
+    /**
+     * Event delegation handler for analytics actions
+     */
+    setupEventDelegation() {
+        const analyticsContent = document.getElementById('analytics');
+        if (!analyticsContent) return;
+
+        // Remove existing listeners to prevent duplicates
+        analyticsContent.removeEventListener('click', this.handleAnalyticsActions);
+
+        // Add event delegation
+        this.handleAnalyticsActions = this.handleAnalyticsActions.bind(this);
+        analyticsContent.addEventListener('click', this.handleAnalyticsActions);
+    }
+
+    /**
+     * Handle delegated analytics action events
+     */
+    handleAnalyticsActions(event) {
+        const target = event.target;
+        const action = target.getAttribute('data-action');
+
+        if (!action) return;
+
+        switch (action) {
+            case 'export-report':
+                const format = target.getAttribute('data-format');
+                if (format) {
+                    this.exportReport(format);
+                }
+                break;
+            case 'retry-load-data':
+                this.loadData(false);
+                break;
         }
     }
 }

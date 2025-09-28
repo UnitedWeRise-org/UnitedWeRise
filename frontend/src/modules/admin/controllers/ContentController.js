@@ -104,13 +104,86 @@ class ContentController {
         }
 
         // Search button for user reports
-        const searchBtn = document.querySelector('#userReportsContent button[onclick="loadUserReports()"]');
-        if (searchBtn) {
+        const searchBtn = document.querySelector('#userReportsContent button');
+        if (searchBtn && searchBtn.hasAttribute('onclick')) {
             searchBtn.removeAttribute('onclick');
             searchBtn.addEventListener('click', this.loadUserReports);
         }
 
+        // Professional event delegation for dynamically generated content
+        this.setupContentEventDelegation();
+
         await adminDebugLog('ContentController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up sophisticated event delegation for dynamic content actions
+     */
+    setupContentEventDelegation() {
+        // Remove any existing delegation listeners
+        document.removeEventListener('click', this.handleContentActions);
+
+        // Bind the handler to preserve context
+        this.handleContentActions = this.handleContentActions.bind(this);
+
+        // Set up unified event delegation for all content actions
+        document.addEventListener('click', this.handleContentActions);
+
+        // Handle modal close events specifically
+        document.addEventListener('click', (event) => {
+            const modalCloseBtn = event.target.closest('[data-action="close-modal"]');
+            if (modalCloseBtn) {
+                event.preventDefault();
+                const modal = modalCloseBtn.closest('.modal-overlay');
+                if (modal) {
+                    modal.remove();
+                }
+            }
+        });
+    }
+
+    /**
+     * Handle all content-related actions through professional event delegation
+     */
+    handleContentActions(event) {
+        const actionElement = event.target.closest('[data-action]');
+        if (!actionElement) return;
+
+        const action = actionElement.dataset.action;
+        const targetId = actionElement.dataset.target;
+
+        // Prevent default action
+        event.preventDefault();
+
+        // Route to appropriate handler based on action
+        switch (action) {
+            case 'show-report-action-modal':
+                if (targetId) {
+                    this.showReportActionModal(targetId);
+                }
+                break;
+
+            case 'show-report-details-modal':
+                if (targetId) {
+                    this.showReportDetailsModal(targetId);
+                }
+                break;
+
+            case 'resolve-flag':
+                if (targetId) {
+                    this.resolveFlag(targetId);
+                }
+                break;
+
+            case 'process-report-action':
+                if (targetId) {
+                    this.processReportAction(targetId);
+                }
+                break;
+
+            default:
+                console.warn('Unknown content action:', action);
+        }
     }
 
     /**
@@ -334,11 +407,11 @@ class ContentController {
                 </td>
                 <td>
                     ${report.status === 'PENDING' ? `
-                        <button onclick="window.contentController.showReportActionModal('${report.id}')" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                        <button data-action="show-report-action-modal" data-target="${report.id}" class="btn-sm" style="background: #4b5c09; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
                             Take Action
                         </button>
                     ` : `
-                        <button onclick="window.contentController.showReportDetailsModal('${report.id}')" class="btn-sm" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
+                        <button data-action="show-report-details-modal" data-target="${report.id}" class="btn-sm" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 3px; cursor: pointer;">
                             View Details
                         </button>
                     `}
@@ -466,7 +539,7 @@ class ContentController {
                         <td>${confidence}%</td>
                         <td>${date}</td>
                         <td>
-                            <button onclick="window.contentController.resolveFlag('${flag.id}')" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Resolve</button>
+                            <button data-action="resolve-flag" data-target="${flag.id}" class="nav-button" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Resolve</button>
                         </td>
                     </tr>
                 `;
@@ -510,10 +583,10 @@ class ContentController {
                             <textarea id="actionNotes" placeholder="Enter reason for this action..." style="width: 100%; padding: 0.5rem; margin-top: 0.25rem; min-height: 100px;"></textarea>
                         </div>
                         <div style="text-align: right;">
-                            <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">
+                            <button type="button" data-action="close-modal" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">
                                 Cancel
                             </button>
-                            <button type="button" onclick="window.contentController.processReportAction('${reportId}')" style="background: #4b5c09; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                            <button type="button" data-action="process-report-action" data-target="${reportId}" style="background: #4b5c09; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
                                 Take Action
                             </button>
                         </div>
@@ -545,7 +618,7 @@ class ContentController {
                     <p>Report ID: ${reportId}</p>
                     <p><em>This report has already been resolved. View the moderation history for details.</em></p>
                     <div style="text-align: right; margin-top: 1rem;">
-                        <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                        <button type="button" data-action="close-modal" style="background: #6c757d; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
                             Close
                         </button>
                     </div>
@@ -681,6 +754,11 @@ class ContentController {
 
         if (aiFlagsTab) {
             aiFlagsTab.removeEventListener('click', this.showContentTab);
+        }
+
+        // Remove event delegation listeners
+        if (this.handleContentActions) {
+            document.removeEventListener('click', this.handleContentActions);
         }
 
         // Clear data

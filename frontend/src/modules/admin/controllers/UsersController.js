@@ -58,7 +58,7 @@ class UsersController {
     async setupEventListeners() {
         // Search functionality
         const searchInput = document.getElementById('userSearch');
-        const searchBtn = document.querySelector('#users button[onclick="searchUsers()"]');
+        const searchBtn = document.querySelector('#users button');
 
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -71,19 +71,124 @@ class UsersController {
             });
         }
 
-        if (searchBtn) {
+        if (searchBtn && searchBtn.hasAttribute('onclick')) {
             searchBtn.removeAttribute('onclick');
             searchBtn.addEventListener('click', this.handleSearch);
         }
 
         // Account merge functionality
-        const mergeBtn = document.querySelector('#users button[onclick="mergeAccounts()"]');
-        if (mergeBtn) {
+        const mergeBtn = document.querySelector('#users button[type="button"]');
+        if (mergeBtn && mergeBtn.hasAttribute('onclick')) {
             mergeBtn.removeAttribute('onclick');
             mergeBtn.addEventListener('click', this.mergeAccounts);
         }
 
+        // Professional event delegation for dynamic content
+        this.setupUsersEventDelegation();
+
         await adminDebugLog('UsersController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up sophisticated event delegation for dynamic users content actions
+     */
+    setupUsersEventDelegation() {
+        // Remove any existing delegation listeners
+        document.removeEventListener('click', this.handleUsersActions);
+
+        // Bind the handler to preserve context
+        this.handleUsersActions = this.handleUsersActions.bind(this);
+
+        // Set up unified event delegation for all users actions
+        document.addEventListener('click', this.handleUsersActions);
+
+        // Handle modal close events specifically
+        document.addEventListener('click', (event) => {
+            const modalCloseBtn = event.target.closest('[data-action="close-modal"]');
+            if (modalCloseBtn) {
+                event.preventDefault();
+                const modal = modalCloseBtn.closest('.modal');
+                if (modal) {
+                    modal.remove();
+                }
+            }
+        });
+    }
+
+    /**
+     * Handle all user-related actions through professional event delegation
+     */
+    handleUsersActions(event) {
+        const actionElement = event.target.closest('[data-action]');
+        if (!actionElement) return;
+
+        const action = actionElement.dataset.action;
+        const targetId = actionElement.dataset.target;
+        const targetUsername = actionElement.dataset.username;
+        const targetRole = actionElement.dataset.role;
+
+        // Prevent default action
+        event.preventDefault();
+
+        // Stop propagation for nested actions
+        if (action !== 'show-user-profile-row') {
+            event.stopPropagation();
+        }
+
+        // Route to appropriate handler based on action
+        switch (action) {
+            case 'show-user-profile-row':
+            case 'show-user-profile':
+                if (targetId) {
+                    this.showUserProfile(targetId);
+                }
+                break;
+
+            case 'suspend-user':
+                if (targetId && targetUsername) {
+                    this.suspendUser(targetId, targetUsername);
+                }
+                break;
+
+            case 'unsuspend-user':
+                if (targetId && targetUsername) {
+                    this.unsuspendUser(targetId, targetUsername);
+                }
+                break;
+
+            case 'change-user-role':
+                if (targetId && targetUsername && targetRole) {
+                    this.changeUserRole(targetId, targetUsername, targetRole);
+                }
+                break;
+
+            case 'reset-user-password':
+                if (targetId && targetUsername) {
+                    this.resetUserPassword(targetId, targetUsername);
+                }
+                break;
+
+            case 'resend-email-verification':
+                if (targetId && targetUsername) {
+                    this.resendEmailVerification(targetId, targetUsername);
+                }
+                break;
+
+            case 'delete-user':
+                if (targetId && targetUsername) {
+                    // Parse impact data from dataset
+                    const impact = {
+                        posts: parseInt(actionElement.dataset.posts) || 0,
+                        comments: parseInt(actionElement.dataset.comments) || 0,
+                        followers: parseInt(actionElement.dataset.followers) || 0
+                    };
+                    this.deleteUser(targetId, targetUsername, impact);
+                }
+                break;
+
+            default:
+                console.warn('Unknown users action:', action);
+        }
     }
 
     /**
@@ -443,7 +548,7 @@ class UsersController {
         const currentRole = user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user';
 
         return `
-            <tr data-user-id="${user.id}" onclick="window.usersController.showUserProfile('${user.id}')" style="cursor: pointer;" title="Click to view full profile">
+            <tr data-user-id="${user.id}" data-action="show-user-profile-row" data-target="${user.id}" style="cursor: pointer;" title="Click to view full profile">
                 <td>
                     <div class="user-info">
                         <strong>@${user.username || 'N/A'}</strong>
@@ -464,7 +569,7 @@ class UsersController {
                 <td>${user.stats?.posts || 0}</td>
                 <td>${user.stats?.followers || 0}</td>
                 <td class="actions">
-                    <button onclick="event.stopPropagation(); window.usersController.showUserProfile('${user.id}')"
+                    <button data-action="show-user-profile" data-target="${user.id}"
                             class="action-btn profile-btn" title="View Full Profile">
                         👤 Profile
                     </button>
@@ -540,7 +645,7 @@ class UsersController {
 
             modal.innerHTML = `
                 <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 95vh; overflow-y: auto; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
-                    <button onclick="this.closest('.modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; color: #666; z-index: 10;">&times;</button>
+                    <button data-action="close-modal" style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; color: #666; z-index: 10;">&times;</button>
 
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px 12px 0 0;">
@@ -682,30 +787,30 @@ class UsersController {
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
 
                                 ${!user.isSuspended ? `
-                                    <button onclick="window.usersController.suspendUser('${user.id}', '${user.username}')" class="nav-button" style="background: #f39c12; white-space: nowrap;">
+                                    <button data-action="suspend-user" data-target="${user.id}" data-username="${user.username}" class="nav-button" style="background: #f39c12; white-space: nowrap;">
                                         🚫 Suspend User
                                     </button>
                                 ` : `
-                                    <button onclick="window.usersController.unsuspendUser('${user.id}', '${user.username}')" class="nav-button" style="background: #27ae60; white-space: nowrap;">
+                                    <button data-action="unsuspend-user" data-target="${user.id}" data-username="${user.username}" class="nav-button" style="background: #27ae60; white-space: nowrap;">
                                         ✅ Unsuspend User
                                     </button>
                                 `}
 
-                                <button onclick="window.usersController.changeUserRole('${user.id}', '${user.username}', '${user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user'}')" class="nav-button" style="background: #9b59b6; white-space: nowrap;">
+                                <button data-action="change-user-role" data-target="${user.id}" data-username="${user.username}" data-role="${user.isSuperAdmin ? 'super-admin' : user.isAdmin ? 'admin' : user.isModerator ? 'moderator' : 'user'}" class="nav-button" style="background: #9b59b6; white-space: nowrap;">
                                     👑 Change Role
                                 </button>
 
-                                <button onclick="window.usersController.resetUserPassword('${user.id}', '${user.username}')" class="nav-button" style="background: #3498db; white-space: nowrap;">
+                                <button data-action="reset-user-password" data-target="${user.id}" data-username="${user.username}" class="nav-button" style="background: #3498db; white-space: nowrap;">
                                     🔑 Reset Password
                                 </button>
 
                                 ${!user.emailVerified ? `
-                                    <button onclick="window.usersController.resendEmailVerification('${user.id}', '${user.username}')" class="nav-button" style="background: #17a2b8; white-space: nowrap;">
+                                    <button data-action="resend-email-verification" data-target="${user.id}" data-username="${user.username}" class="nav-button" style="background: #17a2b8; white-space: nowrap;">
                                         📧 Resend Verification
                                     </button>
                                 ` : ''}
 
-                                <button onclick="window.usersController.deleteUser('${user.id}', '${user.username}', {posts: ${user.stats?.posts || 0}, comments: ${user.stats?.comments || 0}, followers: ${user.stats?.followers || 0}})" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
+                                <button data-action="delete-user" data-target="${user.id}" data-username="${user.username}" data-posts="${user.stats?.posts || 0}" data-comments="${user.stats?.comments || 0}" data-followers="${user.stats?.followers || 0}" class="nav-button" style="background: #e74c3c; white-space: nowrap;">
                                     🗑️ Delete Account
                                 </button>
                             </div>
@@ -713,7 +818,7 @@ class UsersController {
 
                         <!-- Close Button -->
                         <div style="text-align: center; margin-top: 2rem;">
-                            <button onclick="this.closest('.modal').remove()" class="nav-button" style="background: #95a5a6; padding: 0.75rem 2rem;">
+                            <button data-action="close-modal" class="nav-button" style="background: #95a5a6; padding: 0.75rem 2rem;">
                                 Close Details
                             </button>
                         </div>
@@ -820,6 +925,11 @@ class UsersController {
         const searchInput = document.getElementById('userSearch');
         if (searchInput) {
             searchInput.removeEventListener('input', this.handleSearch);
+        }
+
+        // Remove event delegation listeners
+        if (this.handleUsersActions) {
+            document.removeEventListener('click', this.handleUsersActions);
         }
 
         // Clear data
