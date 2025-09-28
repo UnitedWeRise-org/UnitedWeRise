@@ -15,18 +15,14 @@ class PostComponent {
      * Initialize content moderation system
      */
     initializeContentModeration() {
-        // Initialize content warning and sensitive content viewer components
+        // Initialize content warning and sensitive content viewer components (optional)
         if (typeof ContentWarningScreen !== 'undefined') {
             this.contentWarning = new ContentWarningScreen();
             this.contentWarning.initializeEventListeners();
-        } else {
-            console.warn('PostComponent: ContentWarningScreen not available');
         }
 
         if (typeof SensitiveContentViewer !== 'undefined') {
             this.sensitiveViewer = new SensitiveContentViewer();
-        } else {
-            console.warn('PostComponent: SensitiveContentViewer not available');
         }
     }
 
@@ -2201,6 +2197,9 @@ class PostComponent {
                             console.log('📷 PostComponent: File input change detected - handled by navigation-handlers');
                             // No need to do anything here - just acknowledge the event
                             return; // Let navigation-handlers process the file selection
+                        case 'create-post-from-feed':
+                            // Handled by my-feed.js handler - pass through
+                            return;
                         default:
                             console.warn('🚨 PostComponent: Unhandled data-action:', action);
                     }

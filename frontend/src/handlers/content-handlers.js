@@ -149,9 +149,15 @@ export class ContentHandlers {
                         this.displayMOTD(this.currentMOTDData);
                     }
                 }
+            } else if (response.status === 404) {
+                // MOTD endpoint not configured - silently skip (not an error)
+                return;
             }
         } catch (error) {
-            console.error('Failed to load MOTD:', error);
+            // Only log non-404 errors
+            if (error.message && !error.message.includes('404')) {
+                console.error('Failed to load MOTD:', error);
+            }
         }
     }
 

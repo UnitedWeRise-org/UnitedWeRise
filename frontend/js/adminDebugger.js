@@ -23,13 +23,20 @@ class AdminDebugger {
      */
     async verifyAdminStatus() {
         // Use cached result if still valid
-        if (this.adminVerified !== null && 
-            this.verificationExpiry && 
+        if (this.adminVerified !== null &&
+            this.verificationExpiry &&
             Date.now() < this.verificationExpiry) {
             return this.adminVerified;
         }
 
         try {
+            // Check if user has admin flag BEFORE making admin API calls
+            if (!window.currentUser || !window.currentUser.isAdmin) {
+                this.adminVerified = false;
+                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+                return false;
+            }
+
             // Use AdminAPI for modular admin system
             if (!window.AdminAPI || typeof window.AdminAPI.call !== 'function') {
                 // Fall back to regular apiCall for non-admin pages
@@ -39,29 +46,14 @@ class AdminDebugger {
                     return false;
                 }
 
-                // Check if user is logged in first
-                if (!window.currentUser) {
-                    this.adminVerified = false;
-                    this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                    return false;
-                }
-
-                // Use regular apiCall for main site
+                // User has isAdmin flag, now verify with backend
                 const response = await window.apiCall('/admin/users?limit=1');
                 this.adminVerified = response.ok;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
                 return this.adminVerified;
             }
 
-            // Check if user is logged in first
-            if (!window.currentUser) {
-                // User not logged in - can't be admin (silently fail)
-                this.adminVerified = false;
-                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return false;
-            }
-
-            // Use AdminAPI for admin dashboard - try a simple admin endpoint that doesn't require TOTP
+            // User has isAdmin flag (already checked above), now verify with AdminAPI
             const response = await window.AdminAPI.get(`${window.AdminAPI.BACKEND_URL}/api/admin/users`, { limit: 1 });
             this.adminVerified = response.ok;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
