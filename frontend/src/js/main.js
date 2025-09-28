@@ -50,6 +50,9 @@ import '../handlers/notification-handlers.js';
 // Phase 4j-unified: Unified Post Creator (consolidated posting system)
 import '../modules/features/content/UnifiedPostCreator.js';
 
+// Phase 4j-renderer: Unified Post Renderer (consolidated display system)
+import '../modules/features/content/UnifiedPostRenderer.js';
+
 // Phase 5: Component layer
 import '../components/PostComponent.js';
 import '../components/Profile.js';

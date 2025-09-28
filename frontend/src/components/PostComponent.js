@@ -3038,6 +3038,16 @@ class PostComponent {
                         </div>
                     </div>
                     <div class="post-content">${post.content}</div>
+                    ${post.photos && post.photos.length > 0 ? `
+                        <div class="post-media" style="margin-top: 12px; margin-bottom: 12px;">
+                            ${post.photos.map(photo => `
+                                <img src="${photo.url}" alt="Post image"
+                                     style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 8px; display: block; cursor: pointer;"
+                                     onclick="window.open('${photo.url}', '_blank')"
+                                     loading="lazy">
+                            `).join('')}
+                        </div>
+                    ` : ''}
                     <div class="post-actions">
                         <span class="post-action" onclick="likePost('${post.id}', event)" style="cursor: pointer; transition: transform 0.2s;">
                             ${post.isLiked ? '❤️' : '👍'} ${post.likesCount || 0}

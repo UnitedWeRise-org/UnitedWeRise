@@ -147,9 +147,31 @@ export function displayMyFeedPosts(posts, appendMode = false) {
     
     console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
 
-    // Use PostComponent directly for proper photo rendering
-    if (window.postComponent) {
-        console.log('✅ Using PostComponent.renderPost for My Feed display');
+    // Use UnifiedPostRenderer for consistent photo rendering across all contexts
+    if (window.unifiedPostRenderer) {
+        console.log('✅ Using UnifiedPostRenderer for My Feed display');
+
+        if (appendMode) {
+            window.unifiedPostRenderer.appendPosts(posts, 'myFeedPosts', {
+                context: 'feed',
+                showActions: true,
+                showComments: true,
+                showAuthor: true,
+                showTimestamp: true,
+                compactView: false
+            });
+        } else {
+            window.unifiedPostRenderer.renderPostsList(posts, 'myFeedPosts', {
+                context: 'feed',
+                showActions: true,
+                showComments: true,
+                showAuthor: true,
+                showTimestamp: true,
+                compactView: false
+            });
+        }
+    } else if (window.postComponent) {
+        console.log('⚠️ UnifiedPostRenderer not available, using PostComponent fallback');
         let html = '';
 
         posts.forEach(post => {
@@ -168,7 +190,7 @@ export function displayMyFeedPosts(posts, appendMode = false) {
             container.innerHTML = html;
         }
     } else {
-        console.warn('⚠️ PostComponent not available, using fallback');
+        console.warn('⚠️ Neither UnifiedPostRenderer nor PostComponent available, using fallback');
         displayMyFeedPostsFallback(posts, container, appendMode);
     }
 }

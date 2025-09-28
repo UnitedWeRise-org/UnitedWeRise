@@ -274,33 +274,57 @@ export class TrendingHandlers {
         existingPosts.forEach(post => post.remove());
 
         if (posts && posts.length > 0) {
-            posts.forEach(post => {
-                const postElement = this.createPostElement(post);
+            // Use UnifiedPostRenderer for consistent display
+            if (window.unifiedPostRenderer) {
+                console.log('✅ Using UnifiedPostRenderer for topic-filtered feed');
 
-                // Add stance indicator
-                if (post.stance) {
-                    const stanceIndicator = document.createElement('div');
-                    stanceIndicator.style.cssText = `
-                        position: absolute;
-                        top: 10px;
-                        right: 10px;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 4px;
-                        font-size: 0.7rem;
-                        font-weight: bold;
-                        ${post.stance === 'support' ? 'background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid #28a745;' :
-                          post.stance === 'oppose' ? 'background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545;' :
-                          'background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid #6c757d;'}
-                    `;
-                    stanceIndicator.textContent = post.stance === 'support' ? 'Supporting' :
-                                                post.stance === 'oppose' ? 'Opposing' : 'Neutral';
+                // Clear existing content (except topic header)
+                const existingPosts = feedContainer.querySelectorAll('.post-component, .post-container, .feed-post, .post-item');
+                existingPosts.forEach(post => post.remove());
 
-                    postElement.style.position = 'relative';
-                    postElement.appendChild(stanceIndicator);
-                }
+                // Render posts with trending context and stance indicators
+                posts.forEach(post => {
+                    const postHtml = window.unifiedPostRenderer.render(post, {
+                        context: 'trending',
+                        showActions: true,
+                        showComments: false,
+                        showAuthor: true,
+                        showTimestamp: true,
+                        showTopicIndicators: true,
+                        compactView: false
+                    });
+                    feedContainer.insertAdjacentHTML('beforeend', postHtml);
+                });
+            } else {
+                // Fallback to legacy rendering
+                posts.forEach(post => {
+                    const postElement = this.createPostElement(post);
 
-                feedContainer.appendChild(postElement);
-            });
+                    // Add stance indicator
+                    if (post.stance) {
+                        const stanceIndicator = document.createElement('div');
+                        stanceIndicator.style.cssText = `
+                            position: absolute;
+                            top: 10px;
+                            right: 10px;
+                            padding: 0.2rem 0.5rem;
+                            border-radius: 4px;
+                            font-size: 0.7rem;
+                            font-weight: bold;
+                            ${post.stance === 'support' ? 'background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid #28a745;' :
+                              post.stance === 'oppose' ? 'background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545;' :
+                              'background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid #6c757d;'}
+                        `;
+                        stanceIndicator.textContent = post.stance === 'support' ? 'Supporting' :
+                                                    post.stance === 'oppose' ? 'Opposing' : 'Neutral';
+
+                        postElement.style.position = 'relative';
+                        postElement.appendChild(stanceIndicator);
+                    }
+
+                    feedContainer.appendChild(postElement);
+                });
+            }
         } else {
             const noPostsMessage = document.createElement('div');
             noPostsMessage.style.cssText = 'text-align: center; color: #666; padding: 2rem; background: white; border-radius: 8px; margin: 1rem 0;';
