@@ -2142,22 +2142,11 @@ class PostComponent {
                             }
                             break;
                         case 'handle-post-media-upload':
-                            // Media upload click needs to reach the file input to trigger change event
-                            // Let the event continue propagating so the file input can be triggered
-                            console.log('📷 PostComponent: Media upload click detected, allowing file input trigger');
-
-                            // Find the file input and trigger it directly if needed
-                            const fileInput = e.target.querySelector('input[type="file"]') ||
-                                            document.getElementById(e.target.getAttribute('for')) ||
-                                            e.target.closest('label').querySelector('input[type="file"]');
-
-                            if (fileInput) {
-                                console.log('📷 Triggering file input:', fileInput.id);
-                                fileInput.click(); // Trigger the file picker
-                            } else {
-                                console.error('❌ Could not find file input to trigger');
-                            }
-                            return; // Don't prevent default - let the event continue
+                            // Media upload is now handled by direct button onclick
+                            // This event comes from the file input itself, not the button
+                            console.log('📷 PostComponent: File input change detected - handled by navigation-handlers');
+                            // No need to do anything here - just acknowledge the event
+                            return; // Let navigation-handlers process the file selection
                         default:
                             console.warn('🚨 PostComponent: Unhandled data-action:', action);
                     }
