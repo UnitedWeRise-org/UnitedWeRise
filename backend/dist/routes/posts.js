@@ -210,6 +210,47 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                     data: { postId: post.id }
                 });
                 console.log(`📷 Media linked to post: ${mediaId} → ${post.id}`);
+                // Fetch the post again to include the newly linked photos
+                const updatedPost = await prisma_1.prisma.post.findUnique({
+                    where: { id: post.id },
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                verified: true
+                            }
+                        },
+                        photos: {
+                            where: {
+                                isActive: true,
+                                photoType: 'POST_MEDIA'
+                            },
+                            select: {
+                                id: true,
+                                url: true,
+                                thumbnailUrl: true,
+                                width: true,
+                                height: true,
+                                mimeType: true
+                            }
+                        },
+                        _count: {
+                            select: {
+                                likes: true,
+                                comments: true
+                            }
+                        }
+                    }
+                });
+                if (updatedPost) {
+                    // Replace the post object with the updated one that includes photos
+                    Object.assign(post, updatedPost);
+                    console.log(`✅ Post updated with photos: ${post.photos?.length || 0} photo(s)`);
+                }
             }
             catch (error) {
                 console.error('Failed to link media to post:', error);
