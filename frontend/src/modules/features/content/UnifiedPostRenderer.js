@@ -140,7 +140,7 @@ class UnifiedPostRenderer {
 
                 ${shouldShowWarning ? this.renderContentWarning(post.contentFlags) : ''}
 
-                <div class="post-content ${shouldShowWarning ? 'content-hidden' : ''}">
+                <div class="post-content ${shouldShowWarning ? 'content-hidden' : ''}" onclick="if(window.postComponent) window.postComponent.openPostFocus('${post.id}')" style="cursor: pointer;">
                     ${this.renderPostContent(post.content, settings)}
                 </div>
 
@@ -154,7 +154,7 @@ class UnifiedPostRenderer {
 
                 ${settings.showModerationTools ? this.renderModerationTools(post) : ''}
 
-                ${settings.showComments && post.comments ? this.renderComments(post.comments, settings) : ''}
+                ${settings.showComments ? this.renderCommentsSection(post, settings) : ''}
             </div>
         `;
     }
@@ -171,20 +171,21 @@ class UnifiedPostRenderer {
                      style="cursor: pointer;"
                      title="Click to view profile">
                     ${post.author?.avatar ?
-                        `<img src="${post.author.avatar}" alt="${authorName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
-                        `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(45deg, #4b5c09, #6b7c29); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">${authorInitial}</div>`
+                        `<img src="${post.author.avatar}" alt="Profile Picture" class="avatar-img">` :
+                        `<div class="avatar-placeholder">${authorInitial}</div>`
                     }
                 </div>
                 <div class="post-author-info">
-                    <div class="post-author-name">
-                        <strong>${authorName}</strong>
-                        ${post.author?.verified ? '<span class="verified-badge" title="Verified Account">✓</span>' : ''}
+                    <div class="post-author-name user-card-trigger"
+                         onclick="if(window.postComponent) postComponent.showUserCard(event, '${post.author?.id || ''}', {postId: '${post.id}'})"
+                         style="cursor: pointer;"
+                         title="Click to view profile">
+                        ${authorName}
+                        ${post.author?.verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
                         ${post.author?.isAdmin ? '<span class="admin-badge" title="Administrator">🛡️</span>' : ''}
                     </div>
                     ${settings.showTimestamp ? `
-                        <div class="post-timestamp" title="${new Date(post.createdAt).toLocaleString()}">
-                            ${timeAgo}
-                        </div>
+                        <div class="post-timestamp">@${post.author?.username || 'unknown'} • ${timeAgo}</div>
                     ` : ''}
                 </div>
             </div>
@@ -322,26 +323,29 @@ class UnifiedPostRenderer {
     }
 
     /**
-     * Render post actions (like, comment, share buttons)
+     * Render post actions (enhanced reactions, comment, share, edit/delete)
      * @private
      */
     renderActions(post, settings) {
         return `
             <div class="post-actions" data-post-id="${post.id}">
                 ${this.renderEnhancedReactions(post)}
+
                 <button class="post-action-btn comment-btn"
-                        onclick="if(window.postComponent) postComponent.toggleComments('${post.id}')">
+                        onclick="if(window.postComponent) window.postComponent.toggleComments('${post.id}')">
                     <span class="action-icon">💬</span>
                     <span class="action-count">${post.commentsCount || 0}</span>
                 </button>
+
                 <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}"
-                        onclick="if(window.postComponent) postComponent.sharePost('${post.id}')">
+                        onclick="if(window.postComponent) window.postComponent.sharePost('${post.id}')">
                     <span class="action-icon">🔄</span>
                     <span class="action-count">${post.sharesCount || 0}</span>
                 </button>
+
                 ${post.isOwner ? `
                     <button class="post-action-btn more-btn"
-                            onclick="if(window.postComponent) postComponent.showPostMenu('${post.id}')">
+                            onclick="if(window.postComponent) window.postComponent.showPostMenu('${post.id}')">
                         <span class="action-icon">⋯</span>
                     </button>
                 ` : ''}
@@ -350,20 +354,45 @@ class UnifiedPostRenderer {
     }
 
     /**
-     * Render enhanced reactions (like button with animations)
+     * Render enhanced reactions (like/dislike and agree/disagree)
      * @private
      */
     renderEnhancedReactions(post) {
-        const isLiked = post.isLiked || false;
-        const likeCount = post.likesCount || 0;
-
         return `
-            <button class="post-action-btn like-btn ${isLiked ? 'liked' : ''}"
-                    onclick="if(window.postComponent) postComponent.toggleLike('${post.id}')"
-                    data-post-id="${post.id}">
-                <span class="action-icon ${isLiked ? 'liked-icon' : ''}">${isLiked ? '❤️' : '🤍'}</span>
-                <span class="action-count">${likeCount}</span>
-            </button>
+            <div class="reaction-groups">
+                <div class="sentiment-group">
+                    <button class="reaction-btn sentiment-like ${post.userSentiment === 'LIKE' ? 'active' : ''}"
+                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'sentiment', 'LIKE')"
+                            data-reaction-type="sentiment"
+                            data-reaction-value="LIKE">
+                        <span class="emoji">😊</span>
+                        <span class="reaction-count">${post.likesCount || 0}</span>
+                    </button>
+                    <button class="reaction-btn sentiment-dislike ${post.userSentiment === 'DISLIKE' ? 'active' : ''}"
+                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'sentiment', 'DISLIKE')"
+                            data-reaction-type="sentiment"
+                            data-reaction-value="DISLIKE">
+                        <span class="emoji">😞</span>
+                        <span class="reaction-count">${post.dislikesCount || 0}</span>
+                    </button>
+                </div>
+                <div class="stance-group">
+                    <button class="reaction-btn stance-agree ${post.userStance === 'AGREE' ? 'active' : ''}"
+                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'stance', 'AGREE')"
+                            data-reaction-type="stance"
+                            data-reaction-value="AGREE">
+                        <span class="emoji">👍</span>
+                        <span class="reaction-count">${post.agreesCount || 0}</span>
+                    </button>
+                    <button class="reaction-btn stance-disagree ${post.userStance === 'DISAGREE' ? 'active' : ''}"
+                            onclick="if(window.postComponent) window.postComponent.toggleReaction('${post.id}', 'stance', 'DISAGREE')"
+                            data-reaction-type="stance"
+                            data-reaction-value="DISAGREE">
+                        <span class="emoji">👎</span>
+                        <span class="reaction-count">${post.disagreesCount || 0}</span>
+                    </button>
+                </div>
+            </div>
         `;
     }
 
@@ -402,7 +431,37 @@ class UnifiedPostRenderer {
     }
 
     /**
-     * Render comments section
+     * Render complete comments section with input and existing comments
+     * @private
+     */
+    renderCommentsSection(post, settings) {
+        return `
+            <div class="post-comments-section" id="comments-${post.id}" style="display: none;">
+                <div class="comment-input-wrapper">
+                    <textarea class="comment-input"
+                              id="comment-input-${post.id}"
+                              placeholder="Write a comment..."
+                              rows="2"></textarea>
+                    <div class="comment-actions">
+                        <button class="btn btn-sm btn-primary"
+                                data-action="addComment" data-post-id="${post.id}">
+                            Post Comment
+                        </button>
+                        <button class="btn btn-sm btn-secondary"
+                                onclick="if(window.postComponent) window.postComponent.hideComments('${post.id}')">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+                <div class="comments-list" id="comments-list-${post.id}">
+                    <!-- Comments will be loaded here -->
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render existing comments (for display)
      * @private
      */
     renderComments(comments, settings) {
@@ -419,7 +478,7 @@ class UnifiedPostRenderer {
                 `).join('')}
                 ${comments.length > 3 ? `
                     <div class="view-more-comments" style="color: #666; font-size: 0.9rem; cursor: pointer;"
-                         onclick="if(window.postComponent) postComponent.openPostFocus('${comments[0].postId}')">
+                         onclick="if(window.postComponent) window.postComponent.openPostFocus('${comments[0].postId}')">
                         View all ${comments.length} comments
                     </div>
                 ` : ''}

@@ -1037,6 +1037,37 @@ class PostComponent {
     }
 
     /**
+     * Show user card with profile actions (view profile, follow, friend, etc.)
+     */
+    async showUserCard(event, userId, context = {}) {
+        if (!userId) {
+            console.warn('PostComponent: No user ID provided for user card');
+            return;
+        }
+
+        try {
+            // Ensure UserCard component is loaded
+            if (typeof window.UserCard === 'undefined') {
+                console.warn('PostComponent: UserCard component not loaded');
+                return;
+            }
+
+            // Create UserCard instance if it doesn't exist
+            if (!window.userCard) {
+                window.userCard = new window.UserCard();
+            }
+
+            // Show the user card anchored to the clicked element
+            await window.userCard.showCard(event.target.closest('.user-card-trigger'), userId, context);
+
+        } catch (error) {
+            console.error('PostComponent: Error showing user card:', error);
+            // Fallback to opening user profile page
+            window.location.href = `/profile/${userId}`;
+        }
+    }
+
+    /**
      * Show share modal with options
      */
     showShareModal(postId) {
