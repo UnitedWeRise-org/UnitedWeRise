@@ -111,7 +111,9 @@ class UnifiedPostRenderer {
             postId: post.id,
             context: context,
             hasPhotos: !!(post.photos?.length),
-            photoCount: post.photos?.length || 0
+            photoCount: post.photos?.length || 0,
+            hasImageUrl: !!post.imageUrl,
+            postKeys: Object.keys(post)
         });
 
         // Validate post data
@@ -128,6 +130,17 @@ class UnifiedPostRenderer {
         // Content moderation check
         const hasContentFlags = post.contentFlags && typeof post.contentFlags === 'object' && Object.keys(post.contentFlags).length > 0;
         const shouldShowWarning = hasContentFlags && this.shouldHideContent && this.shouldHideContent(post.contentFlags);
+
+        // Auto-detect post ownership if not explicitly set
+        if (typeof post.isOwner === 'undefined' && window.currentUser && post.author) {
+            post.isOwner = post.author.id === window.currentUser.id;
+            console.log('🔧 UnifiedPostRenderer: Auto-detected isOwner', {
+                postId: post.id,
+                authorId: post.author.id,
+                currentUserId: window.currentUser.id,
+                isOwner: post.isOwner
+            });
+        }
 
         // Build the complete post HTML
         return `
@@ -213,12 +226,16 @@ class UnifiedPostRenderer {
      * @private
      */
     renderPostMedia(photos, settings) {
-        if (!photos || photos.length === 0) return '';
+        if (!photos || photos.length === 0) {
+            console.log('🖼️ UnifiedPostRenderer: No media to render', { photos });
+            return '';
+        }
 
         console.log('🖼️ UnifiedPostRenderer: Rendering media', {
             photoCount: photos.length,
             context: settings.context,
-            photoSize: settings.photoSize
+            photoSize: settings.photoSize,
+            photosData: photos.map(p => ({ id: p.id, url: p.url, mimeType: p.mimeType }))
         });
 
         const sizeConfig = this.photoSizes[settings.photoSize] || this.photoSizes.medium;

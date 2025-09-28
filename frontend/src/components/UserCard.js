@@ -31,10 +31,10 @@ class UserCard {
             return;
         }
 
-        // Prevent showing card for current user
-        if (userId === window.currentUser?.id) {
-            console.log('UserCard: Cannot show card for current user');
-            return;
+        // Allow current user to view their own profile card with appropriate actions
+        const isCurrentUser = userId === window.currentUser?.id;
+        if (isCurrentUser) {
+            console.log('UserCard: Showing current user profile card with self-actions');
         }
 
         // Hide existing card
@@ -237,6 +237,7 @@ class UserCard {
         if (!this.currentCard) return;
 
         const isAuthenticated = !!window.currentUser;
+        const isCurrentUser = user.id === window.currentUser?.id;
         const userName = user.firstName || user.username || 'Unknown';
         const userInitial = userName[0].toUpperCase();
 
@@ -264,7 +265,14 @@ class UserCard {
                         👤 View Profile
                     </button>
 
-                    ${isAuthenticated ? `
+                    ${isCurrentUser ? `
+                        <button onclick="window.userCard.editProfile()" class="user-card-btn secondary">
+                            ✏️ Edit Profile
+                        </button>
+                        <button onclick="window.userCard.viewSettings()" class="user-card-btn outline">
+                            ⚙️ Settings
+                        </button>
+                    ` : isAuthenticated ? `
                         <button onclick="window.userCard.toggleFollow('${user.id}', ${relationship.follow?.isFollowing || false})"
                                 class="user-card-btn ${relationship.follow?.isFollowing ? 'secondary' : 'primary'}">
                             ${relationship.follow?.isFollowing ? '✓ Following' : '+ Follow'}
@@ -319,6 +327,30 @@ class UserCard {
             window.showUserProfile(userId);
         } else {
             console.error('showUserProfile function not available');
+        }
+    }
+
+    /**
+     * Handle edit profile action for current user
+     */
+    editProfile() {
+        this.hideCard();
+        if (window.showUserProfile) {
+            window.showUserProfile(window.currentUser?.id, { editMode: true });
+        } else {
+            console.error('showUserProfile function not available for edit mode');
+        }
+    }
+
+    /**
+     * Handle view settings action for current user
+     */
+    viewSettings() {
+        this.hideCard();
+        if (window.showAccountSettings) {
+            window.showAccountSettings();
+        } else {
+            console.error('showAccountSettings function not available');
         }
     }
 
