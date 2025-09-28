@@ -144,6 +144,23 @@ export class MyFeedHandlers {
             </div>
         `;
 
+        // Setup file input change event listener for media uploads
+        const fileInput = document.getElementById('feedMediaUpload');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                console.log('📷 Feed media file input change detected');
+                if (this.files && this.files.length > 0 && window.unifiedPostCreator) {
+                    console.log('📷 Processing selected files:', this.files.length);
+                    window.unifiedPostCreator.handleMediaSelection(this);
+                } else {
+                    console.log('📷 No files selected or UnifiedPostCreator not available');
+                }
+            });
+            console.log('📷 Media upload change listener attached to feedMediaUpload');
+        } else {
+            console.error('📷 Could not find feedMediaUpload input to attach change listener');
+        }
+
         // Load the posts with error handling
         try {
             await this.loadMyFeedPosts();
