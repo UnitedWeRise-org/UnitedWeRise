@@ -117,6 +117,8 @@ class ExternalCandidatesController {
      * Set up event listeners for external candidates section
      */
     async setupEventListeners() {
+        // Set up event delegation for all external candidates actions
+        this.setupEventDelegation();
         // Refresh button
         const refreshBtn = document.getElementById('refreshExternalCandidatesBtn');
         if (refreshBtn) {
@@ -221,6 +223,107 @@ class ExternalCandidatesController {
         }
 
         await adminDebugLog('ExternalCandidatesController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up event delegation for external candidates actions
+     */
+    setupEventDelegation() {
+        // Vote tracking actions
+        const voteTrackingContainer = document.getElementById('voteTrackingTable');
+        if (voteTrackingContainer) {
+            voteTrackingContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button[data-action]');
+                if (button) {
+                    const action = button.dataset.action;
+                    const voteId = button.dataset.voteId;
+                    const url = button.dataset.url;
+
+                    switch (action) {
+                        case 'view-vote-details':
+                            this.viewVoteDetails(voteId);
+                            break;
+                        case 'verify-vote-count':
+                            this.verifyVoteCount(voteId);
+                            break;
+                        default:
+                            console.warn('Unknown vote tracking action:', action);
+                    }
+                }
+            });
+        }
+
+        // Campaign finance actions
+        const campaignFinanceContainer = document.getElementById('campaignFinanceTable');
+        if (campaignFinanceContainer) {
+            campaignFinanceContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button[data-action]');
+                if (button) {
+                    const action = button.dataset.action;
+                    const financeId = button.dataset.financeId;
+
+                    switch (action) {
+                        case 'view-finance-details':
+                            this.viewFinanceDetails(financeId);
+                            break;
+                        case 'check-fec-compliance':
+                            this.checkFECCompliance(financeId);
+                            break;
+                        default:
+                            console.warn('Unknown campaign finance action:', action);
+                    }
+                }
+            });
+        }
+
+        // News tracking actions
+        const newsTrackingContainer = document.getElementById('newsTrackingTable');
+        if (newsTrackingContainer) {
+            newsTrackingContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button[data-action]');
+                if (button) {
+                    const action = button.dataset.action;
+                    const newsId = button.dataset.newsId;
+                    const url = button.dataset.url;
+
+                    switch (action) {
+                        case 'view-news-article':
+                            if (url) {
+                                window.open(url, '_blank');
+                            }
+                            break;
+                        case 'analyze-news-item':
+                            this.analyzeNewsItem(newsId);
+                            break;
+                        default:
+                            console.warn('Unknown news tracking action:', action);
+                    }
+                }
+            });
+        }
+
+        // Polling data actions
+        const pollingDataContainer = document.getElementById('pollingDataTable');
+        if (pollingDataContainer) {
+            pollingDataContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button[data-action]');
+                if (button) {
+                    const action = button.dataset.action;
+                    const pollId = button.dataset.pollId;
+
+                    switch (action) {
+                        case 'view-poll-details':
+                            this.viewPollDetails(pollId);
+                            break;
+                        case 'analyze-poll-trend':
+                            this.analyzePollTrend(pollId);
+                            break;
+                        default:
+                            console.warn('Unknown polling data action:', action);
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -1101,11 +1204,11 @@ class ExternalCandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.externalCandidatesController.viewVoteDetails('${vote.id}')"
+                        <button data-action="view-vote-details" data-vote-id="${vote.id}"
                                 class="action-btn view-btn" title="View Details">
                             🔍 Details
                         </button>
-                        <button onclick="window.externalCandidatesController.verifyVoteCount('${vote.id}')"
+                        <button data-action="verify-vote-count" data-vote-id="${vote.id}"
                                 class="action-btn verify-btn" title="Verify Count">
                             ✅ Verify
                         </button>
@@ -1168,11 +1271,11 @@ class ExternalCandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.externalCandidatesController.viewFinanceDetails('${finance.id}')"
+                        <button data-action="view-finance-details" data-finance-id="${finance.id}"
                                 class="action-btn view-btn" title="View Details">
                             💰 Details
                         </button>
-                        <button onclick="window.externalCandidatesController.checkFECCompliance('${finance.id}')"
+                        <button data-action="check-fec-compliance" data-finance-id="${finance.id}"
                                 class="action-btn compliance-btn" title="Check Compliance">
                             ⚖️ Compliance
                         </button>
@@ -1234,11 +1337,11 @@ class ExternalCandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.open('${news.url}', '_blank')"
+                        <button data-action="view-news-article" data-url="${news.url}"
                                 class="action-btn view-btn" title="View Article">
                             🔗 View
                         </button>
-                        <button onclick="window.externalCandidatesController.analyzeNewsItem('${news.id}')"
+                        <button data-action="analyze-news-item" data-news-id="${news.id}"
                                 class="action-btn analyze-btn" title="Analyze">
                             🧠 Analyze
                         </button>
@@ -1298,11 +1401,11 @@ class ExternalCandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.externalCandidatesController.viewPollDetails('${poll.id}')"
+                        <button data-action="view-poll-details" data-poll-id="${poll.id}"
                                 class="action-btn view-btn" title="View Details">
                             📊 Details
                         </button>
-                        <button onclick="window.externalCandidatesController.analyzePollTrend('${poll.id}')"
+                        <button data-action="analyze-poll-trend" data-poll-id="${poll.id}"
                                 class="action-btn analyze-btn" title="Analyze Trend">
                             📈 Trend
                         </button>
@@ -1591,6 +1694,206 @@ class ExternalCandidatesController {
                 this.generateElectoralForecast();
             });
         }
+    }
+
+    // External candidates action methods (government compliance operations)
+
+    /**
+     * View detailed vote information for specific candidate
+     */
+    async viewVoteDetails(voteId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Viewing vote details', { voteId });
+
+            const response = await window.AdminAPI.getVoteDetails(voteId);
+
+            if (response.success) {
+                // Display vote details modal or navigate to details page
+                this.showVoteDetailsModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to load vote details');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to view vote details', error);
+            alert(`❌ Failed to load vote details: ${error.message}`);
+        }
+    }
+
+    /**
+     * Verify vote count accuracy for specific candidate
+     */
+    async verifyVoteCount(voteId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Verifying vote count', { voteId });
+
+            const response = await window.AdminAPI.verifyVoteCount(voteId);
+
+            if (response.success) {
+                await this.loadData(false); // Refresh data after verification
+                alert(`✅ Vote count verified: ${response.message}`);
+            } else {
+                throw new Error(response.error || 'Failed to verify vote count');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to verify vote count', error);
+            alert(`❌ Failed to verify vote count: ${error.message}`);
+        }
+    }
+
+    /**
+     * View detailed campaign finance information
+     */
+    async viewFinanceDetails(financeId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Viewing finance details', { financeId });
+
+            const response = await window.AdminAPI.getFinanceDetails(financeId);
+
+            if (response.success) {
+                // Display finance details modal or navigate to details page
+                this.showFinanceDetailsModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to load finance details');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to view finance details', error);
+            alert(`❌ Failed to load finance details: ${error.message}`);
+        }
+    }
+
+    /**
+     * Check FEC compliance for candidate campaign finance
+     */
+    async checkFECCompliance(financeId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Checking FEC compliance', { financeId });
+
+            const response = await window.AdminAPI.checkFECCompliance(financeId);
+
+            if (response.success) {
+                await this.loadData(false); // Refresh data after compliance check
+                this.showComplianceResultModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to check FEC compliance');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to check FEC compliance', error);
+            alert(`❌ Failed to check FEC compliance: ${error.message}`);
+        }
+    }
+
+    /**
+     * Analyze news item sentiment and impact
+     */
+    async analyzeNewsItem(newsId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Analyzing news item', { newsId });
+
+            const response = await window.AdminAPI.analyzeNewsItem(newsId);
+
+            if (response.success) {
+                this.showNewsAnalysisModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to analyze news item');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to analyze news item', error);
+            alert(`❌ Failed to analyze news item: ${error.message}`);
+        }
+    }
+
+    /**
+     * View detailed polling information
+     */
+    async viewPollDetails(pollId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Viewing poll details', { pollId });
+
+            const response = await window.AdminAPI.getPollDetails(pollId);
+
+            if (response.success) {
+                this.showPollDetailsModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to load poll details');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to view poll details', error);
+            alert(`❌ Failed to load poll details: ${error.message}`);
+        }
+    }
+
+    /**
+     * Analyze polling trend for candidate
+     */
+    async analyzePollTrend(pollId) {
+        try {
+            await adminDebugLog('ExternalCandidatesController', 'Analyzing poll trend', { pollId });
+
+            const response = await window.AdminAPI.analyzePollTrend(pollId);
+
+            if (response.success) {
+                this.showPollTrendModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to analyze poll trend');
+            }
+        } catch (error) {
+            await adminDebugError('ExternalCandidatesController', 'Failed to analyze poll trend', error);
+            alert(`❌ Failed to analyze poll trend: ${error.message}`);
+        }
+    }
+
+    /**
+     * Show vote details in modal
+     */
+    showVoteDetailsModal(voteData) {
+        // Implementation for vote details modal display
+        console.log('Vote Details Modal:', voteData);
+        // This would typically show a detailed modal with vote information
+    }
+
+    /**
+     * Show finance details in modal
+     */
+    showFinanceDetailsModal(financeData) {
+        // Implementation for finance details modal display
+        console.log('Finance Details Modal:', financeData);
+        // This would typically show a detailed modal with campaign finance information
+    }
+
+    /**
+     * Show compliance result in modal
+     */
+    showComplianceResultModal(complianceData) {
+        // Implementation for compliance result modal display
+        console.log('Compliance Result Modal:', complianceData);
+        // This would typically show FEC compliance check results
+    }
+
+    /**
+     * Show news analysis in modal
+     */
+    showNewsAnalysisModal(analysisData) {
+        // Implementation for news analysis modal display
+        console.log('News Analysis Modal:', analysisData);
+        // This would typically show sentiment analysis and impact metrics
+    }
+
+    /**
+     * Show poll details in modal
+     */
+    showPollDetailsModal(pollData) {
+        // Implementation for poll details modal display
+        console.log('Poll Details Modal:', pollData);
+        // This would typically show detailed polling information
+    }
+
+    /**
+     * Show poll trend analysis in modal
+     */
+    showPollTrendModal(trendData) {
+        // Implementation for poll trend modal display
+        console.log('Poll Trend Modal:', trendData);
+        // This would typically show polling trend analysis and forecasts
     }
 
     // Additional functionality methods

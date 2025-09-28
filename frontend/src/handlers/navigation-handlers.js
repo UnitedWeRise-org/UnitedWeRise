@@ -70,8 +70,11 @@ class NavigationHandlers {
         const target = event.target.closest('[data-nav-toggle], [data-nav-action], [data-action]');
         if (!target) return;
 
-        event.preventDefault();
-        event.stopPropagation();
+        // Don't prevent default behavior for file inputs - they need to open file picker
+        if (target.type !== 'file') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
 
         const action = target.dataset.navToggle || target.dataset.navAction || target.dataset.action;
 

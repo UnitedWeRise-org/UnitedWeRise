@@ -111,6 +111,9 @@ class CandidatesController {
      * Set up event listeners for candidates section
      */
     async setupEventListeners() {
+        // Set up enterprise event delegation for candidate operations
+        await this.setupCandidateEventDelegation();
+
         // Refresh button
         const refreshBtn = document.getElementById('refreshCandidatesBtn');
         if (refreshBtn) {
@@ -192,6 +195,153 @@ class CandidatesController {
         }
 
         await adminDebugLog('CandidatesController', 'Event listeners set up successfully');
+    }
+
+    /**
+     * Set up enterprise-grade event delegation for all candidate operations
+     */
+    async setupCandidateEventDelegation() {
+        // Delegate all candidate action events to document body
+        document.body.addEventListener('click', async (e) => {
+            const target = e.target;
+            const action = target.dataset.candidateAction;
+            const id = target.dataset.candidateId || target.dataset.itemId;
+
+            if (!action || !id) return;
+
+            // Prevent default and stop propagation for candidate actions
+            e.preventDefault();
+            e.stopPropagation();
+
+            try {
+                await this.handleCandidateAction(action, id, target);
+            } catch (error) {
+                await adminDebugError('CandidatesController', 'Candidate action failed', { action, id, error });
+            }
+        });
+
+        // Delegate modal and document viewer events
+        document.body.addEventListener('click', async (e) => {
+            const target = e.target;
+
+            // Handle modal close actions
+            if (target.classList.contains('close-modal') || target.classList.contains('modal-overlay')) {
+                const modal = target.closest('.modal-overlay') || target.closest('.verification-modal') || target.closest('.profile-edit-modal');
+                if (modal && (target.classList.contains('close-modal') || target === modal)) {
+                    modal.remove();
+                    return;
+                }
+            }
+
+            // Handle document tab switching
+            if (target.classList.contains('doc-tab')) {
+                const docIndex = parseInt(target.dataset.docIndex);
+                const modal = target.closest('.verification-modal');
+                if (modal && this.currentVerificationDocs && this.currentVerificationDocs[docIndex]) {
+                    this.switchDocumentView(this.currentVerificationDocs[docIndex]);
+
+                    // Update active tab
+                    modal.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+                    target.classList.add('active');
+                }
+                return;
+            }
+
+            // Handle section tab switching in profile modal
+            if (target.classList.contains('section-tab')) {
+                const section = target.dataset.section;
+                if (section) {
+                    this.switchProfileSection(section, target);
+                }
+                return;
+            }
+
+            // Handle special document actions
+            if (target.dataset.action === 'open-new-tab' && target.dataset.url) {
+                window.open(target.dataset.url, '_blank');
+                return;
+            }
+        });
+
+        await adminDebugLog('CandidatesController', 'Enterprise event delegation established');
+    }
+
+    /**
+     * Central handler for all candidate actions
+     */
+    async handleCandidateAction(action, id, target) {
+        await adminDebugLog('CandidatesController', 'Processing candidate action', { action, id });
+
+        switch (action) {
+            // Registration actions
+            case 'review-registration':
+                await this.reviewRegistration(id);
+                break;
+            case 'approve-registration':
+                await this.approveRegistration(id);
+                break;
+            case 'reject-registration':
+                await this.rejectRegistration(id);
+                break;
+
+            // Profile actions
+            case 'edit-profile':
+                await this.handleCandidateProfile(id);
+                break;
+            case 'view-campaign':
+                await this.viewCampaignDetails(id);
+                break;
+            case 'check-compliance':
+                await this.checkCompliance(id);
+                break;
+
+            // Report actions
+            case 'review-report':
+                await this.reviewCandidateReport(id);
+                break;
+            case 'investigate-report':
+                await this.investigateReport(id);
+                break;
+            case 'escalate-report':
+                await this.escalateToFEC(id);
+                break;
+
+            // Verification actions
+            case 'process-verification':
+                await this.handleCandidateVerification(id);
+                break;
+            case 'approve-verification':
+                await this.approveVerification(id);
+                break;
+            case 'reject-verification':
+                await this.rejectVerification(id);
+                break;
+
+            // Document actions
+            case 'view-document':
+                await this.viewDocument(id);
+                break;
+            case 'download-document':
+                await this.downloadDocument(id);
+                break;
+            case 'annotate-document':
+                await this.annotateDocument(id);
+                break;
+
+            // Modal actions
+            case 'save-profile':
+                await this.saveProfileChanges(id);
+                break;
+            case 'reset-profile':
+                await this.resetProfileChanges(id);
+                break;
+            case 'request-additional-info':
+                await this.requestAdditionalInfo(id);
+                break;
+
+            default:
+                await adminDebugWarn('CandidatesController', 'Unknown candidate action', { action, id });
+        }
     }
 
     /**
@@ -847,15 +997,15 @@ class CandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.candidatesController.reviewRegistration('${registration.id}')"
+                        <button data-candidate-action="review-registration" data-candidate-id="${registration.id}"
                                 class="action-btn review-btn" title="Review Registration">
                             🔍 Review
                         </button>
-                        <button onclick="window.candidatesController.approveRegistration('${registration.id}')"
+                        <button data-candidate-action="approve-registration" data-candidate-id="${registration.id}"
                                 class="action-btn approve-btn" title="Approve Registration">
                             ✅ Approve
                         </button>
-                        <button onclick="window.candidatesController.rejectRegistration('${registration.id}')"
+                        <button data-candidate-action="reject-registration" data-candidate-id="${registration.id}"
                                 class="action-btn reject-btn" title="Reject Registration">
                             ❌ Reject
                         </button>
@@ -928,15 +1078,15 @@ class CandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.candidatesController.handleCandidateProfile('${profile.id}')"
+                        <button data-candidate-action="edit-profile" data-candidate-id="${profile.id}"
                                 class="action-btn edit-btn" title="Edit Profile">
                             ✏️ Edit
                         </button>
-                        <button onclick="window.candidatesController.viewCampaignDetails('${profile.id}')"
+                        <button data-candidate-action="view-campaign" data-candidate-id="${profile.id}"
                                 class="action-btn campaign-btn" title="Campaign Details">
                             🎯 Campaign
                         </button>
-                        <button onclick="window.candidatesController.checkCompliance('${profile.id}')"
+                        <button data-candidate-action="check-compliance" data-candidate-id="${profile.id}"
                                 class="action-btn compliance-btn" title="Check Compliance">
                             ⚖️ Compliance
                         </button>
@@ -1002,15 +1152,15 @@ class CandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.candidatesController.reviewCandidateReport('${report.id}')"
+                        <button data-candidate-action="review-report" data-candidate-id="${report.id}"
                                 class="action-btn review-btn" title="Review Report">
                             🔍 Review
                         </button>
-                        <button onclick="window.candidatesController.investigateReport('${report.id}')"
+                        <button data-candidate-action="investigate-report" data-candidate-id="${report.id}"
                                 class="action-btn investigate-btn" title="Start Investigation">
                             🕵️ Investigate
                         </button>
-                        <button onclick="window.candidatesController.escalateToFEC('${report.id}')"
+                        <button data-candidate-action="escalate-report" data-candidate-id="${report.id}"
                                 class="action-btn escalate-btn" title="Escalate to FEC">
                             ⚖️ Escalate
                         </button>
@@ -1056,7 +1206,7 @@ class CandidatesController {
                         ${verification.documents.map(doc => `
                             <div class="document-item">
                                 <span class="doc-type">${doc.type}</span>
-                                <button onclick="window.candidatesController.viewDocument('${doc.id}')"
+                                <button data-candidate-action="view-document" data-candidate-id="${doc.id}"
                                         class="view-doc-btn">📄 View</button>
                             </div>
                         `).join('')}
@@ -1078,15 +1228,15 @@ class CandidatesController {
                 </td>
                 <td class="actions">
                     <div class="action-buttons">
-                        <button onclick="window.candidatesController.handleCandidateVerification('${verification.id}')"
+                        <button data-candidate-action="process-verification" data-candidate-id="${verification.id}"
                                 class="action-btn verify-btn" title="Process Verification">
                             🔍 Verify
                         </button>
-                        <button onclick="window.candidatesController.approveVerification('${verification.id}')"
+                        <button data-candidate-action="approve-verification" data-candidate-id="${verification.id}"
                                 class="action-btn approve-btn" title="Approve Verification">
                             ✅ Approve
                         </button>
-                        <button onclick="window.candidatesController.rejectVerification('${verification.id}')"
+                        <button data-candidate-action="reject-verification" data-candidate-id="${verification.id}"
                                 class="action-btn reject-btn" title="Reject Verification">
                             ❌ Reject
                         </button>
@@ -1126,7 +1276,7 @@ class CandidatesController {
             <div class="verification-modal">
                 <div class="modal-header">
                     <h3>🔍 Candidate Verification</h3>
-                    <button class="close-modal" onclick="this.closest('.verification-modal').remove()">✕</button>
+                    <button class="close-modal">✕</button>
                 </div>
                 <div class="modal-content">
                     <div class="verification-layout">
@@ -1180,14 +1330,13 @@ class CandidatesController {
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button onclick="window.candidatesController.approveVerification('${verification.id}')"
+                    <button data-candidate-action="approve-verification" data-candidate-id="${verification.id}"
                             class="action-btn approve-btn large">✅ Approve Verification</button>
-                    <button onclick="window.candidatesController.rejectVerification('${verification.id}')"
+                    <button data-candidate-action="reject-verification" data-candidate-id="${verification.id}"
                             class="action-btn reject-btn large">❌ Reject Verification</button>
-                    <button onclick="window.candidatesController.requestAdditionalInfo('${verification.id}')"
+                    <button data-candidate-action="request-additional-info" data-candidate-id="${verification.id}"
                             class="action-btn info-btn large">📋 Request Additional Info</button>
-                    <button onclick="this.closest('.verification-modal').remove()"
-                            class="action-btn secondary-btn large">Close</button>
+                    <button class="close-modal action-btn secondary-btn large">Close</button>
                 </div>
             </div>
         `;
@@ -1198,25 +1347,13 @@ class CandidatesController {
         modalContainer.innerHTML = modalHtml;
         document.body.appendChild(modalContainer);
 
-        // Set up document tab switching
-        const docTabs = modalContainer.querySelectorAll('.doc-tab');
-        docTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const docIndex = parseInt(tab.dataset.docIndex);
-                this.switchDocumentView(verification.documents[docIndex]);
+        // Store current verification documents for tab switching
+        this.currentVerificationDocs = verification.documents;
 
-                // Update active tab
-                docTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-            });
-        });
-
-        // Close modal when clicking overlay
-        modalContainer.addEventListener('click', (e) => {
-            if (e.target === modalContainer) {
-                modalContainer.remove();
-            }
-        });
+        // Initialize document viewer with first document
+        if (verification.documents && verification.documents.length > 0) {
+            this.switchDocumentView(verification.documents[0]);
+        }
     }
 
     /**
@@ -1249,7 +1386,7 @@ class CandidatesController {
             <div class="profile-edit-modal">
                 <div class="modal-header">
                     <h3>✏️ Edit Candidate Profile</h3>
-                    <button class="close-modal" onclick="this.closest('.profile-edit-modal').remove()">✕</button>
+                    <button class="close-modal">✕</button>
                 </div>
                 <div class="modal-content">
                     <div class="profile-edit-layout">
@@ -1283,12 +1420,11 @@ class CandidatesController {
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button onclick="window.candidatesController.saveProfileChanges('${profile.id}')"
+                    <button data-candidate-action="save-profile" data-candidate-id="${profile.id}"
                             class="action-btn save-btn large">💾 Save Changes</button>
-                    <button onclick="window.candidatesController.resetProfileChanges('${profile.id}')"
+                    <button data-candidate-action="reset-profile" data-candidate-id="${profile.id}"
                             class="action-btn reset-btn large">🔄 Reset</button>
-                    <button onclick="this.closest('.profile-edit-modal').remove()"
-                            class="action-btn secondary-btn large">Cancel</button>
+                    <button class="close-modal action-btn secondary-btn large">Cancel</button>
                 </div>
             </div>
         `;
@@ -1299,15 +1435,8 @@ class CandidatesController {
         modalContainer.innerHTML = modalHtml;
         document.body.appendChild(modalContainer);
 
-        // Set up section tab switching
-        this.setupProfileModalTabs(modalContainer);
-
-        // Close modal when clicking overlay
-        modalContainer.addEventListener('click', (e) => {
-            if (e.target === modalContainer) {
-                modalContainer.remove();
-            }
-        });
+        // Initialize with basic section active
+        this.switchProfileSection('basic', modalContainer.querySelector('.section-tab[data-section="basic"]'));
     }
 
     /**
@@ -1767,9 +1896,9 @@ class CandidatesController {
                     }
                 </div>
                 <div class="document-actions">
-                    <button onclick="window.open('${document.url}', '_blank')" class="doc-action-btn">🔗 Open in New Tab</button>
-                    <button onclick="window.candidatesController.downloadDocument('${document.id}')" class="doc-action-btn">💾 Download</button>
-                    <button onclick="window.candidatesController.annotateDocument('${document.id}')" class="doc-action-btn">✏️ Annotate</button>
+                    <button data-action="open-new-tab" data-url="${document.url}" class="doc-action-btn">🔗 Open in New Tab</button>
+                    <button data-candidate-action="download-document" data-candidate-id="${document.id}" class="doc-action-btn">💾 Download</button>
+                    <button data-candidate-action="annotate-document" data-candidate-id="${document.id}" class="doc-action-btn">✏️ Annotate</button>
                 </div>
             </div>
         `;
@@ -2020,6 +2149,159 @@ class CandidatesController {
         this.isInitialized = false;
 
         await adminDebugLog('CandidatesController', 'Controller destroyed');
+    }
+
+    /**
+     * Switch document view in verification modal
+     */
+    switchDocumentView(document) {
+        const documentContent = document.querySelector('.document-content');
+        if (documentContent && document) {
+            documentContent.innerHTML = this.renderDocumentViewer(document);
+        }
+    }
+
+    /**
+     * Switch profile section in edit modal
+     */
+    switchProfileSection(section, activeTab) {
+        // Update active tab
+        const modal = activeTab.closest('.profile-edit-modal');
+        if (modal) {
+            modal.querySelectorAll('.section-tab').forEach(tab => tab.classList.remove('active'));
+            activeTab.classList.add('active');
+
+            // Update active section
+            modal.querySelectorAll('.profile-section').forEach(section => section.classList.remove('active'));
+            const targetSection = modal.querySelector(`#${section}-section`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+        }
+    }
+
+    /**
+     * Placeholder methods for missing candidate operations
+     * These would be implemented based on specific business requirements
+     */
+    async reviewRegistration(id) {
+        await adminDebugLog('CandidatesController', 'Review registration', { id });
+        // Implementation would load detailed registration view
+        alert(`Review registration: ${id}`);
+    }
+
+    async approveRegistration(id) {
+        await adminDebugLog('CandidatesController', 'Approve registration', { id });
+        // Implementation would approve registration with TOTP
+        alert(`Approve registration: ${id}`);
+    }
+
+    async rejectRegistration(id) {
+        await adminDebugLog('CandidatesController', 'Reject registration', { id });
+        // Implementation would reject registration with reason
+        alert(`Reject registration: ${id}`);
+    }
+
+    async viewCampaignDetails(id) {
+        await adminDebugLog('CandidatesController', 'View campaign details', { id });
+        // Implementation would show campaign management interface
+        alert(`View campaign: ${id}`);
+    }
+
+    async checkCompliance(id) {
+        await adminDebugLog('CandidatesController', 'Check compliance', { id });
+        // Implementation would run compliance check
+        alert(`Check compliance: ${id}`);
+    }
+
+    async reviewCandidateReport(id) {
+        await adminDebugLog('CandidatesController', 'Review candidate report', { id });
+        // Implementation would show report details
+        alert(`Review report: ${id}`);
+    }
+
+    async investigateReport(id) {
+        await adminDebugLog('CandidatesController', 'Investigate report', { id });
+        // Implementation would start investigation workflow
+        alert(`Investigate report: ${id}`);
+    }
+
+    async escalateToFEC(id) {
+        await adminDebugLog('CandidatesController', 'Escalate to FEC', { id });
+        // Implementation would escalate to FEC with TOTP
+        alert(`Escalate to FEC: ${id}`);
+    }
+
+    async approveVerification(id) {
+        await adminDebugLog('CandidatesController', 'Approve verification', { id });
+        // Implementation would approve verification with TOTP
+        alert(`Approve verification: ${id}`);
+    }
+
+    async rejectVerification(id) {
+        await adminDebugLog('CandidatesController', 'Reject verification', { id });
+        // Implementation would reject verification with reason
+        alert(`Reject verification: ${id}`);
+    }
+
+    async viewDocument(id) {
+        await adminDebugLog('CandidatesController', 'View document', { id });
+        // Implementation would show document viewer
+        alert(`View document: ${id}`);
+    }
+
+    async downloadDocument(id) {
+        await adminDebugLog('CandidatesController', 'Download document', { id });
+        // Implementation would trigger document download
+        alert(`Download document: ${id}`);
+    }
+
+    async annotateDocument(id) {
+        await adminDebugLog('CandidatesController', 'Annotate document', { id });
+        // Implementation would open annotation interface
+        alert(`Annotate document: ${id}`);
+    }
+
+    async saveProfileChanges(id) {
+        await adminDebugLog('CandidatesController', 'Save profile changes', { id });
+        // Implementation would save profile changes
+        alert(`Save profile changes: ${id}`);
+    }
+
+    async resetProfileChanges(id) {
+        await adminDebugLog('CandidatesController', 'Reset profile changes', { id });
+        // Implementation would reset form to original values
+        alert(`Reset profile changes: ${id}`);
+    }
+
+    async requestAdditionalInfo(id) {
+        await adminDebugLog('CandidatesController', 'Request additional info', { id });
+        // Implementation would send additional info request
+        alert(`Request additional info: ${id}`);
+    }
+
+    /**
+     * Placeholder rendering methods for profile sections
+     * These would render specific form sections based on profile data
+     */
+    renderBasicInfoSection(profile) {
+        return `<div class="basic-info-form">Basic info form for ${profile.firstName} ${profile.lastName}</div>`;
+    }
+
+    renderCampaignSection(profile) {
+        return `<div class="campaign-form">Campaign form for ${profile.office}</div>`;
+    }
+
+    renderSocialMediaSection(profile) {
+        return `<div class="social-media-form">Social media form</div>`;
+    }
+
+    renderFinanceSection(profile) {
+        return `<div class="finance-form">Finance form</div>`;
+    }
+
+    renderComplianceSection(profile) {
+        return `<div class="compliance-form">Compliance form</div>`;
     }
 }
 
