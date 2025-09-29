@@ -88,6 +88,21 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDonationSystem();
     console.log('💳 Payment systems initialized');
 
+    // Initialize Google Ads tracking (non-blocking, safe)
+    import('../utils/google-ads-tracking.js')
+        .then(module => {
+            return module.default(); // Call initializeGoogleAdsTracking()
+        })
+        .then(success => {
+            if (success) {
+                console.log('📊 Google Ads tracking initialized successfully');
+            }
+        })
+        .catch(error => {
+            console.warn('⚠️ Google Ads tracking module failed to load (non-critical):', error);
+            console.warn('   → App functionality not affected');
+        });
+
     // Performance optimizations (migrated from index.html inline script)
     console.log('🚀 Initializing performance optimizations...');
 
