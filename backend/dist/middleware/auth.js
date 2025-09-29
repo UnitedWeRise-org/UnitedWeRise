@@ -60,12 +60,21 @@ const requireAuth = async (req, res, next) => {
         if (sessionId) {
             await sessionManager_1.sessionManager.updateSessionActivity(sessionId);
         }
-        // Check if development environment requires admin access
+        // Check if development environment requires admin access for specific routes
         if ((0, environment_1.isDevelopment)() && !req.user?.isAdmin) {
-            return res.status(403).json({
-                error: 'This is a staging environment - admin access required.',
-                environment: 'staging'
-            });
+            // Define admin-only routes for staging environment
+            const adminOnlyInStaging = [
+                '/api/admin/', '/api/motd/admin/', '/api/moderation/',
+                '/api/candidate-verification/', '/api/appeals/'
+            ];
+            const requiresAdminInStaging = adminOnlyInStaging.some(route => req.path.startsWith(route));
+            if (requiresAdminInStaging) {
+                return res.status(403).json({
+                    error: 'Admin access required for this staging feature.',
+                    environment: 'staging'
+                });
+            }
+            // Allow user-facing routes (photos, feed, posts, etc.) to proceed for all authenticated users
         }
         next();
     }
