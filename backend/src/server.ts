@@ -438,18 +438,15 @@ app.get('/api/health/detailed', async (req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Initialize photo service directories
-PhotoService.initializeDirectories().catch(console.error);
-
 // Graceful shutdown handler for proper database connection cleanup
 const gracefulShutdown = async () => {
   console.log('Received shutdown signal, closing server gracefully...');
-  
+
   // Close HTTP server
   httpServer.close(() => {
     console.log('HTTP server closed');
   });
-  
+
   // Close database connections
   try {
     await prisma.$disconnect();
@@ -457,7 +454,7 @@ const gracefulShutdown = async () => {
   } catch (error) {
     console.error('Error closing database connections:', error);
   }
-  
+
   process.exit(0);
 };
 
@@ -465,11 +462,28 @@ const gracefulShutdown = async () => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-// Use httpServer instead of app for WebSocket support
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server active`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`Photo uploads: enabled with automatic resizing`);
-  console.log(`Database connection pool: 10 connections max, 20s timeout`);
-});
+// Initialize services and start server
+async function startServer() {
+  try {
+    console.log('🚀 Initializing services...');
+
+    // Initialize photo service and Azure Blob Storage - MUST complete before accepting requests
+    await PhotoService.initializeDirectories();
+    console.log('✅ Photo service initialized');
+
+    // Start server only after all services are ready
+    httpServer.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`✅ WebSocket server active`);
+      console.log(`✅ Health check: http://localhost:${PORT}/health`);
+      console.log(`✅ Photo uploads: enabled with automatic resizing`);
+      console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

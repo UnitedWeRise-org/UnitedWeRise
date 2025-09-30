@@ -405,8 +405,6 @@ app.get('/api/health/detailed', async (req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
-// Initialize photo service directories
-photoService_1.PhotoService.initializeDirectories().catch(console.error);
 // Graceful shutdown handler for proper database connection cleanup
 const gracefulShutdown = async () => {
     console.log('Received shutdown signal, closing server gracefully...');
@@ -427,12 +425,27 @@ const gracefulShutdown = async () => {
 // Listen for shutdown signals
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
-// Use httpServer instead of app for WebSocket support
-httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`WebSocket server active`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`Photo uploads: enabled with automatic resizing`);
-    console.log(`Database connection pool: 10 connections max, 20s timeout`);
-});
+// Initialize services and start server
+async function startServer() {
+    try {
+        console.log('🚀 Initializing services...');
+        // Initialize photo service and Azure Blob Storage - MUST complete before accepting requests
+        await photoService_1.PhotoService.initializeDirectories();
+        console.log('✅ Photo service initialized');
+        // Start server only after all services are ready
+        httpServer.listen(PORT, () => {
+            console.log(`✅ Server running on port ${PORT}`);
+            console.log(`✅ WebSocket server active`);
+            console.log(`✅ Health check: http://localhost:${PORT}/health`);
+            console.log(`✅ Photo uploads: enabled with automatic resizing`);
+            console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
+        });
+    }
+    catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+}
+// Start the server
+startServer();
 //# sourceMappingURL=server.js.map
