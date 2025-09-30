@@ -124,11 +124,23 @@ app.use((0, helmet_1.default)({
             imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
             connectSrc: [
                 "'self'",
+                "https://api.unitedwerise.org", // Production API
+                "https://dev-api.unitedwerise.org", // Staging API
                 "ws:", "wss:", // WebSocket connections
+                "wss://api.unitedwerise.org", // Production WebSocket
+                "wss://dev-api.unitedwerise.org", // Staging WebSocket
                 "https://js.stripe.com", // Stripe API
                 "*.azurecontainerapps.io", // Azure backend
+                "https://*.blob.core.windows.net", // Azure Blob Storage for direct uploads
                 "https://hcaptcha.com", // hCaptcha API
                 "https://api.hcaptcha.com",
+                "https://www.google-analytics.com", // Google Analytics
+                "https://googleads.g.doubleclick.net", // Google Ads
+                "https://www.google.com", // Google services
+                "https://*.cartocdn.com", // Map tiles
+                "local.adguard.org", // AdGuard
+                "ws://local.adguard.org", // AdGuard WS
+                "wss://local.adguard.org" // AdGuard WSS
             ],
             fontSrc: ["'self'", "https:", "data:"],
             objectSrc: ["'none'"], // Block dangerous plugins
