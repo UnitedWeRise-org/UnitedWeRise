@@ -222,7 +222,7 @@ class UnifiedPostCreator {
             // Determine photo type based on destination
             let photoType = 'POST_MEDIA';
             if (destination === 'profile') {
-                photoType = 'PROFILE_PICTURE';
+                photoType = 'AVATAR';  // Fixed: Use correct PhotoType enum value
             } else if (destination === 'volunteer') {
                 photoType = 'POST_MEDIA';
             }
