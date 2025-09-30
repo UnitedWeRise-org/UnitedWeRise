@@ -226,12 +226,20 @@ class UnifiedPostRenderer {
      * @private
      */
     renderPostMedia(photos, settings) {
+        // DIAGNOSTIC: Enhanced logging for photo rendering
+        console.log('📸 RENDERER - renderPostMedia called', {
+            photosProvided: !!photos,
+            photosLength: photos?.length || 0,
+            photosType: typeof photos,
+            isArray: Array.isArray(photos)
+        });
+
         if (!photos || photos.length === 0) {
-            console.log('🖼️ UnifiedPostRenderer: No media to render', { photos });
+            console.log('📸 RENDERER: No media to render - returning empty string');
             return '';
         }
 
-        console.log('🖼️ UnifiedPostRenderer: Rendering media', {
+        console.log('📸 RENDERER: Rendering media', {
             photoCount: photos.length,
             context: settings.context,
             photoSize: settings.photoSize,

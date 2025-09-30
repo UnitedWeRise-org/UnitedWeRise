@@ -168,6 +168,17 @@ export function displayMyFeedPosts(posts, appendMode = false) {
     
     console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
 
+    // DIAGNOSTIC: Log photo data received from API
+    const postsWithPhotos = posts.filter(p => p.photos && p.photos.length > 0);
+    console.log(`📸 FRONTEND - ${postsWithPhotos.length} posts have photos out of ${posts.length} total`);
+    if (postsWithPhotos.length > 0) {
+        console.log(`📸 FRONTEND - Sample post with photos:`, {
+            postId: postsWithPhotos[0].id,
+            photoCount: postsWithPhotos[0].photos.length,
+            photoData: postsWithPhotos[0].photos
+        });
+    }
+
     // Use UnifiedPostRenderer for consistent photo rendering across all contexts
     if (window.unifiedPostRenderer) {
         console.log('✅ Using UnifiedPostRenderer for My Feed display');

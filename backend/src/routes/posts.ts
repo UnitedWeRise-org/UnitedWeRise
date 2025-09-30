@@ -279,6 +279,9 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                     // Replace the post object with the updated one that includes photos
                     Object.assign(post, updatedPost);
                     console.log(`✅ Post updated with photos: ${post.photos?.length || 0} photo(s)`);
+                    console.log(`📸 DIAGNOSTIC - Photo URLs:`, post.photos?.map(p => p.url));
+                } else {
+                    console.error(`❌ DIAGNOSTIC - Failed to fetch updated post with photos for postId: ${post.id}`);
                 }
             } catch (error) {
                 console.error('Failed to link media to post:', error);
