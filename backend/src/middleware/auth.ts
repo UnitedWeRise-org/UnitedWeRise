@@ -89,7 +89,12 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     // Update session activity if available
     const sessionId = req.header('X-Session-ID');
     if (sessionId) {
-      await sessionManager.updateSessionActivity(sessionId);
+      try {
+        await sessionManager.updateSessionActivity(sessionId);
+      } catch (error) {
+        // Log but don't fail the request if session update fails
+        console.error('Failed to update session activity:', error);
+      }
     }
 
     // Check if development environment requires admin access for specific routes
