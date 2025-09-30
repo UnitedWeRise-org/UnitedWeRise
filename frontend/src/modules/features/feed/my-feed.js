@@ -58,11 +58,16 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
         console.log('  -', pair[0], ':', pair[1]);
     }
 
-    return await window.apiCall('/photos/upload', {
+    console.log('📸 About to make API call to /photos/upload');
+
+    const result = await window.apiCall('/photos/upload', {
         method: 'POST',
         body: formData,
         skipContentType: true // Essential for FormData uploads
     });
+
+    console.log('📸 Full API response received:', result);
+    return result;
 }
 
 /**
