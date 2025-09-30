@@ -234,15 +234,23 @@ class UnifiedPostCreator {
 
             const result = await window.uploadMediaFiles(files, photoType, 'PERSONAL');
             console.log('📸 Upload result from uploadMediaFiles:', result);
+            console.log('📸 Upload result.ok:', result.ok);
+            console.log('📸 Upload result.data:', result.data);
+            console.log('📸 Upload result.data.photos:', result.data?.photos);
+            console.log('📸 Upload result.data.photos length:', result.data?.photos?.length);
 
             if (result.ok && result.data?.photos) {
                 const mediaIds = result.data.photos.map(photo => photo.id);
+                console.log('📸 Extracted mediaIds:', mediaIds);
                 return {
                     success: true,
                     mediaIds: mediaIds,
                     photos: result.data.photos
                 };
             } else {
+                console.log('📸 Upload failed - checking error details:');
+                console.log('📸 result.error:', result.error);
+                console.log('📸 result.data?.error:', result.data?.error);
                 const errorMessage = result.error || result.data?.error || 'Media upload failed';
                 return { success: false, error: errorMessage };
             }
