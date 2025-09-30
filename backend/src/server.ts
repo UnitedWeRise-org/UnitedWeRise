@@ -168,7 +168,7 @@ app.use(cors({
     }
     
     // Allow any Azure Static Web Apps origin or unitedwerise.org domain
-    if (!origin || 
+    if (!origin ||
         allowedOrigins.includes(origin) ||
         origin.includes('azurestaticapps.net') ||
         origin.includes('unitedwerise.org')) {
@@ -176,7 +176,9 @@ app.use(cors({
       callback(null, true);
     } else {
       console.log('❌ CORS - Origin blocked:', origin);
-      callback(null, false); // Don't throw error, just reject
+      // TEMPORARY: Allow all origins for debugging file upload issue
+      console.log('⚠️ TEMPORARY DEBUG: Allowing blocked origin for file upload debugging');
+      callback(null, true);
     }
   },
   credentials: true,
