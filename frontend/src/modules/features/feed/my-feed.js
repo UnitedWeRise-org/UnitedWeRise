@@ -10,6 +10,7 @@
 
 import { apiClient } from '../../core/api/client.js';
 import { userState } from '../../core/state/user.js';
+import { uploadPhotoDirectToBlob } from './photo-upload-direct.js';
 
 // Variables for infinite scroll functionality
 let isLoadingMorePosts = false;
@@ -19,6 +20,8 @@ let selectedPostMedia = null;
 
 /**
  * Unified media upload function that works consistently across the platform
+ * NOW USES DIRECT-TO-BLOB UPLOAD (no more broken multipart uploads)
+ *
  * @param {File|File[]} files - Single file or array of files to upload
  * @param {string} photoType - Type: 'POST_MEDIA', 'AVATAR', 'GALLERY', etc.
  * @param {string} purpose - Purpose: 'PERSONAL', 'CIVIC', etc.
@@ -27,46 +30,12 @@ let selectedPostMedia = null;
  */
 async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '') {
     console.log('📸 uploadMediaFiles called with:', { files, photoType, purpose });
-    console.log('📸 Files type:', typeof files);
-    console.log('📸 Is array?', Array.isArray(files));
-    console.log('📸 Files length:', Array.isArray(files) ? files.length : 'N/A');
+    console.log('📸 Using NEW direct-to-blob upload architecture');
 
-    const formData = new FormData();
+    // Use the new direct-to-blob upload system
+    const result = await uploadPhotoDirectToBlob(files, photoType, purpose, caption);
 
-    // Handle single file or array of files
-    if (Array.isArray(files)) {
-        console.log('📸 Processing array of files:', files.length);
-        files.forEach((file, index) => {
-            console.log(`📸 Appending file ${index}:`, file.name, file.size, file.type);
-            formData.append('photos', file);
-        });
-    } else {
-        console.log('📸 Processing single file:', files.name, files.size, files.type);
-        formData.append('photos', files);
-    }
-
-    formData.append('photoType', photoType);
-    formData.append('purpose', purpose);
-
-    if (caption.trim()) {
-        formData.append('caption', caption.substring(0, 200));
-    }
-
-    // Debug FormData contents
-    console.log('📸 FormData entries:');
-    for (let pair of formData.entries()) {
-        console.log('  -', pair[0], ':', pair[1]);
-    }
-
-    console.log('📸 About to make API call to /photos/upload');
-
-    const result = await window.apiCall('/photos/upload', {
-        method: 'POST',
-        body: formData,
-        skipContentType: true // Essential for FormData uploads
-    });
-
-    console.log('📸 Full API response received:', result);
+    console.log('📸 Direct-to-blob upload result:', result);
     return result;
 }
 

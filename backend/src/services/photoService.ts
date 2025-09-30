@@ -512,9 +512,10 @@ export class PhotoService {
     });
   }
 
-  // Private helper methods
-
-  private static async validateStorageLimit(userId: string, fileSize: number): Promise<void> {
+  /**
+   * Validate storage limit (exposed for SAS token generation)
+   */
+  static async validateStorageLimit(userId: string, fileSize: number): Promise<void> {
     const userPhotos = await prisma.photo.findMany({
       where: {
         userId,
@@ -534,7 +535,10 @@ export class PhotoService {
     }
   }
 
-  private static async validateUserPermissions(userId: string, candidateId?: string): Promise<void> {
+  /**
+   * Validate user permissions (exposed for SAS token generation)
+   */
+  static async validateUserPermissions(userId: string, candidateId?: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { candidateProfile: true }
@@ -887,5 +891,102 @@ export class PhotoService {
       photosByType,
       pendingModeration: pendingCount
     };
+  }
+
+  /**
+   * Create photo record from direct blob upload
+   * Used after client uploads directly to Azure Blob Storage with SAS token
+   */
+  static async createPhotoRecordFromBlob(options: {
+    userId: string;
+    blobName: string;
+    blobUrl: string;
+    photoType: PhotoType;
+    purpose: PhotoPurpose;
+    candidateId?: string;
+    gallery?: string;
+    caption?: string;
+    fileSize: number;
+    mimeType: string;
+  }): Promise<Photo> {
+    try {
+      console.log(`📸 Creating photo record from blob: ${options.blobName}`);
+
+      // Download blob to get image dimensions
+      // We need to generate thumbnail and get metadata
+      const blobBuffer = await this.downloadBlobBuffer(options.blobUrl);
+
+      // Get image metadata
+      const metadata = await sharp(blobBuffer).metadata();
+
+      // Generate thumbnail
+      const preset = this.SIZE_PRESETS[options.photoType];
+      const thumbnailBuffer = await sharp(blobBuffer)
+        .resize(preset.thumbnailWidth, preset.thumbnailHeight, {
+          fit: 'cover'
+        })
+        .webp({ quality: 75 })
+        .toBuffer();
+
+      // Upload thumbnail to Azure Blob Storage
+      const thumbnailFilename = options.blobName.replace(/\.[^.]+$/, '-thumb.webp');
+      const thumbnailUrl = await AzureBlobService.uploadFile(
+        thumbnailBuffer,
+        thumbnailFilename,
+        'image/webp',
+        'thumbnails'
+      );
+
+      // Create database record
+      const photo = await prisma.photo.create({
+        data: {
+          userId: options.userId,
+          candidateId: options.candidateId,
+          filename: options.blobName,
+          url: options.blobUrl,
+          thumbnailUrl: thumbnailUrl,
+          photoType: options.photoType,
+          purpose: options.purpose,
+          gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
+          caption: options.caption ? options.caption.substring(0, 200) : null,
+          originalSize: options.fileSize,
+          compressedSize: options.fileSize, // For direct upload, these are the same
+          width: metadata.width || 0,
+          height: metadata.height || 0,
+          mimeType: options.mimeType,
+          isApproved: this.shouldAutoApprove(options.photoType, options.userId)
+        }
+      });
+
+      // Update user/candidate avatar if this is an avatar photo
+      if (options.photoType === 'AVATAR') {
+        await this.updateProfileAvatar(options.userId, photo.url, options.candidateId);
+      }
+
+      console.log(`✅ Photo record created from blob: ${photo.id}`);
+
+      return photo;
+
+    } catch (error) {
+      console.error('Failed to create photo record from blob:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download blob buffer for processing
+   */
+  private static async downloadBlobBuffer(blobUrl: string): Promise<Buffer> {
+    try {
+      const response = await fetch(blobUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download blob: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error('Failed to download blob:', error);
+      throw error;
+    }
   }
 }

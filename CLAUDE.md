@@ -13,7 +13,7 @@ IT IS UNNECESSARY TO SAY "YOU'RE ABSOLUTELY RIGHT". THIS IS A GIVEN AND ADDS NOT
 ```bash
 # Emergency rollback (try script first, manual fallback)
 ./scripts/emergency-rollback.sh || {
-  git checkout development && git revert HEAD && git push origin development
+  git revert HEAD && git push origin <current-branch>
 }
 
 # System status check
@@ -34,10 +34,10 @@ az containerapp update --name unitedwerise-backend --resource-group unitedwerise
 **For comprehensive workflow see: [Daily Development Workflow](#daily-development-workflow-streamlined)**
 
 ```bash
-# Quick start development session
-git checkout development && git pull origin development
+# Update current branch
+git pull origin <current-branch>
 
-# Deploy to staging
+# Deploy to staging (development branch)
 git add . && git commit -m "feat: your changes" && git push origin development
 
 # Check deployment status
@@ -149,26 +149,26 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 - "Start building..."
 - Explicit approval after discussion
 
-### 🔥 MANDATORY DEVELOPMENT BRANCH WORKFLOW (NEVER WORK ON MAIN)
-**ABSOLUTE REQUIREMENT - ALL development work MUST be done on development branch:**
+### 🔥 BRANCH WORKFLOW REQUIREMENTS
 
-#### Step 1: Always Start on Development Branch
+**Work on current branch unless user explicitly directs a branch change. Never suggest or request branch changes.**
+
+#### Branch Management
+- Work proceeds on whatever branch is currently active
+- Only execute `git checkout <branch>` when user explicitly directs it
+- Never ask "should we switch branches?" or propose branch changes
+- Pull updates for current branch: `git pull origin <current-branch>`
+
+#### Feature Branch Workflow (Reference Only - User Directed)
 ```bash
-# REQUIRED at start of every development session
-git checkout development
-git pull origin development
-```
+# Example: Creating a feature branch (only when user directs)
+git checkout -b feature/feature-name <base-branch>
 
-#### Step 2: Create Feature Branch from Development (Optional)
-```bash
-# For complex features, create feature branch from development
-git checkout -b feature/feature-name development
-
-# When feature is complete, merge back to development:
-# git checkout development
-# git pull origin development
+# Example: Merging completed feature (only when user directs)
+# git checkout <target-branch>
+# git pull origin <target-branch>
 # git merge feature/feature-name
-# git push origin development
+# git push origin <target-branch>
 # git branch -d feature/feature-name
 ```
 
@@ -181,12 +181,12 @@ development    # Staging code (ALL development work happens here)
 └── hotfix/*   # Emergency fixes (hotfix/security-patch) - branch from development
 ```
 
-#### Step 3: Development and Testing on Development Branch
+#### Making Changes on Current Branch
 ```bash
-# Make changes, commit to development branch
+# Make changes, commit to current branch
 git add .
 git commit -m "feat/fix: Description of changes"
-git push origin development  # Deploys to staging automatically
+git push origin <current-branch>
 ```
 
 **Commit Message Format:**
@@ -229,12 +229,12 @@ main branch → PRODUCTION
 **✅ ALWAYS ASK USER: "Ready to deploy to production?" and wait for explicit approval**
 
 **🚨 CRITICAL RULES:**
-- ❌ **NEVER** work directly on main branch
-- ❌ **NEVER** push to main without explicit user approval
-- ❌ **NEVER** merge to main "while we're at it"
-- ✅ **ALWAYS** start work on development branch
-- ✅ **ALWAYS** test on staging before requesting production merge
-- ✅ **ALWAYS** get user approval: "Ready to deploy to production?"
+- ❌ **NEVER** change branches without explicit user directive
+- ❌ **NEVER** suggest or request branch changes
+- ❌ **NEVER** merge to main without explicit user approval
+- ✅ Work on current branch unless directed otherwise
+- ✅ Verify current branch before commits/pushes
+- ✅ Get explicit user approval before production deployment
 
 ### Pre-Implementation Requirements (MANDATORY)
 **Before ANY code changes:**
@@ -414,11 +414,14 @@ cd ..
 #### 🔥 MANDATORY WORKFLOW: Development → Staging → Production
 
 #### 1️⃣ Frontend Development Deployment (STAGING)
+**Note:** Staging deployment requires being on `development` branch
+
 ```bash
 # Deploy to staging (script with manual fallback)
 ./scripts/quick-deploy-staging.sh "feat: your changes" || {
-  # Manual deployment if script fails:
-  git checkout development && git pull origin development
+  # Manual deployment if script fails (requires development branch):
+  # If not on development branch, user must direct: git checkout development
+  git pull origin development
   git add . && git commit -m "feat: your changes" && git push origin development
   # GitHub Actions auto-deploys to STAGING in ~2-5 minutes
   # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
@@ -439,6 +442,8 @@ cd ..
 ```
 
 #### 2️⃣ Backend Development Deployment (STAGING FIRST)
+**Note:** Staging deployment requires being on `development` branch
+
 ```bash
 # Deploy backend to staging (script with manual fallback for git operations)
 ./scripts/quick-deploy-staging.sh "feat: your backend changes" || {
@@ -446,7 +451,8 @@ cd ..
   ./scripts/validate-before-commit.sh || {
     git status && cd backend && npm run build && cd ..
   }
-  git checkout development && git pull origin development
+  # If not on development branch, user must direct: git checkout development
+  git pull origin development
   git add . && git commit -m "feat: your backend changes" && git push origin development
   git status  # Verify push succeeded
 }
@@ -635,16 +641,15 @@ git add . && git commit -m "schema: description" && git push origin development
 ### 🛠️ COMMON DEPLOYMENT ISSUES
 
 #### Issue #1: Uncommitted Changes (50% of failures)
-**Symptom**: Changes don't deploy despite "successful" builds  
-**Cause**: Docker builds from GitHub, not local files  
-**Fix**: 
+**Symptom**: Changes don't deploy despite "successful" builds
+**Cause**: Docker builds from GitHub, not local files
+**Fix**:
 ```bash
-# ALWAYS push to development branch (staging)
-git checkout development
-git add . && git commit -m "Description" && git push origin development
+# Verify current branch and push
+git status  # Confirm you're on intended branch
+git add . && git commit -m "Description" && git push origin <current-branch>
 
 # ❌ FORBIDDEN: No main branch operations without user explicitly saying "deploy to production"
-# ❌ FORBIDDEN: git checkout main && git merge development && git push origin main
 ```
 
 #### Issue #2: TypeScript Compilation Errors
@@ -669,7 +674,7 @@ git add . && git commit -m "Description" && git push origin development
 # Complete emergency rollback (script with manual fallback)
 ./scripts/emergency-rollback.sh || {
   # Manual rollback if script fails:
-  git checkout development && git revert HEAD && git push origin development
+  git revert HEAD && git push origin <current-branch>
 }
 
 # Backend emergency restart (manual only)
@@ -1043,7 +1048,7 @@ window.ClassName = ClassName;
 # Complete development session (script with manual fallback)
 # 1. START SESSION
 ./scripts/dev-start.sh || {
-  git checkout development && git pull origin development
+  git pull origin <current-branch>
 }
 
 # 2. MAKE CHANGES AND DEPLOY
@@ -1462,16 +1467,16 @@ az containerapp update --name unitedwerise-backend --resource-group unitedwerise
 # Health check
 curl -s "https://api.unitedwerise.org/health" | grep uptime
 
-# Rollback to staging
-git checkout development && git revert HEAD && git push origin development
+# Rollback current branch
+git revert HEAD && git push origin <current-branch>
 ```
 
 ### ⚡ Daily Development
 **See: [Daily Development Workflow](#daily-development-workflow-streamlined) for comprehensive version**
 ```bash
 # Quick commands
-git checkout development && git pull origin development
-git add . && git commit -m "feat/fix: Description" && git push origin development
+git pull origin <current-branch>
+git add . && git commit -m "feat/fix: Description" && git push origin <current-branch>
 curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
 ```
 

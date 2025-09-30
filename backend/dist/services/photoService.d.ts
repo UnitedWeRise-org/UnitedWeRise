@@ -72,8 +72,14 @@ export declare class PhotoService {
      * Get photos pending moderation
      */
     static getPendingModeration(): Promise<Photo[]>;
-    private static validateStorageLimit;
-    private static validateUserPermissions;
+    /**
+     * Validate storage limit (exposed for SAS token generation)
+     */
+    static validateStorageLimit(userId: string, fileSize: number): Promise<void>;
+    /**
+     * Validate user permissions (exposed for SAS token generation)
+     */
+    static validateUserPermissions(userId: string, candidateId?: string): Promise<void>;
     private static shouldAutoApprove;
     /**
      * Azure OpenAI Vision-powered content moderation
@@ -110,6 +116,26 @@ export declare class PhotoService {
         photosByType: Record<string, number>;
         pendingModeration: number;
     }>;
+    /**
+     * Create photo record from direct blob upload
+     * Used after client uploads directly to Azure Blob Storage with SAS token
+     */
+    static createPhotoRecordFromBlob(options: {
+        userId: string;
+        blobName: string;
+        blobUrl: string;
+        photoType: PhotoType;
+        purpose: PhotoPurpose;
+        candidateId?: string;
+        gallery?: string;
+        caption?: string;
+        fileSize: number;
+        mimeType: string;
+    }): Promise<Photo>;
+    /**
+     * Download blob buffer for processing
+     */
+    private static downloadBlobBuffer;
 }
 export {};
 //# sourceMappingURL=photoService.d.ts.map
