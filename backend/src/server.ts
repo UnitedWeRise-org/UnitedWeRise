@@ -80,26 +80,55 @@ app.use(helmet({
   // Content Security Policy - Prevent XSS and injection attacks
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://js.stripe.com"],
-      scriptSrc: [
-        "'self'", 
-        "'unsafe-inline'", // Required for inline scripts - TODO: remove with nonce implementation
+      defaultSrc: ["'self'", "data:", "blob:", "local.adguard.org"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'",
+        "data:",
+        "blob:",
         "https://unpkg.com",
-        "https://js.stripe.com/v3/", // Stripe payment processing
-        "https://www.googletagmanager.com", // Analytics (if used)
+        "https://js.stripe.com",
+        "local.adguard.org"
+      ],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'", // Required for dynamic imports and MapLibre
+        "https://unpkg.com",
+        "https://js.stripe.com",
+        "https://js.hcaptcha.com",
+        "https://www.googletagmanager.com",
+        "https://www.google-analytics.com",
+        "https://googleads.g.doubleclick.net",
+        "local.adguard.org"
+      ],
+      styleSrcElem: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://unpkg.com",
+        "https://js.stripe.com",
+        "local.adguard.org"
       ],
       imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
       connectSrc: [
-        "'self'", 
+        "'self'",
         "ws:", "wss:", // WebSocket connections
         "https://js.stripe.com", // Stripe API
         "*.azurecontainerapps.io", // Azure backend
+        "https://hcaptcha.com", // hCaptcha API
+        "https://api.hcaptcha.com",
       ],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"], // Block dangerous plugins
       mediaSrc: ["'self'", "https:"],
-      frameSrc: ["'self'", "https://js.stripe.com"], // Stripe checkout frames
+      frameSrc: [
+        "'self'",
+        "https://js.stripe.com", // Stripe checkout frames
+        "https://newassets.hcaptcha.com", // hCaptcha frames
+        "https://www.googletagmanager.com" // Google Tag Manager
+      ],
+      workerSrc: ["'self'", "blob:", "data:"], // Required for MapLibre workers
       upgradeInsecureRequests: [], // Force HTTPS in production
     },
   },

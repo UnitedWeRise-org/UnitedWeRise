@@ -73,69 +73,6 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 
-    <!-- Google Tag Manager (gtag.js) - Google Ads Tracking -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17599542348"
-            onerror="console.warn('⚠️ Google Ads script failed to load - account configuration may be needed')"></script>
-    <script>
-        try {
-            // Initialize Google Analytics/Ads tracking with error handling
-            window.dataLayer = window.dataLayer || [];
-
-            function gtag() {
-                try {
-                    dataLayer.push(arguments);
-                } catch (error) {
-                    console.warn('⚠️ Google Ads tracking failed:', error.message);
-                }
-            }
-
-            // Initialize gtag
-            gtag('js', new Date());
-
-            // Configure Google Ads - wrap in try/catch for account issues
-            try {
-                gtag('config', 'AW-17599542348', {
-                    'debug_mode': false, // Set to true for debugging
-                    'send_page_view': false // We'll send manually with error handling
-                });
-                console.log('📊 Google Ads configured: AW-17599542348');
-            } catch (error) {
-                console.warn('⚠️ Google Ads config failed:', error.message);
-            }
-
-            // Track page view conversion with error handling
-            try {
-                gtag('event', 'page_view', {
-                    page_title: document.title,
-                    page_location: window.location.href,
-                    send_to: 'AW-17599542348'
-                });
-                console.log('📊 Page view event sent to Google Ads');
-            } catch (error) {
-                console.warn('⚠️ Page view tracking failed:', error.message);
-                console.warn('   → This is often due to Google Ads account configuration issues');
-                console.warn('   → Check: 1) Domain verification 2) Conversion action setup 3) Account status');
-            }
-
-            // Global function for manual tracking with error handling
-            window.trackGoogleAdsEvent = function(eventName, parameters = {}) {
-                try {
-                    gtag('event', eventName, {
-                        send_to: 'AW-17599542348',
-                        ...parameters
-                    });
-                    console.log(`📊 Tracked: ${eventName}`, parameters);
-                } catch (error) {
-                    console.warn(`⚠️ Failed to track ${eventName}:`, error.message);
-                }
-            };
-
-        } catch (error) {
-            console.warn('⚠️ Google Ads initialization completely failed:', error.message);
-            console.warn('   → Possible causes: Ad blocker, network issues, or account problems');
-            console.warn('   → Site functionality not affected');
-        }
-    </script>
 
     <!-- External CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
