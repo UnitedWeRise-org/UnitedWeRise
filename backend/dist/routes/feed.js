@@ -42,6 +42,17 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             isLiked: likedPostIds.has(post.id),
             _count: undefined
         }));
+        // DIAGNOSTIC: Log photo data being sent to frontend
+        console.log(`📸 FEED API - Sending ${postsWithLikeStatus.length} posts`);
+        const postsWithPhotos = postsWithLikeStatus.filter(p => p.photos && p.photos.length > 0);
+        console.log(`📸 FEED API - ${postsWithPhotos.length} posts have photos`);
+        if (postsWithPhotos.length > 0) {
+            console.log(`📸 FEED API - Sample post with photos:`, {
+                postId: postsWithPhotos[0].id,
+                photoCount: postsWithPhotos[0].photos.length,
+                photoUrls: postsWithPhotos[0].photos.map(p => p.url)
+            });
+        }
         res.json({
             posts: postsWithLikeStatus,
             algorithm: feedResult.algorithm,

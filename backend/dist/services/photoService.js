@@ -177,15 +177,25 @@ class PhotoService {
      */
     static async uploadMultiplePhotos(files, options) {
         const results = [];
+        const errors = [];
         for (const file of files) {
             try {
                 const result = await this.uploadPhoto(file, options);
                 results.push(result);
             }
             catch (error) {
-                console.error(`Failed to upload file ${file.originalname}:`, error);
-                // Continue with other files
+                const errorMessage = `Failed to upload file ${file.originalname}: ${error instanceof Error ? error.message : String(error)}`;
+                console.error(errorMessage, error);
+                errors.push(errorMessage);
             }
+        }
+        // If we have errors but no successful uploads, throw error
+        if (errors.length > 0 && results.length === 0) {
+            throw new Error(`All file uploads failed: ${errors.join('; ')}`);
+        }
+        // If we have some errors but some successes, log warnings but continue
+        if (errors.length > 0) {
+            console.warn(`Some uploads failed (${errors.length} of ${files.length}):`, errors);
         }
         return results;
     }

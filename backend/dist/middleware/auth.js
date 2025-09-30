@@ -46,19 +46,28 @@ const requireAuth = async (req, res, next) => {
         const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
         // Only update if user hasn't been seen recently (batch updates to reduce DB load)
         if (!user.lastSeenAt || user.lastSeenAt < fiveMinutesAgo) {
-            // Use upsert to handle race conditions gracefully
-            prisma_1.prisma.user.update({
-                where: { id: user.id },
-                data: { lastSeenAt: now }
-            }).catch(error => {
+            // CRITICAL FIX: Properly await and handle database operation to prevent uncaught promise rejections
+            try {
+                await prisma_1.prisma.user.update({
+                    where: { id: user.id },
+                    data: { lastSeenAt: now }
+                });
+            }
+            catch (error) {
                 // Log but don't fail the request if lastSeenAt update fails
                 console.error('Failed to update lastSeenAt:', error);
-            });
+            }
         }
         // Update session activity if available
         const sessionId = req.header('X-Session-ID');
         if (sessionId) {
-            await sessionManager_1.sessionManager.updateSessionActivity(sessionId);
+            try {
+                await sessionManager_1.sessionManager.updateSessionActivity(sessionId);
+            }
+            catch (error) {
+                // Log but don't fail the request if session update fails
+                console.error('Failed to update session activity:', error);
+            }
         }
         // Check if development environment requires admin access for specific routes
         if ((0, environment_1.isDevelopment)() && !req.user?.isAdmin) {
