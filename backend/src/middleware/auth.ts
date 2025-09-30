@@ -76,14 +76,16 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     
     // Only update if user hasn't been seen recently (batch updates to reduce DB load)
     if (!user.lastSeenAt || user.lastSeenAt < fiveMinutesAgo) {
-      // Use upsert to handle race conditions gracefully
-      prisma.user.update({
-        where: { id: user.id },
-        data: { lastSeenAt: now }
-      }).catch(error => {
+      // CRITICAL FIX: Properly await and handle database operation to prevent uncaught promise rejections
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastSeenAt: now }
+        });
+      } catch (error) {
         // Log but don't fail the request if lastSeenAt update fails
         console.error('Failed to update lastSeenAt:', error);
-      });
+      }
     }
     
     // Update session activity if available
