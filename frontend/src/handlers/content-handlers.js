@@ -127,7 +127,7 @@ export class ContentHandlers {
             headers['X-Dismissal-Token'] = this.dismissalToken;
 
             // Use environment-aware API base URL (imported from environment.js)
-            const API_BASE = getApiBaseUrl().replace('/api', '');
+            const API_BASE = getApiBaseUrl();
             const response = await fetch(`${API_BASE}/motd/current`, {
                 credentials: 'include', // Include cookies for authentication
                 headers: headers

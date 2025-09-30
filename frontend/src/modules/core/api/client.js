@@ -108,9 +108,29 @@ class APIClient {
             const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
             fetchOptions.signal = controller.signal;
             
+            // Debug logging for FormData uploads
+            if (options.body instanceof FormData) {
+                console.log('🔧 Making FormData request to:', url);
+                console.log('🔧 Fetch options:', {
+                    method: fetchOptions.method,
+                    headers: fetchOptions.headers,
+                    bodyType: 'FormData'
+                });
+            }
+
             // Make request
             const response = await fetch(url, fetchOptions);
             clearTimeout(timeoutId);
+
+            // Log FormData response details
+            if (options.body instanceof FormData) {
+                console.log('🔧 FormData response:', {
+                    url,
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+            }
             
             // Handle response
             if (!response.ok) {
@@ -168,19 +188,25 @@ class APIClient {
      * @private
      */
     _buildURL(endpoint, params) {
-        const baseURL = endpoint.startsWith('http') 
-            ? endpoint 
+        const baseURL = endpoint.startsWith('http')
+            ? endpoint
             : `${API_CONFIG.BASE_URL}${endpoint}`;
-        
+
+        console.log('🔧 API Client _buildURL:', {
+            endpoint,
+            baseURL: API_CONFIG.BASE_URL,
+            fullURL: baseURL
+        });
+
         if (!params) return baseURL;
-        
+
         const url = new URL(baseURL, window.location.origin);
         Object.entries(params).forEach(([key, value]) => {
             if (value !== null && value !== undefined) {
                 url.searchParams.append(key, value);
             }
         });
-        
+
         return url.toString();
     }
 

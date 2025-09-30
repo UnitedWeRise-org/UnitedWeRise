@@ -6,7 +6,43 @@
     <meta name="build-time" content="2025-08-21T21:15:00.000Z">
     <meta name="version" content="1.1.0">
     <meta name="last-updated" content="2025-08-21T21:15:00.000Z">
-    
+
+    <!-- Content Security Policy - Complete directives for all external resources -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval'
+            https://www.googletagmanager.com
+            https://www.google-analytics.com
+            https://googleads.g.doubleclick.net
+            https://unpkg.com
+            https://js.stripe.com
+            https://js.hcaptcha.com
+            https://cdn.socket.io;
+        style-src 'self' 'unsafe-inline' 'unsafe-eval'
+            https://unpkg.com
+            https://js.stripe.com
+            data: blob:;
+        worker-src 'self' blob: data:;
+        frame-src 'self'
+            https://js.stripe.com
+            https://newassets.hcaptcha.com
+            https://www.googletagmanager.com;
+        connect-src 'self'
+            https://api.unitedwerise.org
+            https://dev-api.unitedwerise.org
+            wss://api.unitedwerise.org
+            wss://dev-api.unitedwerise.org
+            https://www.google-analytics.com
+            https://googleads.g.doubleclick.net
+            https://www.google.com
+            https://api.hcaptcha.com
+            https://hcaptcha.com
+            https://*.cartocdn.com;
+        img-src 'self' data: blob:
+            https://www.google-analytics.com
+            https://googleads.g.doubleclick.net;
+    ">
+
     <!-- SEO Meta Tags -->
     <title>United We Rise - Unite Communities, Empower Democracy</title>
     <meta name="description" content="United We Rise is a revolutionary social platform connecting communities with their elected officials. Join the movement for transparent democracy, civic engagement, and positive change.">
@@ -48,7 +84,71 @@
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
-    
+
+    <!-- DIAGNOSTIC TEST COMPLETE: Re-enabling Google Ads after CSP fixes -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17599542348"
+            onerror="console.warn('⚠️ Google Ads script failed to load - account configuration may be needed')"></script>
+    <script>
+        try {
+            // Initialize Google Ads tracking with error handling
+            window.dataLayer = window.dataLayer || [];
+
+            function gtag() {
+                try {
+                    dataLayer.push(arguments);
+                } catch (error) {
+                    console.warn('⚠️ Google Ads tracking failed:', error.message);
+                }
+            }
+
+            // Initialize gtag
+            gtag('js', new Date());
+
+            // Configure Google Ads - wrap in try/catch for account issues
+            try {
+                gtag('config', 'AW-17599542348', {
+                    'debug_mode': false // Set to true for debugging
+                });
+                console.log('📊 Google Ads configured: AW-17599542348');
+            } catch (error) {
+                console.warn('⚠️ Google Ads config failed:', error.message);
+            }
+
+            // Global function for sign-up conversion tracking
+            window.trackSignUpConversion = function() {
+                try {
+                    gtag('event', 'conversion', {
+                        'send_to': 'AW-17599542348/c7nDCIjrsKQbEMzojshB'
+                    });
+                    console.log('📊 Sign-up conversion tracked successfully');
+                    return true;
+                } catch (error) {
+                    console.warn('⚠️ Sign-up conversion tracking failed:', error.message);
+                    return false;
+                }
+            };
+
+            // Global function for manual event tracking with error handling
+            window.trackGoogleAdsEvent = function(eventName, parameters = {}) {
+                try {
+                    gtag('event', eventName, {
+                        send_to: 'AW-17599542348',
+                        ...parameters
+                    });
+                    console.log(`📊 Tracked: ${eventName}`, parameters);
+                } catch (error) {
+                    console.warn(`⚠️ Failed to track ${eventName}:`, error.message);
+                }
+            };
+
+        } catch (error) {
+            console.warn('⚠️ Google Ads initialization completely failed:', error.message);
+            console.warn('   → Possible causes: Ad blocker, network issues, or account problems');
+            console.warn('   → Site functionality not affected');
+        }
+    </script>
+
+
     <!-- External CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" />

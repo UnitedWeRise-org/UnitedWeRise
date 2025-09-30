@@ -284,6 +284,18 @@ export async function handleRegister() {
 
             showAuthMessage('Account created successfully!', 'success', 'register');
 
+            // Track Google Ads sign-up conversion
+            if (typeof window.trackSignUpConversion === 'function') {
+                const conversionTracked = window.trackSignUpConversion();
+                if (conversionTracked) {
+                    console.log('📊 Google Ads sign-up conversion tracked for user:', response.user.username);
+                } else {
+                    console.warn('⚠️ Google Ads sign-up conversion tracking failed');
+                }
+            } else {
+                console.warn('⚠️ Google Ads tracking function not available - trackSignUpConversion');
+            }
+
             // Close modal after short delay
             setTimeout(() => {
                 closeAuthModal();

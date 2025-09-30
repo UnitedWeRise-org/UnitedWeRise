@@ -26,12 +26,22 @@ let selectedPostMedia = null;
  * @returns {Promise<Object>} Upload response from backend
  */
 async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '') {
+    console.log('📸 uploadMediaFiles called with:', { files, photoType, purpose });
+    console.log('📸 Files type:', typeof files);
+    console.log('📸 Is array?', Array.isArray(files));
+    console.log('📸 Files length:', Array.isArray(files) ? files.length : 'N/A');
+
     const formData = new FormData();
 
     // Handle single file or array of files
     if (Array.isArray(files)) {
-        files.forEach(file => formData.append('photos', file));
+        console.log('📸 Processing array of files:', files.length);
+        files.forEach((file, index) => {
+            console.log(`📸 Appending file ${index}:`, file.name, file.size, file.type);
+            formData.append('photos', file);
+        });
     } else {
+        console.log('📸 Processing single file:', files.name, files.size, files.type);
         formData.append('photos', files);
     }
 
@@ -42,11 +52,22 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
         formData.append('caption', caption.substring(0, 200));
     }
 
-    return await window.apiCall('/photos/upload', {
+    // Debug FormData contents
+    console.log('📸 FormData entries:');
+    for (let pair of formData.entries()) {
+        console.log('  -', pair[0], ':', pair[1]);
+    }
+
+    console.log('📸 About to make API call to /photos/upload');
+
+    const result = await window.apiCall('/photos/upload', {
         method: 'POST',
         body: formData,
         skipContentType: true // Essential for FormData uploads
     });
+
+    console.log('📸 Full API response received:', result);
+    return result;
 }
 
 /**
