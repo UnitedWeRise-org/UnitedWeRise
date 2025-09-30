@@ -9,7 +9,10 @@
  */
 
 const API_CONFIG = {
-    BASE_URL: window.API_CONFIG?.BASE_URL || '/api',
+    get BASE_URL() {
+        // Dynamic getter to ensure we always use the latest config
+        return window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api';
+    },
     TIMEOUT: 30000,
     RETRY_ATTEMPTS: 3,
     CACHE_DURATION: 5 * 60 * 1000 // 5 minutes

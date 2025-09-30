@@ -1,18 +1,14 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      "rewrite": "https://api.unitedwerise.org{path}"
-    },
-    {
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
     }
   ],
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": ["/api/*"]
   },
   "mimeTypes": {
     ".js": "application/javascript",

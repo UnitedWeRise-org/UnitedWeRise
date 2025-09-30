@@ -76,14 +76,35 @@ app.use((0, helmet_1.default)({
     // Content Security Policy - Prevent XSS and injection attacks
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://js.stripe.com"],
+            defaultSrc: ["'self'", "data:", "blob:", "local.adguard.org"],
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "data:",
+                "blob:",
+                "https://unpkg.com",
+                "https://js.stripe.com",
+                "local.adguard.org"
+            ],
             scriptSrc: [
                 "'self'",
-                "'unsafe-inline'", // Required for inline scripts - TODO: remove with nonce implementation
+                "'unsafe-inline'",
+                "'unsafe-eval'", // Required for dynamic imports and MapLibre
                 "https://unpkg.com",
-                "https://js.stripe.com/v3/", // Stripe payment processing
-                "https://www.googletagmanager.com", // Analytics (if used)
+                "https://js.stripe.com",
+                "https://js.hcaptcha.com",
+                "https://www.googletagmanager.com",
+                "https://www.google-analytics.com",
+                "https://googleads.g.doubleclick.net",
+                "local.adguard.org"
+            ],
+            styleSrcElem: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://unpkg.com",
+                "https://js.stripe.com",
+                "local.adguard.org"
             ],
             imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
             connectSrc: [
@@ -91,11 +112,19 @@ app.use((0, helmet_1.default)({
                 "ws:", "wss:", // WebSocket connections
                 "https://js.stripe.com", // Stripe API
                 "*.azurecontainerapps.io", // Azure backend
+                "https://hcaptcha.com", // hCaptcha API
+                "https://api.hcaptcha.com",
             ],
             fontSrc: ["'self'", "https:", "data:"],
             objectSrc: ["'none'"], // Block dangerous plugins
             mediaSrc: ["'self'", "https:"],
-            frameSrc: ["'self'", "https://js.stripe.com"], // Stripe checkout frames
+            frameSrc: [
+                "'self'",
+                "https://js.stripe.com", // Stripe checkout frames
+                "https://newassets.hcaptcha.com", // hCaptcha frames
+                "https://www.googletagmanager.com" // Google Tag Manager
+            ],
+            workerSrc: ["'self'", "blob:", "data:"], // Required for MapLibre workers
             upgradeInsecureRequests: [], // Force HTTPS in production
         },
     },
@@ -139,13 +168,35 @@ app.use((0, cors_1.default)({
         }
         else {
             console.log('❌ CORS - Origin blocked:', origin);
-            callback(null, false); // Don't throw error, just reject
+            // TEMPORARY: Allow all origins for debugging file upload issue
+            console.log('⚠️ TEMPORARY DEBUG: Allowing blocked origin for file upload debugging');
+            callback(null, true);
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
+// 🚨 CRITICAL DEBUG: Log ALL incoming requests (REMOVE AFTER DEBUGGING)
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
+    console.log(`📥 INCOMING REQUEST: ${timestamp}`);
+    console.log(`📥 Method: ${req.method}`);
+    console.log(`📥 URL: ${req.url}`);
+    console.log(`📥 Path: ${req.path}`);
+    console.log(`📥 Content-Type: ${req.headers['content-type'] || 'none'}`);
+    console.log(`📥 Content-Length: ${req.headers['content-length'] || 'none'}`);
+    console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
+    console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
+    // Special attention to photos endpoint
+    if (req.path === '/api/photos/upload') {
+        console.log('🎯🎯🎯 PHOTOS UPLOAD ENDPOINT HIT!');
+        console.log('🎯 Full headers:', JSON.stringify(req.headers, null, 2));
+    }
+    console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
+    next();
+});
 // Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {
     const contentType = req.headers['content-type'] || '';
@@ -172,6 +223,17 @@ if ((0, environment_1.enableRequestLogging)()) {
 app.use(metricsService_1.metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMonitor_1.performanceMiddleware);
+// 🚨 DEBUGGING ROUTE: Test if our backend is being hit
+app.get('/api/debug-test', (req, res) => {
+    console.log('🎯🎯🎯 DEBUG TEST ENDPOINT HIT!');
+    res.json({
+        message: 'Debug test successful',
+        timestamp: new Date().toISOString(),
+        releaseSha: '2ba3d14',
+        requestPath: req.path,
+        logs: 'If you see this, our backend is working!'
+    });
+});
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);
