@@ -84,7 +84,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 
-    <!-- Google Tag Manager (gtag.js) - Google Ads Conversion Tracking -->
+    <!-- DIAGNOSTIC TEST: Google Ads temporarily disabled to identify source of 6500+ console errors -->
+    <!--
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17599542348"
             onerror="console.warn('⚠️ Google Ads script failed to load - account configuration may be needed')"></script>
     <script>
@@ -145,6 +146,20 @@
             console.warn('   → Possible causes: Ad blocker, network issues, or account problems');
             console.warn('   → Site functionality not affected');
         }
+    </script>
+    -->
+
+    <!-- Placeholder tracking functions to prevent undefined errors during diagnostic test -->
+    <script>
+        // Temporary fallback functions during Google Ads diagnostic test
+        window.trackSignUpConversion = function() {
+            console.log('📊 DIAGNOSTIC: trackSignUpConversion called (Google Ads disabled)');
+            return true;
+        };
+
+        window.trackGoogleAdsEvent = function(eventName, parameters = {}) {
+            console.log(`📊 DIAGNOSTIC: trackGoogleAdsEvent called with ${eventName}`, parameters);
+        };
     </script>
 
     <!-- External CSS -->
