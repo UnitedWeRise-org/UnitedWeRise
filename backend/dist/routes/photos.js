@@ -103,8 +103,12 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, (req, res, next) => {
     next();
 }, upload.array('photos', 5), async (req, res) => {
     try {
+        console.log('✅✅✅ INSIDE ROUTE HANDLER - After Multer ✅✅✅');
         const { user } = req;
         const files = req.files;
+        console.log('✅ User:', user?.username);
+        console.log('✅ req.files exists:', !!req.files);
+        console.log('✅ req.files type:', typeof req.files);
         // DEBUG: Log what Multer actually received
         console.log('🔍 BACKEND DEBUG - Upload endpoint hit');
         console.log('📁 req.files type:', typeof req.files);
@@ -172,7 +176,13 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, (req, res, next) => {
         });
     }
     catch (error) {
-        console.error('Photo upload error:', error);
+        console.error('🚨🚨🚨 PHOTO UPLOAD ERROR CAUGHT 🚨🚨🚨');
+        console.error('Error type:', typeof error);
+        console.error('Error constructor:', error?.constructor?.name);
+        console.error('Error message:', error?.message);
+        console.error('Error stack:', error?.stack);
+        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error('🚨🚨🚨 END ERROR DETAILS 🚨🚨🚨');
         if (error.message.includes('Invalid file type')) {
             return res.status(400).json({
                 error: 'Invalid file type',
