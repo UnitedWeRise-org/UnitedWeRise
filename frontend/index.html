@@ -85,8 +85,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
 
-    <!-- DIAGNOSTIC TEST: Google Ads temporarily disabled to identify source of 6500+ console errors -->
-    <!--
+    <!-- DIAGNOSTIC TEST COMPLETE: Re-enabling Google Ads after CSP fixes -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17599542348"
             onerror="console.warn('⚠️ Google Ads script failed to load - account configuration may be needed')"></script>
     <script>
@@ -148,20 +147,7 @@
             console.warn('   → Site functionality not affected');
         }
     </script>
-    -->
 
-    <!-- Placeholder tracking functions to prevent undefined errors during diagnostic test -->
-    <script>
-        // Temporary fallback functions during Google Ads diagnostic test
-        window.trackSignUpConversion = function() {
-            console.log('📊 DIAGNOSTIC: trackSignUpConversion called (Google Ads disabled)');
-            return true;
-        };
-
-        window.trackGoogleAdsEvent = function(eventName, parameters = {}) {
-            console.log(`📊 DIAGNOSTIC: trackGoogleAdsEvent called with ${eventName}`, parameters);
-        };
-    </script>
 
     <!-- External CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
