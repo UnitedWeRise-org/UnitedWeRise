@@ -75,6 +75,22 @@ const webSocketService = new WebSocketService(httpServer);
 // Export webSocketService for global access (notifications, etc.)
 export { webSocketService };
 
+// 🚨 ABSOLUTE FIRST MIDDLEWARE - LOGS EVERY REQUEST BEFORE ANYTHING ELSE
+// This MUST be before helmet, rate limiters, CORS, body parsers - EVERYTHING
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log('🆘🆘🆘 FAILSAFE: Request received before all middleware');
+  console.log(`🆘 Time: ${timestamp}`);
+  console.log(`🆘 Method: ${req.method}`);
+  console.log(`🆘 URL: ${req.url}`);
+  console.log(`🆘 Path: ${req.path}`);
+  console.log(`🆘 Content-Type: ${req.headers['content-type'] || 'none'}`);
+  console.log(`🆘 Origin: ${req.headers['origin'] || 'none'}`);
+  console.log(`🆘 Content-Length: ${req.headers['content-length'] || 'none'}`);
+  console.log('🆘🆘🆘');
+  next();
+});
+
 // Enhanced Security Middleware - Enterprise Grade
 app.use(helmet({
   // Content Security Policy - Prevent XSS and injection attacks
@@ -146,20 +162,6 @@ app.use(helmet({
   crossOriginOpenerPolicy: { policy: 'same-origin' },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-
-// 🚨 FAILSAFE LOGGER - LOGS EVERY REQUEST BEFORE ANY OTHER MIDDLEWARE
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log('🆘🆘🆘 FAILSAFE: Request received before all middleware');
-  console.log(`🆘 Time: ${timestamp}`);
-  console.log(`🆘 Method: ${req.method}`);
-  console.log(`🆘 URL: ${req.url}`);
-  console.log(`🆘 Path: ${req.path}`);
-  console.log(`🆘 Content-Type: ${req.headers['content-type'] || 'none'}`);
-  console.log(`🆘 Origin: ${req.headers['origin'] || 'none'}`);
-  console.log('🆘🆘🆘');
-  next();
-});
 
 // Apply burst limiter first (shorter window, catches rapid requests)
 app.use(burstLimiter);
