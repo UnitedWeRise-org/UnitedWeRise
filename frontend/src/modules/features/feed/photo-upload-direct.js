@@ -142,14 +142,17 @@ async function uploadSinglePhoto(file, photoType, purpose, caption) {
             })
         });
 
-        if (!response.ok && !response.data?.success) {
-            throw new Error(response.error || response.data?.error || 'Failed to get upload token');
+        // Check if we got valid data (backend returns SAS token directly)
+        if (!response || !response.sasUrl) {
+            const errorMsg = response?.error || response?.message || 'Failed to get upload token';
+            console.error('❌ SAS token request failed:', errorMsg);
+            throw new Error(errorMsg);
         }
 
         return response;
     });
 
-    const { sasUrl, blobName, uploadId } = sasResponse.data;
+    const { sasUrl, blobName, uploadId } = sasResponse;
     console.log('🎫 Got SAS token. Blob name:', blobName, 'Upload ID:', uploadId);
 
     // STEP 4: Upload directly to Azure Blob Storage
@@ -186,21 +189,23 @@ async function uploadSinglePhoto(file, photoType, purpose, caption) {
             })
         });
 
-        if (!response.ok && !response.data?.success) {
-            const errorMsg = response.error || response.data?.error || 'Upload confirmation failed';
+        // Check if we got valid photo data (backend returns photo directly in response)
+        if (!response || !response.photo) {
+            const errorMsg = response?.error || response?.message || 'Upload confirmation failed';
 
             // If moderation failed, throw specific error
             if (errorMsg.includes('moderation') || errorMsg.includes('policy')) {
                 throw new Error(`Content policy violation: ${errorMsg}`);
             }
 
+            console.error('❌ Upload confirmation failed:', errorMsg);
             throw new Error(errorMsg);
         }
 
         return response;
     });
 
-    const photoRecord = confirmResponse.data.photo;
+    const photoRecord = confirmResponse.photo;
     console.log('✅ Upload confirmed. Photo record:', photoRecord);
 
     return photoRecord;
