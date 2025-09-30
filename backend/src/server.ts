@@ -241,6 +241,18 @@ app.use(metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMiddleware);
 
+// 🚨 DEBUGGING ROUTE: Test if our backend is being hit
+app.get('/api/debug-test', (req, res) => {
+  console.log('🎯🎯🎯 DEBUG TEST ENDPOINT HIT!');
+  res.json({
+    message: 'Debug test successful',
+    timestamp: new Date().toISOString(),
+    releaseSha: '2ba3d14',
+    requestPath: req.path,
+    logs: 'If you see this, our backend is working!'
+  });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
