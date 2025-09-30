@@ -200,15 +200,20 @@ app.use((req, res, next) => {
 // Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {
     const contentType = req.headers['content-type'] || '';
+    // CRITICAL FIX: Explicitly skip multipart/form-data to prevent stream interference
+    if (contentType.includes('multipart/form-data')) {
+        console.log('🔧 MULTIPART REQUEST - Skipping body parsing, letting multer handle it');
+        return next();
+    }
     // Only parse as JSON if content-type indicates JSON
     if (contentType.includes('application/json')) {
-        express_1.default.json({ limit: '10mb' })(req, res, next);
+        return express_1.default.json({ limit: '10mb' })(req, res, next);
     }
     // Only parse URL-encoded if content-type indicates it
     else if (contentType.includes('application/x-www-form-urlencoded')) {
-        express_1.default.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+        return express_1.default.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
     }
-    // Skip parsing for multipart/form-data (handled by Multer) and other content types
+    // For other content types, proceed without body parsing
     else {
         next();
     }
