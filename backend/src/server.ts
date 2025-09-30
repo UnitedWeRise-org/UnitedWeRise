@@ -186,6 +186,29 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
 
+// 🚨 CRITICAL DEBUG: Log ALL incoming requests (REMOVE AFTER DEBUGGING)
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
+  console.log(`📥 INCOMING REQUEST: ${timestamp}`);
+  console.log(`📥 Method: ${req.method}`);
+  console.log(`📥 URL: ${req.url}`);
+  console.log(`📥 Path: ${req.path}`);
+  console.log(`📥 Content-Type: ${req.headers['content-type'] || 'none'}`);
+  console.log(`📥 Content-Length: ${req.headers['content-length'] || 'none'}`);
+  console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
+  console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
+
+  // Special attention to photos endpoint
+  if (req.path === '/api/photos/upload') {
+    console.log('🎯🎯🎯 PHOTOS UPLOAD ENDPOINT HIT!');
+    console.log('🎯 Full headers:', JSON.stringify(req.headers, null, 2));
+  }
+
+  console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
+  next();
+});
+
 // Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
