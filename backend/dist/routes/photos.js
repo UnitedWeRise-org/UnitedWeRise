@@ -219,6 +219,24 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, (req, res, next) => {
         });
     }
 });
+// Multer error handling middleware - MUST be after the upload route
+router.use((error, req, res, next) => {
+    console.error('🚨🚨🚨 ERROR HANDLER IN PHOTOS ROUTE TRIGGERED 🚨🚨🚨');
+    console.error('Error type:', error.constructor?.name);
+    console.error('Error message:', error.message);
+    console.error('Full error:', error);
+    // Check if it's a Multer error
+    if (error.code && (error.code === 'LIMIT_FILE_SIZE' || error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE')) {
+        console.error('🚨 MULTER ERROR DETECTED:', error.code);
+        return res.status(400).json({
+            error: 'File upload error',
+            message: error.message,
+            code: error.code
+        });
+    }
+    // Pass other errors to the global error handler
+    next(error);
+});
 /**
  * @swagger
  * /api/photos/my:

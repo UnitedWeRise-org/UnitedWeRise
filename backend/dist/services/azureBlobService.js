@@ -9,20 +9,27 @@ class AzureBlobService {
      */
     static async initialize() {
         try {
+            console.log('🔧 Initializing Azure Blob Storage...');
             const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
             if (!connectionString) {
+                console.error('❌ AZURE_STORAGE_CONNECTION_STRING environment variable is not set');
                 throw new Error('AZURE_STORAGE_CONNECTION_STRING environment variable not set');
             }
+            console.log('🔧 Creating BlobServiceClient...');
             this.blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
             this.containerClient = this.blobServiceClient.getContainerClient(this.CONTAINER_NAME);
             // Create container if it doesn't exist
+            console.log('🔧 Creating/verifying container exists...');
             await this.containerClient.createIfNotExists({
                 access: 'blob' // Allow public read access to blobs
             });
-            console.log('✅ Azure Blob Storage initialized');
+            console.log('✅ Azure Blob Storage initialized successfully');
         }
         catch (error) {
-            console.error('Failed to initialize Azure Blob Storage:', error);
+            console.error('❌❌❌ FAILED TO INITIALIZE AZURE BLOB STORAGE ❌❌❌');
+            console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+            console.error('Error message:', error instanceof Error ? error.message : String(error));
+            console.error('Full error:', error);
             throw error;
         }
     }
