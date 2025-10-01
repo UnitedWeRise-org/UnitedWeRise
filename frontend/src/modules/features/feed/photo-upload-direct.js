@@ -160,13 +160,16 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
     // STEP 4: Upload directly to Azure Blob Storage
     console.log('☁️ Uploading to Azure Blob Storage...');
     await retryWithBackoff(async () => {
+        // Convert File to Blob without type to prevent browser from auto-setting Content-Type header
+        // (which would cause signature mismatch since backend doesn't include it in SAS signature)
+        const blob = new Blob([file], { type: '' });
+
         const uploadResponse = await fetch(sasUrl, {
             method: 'PUT',
             headers: {
                 'x-ms-blob-type': 'BlockBlob'
-                // Content-Type is set via SAS token rsct parameter, not header
             },
-            body: file
+            body: blob
         });
 
         if (!uploadResponse.ok) {
