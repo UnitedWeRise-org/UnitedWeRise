@@ -1,11 +1,8 @@
 import {
   BlobServiceClient,
-  StorageSharedKeyCredential,
   BlobSASPermissions,
-  generateBlobSASQueryParameters,
   SASProtocol
 } from '@azure/storage-blob';
-import { createHmac } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { PhotoType } from '@prisma/client';
 
@@ -36,11 +33,11 @@ export class SASTokenService {
     try {
       console.log(`🔐 Generating SAS token for user ${request.userId} - ${request.photoType}`);
 
-      // Validate Azure Storage credentials
+      // Use connection string approach - this is the official method
+      const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
       const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-      const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
 
-      if (!accountName || !accountKey) {
+      if (!connectionString || !accountName) {
         throw new Error('Azure Storage credentials not configured');
       }
 
@@ -51,68 +48,27 @@ export class SASTokenService {
       const folder = this.getFolderForPhotoType(request.photoType);
       const blobName = `${folder}/${uploadId}-${timestamp}${fileExtension}`;
 
-      // Create shared key credential
-      const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-
       // Set SAS token expiration
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + this.SAS_EXPIRY_MINUTES);
 
-      // Manual SAS token generation to match Azure's exact expectations
-      const version = '2021-12-02';
-      const resource = 'b'; // blob
-      const permissions = 'cw'; // create, write
-      const startsOn = new Date();
+      // Use BlobServiceClient with connection string - this is the OFFICIAL SDK method
+      const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+      const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-      // Format times in ISO 8601 UTC format (YYYY-MM-DDTHH:MM:SSZ)
-      const startTime = startsOn.toISOString().split('.')[0] + 'Z';
-      const expiryTime = expiresAt.toISOString().split('.')[0] + 'Z';
+      // Define SAS permissions
+      const permissions = BlobSASPermissions.parse('cw'); // create, write only
 
-      // Canonicalized resource: /blob/<account>/<container>/<blob>
-      const canonicalizedResource = `/blob/${accountName}/${this.CONTAINER_NAME}/${blobName}`;
+      // Generate SAS URL using SDK (this handles ALL signature details correctly)
+      const sasUrl = await blockBlobClient.generateSasUrl({
+        permissions: permissions,
+        startsOn: new Date(),
+        expiresOn: expiresAt,
+        protocol: SASProtocol.Https,
+      });
 
-      // String to sign for Blob SAS (version 2021-12-02)
-      const stringToSign = [
-        permissions,                  // signed permissions
-        startTime,                    // signed start
-        expiryTime,                   // signed expiry
-        canonicalizedResource,        // canonicalized resource
-        '',                           // signed identifier
-        '',                           // signed IP
-        'https',                      // signed protocol
-        version,                      // signed version
-        resource,                     // signed resource
-        '',                           // signed timestamp (snapshot time)
-        '',                           // signed encryption scope
-        '',                           // rscc (cache-control)
-        '',                           // rscd (content-disposition)
-        '',                           // rsce (content-encoding)
-        '',                           // rscl (content-language)
-        ''                            // rsct (content-type)
-      ].join('\n');
-
-      console.log('🔐 String to sign:', stringToSign.split('\n').map((line, i) => `  ${i}: "${line}"`).join('\n'));
-
-      // Generate signature: HMAC-SHA256 of stringToSign with account key
-      const signature = createHmac('sha256', Buffer.from(accountKey, 'base64'))
-        .update(stringToSign, 'utf8')
-        .digest('base64');
-
-      // Build SAS query string
-      const sasToken = [
-        `sv=${encodeURIComponent(version)}`,
-        `spr=https`,
-        `st=${encodeURIComponent(startTime)}`,
-        `se=${encodeURIComponent(expiryTime)}`,
-        `sr=${resource}`,
-        `sp=${permissions}`,
-        `sig=${encodeURIComponent(signature)}`
-      ].join('&');
-
-      // Construct full SAS URL
-      const sasUrl = `https://${accountName}.blob.core.windows.net/${this.CONTAINER_NAME}/${blobName}?${sasToken}`;
-
-      console.log(`✅ SAS token generated: ${blobName} (expires: ${expiryTime})`);
+      console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
 
       return {
         blobName,
