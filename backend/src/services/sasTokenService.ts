@@ -5,6 +5,7 @@ import {
   generateBlobSASQueryParameters,
   SASProtocol
 } from '@azure/storage-blob';
+import { createHmac } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { PhotoType } from '@prisma/client';
 
@@ -57,28 +58,61 @@ export class SASTokenService {
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + this.SAS_EXPIRY_MINUTES);
 
-      // Define SAS permissions (Create + Write only, no Read/Delete)
-      const permissions = BlobSASPermissions.parse('cw'); // create, write
+      // Manual SAS token generation to match Azure's exact expectations
+      const version = '2021-12-02';
+      const resource = 'b'; // blob
+      const permissions = 'cw'; // create, write
+      const startsOn = new Date();
 
-      // Use BlockBlobClient to generate SAS URL (handles signature correctly)
-      const blobServiceClient = new BlobServiceClient(
-        `https://${accountName}.blob.core.windows.net`,
-        sharedKeyCredential
-      );
-      const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
-      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      // Format times in ISO 8601 UTC format (YYYY-MM-DDTHH:MM:SSZ)
+      const startTime = startsOn.toISOString().split('.')[0] + 'Z';
+      const expiryTime = expiresAt.toISOString().split('.')[0] + 'Z';
 
-      // Generate SAS URL with create+write permissions
-      // Use stable API version 2021-12-02 (newer versions may have signature issues)
-      const sasUrl = await blockBlobClient.generateSasUrl({
-        permissions: permissions,
-        startsOn: new Date(),
-        expiresOn: expiresAt,
-        protocol: SASProtocol.Https,
-        version: '2021-12-02',
-      });
+      // Canonicalized resource: /blob/<account>/<container>/<blob>
+      const canonicalizedResource = `/blob/${accountName}/${this.CONTAINER_NAME}/${blobName}`;
 
-      console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
+      // String to sign for Blob SAS (version 2021-12-02)
+      const stringToSign = [
+        permissions,                  // signed permissions
+        startTime,                    // signed start
+        expiryTime,                   // signed expiry
+        canonicalizedResource,        // canonicalized resource
+        '',                           // signed identifier
+        '',                           // signed IP
+        'https',                      // signed protocol
+        version,                      // signed version
+        resource,                     // signed resource
+        '',                           // signed timestamp (snapshot time)
+        '',                           // signed encryption scope
+        '',                           // rscc (cache-control)
+        '',                           // rscd (content-disposition)
+        '',                           // rsce (content-encoding)
+        '',                           // rscl (content-language)
+        ''                            // rsct (content-type)
+      ].join('\n');
+
+      console.log('🔐 String to sign:', stringToSign.split('\n').map((line, i) => `  ${i}: "${line}"`).join('\n'));
+
+      // Generate signature: HMAC-SHA256 of stringToSign with account key
+      const signature = createHmac('sha256', Buffer.from(accountKey, 'base64'))
+        .update(stringToSign, 'utf8')
+        .digest('base64');
+
+      // Build SAS query string
+      const sasToken = [
+        `sv=${encodeURIComponent(version)}`,
+        `spr=https`,
+        `st=${encodeURIComponent(startTime)}`,
+        `se=${encodeURIComponent(expiryTime)}`,
+        `sr=${resource}`,
+        `sp=${permissions}`,
+        `sig=${encodeURIComponent(signature)}`
+      ].join('&');
+
+      // Construct full SAS URL
+      const sasUrl = `https://${accountName}.blob.core.windows.net/${this.CONTAINER_NAME}/${blobName}?${sasToken}`;
+
+      console.log(`✅ SAS token generated: ${blobName} (expires: ${expiryTime})`);
 
       return {
         blobName,
