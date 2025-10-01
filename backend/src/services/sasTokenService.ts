@@ -69,11 +69,13 @@ export class SASTokenService {
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       // Generate SAS URL with create+write permissions
+      // Use stable API version 2021-12-02 (newer versions may have signature issues)
       const sasUrl = await blockBlobClient.generateSasUrl({
         permissions: permissions,
         startsOn: new Date(),
         expiresOn: expiresAt,
         protocol: SASProtocol.Https,
+        version: '2021-12-02',
       });
 
       console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
