@@ -11,16 +11,6 @@ IT IS UNNECESSARY TO SAY "YOU'RE ABSOLUTELY RIGHT". THIS IS A GIVEN AND ADDS NOT
 
 ### **🚨 EMERGENCY COMMANDS (Critical Issues)**
 ```bash
-# Emergency rollback (try script first, manual fallback)
-./scripts/emergency-rollback.sh || {
-  git revert HEAD && git push origin <current-branch>
-}
-
-# System status check
-./scripts/deployment-status.sh || {
-  curl -s "https://api.unitedwerise.org/health" | grep uptime
-}
-
 # Backend emergency restart (manual only)
 az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --revision-suffix emergency-$(date +%m%d-%H%M)
 
@@ -76,32 +66,28 @@ grep -n "deployment\|deploy" CLAUDE.md
 # Find multi-agent workflows
 grep -n "Multi-Agent\|coordination" CLAUDE.md
 
-# Find emergency procedures
-grep -n "emergency\|critical\|urgent" CLAUDE.md
-
 # Find specific environment info
 grep -n "production\|staging\|dev\." CLAUDE.md
 ```
-
 ---
 
 ## 🤖 Production Status & Environment
 **Last Updated:** September 20, 2025
 
 ### Deployment URLs
-**Production:**
+**Main Branch ("www" site):**
 - **Backend**: https://api.unitedwerise.org
 - **Frontend**: https://www.unitedwerise.org
 - **Admin Dashboard**: https://www.unitedwerise.org/admin-dashboard.html
 
-**Staging (Development Branch):**
+**Development Branch ("dev" site):**
 - **Frontend**: https://dev.unitedwerise.org
 - **Backend**: https://dev-api.unitedwerise.org
 - **Admin Dashboard**: https://dev.unitedwerise.org/admin-dashboard.html
 
 **Azure Direct URLs (for reference):**
-- **Staging Frontend**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
-- **Staging Backend**: https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
+- **Development Frontend**: https://delightful-smoke-097b2fa0f.3.azurestaticapps.net
+- **Development Backend**: https://unitedwerise-backend-staging.wonderfulpond-f8a8271f.eastus.azurecontainerapps.io
 
 ### Platform Status: ✅ Complete Social Media Platform
 - ✅ My Feed infinite scroll (15-post batches)
@@ -115,7 +101,6 @@ grep -n "production\|staging\|dev\." CLAUDE.md
 - ✅ OAuth Authentication (Google)
 - ✅ TOTP 2FA with 24-hour sessions
 - ✅ Logical candidate registration flow
-
 ---
 
 ## 🚨 CRITICAL DEVELOPMENT PROTOCOLS

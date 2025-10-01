@@ -61,6 +61,7 @@ export class SASTokenService {
       const permissions = BlobSASPermissions.parse('cw'); // create, write
 
       // Generate SAS token with explicit version
+      // Note: contentType is NOT included in SAS params - frontend sets it via x-ms-blob-content-type header
       const sasToken = generateBlobSASQueryParameters(
         {
           containerName: this.CONTAINER_NAME,
@@ -70,7 +71,6 @@ export class SASTokenService {
           expiresOn: expiresAt,
           protocol: SASProtocol.Https,
           version: '2023-11-03', // Explicit API version
-          contentType: request.mimeType,
         },
         sharedKeyCredential
       ).toString();
