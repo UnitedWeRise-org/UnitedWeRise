@@ -217,7 +217,7 @@ export class SASTokenService {
       VERIFICATION: 'verification',
       EVENT: 'events',
       GALLERY: 'gallery',
-      POST_MEDIA: 'posts'
+      POST_MEDIA: 'photos' // Use proven working folder structure
     };
     return folderMap[photoType] || 'photos';
   }

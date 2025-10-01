@@ -160,21 +160,28 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
     // STEP 4: Upload directly to Azure Blob Storage
     console.log('☁️ Uploading to Azure Blob Storage...');
     await retryWithBackoff(async () => {
-        // Convert File to Blob without type to prevent browser from auto-setting Content-Type header
-        // (which would cause signature mismatch since backend doesn't include it in SAS signature)
-        const blob = new Blob([file], { type: '' });
-
+        // Upload with proper Content-Type for blob persistence
         const uploadResponse = await fetch(sasUrl, {
             method: 'PUT',
             headers: {
-                'x-ms-blob-type': 'BlockBlob'
+                'x-ms-blob-type': 'BlockBlob',
+                'Content-Type': file.type
             },
-            body: blob
+            body: file
+        });
+
+        // Log detailed response for debugging
+        const responseText = await uploadResponse.text();
+        console.log('☁️ Azure response:', {
+            status: uploadResponse.status,
+            statusText: uploadResponse.statusText,
+            ok: uploadResponse.ok,
+            headers: Object.fromEntries(uploadResponse.headers.entries()),
+            body: responseText
         });
 
         if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            throw new Error(`Azure upload failed: ${uploadResponse.status} ${errorText}`);
+            throw new Error(`Azure upload failed: ${uploadResponse.status} ${responseText}`);
         }
 
         console.log('☁️ Upload to Azure successful');
