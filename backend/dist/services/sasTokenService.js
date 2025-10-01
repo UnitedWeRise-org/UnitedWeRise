@@ -30,8 +30,8 @@ class SASTokenService {
             expiresAt.setMinutes(expiresAt.getMinutes() + this.SAS_EXPIRY_MINUTES);
             // Define SAS permissions (Create + Write only, no Read/Delete)
             const permissions = storage_blob_1.BlobSASPermissions.parse('cw'); // create, write
-            // Generate SAS token with explicit version
-            // Note: contentType is NOT included in SAS params - frontend sets it via x-ms-blob-content-type header
+            // Generate SAS token with explicit version and contentType
+            // CRITICAL: contentType MUST be in signature for Azure to accept Content-Type header
             const sasToken = (0, storage_blob_1.generateBlobSASQueryParameters)({
                 containerName: this.CONTAINER_NAME,
                 blobName: blobName,
@@ -40,6 +40,7 @@ class SASTokenService {
                 expiresOn: expiresAt,
                 protocol: storage_blob_1.SASProtocol.Https,
                 version: '2023-11-03', // Explicit API version
+                contentType: request.mimeType, // Include in signature
             }, sharedKeyCredential).toString();
             // Construct full SAS URL
             const sasUrl = `https://${accountName}.blob.core.windows.net/${this.CONTAINER_NAME}/${blobName}?${sasToken}`;

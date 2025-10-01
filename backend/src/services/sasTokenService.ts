@@ -60,8 +60,8 @@ export class SASTokenService {
       // Define SAS permissions (Create + Write only, no Read/Delete)
       const permissions = BlobSASPermissions.parse('cw'); // create, write
 
-      // Generate SAS token with explicit version
-      // Note: contentType is NOT included in SAS params - frontend sets it via x-ms-blob-content-type header
+      // Generate SAS token with explicit version and contentType
+      // CRITICAL: contentType MUST be in signature for Azure to accept Content-Type header
       const sasToken = generateBlobSASQueryParameters(
         {
           containerName: this.CONTAINER_NAME,
@@ -71,6 +71,7 @@ export class SASTokenService {
           expiresOn: expiresAt,
           protocol: SASProtocol.Https,
           version: '2023-11-03', // Explicit API version
+          contentType: request.mimeType, // Include in signature
         },
         sharedKeyCredential
       ).toString();
