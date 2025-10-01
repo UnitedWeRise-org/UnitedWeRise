@@ -60,7 +60,7 @@ export class SASTokenService {
       // Define SAS permissions (Create + Write only, no Read/Delete)
       const permissions = BlobSASPermissions.parse('cw'); // create, write
 
-      // Generate SAS token
+      // Generate SAS token with explicit version
       const sasToken = generateBlobSASQueryParameters(
         {
           containerName: this.CONTAINER_NAME,
@@ -69,6 +69,7 @@ export class SASTokenService {
           startsOn: new Date(),
           expiresOn: expiresAt,
           protocol: SASProtocol.Https,
+          version: '2023-11-03', // Explicit API version
           contentType: request.mimeType,
         },
         sharedKeyCredential
