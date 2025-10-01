@@ -10,7 +10,7 @@ const router = express.Router();
 // Rate limiting for photo uploads
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 uploads per 15 minutes
+  max: 50, // 50 uploads per 15 minutes (increased for testing/debugging)
   message: {
     error: 'Too many upload attempts',
     message: 'Please wait before uploading more photos'
