@@ -85,33 +85,60 @@ export class SASTokenService {
 
   /**
    * Verify blob exists in Azure Storage
+   * Retries up to 3 times with delays to account for Azure's eventual consistency
    */
   static async verifyBlobExists(blobName: string): Promise<boolean> {
-    try {
-      const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-      if (!connectionString) {
-        throw new Error('Azure Storage connection string not configured');
+    const maxRetries = 3;
+    const retryDelayMs = 1000; // 1 second
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+        if (!connectionString) {
+          console.error('❌ Azure Storage connection string not configured');
+          throw new Error('Azure Storage connection string not configured');
+        }
+
+        console.log(`🔍 Verifying blob exists (attempt ${attempt}/${maxRetries}): ${blobName}`);
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+        const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
+        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+        // Check if blob exists
+        const exists = await blockBlobClient.exists();
+
+        if (exists) {
+          // Get blob properties to verify it's complete
+          const properties = await blockBlobClient.getProperties();
+          console.log(`✅ Blob verified: ${blobName} (${properties.contentLength} bytes)`);
+          return true;
+        }
+
+        console.log(`⚠️ Blob not found on attempt ${attempt}/${maxRetries}`);
+
+        // If not last attempt, wait before retrying
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        }
+
+      } catch (error: any) {
+        console.error(`❌ Error verifying blob (attempt ${attempt}/${maxRetries}):`, {
+          error: error.message,
+          code: error.code,
+          statusCode: error.statusCode,
+          blobName
+        });
+
+        // If not last attempt, wait before retrying
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        }
       }
-
-      const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-      const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
-      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-
-      // Check if blob exists
-      const exists = await blockBlobClient.exists();
-
-      if (exists) {
-        // Get blob properties to verify it's complete
-        const properties = await blockBlobClient.getProperties();
-        console.log(`✅ Blob verified: ${blobName} (${properties.contentLength} bytes)`);
-      }
-
-      return exists;
-
-    } catch (error) {
-      console.error('Failed to verify blob existence:', error);
-      return false;
     }
+
+    console.error(`❌ Blob verification failed after ${maxRetries} attempts: ${blobName}`);
+    return false;
   }
 
   /**
