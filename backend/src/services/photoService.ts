@@ -139,21 +139,25 @@ export class PhotoService {
 
       if (isGif) {
         // For GIFs, resize but keep format and animation
+        // SECURITY: Strip EXIF metadata for privacy
         const processedGif = sharp(file.buffer, { animated: true })
-          .resize(maxWidth, maxHeight, { 
-            fit: 'inside', 
-            withoutEnlargement: true 
+          .rotate() // Auto-rotate based on EXIF orientation
+          .resize(maxWidth, maxHeight, {
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .gif();
-        
+
         imageBuffer = await processedGif.toBuffer();
         metadata = await sharp(imageBuffer).metadata();
       } else {
         // For static images, convert to WebP
+        // SECURITY: EXIF is automatically stripped when converting to WebP
         const processedImage = sharp(file.buffer)
-          .resize(maxWidth, maxHeight, { 
-            fit: 'inside', 
-            withoutEnlargement: true 
+          .rotate() // Auto-rotate based on EXIF orientation
+          .resize(maxWidth, maxHeight, {
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .webp({ quality: options.quality || 85 });
 
@@ -161,10 +165,11 @@ export class PhotoService {
         metadata = await sharp(imageBuffer).metadata();
       }
 
-      // Always create WebP thumbnail
+      // Always create WebP thumbnail (EXIF automatically stripped)
       thumbnailBuffer = await sharp(file.buffer)
-        .resize(preset.thumbnailWidth, preset.thumbnailHeight, { 
-          fit: 'cover' 
+        .rotate() // Auto-rotate based on EXIF orientation
+        .resize(preset.thumbnailWidth, preset.thumbnailHeight, {
+          fit: 'cover'
         })
         .webp({ quality: 75 })
         .toBuffer();
@@ -912,27 +917,68 @@ export class PhotoService {
     try {
       console.log(`📸 Creating photo record from blob: ${options.blobName}`);
 
-      // Download blob to get image dimensions
-      // We need to generate thumbnail and get metadata
+      // Download blob for security validation and processing
       const blobBuffer = await this.downloadBlobBuffer(options.blobUrl);
 
-      // Get image metadata
-      const metadata = await sharp(blobBuffer).metadata();
+      // SECURITY: Validate file is actually an image (magic bytes check)
+      const fileValidation = await this.validateImageFile(blobBuffer, options.mimeType);
+      if (!fileValidation.valid) {
+        console.error(`🚫 File validation failed: ${fileValidation.reason}`);
+        await this.cleanupFailedBlob(options.blobName);
+        throw new Error(fileValidation.reason || 'Invalid image file');
+      }
 
-      // Generate thumbnail
+      // SECURITY: AI Content Moderation (CRITICAL - protects against illegal content)
+      console.log(`🔍 Performing AI content moderation on ${options.blobName}...`);
+      const moderationResult = await this.performContentModeration(
+        { buffer: blobBuffer, mimetype: options.mimeType, size: options.fileSize, originalname: options.blobName } as any,
+        options.photoType,
+        options.userId
+      );
+
+      if (!moderationResult.approved) {
+        console.error(`🚫 Content moderation failed: ${moderationResult.reason}`);
+        await this.cleanupFailedBlob(options.blobName);
+        throw new Error(moderationResult.reason || 'Content moderation failed');
+      }
+      console.log(`✅ Content moderation passed for ${options.blobName}`);
+
+      // SECURITY: Strip EXIF metadata for privacy (GPS coordinates, camera serial numbers, etc.)
+      console.log(`🔒 Stripping EXIF metadata from ${options.blobName}...`);
+      const sanitizedBuffer = await sharp(blobBuffer)
+        .rotate() // Auto-rotate based on EXIF orientation, then strip
+        .withMetadata({
+          exif: {}, // Remove all EXIF data
+          icc: undefined, // Remove color profile if present
+        })
+        .toBuffer();
+
+      // Get image metadata after sanitization
+      const metadata = await sharp(sanitizedBuffer).metadata();
+
+      // Generate thumbnail from sanitized image
       const preset = this.SIZE_PRESETS[options.photoType];
-      const thumbnailBuffer = await sharp(blobBuffer)
+      const thumbnailBuffer = await sharp(sanitizedBuffer)
         .resize(preset.thumbnailWidth, preset.thumbnailHeight, {
           fit: 'cover'
         })
         .webp({ quality: 75 })
         .toBuffer();
 
+      // Re-upload sanitized image to Azure (overwrites original)
+      console.log(`🔒 Re-uploading sanitized image to ${options.blobName}...`);
+      await AzureBlobService.uploadFile(
+        sanitizedBuffer,
+        options.blobName.split('/').pop() || options.blobName,
+        options.mimeType,
+        options.blobName.split('/')[0] // Use the folder from blobName
+      );
+
       // Upload thumbnail to Azure Blob Storage
       const thumbnailFilename = options.blobName.replace(/\.[^.]+$/, '-thumb.webp');
       const thumbnailUrl = await AzureBlobService.uploadFile(
         thumbnailBuffer,
-        thumbnailFilename,
+        thumbnailFilename.split('/').pop() || thumbnailFilename,
         'image/webp',
         'thumbnails'
       );
@@ -950,7 +996,7 @@ export class PhotoService {
           gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
           caption: options.caption ? options.caption.substring(0, 200) : null,
           originalSize: options.fileSize,
-          compressedSize: options.fileSize, // For direct upload, these are the same
+          compressedSize: sanitizedBuffer.length, // Size after sanitization
           width: metadata.width || 0,
           height: metadata.height || 0,
           mimeType: options.mimeType,
@@ -963,7 +1009,7 @@ export class PhotoService {
         await this.updateProfileAvatar(options.userId, photo.url, options.candidateId);
       }
 
-      console.log(`✅ Photo record created from blob: ${photo.id}`);
+      console.log(`✅ Photo record created from blob with full security validation: ${photo.id}`);
 
       return photo;
 
@@ -987,6 +1033,81 @@ export class PhotoService {
     } catch (error) {
       console.error('Failed to download blob:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Validate image file using magic bytes (file signature)
+   * Prevents upload of malware disguised as images
+   */
+  private static async validateImageFile(
+    buffer: Buffer,
+    declaredMimeType: string
+  ): Promise<{ valid: boolean; reason?: string }> {
+    try {
+      // Check magic bytes (file signature)
+      const magicBytes = buffer.slice(0, 12);
+
+      // JPEG: FF D8 FF
+      if (magicBytes[0] === 0xFF && magicBytes[1] === 0xD8 && magicBytes[2] === 0xFF) {
+        if (!declaredMimeType.includes('jpeg') && !declaredMimeType.includes('jpg')) {
+          return { valid: false, reason: 'File is JPEG but declared as ' + declaredMimeType };
+        }
+        return { valid: true };
+      }
+
+      // PNG: 89 50 4E 47 0D 0A 1A 0A
+      if (magicBytes[0] === 0x89 && magicBytes[1] === 0x50 &&
+          magicBytes[2] === 0x4E && magicBytes[3] === 0x47) {
+        if (!declaredMimeType.includes('png')) {
+          return { valid: false, reason: 'File is PNG but declared as ' + declaredMimeType };
+        }
+        return { valid: true };
+      }
+
+      // GIF: 47 49 46 38 (GIF8)
+      if (magicBytes[0] === 0x47 && magicBytes[1] === 0x49 &&
+          magicBytes[2] === 0x46 && magicBytes[3] === 0x38) {
+        if (!declaredMimeType.includes('gif')) {
+          return { valid: false, reason: 'File is GIF but declared as ' + declaredMimeType };
+        }
+        return { valid: true };
+      }
+
+      // WebP: 52 49 46 46 ... 57 45 42 50 (RIFF...WEBP)
+      if (magicBytes[0] === 0x52 && magicBytes[1] === 0x49 &&
+          magicBytes[2] === 0x46 && magicBytes[3] === 0x46 &&
+          magicBytes[8] === 0x57 && magicBytes[9] === 0x45 &&
+          magicBytes[10] === 0x42 && magicBytes[11] === 0x50) {
+        if (!declaredMimeType.includes('webp')) {
+          return { valid: false, reason: 'File is WebP but declared as ' + declaredMimeType };
+        }
+        return { valid: true };
+      }
+
+      // If none of the magic bytes match, file is not a valid image
+      return {
+        valid: false,
+        reason: 'File is not a valid image (magic bytes check failed)'
+      };
+
+    } catch (error) {
+      console.error('File validation error:', error);
+      return { valid: false, reason: 'File validation failed' };
+    }
+  }
+
+  /**
+   * Cleanup blob from Azure Storage if upload validation fails
+   */
+  private static async cleanupFailedBlob(blobName: string): Promise<void> {
+    try {
+      console.log(`🗑️ Cleaning up failed upload: ${blobName}`);
+      const { SASTokenService } = await import('./sasTokenService');
+      await SASTokenService.cleanupFailedUpload(blobName);
+    } catch (error) {
+      console.error('Failed to cleanup blob (non-critical):', error);
+      // Non-critical - don't throw
     }
   }
 }

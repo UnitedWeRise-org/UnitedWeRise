@@ -136,6 +136,15 @@ export declare class PhotoService {
      * Download blob buffer for processing
      */
     private static downloadBlobBuffer;
+    /**
+     * Validate image file using magic bytes (file signature)
+     * Prevents upload of malware disguised as images
+     */
+    private static validateImageFile;
+    /**
+     * Cleanup blob from Azure Storage if upload validation fails
+     */
+    private static cleanupFailedBlob;
 }
 export {};
 //# sourceMappingURL=photoService.d.ts.map
