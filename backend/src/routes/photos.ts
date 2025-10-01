@@ -284,16 +284,7 @@ router.post('/upload/confirm', uploadLimiter, requireAuth, async (req: AuthReque
 
     console.log(`📸 Confirming upload for user ${user!.username}: ${uploadId}`);
 
-    // Verify blob exists in Azure Storage
-    const blobExists = await SASTokenService.verifyBlobExists(blobName);
-    if (!blobExists) {
-      return res.status(404).json({
-        error: 'Upload not found',
-        message: 'Blob not found in storage. Upload may have failed or expired.'
-      });
-    }
-
-    // Get blob metadata
+    // Get blob metadata (size, contentType, URL)
     const blobMetadata = await SASTokenService.getBlobMetadata(blobName);
     if (!blobMetadata) {
       return res.status(500).json({
