@@ -162,7 +162,7 @@ async function uploadSinglePhoto(file, photoType, purpose, caption) {
             method: 'PUT',
             headers: {
                 'x-ms-blob-type': 'BlockBlob',
-                'x-ms-blob-content-type': file.type
+                'Content-Type': file.type
             },
             body: file
         });
