@@ -68,7 +68,21 @@ export class SASTokenService {
         protocol: SASProtocol.Https,
       });
 
+      // DIAGNOSTIC: Parse and log SAS URL structure
+      const url = new URL(sasUrl);
+      const params = new URLSearchParams(url.search);
       console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
+      console.log(`🔍 SAS URL DIAGNOSTIC:`);
+      console.log(`   Base URL: ${url.origin}${url.pathname}`);
+      console.log(`   Query Parameters:`);
+      params.forEach((value, key) => {
+        if (key === 'sig') {
+          console.log(`     ${key}: [REDACTED]`);
+        } else {
+          console.log(`     ${key}: ${value}`);
+        }
+      });
+      console.log(`   Full URL (sig redacted): ${sasUrl.replace(/sig=[^&]+/, 'sig=[REDACTED]')}`);
 
       return {
         blobName,

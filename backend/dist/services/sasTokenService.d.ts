@@ -22,6 +22,7 @@ export declare class SASTokenService {
     static generateUploadToken(request: SASTokenRequest): Promise<SASTokenResponse>;
     /**
      * Verify blob exists in Azure Storage
+     * Retries up to 3 times with delays to account for Azure's eventual consistency
      */
     static verifyBlobExists(blobName: string): Promise<boolean>;
     /**
