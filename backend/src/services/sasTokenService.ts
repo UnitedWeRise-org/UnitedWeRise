@@ -88,8 +88,8 @@ export class SASTokenService {
    * Retries up to 3 times with delays to account for Azure's eventual consistency
    */
   static async verifyBlobExists(blobName: string): Promise<boolean> {
-    const maxRetries = 3;
-    const retryDelayMs = 1000; // 1 second
+    const maxRetries = 5;
+    const retryDelayMs = 2000; // 2 seconds
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
