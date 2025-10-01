@@ -217,7 +217,7 @@ export class SASTokenService {
       VERIFICATION: 'verification',
       EVENT: 'events',
       GALLERY: 'gallery',
-      POST_MEDIA: 'photos' // Use proven working folder structure
+      POST_MEDIA: 'posts' // Fixed: was 'photos' which duplicated container name
     };
     return folderMap[photoType] || 'photos';
   }

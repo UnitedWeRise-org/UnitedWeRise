@@ -11,10 +11,10 @@ class SASTokenService {
     static async generateUploadToken(request) {
         try {
             console.log(`🔐 Generating SAS token for user ${request.userId} - ${request.photoType}`);
-            // Validate Azure Storage credentials
+            // Use connection string approach - this is the official method
+            const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
             const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-            const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-            if (!accountName || !accountKey) {
+            if (!connectionString || !accountName) {
                 throw new Error('Azure Storage credentials not configured');
             }
             // Generate unique blob name with folder structure
@@ -23,27 +23,22 @@ class SASTokenService {
             const timestamp = Date.now();
             const folder = this.getFolderForPhotoType(request.photoType);
             const blobName = `${folder}/${uploadId}-${timestamp}${fileExtension}`;
-            // Create shared key credential
-            const sharedKeyCredential = new storage_blob_1.StorageSharedKeyCredential(accountName, accountKey);
             // Set SAS token expiration
             const expiresAt = new Date();
             expiresAt.setMinutes(expiresAt.getMinutes() + this.SAS_EXPIRY_MINUTES);
-            // Define SAS permissions (Create + Write only, no Read/Delete)
-            const permissions = storage_blob_1.BlobSASPermissions.parse('cw'); // create, write
-            // Generate SAS token with explicit version and contentType
-            // CRITICAL: contentType MUST be in signature for Azure to accept Content-Type header
-            const sasToken = (0, storage_blob_1.generateBlobSASQueryParameters)({
-                containerName: this.CONTAINER_NAME,
-                blobName: blobName,
+            // Use BlobServiceClient with connection string - this is the OFFICIAL SDK method
+            const blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
+            const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
+            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            // Define SAS permissions
+            const permissions = storage_blob_1.BlobSASPermissions.parse('cw'); // create, write only
+            // Generate SAS URL using SDK (this handles ALL signature details correctly)
+            const sasUrl = await blockBlobClient.generateSasUrl({
                 permissions: permissions,
                 startsOn: new Date(),
                 expiresOn: expiresAt,
                 protocol: storage_blob_1.SASProtocol.Https,
-                version: '2023-11-03', // Explicit API version
-                contentType: request.mimeType, // Include in signature
-            }, sharedKeyCredential).toString();
-            // Construct full SAS URL
-            const sasUrl = `https://${accountName}.blob.core.windows.net/${this.CONTAINER_NAME}/${blobName}?${sasToken}`;
+            });
             console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
             return {
                 blobName,
@@ -59,29 +54,51 @@ class SASTokenService {
     }
     /**
      * Verify blob exists in Azure Storage
+     * Retries up to 3 times with delays to account for Azure's eventual consistency
      */
     static async verifyBlobExists(blobName) {
-        try {
-            const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-            if (!connectionString) {
-                throw new Error('Azure Storage connection string not configured');
+        const maxRetries = 3;
+        const retryDelayMs = 1000; // 1 second
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+                if (!connectionString) {
+                    console.error('❌ Azure Storage connection string not configured');
+                    throw new Error('Azure Storage connection string not configured');
+                }
+                console.log(`🔍 Verifying blob exists (attempt ${attempt}/${maxRetries}): ${blobName}`);
+                const blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
+                const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
+                const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+                // Check if blob exists
+                const exists = await blockBlobClient.exists();
+                if (exists) {
+                    // Get blob properties to verify it's complete
+                    const properties = await blockBlobClient.getProperties();
+                    console.log(`✅ Blob verified: ${blobName} (${properties.contentLength} bytes)`);
+                    return true;
+                }
+                console.log(`⚠️ Blob not found on attempt ${attempt}/${maxRetries}`);
+                // If not last attempt, wait before retrying
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                }
             }
-            const blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
-            const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
-            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-            // Check if blob exists
-            const exists = await blockBlobClient.exists();
-            if (exists) {
-                // Get blob properties to verify it's complete
-                const properties = await blockBlobClient.getProperties();
-                console.log(`✅ Blob verified: ${blobName} (${properties.contentLength} bytes)`);
+            catch (error) {
+                console.error(`❌ Error verifying blob (attempt ${attempt}/${maxRetries}):`, {
+                    error: error.message,
+                    code: error.code,
+                    statusCode: error.statusCode,
+                    blobName
+                });
+                // If not last attempt, wait before retrying
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                }
             }
-            return exists;
         }
-        catch (error) {
-            console.error('Failed to verify blob existence:', error);
-            return false;
-        }
+        console.error(`❌ Blob verification failed after ${maxRetries} attempts: ${blobName}`);
+        return false;
     }
     /**
      * Get blob metadata without downloading
@@ -146,7 +163,7 @@ class SASTokenService {
             VERIFICATION: 'verification',
             EVENT: 'events',
             GALLERY: 'gallery',
-            POST_MEDIA: 'posts'
+            POST_MEDIA: 'posts' // Fixed: was 'photos' which duplicated container name
         };
         return folderMap[photoType] || 'photos';
     }
