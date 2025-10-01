@@ -60,23 +60,21 @@ export class SASTokenService {
       // Define SAS permissions (Create + Write only, no Read/Delete)
       const permissions = BlobSASPermissions.parse('cw'); // create, write
 
-      // Generate SAS token WITHOUT contentType
-      // Content-type will be set in backend after upload confirmation
-      const sasToken = generateBlobSASQueryParameters(
-        {
-          containerName: this.CONTAINER_NAME,
-          blobName: blobName,
-          permissions: permissions,
-          startsOn: new Date(),
-          expiresOn: expiresAt,
-          protocol: SASProtocol.Https,
-          version: '2023-11-03', // Explicit API version
-        },
+      // Use BlockBlobClient to generate SAS URL (handles signature correctly)
+      const blobServiceClient = new BlobServiceClient(
+        `https://${accountName}.blob.core.windows.net`,
         sharedKeyCredential
-      ).toString();
+      );
+      const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-      // Construct full SAS URL
-      const sasUrl = `https://${accountName}.blob.core.windows.net/${this.CONTAINER_NAME}/${blobName}?${sasToken}`;
+      // Generate SAS URL with create+write permissions
+      const sasUrl = await blockBlobClient.generateSasUrl({
+        permissions: permissions,
+        startsOn: new Date(),
+        expiresOn: expiresAt,
+        protocol: SASProtocol.Https,
+      });
 
       console.log(`✅ SAS token generated: ${blobName} (expires: ${expiresAt.toISOString()})`);
 
