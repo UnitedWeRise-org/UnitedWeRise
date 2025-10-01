@@ -163,8 +163,8 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
         const uploadResponse = await fetch(sasUrl, {
             method: 'PUT',
             headers: {
-                'x-ms-blob-type': 'BlockBlob',
-                'Content-Type': file.type
+                'x-ms-blob-type': 'BlockBlob'
+                // Content-Type is set via SAS token rsct parameter, not header
             },
             body: file
         });
