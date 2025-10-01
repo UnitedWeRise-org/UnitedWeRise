@@ -6,6 +6,7 @@
  */
 
 import { isDevelopment, getAdminDashboardUrl } from '../utils/environment.js';
+import { uploadPhotoDirectToBlob } from '../modules/features/feed/photo-upload-direct.js';
 
 class Profile {
     constructor() {
@@ -1168,17 +1169,9 @@ class Profile {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('photos', file); // Backend expects 'photos' array
-        formData.append('photoType', 'AVATAR'); // Must match PhotoType enum
-        formData.append('purpose', 'PERSONAL'); // Required field
-
         try {
-            const response = await window.apiCall('/photos/upload', {
-                method: 'POST',
-                body: formData,
-                skipContentType: true // Let browser set multipart boundary
-            });
+            // Use secure direct-to-blob upload with AI moderation, EXIF stripping, and magic byte validation
+            const response = await uploadPhotoDirectToBlob(file, 'AVATAR', 'PERSONAL');
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 const uploadedPhoto = response.data.photos[0];
@@ -1193,7 +1186,7 @@ class Profile {
                     this.refreshProfile('mainContent');
                 }, 500);
             } else {
-                const errorMsg = response.data?.message || 'Failed to upload profile picture';
+                const errorMsg = response.data?.error || response.error || 'Failed to upload profile picture';
                 alert(errorMsg);
             }
         } catch (error) {
@@ -2056,36 +2049,24 @@ class Profile {
         const gallery = prompt('Enter gallery name (or leave empty for "My Photos"):') || 'My Photos';
         const caption = prompt('Add a caption (optional, max 200 characters):') || '';
 
-        const formData = new FormData();
-        files.forEach(file => formData.append('photos', file));
-        formData.append('photoType', 'GALLERY');
-        formData.append('purpose', 'PERSONAL');
-        formData.append('gallery', gallery);
-        if (caption.trim()) {
-            formData.append('caption', caption.substring(0, 200));
-        }
-
         try {
-            const response = await window.apiCall('/photos/upload', {
-                method: 'POST',
-                body: formData,
-                skipContentType: true // Let browser set multipart boundary
-            });
+            // Use secure direct-to-blob upload with AI moderation, EXIF stripping, and magic byte validation
+            const response = await uploadPhotoDirectToBlob(files, 'GALLERY', 'PERSONAL', caption, gallery);
 
             if (response.ok) {
                 alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
-                
+
                 // Force fresh gallery data by bypassing cache
                 this.loadPhotoGalleries(true); // Reload galleries with fresh data
             } else {
-                const errorMsg = response.data?.message || 'Failed to upload photos';
+                const errorMsg = response.data?.error || response.error || 'Failed to upload photos';
                 alert(`Upload failed: ${errorMsg}`);
             }
         } catch (error) {
             adminDebugError('Bulk upload error:', error);
             alert('Error uploading photos. Please try again.');
         }
-        
+
         // Clear input
         input.value = '';
     }

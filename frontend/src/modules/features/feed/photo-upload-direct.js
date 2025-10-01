@@ -26,10 +26,11 @@ import {
  * @param {string} photoType - Type: 'POST_MEDIA', 'AVATAR', 'GALLERY', etc.
  * @param {string} purpose - Purpose: 'PERSONAL', 'CIVIC', etc.
  * @param {string} caption - Optional caption for photos
+ * @param {string} gallery - Optional gallery name for organization
  * @returns {Promise<Object>} Upload response in same format as old uploadMediaFiles()
  */
-export async function uploadPhotoDirectToBlob(files, photoType, purpose = 'PERSONAL', caption = '') {
-    console.log('📸 uploadPhotoDirectToBlob called with:', { files, photoType, purpose });
+export async function uploadPhotoDirectToBlob(files, photoType, purpose = 'PERSONAL', caption = '', gallery = null) {
+    console.log('📸 uploadPhotoDirectToBlob called with:', { files, photoType, purpose, gallery });
 
     try {
         // Normalize to array
@@ -56,7 +57,7 @@ export async function uploadPhotoDirectToBlob(files, photoType, purpose = 'PERSO
             console.log(`📤 Uploading file ${i + 1}/${fileArray.length}: ${file.name}`);
 
             try {
-                const photo = await uploadSinglePhoto(file, photoType, purpose, caption);
+                const photo = await uploadSinglePhoto(file, photoType, purpose, caption, gallery);
                 uploadedPhotos.push(photo);
                 console.log(`✅ File ${i + 1} uploaded successfully:`, photo.id);
             } catch (error) {
@@ -113,9 +114,10 @@ export async function uploadPhotoDirectToBlob(files, photoType, purpose = 'PERSO
  * @param {string} photoType - Photo type enum value
  * @param {string} purpose - Purpose enum value
  * @param {string} caption - Optional caption
+ * @param {string} gallery - Optional gallery name
  * @returns {Promise<Object>} Photo record from backend
  */
-async function uploadSinglePhoto(file, photoType, purpose, caption) {
+async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = null) {
     console.log('📸 uploadSinglePhoto:', file.name);
 
     // STEP 1: Get image dimensions
@@ -185,7 +187,8 @@ async function uploadSinglePhoto(file, photoType, purpose, caption) {
                 uploadId: uploadId,
                 photoType: photoType,
                 purpose: purpose,
-                caption: caption ? caption.substring(0, 200) : undefined
+                caption: caption ? caption.substring(0, 200) : undefined,
+                gallery: gallery || undefined
             })
         });
 
