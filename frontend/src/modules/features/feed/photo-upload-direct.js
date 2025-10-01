@@ -15,7 +15,6 @@ import { apiClient } from '../../core/api/client.js';
 import {
     getImageDimensions,
     calculateFileHash,
-    retryWithBackoff,
     validateImageFile
 } from '../../../utils/photo-upload-utils.js';
 
@@ -132,91 +131,89 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
 
     // STEP 3: Request SAS token from backend
     console.log('🎫 Requesting SAS token from backend...');
-    const sasResponse = await retryWithBackoff(async () => {
-        const response = await apiClient.call('/photos/upload/sas-token', {
-            method: 'POST',
-            body: JSON.stringify({
-                filename: file.name,
-                fileSize: file.size,
-                mimeType: file.type,
-                photoType: photoType,
-                purpose: purpose
-            })
-        });
-
-        // Check if we got valid data (backend returns SAS token directly)
-        if (!response || !response.sasUrl) {
-            const errorMsg = response?.error || response?.message || 'Failed to get upload token';
-            console.error('❌ SAS token request failed:', errorMsg);
-            throw new Error(errorMsg);
-        }
-
-        return response;
+    const response = await apiClient.call('/photos/upload/sas-token', {
+        method: 'POST',
+        body: JSON.stringify({
+            filename: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            photoType: photoType,
+            purpose: purpose
+        })
     });
+
+    // Check if we got valid data (backend returns SAS token directly)
+    if (!response || !response.sasUrl) {
+        const errorMsg = response?.error || response?.message || 'Failed to get upload token';
+        console.error('❌ SAS token request failed:', errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    const sasResponse = response;
 
     const { sasUrl, blobName, uploadId } = sasResponse;
     console.log('🎫 Got SAS token. Blob name:', blobName, 'Upload ID:', uploadId);
 
     // STEP 4: Upload directly to Azure Blob Storage
     console.log('☁️ Uploading to Azure Blob Storage...');
-    await retryWithBackoff(async () => {
-        // Upload without any content-type headers to avoid SAS signature mismatch
-        // Azure will auto-detect content type from file data
-        const uploadResponse = await fetch(sasUrl, {
-            method: 'PUT',
-            headers: {
-                'x-ms-blob-type': 'BlockBlob'
-            },
-            body: file
-        });
+    // Extract blob URL without SAS token for logging
+    const blobUrlOnly = sasUrl.split('?')[0];
+    console.log('☁️ Target blob URL:', blobUrlOnly);
 
-        // Log detailed response for debugging
-        const responseText = await uploadResponse.text();
-        console.log('☁️ Azure response:', {
-            status: uploadResponse.status,
-            statusText: uploadResponse.statusText,
-            ok: uploadResponse.ok,
-            headers: Object.fromEntries(uploadResponse.headers.entries()),
-            body: responseText
-        });
-
-        if (!uploadResponse.ok) {
-            throw new Error(`Azure upload failed: ${uploadResponse.status} ${responseText}`);
-        }
-
-        console.log('☁️ Upload to Azure successful');
+    // Upload without any content-type headers to avoid SAS signature mismatch
+    // Azure will auto-detect content type from file data
+    const uploadResponse = await fetch(sasUrl, {
+        method: 'PUT',
+        headers: {
+            'x-ms-blob-type': 'BlockBlob'
+        },
+        body: file
     });
+
+    // Log detailed response for debugging
+    const responseText = await uploadResponse.text();
+    console.log('☁️ Azure response:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        ok: uploadResponse.ok,
+        headers: Object.fromEntries(uploadResponse.headers.entries()),
+        body: responseText
+    });
+
+    if (!uploadResponse.ok) {
+        throw new Error(`Azure upload failed: ${uploadResponse.status} ${responseText}`);
+    }
+
+    console.log('☁️ Upload to Azure successful');
 
     // STEP 5: Confirm upload with backend (AI moderation happens here)
     console.log('✅ Confirming upload with backend (AI moderation)...');
-    const confirmResponse = await retryWithBackoff(async () => {
-        const response = await apiClient.call('/photos/upload/confirm', {
-            method: 'POST',
-            body: JSON.stringify({
-                blobName: blobName,
-                uploadId: uploadId,
-                photoType: photoType,
-                purpose: purpose,
-                caption: caption ? caption.substring(0, 200) : undefined,
-                gallery: gallery || undefined
-            })
-        });
+    const response2 = await apiClient.call('/photos/upload/confirm', {
+        method: 'POST',
+        body: JSON.stringify({
+            blobName: blobName,
+            uploadId: uploadId,
+            photoType: photoType,
+            purpose: purpose,
+            caption: caption ? caption.substring(0, 200) : undefined,
+            gallery: gallery || undefined
+        })
+    });
 
-        // Check if we got valid photo data (backend returns photo directly in response)
-        if (!response || !response.photo) {
-            const errorMsg = response?.error || response?.message || 'Upload confirmation failed';
+    // Check if we got valid photo data (backend returns photo directly in response)
+    if (!response2 || !response2.photo) {
+        const errorMsg = response2?.error || response2?.message || 'Upload confirmation failed';
 
-            // If moderation failed, throw specific error
-            if (errorMsg.includes('moderation') || errorMsg.includes('policy')) {
-                throw new Error(`Content policy violation: ${errorMsg}`);
-            }
-
-            console.error('❌ Upload confirmation failed:', errorMsg);
-            throw new Error(errorMsg);
+        // If moderation failed, throw specific error
+        if (errorMsg.includes('moderation') || errorMsg.includes('policy')) {
+            throw new Error(`Content policy violation: ${errorMsg}`);
         }
 
-        return response;
-    });
+        console.error('❌ Upload confirmation failed:', errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    const confirmResponse = response2;
 
     const photoRecord = confirmResponse.photo;
     console.log('✅ Upload confirmed. Photo record:', photoRecord);
