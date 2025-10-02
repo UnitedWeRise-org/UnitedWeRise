@@ -25,7 +25,7 @@ class ImageContentModerationService {
             this.client = new openai_1.default({
                 apiKey: apiKey,
                 baseURL: `${endpoint.replace(/\/+$/, '')}/openai/deployments`,
-                defaultQuery: { 'api-version': '2024-02-15-preview' },
+                defaultQuery: { 'api-version': '2024-10-01-preview' },
                 defaultHeaders: {
                     'api-key': apiKey,
                 },
