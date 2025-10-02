@@ -30,8 +30,8 @@ class SASTokenService {
             const blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
             const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
             const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-            // Define SAS permissions
-            const permissions = storage_blob_1.BlobSASPermissions.parse('cw'); // create, write only
+            // Define SAS permissions - include read to ensure blob can be verified after upload
+            const permissions = storage_blob_1.BlobSASPermissions.parse('rcw'); // read, create, write
             // Generate SAS URL using SDK (this handles ALL signature details correctly)
             const sasUrl = await blockBlobClient.generateSasUrl({
                 permissions: permissions,
