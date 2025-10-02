@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@azure/openai": "^2.0.0",
-    "@azure/storage-blob": "^12.28.0",
+    "@azure/storage-blob": "^12.24.0",
     "@faker-js/faker": "^9.9.0",
     "@huggingface/inference": "^4.6.1",
     "@prisma/client": "^6.13.0",
