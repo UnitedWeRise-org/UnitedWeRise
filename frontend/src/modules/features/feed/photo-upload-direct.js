@@ -167,12 +167,13 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
     console.log('   Has blockid parameter?', url.searchParams.has('blockid'));
     console.log('   All parameters:', url.searchParams.toString());
 
-    // Upload without any content-type headers to avoid SAS signature mismatch
-    // Azure will auto-detect content type from file data
+    // Upload with required headers for Azure Blob Storage PUT Blob operation
     const uploadResponse = await fetch(sasUrl, {
         method: 'PUT',
         headers: {
-            'x-ms-blob-type': 'BlockBlob'
+            'x-ms-blob-type': 'BlockBlob',
+            'Content-Type': file.type,
+            'Content-Length': file.size.toString()
         },
         body: file
     });
