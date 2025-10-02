@@ -253,6 +253,171 @@ export class PhotoService {
   }
 
   /**
+   * Process and upload photo (backend-first architecture)
+   * Receives file buffer from multer, processes BEFORE any blob upload
+   */
+  static async processAndUploadPhoto(options: {
+    fileBuffer: Buffer;
+    filename: string;
+    mimeType: string;
+    fileSize: number;
+    userId: string;
+    photoType: PhotoType;
+    purpose: PhotoPurpose;
+    caption?: string;
+    gallery?: string;
+    candidateId?: string;
+  }): Promise<{
+    id: string;
+    url: string;
+    thumbnailUrl: string;
+    width: number;
+    height: number;
+  }> {
+    try {
+      console.log(`📸 Processing photo upload for user ${options.userId} (${options.photoType})`);
+
+      // STEP 1: Validate user permissions
+      await this.validateUserPermissions(options.userId, options.candidateId);
+
+      // STEP 2: Check account storage limit
+      await this.validateStorageLimit(options.userId, options.fileSize);
+
+      // STEP 3: Validate image file (magic bytes check)
+      const fileValidation = await this.validateImageFile(options.fileBuffer, options.mimeType);
+      if (!fileValidation.valid) {
+        throw new Error(fileValidation.reason || 'Invalid image file');
+      }
+
+      // STEP 4: AI content moderation
+      const moderationResult = await this.performContentModeration(
+        {
+          buffer: options.fileBuffer,
+          mimetype: options.mimeType,
+          size: options.fileSize,
+          originalname: options.filename
+        } as any,
+        options.photoType,
+        options.userId
+      );
+
+      if (!moderationResult.approved) {
+        throw new Error(moderationResult.reason || 'Content moderation failed');
+      }
+
+      // STEP 5: Strip EXIF metadata and process image
+      const fileExtension = path.extname(options.filename);
+      const baseFilename = `${uuidv4()}-${options.photoType.toLowerCase()}`;
+      const isGif = options.mimeType === 'image/gif';
+
+      const filename = isGif ? `${baseFilename}.gif` : `${baseFilename}.webp`;
+      const thumbnailFilename = `${baseFilename}-thumb.webp`;
+
+      const preset = this.SIZE_PRESETS[options.photoType];
+      let imageBuffer: Buffer;
+      let metadata: sharp.Metadata;
+
+      if (isGif) {
+        // For GIFs, resize but keep format and animation
+        const processedGif = sharp(options.fileBuffer, { animated: true })
+          .rotate() // Auto-rotate based on EXIF, then strips EXIF
+          .resize(preset.width, preset.height, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .gif();
+
+        imageBuffer = await processedGif.toBuffer();
+        metadata = await sharp(imageBuffer).metadata();
+      } else {
+        // For static images, convert to WebP (automatically strips EXIF)
+        const processedImage = sharp(options.fileBuffer)
+          .rotate() // Auto-rotate based on EXIF
+          .resize(preset.width, preset.height, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({ quality: 85 });
+
+        imageBuffer = await processedImage.toBuffer();
+        metadata = await sharp(imageBuffer).metadata();
+      }
+
+      // STEP 6: Generate thumbnail
+      const thumbnailBuffer = await sharp(options.fileBuffer)
+        .rotate()
+        .resize(preset.thumbnailWidth, preset.thumbnailHeight, {
+          fit: 'cover'
+        })
+        .webp({ quality: 75 })
+        .toBuffer();
+
+      // STEP 7: Upload sanitized image to blob ONCE
+      let photoUrl: string;
+      let thumbnailUrl: string;
+
+      // Upload main photo
+      photoUrl = await AzureBlobService.uploadFile(
+        imageBuffer,
+        filename,
+        isGif ? 'image/gif' : 'image/webp',
+        'photos'
+      );
+
+      // Upload thumbnail
+      thumbnailUrl = await AzureBlobService.uploadFile(
+        thumbnailBuffer,
+        thumbnailFilename,
+        'image/webp',
+        'thumbnails'
+      );
+
+      console.log(`✅ Photo uploaded to Azure Blob Storage: ${photoUrl}`);
+
+      // STEP 8: Create database record
+      const photo = await prisma.photo.create({
+        data: {
+          userId: options.userId,
+          candidateId: options.candidateId,
+          filename: options.filename,
+          url: photoUrl,
+          thumbnailUrl: thumbnailUrl,
+          photoType: options.photoType,
+          purpose: options.purpose,
+          gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
+          caption: options.caption,
+          originalSize: options.fileSize,
+          compressedSize: imageBuffer.length,
+          width: metadata.width || 0,
+          height: metadata.height || 0,
+          mimeType: isGif ? 'image/gif' : 'image/webp',
+          isApproved: this.shouldAutoApprove(options.photoType, options.userId)
+        }
+      });
+
+      // Update user/candidate avatar if this is an avatar photo
+      if (options.photoType === 'AVATAR') {
+        await this.updateProfileAvatar(options.userId, photo.url, options.candidateId);
+      }
+
+      console.log(`✅ Photo upload complete: ${photo.id}`);
+
+      // STEP 9: Return photo record
+      return {
+        id: photo.id,
+        url: photo.url,
+        thumbnailUrl: photo.thumbnailUrl!,
+        width: photo.width,
+        height: photo.height
+      };
+
+    } catch (error) {
+      console.error('Photo processing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Upload multiple photos
    */
   static async uploadMultiplePhotos(
