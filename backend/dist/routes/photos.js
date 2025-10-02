@@ -48,12 +48,17 @@ const uploadLimiter = (0, express_rate_limit_1.default)({
 });
 // 🔍 LAYER 5 DEBUG: Multer middleware wrapper with detailed logging
 const multerDebugWrapper = (req, res, next) => {
+    // EMERGENCY: Force stderr
+    process.stderr.write(`🚨 EMERGENCY STDERR: Multer wrapper entered at ${new Date().toISOString()}\n`);
     console.log('🔍 LAYER 5 | Multer Middleware | Starting file processing:', {
         contentType: req.headers['content-type'],
         contentLength: req.headers['content-length']
     });
     upload.single('file')(req, res, (err) => {
         if (err) {
+            // EMERGENCY: Force stderr for Multer errors
+            process.stderr.write(`🚨 EMERGENCY STDERR: MULTER ERROR at ${new Date().toISOString()}\n`);
+            process.stderr.write(`🚨 Multer error: ${err.message}\n`);
             console.log('❌ LAYER 5 | Multer Middleware | ERROR:', {
                 name: err.name,
                 message: err.message,
@@ -62,6 +67,8 @@ const multerDebugWrapper = (req, res, next) => {
             });
             return next(err);
         }
+        // EMERGENCY: Force stderr for success
+        process.stderr.write(`🚨 EMERGENCY STDERR: Multer SUCCESS - file parsed\n`);
         console.log('🔍 LAYER 5 | Multer Middleware | File parsed successfully:', {
             hasFile: !!req.file,
             fileName: req.file?.originalname,
@@ -306,6 +313,9 @@ router.post('/upload/sas-token', uploadLimiter, auth_1.requireAuth, async (req, 
  */
 router.post('/upload', uploadLimiter, auth_1.requireAuth, multerDebugWrapper, async (req, res) => {
     try {
+        // EMERGENCY: Force stderr output to bypass buffering
+        process.stderr.write(`🚨 EMERGENCY STDERR: Upload handler reached at ${new Date().toISOString()}\n`);
+        process.stderr.write(`🚨 Has file: ${!!req.file}, User: ${req.user?.id}\n`);
         console.log('🔍 LAYER 6 | Upload Handler | Request received in handler:', {
             userId: req.user?.id,
             hasFile: !!req.file,
@@ -382,6 +392,10 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, multerDebugWrapper, as
         });
     }
     catch (error) {
+        // EMERGENCY: Force stderr output
+        process.stderr.write(`🚨 EMERGENCY STDERR: CATCH BLOCK HIT at ${new Date().toISOString()}\n`);
+        process.stderr.write(`🚨 Error: ${error.message}\n`);
+        process.stderr.write(`🚨 Stack: ${error.stack}\n`);
         console.error('========== PHOTO UPLOAD ERROR ==========');
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
