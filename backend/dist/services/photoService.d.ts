@@ -135,6 +135,7 @@ export declare class PhotoService {
     /**
      * Download blob buffer for processing using authenticated connection
      * Uses Azure SDK with connection string to bypass public access requirements
+     * Includes retry logic for Azure eventual consistency
      */
     private static downloadBlobBuffer;
     /**
