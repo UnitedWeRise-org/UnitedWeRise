@@ -9,7 +9,25 @@ const photoService_1 = require("../services/photoService");
 const sasTokenService_1 = require("../services/sasTokenService");
 const client_1 = require("@prisma/client");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const multer_1 = __importDefault(require("multer"));
 const router = express_1.default.Router();
+// Configure multer for backend-first photo upload
+const upload = (0, multer_1.default)({
+    storage: multer_1.default.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+        files: 1
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'));
+        }
+    }
+});
 // Rate limiting for photo uploads
 const uploadLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -20,11 +38,15 @@ const uploadLimiter = (0, express_rate_limit_1.default)({
     }
 });
 /**
+ * DEPRECATED: Use POST /api/photos/upload instead
+ * This endpoint will be removed after 2025-11-01
+ * Kept temporarily for backward compatibility during migration
+ *
  * @swagger
  * /api/photos/upload/sas-token:
  *   post:
  *     tags: [Photos]
- *     summary: Generate SAS token for direct-to-blob upload
+ *     summary: Generate SAS token for direct-to-blob upload (DEPRECATED)
  *     description: Get a time-limited SAS token to upload photos directly to Azure Blob Storage
  *     security:
  *       - bearerAuth: []
@@ -172,10 +194,200 @@ router.post('/upload/sas-token', uploadLimiter, auth_1.requireAuth, async (req, 
 });
 /**
  * @swagger
+ * /api/photos/upload:
+ *   post:
+ *     tags: [Photos]
+ *     summary: Upload photo with backend-first processing
+ *     description: Upload a photo with server-side validation, moderation, and EXIF stripping before storage
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - photoType
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
+ *               photoType:
+ *                 type: string
+ *                 enum: [AVATAR, COVER, CAMPAIGN, VERIFICATION, EVENT, GALLERY, POST_MEDIA]
+ *                 description: Type of photo being uploaded
+ *               purpose:
+ *                 type: string
+ *                 enum: [PERSONAL, CAMPAIGN, BOTH]
+ *                 default: PERSONAL
+ *                 description: How the photo will be used
+ *               caption:
+ *                 type: string
+ *                 description: Optional caption (max 200 chars)
+ *               gallery:
+ *                 type: string
+ *                 description: Optional gallery/folder name
+ *               candidateId:
+ *                 type: string
+ *                 description: Required if purpose is CAMPAIGN or BOTH
+ *     responses:
+ *       201:
+ *         description: Photo uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 photo:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     url:
+ *                       type: string
+ *                     thumbnailUrl:
+ *                       type: string
+ *                     width:
+ *                       type: integer
+ *                     height:
+ *                       type: integer
+ *                 pendingModeration:
+ *                   type: boolean
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       413:
+ *         description: File too large or storage limit exceeded
+ *       422:
+ *         description: Content moderation failed
+ */
+router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.single('file'), async (req, res) => {
+    try {
+        console.log('========== PHOTO UPLOAD STARTED ==========');
+        console.log('User:', req.user?.id);
+        console.log('File present:', !!req.file);
+        console.log('Body:', JSON.stringify(req.body));
+        console.log('==========================================');
+        const { user } = req;
+        const { photoType, purpose = 'PERSONAL', caption, gallery, candidateId } = req.body;
+        // 1. Validate file uploaded
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'No file uploaded',
+                message: 'Please select a photo to upload'
+            });
+        }
+        // 2. Validate required fields
+        if (!photoType) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                message: 'photoType is required'
+            });
+        }
+        // 3. Validate photo type enum
+        if (!Object.values(client_1.PhotoType).includes(photoType)) {
+            return res.status(400).json({
+                error: 'Invalid photo type',
+                message: 'Photo type must be one of: AVATAR, COVER, CAMPAIGN, VERIFICATION, EVENT, GALLERY, POST_MEDIA'
+            });
+        }
+        // 4. Validate purpose enum
+        if (!Object.values(client_1.PhotoPurpose).includes(purpose)) {
+            return res.status(400).json({
+                error: 'Invalid purpose',
+                message: 'Purpose must be one of: PERSONAL, CAMPAIGN, BOTH'
+            });
+        }
+        // 5. Validate candidate relationship for campaign photos
+        if ((purpose === 'CAMPAIGN' || purpose === 'BOTH' || photoType === 'CAMPAIGN') && !candidateId) {
+            return res.status(400).json({
+                error: 'Candidate ID required',
+                message: 'Candidate ID is required for campaign photos'
+            });
+        }
+        // 6. Call PhotoService to process and upload
+        const result = await photoService_1.PhotoService.processAndUploadPhoto({
+            fileBuffer: req.file.buffer,
+            filename: req.file.originalname,
+            mimeType: req.file.mimetype,
+            fileSize: req.file.size,
+            userId: user.id,
+            photoType: photoType,
+            purpose: purpose,
+            caption: caption ? caption.substring(0, 200) : undefined,
+            gallery: gallery || undefined,
+            candidateId: candidateId || undefined
+        });
+        // 7. Return success response
+        res.status(201).json({
+            success: true,
+            photo: {
+                id: result.id,
+                url: result.url,
+                thumbnailUrl: result.thumbnailUrl,
+                width: result.width,
+                height: result.height
+            },
+            pendingModeration: photoType === 'CAMPAIGN' || photoType === 'VERIFICATION'
+        });
+    }
+    catch (error) {
+        console.error('========== PHOTO UPLOAD ERROR ==========');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Error name:', error.name);
+        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error('======================================');
+        // Handle specific error types
+        if (error.message?.includes('Storage limit exceeded')) {
+            return res.status(413).json({
+                error: 'Storage limit exceeded',
+                message: error.message
+            });
+        }
+        if (error.message?.includes('Permission denied') || error.message?.includes('Invalid candidate')) {
+            return res.status(403).json({
+                error: 'Permission denied',
+                message: error.message
+            });
+        }
+        if (error.message?.includes('Content moderation failed')) {
+            return res.status(422).json({
+                error: 'Content moderation failed',
+                message: error.message
+            });
+        }
+        if (error.message?.includes('Invalid file type')) {
+            return res.status(400).json({
+                error: 'Invalid file type',
+                message: error.message
+            });
+        }
+        res.status(500).json({
+            error: 'Upload failed',
+            message: 'Failed to upload photo. Please try again.',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+/**
+ * DEPRECATED: Use POST /api/photos/upload instead
+ * This endpoint will be removed after 2025-11-01
+ * Kept temporarily for backward compatibility during migration
+ *
+ * @swagger
  * /api/photos/upload/confirm:
  *   post:
  *     tags: [Photos]
- *     summary: Confirm direct blob upload and create database record
+ *     summary: Confirm direct blob upload and create database record (DEPRECATED)
  *     description: Verify blob upload completed successfully and create photo record
  *     security:
  *       - bearerAuth: []

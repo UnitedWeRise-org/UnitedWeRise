@@ -282,6 +282,12 @@ router.post('/upload/sas-token', uploadLimiter, requireAuth, async (req: AuthReq
  */
 router.post('/upload', uploadLimiter, requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
   try {
+    console.log('========== PHOTO UPLOAD STARTED ==========');
+    console.log('User:', req.user?.id);
+    console.log('File present:', !!req.file);
+    console.log('Body:', JSON.stringify(req.body));
+    console.log('==========================================');
+
     const { user } = req;
     const { photoType, purpose = 'PERSONAL', caption, gallery, candidateId } = req.body;
 
@@ -353,7 +359,12 @@ router.post('/upload', uploadLimiter, requireAuth, upload.single('file'), async 
     });
 
   } catch (error: any) {
-    console.error('Photo upload failed:', error);
+    console.error('========== PHOTO UPLOAD ERROR ==========');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('======================================');
 
     // Handle specific error types
     if (error.message?.includes('Storage limit exceeded')) {
