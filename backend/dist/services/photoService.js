@@ -784,10 +784,24 @@ class PhotoService {
             })
                 .webp({ quality: 75 })
                 .toBuffer();
-            // Re-upload sanitized image to Azure (overwrites original)
+            // Re-upload sanitized image to Azure (overwrites original at SAME path)
             console.log(`🔒 Re-uploading sanitized image to ${options.blobName}...`);
-            await azureBlobService_1.AzureBlobService.uploadFile(sanitizedBuffer, options.blobName.split('/').pop() || options.blobName, options.mimeType, options.blobName.split('/')[0] // Use the folder from blobName
-            );
+            const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+            if (!connectionString) {
+                throw new Error('Azure Storage connection string not configured');
+            }
+            const { BlobServiceClient } = await Promise.resolve().then(() => __importStar(require('@azure/storage-blob')));
+            const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+            const containerClient = blobServiceClient.getContainerClient('photos');
+            const sanitizedBlobClient = containerClient.getBlockBlobClient(options.blobName); // SAME path as original
+            // Upload sanitized version - automatically overwrites original blob at same path
+            await sanitizedBlobClient.uploadData(sanitizedBuffer, {
+                blobHTTPHeaders: {
+                    blobContentType: options.mimeType,
+                    blobCacheControl: 'public, max-age=31536000'
+                }
+            });
+            console.log(`✅ Sanitized image uploaded, original overwritten at: ${options.blobName}`);
             // Upload thumbnail to Azure Blob Storage
             const thumbnailFilename = options.blobName.replace(/\.[^.]+$/, '-thumb.webp');
             const thumbnailUrl = await azureBlobService_1.AzureBlobService.uploadFile(thumbnailBuffer, thumbnailFilename.split('/').pop() || thumbnailFilename, 'image/webp', 'thumbnails');
@@ -825,70 +839,45 @@ class PhotoService {
     }
     /**
      * Download blob buffer for processing using authenticated connection
-     * Uses Azure SDK with connection string to bypass public access requirements
-     * Includes retry logic for Azure eventual consistency
+     * Uses Azure SDK with connection string for authenticated access
      */
     static async downloadBlobBuffer(blobName) {
-        const maxRetries = 5;
-        const retryDelayMs = 2000; // 2 seconds
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                console.log(`📥 Downloading blob (attempt ${attempt}/${maxRetries}): ${blobName}`);
-                const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-                if (!connectionString) {
-                    throw new Error('Azure Storage connection string not configured');
-                }
-                // Use Azure SDK with connection string for authenticated download
-                const { BlobServiceClient } = await Promise.resolve().then(() => __importStar(require('@azure/storage-blob')));
-                const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-                const containerClient = blobServiceClient.getContainerClient('photos');
-                const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-                // Check if blob exists first (helps with clearer error messages)
-                const exists = await blockBlobClient.exists();
-                if (!exists) {
-                    console.log(`⏳ Blob not yet available (attempt ${attempt}/${maxRetries}), waiting...`);
-                    if (attempt < maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-                        continue;
-                    }
-                    else {
-                        throw new Error(`Blob does not exist after ${maxRetries} attempts: ${blobName}`);
-                    }
-                }
-                // Download blob data
-                const downloadResponse = await blockBlobClient.download();
-                if (!downloadResponse.readableStreamBody) {
-                    throw new Error('No data stream in download response');
-                }
-                // Convert stream to buffer
-                const chunks = [];
-                for await (const chunk of downloadResponse.readableStreamBody) {
-                    chunks.push(Buffer.from(chunk));
-                }
-                const buffer = Buffer.concat(chunks);
-                console.log(`✅ Downloaded blob: ${blobName} (${buffer.length} bytes) on attempt ${attempt}`);
-                return buffer;
+        try {
+            console.log(`📥 Downloading blob: ${blobName}`);
+            const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+            if (!connectionString) {
+                throw new Error('Azure Storage connection string not configured');
             }
-            catch (error) {
-                console.error(`❌ Blob download attempt ${attempt}/${maxRetries} failed:`, {
-                    error: error.message,
-                    code: error.code,
-                    blobName
-                });
-                // If not last attempt and it's a "not found" error, retry
-                if (attempt < maxRetries && (error.code === 'BlobNotFound' ||
-                    error.message?.includes('does not exist') ||
-                    error.message?.includes('not found'))) {
-                    console.log(`⏳ Retrying in ${retryDelayMs}ms due to Azure eventual consistency...`);
-                    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-                    continue;
-                }
-                // For other errors or last attempt, throw
-                throw error;
+            // Use Azure SDK with connection string for authenticated download
+            const { BlobServiceClient } = await Promise.resolve().then(() => __importStar(require('@azure/storage-blob')));
+            const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+            const containerClient = blobServiceClient.getContainerClient('photos');
+            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            console.log(`📥 Blob URL: ${blockBlobClient.url}`);
+            // Download blob data
+            const downloadResponse = await blockBlobClient.download();
+            if (!downloadResponse.readableStreamBody) {
+                throw new Error('No data stream in download response');
             }
+            // Convert stream to buffer
+            const chunks = [];
+            for await (const chunk of downloadResponse.readableStreamBody) {
+                chunks.push(Buffer.from(chunk));
+            }
+            const buffer = Buffer.concat(chunks);
+            console.log(`✅ Downloaded blob: ${blobName} (${buffer.length} bytes)`);
+            return buffer;
         }
-        // This should never be reached, but TypeScript needs it
-        throw new Error(`Failed to download blob after ${maxRetries} attempts: ${blobName}`);
+        catch (error) {
+            console.error(`❌ Blob download failed:`, {
+                blobName,
+                error: error.message,
+                code: error.code,
+                statusCode: error.statusCode,
+                details: error.details
+            });
+            throw error;
+        }
     }
     /**
      * Validate image file using magic bytes (file signature)

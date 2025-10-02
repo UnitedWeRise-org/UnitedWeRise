@@ -134,8 +134,7 @@ export declare class PhotoService {
     }): Promise<Photo>;
     /**
      * Download blob buffer for processing using authenticated connection
-     * Uses Azure SDK with connection string to bypass public access requirements
-     * Includes retry logic for Azure eventual consistency
+     * Uses Azure SDK with connection string for authenticated access
      */
     private static downloadBlobBuffer;
     /**

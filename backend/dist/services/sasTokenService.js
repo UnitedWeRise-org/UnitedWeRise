@@ -127,6 +127,8 @@ class SASTokenService {
             const blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
             const containerClient = blobServiceClient.getContainerClient(this.CONTAINER_NAME);
             const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            console.log(`📋 Getting metadata for blob: ${blobName}`);
+            console.log(`📋 Blob URL: ${blockBlobClient.url}`);
             const properties = await blockBlobClient.getProperties();
             return {
                 size: properties.contentLength || 0,
