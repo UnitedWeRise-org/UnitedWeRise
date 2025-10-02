@@ -105,6 +105,12 @@ class ImageContentModerationService {
      */
     async performVisionAnalysis(imageDataUrl, photoType) {
         const prompt = this.buildAnalysisPrompt(photoType);
+        console.log('🔍 LAYER 7 | AI Moderation | Calling Azure OpenAI Vision API:', {
+            deployment: this.visionDeployment,
+            apiVersion: '2024-10-01-preview',
+            photoType,
+            imageDataUrlLength: imageDataUrl.length
+        });
         const response = await this.client.chat.completions.create({
             model: this.visionDeployment,
             messages: [
@@ -132,7 +138,13 @@ class ImageContentModerationService {
             temperature: 0.1, // Low temperature for consistent analysis
         });
         const content = response.choices[0].message?.content;
+        console.log('🔍 LAYER 7 | AI Moderation | Vision API response received:', {
+            hasContent: !!content,
+            contentLength: content?.length,
+            contentPreview: content?.substring(0, 100)
+        });
         if (!content) {
+            console.log('❌ LAYER 7 | AI Moderation | No response from Azure OpenAI Vision');
             throw new Error('No response from Azure OpenAI Vision');
         }
         // Try to parse JSON response

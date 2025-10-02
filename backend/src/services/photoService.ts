@@ -275,21 +275,34 @@ export class PhotoService {
     height: number;
   }> {
     try {
-      console.log(`📸 Processing photo upload for user ${options.userId} (${options.photoType})`);
+      console.log('🔍 LAYER 7 | Photo Service | Starting processAndUploadPhoto:', {
+        userId: options.userId,
+        photoType: options.photoType,
+        fileSize: options.fileSize,
+        mimeType: options.mimeType
+      });
 
       // STEP 1: Validate user permissions
+      console.log('🔍 LAYER 7 | Photo Service | Validating user permissions');
       await this.validateUserPermissions(options.userId, options.candidateId);
+      console.log('🔍 LAYER 7 | Photo Service | Permissions validated successfully');
 
       // STEP 2: Check account storage limit
+      console.log('🔍 LAYER 7 | Photo Service | Checking storage limit');
       await this.validateStorageLimit(options.userId, options.fileSize);
+      console.log('🔍 LAYER 7 | Photo Service | Storage limit check passed');
 
       // STEP 3: Validate image file (magic bytes check)
+      console.log('🔍 LAYER 7 | Photo Service | Validating image file (magic bytes)');
       const fileValidation = await this.validateImageFile(options.fileBuffer, options.mimeType);
       if (!fileValidation.valid) {
+        console.log('❌ LAYER 7 | Photo Service | File validation failed:', fileValidation.reason);
         throw new Error(fileValidation.reason || 'Invalid image file');
       }
+      console.log('🔍 LAYER 7 | Photo Service | Image file validated successfully');
 
       // STEP 4: AI content moderation
+      console.log('🔍 LAYER 7 | Photo Service | Starting AI content moderation');
       const moderationResult = await this.performContentModeration(
         {
           buffer: options.fileBuffer,
@@ -302,10 +315,13 @@ export class PhotoService {
       );
 
       if (!moderationResult.approved) {
+        console.log('❌ LAYER 7 | Photo Service | Content moderation rejected:', moderationResult.reason);
         throw new Error(moderationResult.reason || 'Content moderation failed');
       }
+      console.log('🔍 LAYER 7 | Photo Service | Content moderation passed');
 
       // STEP 5: Strip EXIF metadata and process image
+      console.log('🔍 LAYER 7 | Photo Service | Processing image with Sharp (EXIF stripping)');
       const fileExtension = path.extname(options.filename);
       const baseFilename = `${uuidv4()}-${options.photoType.toLowerCase()}`;
       const isGif = options.mimeType === 'image/gif';
@@ -352,7 +368,14 @@ export class PhotoService {
         .webp({ quality: 75 })
         .toBuffer();
 
+      console.log('🔍 LAYER 7 | Photo Service | Sharp processing complete:', {
+        originalSize: options.fileSize,
+        processedSize: imageBuffer.length,
+        thumbnailSize: thumbnailBuffer.length
+      });
+
       // STEP 7: Upload sanitized image to blob ONCE
+      console.log('🔍 LAYER 7 | Photo Service | Uploading to Azure Blob Storage');
       let photoUrl: string;
       let thumbnailUrl: string;
 
@@ -372,9 +395,13 @@ export class PhotoService {
         'thumbnails'
       );
 
-      console.log(`✅ Photo uploaded to Azure Blob Storage: ${photoUrl}`);
+      console.log('🔍 LAYER 7 | Photo Service | Azure Blob upload complete:', {
+        photoUrl,
+        thumbnailUrl
+      });
 
       // STEP 8: Create database record
+      console.log('🔍 LAYER 7 | Photo Service | Creating database record');
       const photo = await prisma.photo.create({
         data: {
           userId: options.userId,

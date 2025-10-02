@@ -211,6 +211,146 @@ class PhotoService {
         }
     }
     /**
+     * Process and upload photo (backend-first architecture)
+     * Receives file buffer from multer, processes BEFORE any blob upload
+     */
+    static async processAndUploadPhoto(options) {
+        try {
+            console.log('🔍 LAYER 7 | Photo Service | Starting processAndUploadPhoto:', {
+                userId: options.userId,
+                photoType: options.photoType,
+                fileSize: options.fileSize,
+                mimeType: options.mimeType
+            });
+            // STEP 1: Validate user permissions
+            console.log('🔍 LAYER 7 | Photo Service | Validating user permissions');
+            await this.validateUserPermissions(options.userId, options.candidateId);
+            console.log('🔍 LAYER 7 | Photo Service | Permissions validated successfully');
+            // STEP 2: Check account storage limit
+            console.log('🔍 LAYER 7 | Photo Service | Checking storage limit');
+            await this.validateStorageLimit(options.userId, options.fileSize);
+            console.log('🔍 LAYER 7 | Photo Service | Storage limit check passed');
+            // STEP 3: Validate image file (magic bytes check)
+            console.log('🔍 LAYER 7 | Photo Service | Validating image file (magic bytes)');
+            const fileValidation = await this.validateImageFile(options.fileBuffer, options.mimeType);
+            if (!fileValidation.valid) {
+                console.log('❌ LAYER 7 | Photo Service | File validation failed:', fileValidation.reason);
+                throw new Error(fileValidation.reason || 'Invalid image file');
+            }
+            console.log('🔍 LAYER 7 | Photo Service | Image file validated successfully');
+            // STEP 4: AI content moderation
+            console.log('🔍 LAYER 7 | Photo Service | Starting AI content moderation');
+            const moderationResult = await this.performContentModeration({
+                buffer: options.fileBuffer,
+                mimetype: options.mimeType,
+                size: options.fileSize,
+                originalname: options.filename
+            }, options.photoType, options.userId);
+            if (!moderationResult.approved) {
+                console.log('❌ LAYER 7 | Photo Service | Content moderation rejected:', moderationResult.reason);
+                throw new Error(moderationResult.reason || 'Content moderation failed');
+            }
+            console.log('🔍 LAYER 7 | Photo Service | Content moderation passed');
+            // STEP 5: Strip EXIF metadata and process image
+            console.log('🔍 LAYER 7 | Photo Service | Processing image with Sharp (EXIF stripping)');
+            const fileExtension = path_1.default.extname(options.filename);
+            const baseFilename = `${(0, uuid_1.v4)()}-${options.photoType.toLowerCase()}`;
+            const isGif = options.mimeType === 'image/gif';
+            const filename = isGif ? `${baseFilename}.gif` : `${baseFilename}.webp`;
+            const thumbnailFilename = `${baseFilename}-thumb.webp`;
+            const preset = this.SIZE_PRESETS[options.photoType];
+            let imageBuffer;
+            let metadata;
+            if (isGif) {
+                // For GIFs, resize but keep format and animation
+                const processedGif = (0, sharp_1.default)(options.fileBuffer, { animated: true })
+                    .rotate() // Auto-rotate based on EXIF, then strips EXIF
+                    .resize(preset.width, preset.height, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                    .gif();
+                imageBuffer = await processedGif.toBuffer();
+                metadata = await (0, sharp_1.default)(imageBuffer).metadata();
+            }
+            else {
+                // For static images, convert to WebP (automatically strips EXIF)
+                const processedImage = (0, sharp_1.default)(options.fileBuffer)
+                    .rotate() // Auto-rotate based on EXIF
+                    .resize(preset.width, preset.height, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                    .webp({ quality: 85 });
+                imageBuffer = await processedImage.toBuffer();
+                metadata = await (0, sharp_1.default)(imageBuffer).metadata();
+            }
+            // STEP 6: Generate thumbnail
+            const thumbnailBuffer = await (0, sharp_1.default)(options.fileBuffer)
+                .rotate()
+                .resize(preset.thumbnailWidth, preset.thumbnailHeight, {
+                fit: 'cover'
+            })
+                .webp({ quality: 75 })
+                .toBuffer();
+            console.log('🔍 LAYER 7 | Photo Service | Sharp processing complete:', {
+                originalSize: options.fileSize,
+                processedSize: imageBuffer.length,
+                thumbnailSize: thumbnailBuffer.length
+            });
+            // STEP 7: Upload sanitized image to blob ONCE
+            console.log('🔍 LAYER 7 | Photo Service | Uploading to Azure Blob Storage');
+            let photoUrl;
+            let thumbnailUrl;
+            // Upload main photo
+            photoUrl = await azureBlobService_1.AzureBlobService.uploadFile(imageBuffer, filename, isGif ? 'image/gif' : 'image/webp', 'photos');
+            // Upload thumbnail
+            thumbnailUrl = await azureBlobService_1.AzureBlobService.uploadFile(thumbnailBuffer, thumbnailFilename, 'image/webp', 'thumbnails');
+            console.log('🔍 LAYER 7 | Photo Service | Azure Blob upload complete:', {
+                photoUrl,
+                thumbnailUrl
+            });
+            // STEP 8: Create database record
+            console.log('🔍 LAYER 7 | Photo Service | Creating database record');
+            const photo = await prisma_1.prisma.photo.create({
+                data: {
+                    userId: options.userId,
+                    candidateId: options.candidateId,
+                    filename: options.filename,
+                    url: photoUrl,
+                    thumbnailUrl: thumbnailUrl,
+                    photoType: options.photoType,
+                    purpose: options.purpose,
+                    gallery: options.gallery || (options.photoType === 'GALLERY' ? 'My Photos' : null),
+                    caption: options.caption,
+                    originalSize: options.fileSize,
+                    compressedSize: imageBuffer.length,
+                    width: metadata.width || 0,
+                    height: metadata.height || 0,
+                    mimeType: isGif ? 'image/gif' : 'image/webp',
+                    isApproved: this.shouldAutoApprove(options.photoType, options.userId)
+                }
+            });
+            // Update user/candidate avatar if this is an avatar photo
+            if (options.photoType === 'AVATAR') {
+                await this.updateProfileAvatar(options.userId, photo.url, options.candidateId);
+            }
+            console.log(`✅ Photo upload complete: ${photo.id}`);
+            // STEP 9: Return photo record
+            return {
+                id: photo.id,
+                url: photo.url,
+                thumbnailUrl: photo.thumbnailUrl,
+                width: photo.width,
+                height: photo.height
+            };
+        }
+        catch (error) {
+            console.error('Photo processing failed:', error);
+            throw error;
+        }
+    }
+    /**
      * Upload multiple photos
      */
     static async uploadMultiplePhotos(files, options) {

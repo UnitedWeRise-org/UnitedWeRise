@@ -9,6 +9,12 @@ const metricsService_1 = require("../services/metricsService");
 const environment_1 = require("../utils/environment");
 const requireAuth = async (req, res, next) => {
     try {
+        // 🔍 LAYER 5 DEBUG: Authentication middleware entry
+        console.log('🔍 LAYER 5 | Authentication | Starting auth check:', {
+            path: req.path,
+            hasCookie: !!req.cookies?.authToken,
+            hasAuthHeader: !!req.header('Authorization')
+        });
         // Get token from cookie first, fallback to header for transition period
         let token = req.cookies?.authToken;
         // Fallback for migration period
@@ -37,6 +43,11 @@ const requireAuth = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found.' });
         }
         req.user = user;
+        // 🔍 LAYER 5 DEBUG: Authentication successful
+        console.log('🔍 LAYER 5 | Authentication | User authenticated:', {
+            userId: user.id,
+            username: user.username
+        });
         // Record successful authentication
         metricsService_1.metricsService.incrementCounter('auth_middleware_success_total', {
             method: req.cookies?.authToken ? 'cookie' : 'header'

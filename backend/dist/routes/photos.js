@@ -11,6 +11,15 @@ const client_1 = require("@prisma/client");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const multer_1 = __importDefault(require("multer"));
 const router = express_1.default.Router();
+// 🔍 LAYER 4 DEBUG: Track all requests to photo router
+router.use((req, res, next) => {
+    console.log('🔍 LAYER 4 | Route Matching | Photo router matched:', {
+        path: req.path,
+        method: req.method,
+        fullPath: req.baseUrl + req.path
+    });
+    next();
+});
 // Configure multer for backend-first photo upload
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
@@ -37,6 +46,32 @@ const uploadLimiter = (0, express_rate_limit_1.default)({
         message: 'Please wait before uploading more photos'
     }
 });
+// 🔍 LAYER 5 DEBUG: Multer middleware wrapper with detailed logging
+const multerDebugWrapper = (req, res, next) => {
+    console.log('🔍 LAYER 5 | Multer Middleware | Starting file processing:', {
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length']
+    });
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.log('❌ LAYER 5 | Multer Middleware | ERROR:', {
+                name: err.name,
+                message: err.message,
+                code: err.code,
+                field: err.field
+            });
+            return next(err);
+        }
+        console.log('🔍 LAYER 5 | Multer Middleware | File parsed successfully:', {
+            hasFile: !!req.file,
+            fileName: req.file?.originalname,
+            fileSize: req.file?.size,
+            fileMime: req.file?.mimetype,
+            bodyKeys: Object.keys(req.body)
+        });
+        next();
+    });
+};
 /**
  * DEPRECATED: Use POST /api/photos/upload instead
  * This endpoint will be removed after 2025-11-01
@@ -269,13 +304,14 @@ router.post('/upload/sas-token', uploadLimiter, auth_1.requireAuth, async (req, 
  *       422:
  *         description: Content moderation failed
  */
-router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.single('file'), async (req, res) => {
+router.post('/upload', uploadLimiter, auth_1.requireAuth, multerDebugWrapper, async (req, res) => {
     try {
-        console.log('========== PHOTO UPLOAD STARTED ==========');
-        console.log('User:', req.user?.id);
-        console.log('File present:', !!req.file);
-        console.log('Body:', JSON.stringify(req.body));
-        console.log('==========================================');
+        console.log('🔍 LAYER 6 | Upload Handler | Request received in handler:', {
+            userId: req.user?.id,
+            hasFile: !!req.file,
+            fileName: req.file?.originalname,
+            bodyKeys: Object.keys(req.body)
+        });
         const { user } = req;
         const { photoType, purpose = 'PERSONAL', caption, gallery, candidateId } = req.body;
         // 1. Validate file uploaded
@@ -313,6 +349,12 @@ router.post('/upload', uploadLimiter, auth_1.requireAuth, upload.single('file'),
                 message: 'Candidate ID is required for campaign photos'
             });
         }
+        console.log('🔍 LAYER 6 | Upload Handler | Validation passed, calling PhotoService:', {
+            photoType,
+            purpose,
+            fileSize: req.file.size,
+            userId: user.id
+        });
         // 6. Call PhotoService to process and upload
         const result = await photoService_1.PhotoService.processAndUploadPhoto({
             fileBuffer: req.file.buffer,

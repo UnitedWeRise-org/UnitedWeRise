@@ -41,6 +41,28 @@ export declare class PhotoService {
      */
     static uploadPhoto(file: Express.Multer.File, options: PhotoUploadOptions): Promise<PhotoProcessingResult>;
     /**
+     * Process and upload photo (backend-first architecture)
+     * Receives file buffer from multer, processes BEFORE any blob upload
+     */
+    static processAndUploadPhoto(options: {
+        fileBuffer: Buffer;
+        filename: string;
+        mimeType: string;
+        fileSize: number;
+        userId: string;
+        photoType: PhotoType;
+        purpose: PhotoPurpose;
+        caption?: string;
+        gallery?: string;
+        candidateId?: string;
+    }): Promise<{
+        id: string;
+        url: string;
+        thumbnailUrl: string;
+        width: number;
+        height: number;
+    }>;
+    /**
      * Upload multiple photos
      */
     static uploadMultiplePhotos(files: Express.Multer.File[], options: PhotoUploadOptions): Promise<PhotoProcessingResult[]>;
