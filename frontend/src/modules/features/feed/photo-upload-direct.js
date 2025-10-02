@@ -160,6 +160,13 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
     const blobUrlOnly = sasUrl.split('?')[0];
     console.log('☁️ Target blob URL:', blobUrlOnly);
 
+    // DIAGNOSTIC: Check for Put Block parameters
+    const url = new URL(sasUrl);
+    console.log('🔍 CRITICAL DIAGNOSTIC - SAS URL Parameters:');
+    console.log('   Has comp parameter?', url.searchParams.has('comp'));
+    console.log('   Has blockid parameter?', url.searchParams.has('blockid'));
+    console.log('   All parameters:', url.searchParams.toString());
+
     // Upload without any content-type headers to avoid SAS signature mismatch
     // Azure will auto-detect content type from file data
     const uploadResponse = await fetch(sasUrl, {
