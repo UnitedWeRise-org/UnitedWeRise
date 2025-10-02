@@ -10,7 +10,6 @@
 
 import { apiClient } from '../../core/api/client.js';
 import { userState } from '../../core/state/user.js';
-import { uploadPhotoDirectToBlob } from './photo-upload-direct.js';
 
 // Variables for infinite scroll functionality
 let isLoadingMorePosts = false;
@@ -19,24 +18,61 @@ let currentFeedOffset = 0;
 let selectedPostMedia = null;
 
 /**
- * Unified media upload function that works consistently across the platform
- * NOW USES DIRECT-TO-BLOB UPLOAD (no more broken multipart uploads)
+ * Unified media upload function - NEW BACKEND-FIRST ARCHITECTURE
  *
  * @param {File|File[]} files - Single file or array of files to upload
  * @param {string} photoType - Type: 'POST_MEDIA', 'AVATAR', 'GALLERY', etc.
- * @param {string} purpose - Purpose: 'PERSONAL', 'CIVIC', etc.
+ * @param {string} purpose - Purpose: 'PERSONAL', 'CAMPAIGN', 'BOTH'
  * @param {string} caption - Optional caption for photos
+ * @param {string} gallery - Optional gallery name
  * @returns {Promise<Object>} Upload response from backend
  */
-async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '') {
-    console.log('📸 uploadMediaFiles called with:', { files, photoType, purpose });
-    console.log('📸 Using NEW direct-to-blob upload architecture');
+async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '', gallery = null) {
+    console.log('📸 Uploading media files:', { files, photoType, purpose });
 
-    // Use the new direct-to-blob upload system
-    const result = await uploadPhotoDirectToBlob(files, photoType, purpose, caption);
+    const fileArray = Array.isArray(files) ? files : [files];
+    const uploadedPhotos = [];
 
-    console.log('📸 Direct-to-blob upload result:', result);
-    return result;
+    // Upload each file to backend
+    for (const file of fileArray) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('photoType', photoType);
+            formData.append('purpose', purpose);
+            if (caption) formData.append('caption', caption);
+            if (gallery) formData.append('gallery', gallery);
+
+            console.log(`📤 Uploading ${file.name} to backend...`);
+
+            const response = await apiClient.call('/photos/upload', {
+                method: 'POST',
+                body: formData,
+                // DO NOT set Content-Type header - browser sets it automatically with boundary
+            });
+
+            console.log(`✅ Upload response:`, response);
+
+            // Handle response format (apiClient wraps in data.data)
+            const photo = response.data?.photo || response.photo;
+            if (photo) {
+                uploadedPhotos.push(photo);
+                console.log(`✅ Photo uploaded: ${photo.id}`);
+            } else {
+                console.error('❌ No photo in response:', response);
+            }
+
+        } catch (error) {
+            console.error(`❌ Failed to upload ${file.name}:`, error);
+            throw error; // Re-throw to let caller handle
+        }
+    }
+
+    return {
+        ok: true,
+        status: 200,
+        data: { success: true, photos: uploadedPhotos }
+    };
 }
 
 /**

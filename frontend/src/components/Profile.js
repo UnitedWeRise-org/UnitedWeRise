@@ -6,7 +6,7 @@
  */
 
 import { isDevelopment, getAdminDashboardUrl } from '../utils/environment.js';
-import { uploadPhotoDirectToBlob } from '../modules/features/feed/photo-upload-direct.js';
+import { uploadMediaFiles } from '../modules/features/feed/my-feed.js';
 
 class Profile {
     constructor() {
@@ -1170,8 +1170,8 @@ class Profile {
         }
 
         try {
-            // Use secure direct-to-blob upload with AI moderation, EXIF stripping, and magic byte validation
-            const response = await uploadPhotoDirectToBlob(file, 'AVATAR', 'PERSONAL');
+            // Use backend-first upload with AI moderation, EXIF stripping, and magic byte validation
+            const response = await uploadMediaFiles(file, 'AVATAR', 'PERSONAL');
 
             if (response.ok && response.data.photos && response.data.photos.length > 0) {
                 const uploadedPhoto = response.data.photos[0];
@@ -2050,8 +2050,8 @@ class Profile {
         const caption = prompt('Add a caption (optional, max 200 characters):') || '';
 
         try {
-            // Use secure direct-to-blob upload with AI moderation, EXIF stripping, and magic byte validation
-            const response = await uploadPhotoDirectToBlob(files, 'GALLERY', 'PERSONAL', caption, gallery);
+            // Use backend-first upload with AI moderation, EXIF stripping, and magic byte validation
+            const response = await uploadMediaFiles(files, 'GALLERY', 'PERSONAL', caption, gallery);
 
             if (response.ok) {
                 alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
