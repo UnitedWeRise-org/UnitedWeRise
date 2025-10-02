@@ -168,12 +168,11 @@ async function uploadSinglePhoto(file, photoType, purpose, caption, gallery = nu
     console.log('   All parameters:', url.searchParams.toString());
 
     // Upload with required headers for Azure Blob Storage PUT Blob operation
+    // Let browser set Content-Type and Content-Length automatically from File object
     const uploadResponse = await fetch(sasUrl, {
         method: 'PUT',
         headers: {
-            'x-ms-blob-type': 'BlockBlob',
-            'Content-Type': file.type,
-            'Content-Length': file.size.toString()
+            'x-ms-blob-type': 'BlockBlob'
         },
         body: file
     });
