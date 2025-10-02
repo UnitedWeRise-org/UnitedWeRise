@@ -917,8 +917,8 @@ export class PhotoService {
     try {
       console.log(`📸 Creating photo record from blob: ${options.blobName}`);
 
-      // Download blob for security validation and processing
-      const blobBuffer = await this.downloadBlobBuffer(options.blobUrl);
+      // Download blob for security validation and processing (using authenticated connection)
+      const blobBuffer = await this.downloadBlobBuffer(options.blobName);
 
       // SECURITY: Validate file is actually an image (magic bytes check)
       const fileValidation = await this.validateImageFile(blobBuffer, options.mimeType);
@@ -1020,18 +1020,43 @@ export class PhotoService {
   }
 
   /**
-   * Download blob buffer for processing
+   * Download blob buffer for processing using authenticated connection
+   * Uses Azure SDK with connection string to bypass public access requirements
    */
-  private static async downloadBlobBuffer(blobUrl: string): Promise<Buffer> {
+  private static async downloadBlobBuffer(blobName: string): Promise<Buffer> {
     try {
-      const response = await fetch(blobUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download blob: ${response.statusText}`);
+      console.log(`📥 Downloading blob with authentication: ${blobName}`);
+
+      const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+      if (!connectionString) {
+        throw new Error('Azure Storage connection string not configured');
       }
-      const arrayBuffer = await response.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+
+      // Use Azure SDK with connection string for authenticated download
+      const { BlobServiceClient } = await import('@azure/storage-blob');
+      const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+      const containerClient = blobServiceClient.getContainerClient('photos');
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      // Download blob data
+      const downloadResponse = await blockBlobClient.download();
+
+      if (!downloadResponse.readableStreamBody) {
+        throw new Error('No data stream in download response');
+      }
+
+      // Convert stream to buffer
+      const chunks: Buffer[] = [];
+      for await (const chunk of downloadResponse.readableStreamBody) {
+        chunks.push(Buffer.from(chunk));
+      }
+      const buffer = Buffer.concat(chunks);
+
+      console.log(`✅ Downloaded blob: ${blobName} (${buffer.length} bytes)`);
+      return buffer;
+
     } catch (error) {
-      console.error('Failed to download blob:', error);
+      console.error('Failed to download blob with authentication:', error);
       throw error;
     }
   }

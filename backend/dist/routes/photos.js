@@ -244,10 +244,13 @@ router.post('/upload/sas-token', uploadLimiter, auth_1.requireAuth, async (req, 
  */
 router.post('/upload/confirm', uploadLimiter, auth_1.requireAuth, async (req, res) => {
     try {
+        console.log('📸 CONFIRMATION ENDPOINT HIT - Starting upload confirmation');
         const { user } = req;
         const { blobName, uploadId, photoType, purpose = 'PERSONAL', candidateId, gallery, caption } = req.body;
+        console.log(`📸 Confirmation request from user ${user.username} for blob: ${blobName}`);
         // Validate required fields
         if (!blobName || !uploadId || !photoType) {
+            console.error('❌ Missing required fields in confirmation request');
             return res.status(400).json({
                 error: 'Missing required fields',
                 message: 'blobName, uploadId, and photoType are required'
@@ -305,16 +308,27 @@ router.post('/upload/confirm', uploadLimiter, auth_1.requireAuth, async (req, re
         });
     }
     catch (error) {
-        console.error('Upload confirmation failed:', error);
-        if (error.message.includes('Permission denied') || error.message.includes('Invalid candidate')) {
+        console.error('❌ Upload confirmation failed:', {
+            error: error.message,
+            stack: error.stack,
+            type: error.constructor?.name
+        });
+        if (error.message?.includes('Permission denied') || error.message?.includes('Invalid candidate')) {
             return res.status(403).json({
                 error: 'Permission denied',
                 message: error.message
             });
         }
+        if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
+            return res.status(404).json({
+                error: 'Blob not found',
+                message: 'The uploaded blob could not be found. Please try uploading again.'
+            });
+        }
         res.status(500).json({
             error: 'Confirmation failed',
-            message: 'Failed to confirm photo upload. Please try again.'
+            message: error.message || 'Failed to confirm photo upload. Please try again.',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });

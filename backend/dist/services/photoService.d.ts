@@ -133,7 +133,8 @@ export declare class PhotoService {
         mimeType: string;
     }): Promise<Photo>;
     /**
-     * Download blob buffer for processing
+     * Download blob buffer for processing using authenticated connection
+     * Uses Azure SDK with connection string to bypass public access requirements
      */
     private static downloadBlobBuffer;
     /**

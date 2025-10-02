@@ -28,6 +28,10 @@ export class AzureBlobService {
         access: 'blob' // Allow public read access to blobs
       });
 
+      // Ensure public blob access is set (in case container existed with different policy)
+      console.log('🔧 Setting container access policy to public blob access...');
+      await this.containerClient.setAccessPolicy('blob');
+
       console.log('✅ Azure Blob Storage initialized successfully');
     } catch (error) {
       console.error('❌❌❌ FAILED TO INITIALIZE AZURE BLOB STORAGE ❌❌❌');
