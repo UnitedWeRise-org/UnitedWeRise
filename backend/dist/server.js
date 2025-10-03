@@ -50,6 +50,7 @@ const externalCandidates_1 = __importDefault(require("./routes/externalCandidate
 const motd_1 = __importDefault(require("./routes/motd"));
 const badges_1 = __importDefault(require("./routes/badges"));
 const quests_1 = __importDefault(require("./routes/quests"));
+const photos_1 = __importDefault(require("./routes/photos"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -261,6 +262,7 @@ app.get('/api/debug-test', (req, res) => {
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);
+app.use('/api/photos', photos_1.default); // Layer 0: Minimal photo upload
 app.use('/api/posts', posts_1.default);
 app.use('/api/feed', feed_1.default);
 app.use('/api/notifications', notifications_1.default);

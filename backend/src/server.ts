@@ -44,6 +44,7 @@ import externalCandidatesRoutes from './routes/externalCandidates';
 import motdRoutes from './routes/motd';
 import badgeRoutes from './routes/badges';
 import questRoutes from './routes/quests';
+import photosRoutes from './routes/photos';
 import WebSocketService from './services/WebSocketService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
@@ -281,6 +282,7 @@ app.get('/api/debug-test', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/photos', photosRoutes); // Layer 0: Minimal photo upload
 app.use('/api/posts', postRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/notifications', notificationRoutes);
