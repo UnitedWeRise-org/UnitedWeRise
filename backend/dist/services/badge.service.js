@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const storage_blob_1 = require("@azure/storage-blob");
-const prisma = new client_1.PrismaClient();
 class BadgeService {
     constructor() {
         this.containerName = 'photos'; // Using existing photos container
@@ -36,7 +35,7 @@ class BadgeService {
         if (!imageUrl) {
             throw new Error('Badge image is required');
         }
-        return await prisma.badge.create({
+        return await prisma_1.prisma.badge.create({
             data: {
                 name: data.name,
                 description: data.description,
@@ -52,7 +51,7 @@ class BadgeService {
     // Award badge to user
     async awardBadge(userId, badgeId, awardedBy, reason) {
         // Check if user already has this badge
-        const existing = await prisma.userBadge.findUnique({
+        const existing = await prisma_1.prisma.userBadge.findUnique({
             where: {
                 userId_badgeId: {
                     userId,
@@ -64,7 +63,7 @@ class BadgeService {
             throw new Error('User already has this badge');
         }
         // Check if badge has max awards limit
-        const badge = await prisma.badge.findUnique({
+        const badge = await prisma_1.prisma.badge.findUnique({
             where: { id: badgeId },
             include: {
                 _count: {
@@ -79,7 +78,7 @@ class BadgeService {
             throw new Error('Badge award limit reached');
         }
         // Award the badge
-        const userBadge = await prisma.userBadge.create({
+        const userBadge = await prisma_1.prisma.userBadge.create({
             data: {
                 userId,
                 badgeId,
@@ -91,7 +90,7 @@ class BadgeService {
             }
         });
         // Create notification for user
-        await prisma.notification.create({
+        await prisma_1.prisma.notification.create({
             data: {
                 type: 'REACTION', // Using existing type, may want to add BADGE_EARNED later
                 senderId: awardedBy || 'system',
@@ -103,7 +102,7 @@ class BadgeService {
     }
     // Check if user qualifies for a badge
     async checkUserQualifications(userId, badgeId) {
-        const badge = await prisma.badge.findUnique({
+        const badge = await prisma_1.prisma.badge.findUnique({
             where: { id: badgeId }
         });
         if (!badge) {
@@ -127,7 +126,7 @@ class BadgeService {
     }
     async checkQuestCriteria(userId, requirements) {
         if (requirements.questCompletionCount) {
-            const completedQuests = await prisma.userQuestProgress.count({
+            const completedQuests = await prisma_1.prisma.userQuestProgress.count({
                 where: {
                     userId,
                     completed: true
@@ -138,7 +137,7 @@ class BadgeService {
             }
         }
         if (requirements.streakDays) {
-            const streak = await prisma.userQuestStreak.findUnique({
+            const streak = await prisma_1.prisma.userQuestStreak.findUnique({
                 where: { userId }
             });
             if (!streak || streak.currentDailyStreak < requirements.streakDays) {
@@ -158,13 +157,13 @@ class BadgeService {
             since.setDate(since.getDate() - days);
             whereClause.createdAt = { gte: since };
         }
-        const activityCount = await prisma.userActivity.count({
+        const activityCount = await prisma_1.prisma.userActivity.count({
             where: whereClause
         });
         return activityCount >= (requirements.activityCount || 0);
     }
     async checkCivicCriteria(userId, requirements) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 _count: {
@@ -190,7 +189,7 @@ class BadgeService {
         return true;
     }
     async checkSocialCriteria(userId, requirements) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 reputationScore: true,
@@ -228,13 +227,13 @@ class BadgeService {
     async runBadgeQualificationChecks() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const activeUsers = await prisma.user.findMany({
+        const activeUsers = await prisma_1.prisma.user.findMany({
             where: {
                 lastSeenAt: { gte: thirtyDaysAgo }
             },
             select: { id: true }
         });
-        const activeBadges = await prisma.badge.findMany({
+        const activeBadges = await prisma_1.prisma.badge.findMany({
             where: {
                 isActive: true,
                 isAutoAwarded: true
@@ -243,7 +242,7 @@ class BadgeService {
         let badgesAwarded = 0;
         for (const user of activeUsers) {
             for (const badge of activeBadges) {
-                const alreadyHas = await prisma.userBadge.findUnique({
+                const alreadyHas = await prisma_1.prisma.userBadge.findUnique({
                     where: {
                         userId_badgeId: {
                             userId: user.id,
@@ -266,7 +265,7 @@ class BadgeService {
     }
     // Get user's badge collection
     async getUserBadges(userId) {
-        const userBadges = await prisma.userBadge.findMany({
+        const userBadges = await prisma_1.prisma.userBadge.findMany({
             where: { userId },
             include: {
                 badge: true
@@ -288,7 +287,7 @@ class BadgeService {
     }
     // Update user's badge display preferences
     async updateBadgeDisplay(userId, badgeId, isDisplayed, displayOrder) {
-        return await prisma.userBadge.update({
+        return await prisma_1.prisma.userBadge.update({
             where: {
                 userId_badgeId: {
                     userId,
@@ -306,7 +305,7 @@ class BadgeService {
     }
     // Get all badges for admin management
     async getAllBadges() {
-        return await prisma.badge.findMany({
+        return await prisma_1.prisma.badge.findMany({
             include: {
                 _count: {
                     select: { userBadges: true }
@@ -338,7 +337,7 @@ class BadgeService {
         if (updates.imageFile) {
             data.imageUrl = await this.uploadBadgeImage(updates.imageFile, updates.name || 'badge');
         }
-        return await prisma.badge.update({
+        return await prisma_1.prisma.badge.update({
             where: { id: badgeId },
             data
         });
@@ -346,7 +345,7 @@ class BadgeService {
     // Delete badge
     async deleteBadge(badgeId) {
         // Soft delete by deactivating
-        await prisma.badge.update({
+        await prisma_1.prisma.badge.update({
             where: { id: badgeId },
             data: { isActive: false }
         });

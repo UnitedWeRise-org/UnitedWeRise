@@ -3,13 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
 const badge_service_1 = __importDefault(require("./badge.service"));
-const prisma = new client_1.PrismaClient();
 class QuestService {
     // Generate daily quests for a user
     async generateDailyQuests(userId) {
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 interests: true,
@@ -25,7 +24,7 @@ class QuestService {
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const existingDailyQuests = await prisma.userQuestProgress.findMany({
+        const existingDailyQuests = await prisma_1.prisma.userQuestProgress.findMany({
             where: {
                 userId,
                 startedAt: {
@@ -39,7 +38,7 @@ class QuestService {
         });
         if (existingDailyQuests.length > 0) {
             // Return existing daily quests
-            return await prisma.quest.findMany({
+            return await prisma_1.prisma.quest.findMany({
                 where: {
                     id: { in: existingDailyQuests.map(q => q.questId) }
                 }
@@ -71,7 +70,7 @@ class QuestService {
         return quests;
     }
     async getOrCreateDailyHabitQuest() {
-        let quest = await prisma.quest.findFirst({
+        let quest = await prisma_1.prisma.quest.findFirst({
             where: {
                 type: 'DAILY_HABIT',
                 timeframe: 'DAILY',
@@ -80,7 +79,7 @@ class QuestService {
             }
         });
         if (!quest) {
-            quest = await prisma.quest.create({
+            quest = await prisma_1.prisma.quest.create({
                 data: {
                     type: 'DAILY_HABIT',
                     category: 'INFORMATION',
@@ -125,7 +124,7 @@ class QuestService {
             }
         ];
         const randomAction = civicActions[Math.floor(Math.random() * civicActions.length)];
-        let quest = await prisma.quest.findFirst({
+        let quest = await prisma_1.prisma.quest.findFirst({
             where: {
                 type: 'DAILY_CIVIC',
                 title: randomAction.title,
@@ -134,7 +133,7 @@ class QuestService {
             }
         });
         if (!quest) {
-            quest = await prisma.quest.create({
+            quest = await prisma_1.prisma.quest.create({
                 data: {
                     type: 'DAILY_CIVIC',
                     category: 'PARTICIPATION',
@@ -161,7 +160,7 @@ class QuestService {
         return quest;
     }
     async getOrCreateSocialQuest() {
-        let quest = await prisma.quest.findFirst({
+        let quest = await prisma_1.prisma.quest.findFirst({
             where: {
                 type: 'SOCIAL_ENGAGEMENT',
                 timeframe: 'DAILY',
@@ -170,7 +169,7 @@ class QuestService {
             }
         });
         if (!quest) {
-            quest = await prisma.quest.create({
+            quest = await prisma_1.prisma.quest.create({
                 data: {
                     type: 'SOCIAL_ENGAGEMENT',
                     category: 'COMMUNITY',
@@ -195,7 +194,7 @@ class QuestService {
     }
     // Assign quest to user (with upsert to prevent duplicate key errors)
     async assignQuestToUser(userId, questId) {
-        return await prisma.userQuestProgress.upsert({
+        return await prisma_1.prisma.userQuestProgress.upsert({
             where: {
                 userId_questId: {
                     userId,
@@ -215,7 +214,7 @@ class QuestService {
     // Update quest progress
     async updateQuestProgress(userId, actionType, metadata) {
         // Get user's active quests
-        const activeQuests = await prisma.userQuestProgress.findMany({
+        const activeQuests = await prisma_1.prisma.userQuestProgress.findMany({
             where: {
                 userId,
                 completed: false
@@ -263,7 +262,7 @@ class QuestService {
                     target: requirements.target
                 };
                 const isCompleted = newProgress.completed >= requirements.target;
-                await prisma.userQuestProgress.update({
+                await prisma_1.prisma.userQuestProgress.update({
                     where: { id: questProgress.id },
                     data: {
                         progress: newProgress,
@@ -279,7 +278,7 @@ class QuestService {
     }
     // Handle quest completion
     async handleQuestCompletion(userId, questId) {
-        const quest = await prisma.quest.findUnique({
+        const quest = await prisma_1.prisma.quest.findUnique({
             where: { id: questId }
         });
         if (!quest)
@@ -287,12 +286,12 @@ class QuestService {
         const rewards = quest.rewards;
         // Award reputation points
         if (rewards.reputationPoints) {
-            const user = await prisma.user.findUnique({
+            const user = await prisma_1.prisma.user.findUnique({
                 where: { id: userId }
             });
             if (user) {
                 const newScore = Math.min(100, (user.reputationScore || 70) + rewards.reputationPoints);
-                await prisma.user.update({
+                await prisma_1.prisma.user.update({
                     where: { id: userId },
                     data: {
                         reputationScore: newScore,
@@ -300,7 +299,7 @@ class QuestService {
                     }
                 });
                 // Log reputation event
-                await prisma.reputationEvent.create({
+                await prisma_1.prisma.reputationEvent.create({
                     data: {
                         userId,
                         eventType: 'QUEST_COMPLETED',
@@ -325,7 +324,7 @@ class QuestService {
         // Update streak
         await this.updateUserStreak(userId, quest.type);
         // Send notification
-        await prisma.notification.create({
+        await prisma_1.prisma.notification.create({
             data: {
                 type: 'REACTION',
                 senderId: 'system',
@@ -336,13 +335,13 @@ class QuestService {
     }
     // Update user streak
     async updateUserStreak(userId, questType) {
-        let streak = await prisma.userQuestStreak.findUnique({
+        let streak = await prisma_1.prisma.userQuestStreak.findUnique({
             where: { userId }
         });
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (!streak) {
-            streak = await prisma.userQuestStreak.create({
+            streak = await prisma_1.prisma.userQuestStreak.create({
                 data: {
                     userId,
                     currentDailyStreak: 1,
@@ -385,7 +384,7 @@ class QuestService {
             else if (currentWeek > lastCompletedWeek + 1) {
                 newWeeklyStreak = 1;
             }
-            await prisma.userQuestStreak.update({
+            await prisma_1.prisma.userQuestStreak.update({
                 where: { userId },
                 data: {
                     currentDailyStreak: newDailyStreak,
@@ -400,7 +399,7 @@ class QuestService {
     }
     // Get user's quest progress
     async getUserQuestProgress(userId) {
-        const questProgress = await prisma.userQuestProgress.findMany({
+        const questProgress = await prisma_1.prisma.userQuestProgress.findMany({
             where: { userId },
             include: {
                 quest: true
@@ -410,7 +409,7 @@ class QuestService {
                 { startedAt: 'desc' }
             ]
         });
-        const streak = await prisma.userQuestStreak.findUnique({
+        const streak = await prisma_1.prisma.userQuestStreak.findUnique({
             where: { userId }
         });
         const dailyQuests = questProgress.filter(qp => qp.quest.timeframe === 'DAILY');
@@ -433,7 +432,7 @@ class QuestService {
     }
     // Create weekly quest
     async createWeeklyQuest() {
-        return await prisma.quest.create({
+        return await prisma_1.prisma.quest.create({
             data: {
                 type: 'WEEKLY_ENGAGEMENT',
                 category: 'COMMUNITY',
@@ -460,7 +459,7 @@ class QuestService {
     }
     // Admin: Create custom quest
     async createQuest(data) {
-        return await prisma.quest.create({
+        return await prisma_1.prisma.quest.create({
             data: {
                 ...data,
                 requirements: data.requirements,
@@ -470,7 +469,7 @@ class QuestService {
     }
     // Admin: Get all quests
     async getAllQuests() {
-        return await prisma.quest.findMany({
+        return await prisma_1.prisma.quest.findMany({
             include: {
                 _count: {
                     select: {
@@ -506,20 +505,20 @@ class QuestService {
             data.startDate = updates.startDate;
         if (updates.endDate !== undefined)
             data.endDate = updates.endDate;
-        return await prisma.quest.update({
+        return await prisma_1.prisma.quest.update({
             where: { id: questId },
             data
         });
     }
     // Admin: Get quest analytics
     async getQuestAnalytics() {
-        const totalQuests = await prisma.quest.count();
-        const activeQuests = await prisma.quest.count({ where: { isActive: true } });
-        const questProgress = await prisma.userQuestProgress.groupBy({
+        const totalQuests = await prisma_1.prisma.quest.count();
+        const activeQuests = await prisma_1.prisma.quest.count({ where: { isActive: true } });
+        const questProgress = await prisma_1.prisma.userQuestProgress.groupBy({
             by: ['questId', 'completed'],
             _count: true
         });
-        const streakStats = await prisma.userQuestStreak.aggregate({
+        const streakStats = await prisma_1.prisma.userQuestStreak.aggregate({
             _avg: {
                 currentDailyStreak: true,
                 longestDailyStreak: true,
