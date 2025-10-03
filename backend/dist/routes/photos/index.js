@@ -1,14 +1,15 @@
 "use strict";
 /**
- * Layer 3: Photo Upload with EXIF Stripping
+ * Layer 4: Photo Upload with AI Content Moderation
  *
- * Purpose: Strip EXIF metadata and convert to WebP for privacy and efficiency
- * Features: Authentication + File Validation + EXIF Stripping + WebP Conversion
+ * Purpose: Add AI-powered content moderation for safety and compliance
+ * Features: Authentication + File Validation + EXIF Stripping + AI Moderation
  * Layers:
  *   - Layer 0: Basic file transport ✅
  *   - Layer 1: Authentication ✅
  *   - Layer 2: File validation ✅
  *   - Layer 3: EXIF stripping and WebP conversion ✅
+ *   - Layer 4: AI content moderation ✅
  * Logging: Every step logs with requestId for tracing
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -21,6 +22,7 @@ const storage_blob_1 = require("@azure/storage-blob");
 const uuid_1 = require("uuid");
 const sharp_1 = __importDefault(require("sharp"));
 const auth_1 = require("../../middleware/auth");
+const imageContentModerationService_1 = require("../../services/imageContentModerationService");
 const router = express_1.default.Router();
 // Layer 2: File validation constants
 const ALLOWED_MIME_TYPES = [
@@ -310,6 +312,67 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
                 quality: 85
             });
         }
+        // Layer 4: AI Content Moderation
+        log(requestId, 'MODERATION_START', {
+            bufferSize: processedBuffer.length,
+            userId: req.user.id
+        });
+        let moderationResult;
+        try {
+            moderationResult = await imageContentModerationService_1.imageContentModerationService.analyzeImage({
+                imageBuffer: processedBuffer,
+                mimeType: finalMimeType,
+                userId: req.user.id,
+                photoType: 'POST_MEDIA'
+            });
+            log(requestId, 'MODERATION_COMPLETE', {
+                category: moderationResult.category,
+                approved: moderationResult.approved,
+                contentType: moderationResult.contentType,
+                confidence: moderationResult.confidence,
+                processingTime: moderationResult.processingTime
+            });
+            // Block if moderation rejected
+            if (!moderationResult.approved) {
+                log(requestId, 'MODERATION_BLOCKED', {
+                    reason: moderationResult.reason,
+                    category: moderationResult.category,
+                    contentType: moderationResult.contentType
+                });
+                return res.status(422).json({
+                    success: false,
+                    error: 'Content moderation failed',
+                    details: moderationResult.reason,
+                    category: moderationResult.category,
+                    requestId
+                });
+            }
+        }
+        catch (moderationError) {
+            log(requestId, 'MODERATION_ERROR', {
+                error: moderationError.message,
+                stack: moderationError.stack
+            });
+            // In production, fail safe and block on moderation errors
+            // In development/staging, log and continue
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Content moderation service unavailable',
+                    requestId
+                });
+            }
+            // Development/staging: continue with warning
+            moderationResult = {
+                category: 'WARN',
+                approved: true,
+                reason: 'Moderation service error - approved for development',
+                description: moderationError.message,
+                contentType: 'UNKNOWN',
+                confidence: 0.1,
+                processingTime: 0
+            };
+        }
         // Step 2: Check environment variables
         const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
         const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
@@ -363,7 +426,15 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
                 originalMimeType: req.file.mimetype,
                 finalMimeType,
                 dimensions,
-                exifStripped: true
+                exifStripped: true,
+                moderation: {
+                    decision: moderationResult.category,
+                    approved: moderationResult.approved,
+                    reason: moderationResult.reason,
+                    contentType: moderationResult.contentType,
+                    confidence: moderationResult.confidence,
+                    processingTime: moderationResult.processingTime
+                }
             }
         });
     }
@@ -389,18 +460,19 @@ router.get('/health', (req, res) => {
     const envCheck = {
         hasConnectionString: !!process.env.AZURE_STORAGE_CONNECTION_STRING,
         hasAccountName: !!process.env.AZURE_STORAGE_ACCOUNT_NAME,
-        accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME
+        accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
+        hasAzureOpenAI: !!process.env.AZURE_OPENAI_ENDPOINT && !!process.env.AZURE_OPENAI_API_KEY
     };
     return res.json({
         status: 'ok',
-        layer: 3,
-        description: 'Authenticated photo upload with validation and EXIF stripping',
+        layer: 4,
+        description: 'Authenticated photo upload with validation, EXIF stripping, and AI moderation',
         features: {
             authentication: true,
             validation: true,
             exifStripping: true,
             webpConversion: true,
-            moderation: false,
+            moderation: true,
             database: false
         },
         validation: {
