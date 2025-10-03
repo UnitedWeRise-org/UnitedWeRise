@@ -32,8 +32,8 @@ export declare class CandidateReportService {
         moderatorId: string | null;
         targetType: import(".prisma/client").$Enums.ReportTargetType;
         targetId: string;
-        moderatedAt: Date | null;
         reporterId: string;
+        moderatedAt: Date | null;
         moderatorNotes: string | null;
         actionTaken: import(".prisma/client").$Enums.ModerationAction | null;
         reporterDistrict: string | null;

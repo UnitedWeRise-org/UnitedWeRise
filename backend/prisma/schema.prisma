@@ -114,17 +114,11 @@ model User {
   sentMessages                Message[]                 @relation("SentMessages")
   createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
-  moderationReviews           ImageModerationReview[]   @relation("ModerationReviews")
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
   sentNotifications           Notification[]            @relation("NotificationSender")
   payments                    Payment[]
   petitionsCreated            Petition[]                @relation("PetitionCreator")
   petitionSignatures          PetitionSignature[]       @relation("PetitionSignatures")
-  flaggedPhotos               Photo[]                   @relation("FlaggedPhotos")
-  photos                      Photo[]
-  photoPrivacyRequests        PhotoPrivacyRequest[]
-  photoTagsCreated            PhotoTag[]                @relation("PhotoTagsCreated")
-  photoTagsReceived           PhotoTag[]                @relation("PhotoTagsReceived")
   politicalInquiries          PoliticalInquiry[]        @relation("PoliticalInquiries")
   posts                       Post[]
   publicQAVotes               PublicQAVote[]            @relation("PublicQAVotes")
@@ -254,7 +248,6 @@ model Post {
   privacyDisplaced   Boolean           @default(true)
   comments           Comment[]
   likes              Like[]
-  photos             Photo[]
   author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   reactions          Reaction[]
   reputationEvents   ReputationEvent[]
@@ -463,7 +456,6 @@ model Candidate {
   verificationDocuments  CandidateVerificationDocument[]
   endorsements           Endorsement[]
   financialData          FinancialData?
-  photos                 Photo[]
   policyPositions        PolicyPosition[]
   politicalInquiries     PoliticalInquiry[]
   publicQAs              PublicQA[]
@@ -839,155 +831,6 @@ model ElectionCache {
 
   @@index([stateCode])
   @@index([lastUpdated])
-}
-
-model Photo {
-  id                    String                    @id @default(cuid())
-  userId                String
-  filename              String
-  url                   String
-  thumbnailUrl          String?
-  photoType             PhotoType
-  purpose               PhotoPurpose              @default(PERSONAL)
-  originalSize          Int
-  compressedSize        Int
-  width                 Int
-  height                Int
-  mimeType              String
-  isApproved            Boolean                   @default(false)
-  flaggedBy             String?
-  flagReason            String?
-  moderatedAt           DateTime?
-  candidateId           String?
-  isActive              Boolean                   @default(true)
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  caption               String?
-  gallery               String?                   @default("My Photos")
-  postId                String?
-  moderationStatus      ModerationStatus          @default(PENDING)
-  moderationScore       Float?                    @default(0.0)
-  requiresReview        Boolean                   @default(false)
-  autoModerationPassed  Boolean?                  @default(false)
-  humanReviewRequired   Boolean                   @default(false)
-  lastModerationAt      DateTime?
-  moderationMetadata    Json?
-  candidate             Candidate?                @relation(fields: [candidateId], references: [id])
-  flaggedByUser         User?                     @relation("FlaggedPhotos", fields: [flaggedBy], references: [id])
-  post                  Post?                     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  privacyRequests       PhotoPrivacyRequest[]
-  tags                  PhotoTag[]
-  moderationResults     ImageModerationResult[]
-
-  @@index([userId])
-  @@index([candidateId])
-  @@index([photoType, purpose])
-  @@index([isApproved, isActive])
-  @@index([createdAt])
-  @@index([moderationStatus])
-  @@index([moderationScore])
-  @@index([requiresReview, humanReviewRequired])
-  @@index([lastModerationAt])
-  @@index([moderationStatus, createdAt])
-}
-
-model PhotoTag {
-  id         String         @id @default(cuid())
-  photoId    String
-  taggedById String
-  taggedId   String
-  x          Float
-  y          Float
-  status     PhotoTagStatus @default(PENDING)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  photo      Photo          @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  taggedBy   User           @relation("PhotoTagsCreated", fields: [taggedById], references: [id])
-  tagged     User           @relation("PhotoTagsReceived", fields: [taggedId], references: [id])
-
-  @@unique([photoId, taggedId])
-  @@index([taggedId, status])
-  @@index([photoId])
-}
-
-model PhotoPrivacyRequest {
-  id        String                    @id @default(cuid())
-  photoId   String
-  userId    String
-  type      PhotoPrivacyRequestType
-  reason    String?
-  status    PhotoPrivacyRequestStatus @default(PENDING)
-  createdAt DateTime                  @default(now())
-  updatedAt DateTime                  @updatedAt
-  photo     Photo                     @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([photoId, userId])
-  @@index([userId, status])
-  @@index([status, createdAt])
-}
-
-model ImageModerationResult {
-  id                   String              @id @default(cuid())
-  photoId              String              @unique
-  moderationType       String              @default("AI_ANALYSIS")
-  aiAnalysisResults    Json?
-  overallConfidence    Float               @default(0.0)
-  categories           ModerationCategory[] @default([])
-  primaryCategory      ModerationCategory?
-  riskScore            Float               @default(0.0)
-  isSafe               Boolean             @default(true)
-  requiresHumanReview  Boolean             @default(false)
-  detectedObjects      String[]            @default([])
-  detectedText         String?
-  textAnalysis         Json?
-  faceCount            Int?                @default(0)
-  adultContentScore    Float?              @default(0.0)
-  violenceScore        Float?              @default(0.0)
-  racyScore            Float?              @default(0.0)
-  hateSpeechScore      Float?              @default(0.0)
-  spamScore            Float?              @default(0.0)
-  qualityScore         Float?              @default(0.0)
-  technicalMetadata    Json?
-  processingTime       Int?
-  aiModel              String?
-  modelVersion         String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  photo                Photo               @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  reviews              ImageModerationReview[]
-
-  @@index([moderationType])
-  @@index([primaryCategory])
-  @@index([riskScore])
-  @@index([isSafe, requiresHumanReview])
-  @@index([createdAt])
-  @@index([aiModel, modelVersion])
-}
-
-model ImageModerationReview {
-  id                  String            @id @default(cuid())
-  moderationResultId  String
-  reviewerId          String
-  decision            ModerationDecision
-  reason              String?
-  notes               String?
-  confidenceOverride  Float?
-  categoryOverride    ModerationCategory?
-  isAppeal            Boolean           @default(false)
-  originalDecision    ModerationDecision?
-  reviewedAt          DateTime          @default(now())
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  moderationResult    ImageModerationResult @relation(fields: [moderationResultId], references: [id], onDelete: Cascade)
-  reviewer            User              @relation("ModerationReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
-
-  @@index([moderationResultId])
-  @@index([reviewerId])
-  @@index([decision])
-  @@index([isAppeal])
-  @@index([reviewedAt])
 }
 
 model CandidateInbox {
@@ -2069,10 +1912,6 @@ enum NotificationType {
   VERIFICATION_DENIED
   FRIEND_REQUEST
   FRIEND_ACCEPTED
-  PHOTO_TAG_REQUEST
-  PHOTO_TAG_APPROVED
-  PHOTO_TAG_DECLINED
-  PRIVACY_REQUEST
   REACTION
 }
 
@@ -2256,42 +2095,6 @@ enum AppealStatus {
   PENDING
   APPROVED
   DENIED
-}
-
-enum PhotoType {
-  AVATAR
-  COVER
-  CAMPAIGN
-  VERIFICATION
-  EVENT
-  GALLERY
-  POST_MEDIA
-}
-
-enum PhotoPurpose {
-  PERSONAL
-  CAMPAIGN
-  BOTH
-}
-
-enum PhotoTagStatus {
-  PENDING
-  APPROVED
-  DECLINED
-  REMOVED
-}
-
-enum PhotoPrivacyRequestType {
-  REMOVE_TAG
-  REMOVE_PHOTO
-  BLOCK_FUTURE
-}
-
-enum PhotoPrivacyRequestStatus {
-  PENDING
-  APPROVED
-  DECLINED
-  RESOLVED
 }
 
 enum StaffRole {
@@ -2658,23 +2461,23 @@ enum AgreementLevel {
 
 // Civic Engagement Quest System
 model Quest {
-  id                String              @id @default(cuid())
-  type              QuestType
-  category          QuestCategory
-  title             String
-  description       String              @db.Text
-  shortDescription  String?             // For display in quest lists
-  requirements      Json                // Flexible requirement definition
-  rewards           Json                // Points, badges, reputation
-  timeframe         QuestTimeframe
-  displayOrder      Int                 @default(0)
-  isActive          Boolean             @default(true)
-  startDate         DateTime?           // For special events
-  endDate           DateTime?           // For limited-time quests
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  createdBy         String?             // Admin who created it
-  userProgress      UserQuestProgress[]
+  id               String              @id @default(cuid())
+  type             QuestType
+  category         QuestCategory
+  title            String
+  description      String              @db.Text
+  shortDescription String? // For display in quest lists
+  requirements     Json // Flexible requirement definition
+  rewards          Json // Points, badges, reputation
+  timeframe        QuestTimeframe
+  displayOrder     Int                 @default(0)
+  isActive         Boolean             @default(true)
+  startDate        DateTime? // For special events
+  endDate          DateTime? // For limited-time quests
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  createdBy        String? // Admin who created it
+  userProgress     UserQuestProgress[]
 
   @@index([type])
   @@index([isActive])
@@ -2685,7 +2488,7 @@ model UserQuestProgress {
   id          String    @id @default(cuid())
   userId      String
   questId     String
-  progress    Json      // Current progress state
+  progress    Json // Current progress state
   completed   Boolean   @default(false)
   completedAt DateTime?
   startedAt   DateTime  @default(now())
@@ -2700,17 +2503,17 @@ model UserQuestProgress {
 }
 
 model UserQuestStreak {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  currentDailyStreak Int      @default(0)
-  longestDailyStreak Int      @default(0)
-  currentWeeklyStreak Int     @default(0)
-  longestWeeklyStreak Int     @default(0)
-  lastCompletedDate  DateTime?
-  totalQuestsCompleted Int    @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  currentDailyStreak   Int       @default(0)
+  longestDailyStreak   Int       @default(0)
+  currentWeeklyStreak  Int       @default(0)
+  longestWeeklyStreak  Int       @default(0)
+  lastCompletedDate    DateTime?
+  totalQuestsCompleted Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -2720,15 +2523,15 @@ model Badge {
   id                    String      @id @default(cuid())
   name                  String      @unique
   description           String      @db.Text
-  imageUrl              String      // URL to badge image in Azure Storage
-  qualificationCriteria Json        // Flexible criteria object
+  imageUrl              String // URL to badge image in Azure Storage
+  qualificationCriteria Json // Flexible criteria object
   displayOrder          Int         @default(0)
   isActive              Boolean     @default(true)
   isAutoAwarded         Boolean     @default(true) // Whether system auto-awards or admin manual only
-  maxAwards             Int?        // Optional limit on how many can be awarded
+  maxAwards             Int? // Optional limit on how many can be awarded
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
-  createdBy             String?     // Admin who created it
+  createdBy             String? // Admin who created it
   userBadges            UserBadge[]
 
   @@index([isActive])
@@ -2741,9 +2544,9 @@ model UserBadge {
   badgeId      String
   earnedAt     DateTime @default(now())
   isDisplayed  Boolean  @default(false) // Whether user chose to display it
-  displayOrder Int?     // User's personal ordering for displayed badges
-  awardedBy    String?  // Admin ID if manually awarded
-  awardReason  String?  // Optional reason for manual awards
+  displayOrder Int? // User's personal ordering for displayed badges
+  awardedBy    String? // Admin ID if manually awarded
+  awardReason  String? // Optional reason for manual awards
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
@@ -2779,33 +2582,4 @@ enum QuestTimeframe {
   MONTHLY
   ONGOING
   LIMITED_TIME
-}
-
-enum ModerationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FLAGGED
-  REVIEW_REQUIRED
-}
-
-enum ModerationCategory {
-  SAFE
-  INAPPROPRIATE
-  ADULT_CONTENT
-  VIOLENCE
-  HATE_SPEECH
-  SPAM
-  COPYRIGHT
-  POLITICAL_DISINFORMATION
-  PERSONAL_INFORMATION
-  OTHER
-}
-
-enum ModerationDecision {
-  APPROVE
-  REJECT
-  FLAG_FOR_REVIEW
-  REQUIRE_BLUR
-  REQUIRE_WARNING
 }

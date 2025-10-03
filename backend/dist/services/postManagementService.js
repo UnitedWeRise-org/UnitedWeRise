@@ -141,7 +141,6 @@ class PostManagementService {
                         },
                     }
                     : false,
-                photos: true,
                 _count: {
                     select: {
                         likes: true,
@@ -169,7 +168,6 @@ class PostManagementService {
                 commentsCount: post._count.comments,
             },
             comments: this.config.archiveCommentsOnDelete ? post.comments : [],
-            photos: post.photos,
         };
         let result;
         if (this.config.enableSoftDelete) {

@@ -11,6 +11,32 @@ const client_1 = require("@prisma/client");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const multer_1 = __importDefault(require("multer"));
 const router = express_1.default.Router();
+// 🚨 ABSOLUTE FIRST: Pre-middleware logging (BEFORE everything)
+router.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    // Use BOTH stderr and console.log to ensure we capture this
+    process.stderr.write(`\n🚨🚨🚨 PRE-MIDDLEWARE CHECKPOINT 🚨🚨🚨\n`);
+    process.stderr.write(`🚨 Timestamp: ${timestamp}\n`);
+    process.stderr.write(`🚨 Method: ${req.method}\n`);
+    process.stderr.write(`🚨 Path: ${req.path}\n`);
+    process.stderr.write(`🚨 Base URL: ${req.baseUrl}\n`);
+    process.stderr.write(`🚨 Full URL: ${req.baseUrl}${req.path}\n`);
+    process.stderr.write(`🚨 Content-Type: ${req.headers['content-type'] || 'none'}\n`);
+    process.stderr.write(`🚨 Content-Length: ${req.headers['content-length'] || 'none'}\n`);
+    process.stderr.write(`🚨🚨🚨 END PRE-MIDDLEWARE CHECKPOINT 🚨🚨🚨\n\n`);
+    console.log('\n🚨🚨🚨 PRE-MIDDLEWARE CHECKPOINT 🚨🚨🚨');
+    console.log('🚨 PRE-MIDDLEWARE:', {
+        timestamp,
+        method: req.method,
+        path: req.path,
+        baseUrl: req.baseUrl,
+        fullUrl: req.baseUrl + req.path,
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length']
+    });
+    console.log('🚨🚨🚨 END PRE-MIDDLEWARE CHECKPOINT 🚨🚨🚨\n');
+    next();
+});
 // 🔍 LAYER 4 DEBUG: Track all requests to photo router
 router.use((req, res, next) => {
     console.log('🔍 LAYER 4 | Route Matching | Photo router matched:', {

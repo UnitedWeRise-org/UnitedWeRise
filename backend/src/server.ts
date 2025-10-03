@@ -25,8 +25,6 @@ import unifiedMessagesRoutes from './routes/unifiedMessages';
 import candidatePolicyPlatformRoutes from './routes/candidatePolicyPlatform';
 import topicRoutes from './routes/topics';
 import topicNavigationRoutes from './routes/topicNavigation';
-import photoRoutes from './routes/photos';
-import photoTagRoutes from './routes/photoTags';
 import googleCivicRoutes from './routes/googleCivic';
 import feedbackRoutes from './routes/feedback';
 import batchRoutes from './routes/batch';
@@ -47,7 +45,6 @@ import motdRoutes from './routes/motd';
 import badgeRoutes from './routes/badges';
 import questRoutes from './routes/quests';
 import WebSocketService from './services/WebSocketService';
-import { PhotoService } from './services/photoService';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -227,12 +224,6 @@ app.use((req, res, next) => {
   console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
   console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
 
-  // Special attention to photos endpoint
-  if (req.path === '/api/photos/upload') {
-    console.log('🎯🎯🎯 PHOTOS UPLOAD ENDPOINT HIT!');
-    console.log('🎯 Full headers:', JSON.stringify(req.headers, null, 2));
-  }
-
   console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
   next();
 });
@@ -307,8 +298,6 @@ app.use('/api/candidate', candidateAdminMessagesRoutes);
 app.use('/api/unified-messages', unifiedMessagesRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/topic-navigation', topicNavigationRoutes);
-app.use('/api/photos', photoRoutes);
-app.use('/api/photo-tags', photoTagRoutes);
 app.use('/api/google-civic', googleCivicRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/batch', batchRoutes);
@@ -495,16 +484,11 @@ async function startServer() {
   try {
     console.log('🚀 Initializing services...');
 
-    // Initialize photo service and Azure Blob Storage - MUST complete before accepting requests
-    await PhotoService.initializeDirectories();
-    console.log('✅ Photo service initialized');
-
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`✅ WebSocket server active`);
       console.log(`✅ Health check: http://localhost:${PORT}/health`);
-      console.log(`✅ Photo uploads: enabled with automatic resizing`);
       console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
     });
   } catch (error) {

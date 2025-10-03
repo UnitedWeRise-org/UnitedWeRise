@@ -1,32 +1,143 @@
-# 🧪 COMPREHENSIVE TESTING PLAN: Direct-to-Blob Upload Architecture
-**Testing Agent Report**
-**Date:** September 30, 2025
-**Target:** Photo upload architecture change from Container Apps → Direct Browser Upload
+# 🧪 Direct-to-Blob Upload: Troubleshooting & Testing
+**Status:** 🔴 ACTIVE TROUBLESHOOTING
+**Last Updated:** October 2, 2025
+**Environment:** Production (www.unitedwerise.org)
 
 ---
 
-## 📊 EXECUTIVE SUMMARY
+## 🚨 CURRENT ISSUE
 
-### Architecture Change Analysis
-**OLD ARCHITECTURE (Current):**
+**Problem:** Photo uploads failing - blob not created in Azure Storage despite frontend showing "success"
+
+**Symptoms:**
+- Frontend logs show "☁️ Upload to Azure successful"
+- Browser console shows `☁️ Azure response: Object` (need to expand)
+- Backend confirm endpoint returns **404 Not Found** (but curl shows **401 Unauthorized**)
+- No blob appears in Azure Portal `/photos/posts/` folder
+- Feed shows no uploaded photos
+
+---
+
+## 📝 TROUBLESHOOTING LOG (Oct 2, 2025)
+
+### Change 1: Fixed EXIF Blob Overwrite ✅
+**Commit:** b6aa14a
+**File:** `backend/src/services/photoService.ts:968-988`
+
+**Problem:** Backend created NEW blob with UUID instead of overwriting original
+- Original: `posts/abc-123.png`
+- Sanitized: `posts/xyz-abc-123.png` ❌ (orphaned blob)
+- Database pointed to unsafe original blob with EXIF data
+
+**Fix:** Direct `uploadData()` to same path
+```typescript
+await sanitizedBlobClient.uploadData(sanitizedBuffer, {
+  blobHTTPHeaders: { blobContentType: options.mimeType }
+});
 ```
-Browser → Container Apps Backend (Multer) → Azure Blob Storage
-- File travels through Container Apps (2-hop)
-- 10MB payload through backend
-- Multer processes in memory
-- Backend uploads to blob
-- Network bottleneck at Container Apps
+**Result:** ✅ Deployed to production. Blob overwrite fixed. Upload still failing.
+
+---
+
+### Change 2: Removed Retry Logic ✅
+**Commit:** b6aa14a
+**File:** `backend/src/services/photoService.ts:1039-1083`
+
+**Problem:** Added 5-retry loop assuming "eventual consistency"
+**User Feedback:** *"Spamming retry requests is not a solution. Azure has STRONG consistency."*
+
+**Fix:** Removed retry loop entirely
+**Result:** ✅ Deployed. Focus on actual code issues, not Azure delays.
+
+---
+
+### Change 3: Set Public Blob Access ✅
+**Commit:** b6aa14a
+**File:** `backend/src/services/azureBlobService.ts:25-33`
+
+**Problem:** Container might not have public read access
+
+**Fix:** Added explicit `setAccessPolicy('blob')`
+**Result:** ✅ Deployed. Public blob access ensured.
+
+---
+
+### Change 4: Added Content-Type/Length Headers ❌
+**Commit:** d139977
+**File:** `frontend/src/modules/features/feed/photo-upload-direct.js:170-179`
+
+**Hypothesis:** Azure needs explicit Content-Type and Content-Length headers
+
+**Fix Attempted:**
+```javascript
+headers: {
+    'x-ms-blob-type': 'BlockBlob',
+    'Content-Type': file.type,
+    'Content-Length': file.size.toString()
+}
+```
+**Result:** ❌ FAILED. Blob still not created. (Content-Length is forbidden header in Fetch API)
+
+---
+
+### Change 5: Removed Explicit Headers ⏳
+**Commit:** c4b0577
+**File:** `frontend/src/modules/features/feed/photo-upload-direct.js:170-178`
+
+**Reasoning:** Browser automatically sets Content-Type/Length when passing File object
+
+**Fix:**
+```javascript
+headers: {
+    'x-ms-blob-type': 'BlockBlob'
+    // Let browser set Content-Type and Content-Length
+}
+```
+**Result:** ⏳ DEPLOYED. Awaiting test results.
+
+---
+
+## 🔍 CURRENT INVESTIGATION
+
+### Verified Working ✅
+- Backend endpoints exist (curl returns 401 Unauthorized, not 404)
+- Production backend deployed: `releaseSha: b6aa14a`
+- Routes registered in compiled code
+- API client URL building correct
+- SAS token generation successful
+- CORS configured (OPTIONS and PUT enabled)
+- No lifecycle deletion rules
+
+### Mystery 🔍
+- **Curl test:** `/api/photos/upload/confirm` → 401 Unauthorized (endpoint exists)
+- **Browser:** `/api/photos/upload/confirm` → 404 Not Found (endpoint missing?)
+- **Why different status codes?**
+
+### Pending Diagnostics
+User needs to expand browser console objects:
+1. `☁️ Azure response: Object` → Get status, ok, statusText, body
+2. `🔍 SAS URL Parameters` → Already checked: no comp/blockid (correct)
+
+### Azure Portal Checks
+- ✅ CORS: OPTIONS and PUT enabled
+- ✅ Storage account: `uwrstorage2425`
+- ❌ Direct blob URL: Returns `BlobNotFound`
+- ❌ Posts folder: Only 3 old .webp files, no recent .png
+
+---
+
+## 🏗️ ARCHITECTURE OVERVIEW
+
+**CURRENT SYSTEM (Direct-to-Blob):**
+```
+Browser → GET SAS Token → Direct Upload to Azure → Confirm with Backend
 ```
 
-**NEW ARCHITECTURE (Proposed):**
-```
-Browser → GET SAS Token (Backend) → Direct Upload (Azure Blob) → Confirm (Backend)
-- File travels direct to blob (1-hop)
-- Only token metadata through backend
-- Azure handles upload directly
-- Backend confirms completion
-- Eliminates Container Apps bottleneck
-```
+**Key Files:**
+- Frontend: `frontend/src/modules/features/feed/photo-upload-direct.js`
+- Backend SAS: `backend/src/services/sasTokenService.ts`
+- Backend Photo: `backend/src/services/photoService.ts`
+- Backend Routes: `backend/src/routes/photos.ts`
 
 ### Critical Risk Assessment
 ⚠️ **HIGH RISK AREAS:**

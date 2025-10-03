@@ -9,10 +9,8 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const relationshipService_1 = require("../services/relationshipService");
-const photoService_1 = require("../services/photoService");
 const activityTracker_1 = require("../services/activityTracker");
 const client_1 = require("@prisma/client");
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Get current user's full profile
@@ -683,55 +681,8 @@ router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Rate limiting for background image uploads
-const backgroundUploadLimiter = (0, express_rate_limit_1.default)({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 uploads per hour
-    message: {
-        error: 'Too many background image upload attempts',
-        message: 'Please wait before uploading another background image'
-    }
-});
-// Upload background image
-router.post('/background-image', auth_1.requireAuth, backgroundUploadLimiter, async (req, res) => {
-    const upload = photoService_1.PhotoService.getMulterConfig();
-    upload.single('backgroundImage')(req, res, async (err) => {
-        if (err) {
-            console.error('Background image upload error:', err);
-            return res.status(400).json({ error: 'Failed to upload background image' });
-        }
-        if (!req.file) {
-            return res.status(400).json({ error: 'No background image file provided' });
-        }
-        try {
-            // Process the uploaded image
-            const photoData = await photoService_1.PhotoService.uploadPhoto(req.file, {
-                userId: req.user.id,
-                photoType: 'COVER', // Use COVER type for background images
-                purpose: 'PERSONAL',
-                maxWidth: 1920,
-                maxHeight: 1080
-            });
-            // Update user's background image
-            const updatedUser = await prisma_1.prisma.user.update({
-                where: { id: req.user.id },
-                data: { backgroundImage: photoData.url },
-                select: {
-                    id: true,
-                    backgroundImage: true
-                }
-            });
-            res.json({
-                message: 'Background image updated successfully',
-                backgroundImage: updatedUser.backgroundImage
-            });
-        }
-        catch (error) {
-            console.error('Background image update error:', error);
-            res.status(500).json({ error: 'Failed to update background image' });
-        }
-    });
-});
+// TODO: Background image upload endpoint removed during PhotoService cleanup
+// Will be reimplemented with new photo upload architecture
 // Remove background image
 router.delete('/background-image', auth_1.requireAuth, async (req, res) => {
     try {

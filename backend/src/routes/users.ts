@@ -5,7 +5,6 @@ import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateProfileUpdate } from '../middleware/validation';
 import { FollowService } from '../services/relationshipService';
-import { PhotoService } from '../services/photoService';
 import { ActivityTracker } from '../services/activityTracker';
 import { ActivityType } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
@@ -731,61 +730,8 @@ router.get('/follow-status/:userId', requireAuth, async (req: AuthRequest, res) 
     }
 });
 
-// Rate limiting for background image uploads
-const backgroundUploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 uploads per hour
-  message: {
-    error: 'Too many background image upload attempts',
-    message: 'Please wait before uploading another background image'
-  }
-});
-
-// Upload background image
-router.post('/background-image', requireAuth, backgroundUploadLimiter, async (req: AuthRequest, res) => {
-    const upload = PhotoService.getMulterConfig();
-    
-    upload.single('backgroundImage')(req, res, async (err) => {
-        if (err) {
-            console.error('Background image upload error:', err);
-            return res.status(400).json({ error: 'Failed to upload background image' });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ error: 'No background image file provided' });
-        }
-
-        try {
-            // Process the uploaded image
-            const photoData = await PhotoService.uploadPhoto(req.file, {
-                userId: req.user!.id,
-                photoType: 'COVER', // Use COVER type for background images
-                purpose: 'PERSONAL',
-                maxWidth: 1920,
-                maxHeight: 1080
-            });
-
-            // Update user's background image
-            const updatedUser = await prisma.user.update({
-                where: { id: req.user!.id },
-                data: { backgroundImage: photoData.url },
-                select: {
-                    id: true,
-                    backgroundImage: true
-                }
-            });
-
-            res.json({
-                message: 'Background image updated successfully',
-                backgroundImage: updatedUser.backgroundImage
-            });
-
-        } catch (error) {
-            console.error('Background image update error:', error);
-            res.status(500).json({ error: 'Failed to update background image' });
-        }
-    });
-});
+// TODO: Background image upload endpoint removed during PhotoService cleanup
+// Will be reimplemented with new photo upload architecture
 
 // Remove background image
 router.delete('/background-image', requireAuth, async (req: AuthRequest, res) => {

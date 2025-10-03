@@ -1,7 +1,6 @@
-import { Candidate, Photo } from '@prisma/client';
+import { Candidate } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { azureOpenAI } from './azureOpenAIService';
-import { PhotoService } from './photoService';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -18,9 +17,9 @@ interface CandidateProfile {
   
   // Enhanced data
   photos: {
-    avatar?: Photo;
-    campaignHeadshot?: Photo;
-    gallery: Photo[];
+    avatar?: any;
+    campaignHeadshot?: any;
+    gallery: any[];
   };
   
   policyPositions?: {
@@ -121,9 +120,13 @@ export class EnhancedCandidateService {
         return null;
       }
 
-      // Get candidate photos
-      const photos = await this.getCandidatePhotos(candidateId);
-      
+      // Photos functionality removed - PhotoService deleted
+      const photos = {
+        avatar: undefined,
+        campaignHeadshot: undefined,
+        gallery: []
+      };
+
       // Get AI-analyzed policy positions
       let policyPositions = [];
       try {
@@ -406,28 +409,13 @@ export class EnhancedCandidateService {
 
   // Private helper methods
 
-  private static async getCandidatePhotos(candidateId: string) {
-    try {
-      const photos = await PhotoService.getCandidatePhotos(candidateId);
-      
-      return {
-        avatar: photos.find(p => p.photoType === 'AVATAR') || undefined,
-        campaignHeadshot: photos.find(p => p.photoType === 'CAMPAIGN') || undefined,
-        gallery: photos.filter(p => p.photoType === 'GALLERY' || p.photoType === 'EVENT')
-      };
-
-    } catch (error) {
-      console.warn(`Failed to load photos for candidate ${candidateId}:`, error);
-      return {
-        avatar: undefined,
-        campaignHeadshot: undefined,
-        gallery: []
-      };
-    }
-  }
-
   private static async buildBasicProfile(candidate: any): Promise<CandidateProfile> {
-    const photos = await this.getCandidatePhotos(candidate.id);
+    // Photos functionality removed - PhotoService deleted
+    const photos = {
+      avatar: undefined,
+      campaignHeadshot: undefined,
+      gallery: []
+    };
     
     return {
       id: candidate.id,

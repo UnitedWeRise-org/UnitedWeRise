@@ -138,27 +138,6 @@ router.get('/trending', async (req, res) => {
             }
           }
         },
-        photos: {
-          where: {
-            isActive: true,
-            photoType: 'POST_MEDIA'
-          },
-          select: {
-            id: true,
-            url: true,
-            thumbnailUrl: true,
-            width: true,
-            height: true,
-            mimeType: true
-          }
-        },
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-            shares: true
-          }
-        },
         comments: {
           select: {
             likesCount: true,
@@ -184,8 +163,8 @@ router.get('/trending', async (req, res) => {
         dislikesCount: post.dislikesCount || 0,
         agreesCount: post.agreesCount || 0,
         disagreesCount: post.disagreesCount || 0,
-        commentsCount: post._count.comments || 0,
-        sharesCount: post._count.shares || 0,
+        commentsCount: post.commentsCount || 0,
+        sharesCount: post.sharesCount || 0,
         viewsCount: 0, // Views not implemented yet
         communityNotesCount: 0,
         reportsCount: 0,
@@ -200,11 +179,7 @@ router.get('/trending', async (req, res) => {
 
       return {
         ...post,
-        likesCount: post._count.likes,
-        commentsCount: post._count.comments,
-        sharesCount: post._count.shares,
-        engagementScore: engagementResult.score,
-        _count: undefined
+        engagementScore: engagementResult.score
       };
     });
 

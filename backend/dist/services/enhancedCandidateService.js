@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnhancedCandidateService = void 0;
 const prisma_1 = require("../lib/prisma");
-const photoService_1 = require("./photoService");
 class EnhancedCandidateService {
     /**
      * Get enhanced candidate profile with photos and AI-analyzed positions
@@ -46,8 +45,12 @@ class EnhancedCandidateService {
             if (!candidate) {
                 return null;
             }
-            // Get candidate photos
-            const photos = await this.getCandidatePhotos(candidateId);
+            // Photos functionality removed - PhotoService deleted
+            const photos = {
+                avatar: undefined,
+                campaignHeadshot: undefined,
+                gallery: []
+            };
             // Get AI-analyzed policy positions
             let policyPositions = [];
             try {
@@ -281,26 +284,13 @@ class EnhancedCandidateService {
         }
     }
     // Private helper methods
-    static async getCandidatePhotos(candidateId) {
-        try {
-            const photos = await photoService_1.PhotoService.getCandidatePhotos(candidateId);
-            return {
-                avatar: photos.find(p => p.photoType === 'AVATAR') || undefined,
-                campaignHeadshot: photos.find(p => p.photoType === 'CAMPAIGN') || undefined,
-                gallery: photos.filter(p => p.photoType === 'GALLERY' || p.photoType === 'EVENT')
-            };
-        }
-        catch (error) {
-            console.warn(`Failed to load photos for candidate ${candidateId}:`, error);
-            return {
-                avatar: undefined,
-                campaignHeadshot: undefined,
-                gallery: []
-            };
-        }
-    }
     static async buildBasicProfile(candidate) {
-        const photos = await this.getCandidatePhotos(candidate.id);
+        // Photos functionality removed - PhotoService deleted
+        const photos = {
+            avatar: undefined,
+            campaignHeadshot: undefined,
+            gallery: []
+        };
         return {
             id: candidate.id,
             name: candidate.name,

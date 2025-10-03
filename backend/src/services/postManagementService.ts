@@ -202,7 +202,6 @@ export class PostManagementService {
               },
             }
           : false,
-        photos: true,
         _count: {
           select: {
             likes: true,
@@ -233,7 +232,6 @@ export class PostManagementService {
         commentsCount: post._count.comments,
       },
       comments: this.config.archiveCommentsOnDelete ? post.comments : [],
-      photos: post.photos,
     };
 
     let result;

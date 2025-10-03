@@ -39,21 +39,8 @@ class ModerationResultsService {
                     processingTime: data.processingTime,
                     aiModel: data.aiModel,
                     modelVersion: data.modelVersion
-                },
-                include: {
-                    photo: {
-                        select: {
-                            id: true,
-                            filename: true,
-                            url: true,
-                            userId: true,
-                            createdAt: true
-                        }
-                    }
                 }
             });
-            // Update photo moderation status based on AI results
-            await this.updatePhotoModerationStatus(data.photoId, result);
             await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Moderation result created successfully', { resultId: result.id });
             return result;
         }
@@ -70,17 +57,6 @@ class ModerationResultsService {
             const result = await prisma.imageModerationResult.findUnique({
                 where: { photoId },
                 include: {
-                    photo: {
-                        select: {
-                            id: true,
-                            filename: true,
-                            url: true,
-                            thumbnailUrl: true,
-                            userId: true,
-                            moderationStatus: true,
-                            createdAt: true
-                        }
-                    },
                     reviews: {
                         include: {
                             reviewer: {
@@ -133,33 +109,10 @@ class ModerationResultsService {
                 if (dateTo)
                     where.createdAt.lte = dateTo;
             }
-            // Add photo status filter if provided
-            if (status) {
-                where.photo = {
-                    moderationStatus: status
-                };
-            }
+            // Note: Photo status filtering removed - Photo model deleted
             const results = await prisma.imageModerationResult.findMany({
                 where,
                 include: {
-                    photo: {
-                        select: {
-                            id: true,
-                            filename: true,
-                            url: true,
-                            thumbnailUrl: true,
-                            userId: true,
-                            moderationStatus: true,
-                            createdAt: true,
-                            user: {
-                                select: {
-                                    id: true,
-                                    username: true,
-                                    email: true
-                                }
-                            }
-                        }
-                    },
                     reviews: {
                         include: {
                             reviewer: {
@@ -204,29 +157,22 @@ class ModerationResultsService {
         try {
             const results = await prisma.imageModerationResult.findMany({
                 where: {
-                    requiresHumanReview: true,
-                    photo: {
-                        moderationStatus: 'PENDING'
-                    }
+                    requiresHumanReview: true
                 },
                 include: {
-                    photo: {
-                        select: {
-                            id: true,
-                            filename: true,
-                            url: true,
-                            thumbnailUrl: true,
-                            userId: true,
-                            moderationStatus: true,
-                            createdAt: true,
-                            user: {
+                    reviews: {
+                        include: {
+                            reviewer: {
                                 select: {
                                     id: true,
                                     username: true,
-                                    email: true
+                                    isAdmin: true,
+                                    isModerator: true
                                 }
                             }
-                        }
+                        },
+                        orderBy: { reviewedAt: 'desc' },
+                        take: 1
                     }
                 },
                 orderBy: [
@@ -238,10 +184,7 @@ class ModerationResultsService {
             });
             const totalPending = await prisma.imageModerationResult.count({
                 where: {
-                    requiresHumanReview: true,
-                    photo: {
-                        moderationStatus: 'PENDING'
-                    }
+                    requiresHumanReview: true
                 }
             });
             return {
@@ -278,11 +221,7 @@ class ModerationResultsService {
                     originalDecision: data.originalDecision
                 },
                 include: {
-                    moderationResult: {
-                        include: {
-                            photo: true
-                        }
-                    },
+                    moderationResult: true,
                     reviewer: {
                         select: {
                             id: true,
@@ -293,8 +232,6 @@ class ModerationResultsService {
                     }
                 }
             });
-            // Update photo status based on review decision
-            await this.applyModerationDecision(review.moderationResult.photoId, data.decision);
             await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Moderation review created successfully', { reviewId: review.id });
             return review;
         }
@@ -308,27 +245,14 @@ class ModerationResultsService {
      */
     static async getModerationStatistics() {
         try {
-            const [totalImages, pendingReview, approved, rejected, flagged, highRiskImages, recentActivity] = await Promise.all([
+            const [totalImages, pendingReview, highRiskImages, recentActivity] = await Promise.all([
                 // Total images with moderation results
                 prisma.imageModerationResult.count(),
                 // Pending human review
                 prisma.imageModerationResult.count({
                     where: {
-                        requiresHumanReview: true,
-                        photo: { moderationStatus: 'PENDING' }
+                        requiresHumanReview: true
                     }
-                }),
-                // Approved images
-                prisma.photo.count({
-                    where: { moderationStatus: 'APPROVED' }
-                }),
-                // Rejected images
-                prisma.photo.count({
-                    where: { moderationStatus: 'REJECTED' }
-                }),
-                // Flagged images
-                prisma.photo.count({
-                    where: { moderationStatus: 'FLAGGED' }
                 }),
                 // High risk images (risk score > 0.7)
                 prisma.imageModerationResult.count({
@@ -346,9 +270,6 @@ class ModerationResultsService {
             return {
                 totalImages,
                 pendingReview,
-                approved,
-                rejected,
-                flagged,
                 highRiskImages,
                 recentActivity
             };
@@ -360,99 +281,25 @@ class ModerationResultsService {
     }
     /**
      * Update photo moderation status based on AI analysis
+     * NOTE: Photo model removed - this method is now a no-op
      */
     static async updatePhotoModerationStatus(photoId, result) {
-        try {
-            let status = 'PENDING';
-            let requiresReview = false;
-            let humanReviewRequired = false;
-            // Determine status based on AI analysis
-            if (result.isSafe && result.riskScore < 0.3 && result.overallConfidence > 0.8) {
-                status = 'APPROVED';
-            }
-            else if (result.riskScore > 0.7 || !result.isSafe) {
-                status = 'FLAGGED';
-                requiresReview = true;
-                humanReviewRequired = true;
-            }
-            else if (result.requiresHumanReview || result.overallConfidence < 0.6) {
-                status = 'REVIEW_REQUIRED';
-                requiresReview = true;
-                humanReviewRequired = true;
-            }
-            await prisma.photo.update({
-                where: { id: photoId },
-                data: {
-                    moderationStatus: status,
-                    moderationScore: result.riskScore,
-                    requiresReview,
-                    autoModerationPassed: status === 'APPROVED',
-                    humanReviewRequired,
-                    lastModerationAt: new Date(),
-                    moderationMetadata: {
-                        aiModel: result.aiModel,
-                        modelVersion: result.modelVersion,
-                        overallConfidence: result.overallConfidence,
-                        primaryCategory: result.primaryCategory
-                    }
-                }
-            });
-            await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Updated photo moderation status', {
-                photoId,
-                status,
-                riskScore: result.riskScore
-            });
-        }
-        catch (error) {
-            await (0, adminDebug_js_1.adminDebugError)('ModerationResultsService', 'Failed to update photo moderation status', error);
-            throw error;
-        }
+        // Photo model deleted - no-op
+        await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Photo moderation update skipped (Photo model removed)', {
+            photoId,
+            riskScore: result.riskScore
+        });
     }
     /**
      * Apply moderation decision to photo
+     * NOTE: Photo model removed - this method is now a no-op
      */
     static async applyModerationDecision(photoId, decision) {
-        try {
-            let status;
-            let isActive = true;
-            switch (decision) {
-                case 'APPROVE':
-                    status = 'APPROVED';
-                    break;
-                case 'REJECT':
-                    status = 'REJECTED';
-                    isActive = false;
-                    break;
-                case 'FLAG_FOR_REVIEW':
-                    status = 'FLAGGED';
-                    break;
-                case 'REQUIRE_BLUR':
-                case 'REQUIRE_WARNING':
-                    status = 'FLAGGED';
-                    break;
-                default:
-                    status = 'PENDING';
-            }
-            await prisma.photo.update({
-                where: { id: photoId },
-                data: {
-                    moderationStatus: status,
-                    isActive,
-                    requiresReview: false,
-                    humanReviewRequired: false,
-                    lastModerationAt: new Date()
-                }
-            });
-            await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Applied moderation decision', {
-                photoId,
-                decision,
-                status
-            });
-        }
-        catch (error) {
-            await (0, adminDebug_js_1.adminDebugError)('ModerationResultsService', 'Failed to apply moderation decision', error);
-            throw error;
-        }
+        // Photo model deleted - no-op
+        await (0, adminDebug_js_1.adminDebugLog)('ModerationResultsService', 'Moderation decision application skipped (Photo model removed)', {
+            photoId,
+            decision
+        });
     }
     /**
      * Bulk approve multiple images

@@ -1,4 +1,3 @@
-import { Photo } from '@prisma/client';
 interface CandidateProfile {
     id: string;
     name: string;
@@ -10,9 +9,9 @@ interface CandidateProfile {
     keyIssues: string[];
     isVerified: boolean;
     photos: {
-        avatar?: Photo;
-        campaignHeadshot?: Photo;
-        gallery: Photo[];
+        avatar?: any;
+        campaignHeadshot?: any;
+        gallery: any[];
     };
     policyPositions?: {
         issue: string;
@@ -94,7 +93,6 @@ export declare class EnhancedCandidateService {
         campaignWebsite?: string;
         campaignEmail?: string;
     }): Promise<boolean>;
-    private static getCandidatePhotos;
     private static buildBasicProfile;
     private static generateFallbackComparison;
     private static findSharedIssues;

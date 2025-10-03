@@ -31,8 +31,6 @@ const unifiedMessages_1 = __importDefault(require("./routes/unifiedMessages"));
 const candidatePolicyPlatform_1 = __importDefault(require("./routes/candidatePolicyPlatform"));
 const topics_1 = __importDefault(require("./routes/topics"));
 const topicNavigation_1 = __importDefault(require("./routes/topicNavigation"));
-const photos_1 = __importDefault(require("./routes/photos"));
-const photoTags_1 = __importDefault(require("./routes/photoTags"));
 const googleCivic_1 = __importDefault(require("./routes/googleCivic"));
 const feedback_1 = __importDefault(require("./routes/feedback"));
 const batch_1 = __importDefault(require("./routes/batch"));
@@ -53,7 +51,6 @@ const motd_1 = __importDefault(require("./routes/motd"));
 const badges_1 = __importDefault(require("./routes/badges"));
 const quests_1 = __importDefault(require("./routes/quests"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
-const photoService_1 = require("./services/photoService");
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
@@ -216,11 +213,6 @@ app.use((req, res, next) => {
     console.log(`📥 Content-Length: ${req.headers['content-length'] || 'none'}`);
     console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
     console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
-    // Special attention to photos endpoint
-    if (req.path === '/api/photos/upload') {
-        console.log('🎯🎯🎯 PHOTOS UPLOAD ENDPOINT HIT!');
-        console.log('🎯 Full headers:', JSON.stringify(req.headers, null, 2));
-    }
     console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
     next();
 });
@@ -286,8 +278,6 @@ app.use('/api/candidate', candidateAdminMessages_1.default);
 app.use('/api/unified-messages', unifiedMessages_1.default);
 app.use('/api/topics', topics_1.default);
 app.use('/api/topic-navigation', topicNavigation_1.default);
-app.use('/api/photos', photos_1.default);
-app.use('/api/photo-tags', photoTags_1.default);
 app.use('/api/google-civic', googleCivic_1.default);
 app.use('/api/feedback', feedback_1.default);
 app.use('/api/batch', batch_1.default);
@@ -456,15 +446,11 @@ process.on('SIGINT', gracefulShutdown);
 async function startServer() {
     try {
         console.log('🚀 Initializing services...');
-        // Initialize photo service and Azure Blob Storage - MUST complete before accepting requests
-        await photoService_1.PhotoService.initializeDirectories();
-        console.log('✅ Photo service initialized');
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
             console.log(`✅ Server running on port ${PORT}`);
             console.log(`✅ WebSocket server active`);
             console.log(`✅ Health check: http://localhost:${PORT}/health`);
-            console.log(`✅ Photo uploads: enabled with automatic resizing`);
             console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
         });
     }

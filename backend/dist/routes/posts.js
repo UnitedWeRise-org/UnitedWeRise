@@ -59,18 +59,10 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ error: 'Post content is required' });
         }
-        // Validate media attachment if provided
-        let mediaPhoto = null;
+        // Photo model removed - media attachments no longer supported
+        // Posts can still use imageUrl (string) field for image links
         if (mediaId) {
-            mediaPhoto = await prisma_1.prisma.photo.findUnique({
-                where: { id: mediaId }
-            });
-            if (!mediaPhoto || mediaPhoto.userId !== userId || !mediaPhoto.isActive) {
-                return res.status(400).json({ error: 'Invalid media attachment' });
-            }
-            if (mediaPhoto.photoType !== 'POST_MEDIA') {
-                return res.status(400).json({ error: 'Only POST_MEDIA type photos can be attached to posts' });
-            }
+            return res.status(400).json({ error: 'Media attachments are no longer supported. Use imageUrl instead.' });
         }
         // Handle content length - split into content and extendedContent if needed
         let mainContent = content.trim();
@@ -180,20 +172,7 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                         verified: true
                     }
                 },
-                photos: {
-                    where: {
-                        isActive: true,
-                        photoType: 'POST_MEDIA'
-                    },
-                    select: {
-                        id: true,
-                        url: true,
-                        thumbnailUrl: true,
-                        width: true,
-                        height: true,
-                        mimeType: true
-                    }
-                },
+                // Photo model removed - photos relation no longer exists
                 _count: {
                     select: {
                         likes: true,
@@ -202,65 +181,8 @@ router.post('/', auth_1.requireAuth, moderation_1.checkUserSuspension, rateLimit
                 }
             }
         });
-        // Link media to post if provided
-        if (mediaId && mediaPhoto) {
-            try {
-                await prisma_1.prisma.photo.update({
-                    where: { id: mediaId },
-                    data: { postId: post.id }
-                });
-                console.log(`📷 Media linked to post: ${mediaId} → ${post.id}`);
-                // Fetch the post again to include the newly linked photos
-                const updatedPost = await prisma_1.prisma.post.findUnique({
-                    where: { id: post.id },
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                firstName: true,
-                                lastName: true,
-                                avatar: true,
-                                verified: true
-                            }
-                        },
-                        photos: {
-                            where: {
-                                isActive: true,
-                                photoType: 'POST_MEDIA'
-                            },
-                            select: {
-                                id: true,
-                                url: true,
-                                thumbnailUrl: true,
-                                width: true,
-                                height: true,
-                                mimeType: true
-                            }
-                        },
-                        _count: {
-                            select: {
-                                likes: true,
-                                comments: true
-                            }
-                        }
-                    }
-                });
-                if (updatedPost) {
-                    // Replace the post object with the updated one that includes photos
-                    Object.assign(post, updatedPost);
-                    console.log(`✅ Post updated with photos: ${post.photos?.length || 0} photo(s)`);
-                    console.log(`📸 DIAGNOSTIC - Photo URLs:`, post.photos?.map(p => p.url));
-                }
-                else {
-                    console.error(`❌ DIAGNOSTIC - Failed to fetch updated post with photos for postId: ${post.id}`);
-                }
-            }
-            catch (error) {
-                console.error('Failed to link media to post:', error);
-                // Non-critical error - don't fail the post creation
-            }
-        }
+        // Photo model removed - media linking no longer supported
+        // Posts now use imageUrl field directly instead of Photo relations
         // Update reputation event with actual post ID if penalties were applied
         if (reputationImpact.totalPenalty < 0) {
             try {
@@ -344,20 +266,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
                         verified: true
                     }
                 },
-                photos: {
-                    where: {
-                        isActive: true,
-                        photoType: 'POST_MEDIA'
-                    },
-                    select: {
-                        id: true,
-                        url: true,
-                        thumbnailUrl: true,
-                        width: true,
-                        height: true,
-                        mimeType: true
-                    }
-                },
+                // Photo model removed - photos relation no longer exists
                 reactions: {
                     where: { userId },
                     select: {
@@ -437,20 +346,7 @@ router.get('/:postId', async (req, res) => {
                         verified: true
                     }
                 },
-                photos: {
-                    where: {
-                        isActive: true,
-                        photoType: 'POST_MEDIA'
-                    },
-                    select: {
-                        id: true,
-                        url: true,
-                        thumbnailUrl: true,
-                        width: true,
-                        height: true,
-                        mimeType: true
-                    }
-                },
+                // Photo model removed - photos relation no longer exists
                 reactions: userId ? {
                     where: { userId },
                     select: {
@@ -1267,20 +1163,7 @@ router.get('/user/:userId', async (req, res) => {
                         verified: true
                     }
                 },
-                photos: {
-                    where: {
-                        isActive: true,
-                        photoType: 'POST_MEDIA'
-                    },
-                    select: {
-                        id: true,
-                        url: true,
-                        thumbnailUrl: true,
-                        width: true,
-                        height: true,
-                        mimeType: true
-                    }
-                },
+                // Photo model removed - photos relation no longer exists
                 reactions: currentUserId ? {
                     where: { userId: currentUserId },
                     select: {
