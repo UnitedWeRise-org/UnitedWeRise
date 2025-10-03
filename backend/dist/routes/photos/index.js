@@ -1,13 +1,14 @@
 "use strict";
 /**
- * Layer 2: Photo Upload with File Validation
+ * Layer 3: Photo Upload with EXIF Stripping
  *
- * Purpose: Add comprehensive file validation to photo uploads
- * Features: Authentication + File Validation + File Transport
+ * Purpose: Strip EXIF metadata and convert to WebP for privacy and efficiency
+ * Features: Authentication + File Validation + EXIF Stripping + WebP Conversion
  * Layers:
  *   - Layer 0: Basic file transport ✅
  *   - Layer 1: Authentication ✅
  *   - Layer 2: File validation ✅
+ *   - Layer 3: EXIF stripping and WebP conversion ✅
  * Logging: Every step logs with requestId for tracing
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -18,6 +19,7 @@ const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const storage_blob_1 = require("@azure/storage-blob");
 const uuid_1 = require("uuid");
+const sharp_1 = __importDefault(require("sharp"));
 const auth_1 = require("../../middleware/auth");
 const router = express_1.default.Router();
 // Layer 2: File validation constants
@@ -271,6 +273,43 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
             extension: fileExtension,
             dimensions: dimensions
         });
+        // Layer 3: EXIF stripping and format optimization
+        const originalSize = req.file.size;
+        let processedBuffer;
+        let finalMimeType;
+        let finalExtension;
+        if (req.file.mimetype === 'image/gif') {
+            // GIFs: Strip metadata but preserve animation
+            const sharpInstance = (0, sharp_1.default)(req.file.buffer, { animated: true });
+            processedBuffer = await sharpInstance
+                .gif()
+                .toBuffer();
+            finalMimeType = 'image/gif';
+            finalExtension = 'gif';
+            log(requestId, 'EXIF_STRIPPED', {
+                format: 'gif',
+                originalSize,
+                processedSize: processedBuffer.length,
+                reduction: ((originalSize - processedBuffer.length) / originalSize * 100).toFixed(2) + '%',
+                preserved: 'animation'
+            });
+        }
+        else {
+            // Static images: Strip EXIF and convert to WebP
+            processedBuffer = await (0, sharp_1.default)(req.file.buffer)
+                .webp({ quality: 85 })
+                .toBuffer();
+            finalMimeType = 'image/webp';
+            finalExtension = 'webp';
+            log(requestId, 'EXIF_STRIPPED', {
+                format: 'webp',
+                originalFormat: req.file.mimetype,
+                originalSize,
+                processedSize: processedBuffer.length,
+                reduction: ((originalSize - processedBuffer.length) / originalSize * 100).toFixed(2) + '%',
+                quality: 85
+            });
+        }
         // Step 2: Check environment variables
         const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
         const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
@@ -293,15 +332,15 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
         // Step 4: Ensure container exists
         await containerClient.createIfNotExists({ access: 'blob' });
         log(requestId, 'CONTAINER_VERIFIED', { container: 'photos' });
-        // Step 5: Generate unique blob name with user ID (use validated extension)
-        const blobName = `${req.user.id}/${requestId}.${fileExtension}`;
+        // Step 5: Generate unique blob name with processed extension
+        const blobName = `${req.user.id}/${requestId}.${finalExtension}`;
         log(requestId, 'BLOB_NAME_GENERATED', { blobName, userId: req.user.id });
         // Step 6: Get blob client
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-        // Step 7: Upload to Azure
-        await blockBlobClient.uploadData(req.file.buffer, {
+        // Step 7: Upload to Azure (use processed buffer and mime type)
+        await blockBlobClient.uploadData(processedBuffer, {
             blobHTTPHeaders: {
-                blobContentType: req.file.mimetype
+                blobContentType: finalMimeType
             }
         });
         log(requestId, 'AZURE_UPLOAD_SUCCESS', { blobName });
@@ -311,16 +350,20 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
             url: photoUrl,
             duration: Date.now() - new Date(requestId.split('-')[0]).getTime()
         });
-        // Step 9: Return success with validation metadata
+        // Step 9: Return success with processing metadata
         return res.status(201).json({
             success: true,
             data: {
                 url: photoUrl,
                 blobName,
                 requestId,
-                size: req.file.size,
-                mimeType: req.file.mimetype,
-                dimensions: dimensions
+                originalSize,
+                processedSize: processedBuffer.length,
+                sizeReduction: ((originalSize - processedBuffer.length) / originalSize * 100).toFixed(2) + '%',
+                originalMimeType: req.file.mimetype,
+                finalMimeType,
+                dimensions,
+                exifStripped: true
             }
         });
     }
@@ -350,12 +393,13 @@ router.get('/health', (req, res) => {
     };
     return res.json({
         status: 'ok',
-        layer: 2,
-        description: 'Authenticated photo upload with file validation',
+        layer: 3,
+        description: 'Authenticated photo upload with validation and EXIF stripping',
         features: {
             authentication: true,
             validation: true,
-            exifStripping: false,
+            exifStripping: true,
+            webpConversion: true,
             moderation: false,
             database: false
         },

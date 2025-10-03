@@ -1,12 +1,13 @@
 /**
- * Layer 2: Photo Upload with File Validation
+ * Layer 3: Photo Upload with EXIF Stripping
  *
- * Purpose: Add comprehensive file validation to photo uploads
- * Features: Authentication + File Validation + File Transport
+ * Purpose: Strip EXIF metadata and convert to WebP for privacy and efficiency
+ * Features: Authentication + File Validation + EXIF Stripping + WebP Conversion
  * Layers:
  *   - Layer 0: Basic file transport ✅
  *   - Layer 1: Authentication ✅
  *   - Layer 2: File validation ✅
+ *   - Layer 3: EXIF stripping and WebP conversion ✅
  * Logging: Every step logs with requestId for tracing
  */
 declare const router: import("express-serve-static-core").Router;
