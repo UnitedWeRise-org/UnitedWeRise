@@ -1,0 +1,110 @@
+name: Backend Auto-Deploy to Staging
+
+on:
+  push:
+    branches:
+      - development
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-staging-autodeploy.yml'
+
+jobs:
+  deploy-backend-staging:
+    runs-on: ubuntu-latest
+    name: Deploy Backend to Staging Environment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Deploy Backend to Staging
+        env:
+          AZURE_REGISTRY: uwracr2425
+          AZURE_RESOURCE_GROUP: unitedwerise-rg
+          AZURE_CONTAINER_APP: unitedwerise-backend-staging
+        run: |
+          set -e
+
+          echo "🚀 Starting backend deployment to STAGING"
+          echo "Branch: development"
+          echo "Commit: ${{ github.sha }}"
+          echo "Timestamp: $(date)"
+
+          # Get short commit SHA
+          GIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          DOCKER_TAG="backend-dev-${GIT_SHA}-$(date +%Y%m%d-%H%M%S)"
+
+          echo "🏷️ Docker tag: $DOCKER_TAG"
+
+          # Build Docker image in ACR
+          echo "🔨 Building Docker image in Azure Container Registry..."
+          az acr build --registry $AZURE_REGISTRY \
+            --image "unitedwerise-backend:$DOCKER_TAG" \
+            --no-wait \
+            https://github.com/${{ github.repository }}.git#development:backend
+
+          echo "⏳ Waiting 180 seconds for build to complete..."
+          sleep 180
+
+          # Check build status
+          echo "📊 Checking build status..."
+          az acr task list-runs --registry $AZURE_REGISTRY --output table | head -3
+
+          # Get image digest
+          echo "🔍 Getting image digest..."
+          DIGEST=$(az acr repository show --name $AZURE_REGISTRY \
+            --image "unitedwerise-backend:$DOCKER_TAG" \
+            --query "digest" -o tsv)
+
+          echo "✅ Image digest: $DIGEST"
+
+          # Deploy to Container App
+          echo "🚀 Deploying to Azure Container App (staging)..."
+          az containerapp update \
+            --name $AZURE_CONTAINER_APP \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --image "${AZURE_REGISTRY}.azurecr.io/unitedwerise-backend@$DIGEST" \
+            --revision-suffix "stg-${GIT_SHA}-$(date +%H%M%S)" \
+            --set-env-vars \
+              NODE_ENV=staging \
+              STAGING_ENVIRONMENT=true \
+              RELEASE_SHA=$GIT_SHA \
+              RELEASE_DIGEST=$DIGEST
+
+          # Force single revision mode
+          echo "🔧 Setting single revision mode..."
+          az containerapp update \
+            --name $AZURE_CONTAINER_APP \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --revision-mode Single
+
+          echo "⏳ Waiting 30 seconds for container to start..."
+          sleep 30
+
+          # Verify deployment
+          echo "✅ Verifying deployment..."
+          HEALTH_RESPONSE=$(curl -s "https://dev-api.unitedwerise.org/health")
+          echo "Health check response: $HEALTH_RESPONSE"
+
+          # Check if deployed SHA matches
+          DEPLOYED_SHA=$(echo $HEALTH_RESPONSE | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+          echo "Expected SHA: $GIT_SHA"
+          echo "Deployed SHA: $DEPLOYED_SHA"
+
+          if [ "$DEPLOYED_SHA" = "$GIT_SHA" ]; then
+            echo "✅ Deployment successful! Staging backend is running correct code."
+          else
+            echo "⚠️ Warning: Deployed SHA doesn't match expected SHA"
+            echo "Deployment may still be starting up..."
+          fi
+
+          echo "🎉 Staging deployment complete!"
+          echo "🔗 Backend: https://dev-api.unitedwerise.org"
+          echo "🔗 Frontend: https://dev.unitedwerise.org"
