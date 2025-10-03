@@ -11352,6 +11352,158 @@ if (user.requireApproval) {
 - Thumbnail generation
 - Full-screen viewer on click
 
+### PhotoPipeline Service (Layer 6 Architecture)
+**Status**: ✅ Production Ready (Deployed October 3, 2025)
+**Replaces**: Legacy photoService.ts (removed via nuclear cleanup)
+
+#### Overview
+PhotoPipeline is a comprehensive 6-layer photo processing service that handles upload → validation → moderation → processing → storage → database persistence in a single reusable pipeline.
+
+#### API Response Format
+**CRITICAL**: PhotoPipeline returns `photoId` directly in response, NOT wrapped in `photo` object.
+
+```javascript
+// POST /api/photos/upload
+// Response format:
+{
+  "success": true,
+  "data": {
+    "photoId": "abc123-uuid",           // NOT response.data.photo.id
+    "url": "https://uwrstorage2425.blob.core.windows.net/photos/...",
+    "blobName": "userId/filename.webp",
+    "requestId": "req-xyz",
+    "originalSize": 2048576,
+    "processedSize": 512000,
+    "sizeReduction": "75.00%",
+    "dimensions": { "width": 1920, "height": 1080 },
+    "mimeType": "image/webp",
+    "originalMimeType": "image/jpeg",
+    "moderation": {
+      "decision": "APPROVE",
+      "approved": true,
+      "reason": "Content approved",
+      "contentType": "neutral",
+      "confidence": 0.95,
+      "processingTime": "245ms"
+    },
+    "exifStripped": true
+  }
+}
+```
+
+#### Frontend Integration Pattern
+```javascript
+// ✅ CORRECT: Read photoId directly from response.data
+const photoData = response.data;
+if (photoData && photoData.photoId) {
+    uploadedPhotos.push({
+        id: photoData.photoId,      // Map photoId → id for post creation
+        url: photoData.url,
+        ...photoData                // Include all metadata
+    });
+}
+
+// ❌ INCORRECT: Don't look for wrapped photo object
+const photo = response.data?.photo || response.photo;  // WRONG - doesn't exist
+```
+
+#### Upload Endpoint
+```javascript
+// Frontend: FormData upload
+const formData = new FormData();
+formData.append('file', imageFile);              // Field name: 'file'
+formData.append('photoType', 'POST_MEDIA');      // AVATAR | GALLERY | POST_MEDIA
+formData.append('purpose', 'PERSONAL');          // PERSONAL | OFFICIAL
+formData.append('gallery', 'My Photos');         // Optional gallery name
+formData.append('caption', 'Photo description'); // Optional caption
+
+const response = await apiClient.call('/photos/upload', {
+    method: 'POST',
+    body: formData
+    // DO NOT set Content-Type - browser sets multipart boundary automatically
+});
+```
+
+#### 6-Layer Processing Pipeline
+1. **Layer 0**: Basic upload endpoint (`POST /api/photos/upload`)
+2. **Layer 1**: Authentication & authorization validation
+3. **Layer 2**: File validation (size, type, dimensions)
+4. **Layer 3**: Content moderation (Azure AI Content Safety)
+5. **Layer 4**: Image processing (resize, WebP conversion, EXIF stripping)
+6. **Layer 5**: Azure Blob Storage upload
+7. **Layer 6**: Database persistence with Post attachment support
+
+#### Post Attachment Integration
+```javascript
+// Create post with photo attachments
+POST /api/posts
+{
+  "content": "Post text",
+  "mediaIds": ["photoId1", "photoId2"],  // PhotoPipeline photo IDs
+  "tags": ["#topic"]
+}
+
+// Backend automatically:
+1. Validates photos exist and belong to user
+2. Links photos to post via postId field
+3. Returns post with photos array populated
+```
+
+#### Photo Schema (Prisma)
+```prisma
+model Photo {
+  id                String    @id @default(uuid())
+  userId            String
+  postId            String?   // Optional - for post attachments
+  url               String
+  blobName          String
+  mimeType          String
+  moderationStatus  String    // 'APPROVE', 'WARN', 'BLOCK'
+  photoType         String?   // 'AVATAR', 'GALLERY', 'POST_MEDIA'
+  gallery           String?   // Gallery name
+  caption           String?   // Photo description
+
+  user              User      @relation(fields: [userId], references: [id])
+  post              Post?     @relation(fields: [postId], references: [id])
+}
+```
+
+#### Content Security Policy
+```html
+<!-- REQUIRED: Allow Azure Blob Storage for image display -->
+<meta http-equiv="Content-Security-Policy" content="
+    img-src 'self' data: blob:
+        https://*.blob.core.windows.net
+        ...other sources...;
+">
+```
+
+#### Testing Photo Upload Flow
+```javascript
+// Browser console verification:
+1. Select photo → Upload
+2. Check console logs:
+   ✅ Upload response: {success: true, data: {...}}
+   ✅ Photo uploaded: <photoId>
+   ✅ Post created successfully
+   ✅ Media rendered in feed
+
+3. Verify no CSP errors
+4. Confirm image displays from Azure Blob Storage
+```
+
+#### Known Integration Points
+- **UnifiedPostCreator**: Handles photo upload before post creation
+- **my-feed.js**: Uploads media via `uploadMediaFiles()`
+- **UnifiedPostRenderer**: Renders photos in feed posts
+- **Profile components**: Avatar upload integration
+
+#### Migration Notes
+- **Old System**: photoService.ts (deleted September 2025)
+- **New System**: PhotoPipeline.ts (production ready October 3, 2025)
+- **Breaking Change**: Response format changed from `{photo: {...}}` to `{photoId, url, ...}`
+- **Frontend Updated**: October 3, 2025 (commit 9418544)
+
 ---
 
 ## ⚡ PERFORMANCE OPTIMIZATIONS {#performance-optimizations}

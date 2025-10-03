@@ -1,10 +1,105 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: September 26, 2025
+**Last Updated**: October 3, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## 2025-10-03 - PhotoPipeline Production Deployment & Feed Photo Upload
+
+### 🎉 PHOTOPIPELINE LAYER 6 SYSTEM - PRODUCTION READY
+- **Complete Photo Upload Flow**: End-to-end photo attachment system deployed to production
+- **Layer 6 Architecture**: PhotoPipeline.ts replaces legacy photoService.ts
+  - Layer 0: Basic upload endpoint
+  - Layer 1: Authentication & authorization
+  - Layer 2: File validation (size, type, dimensions)
+  - Layer 3: Azure AI content moderation
+  - Layer 4: Image processing (resize, WebP conversion, EXIF stripping)
+  - Layer 5: Azure Blob Storage upload
+  - Layer 6: Database persistence with Post attachment support
+
+### 🔧 FRONTEND INTEGRATION FIXES
+- **Response Format Update**: Fixed frontend to read PhotoPipeline's `photoId` field directly
+  - **Old (Incorrect)**: `const photo = response.data?.photo || response.photo;`
+  - **New (Correct)**: `const photoData = response.data; if (photoData.photoId) {...}`
+  - **File Modified**: `frontend/src/modules/features/feed/my-feed.js` (lines 54-67)
+  - **Commit**: 9418544
+
+- **Content Security Policy Fix**: Added Azure Blob Storage to CSP `img-src` directive
+  - **Added**: `https://*.blob.core.windows.net` to allowed image sources
+  - **File Modified**: `frontend/index.html` (line 43)
+  - **Commit**: c10f1db
+  - **Impact**: Photos now display correctly from Azure Blob Storage
+
+### ✅ WORKING FEATURES
+- **Feed Photo Upload**: Users can attach photos to posts in My Feed
+- **Photo Processing**: Automatic moderation, WebP conversion, EXIF stripping
+- **Post Integration**: Photos link to posts via `mediaIds` array
+- **Photo Display**: Images render in feed from Azure Blob Storage
+- **User Experience**: Complete flow: select photo → upload → post → display
+
+### 📊 API CHANGES
+- **PhotoPipeline Response Format** (BREAKING CHANGE):
+  ```javascript
+  // POST /api/photos/upload returns:
+  {
+    "success": true,
+    "data": {
+      "photoId": "uuid",           // Direct field, not wrapped
+      "url": "https://...",
+      "blobName": "...",
+      "moderation": {...},
+      ...metadata
+    }
+  }
+  ```
+
+- **Post Creation with Photos**:
+  ```javascript
+  // POST /api/posts accepts:
+  {
+    "content": "Post text",
+    "mediaIds": ["photoId1", "photoId2"],  // Photo IDs from PhotoPipeline
+    "tags": ["#topic"]
+  }
+  ```
+
+### 🗄️ DATABASE SCHEMA
+- **Photo Model**: Production schema includes post attachment support
+  - `postId`: Optional foreign key to Post model
+  - `photoType`: 'AVATAR' | 'GALLERY' | 'POST_MEDIA'
+  - `moderationStatus`: 'APPROVE' | 'WARN' | 'BLOCK'
+  - `gallery`: Optional gallery organization
+  - `caption`: Optional photo description
+
+### 📁 FILES MODIFIED
+- `frontend/src/modules/features/feed/my-feed.js` - PhotoPipeline response integration
+- `frontend/index.html` - CSP img-src directive update
+- `MASTER_DOCUMENTATION.md` - PhotoPipeline documentation added (section 22)
+- `CHANGELOG.md` - This entry
+
+### 🚀 DEPLOYMENT DETAILS
+- **Staging Verification**: Tested on https://dev.unitedwerise.org
+- **Production Deployment**: October 3, 2025
+- **Backend**: PhotoPipeline.ts already deployed (commit bd45f33)
+- **Frontend**: Auto-deployed via GitHub Actions (commits 9418544, c10f1db)
+
+### 🎯 TESTING VERIFICATION
+- ✅ Photo upload succeeds (201 Created)
+- ✅ Frontend extracts photoId from response
+- ✅ Post created with mediaIds array
+- ✅ Photo displays in feed without CSP errors
+- ✅ Console logs show successful upload flow
+- ✅ Azure Blob Storage integration working
+
+### 📝 MIGRATION NOTES
+- **Legacy System**: photoService.ts removed in September 2025 "nuclear cleanup"
+- **New System**: PhotoPipeline.ts is the single source for photo processing
+- **Breaking Change**: Frontend response parsing updated to match PhotoPipeline format
+- **Documentation**: Complete PhotoPipeline integration guide in MASTER_DOCUMENTATION.md
 
 ---
 
