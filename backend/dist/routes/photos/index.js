@@ -1,15 +1,16 @@
 "use strict";
 /**
- * Layer 4: Photo Upload with AI Content Moderation
+ * Layer 5: Photo Upload with Database Persistence
  *
- * Purpose: Add AI-powered content moderation for safety and compliance
- * Features: Authentication + File Validation + EXIF Stripping + AI Moderation
+ * Purpose: Store photo metadata in database for retrieval and management
+ * Features: Authentication + File Validation + EXIF Stripping + AI Moderation + Database
  * Layers:
  *   - Layer 0: Basic file transport ✅
  *   - Layer 1: Authentication ✅
  *   - Layer 2: File validation ✅
  *   - Layer 3: EXIF stripping and WebP conversion ✅
  *   - Layer 4: AI content moderation ✅
+ *   - Layer 5: Database persistence ✅
  * Logging: Every step logs with requestId for tracing
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -23,6 +24,7 @@ const uuid_1 = require("uuid");
 const sharp_1 = __importDefault(require("sharp"));
 const auth_1 = require("../../middleware/auth");
 const imageContentModerationService_1 = require("../../services/imageContentModerationService");
+const prisma_js_1 = require("../../lib/prisma.js");
 const router = express_1.default.Router();
 // Layer 2: File validation constants
 const ALLOWED_MIME_TYPES = [
@@ -409,14 +411,55 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
         log(requestId, 'AZURE_UPLOAD_SUCCESS', { blobName });
         // Step 8: Construct public URL
         const photoUrl = `https://${accountName}.blob.core.windows.net/photos/${blobName}`;
+        // Layer 5: Database Persistence
+        log(requestId, 'DB_PERSIST_START', {
+            userId: req.user.id,
+            blobName
+        });
+        let photoRecord;
+        try {
+            photoRecord = await prisma_js_1.prisma.photo.create({
+                data: {
+                    userId: req.user.id,
+                    url: photoUrl,
+                    blobName: blobName,
+                    mimeType: finalMimeType,
+                    originalMimeType: req.file.mimetype,
+                    originalSize: originalSize,
+                    processedSize: processedBuffer.length,
+                    width: dimensions?.width || null,
+                    height: dimensions?.height || null,
+                    moderationStatus: moderationResult.category,
+                    moderationReason: moderationResult.reason || null,
+                    moderationConfidence: moderationResult.confidence || null,
+                    moderationType: moderationResult.contentType || null,
+                    exifStripped: true
+                }
+            });
+            log(requestId, 'DB_PERSIST_COMPLETE', {
+                photoId: photoRecord.id,
+                userId: req.user.id
+            });
+        }
+        catch (dbError) {
+            log(requestId, 'DB_PERSIST_ERROR', {
+                error: dbError.message,
+                stack: dbError.stack
+            });
+            // Note: Photo already uploaded to blob - log error but return success
+            // Alternative: Could delete blob and return error
+            console.error('Database persistence failed but blob uploaded:', dbError);
+        }
         log(requestId, 'UPLOAD_COMPLETE', {
             url: photoUrl,
+            photoId: photoRecord?.id,
             duration: Date.now() - new Date(requestId.split('-')[0]).getTime()
         });
         // Step 9: Return success with processing metadata
         return res.status(201).json({
             success: true,
             data: {
+                photoId: photoRecord?.id,
                 url: photoUrl,
                 blobName,
                 requestId,
@@ -465,15 +508,15 @@ router.get('/health', (req, res) => {
     };
     return res.json({
         status: 'ok',
-        layer: 4,
-        description: 'Authenticated photo upload with validation, EXIF stripping, and AI moderation',
+        layer: 5,
+        description: 'Authenticated photo upload with validation, EXIF stripping, AI moderation, and database persistence',
         features: {
             authentication: true,
             validation: true,
             exifStripping: true,
             webpConversion: true,
             moderation: true,
-            database: false
+            database: true
         },
         validation: {
             allowedTypes: ALLOWED_MIME_TYPES,

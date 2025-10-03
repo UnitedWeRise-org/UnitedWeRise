@@ -66,10 +66,10 @@ export declare class CandidateReportService {
         candidateId: string;
         verificationNotes: string | null;
         expiresAt: Date | null;
+        uploadedAt: Date;
         documentType: string;
         documentUrl: string;
         documentName: string;
-        uploadedAt: Date;
         isValid: boolean;
         requestedAt: Date | null;
         requestedBy: string | null;

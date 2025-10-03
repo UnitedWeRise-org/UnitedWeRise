@@ -141,6 +141,7 @@ model User {
   questProgress               UserQuestProgress[]
   questStreak                 UserQuestStreak?
   userBadges                  UserBadge[]
+  photos                      Photo[]
 
   @@index([username])
   @@index([createdAt])
@@ -2582,4 +2583,31 @@ enum QuestTimeframe {
   MONTHLY
   ONGOING
   LIMITED_TIME
+}
+
+// Photo Upload System
+model Photo {
+  id                String    @id @default(uuid())
+  userId            String
+  url               String
+  blobName          String
+  mimeType          String
+  originalMimeType  String
+  originalSize      Int
+  processedSize     Int
+  width             Int?
+  height            Int?
+  moderationStatus  String    // 'APPROVE', 'WARN', 'BLOCK'
+  moderationReason  String?
+  moderationConfidence Float?
+  moderationType    String?   // Content type detected
+  exifStripped      Boolean   @default(true)
+  uploadedAt        DateTime  @default(now())
+  deletedAt         DateTime?
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([uploadedAt])
+  @@index([moderationStatus])
 }
