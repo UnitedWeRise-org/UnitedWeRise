@@ -138,6 +138,7 @@ router.get('/trending', async (req, res) => {
             }
           }
         },
+        photos: true,
         comments: {
           select: {
             likesCount: true,

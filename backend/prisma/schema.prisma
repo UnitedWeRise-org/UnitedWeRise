@@ -250,6 +250,7 @@ model Post {
   comments           Comment[]
   likes              Like[]
   author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  photos             Photo[]
   reactions          Reaction[]
   reputationEvents   ReputationEvent[]
   shares             Share[]
@@ -2589,6 +2590,7 @@ enum QuestTimeframe {
 model Photo {
   id                String    @id @default(uuid())
   userId            String
+  postId            String?   // Optional - for post attachments
   url               String
   blobName          String
   mimeType          String
@@ -2604,10 +2606,17 @@ model Photo {
   exifStripped      Boolean   @default(true)
   uploadedAt        DateTime  @default(now())
   deletedAt         DateTime?
+  photoType         String?   // 'AVATAR', 'GALLERY', 'POST_MEDIA'
+  gallery           String?   // Gallery name for organization
+  caption           String?   // Photo description
+  thumbnailUrl      String?   // Optimized thumbnail
+  isActive          Boolean   @default(true)
 
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post              Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([postId])
   @@index([uploadedAt])
   @@index([moderationStatus])
 }

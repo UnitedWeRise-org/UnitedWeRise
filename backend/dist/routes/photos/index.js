@@ -23,6 +23,7 @@ const multer_1 = __importDefault(require("multer"));
 const uuid_1 = require("uuid");
 const auth_1 = require("../../middleware/auth");
 const PhotoPipeline_1 = require("../../services/PhotoPipeline");
+const galleries_js_1 = __importDefault(require("../galleries.js"));
 const router = express_1.default.Router();
 // Configure Multer for memory storage (5MB limit for safety)
 const upload = (0, multer_1.default)({
@@ -51,7 +52,7 @@ const MIN_DIMENSION = 10;
  * - Flow: Auth → Multer → PhotoPipeline.process() → Return Result
  * - All validation, processing, moderation, upload, and database logic in PhotoPipeline
  */
-router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, res) => {
+router.post('/upload', auth_1.requireAuth, upload.single('file'), async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     try {
         // Basic file check
@@ -62,6 +63,10 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
                 requestId
             });
         }
+        // Extract metadata from request body
+        const photoType = req.body.photoType || 'POST_MEDIA';
+        const gallery = req.body.gallery;
+        const caption = req.body.caption;
         // Process through pipeline
         const result = await PhotoPipeline_1.photoPipeline.process({
             userId: req.user.id,
@@ -72,7 +77,9 @@ router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, r
                 size: req.file.size,
                 originalname: req.file.originalname
             },
-            photoType: 'POST_MEDIA'
+            photoType,
+            gallery,
+            caption
         });
         return res.status(201).json({
             success: true,
@@ -134,5 +141,7 @@ router.get('/health', (req, res) => {
         environment: envCheck
     });
 });
+// Mount gallery routes
+router.use('/galleries', galleries_js_1.default);
 exports.default = router;
 //# sourceMappingURL=index.js.map

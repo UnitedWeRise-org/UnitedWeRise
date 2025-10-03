@@ -474,6 +474,7 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
                             politicalProfileType: true
                         }
                     },
+                    photos: true,
                     _count: {
                         select: {
                             comments: true,

@@ -67,10 +67,13 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             return res.status(400).json({ error: 'Post content is required' });
         }
 
-        // Photo model removed - media attachments no longer supported
-        // Posts can still use imageUrl (string) field for image links
+        // Handle photo attachments - accept both singular mediaId and array mediaIds
+        const photoIds: string[] = [];
         if (mediaId) {
-            return res.status(400).json({ error: 'Media attachments are no longer supported. Use imageUrl instead.' });
+            photoIds.push(mediaId);
+        }
+        if (req.body.mediaIds && Array.isArray(req.body.mediaIds)) {
+            photoIds.push(...req.body.mediaIds);
         }
 
         // Handle content length - split into content and extendedContent if needed
@@ -196,7 +199,7 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
                         verified: true
                     }
                 },
-                // Photo model removed - photos relation no longer exists
+                photos: true,
                 _count: {
                     select: {
                         likes: true,
@@ -206,7 +209,47 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
             }
         });
 
-        // Photo model removed - media linking no longer supported
+        // Link photos to post if photoIds provided
+        if (photoIds.length > 0) {
+            await prisma.photo.updateMany({
+                where: {
+                    id: { in: photoIds },
+                    userId: userId // Verify user owns these photos
+                },
+                data: {
+                    postId: post.id
+                }
+            });
+
+            // Refresh post with photos
+            const updatedPost = await prisma.post.findUnique({
+                where: { id: post.id },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    photos: true,
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    }
+                }
+            });
+
+            if (updatedPost) {
+                // Replace post with updated version that includes photos
+                Object.assign(post, updatedPost);
+            }
+        }
         // Posts now use imageUrl field directly instead of Photo relations
 
         // Update reputation event with actual post ID if penalties were applied
@@ -296,7 +339,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
                         verified: true
                     }
                 },
-                // Photo model removed - photos relation no longer exists
+                photos: true,
                 reactions: {
                     where: { userId },
                     select: {
@@ -379,7 +422,7 @@ router.get('/:postId', async (req, res) => {
                         verified: true
                     }
                 },
-                // Photo model removed - photos relation no longer exists
+                photos: true,
                 reactions: userId ? {
                     where: { userId },
                     select: {

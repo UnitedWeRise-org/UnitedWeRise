@@ -38,6 +38,8 @@ export interface PhotoProcessingOptions {
   requestId: string;
   file: PhotoFile;
   photoType?: string;
+  gallery?: string;
+  caption?: string;
 }
 
 export interface PhotoProcessingResult {
@@ -496,11 +498,17 @@ export class PhotoPipeline {
     processedSize: number,
     dimensions: { width: number; height: number } | null,
     moderationResult: ModerationResult,
+    photoType: string,
+    gallery: string | undefined,
+    caption: string | undefined,
     requestId: string
   ): Promise<any> {
     this.log(requestId, 'DB_PERSIST_START', {
       userId,
-      blobName
+      blobName,
+      photoType,
+      gallery,
+      caption
     });
 
     try {
@@ -519,14 +527,31 @@ export class PhotoPipeline {
           moderationReason: moderationResult.reason || null,
           moderationConfidence: moderationResult.confidence || null,
           moderationType: moderationResult.contentType || null,
-          exifStripped: true
+          exifStripped: true,
+          photoType,
+          gallery: gallery || null,
+          caption: caption || null
         }
       });
 
       this.log(requestId, 'DB_PERSIST_COMPLETE', {
         photoId: photoRecord.id,
-        userId
+        userId,
+        photoType
       });
+
+      // If this is an avatar upload, update the user's avatar field
+      if (photoType === 'AVATAR') {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { avatar: photoRecord.url }
+        });
+
+        this.log(requestId, 'AVATAR_UPDATE_COMPLETE', {
+          userId,
+          avatarUrl: photoRecord.url
+        });
+      }
 
       return photoRecord;
 
@@ -545,12 +570,15 @@ export class PhotoPipeline {
   // ========================================
 
   async process(options: PhotoProcessingOptions): Promise<PhotoProcessingResult> {
-    const { userId, requestId, file, photoType = 'POST_MEDIA' } = options;
+    const { userId, requestId, file, photoType = 'POST_MEDIA', gallery, caption } = options;
 
     this.log(requestId, 'PIPELINE_START', {
       userId,
       fileSize: file.size,
-      mimeType: file.mimetype
+      mimeType: file.mimetype,
+      photoType,
+      gallery,
+      caption
     });
 
     // Stage 1: Validate
@@ -597,6 +625,9 @@ export class PhotoPipeline {
       processed.buffer.length,
       validationResult.dimensions || null,
       moderationResult,
+      photoType,
+      gallery,
+      caption,
       requestId
     );
 

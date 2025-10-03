@@ -27,6 +27,8 @@ export interface PhotoProcessingOptions {
     requestId: string;
     file: PhotoFile;
     photoType?: string;
+    gallery?: string;
+    caption?: string;
 }
 export interface PhotoProcessingResult {
     photoId: string;
@@ -86,7 +88,7 @@ export declare class PhotoPipeline {
     persistToDatabase(userId: string, url: string, blobName: string, mimeType: string, originalMimeType: string, originalSize: number, processedSize: number, dimensions: {
         width: number;
         height: number;
-    } | null, moderationResult: ModerationResult, requestId: string): Promise<any>;
+    } | null, moderationResult: ModerationResult, photoType: string, gallery: string | undefined, caption: string | undefined, requestId: string): Promise<any>;
     process(options: PhotoProcessingOptions): Promise<PhotoProcessingResult>;
 }
 export declare const photoPipeline: PhotoPipeline;

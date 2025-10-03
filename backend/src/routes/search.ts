@@ -105,6 +105,7 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
                                 politicalProfileType: true
                             }
                         },
+                        photos: true,
                         _count: {
                             select: {
                                 comments: true,
@@ -509,6 +510,7 @@ router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
                         politicalProfileType: true
                     }
                 },
+                photos: true,
                 _count: {
                     select: {
                         comments: true,

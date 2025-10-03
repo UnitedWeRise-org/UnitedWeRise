@@ -370,10 +370,13 @@ class PhotoPipeline {
     // ========================================
     // Stage 5: Database Persistence
     // ========================================
-    async persistToDatabase(userId, url, blobName, mimeType, originalMimeType, originalSize, processedSize, dimensions, moderationResult, requestId) {
+    async persistToDatabase(userId, url, blobName, mimeType, originalMimeType, originalSize, processedSize, dimensions, moderationResult, photoType, gallery, caption, requestId) {
         this.log(requestId, 'DB_PERSIST_START', {
             userId,
-            blobName
+            blobName,
+            photoType,
+            gallery,
+            caption
         });
         try {
             const photoRecord = await prisma_js_1.prisma.photo.create({
@@ -391,13 +394,28 @@ class PhotoPipeline {
                     moderationReason: moderationResult.reason || null,
                     moderationConfidence: moderationResult.confidence || null,
                     moderationType: moderationResult.contentType || null,
-                    exifStripped: true
+                    exifStripped: true,
+                    photoType,
+                    gallery: gallery || null,
+                    caption: caption || null
                 }
             });
             this.log(requestId, 'DB_PERSIST_COMPLETE', {
                 photoId: photoRecord.id,
-                userId
+                userId,
+                photoType
             });
+            // If this is an avatar upload, update the user's avatar field
+            if (photoType === 'AVATAR') {
+                await prisma_js_1.prisma.user.update({
+                    where: { id: userId },
+                    data: { avatar: photoRecord.url }
+                });
+                this.log(requestId, 'AVATAR_UPDATE_COMPLETE', {
+                    userId,
+                    avatarUrl: photoRecord.url
+                });
+            }
             return photoRecord;
         }
         catch (dbError) {
@@ -412,11 +430,14 @@ class PhotoPipeline {
     // Main Orchestration Method
     // ========================================
     async process(options) {
-        const { userId, requestId, file, photoType = 'POST_MEDIA' } = options;
+        const { userId, requestId, file, photoType = 'POST_MEDIA', gallery, caption } = options;
         this.log(requestId, 'PIPELINE_START', {
             userId,
             fileSize: file.size,
-            mimeType: file.mimetype
+            mimeType: file.mimetype,
+            photoType,
+            gallery,
+            caption
         });
         // Stage 1: Validate
         const validationResult = await this.validateFile(file, requestId);
@@ -436,7 +457,7 @@ class PhotoPipeline {
         const blobName = `${userId}/${requestId}.${processed.extension}`;
         const photoUrl = await this.uploadToBlob(processed.buffer, blobName, processed.mimeType, requestId);
         // Stage 5: Persist to database
-        const photoRecord = await this.persistToDatabase(userId, photoUrl, blobName, processed.mimeType, file.mimetype, file.size, processed.buffer.length, validationResult.dimensions || null, moderationResult, requestId);
+        const photoRecord = await this.persistToDatabase(userId, photoUrl, blobName, processed.mimeType, file.mimetype, file.size, processed.buffer.length, validationResult.dimensions || null, moderationResult, photoType, gallery, caption, requestId);
         this.log(requestId, 'PIPELINE_COMPLETE', {
             photoId: photoRecord.id,
             url: photoUrl

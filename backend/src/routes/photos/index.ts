@@ -19,6 +19,7 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { requireAuth, AuthRequest } from '../../middleware/auth';
 import { photoPipeline } from '../../services/PhotoPipeline';
+import galleryRoutes from '../galleries.js';
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ const MIN_DIMENSION = 10;
  * - Flow: Auth → Multer → PhotoPipeline.process() → Return Result
  * - All validation, processing, moderation, upload, and database logic in PhotoPipeline
  */
-router.post('/upload', requireAuth, upload.single('photo'), async (req: AuthRequest, res: Response) => {
+router.post('/upload', requireAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
   const requestId = uuidv4();
 
   try {
@@ -65,6 +66,11 @@ router.post('/upload', requireAuth, upload.single('photo'), async (req: AuthRequ
       });
     }
 
+    // Extract metadata from request body
+    const photoType = req.body.photoType || 'POST_MEDIA';
+    const gallery = req.body.gallery;
+    const caption = req.body.caption;
+
     // Process through pipeline
     const result = await photoPipeline.process({
       userId: req.user!.id,
@@ -75,7 +81,9 @@ router.post('/upload', requireAuth, upload.single('photo'), async (req: AuthRequ
         size: req.file.size,
         originalname: req.file.originalname
       },
-      photoType: 'POST_MEDIA'
+      photoType,
+      gallery,
+      caption
     });
 
     return res.status(201).json({
@@ -141,5 +149,8 @@ router.get('/health', (req: AuthRequest, res: Response) => {
     environment: envCheck
   });
 });
+
+// Mount gallery routes
+router.use('/galleries', galleryRoutes);
 
 export default router;
