@@ -1,8 +1,11 @@
 /**
- * Layer 0: Minimal Photo Upload - Pure File Transport Test
+ * Layer 1: Authenticated Photo Upload
  *
- * Purpose: Prove Azure Container Apps allows multipart/form-data uploads
- * Features: NONE - just Multer → Azure Blob
+ * Purpose: Add JWT authentication to photo uploads
+ * Features: Authentication + File Transport
+ * Layers:
+ *   - Layer 0: Basic file transport ✅
+ *   - Layer 1: Authentication ✅
  * Logging: Every step logs with requestId for tracing
  */
 declare const router: import("express-serve-static-core").Router;

@@ -1,9 +1,12 @@
 "use strict";
 /**
- * Layer 0: Minimal Photo Upload - Pure File Transport Test
+ * Layer 1: Authenticated Photo Upload
  *
- * Purpose: Prove Azure Container Apps allows multipart/form-data uploads
- * Features: NONE - just Multer → Azure Blob
+ * Purpose: Add JWT authentication to photo uploads
+ * Features: Authentication + File Transport
+ * Layers:
+ *   - Layer 0: Basic file transport ✅
+ *   - Layer 1: Authentication ✅
  * Logging: Every step logs with requestId for tracing
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -14,6 +17,7 @@ const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const storage_blob_1 = require("@azure/storage-blob");
 const uuid_1 = require("uuid");
+const auth_1 = require("../../middleware/auth");
 const router = express_1.default.Router();
 // Configure Multer for memory storage (5MB limit for safety)
 const upload = (0, multer_1.default)({
@@ -35,20 +39,31 @@ const log = (requestId, stage, data = {}) => {
 /**
  * POST /api/photos/upload
  *
- * Layer 0: Minimal upload endpoint
- * - NO authentication
- * - NO validation
- * - NO processing
- * - Just: File → Azure Blob → Return URL
+ * Layer 1: Authenticated upload endpoint
+ * - ✅ JWT authentication (Layer 1)
+ * - NO validation (coming in Layer 2)
+ * - NO processing (coming in Layers 3-4)
+ * - Flow: Auth → File → Azure Blob → Return URL
  */
-router.post('/upload', upload.single('photo'), async (req, res) => {
+router.post('/upload', auth_1.requireAuth, upload.single('photo'), async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     log(requestId, 'REQUEST_RECEIVED', {
+        userId: req.user?.id,
         hasFile: !!req.file,
         fileSize: req.file?.size,
         mimeType: req.file?.mimetype,
         fileName: req.file?.originalname
     });
+    // Layer 1: Authentication validation
+    if (!req.user) {
+        log(requestId, 'AUTH_FAILED', { reason: 'no_user_in_request' });
+        return res.status(401).json({
+            success: false,
+            error: 'Authentication required',
+            requestId
+        });
+    }
+    log(requestId, 'AUTH_VERIFIED', { userId: req.user.id, username: req.user.username });
     try {
         // Step 1: Validate file exists
         if (!req.file) {
@@ -85,10 +100,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
         // Step 4: Ensure container exists
         await containerClient.createIfNotExists({ access: 'blob' });
         log(requestId, 'CONTAINER_VERIFIED', { container: 'photos' });
-        // Step 5: Generate unique blob name
+        // Step 5: Generate unique blob name with user ID
         const fileExtension = req.file.originalname.split('.').pop() || 'jpg';
-        const blobName = `layer0-${requestId}.${fileExtension}`;
-        log(requestId, 'BLOB_NAME_GENERATED', { blobName });
+        const blobName = `${req.user.id}/${requestId}.${fileExtension}`;
+        log(requestId, 'BLOB_NAME_GENERATED', { blobName, userId: req.user.id });
         // Step 6: Get blob client
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         // Step 7: Upload to Azure
@@ -142,8 +157,15 @@ router.get('/health', (req, res) => {
     };
     return res.json({
         status: 'ok',
-        layer: 0,
-        description: 'Minimal photo upload - no auth, no validation',
+        layer: 1,
+        description: 'Authenticated photo upload - JWT required',
+        features: {
+            authentication: true,
+            validation: false,
+            exifStripping: false,
+            moderation: false,
+            database: false
+        },
         environment: envCheck
     });
 });
