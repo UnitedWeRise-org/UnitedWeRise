@@ -1,7 +1,6 @@
-import { PrismaClient, Quest, UserQuestProgress, UserQuestStreak, QuestType, QuestCategory, QuestTimeframe, Prisma } from '@prisma/client';
+import { Quest, UserQuestProgress, UserQuestStreak, QuestType, QuestCategory, QuestTimeframe, Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import badgeService from './badge.service';
-
-const prisma = new PrismaClient();
 
 interface QuestRequirement {
   type: 'LOGIN' | 'READ_POSTS' | 'CIVIC_ACTION' | 'SOCIAL_INTERACTION' | 'COMPLETE_QUESTS';

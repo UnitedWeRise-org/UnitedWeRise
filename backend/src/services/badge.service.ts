@@ -1,7 +1,6 @@
-import { PrismaClient, Badge, UserBadge, Prisma } from '@prisma/client';
+import { Badge, UserBadge, Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
-
-const prisma = new PrismaClient();
 
 interface BadgeQualificationCriteria {
   type: 'QUEST_COMPLETION' | 'USER_ACTIVITY' | 'CIVIC_ACTION' | 'SOCIAL_METRIC' | 'CUSTOM_ENDPOINT';

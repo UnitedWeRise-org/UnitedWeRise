@@ -398,6 +398,29 @@ class Profile {
 
         let activityHtml = `
             <div class="tab-pane">
+                <!-- Quest Progress Dashboard -->
+                ${this.isOwnProfile ? `
+                    <div id="quest-progress-container" style="margin-bottom: 2rem;"></div>
+                ` : ''}
+
+                <!-- Badge Vault Section -->
+                ${this.isOwnProfile ? `
+                    <div class="badge-vault-section" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; color: #333;">
+                                <span style="font-size: 1.5rem;">🏆</span> My Badges
+                            </h3>
+                            <button onclick="window.badgeVault?.showVault()"
+                                    style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                                Manage Badge Vault
+                            </button>
+                        </div>
+                        <div id="profile-badges-display" style="margin-top: 1rem;">
+                            <p style="color: #666; font-style: italic;">Loading badges...</p>
+                        </div>
+                    </div>
+                ` : ''}
+
                 <!-- Search and Filter Row -->
                 <div class="activity-controls" style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; align-items: flex-start;">
                     <!-- Search Box (50% Width) -->
@@ -3866,7 +3889,7 @@ class Profile {
     // Enhanced switchTab with photo gallery support and candidate settings
     switchTab(tabName) {
         this.currentTab = tabName;
-        
+
         // Load data for specific tabs
         if (tabName === 'settings') {
             setTimeout(() => {
@@ -3884,8 +3907,19 @@ class Profile {
                 this.loadCandidateMessages();
                 this.setupMessageForm();
             }, 100);
+        } else if (tabName === 'activity' && this.isOwnProfile) {
+            // Initialize quest and badge components for own profile
+            setTimeout(() => {
+                // Quest progress tracker auto-initializes from its constructor
+                if (window.questProgressTracker) {
+                    window.questProgressTracker.loadQuestData();
+                }
+
+                // Load and display user badges
+                this.loadUserBadges();
+            }, 100);
         }
-        
+
         const contentArea = document.querySelector('.tab-content');
         if (contentArea) {
             contentArea.innerHTML = this.renderTabContent();
@@ -4381,6 +4415,55 @@ class Profile {
             return `${days} day${days > 1 ? 's' : ''} ago`;
         } else {
             return date.toLocaleDateString();
+        }
+    }
+
+    // Load and display user's badges
+    async loadUserBadges() {
+        try {
+            const response = await window.apiCall('/badges/vault');
+
+            if (response.ok && response.data.success) {
+                const badgeData = response.data.data;
+                const displayContainer = document.getElementById('profile-badges-display');
+
+                if (!displayContainer) return;
+
+                if (badgeData.displayedBadges && badgeData.displayedBadges.length > 0) {
+                    displayContainer.innerHTML = `
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                            ${badgeData.displayedBadges.map(userBadge => `
+                                <div class="badge-display" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                    <img src="${userBadge.badge.imageUrl}"
+                                         alt="${userBadge.badge.name}"
+                                         title="${userBadge.badge.name}: ${userBadge.badge.description}"
+                                         style="width: 64px; height: 64px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <span style="font-size: 0.75rem; color: #666; text-align: center; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        ${userBadge.badge.name}
+                                    </span>
+                                </div>
+                            `).join('')}
+                            <div style="color: #666; font-size: 0.9rem;">
+                                Total: ${badgeData.totalBadges} badge${badgeData.totalBadges !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    displayContainer.innerHTML = `
+                        <p style="color: #666; font-style: italic;">
+                            No badges earned yet. Complete quests to earn badges!
+                        </p>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load user badges:', error);
+            const displayContainer = document.getElementById('profile-badges-display');
+            if (displayContainer) {
+                displayContainer.innerHTML = `
+                    <p style="color: #dc3545;">Failed to load badges</p>
+                `;
+            }
         }
     }
 }

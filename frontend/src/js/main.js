@@ -56,6 +56,8 @@ import '../modules/features/content/UnifiedPostRenderer.js';
 // Phase 5: Component layer
 import '../components/PostComponent.js';
 import '../components/Profile.js';
+import '../components/QuestProgressTracker.js';
+import '../components/BadgeVault.js';
 
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';

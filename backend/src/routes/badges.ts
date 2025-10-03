@@ -10,7 +10,18 @@ const upload = multer({
   limits: { fileSize: 1024 * 1024 } // 1MB limit
 });
 
-// Get user's badges
+// Get current user's badge vault (for frontend BadgeVault component)
+router.get('/vault', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const badges = await badgeService.getUserBadges(userId);
+    res.json({ success: true, data: badges });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get user's badges by userId (for viewing other users' profiles)
 router.get('/user/:userId', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
@@ -21,7 +32,17 @@ router.get('/user/:userId', requireAuth, async (req: AuthRequest, res: Response)
   }
 });
 
-// Get all available badges
+// Get all available badges (for BadgeVault "available" section)
+router.get('/available', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const badges = await badgeService.getAllBadges();
+    res.json({ success: true, data: badges });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get all badges (admin endpoint)
 router.get('/all', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const badges = await badgeService.getAllBadges();
