@@ -1,7 +1,7 @@
 /**
- * Layer 5: Photo Upload with Database Persistence
+ * Layer 6: Photo Upload with Pipeline Architecture
  *
- * Purpose: Store photo metadata in database for retrieval and management
+ * Purpose: Clean route handler using reusable PhotoPipeline service
  * Features: Authentication + File Validation + EXIF Stripping + AI Moderation + Database
  * Layers:
  *   - Layer 0: Basic file transport ✅
@@ -10,7 +10,8 @@
  *   - Layer 3: EXIF stripping and WebP conversion ✅
  *   - Layer 4: AI content moderation ✅
  *   - Layer 5: Database persistence ✅
- * Logging: Every step logs with requestId for tracing
+ *   - Layer 6: Pipeline architecture ✅
+ * Architecture: All processing logic extracted to PhotoPipeline service for reusability
  */
 declare const router: import("express-serve-static-core").Router;
 export default router;
