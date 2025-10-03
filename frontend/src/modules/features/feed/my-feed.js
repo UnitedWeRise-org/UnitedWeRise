@@ -53,13 +53,17 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
 
             console.log(`✅ Upload response:`, response);
 
-            // Handle response format (apiClient wraps in data.data)
-            const photo = response.data?.photo || response.photo;
-            if (photo) {
-                uploadedPhotos.push(photo);
-                console.log(`✅ Photo uploaded: ${photo.id}`);
+            // PhotoPipeline returns photoId directly in response.data
+            const photoData = response.data;
+            if (photoData && photoData.photoId) {
+                uploadedPhotos.push({
+                    id: photoData.photoId,      // Map photoId → id for post creation
+                    url: photoData.url,
+                    ...photoData                // Include all other fields
+                });
+                console.log(`✅ Photo uploaded: ${photoData.photoId}`);
             } else {
-                console.error('❌ No photo in response:', response);
+                console.error('❌ No photo data in response:', response);
             }
 
         } catch (error) {
