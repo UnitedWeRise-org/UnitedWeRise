@@ -11,6 +11,10 @@ interface AzureOpenAIConfig {
   apiKey: string;
   embeddingDeployment: string;
   chatDeployment: string;
+  tier1Reasoning: string;
+  tier2Reasoning: string;
+  generalChat: string;
+  vision: string;
   enabled: boolean;
 }
 
@@ -31,12 +35,27 @@ export function getAzureConfig(): AzureConfig {
   
   // Azure OpenAI Configuration
   const openaiEnabled = !!(process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
-  
+
   const openai: AzureOpenAIConfig = {
     endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
     apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-    embeddingDeployment: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT || 'text-embedding-ada-002',
-    chatDeployment: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || 'gpt-35-turbo',
+
+    // Tier-based deployments (future-proof architecture)
+    tier1Reasoning: process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-4o',
+    tier2Reasoning: process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-4o',
+    generalChat: process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-4o-mini',
+    vision: process.env.AZURE_OPENAI_VISION || 'gpt-4o-mini',
+
+    // Embeddings (unchanged)
+    embeddingDeployment: process.env.AZURE_OPENAI_EMBEDDINGS ||
+                          process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ||
+                          'text-embedding-ada-002',
+
+    // SAFETY NET: Backwards compatibility
+    chatDeployment: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT ||
+                     process.env.AZURE_OPENAI_GENERAL_CHAT ||
+                     'gpt-4o-mini',
+
     enabled: openaiEnabled
   };
   

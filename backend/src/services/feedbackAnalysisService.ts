@@ -152,28 +152,15 @@ Respond with JSON only:
     "actionable": boolean
 }`;
 
-            const response = await azureOpenAI['client']?.chat.completions.create({
-                model: azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a feedback analysis system for the UnitedWeRise platform. Focus on identifying genuine platform feedback vs general political discussion."
-                    },
-                    {
-                        role: "user", 
-                        content: analysisPrompt
-                    }
-                ],
-                max_tokens: 300,
-                temperature: 0.2
+            // Use General tier (gpt-4o-mini) for feedback pattern matching
+            const response = await azureOpenAI.generateGeneralCompletion(analysisPrompt, {
+                maxTokens: 300,
+                temperature: 0.2,
+                systemMessage: "You are a feedback analysis system for the UnitedWeRise platform. Focus on identifying genuine platform feedback vs general political discussion."
             });
-            
-            if (!response?.choices[0]?.message?.content) {
-                throw new Error('No response from Azure OpenAI');
-            }
-            
+
             // Parse AI response
-            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+            const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in Azure OpenAI response');
             }

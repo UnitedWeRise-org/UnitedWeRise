@@ -122,25 +122,13 @@ Respond with JSON only:
   "reasoning": "brief explanation",
   "categories": ["category1", "category2"]
 }`;
-            const response = await azureOpenAIService_1.azureOpenAI['client']?.chat.completions.create({
-                model: azureOpenAIService_1.azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a content moderation assistant. Analyze content objectively and provide toxicity scores. Be conservative - only flag genuinely harmful content, not political opinions."
-                    },
-                    {
-                        role: "user",
-                        content: moderationPrompt
-                    }
-                ],
-                max_tokens: 200,
-                temperature: 0.1
+            // Use General tier (gpt-4o-mini) for pattern matching moderation tasks
+            const response = await azureOpenAIService_1.azureOpenAI.generateGeneralCompletion(moderationPrompt, {
+                maxTokens: 200,
+                temperature: 0.1,
+                systemMessage: "You are a content moderation assistant. Analyze content objectively and provide toxicity scores. Be conservative - only flag genuinely harmful content, not political opinions."
             });
-            if (!response?.choices[0]?.message?.content) {
-                throw new Error('No response from Azure OpenAI');
-            }
-            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+            const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in response');
             }
@@ -180,25 +168,13 @@ Respond with JSON only:
   "reasoning": "brief explanation",
   "targetedGroups": ["group1", "group2"]
 }`;
-            const response = await azureOpenAIService_1.azureOpenAI['client']?.chat.completions.create({
-                model: azureOpenAIService_1.azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a hate speech detection system. Focus on content that targets or dehumanizes specific groups. Political criticism or disagreement is not hate speech unless it targets identity groups."
-                    },
-                    {
-                        role: "user",
-                        content: hateSpeechPrompt
-                    }
-                ],
-                max_tokens: 200,
-                temperature: 0.1
+            // Use General tier (gpt-4o-mini) for pattern matching hate speech detection
+            const response = await azureOpenAIService_1.azureOpenAI.generateGeneralCompletion(hateSpeechPrompt, {
+                maxTokens: 200,
+                temperature: 0.1,
+                systemMessage: "You are a hate speech detection system. Focus on content that targets or dehumanizes specific groups. Political criticism or disagreement is not hate speech unless it targets identity groups."
             });
-            if (!response?.choices[0]?.message?.content) {
-                throw new Error('No response from Azure OpenAI');
-            }
-            const analysisMatch = response.choices[0].message.content.match(/\{[\s\S]*\}/);
+            const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in response');
             }

@@ -8,6 +8,10 @@ interface AzureOpenAIConfig {
     apiKey: string;
     embeddingDeployment: string;
     chatDeployment: string;
+    tier1Reasoning: string;
+    tier2Reasoning: string;
+    generalChat: string;
+    vision: string;
     enabled: boolean;
 }
 interface DatabaseConfig {

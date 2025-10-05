@@ -5,6 +5,7 @@ const prisma_1 = require("../lib/prisma");
 ;
 const apiCache_1 = require("./apiCache");
 const newsApiRateLimiter_1 = require("./newsApiRateLimiter");
+const azureOpenAIService_1 = require("./azureOpenAIService");
 // Using singleton prisma from lib/prisma.ts
 // API Configuration
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
@@ -223,9 +224,19 @@ class NewsAggregationService {
 Article: "${textToSummarize}"
 
 Summary:`;
-        // Call Azure OpenAI API (simplified - you'd implement the actual API call)
-        // For now, return extractive summary
-        return this.generateExtractiveSummary(title, description, content);
+        try {
+            // Use Tier 1 (gpt-4o) for mission-critical news summaries
+            const summary = await azureOpenAIService_1.azureOpenAI.generateTier1Completion(prompt, {
+                maxTokens: 150,
+                temperature: 0.5
+            });
+            return summary.trim();
+        }
+        catch (error) {
+            console.error('Azure OpenAI summary generation failed:', error);
+            // Fallback to extractive summary
+            return this.generateExtractiveSummary(title, description, content);
+        }
     }
     static generateExtractiveSummary(title, description, content) {
         // Create a meaningful summary from available text

@@ -95,7 +95,8 @@ Respond with JSON only:
     "similarityInsight": "what the similar posts reveal about this content"
 }`;
         try {
-            const response = await azureOpenAIService_1.azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
+            // Use Tier 2 (gpt-4o) for complex semantic reasoning and classification
+            const response = await azureOpenAIService_1.azureOpenAI.generateTier2Completion(prompt, { maxTokens: 400 });
             const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in AI response');

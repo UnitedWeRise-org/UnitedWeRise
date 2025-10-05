@@ -530,27 +530,14 @@ Respond with JSON only:
   "personal_attack": boolean
 }`;
 
-      const response = await azureOpenAI['client']?.chat.completions.create({
-        model: azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-        messages: [
-          {
-            role: "system",
-            content: "You are a content moderation system. Be conservative - only flag clear violations. Political opinions and passionate expression are allowed. Focus on behavior, not content."
-          },
-          {
-            role: "user",
-            content: analysisPrompt
-          }
-        ],
-        max_tokens: 150,
-        temperature: 0.1
+      // Use General tier (gpt-4o-mini) for content moderation pattern matching
+      const response = await azureOpenAI.generateGeneralCompletion(analysisPrompt, {
+        maxTokens: 150,
+        temperature: 0.1,
+        systemMessage: "You are a content moderation system. Be conservative - only flag clear violations. Political opinions and passionate expression are allowed. Focus on behavior, not content."
       });
 
-      if (!response?.choices[0]?.message?.content) {
-        throw new Error('No response from AI');
-      }
-
-      const analysis = JSON.parse(response.choices[0].message.content);
+      const analysis = JSON.parse(response);
       return analysis;
 
     } catch (error) {
@@ -578,23 +565,14 @@ Is this report valid? Consider:
 
 Respond with JSON: {"valid": boolean, "confidence": 0.0-1.0}`;
 
-      const response = await azureOpenAI['client']?.chat.completions.create({
-        model: azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-        messages: [
-          {
-            role: "system",
-            content: "You validate user reports. Be skeptical of reports against unpopular political opinions. Only validate clear behavioral violations."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 100,
-        temperature: 0.1
+      // Use General tier (gpt-4o-mini) for report validation pattern matching
+      const response = await azureOpenAI.generateGeneralCompletion(prompt, {
+        maxTokens: 100,
+        temperature: 0.1,
+        systemMessage: "You validate user reports. Be skeptical of reports against unpopular political opinions. Only validate clear behavioral violations."
       });
 
-      const result = JSON.parse(response?.choices[0]?.message?.content || '{}');
+      const result = JSON.parse(response);
       return result.valid && result.confidence > 0.7;
 
     } catch (error) {
@@ -626,23 +604,14 @@ Respond with JSON:
   "explanation": "brief reasoning"
 }`;
 
-      const response = await azureOpenAI['client']?.chat.completions.create({
-        model: azureOpenAI['chatDeployment'] || 'gpt-35-turbo',
-        messages: [
-          {
-            role: "system",
-            content: "You review appeals of reputation penalties. Err on the side of free speech - overturn penalties if there's reasonable doubt."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 200,
-        temperature: 0.2
+      // Use General tier (gpt-4o-mini) for appeal review pattern matching
+      const response = await azureOpenAI.generateGeneralCompletion(prompt, {
+        maxTokens: 200,
+        temperature: 0.2,
+        systemMessage: "You review appeals of reputation penalties. Err on the side of free speech - overturn penalties if there's reasonable doubt."
       });
 
-      return JSON.parse(response?.choices[0]?.message?.content || '{}');
+      return JSON.parse(response);
 
     } catch (error) {
       logger.warn('Appeal review failed:', error);

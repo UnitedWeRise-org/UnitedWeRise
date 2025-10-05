@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 ;
 import { ApiCacheService } from './apiCache';
 import { NewsApiRateLimiter } from './newsApiRateLimiter';
+import { azureOpenAI } from './azureOpenAIService';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -294,7 +295,7 @@ export class NewsAggregationService {
 
   private static async generateAzureAISummary(title: string, description?: string, content?: string): Promise<string> {
     const textToSummarize = [title, description, content?.substring(0, 1000)].filter(Boolean).join(' ');
-    
+
     const prompt = `Summarize this news article about a political figure in 200-400 characters. Focus on:
 1. Key political positions or actions
 2. Policy implications
@@ -304,9 +305,18 @@ Article: "${textToSummarize}"
 
 Summary:`;
 
-    // Call Azure OpenAI API (simplified - you'd implement the actual API call)
-    // For now, return extractive summary
-    return this.generateExtractiveSummary(title, description, content);
+    try {
+      // Use Tier 1 (gpt-4o) for mission-critical news summaries
+      const summary = await azureOpenAI.generateTier1Completion(prompt, {
+        maxTokens: 150,
+        temperature: 0.5
+      });
+      return summary.trim();
+    } catch (error) {
+      console.error('Azure OpenAI summary generation failed:', error);
+      // Fallback to extractive summary
+      return this.generateExtractiveSummary(title, description, content);
+    }
   }
 
   private static generateExtractiveSummary(title: string, description?: string, content?: string): string {

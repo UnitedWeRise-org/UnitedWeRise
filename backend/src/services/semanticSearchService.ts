@@ -134,8 +134,9 @@ Respond with JSON only:
 }`;
 
         try {
-            const response = await azureOpenAI.generateCompletion(prompt, { maxTokens: 400 });
-            
+            // Use Tier 2 (gpt-4o) for complex semantic reasoning and classification
+            const response = await azureOpenAI.generateTier2Completion(prompt, { maxTokens: 400 });
+
             const analysisMatch = response.match(/\{[\s\S]*\}/);
             if (!analysisMatch) {
                 throw new Error('No JSON found in AI response');

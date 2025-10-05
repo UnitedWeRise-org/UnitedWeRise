@@ -23,6 +23,10 @@ export declare class AzureOpenAIService {
     private client;
     private embeddingDeployment;
     private chatDeployment;
+    private tier1Reasoning;
+    private tier2Reasoning;
+    private generalChat;
+    private vision;
     private isConfigured;
     constructor();
     /**
@@ -67,6 +71,45 @@ export declare class AzureOpenAIService {
         temperature?: number;
         maxTokens?: number;
         systemMessage?: string;
+    }): Promise<string>;
+    /**
+     * Tier 1: Mission-critical political reasoning
+     * Use for: Stance detection, News accountability summaries
+     * Model: gpt-4o (highest quality)
+     */
+    generateTier1Completion(prompt: string, options?: {
+        maxTokens?: number;
+        temperature?: number;
+        systemMessage?: string;
+    }): Promise<string>;
+    /**
+     * Tier 2: Complex reasoning tasks
+     * Use for: Topic discovery, Semantic classification
+     * Model: gpt-4o (high quality)
+     */
+    generateTier2Completion(prompt: string, options?: {
+        maxTokens?: number;
+        temperature?: number;
+        systemMessage?: string;
+    }): Promise<string>;
+    /**
+     * General: Pattern matching and classification
+     * Use for: Text moderation, Feedback analysis
+     * Model: gpt-4o-mini (cost-effective)
+     */
+    generateGeneralCompletion(prompt: string, options?: {
+        maxTokens?: number;
+        temperature?: number;
+        systemMessage?: string;
+    }): Promise<string>;
+    /**
+     * Vision: Image content analysis
+     * Use for: Photo moderation
+     * Model: gpt-4o-mini with vision (cost-effective pattern recognition)
+     */
+    generateVisionCompletion(messages: any[], options?: {
+        maxTokens?: number;
+        temperature?: number;
     }): Promise<string>;
 }
 export declare const azureOpenAI: AzureOpenAIService;

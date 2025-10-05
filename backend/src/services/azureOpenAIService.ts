@@ -29,29 +29,48 @@ export class AzureOpenAIService {
   private client: OpenAI;
   private embeddingDeployment: string;
   private chatDeployment: string;
+  private tier1Reasoning: string;
+  private tier2Reasoning: string;
+  private generalChat: string;
+  private vision: string;
   private isConfigured: boolean;
-  
+
   constructor() {
     const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
     const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    
-    this.embeddingDeployment = process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT || 'text-embedding-ada-002';
-    this.chatDeployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || 'gpt-35-turbo';
+
+    // Tier-based deployments (future-proof architecture)
+    this.tier1Reasoning = process.env.AZURE_OPENAI_TIER1_REASONING || 'gpt-4o';
+    this.tier2Reasoning = process.env.AZURE_OPENAI_TIER2_REASONING || 'gpt-4o';
+    this.generalChat = process.env.AZURE_OPENAI_GENERAL_CHAT || 'gpt-4o-mini';
+    this.vision = process.env.AZURE_OPENAI_VISION || 'gpt-4o-mini';
+
+    // Embeddings (unchanged)
+    this.embeddingDeployment = process.env.AZURE_OPENAI_EMBEDDINGS ||
+                                process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ||
+                                'text-embedding-ada-002';
+
+    // SAFETY NET: Backwards compatibility for old environment variables
+    this.chatDeployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || this.generalChat;
+
     this.isConfigured = !!(endpoint && apiKey);
-    
+
     if (this.isConfigured) {
       this.client = new OpenAI({
         apiKey: apiKey!,
         baseURL: `${endpoint!.replace(/\/+$/, '')}/openai/deployments`,
-        defaultQuery: { 'api-version': '2024-02-15-preview' },
+        defaultQuery: { 'api-version': '2024-08-01-preview' },
         defaultHeaders: {
           'api-key': apiKey!,
         },
       });
-      logger.info('Azure OpenAI Service initialized', {
+      logger.info('🤖 Azure OpenAI 4-Tier Architecture Initialized', {
         endpoint: endpoint!.replace(/\/+$/, ''),
-        embeddingModel: this.embeddingDeployment,
-        chatModel: this.chatDeployment
+        tier1Reasoning: this.tier1Reasoning,
+        tier2Reasoning: this.tier2Reasoning,
+        generalChat: this.generalChat,
+        vision: this.vision,
+        embeddings: this.embeddingDeployment
       });
     } else {
       logger.warn('Azure OpenAI Service not configured - missing endpoint or API key');
@@ -355,6 +374,161 @@ Focus on:
     }
 
     return content;
+  }
+
+  /**
+   * Tier 1: Mission-critical political reasoning
+   * Use for: Stance detection, News accountability summaries
+   * Model: gpt-4o (highest quality)
+   */
+  async generateTier1Completion(
+    prompt: string,
+    options: { maxTokens?: number; temperature?: number; systemMessage?: string } = {}
+  ): Promise<string> {
+    if (!this.isConfigured) {
+      throw new Error('Azure OpenAI not configured');
+    }
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.tier1Reasoning,
+        messages: [
+          {
+            role: "system",
+            content: options.systemMessage || "You are a political analyst providing objective, nuanced analysis."
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: options.maxTokens || 500,
+        temperature: options.temperature ?? 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from Tier 1 AI');
+      }
+
+      logger.debug('Tier 1 completion generated', {
+        model: this.tier1Reasoning,
+        tokens: response.usage?.total_tokens
+      });
+
+      return content;
+    } catch (error) {
+      logger.error('Tier 1 completion failed', { error, model: this.tier1Reasoning });
+      throw error;
+    }
+  }
+
+  /**
+   * Tier 2: Complex reasoning tasks
+   * Use for: Topic discovery, Semantic classification
+   * Model: gpt-4o (high quality)
+   */
+  async generateTier2Completion(
+    prompt: string,
+    options: { maxTokens?: number; temperature?: number; systemMessage?: string } = {}
+  ): Promise<string> {
+    if (!this.isConfigured) {
+      throw new Error('Azure OpenAI not configured');
+    }
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.tier2Reasoning,
+        messages: [
+          {
+            role: "system",
+            content: options.systemMessage || "You are a helpful AI assistant."
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: options.maxTokens || 500,
+        temperature: options.temperature ?? 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from Tier 2 AI');
+      }
+
+      return content;
+    } catch (error) {
+      logger.error('Tier 2 completion failed', { error, model: this.tier2Reasoning });
+      throw error;
+    }
+  }
+
+  /**
+   * General: Pattern matching and classification
+   * Use for: Text moderation, Feedback analysis
+   * Model: gpt-4o-mini (cost-effective)
+   */
+  async generateGeneralCompletion(
+    prompt: string,
+    options: { maxTokens?: number; temperature?: number; systemMessage?: string } = {}
+  ): Promise<string> {
+    if (!this.isConfigured) {
+      throw new Error('Azure OpenAI not configured');
+    }
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.generalChat,
+        messages: [
+          {
+            role: "system",
+            content: options.systemMessage || "You are a helpful AI assistant."
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: options.maxTokens || 500,
+        temperature: options.temperature ?? 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from General AI');
+      }
+
+      return content;
+    } catch (error) {
+      logger.error('General completion failed', { error, model: this.generalChat });
+      throw error;
+    }
+  }
+
+  /**
+   * Vision: Image content analysis
+   * Use for: Photo moderation
+   * Model: gpt-4o-mini with vision (cost-effective pattern recognition)
+   */
+  async generateVisionCompletion(
+    messages: any[],
+    options: { maxTokens?: number; temperature?: number } = {}
+  ): Promise<string> {
+    if (!this.isConfigured) {
+      throw new Error('Azure OpenAI not configured');
+    }
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.vision,
+        messages,
+        max_tokens: options.maxTokens || 500,
+        temperature: options.temperature ?? 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from Vision AI');
+      }
+
+      return content;
+    } catch (error) {
+      logger.error('Vision completion failed', { error, model: this.vision });
+      throw error;
+    }
   }
 }
 

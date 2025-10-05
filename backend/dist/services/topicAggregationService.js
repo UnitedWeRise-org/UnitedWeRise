@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TopicAggregationService = void 0;
 const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
+const azureOpenAIService_1 = require("./azureOpenAIService");
 class TopicAggregationService {
     /**
      * Generate aggregated topics with dual-vector stance detection
@@ -199,34 +200,17 @@ class TopicAggregationService {
      */
     static async determineStance(post) {
         try {
-            // Use Azure OpenAI for stance detection
-            const response = await fetch(process.env.AZURE_OPENAI_ENDPOINT + '/openai/deployments/' + process.env.AZURE_OPENAI_CHAT_DEPLOYMENT + '/chat/completions?api-version=2024-02-15-preview', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': process.env.AZURE_OPENAI_API_KEY
-                },
-                body: JSON.stringify({
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Analyze the stance of this post. Respond with ONLY one word: "support", "oppose", or "neutral"'
-                        },
-                        {
-                            role: 'user',
-                            content: post.content
-                        }
-                    ],
-                    max_tokens: 10,
-                    temperature: 0.3
-                })
+            const prompt = `Analyze the stance of this post. Respond with ONLY one word: "support", "oppose", or "neutral"
+
+Post: "${post.content}"`;
+            // NEW: Use Tier 1 for mission-critical political reasoning
+            const stance = await azureOpenAIService_1.azureOpenAI.generateTier1Completion(prompt, {
+                maxTokens: 10,
+                temperature: 0.3
             });
-            if (response.ok) {
-                const data = await response.json();
-                const stance = data.choices?.[0]?.message?.content?.toLowerCase().trim();
-                if (['support', 'oppose', 'neutral'].includes(stance)) {
-                    return stance;
-                }
+            const stanceLower = stance.toLowerCase().trim();
+            if (['support', 'oppose', 'neutral'].includes(stanceLower)) {
+                return stanceLower;
             }
         }
         catch (error) {
@@ -240,53 +224,37 @@ class TopicAggregationService {
      */
     static async generateTopicMetadata(supportPosts, opposePosts, neutralPosts) {
         try {
-            // Sample posts for AI analysis
             const supportSample = supportPosts.slice(0, 3).map(p => p.content).join('\n');
             const opposeSample = opposePosts.slice(0, 3).map(p => p.content).join('\n');
-            const response = await fetch(process.env.AZURE_OPENAI_ENDPOINT + '/openai/deployments/' + process.env.AZURE_OPENAI_CHAT_DEPLOYMENT + '/chat/completions?api-version=2024-02-15-preview', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': process.env.AZURE_OPENAI_API_KEY
-                },
-                body: JSON.stringify({
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Generate a concise topic title and summaries for both viewpoints. Format: TITLE: [title]\nSUPPORT: [summary]\nOPPOSE: [summary]'
-                        },
-                        {
-                            role: 'user',
-                            content: `Supporting posts:\n${supportSample}\n\nOpposing posts:\n${opposeSample}`
-                        }
-                    ],
-                    max_tokens: 150,
-                    temperature: 0.7
-                })
+            const prompt = `Generate a concise topic title and summaries for both viewpoints. Format: TITLE: [title]
+SUPPORT: [summary]
+OPPOSE: [summary]
+
+Supporting posts:
+${supportSample}
+
+Opposing posts:
+${opposeSample}`;
+            // NEW: Use Tier 1 for political discourse summarization
+            const content = await azureOpenAIService_1.azureOpenAI.generateTier1Completion(prompt, {
+                maxTokens: 150,
+                temperature: 0.7
             });
-            if (response.ok) {
-                const data = await response.json();
-                const content = data.choices?.[0]?.message?.content;
-                // Parse the response
-                const lines = content.split('\n');
-                const title = lines.find(l => l.startsWith('TITLE:'))?.replace('TITLE:', '').trim() || 'Trending Topic';
-                const supportSummary = lines.find(l => l.startsWith('SUPPORT:'))?.replace('SUPPORT:', '').trim() || 'Supporting viewpoint';
-                const opposeSummary = lines.find(l => l.startsWith('OPPOSE:'))?.replace('OPPOSE:', '').trim() || 'Opposing viewpoint';
-                return {
-                    title,
-                    supportSummary,
-                    opposeSummary
-                };
-            }
+            // Parse the response
+            const lines = content.split('\n');
+            const title = lines.find(l => l.startsWith('TITLE:'))?.replace('TITLE:', '').trim() || 'Trending Topic';
+            const supportSummary = lines.find(l => l.startsWith('SUPPORT:'))?.replace('SUPPORT:', '').trim() || 'Supporting viewpoint';
+            const opposeSummary = lines.find(l => l.startsWith('OPPOSE:'))?.replace('OPPOSE:', '').trim() || 'Opposing viewpoint';
+            return { title, supportSummary, opposeSummary };
         }
         catch (error) {
             console.error('Error generating topic metadata:', error);
+            return {
+                title: 'Trending Discussion',
+                supportSummary: 'Supporting this position',
+                opposeSummary: 'Opposing this position'
+            };
         }
-        return {
-            title: 'Trending Discussion',
-            supportSummary: 'Supporting this position',
-            opposeSummary: 'Opposing this position'
-        };
     }
     /**
      * Calculate topic relevance score
