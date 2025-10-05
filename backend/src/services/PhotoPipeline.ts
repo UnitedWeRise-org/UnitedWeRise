@@ -21,6 +21,7 @@ import sharp from 'sharp';
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
 import { imageContentModerationService } from './imageContentModerationService';
 import { prisma } from '../lib/prisma.js';
+import logger from '../utils/logger';
 
 // ========================================
 // Type Definitions
@@ -406,7 +407,7 @@ export class PhotoPipeline {
         });
 
         // 🚨 ADMIN ALERT: Log blocked content for admin dashboard
-        console.error('🚨 MODERATION BLOCKED - Admin Alert:', {
+        logger.error('🚨 MODERATION BLOCKED - Admin Alert', {
           userId,
           category: result.category,
           reason: result.reason,
@@ -425,30 +426,18 @@ export class PhotoPipeline {
       });
 
       // 🚨 CRITICAL: Moderation service failure - log for admin monitoring
-      console.error('🚨 MODERATION SERVICE FAILURE - Critical Admin Alert:', {
+      logger.error('🚨 MODERATION SERVICE FAILURE - Critical Admin Alert', {
         userId,
         error: moderationError.message,
         stack: moderationError.stack,
         environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        photoId: requestId
       });
 
-      // Production: fail safe and block
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Content moderation service unavailable');
-      }
-
-      // Development/staging: continue with warning
-      // NOTE: This allows explicit content through in dev/staging - monitor admin logs!
-      return {
-        category: 'WARN',
-        approved: true,
-        reason: 'Moderation service error - approved for development',
-        description: moderationError.message,
-        contentType: 'UNKNOWN',
-        confidence: 0.1,
-        processingTime: 0
-      };
+      // SECURITY FIX: Block upload in ALL environments when moderation fails
+      // Previous behavior (approved: true in staging) was a security vulnerability
+      throw new Error(`Content moderation service error: ${moderationError.message}`);
     }
   }
 
