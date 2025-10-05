@@ -17,8 +17,10 @@ class ImageContentModerationService {
     constructor() {
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
-        // Use GPT-4 Vision deployment for image analysis
-        this.visionDeployment = process.env.AZURE_OPENAI_VISION_DEPLOYMENT || 'gpt-4-vision';
+        // Use tier-based Vision deployment (gpt-4o-mini with built-in vision)
+        this.visionDeployment = process.env.AZURE_OPENAI_VISION ||
+            process.env.AZURE_OPENAI_VISION_DEPLOYMENT ||
+            'gpt-4o-mini';
         this.isConfigured = !!(endpoint && apiKey);
         this.config = moderation_1.DEFAULT_MODERATION_CONFIG;
         if (this.isConfigured) {

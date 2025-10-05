@@ -308,6 +308,15 @@ class PhotoPipeline {
                     category: result.category,
                     contentType: result.contentType
                 });
+                // 🚨 ADMIN ALERT: Log blocked content for admin dashboard
+                console.error('🚨 MODERATION BLOCKED - Admin Alert:', {
+                    userId,
+                    category: result.category,
+                    reason: result.reason,
+                    contentType: result.contentType,
+                    confidence: result.confidence,
+                    timestamp: new Date().toISOString()
+                });
             }
             return result;
         }
@@ -316,11 +325,20 @@ class PhotoPipeline {
                 error: moderationError.message,
                 stack: moderationError.stack
             });
+            // 🚨 CRITICAL: Moderation service failure - log for admin monitoring
+            console.error('🚨 MODERATION SERVICE FAILURE - Critical Admin Alert:', {
+                userId,
+                error: moderationError.message,
+                stack: moderationError.stack,
+                environment: process.env.NODE_ENV,
+                timestamp: new Date().toISOString()
+            });
             // Production: fail safe and block
             if (process.env.NODE_ENV === 'production') {
                 throw new Error('Content moderation service unavailable');
             }
             // Development/staging: continue with warning
+            // NOTE: This allows explicit content through in dev/staging - monitor admin logs!
             return {
                 category: 'WARN',
                 approved: true,
