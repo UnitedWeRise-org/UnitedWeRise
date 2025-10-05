@@ -394,6 +394,7 @@ class ContentReporting {
         }
         
         try {
+            const authToken = localStorage.getItem('authToken');
             const response = await fetch(`${this.API_BASE}/moderation/reports`, {
                 method: 'POST',
                 headers: {
@@ -449,8 +450,9 @@ class ContentReporting {
 
     // Check and display user moderation status
     async checkModerationStatus() {
+        const authToken = localStorage.getItem('authToken');
         if (!authToken) return;
-        
+
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
                 headers: {
@@ -501,9 +503,10 @@ function initializeContentReporting() {
         const contentReporting = new ContentReporting();
         // Make it globally available
         window.contentReporting = contentReporting;
-        
+
         // Check moderation status when auth token is available
-        if (typeof authToken !== 'undefined' && authToken) {
+        const authToken = localStorage.getItem('authToken');
+        if (authToken) {
             contentReporting.checkModerationStatus();
         }
     } else {
@@ -511,8 +514,9 @@ function initializeContentReporting() {
         document.addEventListener('DOMContentLoaded', () => {
             const contentReporting = new ContentReporting();
             window.contentReporting = contentReporting;
-            
-            if (typeof authToken !== 'undefined' && authToken) {
+
+            const authToken = localStorage.getItem('authToken');
+            if (authToken) {
                 contentReporting.checkModerationStatus();
             }
         });
