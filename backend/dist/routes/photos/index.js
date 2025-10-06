@@ -81,6 +81,13 @@ router.post('/upload', auth_1.requireAuth, upload.single('file'), async (req, re
             gallery,
             caption
         });
+        // Add debug headers showing moderation results (visible in browser Network tab)
+        res.setHeader('X-Moderation-Decision', result.moderation?.decision || 'UNKNOWN');
+        res.setHeader('X-Moderation-Approved', String(result.moderation?.approved || false));
+        res.setHeader('X-Moderation-Confidence', String(result.moderation?.confidence || 0));
+        res.setHeader('X-Moderation-ContentType', result.moderation?.contentType || 'UNKNOWN');
+        res.setHeader('X-Pipeline-Version', 'layer6-with-debugging');
+        res.setHeader('X-Request-ID', requestId);
         return res.status(201).json({
             success: true,
             data: result

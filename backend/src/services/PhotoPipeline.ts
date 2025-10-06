@@ -581,8 +581,8 @@ export class PhotoPipeline {
   async process(options: PhotoProcessingOptions): Promise<PhotoProcessingResult> {
     const { userId, requestId, file, photoType = 'POST_MEDIA', gallery, caption } = options;
 
-    // EXPLICIT CONSOLE LOGGING FOR VISIBILITY
-    console.log('🚨🚨🚨 PHOTOPIPELINE STARTED 🚨🚨🚨', {
+    // EXPLICIT ERROR LOGGING FOR GUARANTEED VISIBILITY IN AZURE
+    logger.error('🚨🚨🚨 PHOTOPIPELINE STARTED 🚨🚨🚨', {
       requestId,
       userId,
       fileSize: file.size,
@@ -602,16 +602,16 @@ export class PhotoPipeline {
     // Stage 1: Validate
     const validationResult = await this.validateFile(file, requestId);
     if (!validationResult.valid) {
-      console.log('🚨 VALIDATION FAILED', { requestId, error: validationResult.error });
+      logger.error('🚨 VALIDATION FAILED', { requestId, error: validationResult.error });
       throw new Error(validationResult.error);
     }
 
     // Stage 2: Process (EXIF + WebP)
     const processed = await this.processImage(file.buffer, file.mimetype, requestId);
-    console.log('✅ IMAGE PROCESSED', { requestId, newMimeType: processed.mimeType });
+    logger.error('✅ IMAGE PROCESSED', { requestId, newMimeType: processed.mimeType });
 
     // Stage 3: Moderate
-    console.log('🔍 CALLING VISION AI MODERATION', { requestId, userId });
+    logger.error('🔍 CALLING VISION AI MODERATION', { requestId, userId });
     const moderationResult = await this.moderateContent(
       processed.buffer,
       processed.mimeType,
@@ -620,7 +620,7 @@ export class PhotoPipeline {
       photoType
     );
 
-    console.log('📊 MODERATION RESULT', {
+    logger.error('📊 MODERATION RESULT', {
       requestId,
       approved: moderationResult.approved,
       category: moderationResult.category,
@@ -629,7 +629,7 @@ export class PhotoPipeline {
     });
 
     if (!moderationResult.approved) {
-      console.log('🚨 MODERATION BLOCKED UPLOAD', { requestId, reason: moderationResult.reason });
+      logger.error('🚨 MODERATION BLOCKED UPLOAD', { requestId, reason: moderationResult.reason });
       const error: any = new Error('Content moderation failed');
       error.moderationResult = moderationResult;
       throw error;
