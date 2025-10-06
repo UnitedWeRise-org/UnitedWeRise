@@ -43,7 +43,7 @@ export class ImageContentModerationService {
       this.client = new OpenAI({
         apiKey: apiKey!,
         baseURL: `${endpoint!.replace(/\/+$/, '')}/openai/deployments`,
-        defaultQuery: { 'api-version': '2024-10-01-preview' },
+        defaultQuery: { 'api-version': '2024-08-01-preview' },
         defaultHeaders: {
           'api-key': apiKey!,
         },
