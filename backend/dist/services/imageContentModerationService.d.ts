@@ -49,10 +49,12 @@ export declare class ImageContentModerationService {
     private makeModerationDecision;
     /**
      * Create fallback result when service is not configured
+     * SECURITY: Always blocks when unconfigured in ALL environments
      */
     private createFallbackResult;
     /**
      * Create error fallback result
+     * SECURITY: Always blocks on error in ALL environments (production, staging, development)
      */
     private createErrorFallbackResult;
     /**

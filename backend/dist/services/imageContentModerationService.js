@@ -361,15 +361,14 @@ Focus on:
     }
     /**
      * Create fallback result when service is not configured
+     * SECURITY: Always blocks when unconfigured in ALL environments
      */
     createFallbackResult(startTime, reason) {
         return {
-            category: this.config.isProduction ? moderation_1.ModerationCategory.BLOCK : moderation_1.ModerationCategory.APPROVE,
-            approved: !this.config.isProduction,
+            category: moderation_1.ModerationCategory.BLOCK,
+            approved: false, // SECURITY FIX: Always block when moderation is not configured
             reason,
-            description: this.config.isProduction
-                ? 'Content moderation service unavailable - blocked for safety'
-                : 'Content moderation service unavailable - approved for development',
+            description: 'Content moderation service unavailable - blocked for safety',
             contentType: moderation_1.ContentType.UNKNOWN,
             contentFlags: {
                 isAdult: false,
@@ -391,16 +390,15 @@ Focus on:
     }
     /**
      * Create error fallback result
+     * SECURITY: Always blocks on error in ALL environments (production, staging, development)
      */
     createErrorFallbackResult(startTime, error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         return {
-            category: this.config.isProduction ? moderation_1.ModerationCategory.BLOCK : moderation_1.ModerationCategory.APPROVE,
-            approved: !this.config.isProduction,
+            category: moderation_1.ModerationCategory.BLOCK,
+            approved: false, // SECURITY FIX: Always block on moderation errors
             reason: `Moderation error: ${errorMessage}`,
-            description: this.config.isProduction
-                ? 'Content moderation failed - blocked for safety'
-                : 'Content moderation failed - approved for development',
+            description: 'Content moderation failed - blocked for safety',
             contentType: moderation_1.ContentType.UNKNOWN,
             contentFlags: {
                 isAdult: false,
