@@ -1129,17 +1129,37 @@
             const overlay = document.getElementById('page-loading-overlay');
             if (overlay) {
                 overlay.classList.add('hidden');
+                console.log('✅ Page loading overlay hidden');
             }
         }
 
+        // Failsafe: Always hide loading overlay after max 2 seconds
+        setTimeout(() => {
+            console.log('⏱️ Failsafe timeout triggered - hiding loading overlay');
+            hidePageLoadingOverlay();
+        }, 2000);
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                initializeModules();
-
-                // Hide page loading spinner after modules are loaded
-                setTimeout(() => {
+                // Hide loading overlay immediately on mobile (no map to wait for)
+                const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile) {
+                    console.log('📱 Mobile detected - hiding loading overlay immediately');
                     hidePageLoadingOverlay();
-                }, 1000);
+                }
+
+                initializeModules().catch(error => {
+                    console.error('❌ Module initialization error:', error);
+                    // Hide overlay even if modules fail
+                    hidePageLoadingOverlay();
+                });
+
+                // Hide page loading spinner after modules are loaded (desktop)
+                if (!isMobile) {
+                    setTimeout(() => {
+                        hidePageLoadingOverlay();
+                    }, 1000);
+                }
 
                 // Run diagnostics in development
                 if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
@@ -1147,11 +1167,24 @@
                 }
             });
         } else {
-            initializeModules();
-
-            setTimeout(() => {
+            // Hide loading overlay immediately on mobile (no map to wait for)
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+                console.log('📱 Mobile detected - hiding loading overlay immediately');
                 hidePageLoadingOverlay();
-            }, 1000);
+            }
+
+            initializeModules().catch(error => {
+                console.error('❌ Module initialization error:', error);
+                // Hide overlay even if modules fail
+                hidePageLoadingOverlay();
+            });
+
+            if (!isMobile) {
+                setTimeout(() => {
+                    hidePageLoadingOverlay();
+                }, 1000);
+            }
 
             if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
                 setTimeout(testModularFunctionality, 2000);
