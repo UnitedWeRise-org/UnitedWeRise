@@ -2098,7 +2098,7 @@ class Profile {
 
     async setAsProfilePicture(photoId) {
         try {
-            const response = await window.apiCall(`/photos/${photoId}/set-profile`, {
+            const response = await window.apiCall(`/photos/galleries/${photoId}/set-profile`, {
                 method: 'POST'
             });
 
@@ -2119,7 +2119,7 @@ class Profile {
         if (!newGallery) return;
 
         try {
-            const response = await window.apiCall(`/photos/${photoId}/gallery`, {
+            const response = await window.apiCall(`/photos/galleries/${photoId}/gallery`, {
                 method: 'PUT',
                 body: { gallery: newGallery }
             });
@@ -2141,7 +2141,7 @@ class Profile {
         }
 
         try {
-            const response = await window.apiCall(`/photos/${photoId}`, {
+            const response = await window.apiCall(`/photos/galleries/${photoId}`, {
                 method: 'DELETE'
             });
 
