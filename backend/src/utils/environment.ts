@@ -57,7 +57,9 @@ export function isAdminDebuggingEnabled(): boolean {
  * @returns {boolean} True if cookies should be secure (HTTPS only)
  */
 export function requireSecureCookies(): boolean {
-    return isProduction();
+    // Both production and staging use HTTPS (Azure Static Web Apps + Container Apps)
+    // Secure cookies required for SameSite=none to work for cross-subdomain auth
+    return true;
 }
 
 /**

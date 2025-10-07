@@ -135,12 +135,6 @@ class AdminAuth {
                 this.currentUser = result.user;
                 localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
 
-                // FALLBACK: Store auth token for admin dashboard if cookies don't work
-                if (result.token) {
-                    localStorage.setItem('authToken', result.token);
-                    console.log('🔑 Auth token stored in localStorage as fallback');
-                }
-
                 // Set TOTP status from secure cookie-based authentication
                 if (result.totpVerified) {
                     this.totpVerified = true;

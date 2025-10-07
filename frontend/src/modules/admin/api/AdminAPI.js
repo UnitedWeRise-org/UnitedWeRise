@@ -55,13 +55,7 @@ class AdminAPI {
             headers['x-totp-token'] = this.totpToken;
         }
 
-        // FALLBACK: If cookies don't work, use Bearer token from localStorage
-        const authToken = localStorage.getItem('authToken');
-        if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
-        }
-
-        // Authentication handled by httpOnly cookies automatically (with Bearer fallback)
+        // Authentication handled by httpOnly cookies automatically
         try {
             const response = await fetch(url, {
                 ...options,
@@ -83,7 +77,6 @@ class AdminAPI {
                     alert('Your security session has expired. Please log in again.');
 
                     // Clear all auth data (httpOnly cookies cleared server-side)
-                    localStorage.removeItem('authToken');
                     localStorage.removeItem('currentUser');
                     window.csrfToken = null;
 
@@ -104,7 +97,6 @@ class AdminAPI {
                 console.error('🔒 Admin API: Authentication failed');
 
                 // Clear auth data and redirect to login
-                localStorage.removeItem('authToken');
                 localStorage.removeItem('currentUser');
 
                 if (window.adminAuth) {

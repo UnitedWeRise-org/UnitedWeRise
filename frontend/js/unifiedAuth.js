@@ -165,7 +165,6 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                 return {
                     success: true,
                     user: totpResult.user,
-                    token: totpResult.token, // FALLBACK: Include token for localStorage fallback
                     totpSessionToken: totpResult.totpSessionToken,
                     totpVerified: true
                 };
@@ -190,8 +189,7 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             adminDebugLog('UnifiedAuth', `Unified login successful for ${context} (no TOTP)`);
             return {
                 success: true,
-                user: result.user,
-                token: result.token // FALLBACK: Include token for localStorage fallback
+                user: result.user
             };
         } else {
             throw new Error(result.error || 'Login failed');
