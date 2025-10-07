@@ -1,6 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "description": "UnitedWeRise Backend API - Security Hardened",
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
