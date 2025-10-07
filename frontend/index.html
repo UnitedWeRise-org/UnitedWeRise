@@ -1116,7 +1116,48 @@
 
     <!-- Unified Authentication System -->
     <script src="js/unifiedAuth.js"></script>
-    
+
+    <!-- CRITICAL: Bulletproof loading overlay removal -->
+    <!-- This MUST execute before modules to prevent stuck loading screens -->
+    <script>
+        (function() {
+            console.log('🔧 CRITICAL: Loading overlay failsafe activated');
+
+            // Function to forcefully hide loading overlay
+            function forceHideLoadingOverlay() {
+                const overlay = document.getElementById('page-loading-overlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none'; // Double guarantee
+                    console.log('✅ CRITICAL: Loading overlay forcefully hidden');
+                }
+            }
+
+            // Hide immediately on mobile
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+                console.log('📱 CRITICAL: Mobile detected - hiding overlay immediately');
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', forceHideLoadingOverlay);
+                } else {
+                    forceHideLoadingOverlay();
+                }
+            }
+
+            // Absolute failsafe: Hide after 2 seconds no matter what
+            setTimeout(function() {
+                console.log('⏱️ CRITICAL: 2-second failsafe triggered');
+                forceHideLoadingOverlay();
+            }, 2000);
+
+            // Additional failsafe: Hide after 5 seconds (for slow connections)
+            setTimeout(function() {
+                console.log('⏱️ CRITICAL: 5-second emergency failsafe triggered');
+                forceHideLoadingOverlay();
+            }, 5000);
+        })();
+    </script>
+
     <!-- MODULAR JAVASCRIPT SYSTEM -->
     <!-- ES6 modules for modern architecture - replaces inline JavaScript -->
     <script type="module">
