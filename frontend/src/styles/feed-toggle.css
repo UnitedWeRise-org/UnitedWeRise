@@ -339,27 +339,4 @@
     }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .feed-toggle-container {
-        background: #1a1a1a;
-        border-bottom-color: #333;
-    }
-
-    .feed-toggle {
-        background: #2a2a2a;
-    }
-
-    .feed-toggle-btn {
-        color: #999;
-    }
-
-    .feed-toggle-btn:hover {
-        background: rgba(122, 155, 27, 0.2);
-    }
-
-    .feed-toggle-btn.active {
-        background: #3a3a3a;
-        color: #7a9b1b;
-    }
-}
+/* Dark mode support removed - using consistent cream/off-white theme */
