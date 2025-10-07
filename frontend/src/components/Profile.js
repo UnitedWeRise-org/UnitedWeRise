@@ -2079,8 +2079,10 @@ class Profile {
             if (response.ok) {
                 alert(`Successfully uploaded ${files.length} photo(s) to "${gallery}"`);
 
-                // Force fresh gallery data by bypassing cache
-                this.loadPhotoGalleries(true); // Reload galleries with fresh data
+                // Wait 1 second for backend processing (thumbnails, database commits) before refreshing
+                setTimeout(() => {
+                    this.loadPhotoGalleries(true); // Reload galleries with fresh data
+                }, 1000);
             } else {
                 const errorMsg = response.data?.error || response.error || 'Failed to upload photos';
                 alert(`Upload failed: ${errorMsg}`);
