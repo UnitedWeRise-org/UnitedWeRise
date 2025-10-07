@@ -299,6 +299,10 @@ export class MobileBottomBar {
                         <span class="mobile-nav-submenu-icon">⚙️</span>
                         <span class="mobile-nav-submenu-label">Settings</span>
                     </a>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="logout">
+                        <span class="mobile-nav-submenu-icon">🚪</span>
+                        <span class="mobile-nav-submenu-label">Logout</span>
+                    </a>
                 `;
 
             default:
@@ -332,7 +336,8 @@ export class MobileBottomBar {
             'toggle-profile': 'mobile-menu',
             'open-donation': 'mobile-menu',
             'mobile-map': 'mobile-menu',
-            'mobile-settings': 'mobile-menu'
+            'mobile-settings': 'mobile-menu',
+            'logout': 'mobile-menu'
         };
 
         const mainAction = actionMap[buttonAction] || buttonAction;
