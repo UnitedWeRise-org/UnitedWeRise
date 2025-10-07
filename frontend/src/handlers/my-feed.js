@@ -616,24 +616,49 @@ export class MyFeedHandlers {
     /**
      * Scroll event listener for infinite scroll on My Feed
      * Migrated from index.html line 2975
+     * Also handles auto-hide/show for posting box
      */
     setupMyFeedInfiniteScroll() {
         const myFeedContainer = document.getElementById('myFeedPosts');
         if (myFeedContainer) {
             console.log('✅ Setting up infinite scroll for My Feed');
+
+            let lastScrollTop = myFeedContainer.scrollTop;
+            let ticking = false;
+
             myFeedContainer.addEventListener('scroll', () => {
-                // Skip if already loading
-                if (this.isLoadingMorePosts || !this.hasMorePosts) {
-                    return;
-                }
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        const currentScrollTop = myFeedContainer.scrollTop;
 
-                const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
-                const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+                        // Auto-hide/show posting box based on scroll direction
+                        const composerWrapper = document.querySelector('.sticky-composer-wrapper');
+                        if (composerWrapper) {
+                            if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
+                                // Scrolling down - hide posting box
+                                composerWrapper.classList.add('hidden');
+                            } else if (currentScrollTop < lastScrollTop) {
+                                // Scrolling up - show posting box
+                                composerWrapper.classList.remove('hidden');
+                            }
+                        }
 
-                // Only trigger at the very bottom to prevent multiple requests
-                if (distanceFromBottom <= 50) {
-                    console.log('🔄 Infinite scroll triggered - loading more posts');
-                    this.loadMoreMyFeedPosts();
+                        // Infinite scroll logic
+                        if (!this.isLoadingMorePosts && this.hasMorePosts) {
+                            const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
+                            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+                            // Only trigger at the very bottom to prevent multiple requests
+                            if (distanceFromBottom <= 50) {
+                                console.log('🔄 Infinite scroll triggered - loading more posts');
+                                this.loadMoreMyFeedPosts();
+                            }
+                        }
+
+                        lastScrollTop = currentScrollTop;
+                        ticking = false;
+                    });
+                    ticking = true;
                 }
             });
         } else {

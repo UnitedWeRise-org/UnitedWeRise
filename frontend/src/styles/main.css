@@ -1335,7 +1335,7 @@ details {
 /* Sticky Post Composer */
 .sticky-composer-wrapper {
     background: white;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, box-shadow 0.3s ease;
     margin-bottom: 1rem;
     position: sticky;
     top: 0;
@@ -1349,6 +1349,13 @@ details {
     background: #ffffff;
     z-index: 3; /* Keep below map layer */
     top: -32px; /* Compensate for container padding to position higher */
+}
+
+/* Auto-hide state (scrolling down) */
+.sticky-composer-wrapper.hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .quick-post-composer {

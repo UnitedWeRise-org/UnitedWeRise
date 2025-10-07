@@ -134,6 +134,9 @@ export class FeedToggle {
         // Update unread badge
         this.updateUnreadBadge();
 
+        // Setup scroll behavior for auto-hide/show
+        this.setupScrollBehavior();
+
         // Show swipe hint on mobile (first time only)
         if (this.isMobile()) {
             this.showSwipeHint();
@@ -560,6 +563,45 @@ export class FeedToggle {
                 this.switchFeed('following');
             }
         }, { passive: true });
+    }
+
+    /**
+     * Setup scroll behavior for auto-hide/show toggle
+     */
+    setupScrollBehavior() {
+        const toggleContainer = document.querySelector('.feed-toggle-container');
+        if (!toggleContainer) return;
+
+        let lastScrollY = window.scrollY;
+        let ticking = false;
+
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+
+            // Determine scroll direction
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                // Scrolling down - hide toggle
+                toggleContainer.classList.add('hidden');
+            } else if (currentScrollY < lastScrollY) {
+                // Scrolling up - show toggle
+                toggleContainer.classList.remove('hidden');
+            }
+
+            lastScrollY = currentScrollY;
+            ticking = false;
+        };
+
+        // Use requestAnimationFrame for smooth performance
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(handleScroll);
+                ticking = true;
+            }
+        }, { passive: true });
+
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('FeedToggle', 'Scroll behavior initialized');
+        }
     }
 
     /**
