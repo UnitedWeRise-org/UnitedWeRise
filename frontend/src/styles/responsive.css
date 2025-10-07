@@ -136,8 +136,86 @@
     }
 
     /* Mobile Navigation - New ES6 Component System */
-    /* OLD .mobile-top-bar and .mobile-sidebar CSS removed (124 lines) */
-    /* Now using MobileBottomBar.js component with mobile-nav.css */
+    /* Using MobileBottomBar.js component with mobile-nav.css */
+
+    /* Mobile Top Bar - Restored per user preference */
+    .mobile-top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50px; /* Further reduced to match sidebar better */
+        background: #202e0c;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px 0 15px; /* More padding on right for logo */
+        z-index: 2000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .mobile-search-container {
+        flex: 0 0 auto;
+        margin-right: 10px;
+    }
+
+    .mobile-search-input {
+        width: 120px;
+        height: 35px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.9);
+        font-size: 14px;
+    }
+
+    .mobile-logo-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 8px; /* Prevent logo from touching edge */
+    }
+
+    /* Mobile title styling - copy from main site */
+    .mobile-logo-container .site-title-container {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px; /* Increased gap */
+        color: white;
+        font-weight: bold;
+        font-size: 18px; /* Increased by ~10% from 16px */
+    }
+
+    .mobile-logo-container .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-logo-container .logo-circle {
+        width: 42px; /* Increased by 20% from 35px */
+        height: 42px; /* Increased by 20% from 35px */
+        border-radius: 50%;
+    }
+
+    .mobile-logo-container .site-title-left,
+    .mobile-logo-container .site-title-right {
+        color: white;
+        font-weight: bold;
+        font-size: 18px; /* Increased by ~10% */
+    }
+
+    .mobile-logo-container .beta-badge {
+        background: #ffd700;
+        color: #002868;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8px; /* Keep beta small */
+        margin-left: 2px;
+        font-weight: bold;
+    }
 
     /* Show mobile nav - created dynamically by MobileBottomBar.js */
     .mobile-nav {
