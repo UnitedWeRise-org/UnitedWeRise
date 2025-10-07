@@ -165,7 +165,9 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                 return {
                     success: true,
                     user: totpResult.user,
-                    totpSessionToken: totpResult.totpSessionToken
+                    token: totpResult.token, // FALLBACK: Include token for localStorage fallback
+                    totpSessionToken: totpResult.totpSessionToken,
+                    totpVerified: true
                 };
             } else {
                 // Check if TOTP is still required (invalid code)
@@ -188,7 +190,8 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             adminDebugLog('UnifiedAuth', `Unified login successful for ${context} (no TOTP)`);
             return {
                 success: true,
-                user: result.user
+                user: result.user,
+                token: result.token // FALLBACK: Include token for localStorage fallback
             };
         } else {
             throw new Error(result.error || 'Login failed');
