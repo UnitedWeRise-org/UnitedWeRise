@@ -1,0 +1,215 @@
+/**
+ * Mobile Bottom Navigation Bar Styles
+ * iOS-style 5-button tab bar with submenu support
+ */
+
+/* Mobile Navigation Container */
+.mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #ffffff;
+    border-top: 1px solid #e9ecef;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    display: none; /* Hidden by default, shown only on mobile */
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    padding: 0;
+}
+
+/* Show on mobile */
+@media screen and (max-width: 767px) {
+    .mobile-nav {
+        display: flex !important;
+    }
+}
+
+/* Navigation Item */
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    min-height: 48px;
+    padding: 4px 8px;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+    position: relative;
+    flex: 1;
+    max-width: 80px;
+}
+
+.mobile-nav-item:hover {
+    color: #4b5c09;
+}
+
+.mobile-nav-item.active {
+    color: #4b5c09;
+}
+
+/* Active indicator bar */
+.mobile-nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    background: #4b5c09;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Submenu indicator (chevron) */
+.mobile-nav-item[data-has-submenu="true"]::before {
+    content: '⌃';
+    position: absolute;
+    top: 2px;
+    right: 8px;
+    font-size: 10px;
+    color: #999;
+}
+
+/* Icon */
+.mobile-nav-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+/* Label */
+.mobile-nav-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* Submenu Backdrop */
+.mobile-nav-submenu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.mobile-nav-submenu-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Submenu Container */
+.mobile-nav-submenu {
+    position: fixed;
+    bottom: 60px; /* Above nav bar */
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    max-height: 40vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
+}
+
+.mobile-nav-submenu.show {
+    transform: translateY(0);
+}
+
+/* Submenu Item */
+.mobile-nav-submenu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    color: #333;
+    text-decoration: none;
+    transition: background 0.2s;
+    min-height: 48px; /* Touch target */
+}
+
+.mobile-nav-submenu-item:last-child {
+    margin-bottom: 0;
+}
+
+.mobile-nav-submenu-item:active {
+    background: #e9ecef;
+}
+
+.mobile-nav-submenu-icon {
+    font-size: 20px;
+    margin-right: 12px;
+    min-width: 24px;
+}
+
+.mobile-nav-submenu-label {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Content padding to account for bottom nav */
+@media screen and (max-width: 767px) {
+    body {
+        padding-bottom: 60px;
+    }
+
+    /* Ensure main content doesn't get hidden behind nav */
+    #mainContent {
+        padding-bottom: 20px;
+    }
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .mobile-nav-item,
+    .mobile-nav-submenu,
+    .mobile-nav-submenu-backdrop {
+        transition: none !important;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    .mobile-nav {
+        background: #1a1a1a;
+        border-top-color: #333;
+    }
+
+    .mobile-nav-item {
+        color: #999;
+    }
+
+    .mobile-nav-item.active {
+        color: #7a9b1b;
+    }
+
+    .mobile-nav-submenu {
+        background: #1a1a1a;
+        border-top-color: #333;
+    }
+
+    .mobile-nav-submenu-item {
+        background: #2a2a2a;
+        color: #ddd;
+    }
+
+    .mobile-nav-submenu-item:active {
+        background: #333;
+    }
+}

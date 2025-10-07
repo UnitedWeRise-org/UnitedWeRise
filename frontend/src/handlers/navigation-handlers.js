@@ -213,6 +213,41 @@ class NavigationHandlers {
                     window.showMobileProfile();
                 }
                 break;
+            case 'mobile-messages':
+                if (typeof window.showMobileMessages === 'function') {
+                    window.showMobileMessages();
+                }
+                break;
+            case 'mobile-hide-map':
+                if (typeof window.hideMobileMap === 'function') {
+                    window.hideMobileMap();
+                }
+                break;
+            case 'close-civic-organizing':
+                if (typeof window.closeCivicOrganizing === 'function') {
+                    window.closeCivicOrganizing();
+                }
+                break;
+            case 'create-petition':
+                if (typeof window.showPetitionCreator === 'function') {
+                    window.showPetitionCreator();
+                }
+                break;
+            case 'organize-event':
+                if (typeof window.showEventCreator === 'function') {
+                    window.showEventCreator();
+                }
+                break;
+            case 'find-events':
+                if (typeof window.showCivicBrowser === 'function') {
+                    window.showCivicBrowser();
+                }
+                break;
+            case 'my-activities':
+                if (typeof window.showMyOrganizing === 'function') {
+                    window.showMyOrganizing();
+                }
+                break;
 
             // Detail panel actions
             case 'close-detail':

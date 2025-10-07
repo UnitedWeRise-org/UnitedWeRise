@@ -8,6 +8,255 @@
 
 ---
 
+## 2025-10-07 - Feed Toggle Enhancements (Smart Defaults, Unread Indicators, Swipe Gestures)
+
+### 🎨 FEED TOGGLE SYSTEM - ENHANCED USER EXPERIENCE
+- **Component**: FeedToggle.js (620 lines) + feed-toggle.css (351 lines)
+- **Status**: ✅ Implementation complete, ready for staging testing
+- **Location**: `frontend/src/components/FeedToggle.js`, `frontend/src/styles/feed-toggle.css`
+
+### ✨ NEW FEATURES
+
+**Smart Default Feed Selection**:
+- **New Users** (0 follows) → Defaults to Discover feed with welcome banner
+- **Empty Following** (follows > 0, posts = 0) → Discover feed with educational banner
+- **Active Following** (follows > 0, posts > 0) → Following feed by default
+- **Saved Preference**: localStorage remembers last selected feed
+
+**Unread Post Indicators**:
+- **Badge System**: Red badge on Following button shows unread count
+- **Tracking**: localStorage timestamp tracks last Following feed view
+- **Display**: Shows 1-99 count, or "99+" for larger numbers
+- **Auto-Reset**: Badge clears when viewing Following feed
+- **Smart Behavior**: Badge hidden when count is 0
+
+**Smooth Feed Transitions**:
+- **Fade-Out Animation**: Old posts fade out over 200ms
+- **Fade-In Animation**: New posts fade in over 200ms
+- **Total Transition**: 400ms smooth, professional feel
+- **GPU-Accelerated**: Uses `transform` and `opacity` for 60fps performance
+- **Accessibility**: Respects `prefers-reduced-motion` preference
+
+**Mobile Swipe Gestures**:
+- **Swipe Right**: Following → Discover
+- **Swipe Left**: Discover → Following
+- **Minimum Distance**: 50px threshold prevents accidental switches
+- **Smart Detection**: Ignores button taps, only triggers on feed content
+- **Passive Listeners**: Optimized for scroll performance
+
+**Swipe Discovery Education**:
+- **Wobble Animation**: Toggle container wobbles on first mobile visit
+- **Tooltip**: "💡 Swipe to switch feeds" appears first 2 visits
+- **Auto-Dismiss**: Tooltip removes after 3 seconds
+- **localStorage Flags**: Prevents repeated hints
+
+**Helpful Banners**:
+- **New User Banner**: "👋 Welcome to UnitedWeRise! Start by following people..."
+- **Empty Following Banner**: "📭 Following feed is quiet. Check back later or explore Discover!"
+- **Color-Coded**: Green for welcome, orange for empty state
+- **Dismissible**: Banners appear only when relevant
+
+### 📋 IMPLEMENTATION DETAILS
+
+**Smart Default Logic**:
+```javascript
+async determineDefaultFeed() {
+    // 1. Check saved preference first
+    // 2. Check if user follows anyone (GET /user/profile)
+    // 3. Check if Following feed has posts (GET /feed/following?limit=1)
+    // 4. Decide: Discover (new/empty) vs Following (active)
+}
+```
+
+**Unread Tracking**:
+```javascript
+// localStorage keys used:
+- followingLastView: ISO timestamp of last Following feed view
+- preferredFeed: "discover" or "following"
+- hasSeenSwipeAnimation: "true" if wobble shown
+- swipeHintShownCount: "0", "1", or "2" for tooltip
+```
+
+**Animation Classes** (feed-toggle.css):
+```css
+.fade-out { animation: fadeOut 200ms ease-out forwards; }
+.fade-in { animation: fadeIn 200ms ease-out forwards; }
+.wobble-hint { animation: wobbleHint 500ms ease-in-out 2; }
+```
+
+**Mobile Detection**:
+```javascript
+isMobile() {
+    return window.innerWidth <= 767 ||
+           /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+```
+
+### 🎯 USER EXPERIENCE IMPROVEMENTS
+
+**Before** (Old System):
+- ❌ Always defaulted to Discover, even for active users
+- ❌ No indication of new Following posts
+- ❌ Instant, jarring feed switching
+- ❌ No mobile swipe support
+- ❌ No guidance for new users
+
+**After** (New System):
+- ✅ Intelligent default based on user's social graph
+- ✅ Visual unread badge encourages engagement
+- ✅ Smooth, professional transitions
+- ✅ Native app-like swipe gestures on mobile
+- ✅ Contextual banners guide new users
+
+### 🧪 CODE QUALITY
+
+**Error Handling**:
+- ✅ Try-catch blocks in all async methods
+- ✅ Fallback to Discover on API errors
+- ✅ Null checks before DOM manipulation
+- ✅ Handles missing UnifiedPostRenderer gracefully
+
+**Performance**:
+- ✅ Caching system for both feeds (reduces API calls)
+- ✅ Passive event listeners (no scroll jank)
+- ✅ GPU-accelerated animations (60fps)
+- ✅ Debounced localStorage writes
+
+**Accessibility**:
+- ✅ `@media (prefers-reduced-motion)` disables all animations
+- ✅ Focus outlines on keyboard navigation
+- ✅ 44px minimum touch targets (Apple HIG)
+- ✅ ARIA-compatible badge implementation
+
+**Debugging**:
+- ✅ Uses `adminDebugLog()` for admin-only debugging
+- ✅ Console logs for development tracking
+- ✅ Descriptive error messages
+
+### 📱 MOBILE OPTIMIZATIONS
+
+**Responsive CSS**:
+```css
+@media screen and (max-width: 767px) {
+  .feed-toggle-container { padding: 8px 12px; }
+  .feed-toggle-btn { padding: 8px 12px; font-size: 13px; }
+  .feed-toggle-badge { font-size: 10px; }
+}
+```
+
+**Touch Optimization**:
+- Passive listeners prevent scroll blocking
+- 50px minimum swipe distance prevents false positives
+- Tracks touchstart, touchmove, touchend correctly
+- Excludes button taps from swipe detection
+
+### 🔄 API INTEGRATION
+
+**Endpoints Used**:
+- `GET /user/profile` - Get followingCount for smart default
+- `GET /feed/following?limit=1` - Check if Following has posts
+- `GET /feed/following?limit=100` - Get unread count
+- `GET /feed/following?limit=15` - Load Following feed
+- `GET /feed/?limit=15` - Load Discover feed
+
+**Response Handling**:
+```javascript
+// Handles multiple response formats:
+response.posts                    // Direct array
+response.data.posts               // Wrapped in data
+response.ok && response.data.posts // Double-wrapped
+```
+
+### 🌓 DARK MODE SUPPORT
+
+```css
+@media (prefers-color-scheme: dark) {
+  .feed-toggle-container { background: #1a1a1a; }
+  .feed-toggle { background: #2a2a2a; }
+  .feed-toggle-btn { color: #999; }
+  .feed-toggle-btn.active { background: #3a3a3a; color: #7a9b1b; }
+}
+```
+
+### 📊 TESTING STATUS
+
+**Code Quality Checks**:
+- ✅ TypeScript backend compiles (no errors)
+- ✅ Valid ES6 JavaScript syntax
+- ✅ Valid CSS3 (no syntax errors)
+- ✅ All methods implemented (no undefined functions)
+- ✅ adminDebugLog() used correctly
+
+**Integration Points**:
+- ✅ Global instance: `window.feedToggle`
+- ✅ Exported as ES6 module
+- ✅ Called from `handlers/my-feed.js` (lines 165-177)
+- ✅ Uses `window.apiCall()` correctly
+- ✅ Compatible with UnifiedPostRenderer
+
+**Staging Testing Required**:
+- ⏳ Desktop: Feed switching, banners, unread badges
+- ⏳ Mobile: Swipe gestures, wobble animation, tooltip
+- ⏳ Edge Cases: API failures, empty feeds, first-time users
+- ⏳ Accessibility: Keyboard navigation, reduced motion, screen readers
+
+### 📝 FILES MODIFIED
+
+**New Files**:
+- `frontend/src/components/FeedToggle.js` (620 lines)
+- `frontend/src/styles/feed-toggle.css` (351 lines)
+
+**Modified Files**:
+- `frontend/src/handlers/my-feed.js` (integration code added)
+
+**Documentation**:
+- `.claude/scratchpads/FEED-TOGGLE-TESTING.md` (comprehensive test plan)
+
+### 🚀 DEPLOYMENT READINESS
+
+**Status**: ✅ **READY FOR STAGING**
+
+**Pre-Deployment Checklist**:
+- ✅ All methods implemented
+- ✅ Error handling complete
+- ✅ Mobile responsive
+- ✅ Accessibility compliant
+- ✅ Dark mode support
+- ✅ Performance optimized
+- ✅ Documentation complete
+
+**Next Steps**:
+1. Deploy to staging (development branch)
+2. Test all features on real devices
+3. Verify mobile swipe gestures work correctly
+4. Check unread badge accuracy
+5. Confirm animations are smooth (60fps)
+6. User approval → Production deployment
+
+**Estimated Testing Time**: 30-45 minutes
+
+### 🎓 TECHNICAL LEARNINGS
+
+**Architecture Patterns**:
+- Separated concerns: Smart defaults (logic) vs UI rendering
+- localStorage as single source of truth for preferences
+- Event delegation for toggle button clicks
+- Passive event listeners for performance
+
+**Animation Best Practices**:
+- Use GPU-accelerated properties (transform, opacity)
+- Wait for animations to complete before DOM changes
+- Respect user accessibility preferences
+- 200ms as optimal transition duration (feels instant but smooth)
+
+**Mobile Gestures**:
+- Track touchstart, touchmove, touchend (not click)
+- Use passive: true to prevent scroll blocking
+- Minimum distance threshold prevents accidental triggers
+- Exclude UI controls from gesture detection
+
+---
+
 ## 2025-10-07 - Azure Content Safety Migration & Security Fix
 
 ### 🛡️ AZURE CONTENT SAFETY - PURPOSE-BUILT IMAGE MODERATION

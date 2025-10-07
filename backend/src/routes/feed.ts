@@ -81,6 +81,121 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Get posts from followed users only
+router.get('/following', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const limitNum = parseInt(limit.toString());
+    const offsetNum = parseInt(offset.toString());
+
+    // Get list of users this user follows
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true }
+    });
+
+    const followedUserIds = follows.map(f => f.followingId);
+
+    // If not following anyone, return empty feed
+    if (followedUserIds.length === 0) {
+      return res.json({
+        posts: [],
+        pagination: {
+          limit: limitNum,
+          offset: offsetNum,
+          count: 0,
+          hasMore: false
+        }
+      });
+    }
+
+    // Get posts from followed users
+    const posts = await prisma.post.findMany({
+      where: {
+        authorId: { in: followedUserIds },
+        isDeleted: false,
+        feedVisible: true
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            verified: true,
+            userBadges: {
+              where: { isDisplayed: true },
+              take: 5,
+              orderBy: { displayOrder: 'asc' },
+              select: {
+                badge: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    imageUrl: true
+                  }
+                },
+                earnedAt: true,
+                displayOrder: true
+              }
+            }
+          }
+        },
+        photos: true,
+        _count: {
+          select: {
+            likes: true,
+            comments: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip: offsetNum,
+      take: limitNum
+    });
+
+    // Add user's like status to each post
+    const postIds = posts.map(p => p.id);
+    const userLikes = await prisma.like.findMany({
+      where: {
+        userId,
+        postId: { in: postIds }
+      },
+      select: { postId: true }
+    });
+
+    const likedPostIds = new Set(userLikes.map(like => like.postId));
+
+    const postsWithLikeStatus = posts.map(post => ({
+      ...post,
+      likesCount: post._count.likes,
+      commentsCount: post._count.comments,
+      isLiked: likedPostIds.has(post.id),
+      _count: undefined
+    }));
+
+    res.json({
+      posts: postsWithLikeStatus,
+      pagination: {
+        limit: limitNum,
+        offset: offsetNum,
+        count: postsWithLikeStatus.length,
+        hasMore: postsWithLikeStatus.length === limitNum
+      }
+    });
+  } catch (error) {
+    console.error('Following feed error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get trending posts (most liked in last 24 hours)
 router.get('/trending', async (req, res) => {
   try {

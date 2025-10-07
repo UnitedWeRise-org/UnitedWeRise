@@ -256,9 +256,9 @@
         font-size: 12px;
     }
     
-    /* Hide old mobile nav */
+    /* Show mobile nav - now using new bottom bar component */
     .mobile-nav {
-        display: none !important;
+        display: flex !important;
     }
     
     /* Mobile MOTD - Full Screen */

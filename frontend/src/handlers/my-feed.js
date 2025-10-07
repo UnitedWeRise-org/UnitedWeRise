@@ -161,9 +161,20 @@ export class MyFeedHandlers {
             console.error('📷 Could not find feedMediaUpload input to attach change listener');
         }
 
+        // Render feed toggle UI
+        if (window.feedToggle) {
+            window.feedToggle.render('myFeedPosts');
+        }
+
         // Load the posts with error handling
         try {
-            await this.loadMyFeedPosts();
+            // Use feed toggle to load the appropriate feed
+            if (window.feedToggle) {
+                await window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
+            } else {
+                // Fallback to original method
+                await this.loadMyFeedPosts();
+            }
         } catch (error) {
             console.error('❌ Error loading My Feed posts:', error);
             const feedContainer = document.getElementById('myFeedPosts');

@@ -28,13 +28,23 @@ import {
 } from './features/feed/my-feed.js';
 
 // Import search modules
-import { 
-    openSearch, 
-    closeSearch, 
-    performGlobalSearch, 
+import {
+    openSearch,
+    closeSearch,
+    performGlobalSearch,
     toggleAdvancedFilters,
     updateSearchResults
 } from './features/search/global-search.js';
+
+// Import civic organizing modules
+import {
+    showPetitionCreator,
+    showEventCreator,
+    showCivicBrowser,
+    showMyOrganizing,
+    closeCivicOrganizing,
+    showDefaultOrganizingView
+} from './features/civic/civic-organizing.js';
 
 /**
  * Initialize all modules and maintain backward compatibility
@@ -99,6 +109,7 @@ async function initializeModules() {
 
     console.log('✅ My Feed system loaded');
     console.log('✅ Search system loaded');
+    console.log('✅ Civic Organizing system loaded');
 
     // PHASE 4: UI Integration (depends on all above)
     console.log('📋 Phase 4: Setting up UI integration...');
@@ -247,10 +258,31 @@ async function testModularFunctionality() {
                     typeof performGlobalSearch === 'function',
                     typeof toggleAdvancedFilters === 'function'
                 ].every(test => test);
-                
+
                 return searchFunctionsAvailable ? 'Search modules loaded' : 'Search modules missing';
             } catch (error) {
                 return `Search error: ${error.message}`;
+            }
+        }
+    });
+
+    // Test 6: Civic Organizing module integration
+    tests.push({
+        name: 'Civic Organizing System',
+        test: async () => {
+            try {
+                // Test if civic organizing functions are available
+                const civicFunctionsAvailable = [
+                    typeof showPetitionCreator === 'function',
+                    typeof showEventCreator === 'function',
+                    typeof showCivicBrowser === 'function',
+                    typeof showMyOrganizing === 'function',
+                    typeof closeCivicOrganizing === 'function'
+                ].every(test => test);
+
+                return civicFunctionsAvailable ? 'Civic Organizing modules loaded' : 'Civic Organizing modules missing';
+            } catch (error) {
+                return `Civic Organizing error: ${error.message}`;
             }
         }
     });

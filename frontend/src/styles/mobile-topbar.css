@@ -1,0 +1,47 @@
+/**
+ * Mobile Top Bar Styles
+ * Auto-hide functionality for mobile devices
+ */
+
+/* Mobile Top Bar - only on mobile screens */
+@media screen and (max-width: 767px) {
+    .top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateY(0);
+    }
+
+    /* Hidden state - slides up */
+    .top-bar.hidden {
+        transform: translateY(-100%);
+    }
+
+    /* Ensure content accounts for top bar */
+    body {
+        padding-top: 60px; /* Adjust based on actual top bar height */
+    }
+
+    /* When top bar is hidden, reduce padding (optional) */
+    .top-bar.hidden ~ #mainContent {
+        /* Could adjust padding here if desired */
+    }
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .top-bar {
+        transition: none !important;
+    }
+}
+
+/* Ensure top bar stays visible on larger screens */
+@media screen and (min-width: 768px) {
+    .top-bar {
+        position: static;
+        transform: none !important;
+    }
+}

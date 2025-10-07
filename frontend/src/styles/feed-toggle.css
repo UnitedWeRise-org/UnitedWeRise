@@ -1,0 +1,357 @@
+/**
+ * Feed Toggle Component Styles
+ * Segmented control for switching between Discover and Following feeds
+ */
+
+/* Toggle Container */
+.feed-toggle-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #ffffff;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Toggle Segmented Control */
+.feed-toggle {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 4px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Toggle Button */
+.feed-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #666;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative; /* For badge positioning */
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1); /* Material Design curve */
+    min-height: 44px; /* Touch target */
+}
+
+.feed-toggle-btn:hover {
+    background: rgba(75, 92, 9, 0.1);
+}
+
+.feed-toggle-btn.active {
+    background: #ffffff;
+    color: #4b5c09;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Icon */
+.feed-toggle-icon {
+    font-size: 18px;
+}
+
+/* Label */
+.feed-toggle-label {
+    font-weight: 600;
+}
+
+/* ============================================
+   UNREAD BADGE STYLES
+   ============================================ */
+
+/* Unread count badge on Following button */
+.feed-toggle-badge {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    background: #dc3545; /* Red */
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Hide badge when count is 0 */
+.feed-toggle-badge.hidden {
+    display: none;
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   ============================================ */
+
+/* Fade out animation for old posts */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.fade-out {
+    animation: fadeOut 200ms ease-out forwards;
+}
+
+/* Fade in animation for new posts */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 200ms ease-out forwards;
+}
+
+/* Wobble hint animation for swipe discovery */
+@keyframes wobbleHint {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(5px);
+    }
+    75% {
+        transform: translateX(-5px);
+    }
+}
+
+.wobble-hint {
+    animation: wobbleHint 500ms ease-in-out 2;
+}
+
+/* ============================================
+   BANNER STYLES
+   ============================================ */
+
+/* New user banner */
+.feed-banner {
+    background: linear-gradient(135deg, #4b5c09 0%, #7a9b1b 100%);
+    color: #ffffff;
+    padding: 16px;
+    border-radius: 8px;
+    margin: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.feed-banner-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.feed-banner-content {
+    flex: 1;
+}
+
+.feed-banner-title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.feed-banner-text {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.feed-banner-dismiss {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.feed-banner-dismiss:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Empty following state banner */
+.feed-banner.empty-state {
+    background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+}
+
+.feed-banner-cta {
+    background: #ffffff;
+    color: #4b5c09;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.feed-banner-cta:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   SWIPE TOOLTIP STYLES
+   ============================================ */
+
+/* Swipe hint tooltip */
+.swipe-hint-tooltip {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    z-index: 1000;
+    animation: tooltipFadeIn 300ms ease-out;
+}
+
+.swipe-hint-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.8);
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ============================================
+   MOBILE ADJUSTMENTS
+   ============================================ */
+
+/* Mobile Adjustments */
+@media screen and (max-width: 767px) {
+    .feed-toggle-container {
+        padding: 8px 12px;
+    }
+
+    .feed-toggle {
+        max-width: 100%;
+    }
+
+    .feed-toggle-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .feed-toggle-icon {
+        font-size: 16px;
+    }
+
+    /* Mobile badge adjustments */
+    .feed-toggle-badge {
+        top: 2px;
+        right: 4px;
+        font-size: 10px;
+        padding: 1px 4px;
+        min-width: 18px;
+        height: 18px;
+    }
+
+    /* Mobile banner adjustments */
+    .feed-banner {
+        margin: 8px 12px;
+        padding: 12px;
+    }
+
+    .feed-banner-icon {
+        font-size: 20px;
+    }
+
+    .feed-banner-title {
+        font-size: 14px;
+    }
+
+    .feed-banner-text {
+        font-size: 12px;
+    }
+}
+
+/* Accessibility */
+.feed-toggle-btn:focus {
+    outline: 2px solid #4b5c09;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .feed-toggle-btn {
+        transition: none !important;
+    }
+
+    /* Disable all animations for accessibility */
+    .fade-out,
+    .fade-in,
+    .wobble-hint {
+        animation: none !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .feed-toggle-container {
+        background: #1a1a1a;
+        border-bottom-color: #333;
+    }
+
+    .feed-toggle {
+        background: #2a2a2a;
+    }
+
+    .feed-toggle-btn {
+        color: #999;
+    }
+
+    .feed-toggle-btn:hover {
+        background: rgba(122, 155, 27, 0.2);
+    }
+
+    .feed-toggle-btn.active {
+        background: #3a3a3a;
+        color: #7a9b1b;
+    }
+}
