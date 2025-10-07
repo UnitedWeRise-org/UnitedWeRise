@@ -260,6 +260,13 @@
     .mobile-nav {
         display: flex !important;
     }
+
+    /* Hide old mobile sidebar - replaced by new bottom bar */
+    .mobile-sidebar,
+    .mobile-sidebar-toggle,
+    .mobile-sidebar-nav {
+        display: none !important;
+    }
     
     /* Mobile MOTD - Full Screen */
     #motd-panel {
