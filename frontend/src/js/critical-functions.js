@@ -206,13 +206,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 setupCivicOrganizingSidebarMonitoring();
             }
 
-            // Initialize mobile navigation system
+            // OLD mobile navigation system DISABLED - replaced by new mobile UX components
+            // (MobileBottomBar, TopBarController, FeedToggle)
+            // DO NOT re-enable - causes conflicts with new system
+            /*
             if (typeof initMobileNavigation !== 'undefined') {
                 initMobileNavigation();
                 if (typeof adminDebugLog !== 'undefined') {
                     adminDebugLog('Mobile', 'Mobile navigation initialized');
                 }
             }
+            */
         }).catch(error => {
             console.error('💥 App initialization failed:', error);
         });
