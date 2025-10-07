@@ -50,8 +50,8 @@ export class FeedToggle {
             }
 
             // Check if user follows anyone
-            const followResponse = await window.apiCall('/user/profile', { method: 'GET' });
-            const followingCount = followResponse?.data?.followingCount || 0;
+            const followResponse = await window.apiCall('/auth/me', { method: 'GET' });
+            const followingCount = followResponse?.data?.data?.followingCount || 0;
 
             if (followingCount === 0) {
                 // No follows → default to Discover
