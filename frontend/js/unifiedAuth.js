@@ -3,11 +3,14 @@
  * Handles login for both main site and admin dashboard with TOTP support
  */
 
-// Use existing BACKEND_URL if defined, otherwise set default
+// Import centralized environment detection
+import { getApiBaseUrl } from '../src/utils/environment.js';
+
+// Use existing BACKEND_URL if defined, otherwise use centralized environment detection
 // Remove trailing /api from BASE_URL to get the base backend URL
-const BACKEND_URL = window.API_CONFIG 
+const BACKEND_URL = window.API_CONFIG
     ? window.API_CONFIG.BASE_URL.replace(/\/api$/, '') // Only remove /api at the end
-    : 'https://api.unitedwerise.org';
+    : getApiBaseUrl().replace(/\/api$/, ''); // Use centralized environment detection (not hard-coded production!)
 
 /**
  * Show TOTP verification modal (extracted from admin dashboard)
