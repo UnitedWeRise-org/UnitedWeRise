@@ -28,10 +28,9 @@ export class FeedToggle {
     }
 
     /**
-     * Smart default feed selection based on user's follow status
-     * - If user follows 0 people → Discover
-     * - If user follows people but feed is empty → Discover with helpful message
-     * - Otherwise → Saved preference or Following
+     * Determine default feed selection
+     * - Always defaults to Discover unless user has saved preference
+     * - Per user specification: Discover should be the default feed
      */
     async determineDefaultFeed() {
         try {
@@ -42,36 +41,17 @@ export class FeedToggle {
                 return;
             }
 
-            // Safety check: Ensure apiCall is available before making API requests
-            if (typeof window.apiCall !== 'function') {
-                console.warn('FeedToggle: apiCall not available yet, defaulting to Discover feed');
-                this.currentFeed = 'discover';
-                return;
-            }
+            // Default to Discover (per user requirement)
+            this.currentFeed = 'discover';
 
-            // Check if user follows anyone
-            const followResponse = await window.apiCall('/auth/me', { method: 'GET' });
-            const followingCount = followResponse?.data?.data?.followingCount || 0;
+            // Check if user is new (no follows) to show helpful banner
+            if (typeof window.apiCall === 'function') {
+                const followResponse = await window.apiCall('/auth/me', { method: 'GET' });
+                const followingCount = followResponse?.data?.data?.followingCount || 0;
 
-            if (followingCount === 0) {
-                // No follows → default to Discover
-                this.currentFeed = 'discover';
-                this.showNewUserBanner = true;
-                return;
-            }
-
-            // Check if Following feed has posts
-            const followingPreview = await window.apiCall('/feed/following?limit=1', { method: 'GET' });
-            const hasFollowingPosts = followingPreview?.data?.posts?.length > 0 ||
-                                     followingPreview?.posts?.length > 0;
-
-            if (!hasFollowingPosts) {
-                // User follows people but no posts → default to Discover, show empty state
-                this.currentFeed = 'discover';
-                this.showEmptyFollowingState = true;
-            } else {
-                // User has Following content → default to Following
-                this.currentFeed = 'following';
+                if (followingCount === 0) {
+                    this.showNewUserBanner = true;
+                }
             }
         } catch (error) {
             console.error('Error determining default feed:', error);

@@ -281,6 +281,76 @@ class NavigationHandlers {
                     console.warn('About modal not found');
                 }
                 break;
+
+            // Feed navigation actions
+            case 'feed-discover':
+                if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
+                    window.feedToggle.switchFeed('discover');
+                }
+                break;
+            case 'feed-following':
+                if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
+                    window.feedToggle.switchFeed('following');
+                }
+                break;
+            case 'feed-trending':
+                // Show trending topics in feed
+                if (typeof window.showTrendingTopics === 'function') {
+                    window.showTrendingTopics();
+                } else {
+                    console.warn('Trending topics not implemented yet');
+                }
+                break;
+            case 'feed-saved':
+                // Show saved posts (placeholder - Phase 4)
+                alert('Saved Posts feature coming soon! This will allow you to bookmark and save posts for later.');
+                break;
+
+            // Civic actions
+            case 'civic-elections':
+                if (typeof window.showElections === 'function') {
+                    window.showElections();
+                } else {
+                    console.warn('Elections system not available');
+                }
+                break;
+            case 'civic-officials':
+                if (typeof window.showOfficials === 'function') {
+                    window.showOfficials();
+                } else {
+                    console.warn('Officials system not available');
+                }
+                break;
+            case 'civic-candidates':
+                if (typeof window.showCandidates === 'function') {
+                    window.showCandidates();
+                } else {
+                    console.warn('Candidates system not available');
+                }
+                break;
+            case 'civic-organizing':
+                if (typeof window.showCivicOrganizing === 'function') {
+                    window.showCivicOrganizing();
+                } else {
+                    console.warn('Civic organizing not available');
+                }
+                break;
+
+            // Combined alerts (messages + notifications)
+            case 'mobile-alerts':
+                // Toggle notifications panel (combines messages + alerts)
+                if (typeof window.toggleNotifications === 'function') {
+                    window.toggleNotifications();
+                } else {
+                    console.warn('Notifications system not available');
+                }
+                break;
+
+            // Map navigation (dead link for now)
+            case 'mobile-map':
+                alert('Map feature temporarily disabled on mobile. Coming soon!');
+                break;
+
             case 'mobile-hide-map':
                 if (typeof window.hideMobileMap === 'function') {
                     window.hideMobileMap();
