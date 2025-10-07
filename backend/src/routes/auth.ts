@@ -613,7 +613,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         isAdmin: user.isAdmin,
         isModerator: user.isModerator
       },
-      csrfToken
+      csrfToken,
+      token // Also return token in response for admin dashboard localStorage fallback
     });
   } catch (error) {
     console.error('Login error:', error);

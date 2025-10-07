@@ -588,7 +588,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 isAdmin: user.isAdmin,
                 isModerator: user.isModerator
             },
-            csrfToken
+            csrfToken,
+            token // Also return token in response for admin dashboard localStorage fallback
         });
     }
     catch (error) {
