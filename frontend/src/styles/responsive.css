@@ -117,12 +117,16 @@
     }
     
     /* Hide desktop elements IMMEDIATELY on mobile to prevent flicker */
+    /* NOTE: .top-bar is NOT hidden - new mobile UX uses it with auto-hide behavior */
     .sidebar,
     .sidebar-toggle-edge,
-    .top-bar,
-    .desktop-nav,
-    .desktop-search,
     .container > .main {
+        display: none !important;
+    }
+
+    /* Hide desktop-only parts of top bar */
+    .desktop-nav,
+    .desktop-search {
         display: none !important;
     }
     
