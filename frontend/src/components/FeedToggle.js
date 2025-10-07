@@ -42,6 +42,13 @@ export class FeedToggle {
                 return;
             }
 
+            // Safety check: Ensure apiCall is available before making API requests
+            if (typeof window.apiCall !== 'function') {
+                console.warn('FeedToggle: apiCall not available yet, defaulting to Discover feed');
+                this.currentFeed = 'discover';
+                return;
+            }
+
             // Check if user follows anyone
             const followResponse = await window.apiCall('/user/profile', { method: 'GET' });
             const followingCount = followResponse?.data?.followingCount || 0;
@@ -286,6 +293,12 @@ export class FeedToggle {
             return this.caches.following;
         }
 
+        // Safety check: Ensure apiCall is available
+        if (typeof window.apiCall !== 'function') {
+            console.error('FeedToggle: apiCall not available, cannot load Following feed');
+            return [];
+        }
+
         // Backend endpoint is /feed/following
         const response = await window.apiCall('/feed/following?limit=15', {
             method: 'GET'
@@ -318,6 +331,12 @@ export class FeedToggle {
         if (this.caches.discover.length > 0) {
             console.log('Using cached discover feed');
             return this.caches.discover;
+        }
+
+        // Safety check: Ensure apiCall is available
+        if (typeof window.apiCall !== 'function') {
+            console.error('FeedToggle: apiCall not available, cannot load Discover feed');
+            return [];
         }
 
         // Backend endpoint is /feed/ (default discover)
@@ -421,6 +440,11 @@ export class FeedToggle {
      */
     async getUnreadCount() {
         try {
+            // Safety check: Ensure apiCall is available
+            if (typeof window.apiCall !== 'function') {
+                return 0;
+            }
+
             // Get last view timestamp
             const lastView = localStorage.getItem('followingLastView');
             if (!lastView) return 0;
