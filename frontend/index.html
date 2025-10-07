@@ -1180,6 +1180,41 @@
             hidePageLoadingOverlay();
         }, 2000);
 
+        // Mobile content initialization
+        function initializeMobileContent() {
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (!isMobile) return;
+
+            console.log('📱 Initializing mobile content...');
+
+            // Hide map container on mobile
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.style.display = 'none';
+                console.log('✅ Map hidden on mobile');
+            }
+
+            // Show posts container
+            const postsContainer = document.querySelector('.posts-container');
+            if (postsContainer) {
+                postsContainer.style.display = 'block';
+                console.log('✅ Posts container visible');
+            }
+
+            // Load feed if user is authenticated
+            setTimeout(() => {
+                const isAuthenticated = window.currentUser ||
+                                      localStorage.getItem('authToken');
+
+                if (isAuthenticated && typeof loadMyFeedPosts === 'function') {
+                    console.log('✅ Loading feed for authenticated user');
+                    loadMyFeedPosts();
+                } else {
+                    console.log('ℹ️ User not authenticated or loadMyFeedPosts not available');
+                }
+            }, 500);
+        }
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 // Hide loading overlay immediately on mobile (no map to wait for)
@@ -1194,6 +1229,11 @@
                     // Hide overlay even if modules fail
                     hidePageLoadingOverlay();
                 });
+
+                // Initialize mobile content after modules load
+                if (isMobile) {
+                    setTimeout(initializeMobileContent, 1000);
+                }
 
                 // Hide page loading spinner after modules are loaded (desktop)
                 if (!isMobile) {
@@ -1220,6 +1260,11 @@
                 // Hide overlay even if modules fail
                 hidePageLoadingOverlay();
             });
+
+            // Initialize mobile content after modules load
+            if (isMobile) {
+                setTimeout(initializeMobileContent, 1000);
+            }
 
             if (!isMobile) {
                 setTimeout(() => {

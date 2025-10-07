@@ -198,6 +198,19 @@ class NavigationHandlers {
                     window.showMobileFeed();
                 }
                 break;
+            case 'mobile-discover':
+                // Show posts container with discover feed
+                const postsContainer = document.querySelector('.posts-container');
+                if (postsContainer) {
+                    postsContainer.style.display = 'block';
+                }
+                // Use FeedToggle if available
+                if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
+                    window.feedToggle.switchFeed('discover');
+                } else if (typeof loadMyFeedPosts === 'function') {
+                    loadMyFeedPosts();
+                }
+                break;
             case 'mobile-search':
                 if (typeof window.showMobileSearch === 'function') {
                     window.showMobileSearch();
@@ -216,6 +229,16 @@ class NavigationHandlers {
             case 'mobile-messages':
                 if (typeof window.showMobileMessages === 'function') {
                     window.showMobileMessages();
+                }
+                break;
+            case 'mobile-info':
+                // Open About modal
+                const aboutModal = document.getElementById('aboutModal');
+                if (aboutModal) {
+                    aboutModal.style.display = 'block';
+                    aboutModal.classList.add('show');
+                } else {
+                    console.warn('About modal not found');
                 }
                 break;
             case 'mobile-hide-map':
