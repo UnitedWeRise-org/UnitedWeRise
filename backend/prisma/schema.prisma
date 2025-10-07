@@ -142,6 +142,7 @@ model User {
   questStreak                 UserQuestStreak?
   userBadges                  UserBadge[]
   photos                      Photo[]
+  savedPosts                  SavedPost[]
 
   @@index([username])
   @@index([createdAt])
@@ -255,6 +256,7 @@ model Post {
   reputationEvents   ReputationEvent[]
   shares             Share[]
   topics             TopicPost[]
+  savedBy            SavedPost[]
 
   @@index([authorId])
   @@index([createdAt])
@@ -2619,4 +2621,19 @@ model Photo {
   @@index([postId])
   @@index([uploadedAt])
   @@index([moderationStatus])
+}
+
+model SavedPost {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  savedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+  @@index([savedAt])
 }

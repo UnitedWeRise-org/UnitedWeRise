@@ -1955,4 +1955,212 @@ router.get('/:postId/trending-comments', async (req, res) => {
     }
 });
 
+// ==================== SAVED POSTS ENDPOINTS ====================
+
+// Save a post
+router.post('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user!.id;
+
+        // Verify post exists
+        const post = await prisma.post.findUnique({
+            where: { id: postId }
+        });
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                error: 'Post not found'
+            });
+        }
+
+        // Create or update saved post (upsert for idempotency)
+        const savedPost = await prisma.savedPost.upsert({
+            where: {
+                userId_postId: {
+                    userId,
+                    postId
+                }
+            },
+            update: {
+                savedAt: new Date() // Update timestamp if already saved
+            },
+            create: {
+                userId,
+                postId
+            }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                saved: true,
+                savedAt: savedPost.savedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Save post error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to save post'
+        });
+    }
+});
+
+// Unsave a post
+router.delete('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user!.id;
+
+        // Delete saved post (idempotent - no error if doesn't exist)
+        await prisma.savedPost.deleteMany({
+            where: {
+                userId,
+                postId
+            }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                saved: false
+            }
+        });
+
+    } catch (error) {
+        console.error('Unsave post error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unsave post'
+        });
+    }
+});
+
+// Get saved posts
+router.get('/saved', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.id;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const sort = (req.query.sort as string) || 'recent';
+
+        // Build orderBy based on sort parameter
+        let orderBy: any = { savedAt: 'desc' }; // Default: most recent
+        if (sort === 'oldest') {
+            orderBy = { savedAt: 'asc' };
+        } else if (sort === 'popular') {
+            orderBy = { post: { likesCount: 'desc' } };
+        }
+
+        // Get saved posts with full post data
+        const savedPosts = await prisma.savedPost.findMany({
+            where: {
+                userId
+            },
+            include: {
+                post: {
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                username: true,
+                                displayName: true,
+                                avatar: true,
+                                verified: true,
+                                politicalProfileType: true
+                            }
+                        },
+                        photos: {
+                            where: { isActive: true },
+                            select: {
+                                id: true,
+                                url: true,
+                                thumbnailUrl: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy,
+            take: limit,
+            skip: offset
+        });
+
+        // Get total count
+        const total = await prisma.savedPost.count({
+            where: { userId }
+        });
+
+        // Extract posts from saved posts
+        const posts = savedPosts.map(sp => sp.post);
+
+        res.json({
+            success: true,
+            data: {
+                posts,
+                total,
+                hasMore: (offset + limit) < total
+            }
+        });
+
+    } catch (error) {
+        console.error('Get saved posts error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve saved posts'
+        });
+    }
+});
+
+// Batch check saved status
+router.post('/saved/check', requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const userId = req.user!.id;
+        const { postIds } = req.body;
+
+        if (!Array.isArray(postIds)) {
+            return res.status(400).json({
+                success: false,
+                error: 'postIds must be an array'
+            });
+        }
+
+        // Get all saved posts for this user from the provided list
+        const savedPosts = await prisma.savedPost.findMany({
+            where: {
+                userId,
+                postId: {
+                    in: postIds
+                }
+            },
+            select: {
+                postId: true
+            }
+        });
+
+        // Build result object
+        const saved: Record<string, boolean> = {};
+        postIds.forEach(postId => {
+            saved[postId] = savedPosts.some(sp => sp.postId === postId);
+        });
+
+        res.json({
+            success: true,
+            data: {
+                saved
+            }
+        });
+
+    } catch (error) {
+        console.error('Check saved status error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to check saved status'
+        });
+    }
+});
+
 export default router;
