@@ -1,46 +1,32 @@
 /**
  * Image Content Moderation Service
  *
- * Provides Azure OpenAI Vision integration for content analysis and moderation
- * Analyzes images for explicit content, violence, newsworthy content, and safety
+ * Provides Azure Content Safety integration for image moderation
+ * Purpose-built for detecting inappropriate content in user-uploaded images
+ * Supports both images and videos for future TikTok-style features
  */
 import { ModerationResult, ModerationConfig, VisionAnalysisRequest } from '../types/moderation';
 export declare class ImageContentModerationService {
     private client;
-    private visionDeployment;
     private isConfigured;
     private config;
+    private endpoint;
     constructor();
     /**
      * Analyze image content for moderation
      */
     analyzeImage(request: VisionAnalysisRequest): Promise<ModerationResult>;
     /**
-     * Perform Azure OpenAI Vision analysis
+     * Perform Azure Content Safety image analysis
      */
-    private performVisionAnalysis;
+    private performContentSafetyAnalysis;
     /**
-     * Build analysis prompt based on photo type
-     */
-    private buildAnalysisPrompt;
-    /**
-     * Extract content flags from vision analysis
+     * Extract content flags from Content Safety analysis
+     * Maps Content Safety categories to our internal flags
      */
     private extractContentFlags;
     /**
-     * Parse text response when JSON parsing fails
-     */
-    private parseTextResponse;
-    /**
-     * Check if text contains any of the specified keywords
-     */
-    private containsKeywords;
-    /**
-     * Extract numerical score from text response
-     */
-    private extractScore;
-    /**
-     * Classify content type based on analysis
+     * Classify content type based on Content Safety analysis
      */
     private classifyContentType;
     /**
@@ -54,7 +40,7 @@ export declare class ImageContentModerationService {
     private createFallbackResult;
     /**
      * Create error fallback result
-     * SECURITY: Always blocks on error in ALL environments (production, staging, development)
+     * SECURITY: Always blocks on error in ALL environments
      */
     private createErrorFallbackResult;
     /**

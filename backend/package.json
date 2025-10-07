@@ -26,6 +26,8 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@azure-rest/ai-content-safety": "^1.0.1",
+    "@azure/core-auth": "^1.10.1",
     "@azure/openai": "^2.0.0",
     "@azure/storage-blob": "^12.24.0",
     "@faker-js/faker": "^9.9.0",
