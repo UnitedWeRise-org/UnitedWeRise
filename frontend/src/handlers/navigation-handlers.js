@@ -200,15 +200,17 @@ class NavigationHandlers {
                 break;
             case 'mobile-discover':
                 // Show posts container with discover feed
-                const postsContainer = document.querySelector('.posts-container');
-                if (postsContainer) {
-                    postsContainer.style.display = 'block';
-                }
-                // Use FeedToggle if available
-                if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
-                    window.feedToggle.switchFeed('discover');
-                } else if (typeof loadMyFeedPosts === 'function') {
-                    loadMyFeedPosts();
+                {
+                    const postsContainer = document.querySelector('.posts-container');
+                    if (postsContainer) {
+                        postsContainer.style.display = 'block';
+                    }
+                    // Use FeedToggle if available
+                    if (window.feedToggle && typeof window.feedToggle.switchFeed === 'function') {
+                        window.feedToggle.switchFeed('discover');
+                    } else if (typeof loadMyFeedPosts === 'function') {
+                        loadMyFeedPosts();
+                    }
                 }
                 break;
             case 'mobile-search':
@@ -233,29 +235,31 @@ class NavigationHandlers {
                 break;
             case 'mobile-post':
                 // Show posts container and scroll to post creation area
-                const postsContainer = document.querySelector('.posts-container');
-                if (postsContainer) {
-                    postsContainer.style.display = 'block';
-                }
+                {
+                    const postsContainer = document.querySelector('.posts-container');
+                    if (postsContainer) {
+                        postsContainer.style.display = 'block';
+                    }
 
-                // Focus the post creation textarea
-                const feedPostTextarea = document.getElementById('feedPostContent');
-                if (feedPostTextarea) {
-                    feedPostTextarea.focus();
-                    feedPostTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    // If textarea not found, try to show feed first
-                    if (typeof showMyFeed === 'function') {
-                        showMyFeed();
-                        setTimeout(() => {
-                            const textarea = document.getElementById('feedPostContent');
-                            if (textarea) {
-                                textarea.focus();
-                                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                        }, 300);
+                    // Focus the post creation textarea
+                    const feedPostTextarea = document.getElementById('feedPostContent');
+                    if (feedPostTextarea) {
+                        feedPostTextarea.focus();
+                        feedPostTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
-                        console.warn('Post creation area not found');
+                        // If textarea not found, try to show feed first
+                        if (typeof showMyFeed === 'function') {
+                            showMyFeed();
+                            setTimeout(() => {
+                                const textarea = document.getElementById('feedPostContent');
+                                if (textarea) {
+                                    textarea.focus();
+                                    textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 300);
+                        } else {
+                            console.warn('Post creation area not found');
+                        }
                     }
                 }
                 break;
