@@ -637,7 +637,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
 // Get current user
 router.get('/me', requireAuth, async (req: AuthRequest, res) => {
-  res.json({ user: req.user });
+  res.json({ success: true, data: req.user });
 });
 
 // Forgot password

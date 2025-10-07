@@ -85,10 +85,10 @@ class EmbeddingService {
             // Use PostgreSQL vector operations if available (production)
             if ((0, environment_1.isProduction)() && process.env.ENABLE_VECTOR_SEARCH === 'true') {
                 try {
-                    // Use safe parameterized SQL for vector similarity search
+                    // SECURITY FIX: Use parameterized query to prevent SQL injection
                     const embeddingString = `[${targetEmbedding.join(',')}]`;
-                    const similarPosts = await prisma_1.prisma.$queryRawUnsafe(`
-            SELECT 
+                    const similarPosts = await prisma_1.prisma.$queryRaw `
+            SELECT
               p.id,
               p.content,
               p."createdAt",
@@ -97,17 +97,17 @@ class EmbeddingService {
               p."likesCount",
               p."commentsCount",
               u.username,
-              u."firstName", 
+              u."firstName",
               u."lastName",
               u.avatar,
-              1 - (p.embedding <=> $1::vector) as similarity
+              1 - (p.embedding <=> ${embeddingString}::vector) as similarity
             FROM "Post" p
             JOIN "User" u ON p."authorId" = u.id
-            WHERE p.embedding IS NOT NULL 
+            WHERE p.embedding IS NOT NULL
               AND array_length(p.embedding, 1) > 0
-              AND 1 - (p.embedding <=> $1::vector) >= $2
-            ORDER BY p.embedding <=> $1::vector
-            LIMIT $3`, embeddingString, minSimilarity, limit);
+              AND 1 - (p.embedding <=> ${embeddingString}::vector) >= ${minSimilarity}
+            ORDER BY p.embedding <=> ${embeddingString}::vector
+            LIMIT ${limit}`;
                     console.log(`✓ Found ${similarPosts.length} similar posts using PostgreSQL vector search`);
                     return similarPosts;
                 }

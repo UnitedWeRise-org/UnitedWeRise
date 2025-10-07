@@ -610,7 +610,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
 });
 // Get current user
 router.get('/me', auth_2.requireAuth, async (req, res) => {
-    res.json({ user: req.user });
+    res.json({ success: true, data: req.user });
 });
 // Forgot password
 router.post('/forgot-password', async (req, res) => {

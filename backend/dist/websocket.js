@@ -6,10 +6,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeWebSocket = void 0;
 const prisma_1 = require("./lib/prisma");
 const socket_io_1 = require("socket.io");
-;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
+const sessionManager_1 = require("./services/sessionManager");
 // Using singleton prisma from lib/prisma.ts
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
+// SECURITY: JWT_SECRET must be set via environment variable
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('FATAL: JWT_SECRET environment variable must be set for WebSocket authentication');
+}
 const initializeWebSocket = (httpServer) => {
     const io = new socket_io_1.Server(httpServer, {
         cors: {
@@ -25,6 +30,11 @@ const initializeWebSocket = (httpServer) => {
                 return next(new Error('Authentication token required'));
             }
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            // SECURITY FIX: Check if token is blacklisted
+            const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
+            if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
+                return next(new Error('Token has been revoked'));
+            }
             const user = await prisma_1.prisma.user.findUnique({
                 where: { id: decoded.userId },
                 select: { id: true, username: true }

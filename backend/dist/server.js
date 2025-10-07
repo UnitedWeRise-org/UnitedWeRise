@@ -150,7 +150,8 @@ app.use((0, helmet_1.default)({
                 "https://www.googletagmanager.com" // Google Tag Manager
             ],
             workerSrc: ["'self'", "blob:", "data:"], // Required for MapLibre workers
-            upgradeInsecureRequests: [], // Force HTTPS in production
+            // SECURITY FIX: Enable HTTPS enforcement (null enables the directive)
+            upgradeInsecureRequests: null, // Force HTTPS in production
         },
     },
     // Additional security headers
@@ -192,10 +193,9 @@ app.use((0, cors_1.default)({
             callback(null, true);
         }
         else {
+            // SECURITY FIX: Properly block unauthorized origins (removed temporary bypass)
             console.log('❌ CORS - Origin blocked:', origin);
-            // TEMPORARY: Allow all origins for debugging file upload issue
-            console.log('⚠️ TEMPORARY DEBUG: Allowing blocked origin for file upload debugging');
-            callback(null, true);
+            callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
