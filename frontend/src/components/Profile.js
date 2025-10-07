@@ -4488,28 +4488,56 @@ if (typeof adminDebugLog === 'function') {
 
 // Profile integration functions for modular system
 function showProfile(userId = null) {
-    // Hide all panels
+    // Check if on mobile
+    const isMobile = window.innerWidth <= 767;
+
+    // Get containers
     const profilePanel = document.getElementById('profilePanel');
     const messagesContainer = document.getElementById('messagesContainer');
+    const mainContent = document.getElementById('mainContent');
 
-    if (profilePanel) profilePanel.style.display = 'none';
+    // Hide messages container
     if (messagesContainer) messagesContainer.style.display = 'none';
 
-    if (userId) {
-        // Show another user's profile
-        window.profile.render('mainContent', userId);
-    } else {
-        // Show current user's profile
-        if (!window.currentUser) {
-            document.getElementById('mainContent').innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <h2>Please log in to view your profile</h2>
-                    <button onclick="openAuthModal('login')" class="btn">Log In</button>
-                </div>
-            `;
-            return;
+    if (isMobile) {
+        // Mobile: Show profile in profilePanel (full-screen overlay)
+        if (profilePanel) {
+            profilePanel.style.display = 'block';
+            if (userId) {
+                window.profile.render('profilePanel', userId);
+            } else {
+                if (!window.currentUser) {
+                    profilePanel.innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <h2>Please log in to view your profile</h2>
+                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                        </div>
+                    `;
+                    return;
+                }
+                window.profile.render('profilePanel');
+            }
         }
-        window.profile.render('mainContent');
+    } else {
+        // Desktop: Hide profilePanel, show in mainContent
+        if (profilePanel) profilePanel.style.display = 'none';
+
+        if (userId) {
+            window.profile.render('mainContent', userId);
+        } else {
+            if (!window.currentUser) {
+                if (mainContent) {
+                    mainContent.innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <h2>Please log in to view your profile</h2>
+                            <button onclick="openAuthModal('login')" class="btn">Log In</button>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            window.profile.render('mainContent');
+        }
     }
 }
 
