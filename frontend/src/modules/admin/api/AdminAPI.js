@@ -55,7 +55,13 @@ class AdminAPI {
             headers['x-totp-token'] = this.totpToken;
         }
 
-        // Authentication handled by httpOnly cookies automatically
+        // FALLBACK: If cookies don't work, use Bearer token from localStorage
+        const authToken = localStorage.getItem('authToken');
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        // Authentication handled by httpOnly cookies automatically (with Bearer fallback)
         try {
             const response = await fetch(url, {
                 ...options,
