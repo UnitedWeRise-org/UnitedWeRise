@@ -97,20 +97,20 @@ export class MobileBottomBar {
                 <div class="mobile-nav-icon">🏠</div>
                 <div class="mobile-nav-label">Feed</div>
             </a>
-            <a href="#" class="mobile-nav-item ${this.activeButton === 'discover' ? 'active' : ''}" data-action="mobile-discover" data-has-submenu="true">
-                <div class="mobile-nav-icon">🔥</div>
-                <div class="mobile-nav-label">Discover</div>
+            <a href="#" class="mobile-nav-item ${this.activeButton === 'civic' ? 'active' : ''}" data-action="mobile-civic" data-has-submenu="true">
+                <div class="mobile-nav-icon">🏛️</div>
+                <div class="mobile-nav-label">Civic</div>
             </a>
             <a href="#" class="mobile-nav-item ${this.activeButton === 'post' ? 'active' : ''}" data-action="mobile-post">
                 <div class="mobile-nav-icon">➕</div>
                 <div class="mobile-nav-label">Post</div>
             </a>
-            <a href="#" class="mobile-nav-item ${this.activeButton === 'notifications' ? 'active' : ''}" data-action="mobile-notifications">
-                <div class="mobile-nav-icon">🔔</div>
+            <a href="#" class="mobile-nav-item ${this.activeButton === 'alerts' ? 'active' : ''}" data-action="mobile-alerts">
+                <div class="mobile-nav-icon">💬</div>
                 <div class="mobile-nav-label">Alerts</div>
             </a>
-            <a href="#" class="mobile-nav-item ${this.activeButton === 'profile' ? 'active' : ''}" data-action="mobile-profile" data-has-submenu="true">
-                <div class="mobile-nav-icon">👤</div>
+            <a href="#" class="mobile-nav-item ${this.activeButton === 'menu' ? 'active' : ''}" data-action="mobile-menu" data-has-submenu="true">
+                <div class="mobile-nav-icon">☰</div>
                 <div class="mobile-nav-label">Menu</div>
             </a>
         `;
@@ -243,17 +243,17 @@ export class MobileBottomBar {
         switch (buttonAction) {
             case 'mobile-feed':
                 return `
+                    <a href="#" class="mobile-nav-submenu-item" data-action="feed-discover">
+                        <span class="mobile-nav-submenu-icon">🔥</span>
+                        <span class="mobile-nav-submenu-label">Discover</span>
+                    </a>
                     <a href="#" class="mobile-nav-submenu-item" data-action="feed-following">
                         <span class="mobile-nav-submenu-icon">👥</span>
                         <span class="mobile-nav-submenu-label">Following Feed</span>
                     </a>
-                    <a href="#" class="mobile-nav-submenu-item" data-action="feed-discover">
-                        <span class="mobile-nav-submenu-icon">🔥</span>
-                        <span class="mobile-nav-submenu-label">Discover Feed</span>
-                    </a>
                     <a href="#" class="mobile-nav-submenu-item" data-action="feed-trending">
                         <span class="mobile-nav-submenu-icon">📈</span>
-                        <span class="mobile-nav-submenu-label">Trending Topics</span>
+                        <span class="mobile-nav-submenu-label">Trending</span>
                     </a>
                     <a href="#" class="mobile-nav-submenu-item" data-action="feed-saved">
                         <span class="mobile-nav-submenu-icon">🔖</span>
@@ -261,39 +261,39 @@ export class MobileBottomBar {
                     </a>
                 `;
 
-            case 'mobile-discover':
+            case 'mobile-civic':
                 return `
-                    <a href="#" class="mobile-nav-submenu-item" data-action="discover-trending">
-                        <span class="mobile-nav-submenu-icon">🔥</span>
-                        <span class="mobile-nav-submenu-label">Trending Now</span>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="civic-elections">
+                        <span class="mobile-nav-submenu-icon">🗳️</span>
+                        <span class="mobile-nav-submenu-label">Elections</span>
                     </a>
-                    <a href="#" class="mobile-nav-submenu-item" data-action="discover-popular">
-                        <span class="mobile-nav-submenu-icon">⭐</span>
-                        <span class="mobile-nav-submenu-label">Popular Today</span>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="civic-officials">
+                        <span class="mobile-nav-submenu-icon">🏛️</span>
+                        <span class="mobile-nav-submenu-label">Officials</span>
                     </a>
-                    <a href="#" class="mobile-nav-submenu-item" data-action="discover-topics">
-                        <span class="mobile-nav-submenu-icon">🏷️</span>
-                        <span class="mobile-nav-submenu-label">Topic Discovery</span>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="civic-candidates">
+                        <span class="mobile-nav-submenu-icon">👔</span>
+                        <span class="mobile-nav-submenu-label">Candidates</span>
+                    </a>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="civic-organizing">
+                        <span class="mobile-nav-submenu-icon">📋</span>
+                        <span class="mobile-nav-submenu-label">Organizing</span>
                     </a>
                 `;
 
-            case 'mobile-profile':
+            case 'mobile-menu':
                 return `
                     <a href="#" class="mobile-nav-submenu-item" data-action="toggle-profile">
                         <span class="mobile-nav-submenu-icon">👤</span>
-                        <span class="mobile-nav-submenu-label">My Profile</span>
-                    </a>
-                    <a href="#" class="mobile-nav-submenu-item" data-action="mobile-messages">
-                        <span class="mobile-nav-submenu-icon">💬</span>
-                        <span class="mobile-nav-submenu-label">Messages</span>
-                    </a>
-                    <a href="#" class="mobile-nav-submenu-item" data-action="organizing">
-                        <span class="mobile-nav-submenu-icon">🏛️</span>
-                        <span class="mobile-nav-submenu-label">Civic Organizing</span>
+                        <span class="mobile-nav-submenu-label">Profile</span>
                     </a>
                     <a href="#" class="mobile-nav-submenu-item" data-action="open-donation">
                         <span class="mobile-nav-submenu-icon">💰</span>
                         <span class="mobile-nav-submenu-label">Donations</span>
+                    </a>
+                    <a href="#" class="mobile-nav-submenu-item" data-action="mobile-map">
+                        <span class="mobile-nav-submenu-icon">🗺️</span>
+                        <span class="mobile-nav-submenu-label">Map</span>
                     </a>
                     <a href="#" class="mobile-nav-submenu-item" data-action="mobile-settings">
                         <span class="mobile-nav-submenu-icon">⚙️</span>
@@ -310,38 +310,29 @@ export class MobileBottomBar {
         // Set active button
         this.setActive(action);
 
-        // The action will be handled by navigation-handlers.js via event delegation
-        // We just need to trigger a click event on a button with this action
-        const event = new CustomEvent('mobile-nav-action', {
-            detail: { action },
-            bubbles: true
-        });
-
-        // Find button with this action and dispatch event
-        const button = document.querySelector(`[data-action="${action}"]`);
-        if (button) {
-            button.dispatchEvent(new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true
-            }));
-        }
-
         // Store preference
         localStorage.setItem('mobileNavActive', action);
+
+        // Note: The action will be handled by navigation-handlers.js via event delegation
+        // The original click event from the button will bubble up naturally
+        // No need to re-dispatch events (which caused infinite loops)
     }
 
     setActive(buttonAction) {
         // Map submenu actions to main buttons
         const actionMap = {
-            'feed-following': 'mobile-feed',
             'feed-discover': 'mobile-feed',
+            'feed-following': 'mobile-feed',
             'feed-trending': 'mobile-feed',
             'feed-saved': 'mobile-feed',
-            'discover-trending': 'mobile-discover',
-            'discover-popular': 'mobile-discover',
-            'discover-topics': 'mobile-discover',
-            'toggle-profile': 'mobile-profile',
-            'mobile-settings': 'mobile-profile'
+            'civic-elections': 'mobile-civic',
+            'civic-officials': 'mobile-civic',
+            'civic-candidates': 'mobile-civic',
+            'civic-organizing': 'mobile-civic',
+            'toggle-profile': 'mobile-menu',
+            'open-donation': 'mobile-menu',
+            'mobile-map': 'mobile-menu',
+            'mobile-settings': 'mobile-menu'
         };
 
         const mainAction = actionMap[buttonAction] || buttonAction;
