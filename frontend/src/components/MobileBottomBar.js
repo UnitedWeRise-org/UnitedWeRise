@@ -13,42 +13,82 @@ export class MobileBottomBar {
     }
 
     init() {
-        // Check authentication state
-        this.isAuthenticated = !!window.currentUser;
+        try {
+            // Check authentication state
+            this.isAuthenticated = !!window.currentUser;
 
-        // Don't render on desktop
-        if (window.innerWidth > 767) {
-            return;
-        }
+            // Better mobile detection - check both width and user agent
+            const isMobile = window.innerWidth <= 767 ||
+                           /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        this.render();
-        this.attachEventListeners();
-        this.restoreState();
+            if (!isMobile) {
+                console.log('MobileBottomBar: Desktop detected, skipping mobile nav');
+                return;
+            }
 
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MobileBottomBar', 'Mobile bottom navigation initialized');
+            console.log('MobileBottomBar: Mobile detected, rendering...');
+
+            this.render();
+            this.attachEventListeners();
+            this.restoreState();
+
+            console.log('✅ MobileBottomBar: Initialized successfully');
+
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MobileBottomBar', 'Mobile bottom navigation initialized');
+            }
+        } catch (error) {
+            console.error('❌ MobileBottomBar init error:', error);
+            // Try to render anyway after a delay
+            setTimeout(() => {
+                console.log('MobileBottomBar: Retrying render...');
+                try {
+                    this.render();
+                    this.attachEventListeners();
+                } catch (retryError) {
+                    console.error('❌ MobileBottomBar retry failed:', retryError);
+                }
+            }, 1000);
         }
     }
 
     render() {
-        // Find or create the mobile-nav element
-        let mobileNav = document.querySelector('.mobile-nav');
+        try {
+            console.log('MobileBottomBar: Starting render...');
 
-        if (!mobileNav) {
-            mobileNav = document.createElement('nav');
-            mobileNav.className = 'mobile-nav';
-            document.body.appendChild(mobileNav);
+            // Find or create the mobile-nav element
+            let mobileNav = document.querySelector('.mobile-nav');
+
+            if (!mobileNav) {
+                console.log('MobileBottomBar: Creating new mobile-nav element');
+                mobileNav = document.createElement('nav');
+                mobileNav.className = 'mobile-nav';
+                document.body.appendChild(mobileNav);
+            } else {
+                console.log('MobileBottomBar: Found existing mobile-nav element');
+            }
+
+            // Render buttons based on authentication state
+            if (this.isAuthenticated) {
+                console.log('MobileBottomBar: Rendering authenticated nav');
+                mobileNav.innerHTML = this.renderAuthenticatedNav();
+            } else {
+                console.log('MobileBottomBar: Rendering unauthenticated nav');
+                mobileNav.innerHTML = this.renderUnauthenticatedNav();
+            }
+
+            // Verify it's visible
+            const computed = window.getComputedStyle(mobileNav);
+            console.log('MobileBottomBar: display =', computed.display, ', visibility =', computed.visibility);
+
+            // Create submenu container
+            this.createSubmenuContainer();
+
+            console.log('✅ MobileBottomBar: Render complete');
+        } catch (error) {
+            console.error('❌ MobileBottomBar render error:', error);
+            throw error;
         }
-
-        // Render buttons based on authentication state
-        if (this.isAuthenticated) {
-            mobileNav.innerHTML = this.renderAuthenticatedNav();
-        } else {
-            mobileNav.innerHTML = this.renderUnauthenticatedNav();
-        }
-
-        // Create submenu container
-        this.createSubmenuContainer();
     }
 
     renderAuthenticatedNav() {
