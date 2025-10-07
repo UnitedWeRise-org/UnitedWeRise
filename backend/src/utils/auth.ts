@@ -1,8 +1,15 @@
 import bcrypt from 'bcryptjs';
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// SECURITY: JWT_SECRET must be set via environment variable
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set');
+}
+
+// Reduced from 7d to 24h for better security while maintaining UX
+// TODO: Implement refresh tokens for even better security with long-lived sessions
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -27,5 +34,7 @@ export const verifyToken = (token: string): (JwtPayload & { userId: string }) | 
 };
 
 export const generateResetToken = (): string => {
-  return Math.random().toString(36).substr(2, 15) + Math.random().toString(36).substr(2, 15);
+  // SECURITY: Use cryptographically secure random bytes instead of Math.random()
+  const crypto = require('crypto');
+  return crypto.randomBytes(32).toString('hex'); // 256 bits of cryptographic randomness
 };
