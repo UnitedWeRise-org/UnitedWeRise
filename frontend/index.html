@@ -219,7 +219,7 @@
     <script src="src/integrations/officials-system-integration.js"></script>
     <script src="src/integrations/elections-system-integration.js"></script>
     <script src="src/integrations/trending-system-integration.js"></script>
-    <script src="src/js/mobile-navigation.js"></script>
+    <!-- mobile-navigation.js REMOVED - replaced by MobileBottomBar.js ES6 component -->
     <script src="src/js/map-dummy-data.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
     <!-- donation-system.js now loaded via ES6 modules in main.js -->
@@ -1045,32 +1045,7 @@
     From monolithic inline JavaScript to pure modular architecture.
     Thousands of hours of waste eliminated permanently.
     ============================================================================ -->
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav">
-        <a href="#" class="mobile-nav-item mobile-nav-feed active" data-action="mobile-feed">
-            <div class="mobile-nav-icon">🏠</div>
-            <div>Feed</div>
-        </a>
-        <a href="#" class="mobile-nav-item" data-action="mobile-search">
-            <div class="mobile-nav-icon">🔍</div>
-            <div>Search</div>
-        </a>
-        <a href="#" class="mobile-nav-item" data-action="mobile-map">
-            <div class="mobile-nav-icon">🗺️</div>
-            <div>Map</div>
-        </a>
-        <a href="#" class="mobile-nav-item mobile-nav-profile" data-action="mobile-profile"">
-            <div class="mobile-nav-icon">👤</div>
-            <div>Profile</div>
-        </a>
-        <a href="#" class="mobile-nav-item mobile-nav-messages" data-action="mobile-messages">
-            <div class="mobile-nav-icon">💬</div>
-            <div>Messages</div>
-        </a>
-    </nav>
-
-    <!-- Mobile Map Close Button -->
-    <button class="mobile-map-close" data-action="mobile-hide-map">✕ Close Map</button>
+    <!-- Mobile Navigation: Dynamically created by MobileBottomBar.js component -->
 
     <!-- Civic Organizing System -->
     <div class="civic-organizing-container" id="civicOrganizingContainer" style="display: none;">
