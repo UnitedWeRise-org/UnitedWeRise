@@ -5,8 +5,10 @@
 
 /* Feed Controls Wrapper - Contains New Post button and toggle */
 .feed-controls-wrapper {
-    position: sticky;
-    top: 0; /* Frozen to bottom of top-bar */
+    position: fixed; /* Fixed to viewport, not sticky */
+    top: 5.5vh; /* Bottom of top-bar */
+    left: 3vw; /* Match .main margin-left */
+    right: 26%; /* Match .main margin-right */
     z-index: 3; /* Below map overlay (z-index: 5) */
     background: #fefdf8; /* Warm cream with yellow undertones */
     padding: 3px 16px; /* Reduced vertical padding */
@@ -372,7 +374,9 @@
 @media screen and (max-width: 767px) {
     .feed-controls-wrapper {
         padding: 3px 12px; /* Reduced vertical padding */
-        top: 0; /* Frozen to bottom of top-bar */
+        top: 55px; /* Mobile top bar height */
+        left: 0; /* Full width on mobile */
+        right: 0; /* Full width on mobile */
     }
 
     .new-post-standalone-btn {
