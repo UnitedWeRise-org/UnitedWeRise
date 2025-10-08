@@ -72,39 +72,44 @@ export class FeedToggle {
             return;
         }
 
-        // Check if toggle already exists
-        if (document.querySelector('.feed-toggle-container')) {
-            console.log('Feed toggle already exists, updating state');
+        // Check if controls already exist
+        if (document.querySelector('.feed-controls-wrapper')) {
+            console.log('Feed controls already exist, updating state');
             this.updateToggleState();
             this.updateUnreadBadge();
             return;
         }
 
         const toggleHtml = `
-            <div class="feed-toggle-container feed-toggle-5item">
-                <div class="feed-toggle-5item-inner">
-                    <button class="feed-toggle-item new-post-btn" data-action="new-post">
-                        <span class="feed-toggle-item-icon">➕</span>
-                        <span class="feed-toggle-item-label">New Post</span>
-                    </button>
-                    <button class="feed-toggle-item ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
-                        <span class="feed-toggle-item-icon">🔥</span>
-                        <span class="feed-toggle-item-label">Discover</span>
-                    </button>
-                    <button class="feed-toggle-item ${this.currentFeed === 'following' ? 'active' : ''}" data-feed-type="following">
-                        <span class="feed-toggle-item-icon">👥</span>
-                        <span class="feed-toggle-item-label">Following</span>
-                        <span class="feed-toggle-item-badge" style="display: none;"></span>
-                    </button>
-                    <button class="feed-toggle-item ${this.currentFeed === 'saved' ? 'active' : ''}" data-feed-type="saved">
-                        <span class="feed-toggle-item-icon">🔖</span>
-                        <span class="feed-toggle-item-label">Saved</span>
-                    </button>
-                    <button class="feed-toggle-item disabled" data-action="filters-coming-soon">
-                        <span class="feed-toggle-item-icon">⚙️</span>
-                        <span class="feed-toggle-item-label">Filters</span>
-                        <span class="tooltip">Coming Soon - Save your favorite filters!</span>
-                    </button>
+            <div class="feed-controls-wrapper">
+                <!-- Stand-alone New Post Button -->
+                <button class="new-post-standalone-btn" data-action="new-post">
+                    <span class="new-post-icon">➕</span>
+                    <span class="new-post-label">New Post</span>
+                </button>
+
+                <!-- 4-Item Toggle (original style) -->
+                <div class="feed-toggle-container">
+                    <div class="feed-toggle">
+                        <button class="feed-toggle-btn ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
+                            <span class="feed-toggle-icon">🔥</span>
+                            <span class="feed-toggle-label">Discover</span>
+                        </button>
+                        <button class="feed-toggle-btn ${this.currentFeed === 'following' ? 'active' : ''}" data-feed-type="following">
+                            <span class="feed-toggle-icon">👥</span>
+                            <span class="feed-toggle-label">Following</span>
+                            <span class="unread-badge" style="display: none;"></span>
+                        </button>
+                        <button class="feed-toggle-btn ${this.currentFeed === 'saved' ? 'active' : ''}" data-feed-type="saved">
+                            <span class="feed-toggle-icon">🔖</span>
+                            <span class="feed-toggle-label">Saved</span>
+                        </button>
+                        <button class="feed-toggle-btn disabled" data-action="filters-coming-soon">
+                            <span class="feed-toggle-icon">⚙️</span>
+                            <span class="feed-toggle-label">Filters</span>
+                            <span class="tooltip-filters">Coming Soon - Save your favorite filters!</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -151,9 +156,9 @@ export class FeedToggle {
                 </div>
             </div>
         `;
-        const toggleContainer = container.querySelector('.feed-toggle-container');
-        if (toggleContainer) {
-            toggleContainer.insertAdjacentHTML('afterend', bannerHtml);
+        const controlsWrapper = container.querySelector('.feed-controls-wrapper');
+        if (controlsWrapper) {
+            controlsWrapper.insertAdjacentHTML('afterend', bannerHtml);
         }
     }
 
@@ -170,15 +175,15 @@ export class FeedToggle {
                 </div>
             </div>
         `;
-        const toggleContainer = container.querySelector('.feed-toggle-container');
-        if (toggleContainer) {
-            toggleContainer.insertAdjacentHTML('afterend', bannerHtml);
+        const controlsWrapper = container.querySelector('.feed-controls-wrapper');
+        if (controlsWrapper) {
+            controlsWrapper.insertAdjacentHTML('afterend', bannerHtml);
         }
     }
 
     attachEventListeners() {
         // Feed type buttons
-        document.querySelectorAll('.feed-toggle-item[data-feed-type]').forEach(btn => {
+        document.querySelectorAll('.feed-toggle-btn[data-feed-type]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const feedType = btn.dataset.feedType;
@@ -186,8 +191,8 @@ export class FeedToggle {
             });
         });
 
-        // New Post button
-        const newPostBtn = document.querySelector('.feed-toggle-item.new-post-btn');
+        // New Post button (stand-alone)
+        const newPostBtn = document.querySelector('.new-post-standalone-btn');
         if (newPostBtn) {
             newPostBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -198,7 +203,7 @@ export class FeedToggle {
         }
 
         // Filters placeholder (disabled, just tooltip)
-        const filtersBtn = document.querySelector('.feed-toggle-item.disabled');
+        const filtersBtn = document.querySelector('.feed-toggle-btn.disabled');
         if (filtersBtn) {
             filtersBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -209,7 +214,7 @@ export class FeedToggle {
 
     updateToggleState() {
         // Update button states
-        document.querySelectorAll('.feed-toggle-item[data-feed-type]').forEach(btn => {
+        document.querySelectorAll('.feed-toggle-btn[data-feed-type]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.feedType === this.currentFeed);
         });
     }
@@ -250,9 +255,9 @@ export class FeedToggle {
         const container = document.getElementById('myFeedPosts');
         if (!container) return;
 
-        // Get all post elements (not the toggle or banners)
+        // Get all post elements (not the controls wrapper or banners)
         const postElements = Array.from(container.children).filter(el =>
-            !el.classList.contains('feed-toggle-container') &&
+            !el.classList.contains('feed-controls-wrapper') &&
             !el.classList.contains('feed-banner') &&
             !el.classList.contains('feed-loading')
         );
@@ -638,8 +643,8 @@ export class FeedToggle {
      * Setup scroll behavior for auto-hide/show toggle
      */
     setupScrollBehavior() {
-        const toggleContainer = document.querySelector('.feed-toggle-container');
-        if (!toggleContainer) return;
+        const controlsWrapper = document.querySelector('.feed-controls-wrapper');
+        if (!controlsWrapper) return;
 
         let lastScrollY = window.scrollY;
         let ticking = false;
@@ -649,11 +654,11 @@ export class FeedToggle {
 
             // Determine scroll direction
             if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                // Scrolling down - hide toggle
-                toggleContainer.classList.add('hidden');
+                // Scrolling down - hide controls
+                controlsWrapper.classList.add('hidden');
             } else if (currentScrollY < lastScrollY) {
-                // Scrolling up - show toggle
-                toggleContainer.classList.remove('hidden');
+                // Scrolling up - show controls
+                controlsWrapper.classList.remove('hidden');
             }
 
             lastScrollY = currentScrollY;
@@ -705,16 +710,16 @@ export class FeedToggle {
         if (shownCount >= 2) return;
 
         setTimeout(() => {
-            const toggleContainer = document.querySelector('.feed-toggle-container');
-            if (!toggleContainer) return;
+            const controlsWrapper = document.querySelector('.feed-controls-wrapper');
+            if (!controlsWrapper) return;
 
             // Make container position relative for tooltip positioning
-            toggleContainer.style.position = 'relative';
+            controlsWrapper.style.position = 'relative';
 
             const tooltip = document.createElement('div');
             tooltip.className = 'swipe-hint-tooltip';
             tooltip.innerHTML = '💡 Swipe to switch feeds';
-            toggleContainer.appendChild(tooltip);
+            controlsWrapper.appendChild(tooltip);
 
             // Auto-dismiss after 3 seconds
             setTimeout(() => {
