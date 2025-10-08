@@ -20,14 +20,15 @@
         transform: translateY(-100%);
     }
 
-    /* Ensure content accounts for top bar */
+    /* Ensure content accounts for top bar when visible */
     body {
         padding-top: 60px; /* Adjust based on actual top bar height */
+        transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* When top bar is hidden, reduce padding (optional) */
-    .top-bar.hidden ~ #mainContent {
-        /* Could adjust padding here if desired */
+    /* When top bar is hidden, remove padding to reclaim space */
+    body:has(.top-bar.hidden) {
+        padding-top: 0;
     }
 }
 

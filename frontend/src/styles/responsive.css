@@ -326,7 +326,18 @@
         font-size: 14px !important;
         min-height: 60px !important; /* Reduced height for mobile */
     }
-    
+
+    /* Fix sticky composer positioning on mobile (override desktop top: -32px) */
+    .sticky-composer-wrapper {
+        position: relative !important; /* Remove sticky on mobile */
+        top: 0 !important; /* Don't position above viewport */
+    }
+
+    .sticky-composer-wrapper.sticky {
+        top: 0 !important; /* Override desktop top: -32px */
+        position: relative !important; /* Remove sticky behavior on mobile */
+    }
+
     /* Disable map container on mobile */
     #mapContainer {
         display: none !important;

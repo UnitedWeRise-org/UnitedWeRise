@@ -378,6 +378,11 @@ class UnifiedPostRenderer {
                     <span class="action-count">${post.sharesCount || 0}</span>
                 </button>
 
+                <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
+                        onclick="if(window.postComponent) window.postComponent.toggleSave('${post.id}')">
+                    <span class="action-icon">🔖</span>
+                </button>
+
                 ${post.isOwner ? `
                     <button class="post-action-btn more-btn"
                             onclick="if(window.postComponent) window.postComponent.showPostMenu('${post.id}')">
