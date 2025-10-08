@@ -1,10 +1,50 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: October 7, 2025
+**Last Updated**: October 8, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## 2025-10-08 - Critical Login Bug Fix & UI Polish
+
+### 🐛 CRITICAL BUG FIX - Login Race Condition
+- **Issue**: Users logged out immediately after successful TOTP login
+- **Root Cause**: Onboarding status check ran before auth cookie propagated, got 401, triggered logout
+- **Fix**: Added 500ms delay before onboarding checks in backend-integration.js
+- **Impact**: Login now works on first attempt without requiring page reload
+- **Commits**: `49c5550`
+
+**Sequence of the Bug**:
+1. User enters TOTP → Login succeeds → Cookie set
+2. System fires `userLoggedIn` event
+3. Onboarding check runs **immediately** before cookie ready
+4. Gets 401 Unauthorized
+5. API client calls `_handleUnauthorized()` → Sets `userState.current = null`
+6. User logged out right after logging in
+
+**Files Modified**:
+- `frontend/src/integrations/backend-integration.js` - Added 500ms setTimeout delays
+
+### 🎨 UI POLISH - FeedToggle Color Theme
+- **Issue**: System dark mode preference overrode cream/off-white theme
+- **Fix**: Removed `@media (prefers-color-scheme: dark)` from feed-toggle.css
+- **Enhancement**: Warmed up color palette with more yellow/cream undertones
+- **Colors**:
+  - Container: `#fefdf8` (warm cream with yellow undertones)
+  - Toggle background: `#f0ede5` (warm beige)
+  - Active button: `#fffef9` (very warm cream white)
+  - Border: `#e8e2d5` (warm greige)
+- **Commits**: `8349331`, `1cc1416`
+
+**Files Modified**:
+- `frontend/src/styles/feed-toggle.css` - Removed dark mode, updated color palette
+
+### 📝 ARCHITECTURAL NOTES
+- **Dark Mode**: Not implemented site-wide yet. Piecemeal dark mode for single components is wrong.
+- **Future Work**: When implementing dark mode, needs centralized architecture with CSS variables or root class
 
 ---
 
