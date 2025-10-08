@@ -6,10 +6,10 @@
 /* Feed Controls Wrapper - Contains New Post button and toggle */
 .feed-controls-wrapper {
     position: sticky;
-    top: 5.5vh; /* Adjoin with bottom of top-bar */
+    top: 0; /* Frozen to bottom of top-bar */
     z-index: 3; /* Below map overlay (z-index: 5) */
     background: #fefdf8; /* Warm cream with yellow undertones */
-    padding: 12px 16px;
+    padding: 3px 16px; /* Reduced vertical padding */
     border-bottom: 1px solid #e8e2d5; /* Warm greige border */
     box-shadow: 0 2px 4px rgba(75, 92, 9, 0.06); /* Olive-tinted shadow */
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
@@ -20,8 +20,8 @@
     display: block;
     width: 100%;
     max-width: 500px;
-    margin: 0 auto 12px auto;
-    padding: 12px 20px;
+    margin: 0 auto 3px auto; /* Reduced bottom margin */
+    padding: 10px 20px; /* Slightly reduced vertical padding */
     background: #4b5c09; /* Olive green */
     color: #ffffff;
     border: none;
@@ -86,7 +86,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 8px 16px; /* Reduced vertical padding */
     background: transparent;
     border: none;
     border-radius: 6px;
@@ -371,14 +371,14 @@
 /* Mobile Adjustments */
 @media screen and (max-width: 767px) {
     .feed-controls-wrapper {
-        padding: 10px 12px;
-        top: 5.5vh; /* Maintain position below top-bar */
+        padding: 3px 12px; /* Reduced vertical padding */
+        top: 0; /* Frozen to bottom of top-bar */
     }
 
     .new-post-standalone-btn {
-        padding: 10px 16px;
+        padding: 8px 16px; /* Reduced vertical padding */
         font-size: 14px;
-        margin-bottom: 10px;
+        margin-bottom: 3px; /* Reduced spacing */
     }
 
     .new-post-icon {
