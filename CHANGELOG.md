@@ -10,23 +10,46 @@
 
 ## 2025-10-08 - Critical Login Bug Fix & UI Polish
 
-### 🐛 CRITICAL BUG FIX - Login Race Condition
-- **Issue**: Users logged out immediately after successful TOTP login
-- **Root Cause**: Onboarding status check ran before auth cookie propagated, got 401, triggered logout
-- **Fix**: Added 500ms delay before onboarding checks in backend-integration.js
-- **Impact**: Login now works on first attempt without requiring page reload
-- **Commits**: `49c5550`
+### 🐛 CRITICAL BUG FIX - Login Race Condition (Multi-Part Fix)
+
+#### Part 1: Cookie Propagation Delay
+- **Issue**: API calls firing before httpOnly cookie propagated after login
+- **Root Cause**: Multiple systems (onboarding, quests, badges) making API calls within milliseconds of login
+- **Fix**: Added 800ms delay in `unified-manager.js` BEFORE any system synchronization
+- **Impact**: All 401 errors eliminated, login succeeds without race conditions
+- **Commits**: `fe3a292`
 
 **Sequence of the Bug**:
 1. User enters TOTP → Login succeeds → Cookie set
-2. System fires `userLoggedIn` event
-3. Onboarding check runs **immediately** before cookie ready
+2. System immediately fires API calls (quests, badges, onboarding)
+3. Cookie not yet available in subsequent requests
 4. Gets 401 Unauthorized
 5. API client calls `_handleUnauthorized()` → Sets `userState.current = null`
 6. User logged out right after logging in
 
+**The Fix**:
+- Moved delay to start of `_setAuthenticatedState()` in unified-manager.js
+- Delays ALL post-login activity, not just onboarding
+- Increased from 500ms to 800ms for mobile reliability
+
 **Files Modified**:
-- `frontend/src/integrations/backend-integration.js` - Added 500ms setTimeout delays
+- `frontend/src/modules/core/auth/unified-manager.js` - Added 800ms delay before system sync
+- `frontend/src/integrations/backend-integration.js` - Added 500ms delays to onboarding checks
+
+#### Part 2: Mobile UI Not Updating After Login
+- **Issue**: Login succeeded, API calls worked, but mobile navigation still showed unauthenticated state
+- **Root Cause**: `MobileBottomBar` component rendered once on page load, never re-rendered after login
+- **Fix**: Added event listeners to `setupAuthListeners()` method that calls `refresh()` when auth state changes
+- **Impact**: Mobile UI now immediately updates from "Login/Sign Up" to "Feed/Civic/Post/Alerts/Menu" after successful login
+- **Commits**: TBD
+
+**Events Listened To**:
+- `userLoggedIn` - Dispatched by unified-manager.js after login
+- `userLoggedOut` - Dispatched during logout
+- `authStateChanged` - Dispatched on any auth state change
+
+**Files Modified**:
+- `frontend/src/components/MobileBottomBar.js` - Added `setupAuthListeners()` method with event handlers
 
 ### 🎨 UI POLISH - FeedToggle Color Theme
 - **Issue**: System dark mode preference overrode cream/off-white theme

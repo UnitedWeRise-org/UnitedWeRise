@@ -30,6 +30,7 @@ export class MobileBottomBar {
 
             this.render();
             this.attachEventListeners();
+            this.setupAuthListeners();
             this.restoreState();
 
             console.log('✅ MobileBottomBar: Initialized successfully');
@@ -195,6 +196,26 @@ export class MobileBottomBar {
                 this.hideSubmenu();
             });
         }
+    }
+
+    setupAuthListeners() {
+        // Listen for authentication state changes and refresh navigation
+        window.addEventListener('userLoggedIn', () => {
+            console.log('🔄 MobileBottomBar: User logged in, refreshing navigation...');
+            this.refresh();
+        });
+
+        window.addEventListener('userLoggedOut', () => {
+            console.log('🔄 MobileBottomBar: User logged out, refreshing navigation...');
+            this.refresh();
+        });
+
+        window.addEventListener('authStateChanged', (event) => {
+            console.log('🔄 MobileBottomBar: Auth state changed, refreshing navigation...', event.detail);
+            this.refresh();
+        });
+
+        console.log('✅ MobileBottomBar: Auth listeners setup complete');
     }
 
     showSubmenu(buttonAction) {
