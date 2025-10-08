@@ -117,11 +117,6 @@ class UnifiedAuthManager {
             sessionValid: true
         };
 
-        // CRITICAL: Wait for httpOnly cookie to propagate before making ANY API calls
-        // This prevents 401 errors that trigger immediate logout after successful login
-        console.log('⏱️ Waiting 800ms for auth cookie propagation...');
-        await new Promise(resolve => setTimeout(resolve, 800));
-
         // SYNCHRONIZE ALL SYSTEMS
         await this._syncAllSystems(user, csrfToken);
 

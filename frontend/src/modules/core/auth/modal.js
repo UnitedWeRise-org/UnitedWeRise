@@ -166,13 +166,14 @@ export async function handleLogin() {
         console.log('🔍 Unified login result:', result);
         
         if (result.success) {
-            showAuthMessage('Login successful!', 'success', 'login');
+            showAuthMessage('Login successful! Reloading...', 'success', 'login');
+            console.log('✅ Login successful via unified manager:', result.user.username || result.user.email);
 
-            // Close modal after short delay
+            // Reload page to ensure clean state with auth cookie
+            // This prevents race conditions with cookie propagation
             setTimeout(() => {
-                closeAuthModal();
-                console.log('✅ Login successful via unified manager:', result.user.username || result.user.email);
-            }, 1000);
+                window.location.reload();
+            }, 500);
 
         } else if (result.requiresTOTP) {
             console.log('🔍 TOTP required, showing TOTP input...');
@@ -184,8 +185,11 @@ export async function handleLogin() {
             try {
                 const totpResult = await window.unifiedLogin(email, password, 'main-site');
                 if (totpResult.success) {
-                    closeAuthModal();
-                    showAuthMessage('Login successful!', 'success');
+                    showAuthMessage('Login successful! Reloading...', 'success');
+                    // Reload page to ensure clean state with auth cookie
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
                 } else {
                     showAuthMessage(totpResult.error || 'Two-factor authentication failed', 'error', 'login');
                 }
