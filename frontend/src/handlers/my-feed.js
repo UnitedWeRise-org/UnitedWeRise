@@ -112,6 +112,19 @@ export class MyFeedHandlers {
 
         // Show My Feed in main content area
         const mainContent = document.getElementById('mainContent');
+
+        // Ensure mainContent is visible (critical for mobile)
+        mainContent.style.display = 'block';
+        mainContent.style.visibility = 'visible';
+        mainContent.style.opacity = '1';
+
+        // Scroll to top of mainContent on mobile
+        const isMobile = window.innerWidth <= 767;
+        if (isMobile) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         mainContent.innerHTML = `
             <div class="my-feed">
                 <div class="sticky-composer-wrapper">
