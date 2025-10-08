@@ -119,9 +119,13 @@
     /* Hide desktop elements IMMEDIATELY on mobile to prevent flicker */
     /* NOTE: .top-bar is NOT hidden - new mobile UX uses it with auto-hide behavior */
     .sidebar,
-    .sidebar-toggle-edge,
-    .container > .main {
+    .sidebar-toggle-edge {
         display: none !important;
+    }
+
+    /* mainContent is used on mobile - show it (don't hide it like desktop sidebar) */
+    .container > .main {
+        display: block !important;
     }
 
     /* Hide desktop-only parts of top bar */

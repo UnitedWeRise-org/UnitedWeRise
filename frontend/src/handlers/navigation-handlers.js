@@ -78,11 +78,6 @@ class NavigationHandlers {
 
         const action = target.dataset.navToggle || target.dataset.navAction || target.dataset.action;
 
-        // Debug logging for mobile navigation
-        if (action && action.startsWith('mobile-')) {
-            console.log('📱 Mobile navigation action:', action);
-        }
-
         switch (action) {
             // Existing navigation actions
             case 'feed':
@@ -240,25 +235,18 @@ class NavigationHandlers {
                 break;
             case 'mobile-post':
                 // Show My Feed with post creation area
-                console.log('🎯 mobile-post action triggered');
-                console.log('window.showMyFeed type:', typeof window.showMyFeed);
-                console.log('window.showMyFeed exists:', !!window.showMyFeed);
-
                 if (typeof window.showMyFeed === 'function') {
-                    console.log('✅ Calling window.showMyFeed()');
                     window.showMyFeed();
                     // Focus the post creation textarea after feed loads
                     setTimeout(() => {
                         const textarea = document.getElementById('feedPostContent');
-                        console.log('Textarea found:', !!textarea);
                         if (textarea) {
                             textarea.focus();
                             textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                     }, 300);
                 } else {
-                    console.error('❌ showMyFeed function not available');
-                    console.log('Available window functions:', Object.keys(window).filter(k => k.includes('Feed')));
+                    console.error('showMyFeed function not available');
                     alert('Post creation is loading. Please try again in a moment.');
                 }
                 break;
