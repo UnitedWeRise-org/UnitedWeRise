@@ -302,8 +302,13 @@ class NavigationHandlers {
                 }
                 break;
             case 'feed-saved':
-                // Show saved posts (placeholder - Phase 4)
-                alert('Saved Posts feature coming soon! This will allow you to bookmark and save posts for later.');
+                // Show saved posts view
+                if (window.savedPostsView && typeof window.savedPostsView.show === 'function') {
+                    window.savedPostsView.show();
+                } else {
+                    console.error('SavedPostsView not available');
+                    alert('Saved Posts feature is loading. Please try again in a moment.');
+                }
                 break;
 
             // Civic actions

@@ -236,7 +236,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
         res.cookie('authToken', token, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
-            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -414,7 +414,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('authToken', token, {
                         httpOnly: true,
                         secure: (0, environment_1.requireSecureCookies)(),
-                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                         path: '/',
                         domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -424,7 +424,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('csrf-token', csrfToken, {
                         httpOnly: false, // Needs to be readable by JS
                         secure: (0, environment_1.requireSecureCookies)(),
-                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                         maxAge: 30 * 24 * 60 * 60 * 1000,
                         path: '/',
                         domain: '.unitedwerise.org'
@@ -433,7 +433,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('totpSessionToken', newSessionToken, {
                         httpOnly: true,
                         secure: (0, environment_1.requireSecureCookies)(),
-                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
                         path: '/',
                         domain: '.unitedwerise.org'
@@ -442,7 +442,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                     res.cookie('totpVerified', 'true', {
                         httpOnly: true,
                         secure: (0, environment_1.requireSecureCookies)(),
-                        sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                         maxAge: 24 * 60 * 60 * 1000, // 24 hours
                         path: '/',
                         domain: '.unitedwerise.org'
@@ -506,7 +506,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('authToken', token, {
                 httpOnly: true,
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -516,7 +516,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('csrf-token', csrfToken, {
                 httpOnly: false, // Needs to be readable by JS
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -525,7 +525,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('totpSessionToken', sessionToken, {
                 httpOnly: true,
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 path: '/'
             });
@@ -533,7 +533,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             res.cookie('totpVerified', 'true', {
                 httpOnly: true,
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
                 path: '/'
             });
@@ -561,7 +561,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         res.cookie('authToken', token, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
-            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
             maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -571,7 +571,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         res.cookie('csrf-token', csrfToken, {
             httpOnly: false, // Needs to be readable by JS
             secure: (0, environment_1.requireSecureCookies)(),
-            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
             maxAge: 30 * 24 * 60 * 60 * 1000,
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -588,8 +588,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 isAdmin: user.isAdmin,
                 isModerator: user.isModerator
             },
-            csrfToken,
-            token // Also return token in response for admin dashboard localStorage fallback
+            csrfToken
+            // Token is in httpOnly cookie only (not exposed to JavaScript)
         });
     }
     catch (error) {
@@ -706,14 +706,14 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
         const httpOnlyCookieOptions = {
             httpOnly: true, // MUST match login cookie settings for authToken
             secure: (0, environment_1.requireSecureCookies)(),
-            sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+            sameSite: 'none', // MUST match login cookie settings
             path: '/',
             domain: '.unitedwerise.org' // MUST match login cookie settings
         };
         const nonHttpOnlyCookieOptions = {
             httpOnly: false, // MUST match login cookie settings for csrf-token
             secure: (0, environment_1.requireSecureCookies)(),
-            sameSite: 'lax',
+            sameSite: 'none', // MUST match login cookie settings
             path: '/',
             domain: '.unitedwerise.org'
         };
@@ -753,7 +753,7 @@ router.post('/refresh', async (req, res) => {
             res.cookie('authToken', newToken, {
                 httpOnly: true,
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
@@ -763,7 +763,7 @@ router.post('/refresh', async (req, res) => {
             res.cookie('csrf-token', csrfToken, {
                 httpOnly: false,
                 secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'lax', // Use 'lax' for same-site cookies - Chrome blocking 'none'
+                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains

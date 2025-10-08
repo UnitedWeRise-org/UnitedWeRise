@@ -144,6 +144,11 @@ class PostComponent {
                             <span class="action-count">${post.sharesCount || 0}</span>
                         </button>
 
+                        <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
+                                onclick="postComponent.toggleSave('${post.id}')">
+                            <span class="action-icon">${post.isSaved ? '🔖' : '🔖'}</span>
+                        </button>
+
                         ${post.isOwner ? `
                             <button class="post-action-btn more-btn"
                                     onclick="postComponent.showPostMenu('${post.id}')">
@@ -413,6 +418,163 @@ class PostComponent {
             // Hide comments section and extended content
             commentsSection.style.display = 'none';
             this.hideExtendedContentInline(postId);
+        }
+    }
+
+    /**
+     * Toggle save/unsave for a post
+     */
+    async toggleSave(postId) {
+        // Check authentication
+        const currentUser = window.currentUser;
+        if (!currentUser) {
+            alert('Please log in to save posts');
+            return;
+        }
+
+        // Find the save button
+        const postActions = document.querySelector(`[data-post-id="${postId}"]`);
+        if (!postActions) return;
+
+        const saveBtn = postActions.querySelector('.save-btn');
+        if (!saveBtn) return;
+
+        const iconElement = saveBtn.querySelector('.action-icon');
+        const wasSaved = saveBtn.classList.contains('saved');
+
+        // Store original state for rollback
+        const originalSaved = wasSaved;
+        const originalIcon = iconElement.textContent;
+
+        // Optimistic UI update
+        if (wasSaved) {
+            // Unsave
+            saveBtn.classList.remove('saved');
+            iconElement.textContent = '🔖';
+        } else {
+            // Save
+            saveBtn.classList.add('saved');
+            iconElement.textContent = '🔖';
+        }
+
+        try {
+            const endpoint = wasSaved ? `/posts/${postId}/save` : `/posts/${postId}/save`;
+            const method = wasSaved ? 'DELETE' : 'POST';
+
+            const response = await window.apiCall(endpoint, {
+                method: method
+            });
+
+            if (!response.ok) {
+                console.error('Failed to toggle save:', {
+                    status: response.status,
+                    error: response.data?.error || response.data?.message || 'Unknown error',
+                    endpoint,
+                    method
+                });
+
+                // Revert UI on error
+                if (originalSaved) {
+                    saveBtn.classList.add('saved');
+                } else {
+                    saveBtn.classList.remove('saved');
+                }
+                iconElement.textContent = originalIcon;
+
+                // Show error toast
+                this.showToast('Failed to save post. Please try again.', 'error');
+            } else {
+                // Update post data in memory if it exists
+                if (window.currentPosts) {
+                    const postIndex = window.currentPosts.findIndex(p => p.id === postId);
+                    if (postIndex !== -1) {
+                        window.currentPosts[postIndex].isSaved = !wasSaved;
+                    }
+                }
+
+                // Show success toast
+                const message = wasSaved ? 'Post removed from saved' : 'Post saved';
+                this.showToast(message, 'success');
+            }
+        } catch (error) {
+            console.error('Error toggling save:', error);
+
+            // Revert UI on error
+            if (originalSaved) {
+                saveBtn.classList.add('saved');
+            } else {
+                saveBtn.classList.remove('saved');
+            }
+            iconElement.textContent = originalIcon;
+
+            // Show error toast
+            this.showToast('Failed to save post. Please try again.', 'error');
+        }
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, type = 'info') {
+        // Check if toast container exists, create if not
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 10000;';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.style.cssText = `
+            background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#17a2b8'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        `;
+        toast.textContent = message;
+
+        toastContainer.appendChild(toast);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    /**
+     * Batch check saved status for multiple posts
+     */
+    async checkSavedStatus(postIds) {
+        if (!postIds || postIds.length === 0) return {};
+
+        const currentUser = window.currentUser;
+        if (!currentUser) return {};
+
+        try {
+            const response = await window.apiCall('/posts/saved/check', {
+                method: 'POST',
+                body: JSON.stringify({ postIds })
+            });
+
+            if (response.ok && response.data?.data?.saved) {
+                return response.data.data.saved;
+            }
+
+            return {};
+        } catch (error) {
+            console.error('Error checking saved status:', error);
+            return {};
         }
     }
 
@@ -2427,6 +2589,11 @@ class PostComponent {
                         <button class="post-action-btn share-btn ${post.isShared ? 'shared' : ''}" onclick="postComponent.sharePost('${post.id}')">
                             <span class="action-icon">🔄</span>
                             <span class="action-count">${post.sharesCount || 0}</span>
+                        </button>
+
+                        <button class="post-action-btn save-btn ${post.isSaved ? 'saved' : ''}"
+                                onclick="postComponent.toggleSave('${post.id}')">
+                            <span class="action-icon">${post.isSaved ? '🔖' : '🔖'}</span>
                         </button>
                     </div>
                 </div>

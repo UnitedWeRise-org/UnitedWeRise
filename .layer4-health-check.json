@@ -1,0 +1,39 @@
+{
+    "status": "ok",
+    "layer": 4,
+    "description": "Authenticated photo upload with validation, EXIF stripping, and AI moderation",
+    "features": {
+        "authentication": true,
+        "validation": true,
+        "exifStripping": true,
+        "webpConversion": true,
+        "moderation": true,
+        "database": false
+    },
+    "validation": {
+        "allowedTypes": [
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/gif",
+            "image/webp"
+        ],
+        "allowedExtensions": [
+            "jpg",
+            "jpeg",
+            "png",
+            "gif",
+            "webp"
+        ],
+        "maxSize": 5242880,
+        "minSize": 100,
+        "maxDimension": 8000,
+        "minDimension": 10
+    },
+    "environment": {
+        "hasConnectionString": true,
+        "hasAccountName": true,
+        "accountName": "uwrstorage2425",
+        "hasAzureOpenAI": true
+    }
+}
