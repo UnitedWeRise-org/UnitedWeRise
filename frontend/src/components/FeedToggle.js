@@ -236,7 +236,7 @@ export class FeedToggle {
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
                     <div style="display: flex; gap: 8px;">
                         <button id="inlineCancelBtn" style="background: #6c757d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">Cancel</button>
-                        <button id="inlineAttachBtn" style="background: #0d6efd; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">📎 Attach</button>
+                        <button id="inlineAttachBtn" style="background: #f0ede5; color: #4b5c09; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: 1px solid #4b5c09; font-weight: 600;">📎 Attach</button>
                     </div>
                     <button id="inlinePostBtn" style="background: #4b5c09; color: white; padding: 8px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 14px;">Post</button>
                 </div>
@@ -271,13 +271,21 @@ export class FeedToggle {
         if (fileInput && filePreview) {
             fileInput.addEventListener('change', (e) => {
                 selectedFiles = Array.from(e.target.files);
+                console.log(`📎 Files selected: ${selectedFiles.length}`, selectedFiles.map(f => f.name));
 
                 if (selectedFiles.length > 0) {
                     filePreview.style.display = 'block';
+
+                    // Create file list
+                    const fileList = selectedFiles.map(f => `<div style="font-size: 12px; color: #555; margin-left: 8px;">• ${f.name}</div>`).join('');
+
                     filePreview.innerHTML = `
-                        <div style="background: #f0f0f0; padding: 8px; border-radius: 6px; font-size: 13px;">
-                            📎 ${selectedFiles.length} file(s) selected
-                            <button id="clearFilesBtn" style="background: transparent; border: none; color: #dc3545; cursor: pointer; margin-left: 8px; font-weight: 600;">✕ Remove</button>
+                        <div style="background: #e8f4ea; border: 1px solid #4b5c09; padding: 10px; border-radius: 6px; font-size: 13px; color: #4b5c09;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <strong>📎 ${selectedFiles.length} file(s) attached</strong>
+                                <button id="clearFilesBtn" style="background: transparent; border: none; color: #dc3545; cursor: pointer; font-weight: 600; font-size: 14px;">✕ Remove</button>
+                            </div>
+                            ${fileList}
                         </div>
                     `;
 
@@ -289,6 +297,7 @@ export class FeedToggle {
                             fileInput.value = '';
                             filePreview.style.display = 'none';
                             filePreview.innerHTML = '';
+                            console.log('📎 Files cleared');
                         });
                     }
                 } else {
