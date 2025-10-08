@@ -234,33 +234,20 @@ class NavigationHandlers {
                 }
                 break;
             case 'mobile-post':
-                // Show posts container and scroll to post creation area
-                {
-                    const postsContainer = document.querySelector('.posts-container');
-                    if (postsContainer) {
-                        postsContainer.style.display = 'block';
-                    }
-
-                    // Focus the post creation textarea
-                    const feedPostTextarea = document.getElementById('feedPostContent');
-                    if (feedPostTextarea) {
-                        feedPostTextarea.focus();
-                        feedPostTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } else {
-                        // If textarea not found, try to show feed first
-                        if (typeof showMyFeed === 'function') {
-                            showMyFeed();
-                            setTimeout(() => {
-                                const textarea = document.getElementById('feedPostContent');
-                                if (textarea) {
-                                    textarea.focus();
-                                    textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }
-                            }, 300);
-                        } else {
-                            console.warn('Post creation area not found');
+                // Show My Feed with post creation area
+                if (typeof window.showMyFeed === 'function') {
+                    window.showMyFeed();
+                    // Focus the post creation textarea after feed loads
+                    setTimeout(() => {
+                        const textarea = document.getElementById('feedPostContent');
+                        if (textarea) {
+                            textarea.focus();
+                            textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
-                    }
+                    }, 300);
+                } else {
+                    console.error('showMyFeed function not available');
+                    alert('Post creation is loading. Please try again in a moment.');
                 }
                 break;
             case 'mobile-notifications':
@@ -343,11 +330,108 @@ class NavigationHandlers {
 
             // Combined alerts (messages + notifications)
             case 'mobile-alerts':
-                // Toggle notifications panel (combines messages + alerts)
-                if (typeof window.toggleNotifications === 'function') {
-                    window.toggleNotifications();
-                } else {
-                    console.warn('Notifications system not available');
+                // Show mobile-friendly alerts view in main content
+                {
+                    const mainContent = document.getElementById('mainContent');
+                    if (!mainContent) {
+                        console.error('mainContent not found');
+                        return;
+                    }
+
+                    // Check if user is logged in
+                    if (!window.currentUser) {
+                        mainContent.innerHTML = `
+                            <div style="padding: 3rem 2rem; text-align: center;">
+                                <h2>📬 Alerts & Notifications</h2>
+                                <p style="color: #666; margin-top: 1rem;">Please log in to view your notifications</p>
+                                <button onclick="openAuthModal('login')" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+                                    Log In
+                                </button>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Show loading state
+                    mainContent.innerHTML = `
+                        <div style="padding: 2rem; text-align: center;">
+                            <h2>📬 Alerts & Notifications</h2>
+                            <div style="margin-top: 2rem;">
+                                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #4b5c09; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <p style="margin-top: 1rem; color: #666;">Loading notifications...</p>
+                            </div>
+                        </div>
+                    `;
+
+                    // Fetch and display notifications
+                    if (typeof window.fetchNotifications === 'function') {
+                        window.fetchNotifications().then(() => {
+                            const notifications = window.notificationsCache || [];
+
+                            if (notifications.length === 0) {
+                                mainContent.innerHTML = `
+                                    <div style="padding: 3rem 2rem; text-align: center;">
+                                        <h2>📬 Alerts & Notifications</h2>
+                                        <div style="margin-top: 2rem; font-size: 3rem; opacity: 0.3;">🔔</div>
+                                        <p style="color: #666; margin-top: 1rem;">No notifications yet</p>
+                                        <p style="color: #999; font-size: 0.9rem; margin-top: 0.5rem;">You'll see notifications here when you have new activity</p>
+                                    </div>
+                                `;
+                            } else {
+                                let notificationsHTML = `
+                                    <div style="padding: 1.5rem;">
+                                        <h2 style="margin-bottom: 1.5rem;">📬 Alerts & Notifications</h2>
+                                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                `;
+
+                                notifications.forEach(notif => {
+                                    const timeAgo = window.getTimeAgo ? window.getTimeAgo(new Date(notif.createdAt)) : 'Recently';
+                                    const isUnread = !notif.isRead;
+
+                                    notificationsHTML += `
+                                        <div onclick="window.handleNotificationClick && window.handleNotificationClick('${notif.id}')"
+                                             style="padding: 1rem; background: ${isUnread ? '#f0f8ff' : 'white'}; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; border-left: 4px solid ${isUnread ? '#4b5c09' : '#ddd'};">
+                                            <div style="font-weight: ${isUnread ? '600' : '400'};">${notif.message || 'New notification'}</div>
+                                            <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">${timeAgo}</div>
+                                        </div>
+                                    `;
+                                });
+
+                                notificationsHTML += `
+                                        </div>
+                                        ${notifications.some(n => !n.isRead) ? `
+                                            <button onclick="window.markAllNotificationsRead && window.markAllNotificationsRead()"
+                                                    style="width: 100%; margin-top: 1.5rem; padding: 0.75rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem;">
+                                                Mark All as Read
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `;
+
+                                mainContent.innerHTML = notificationsHTML;
+                            }
+                        }).catch(error => {
+                            console.error('Failed to fetch notifications:', error);
+                            mainContent.innerHTML = `
+                                <div style="padding: 3rem 2rem; text-align: center;">
+                                    <h2>📬 Alerts & Notifications</h2>
+                                    <div style="margin-top: 2rem; font-size: 3rem; opacity: 0.3;">⚠️</div>
+                                    <p style="color: #666; margin-top: 1rem;">Failed to load notifications</p>
+                                    <button onclick="document.querySelector('[data-action=\"mobile-alerts\"]').click()"
+                                            style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #4b5c09; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+                                        Retry
+                                    </button>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        mainContent.innerHTML = `
+                            <div style="padding: 3rem 2rem; text-align: center;">
+                                <h2>📬 Alerts & Notifications</h2>
+                                <p style="color: #666; margin-top: 1rem;">Notifications system is loading...</p>
+                            </div>
+                        `;
+                    }
                 }
                 break;
 
