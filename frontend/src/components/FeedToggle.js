@@ -230,23 +230,72 @@ export class FeedToggle {
 
         // Create simple inline composer HTML
         mount.innerHTML = `
-            <div class="inline-composer-content" style="width: 100%;">
+            <div class="inline-composer-content" style="width: 100%; box-sizing: border-box;">
                 <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 8px;"></textarea>
+                <input type="file" id="inlineFileInput" accept="image/*,video/*" multiple style="display: none;" />
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-                    <button id="inlineCancelBtn" style="background: #6c757d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">Cancel</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="inlineCancelBtn" style="background: #6c757d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">Cancel</button>
+                        <button id="inlineAttachBtn" style="background: #0d6efd; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">📎 Attach</button>
+                    </div>
                     <button id="inlinePostBtn" style="background: #4b5c09; color: white; padding: 8px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 14px;">Post</button>
                 </div>
+                <div id="inlineFilePreview" style="margin-top: 8px; display: none;"></div>
             </div>
         `;
 
         // Attach event listeners
         const textarea = mount.querySelector('#inlinePostContent');
         const cancelBtn = mount.querySelector('#inlineCancelBtn');
+        const attachBtn = mount.querySelector('#inlineAttachBtn');
+        const fileInput = mount.querySelector('#inlineFileInput');
+        const filePreview = mount.querySelector('#inlineFilePreview');
         const postBtn = mount.querySelector('#inlinePostBtn');
+
+        // Store selected files
+        let selectedFiles = [];
 
         // Focus textarea
         if (textarea) {
             textarea.focus();
+        }
+
+        // Attach button - trigger file input
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+        }
+
+        // File input change - show preview
+        if (fileInput && filePreview) {
+            fileInput.addEventListener('change', (e) => {
+                selectedFiles = Array.from(e.target.files);
+
+                if (selectedFiles.length > 0) {
+                    filePreview.style.display = 'block';
+                    filePreview.innerHTML = `
+                        <div style="background: #f0f0f0; padding: 8px; border-radius: 6px; font-size: 13px;">
+                            📎 ${selectedFiles.length} file(s) selected
+                            <button id="clearFilesBtn" style="background: transparent; border: none; color: #dc3545; cursor: pointer; margin-left: 8px; font-weight: 600;">✕ Remove</button>
+                        </div>
+                    `;
+
+                    // Clear files button
+                    const clearBtn = filePreview.querySelector('#clearFilesBtn');
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', () => {
+                            selectedFiles = [];
+                            fileInput.value = '';
+                            filePreview.style.display = 'none';
+                            filePreview.innerHTML = '';
+                        });
+                    }
+                } else {
+                    filePreview.style.display = 'none';
+                    filePreview.innerHTML = '';
+                }
+            });
         }
 
         // Cancel button - hide composer, show New Post button
@@ -273,14 +322,37 @@ export class FeedToggle {
                 postBtn.textContent = 'Posting...';
 
                 try {
+                    // Prepare post data
+                    const postData = { content };
+
+                    // Add files if selected
+                    if (selectedFiles.length > 0) {
+                        postData.files = selectedFiles;
+                    }
+
                     // Use UnifiedPostCreator if available, otherwise direct API call
                     if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
-                        await window.unifiedPostCreator.createPost({ content });
+                        await window.unifiedPostCreator.createPost(postData);
                     } else if (window.apiCall) {
-                        await window.apiCall('/posts', {
-                            method: 'POST',
-                            body: JSON.stringify({ content })
-                        });
+                        // For files, need to use FormData
+                        if (selectedFiles.length > 0) {
+                            const formData = new FormData();
+                            formData.append('content', content);
+                            selectedFiles.forEach((file, index) => {
+                                formData.append('files', file);
+                            });
+
+                            await window.apiCall('/posts', {
+                                method: 'POST',
+                                body: formData,
+                                headers: {} // Let browser set Content-Type for FormData
+                            });
+                        } else {
+                            await window.apiCall('/posts', {
+                                method: 'POST',
+                                body: JSON.stringify({ content })
+                            });
+                        }
                     } else {
                         throw new Error('No posting method available');
                     }
