@@ -7,8 +7,10 @@
 .feed-controls-wrapper {
     position: fixed; /* Fixed to viewport, not sticky */
     top: 5.5vh; /* Bottom of top-bar */
-    left: 3vw; /* Match .main margin-left */
-    right: 26%; /* Match .main margin-right */
+    left: 38.5vw; /* Center of feed area (3vw + 71vw/2) */
+    transform: translateX(-50%); /* Center the wrapper itself */
+    width: auto; /* Shrink to content width */
+    max-width: 520px; /* Limit maximum width */
     z-index: 3; /* Below map overlay (z-index: 5) */
     background: #fefdf8; /* Warm cream with yellow undertones */
     padding: 3px 16px; /* Reduced vertical padding */
@@ -79,7 +81,7 @@
 
 /* Auto-hide state (scrolling down) */
 .feed-controls-wrapper.hidden {
-    transform: translateY(-100%);
+    transform: translateX(-50%) translateY(-100%); /* Maintain centering while hiding */
     opacity: 0;
     pointer-events: none;
 }
@@ -390,6 +392,9 @@
         top: 55px; /* Mobile top bar height */
         left: 0; /* Full width on mobile */
         right: 0; /* Full width on mobile */
+        transform: none; /* Remove centering transform */
+        width: auto; /* Full width on mobile */
+        max-width: none; /* No width limit on mobile */
     }
 
     .new-post-standalone-btn {
