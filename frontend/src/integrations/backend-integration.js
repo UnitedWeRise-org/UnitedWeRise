@@ -396,7 +396,10 @@ class OnboardingTrigger {
         // Also listen for direct login events as fallback
         window.addEventListener('userLoggedIn', (event) => {
             if (event.detail && event.detail.user) {
-                this.checkOnboardingStatus(event.detail.user);
+                // Delay onboarding check to allow cookies to propagate after login
+                setTimeout(() => {
+                    this.checkOnboardingStatus(event.detail.user);
+                }, 500); // 500ms delay for cookie propagation
             }
         });
 
@@ -404,7 +407,10 @@ class OnboardingTrigger {
         window.addEventListener('appInitializationComplete', (event) => {
             if (event.detail && event.detail.user) {
                 console.log('🎯 App initialization complete, checking onboarding...');
-                this.checkOnboardingStatus(event.detail.user);
+                // Delay onboarding check to allow cookies to propagate
+                setTimeout(() => {
+                    this.checkOnboardingStatus(event.detail.user);
+                }, 500); // 500ms delay for cookie propagation
             }
         });
     }
