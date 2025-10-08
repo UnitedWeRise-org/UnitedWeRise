@@ -7,16 +7,17 @@
 .feed-controls-wrapper {
     position: fixed; /* Fixed to viewport, not sticky */
     top: 5.5vh; /* Bottom of top-bar */
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%); /* Center horizontally */
-    width: auto; /* Hug content */
-    max-width: 500px; /* Prevent too wide */
+    left: 3vw; /* Match .main margin-left */
+    right: 26%; /* Match .main margin-right */
     z-index: 3; /* Below map overlay (z-index: 5) */
     background: #fefdf8; /* Warm cream with yellow undertones */
     padding: 3px 16px; /* Reduced vertical padding */
     border-bottom: 1px solid #e8e2d5; /* Warm greige border */
     box-shadow: 0 2px 4px rgba(75, 92, 9, 0.06); /* Olive-tinted shadow */
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center contents horizontally */
 }
 
 /* Stand-alone New Post Button */
@@ -387,10 +388,8 @@
     .feed-controls-wrapper {
         padding: 3px 12px; /* Reduced vertical padding */
         top: 55px; /* Mobile top bar height */
-        left: 50%; /* Center on mobile */
-        transform: translateX(-50%); /* Center on mobile */
-        width: calc(100% - 24px); /* Nearly full width with margins */
-        max-width: 500px;
+        left: 0; /* Full width on mobile */
+        right: 0; /* Full width on mobile */
     }
 
     .new-post-standalone-btn {

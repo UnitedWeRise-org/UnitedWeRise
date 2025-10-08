@@ -228,29 +228,76 @@ export class FeedToggle {
         // Show composer mount
         mount.style.display = 'block';
 
-        // Initialize UnifiedPostCreator inline
-        if (window.unifiedPostCreator && typeof window.unifiedPostCreator.initializeInline === 'function') {
-            window.unifiedPostCreator.initializeInline({
-                mountPoint: mount,
-                onPost: () => {
-                    // After posting, hide composer and show button again
+        // Create simple inline composer HTML
+        mount.innerHTML = `
+            <div class="inline-composer-content" style="width: 100%;">
+                <textarea id="inlinePostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box; margin-bottom: 8px;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <button id="inlineCancelBtn" style="background: #6c757d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none;">Cancel</button>
+                    <button id="inlinePostBtn" style="background: #4b5c09; color: white; padding: 8px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 14px;">Post</button>
+                </div>
+            </div>
+        `;
+
+        // Attach event listeners
+        const textarea = mount.querySelector('#inlinePostContent');
+        const cancelBtn = mount.querySelector('#inlineCancelBtn');
+        const postBtn = mount.querySelector('#inlinePostBtn');
+
+        // Focus textarea
+        if (textarea) {
+            textarea.focus();
+        }
+
+        // Cancel button - hide composer, show New Post button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                mount.style.display = 'none';
+                mount.innerHTML = '';
+                btn.style.display = 'flex';
+            });
+        }
+
+        // Post button - create post
+        if (postBtn) {
+            postBtn.addEventListener('click', async () => {
+                const content = textarea?.value?.trim();
+
+                if (!content) {
+                    alert('Please enter some content for your post');
+                    return;
+                }
+
+                // Disable button during posting
+                postBtn.disabled = true;
+                postBtn.textContent = 'Posting...';
+
+                try {
+                    // Use UnifiedPostCreator if available, otherwise direct API call
+                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
+                        await window.unifiedPostCreator.createPost({ content });
+                    } else if (window.apiCall) {
+                        await window.apiCall('/posts', {
+                            method: 'POST',
+                            body: JSON.stringify({ content })
+                        });
+                    } else {
+                        throw new Error('No posting method available');
+                    }
+
+                    // Success - hide composer, show button, refresh feed
                     mount.style.display = 'none';
-                    mount.innerHTML = ''; // Clear content
+                    mount.innerHTML = '';
                     btn.style.display = 'flex';
                     this.loadFeed(this.currentFeed);  // Refresh feed
-                },
-                onCancel: () => {
-                    // On cancel, hide composer and show button again
-                    mount.style.display = 'none';
-                    mount.innerHTML = ''; // Clear content
-                    btn.style.display = 'flex';
+                } catch (error) {
+                    console.error('Failed to create post:', error);
+                    alert('Failed to create post. Please try again.');
+                    // Re-enable button
+                    postBtn.disabled = false;
+                    postBtn.textContent = 'Post';
                 }
             });
-        } else {
-            console.error('FeedToggle: unifiedPostCreator.initializeInline not available');
-            // Fallback: show button again
-            mount.style.display = 'none';
-            btn.style.display = 'flex';
         }
     }
 
