@@ -272,22 +272,39 @@ export class FeedToggle {
             fileInput.addEventListener('change', (e) => {
                 selectedFiles = Array.from(e.target.files);
                 console.log(`📎 Files selected: ${selectedFiles.length}`, selectedFiles.map(f => f.name));
+                console.log('📎 File preview element:', filePreview);
+                console.log('📎 File preview current display:', filePreview.style.display);
 
                 if (selectedFiles.length > 0) {
-                    filePreview.style.display = 'block';
-
-                    // Create file list
-                    const fileList = selectedFiles.map(f => `<div style="font-size: 12px; color: #555; margin-left: 8px;">• ${f.name}</div>`).join('');
+                    // Create file list with image thumbnails for images
+                    const fileList = selectedFiles.map(f => {
+                        if (f.type.startsWith('image/')) {
+                            const url = URL.createObjectURL(f);
+                            return `<div style="font-size: 12px; color: #555; margin-left: 8px; display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                <img src="${url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;" />
+                                <span>• ${f.name}</span>
+                            </div>`;
+                        } else {
+                            return `<div style="font-size: 12px; color: #555; margin-left: 8px; margin-top: 4px;">• ${f.name}</div>`;
+                        }
+                    }).join('');
 
                     filePreview.innerHTML = `
-                        <div style="background: #e8f4ea; border: 1px solid #4b5c09; padding: 10px; border-radius: 6px; font-size: 13px; color: #4b5c09;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div style="background: #e8f4ea; border: 2px solid #4b5c09; padding: 12px; border-radius: 8px; font-size: 13px; color: #4b5c09; margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <strong>📎 ${selectedFiles.length} file(s) attached</strong>
-                                <button id="clearFilesBtn" style="background: transparent; border: none; color: #dc3545; cursor: pointer; font-weight: 600; font-size: 14px;">✕ Remove</button>
+                                <button id="clearFilesBtn" style="background: #dc3545; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">✕ Remove</button>
                             </div>
                             ${fileList}
                         </div>
                     `;
+
+                    // Force display block
+                    filePreview.style.display = 'block';
+                    filePreview.style.visibility = 'visible';
+                    filePreview.style.opacity = '1';
+                    console.log('📎 File preview display set to:', filePreview.style.display);
+                    console.log('📎 File preview HTML:', filePreview.innerHTML.substring(0, 100));
 
                     // Clear files button
                     const clearBtn = filePreview.querySelector('#clearFilesBtn');
@@ -305,6 +322,8 @@ export class FeedToggle {
                     filePreview.innerHTML = '';
                 }
             });
+        } else {
+            console.error('📎 File input or preview element not found:', { fileInput: !!fileInput, filePreview: !!filePreview });
         }
 
         // Cancel button - hide composer, show New Post button
