@@ -1,6 +1,6 @@
 # 📚 MASTER DOCUMENTATION - United We Rise Platform
-**Last Updated**: September 23, 2025
-**Version**: 5.8.0 (Super-Admin Role System & Production Security Enhancements)
+**Last Updated**: October 8, 2025
+**Version**: 5.8.1 (Authentication Race Condition Fix & UI Polish)
 **Status**: 🟢 PRODUCTION READY - ENTERPRISE SECURITY LEVEL
 
 > **📋 Historical Changes**: See CHANGELOG.md for complete development history and feature timeline
@@ -6075,28 +6075,37 @@ export const userState = new UserState();
 export async function handleLogin() {
   const email = document.getElementById('loginEmail')?.value;
   const password = document.getElementById('loginPassword')?.value;
-  
+
   if (!email || !password) {
     showAuthMessage('Please fill in all fields', 'error', 'login');
     return;
   }
-  
+
   try {
     showAuthMessage('Logging in...', 'info', 'login');
-    
-    const response = await apiClient.call('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (response.success && response.user) {
-      userState.current = response.user;
-      setUserLoggedIn(response.user);
-      
-      showAuthMessage('Login successful!', 'success', 'login');
-      setTimeout(() => closeAuthModal(), 1000);
+
+    // Use unified auth manager for login (handles TOTP, state sync, etc.)
+    const result = await unifiedAuthManager.login(email, password);
+
+    if (result.success) {
+      showAuthMessage('Login successful! Reloading...', 'success', 'login');
+
+      // ARCHITECTURAL DECISION: Page reload after successful login
+      // This ensures httpOnly cookie is available for all subsequent requests
+      // Prevents race conditions with cookie propagation (see below)
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+
+    } else if (result.requiresTOTP) {
+      // Delegate to unified login system for TOTP handling
+      const totpResult = await window.unifiedLogin(email, password, 'main-site');
+      if (totpResult.success) {
+        showAuthMessage('Login successful! Reloading...', 'success');
+        setTimeout(() => window.location.reload(), 500);
+      }
     } else {
-      showAuthMessage(response.message || 'Login failed', 'error', 'login');
+      showAuthMessage(result.error || 'Login failed', 'error', 'login');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -6104,6 +6113,40 @@ export async function handleLogin() {
   }
 }
 ```
+
+**Why Page Reload After Login?**
+
+**Problem**: httpOnly Cookie Propagation Race Condition
+- Backend sets httpOnly authentication cookie on successful login
+- Frontend JavaScript cannot access httpOnly cookies (security feature)
+- Multiple systems (feed, quests, badges, onboarding) make API calls immediately after login
+- Browser hasn't propagated cookie to be available for subsequent requests yet
+- These API calls get 401 Unauthorized → User logged out immediately after successful login
+
+**Failed Approaches**:
+- ❌ 500ms delay before API calls - Still got 401s on mobile
+- ❌ 800ms delay before system sync - Still got 401s, unreliable timing
+- ❌ Grace period to ignore 401s - Complex, error-prone, poor security
+
+**Solution**: Page Reload (Industry Standard Pattern)
+1. User logs in → Backend sets httpOnly cookie → Login succeeds
+2. Page reloads → Cookie already in browser, available for all requests
+3. All components initialize fresh with authenticated state
+4. Zero race conditions possible
+
+**Why This Is NOT a Workaround**:
+- Industry standard (GitHub, GitLab, many major platforms reload after login)
+- Simpler and more reliable than complex state synchronization
+- Eliminates entire class of race condition bugs
+- Provides clean slate for authenticated session
+- Ensures consistent state across all components
+
+**Unified Auth Manager Pattern (`unified-manager.js`)**:
+- Single source of truth for authentication state
+- Handles login, logout, TOTP, session verification
+- Dispatches events: `userLoggedIn`, `userLoggedOut`, `authStateChanged`
+- Synchronizes state across legacy and modern systems
+- All login flows (desktop modal, mobile nav) use same manager
 
 **Session Management (`session.js`)**:
 ```javascript
