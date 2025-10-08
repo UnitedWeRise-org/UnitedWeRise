@@ -82,13 +82,7 @@ export class FeedToggle {
 
         const toggleHtml = `
             <div class="feed-controls-wrapper">
-                <!-- Stand-alone New Post Button -->
-                <button class="new-post-standalone-btn" data-action="new-post">
-                    <span class="new-post-icon">➕</span>
-                    <span class="new-post-label">New Post</span>
-                </button>
-
-                <!-- 4-Item Toggle (original style) -->
+                <!-- 4-Item Toggle (original style) - NOW ON TOP -->
                 <div class="feed-toggle-container">
                     <div class="feed-toggle">
                         <button class="feed-toggle-btn ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
@@ -111,6 +105,15 @@ export class FeedToggle {
                         </button>
                     </div>
                 </div>
+
+                <!-- New Post Button - NOW ON BOTTOM -->
+                <button class="new-post-standalone-btn" data-action="new-post">
+                    <span class="new-post-icon">➕</span>
+                    <span class="new-post-label">New Post</span>
+                </button>
+
+                <!-- Inline Composer Mount Point (hidden by default) -->
+                <div id="inline-composer-mount" style="display: none;"></div>
             </div>
         `;
 
@@ -191,14 +194,12 @@ export class FeedToggle {
             });
         });
 
-        // New Post button (stand-alone)
+        // New Post button (stand-alone) - show inline composer
         const newPostBtn = document.querySelector('.new-post-standalone-btn');
         if (newPostBtn) {
             newPostBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                if (window.newPostModal) {
-                    window.newPostModal.show();
-                }
+                this.showInlineComposer();
             });
         }
 
@@ -209,6 +210,47 @@ export class FeedToggle {
                 e.preventDefault();
                 // Tooltip shows on hover/tap via CSS
             });
+        }
+    }
+
+    showInlineComposer() {
+        const btn = document.querySelector('.new-post-standalone-btn');
+        const mount = document.querySelector('#inline-composer-mount');
+
+        if (!btn || !mount) {
+            console.error('FeedToggle: New Post button or composer mount not found');
+            return;
+        }
+
+        // Hide New Post button
+        btn.style.display = 'none';
+
+        // Show composer mount
+        mount.style.display = 'block';
+
+        // Initialize UnifiedPostCreator inline
+        if (window.unifiedPostCreator && typeof window.unifiedPostCreator.initializeInline === 'function') {
+            window.unifiedPostCreator.initializeInline({
+                mountPoint: mount,
+                onPost: () => {
+                    // After posting, hide composer and show button again
+                    mount.style.display = 'none';
+                    mount.innerHTML = ''; // Clear content
+                    btn.style.display = 'flex';
+                    this.loadFeed(this.currentFeed);  // Refresh feed
+                },
+                onCancel: () => {
+                    // On cancel, hide composer and show button again
+                    mount.style.display = 'none';
+                    mount.innerHTML = ''; // Clear content
+                    btn.style.display = 'flex';
+                }
+            });
+        } else {
+            console.error('FeedToggle: unifiedPostCreator.initializeInline not available');
+            // Fallback: show button again
+            mount.style.display = 'none';
+            btn.style.display = 'flex';
         }
     }
 

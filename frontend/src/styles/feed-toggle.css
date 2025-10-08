@@ -7,8 +7,10 @@
 .feed-controls-wrapper {
     position: fixed; /* Fixed to viewport, not sticky */
     top: 5.5vh; /* Bottom of top-bar */
-    left: 3vw; /* Match .main margin-left */
-    right: 26%; /* Match .main margin-right */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Center horizontally */
+    width: auto; /* Hug content */
+    max-width: 500px; /* Prevent too wide */
     z-index: 3; /* Below map overlay (z-index: 5) */
     background: #fefdf8; /* Warm cream with yellow undertones */
     padding: 3px 16px; /* Reduced vertical padding */
@@ -19,10 +21,10 @@
 
 /* Stand-alone New Post Button */
 .new-post-standalone-btn {
-    display: block;
+    display: flex;
     width: 100%;
     max-width: 500px;
-    margin: 0 auto 3px auto; /* Reduced bottom margin */
+    margin: 3px auto 0 auto; /* Top margin instead of bottom */
     padding: 10px 20px; /* Slightly reduced vertical padding */
     background: #4b5c09; /* Olive green */
     color: #ffffff;
@@ -31,7 +33,6 @@
     font-weight: 600;
     font-size: 15px;
     cursor: pointer;
-    display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -57,6 +58,17 @@
 .new-post-label {
     font-size: 15px;
     font-weight: 600;
+}
+
+/* Inline Composer Mount Point */
+#inline-composer-mount {
+    width: 100%;
+    max-width: 500px;
+    margin: 3px auto 0 auto;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(75, 92, 9, 0.15);
 }
 
 /* Toggle Container */
@@ -88,7 +100,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 8px 16px; /* Reduced vertical padding */
+    padding: 4px 16px; /* Further reduced vertical padding */
     background: transparent;
     border: none;
     border-radius: 6px;
@@ -375,14 +387,17 @@
     .feed-controls-wrapper {
         padding: 3px 12px; /* Reduced vertical padding */
         top: 55px; /* Mobile top bar height */
-        left: 0; /* Full width on mobile */
-        right: 0; /* Full width on mobile */
+        left: 50%; /* Center on mobile */
+        transform: translateX(-50%); /* Center on mobile */
+        width: calc(100% - 24px); /* Nearly full width with margins */
+        max-width: 500px;
     }
 
     .new-post-standalone-btn {
         padding: 8px 16px; /* Reduced vertical padding */
         font-size: 14px;
-        margin-bottom: 3px; /* Reduced spacing */
+        margin-top: 3px; /* Top margin for reversed order */
+        margin-bottom: 0;
     }
 
     .new-post-icon {
