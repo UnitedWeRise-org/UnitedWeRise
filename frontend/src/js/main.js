@@ -64,6 +64,7 @@ import '../components/MobileTopBar.js';
 import '../components/MobileBottomBar.js';
 import '../components/TopBarController.js';
 import '../components/FeedToggle.js';
+import '../components/NewPostModal.js';
 import '../components/SavedPostsView.js';
 
 // Phase 4j: My Feed handlers (personalized feed system)

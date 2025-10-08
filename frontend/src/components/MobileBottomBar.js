@@ -102,7 +102,7 @@ export class MobileBottomBar {
                 <div class="mobile-nav-icon">🏛️</div>
                 <div class="mobile-nav-label">Civic</div>
             </a>
-            <a href="#" class="mobile-nav-item ${this.activeButton === 'post' ? 'active' : ''}" data-action="mobile-post">
+            <a href="#" class="mobile-nav-item ${this.activeButton === 'post' ? 'active' : ''}" data-action="mobile-post" data-modal="new-post">
                 <div class="mobile-nav-icon">➕</div>
                 <div class="mobile-nav-label">Post</div>
             </a>
@@ -179,6 +179,15 @@ export class MobileBottomBar {
 
             const action = button.dataset.action;
             const hasSubmenu = button.dataset.hasSubmenu === 'true';
+            const hasModal = button.dataset.modal;
+
+            // If button opens modal, show it
+            if (hasModal === 'new-post') {
+                if (window.newPostModal) {
+                    window.newPostModal.show();
+                }
+                return;
+            }
 
             // If button has submenu, show it
             if (hasSubmenu) {

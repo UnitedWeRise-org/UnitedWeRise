@@ -301,5 +301,40 @@ router.get('/trending', async (req, res) => {
         });
     }
 });
+// PHASE 2 STUB: Get user's saved feed filters
+router.get('/filters', auth_1.requireAuth, async (req, res) => {
+    try {
+        // Phase 2 feature - return empty array for now
+        res.json({
+            success: true,
+            filters: [],
+            message: 'Filter system coming soon in Phase 2!'
+        });
+    }
+    catch (error) {
+        console.error('Get feed filters error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve filters'
+        });
+    }
+});
+// PHASE 2 STUB: Create new feed filter
+router.post('/filters', auth_1.requireAuth, async (req, res) => {
+    try {
+        // Phase 2 feature - not yet implemented
+        res.status(501).json({
+            success: false,
+            error: 'Filter creation not yet available - Coming soon in Phase 2!'
+        });
+    }
+    catch (error) {
+        console.error('Create feed filter error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create filter'
+        });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=feed.js.map

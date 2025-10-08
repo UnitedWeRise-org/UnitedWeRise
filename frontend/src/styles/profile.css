@@ -367,6 +367,98 @@
 }
 
 /* ========================================
+   SAVED POSTS SECTION
+======================================== */
+
+/* Saved Posts Section - Mobile First */
+.my-profile .saved-posts-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.my-profile .saved-posts-section h3 {
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.my-profile .empty-saved-posts {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #999;
+}
+
+.my-profile .empty-saved-posts .empty-icon {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.my-profile .empty-saved-posts h4 {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.my-profile .empty-saved-posts p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Saved post cards (fallback rendering) */
+.my-profile .saved-post-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: box-shadow 0.3s;
+}
+
+.my-profile .saved-post-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Ensure saved posts container is scrollable on mobile */
+#profileSavedPosts {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Mobile responsive */
+@media (max-width: 767px) {
+    .my-profile .saved-posts-section {
+        padding: 1rem 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .my-profile .saved-posts-section h3 {
+        font-size: 1.1rem;
+    }
+
+    .my-profile .empty-saved-posts {
+        padding: 2rem 0.5rem;
+    }
+
+    .my-profile .saved-post-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Tablet and Desktop */
+@media screen and (min-width: 768px) {
+    .my-profile .saved-posts-section {
+        padding-top: 2.5rem;
+        margin-top: 2.5rem;
+    }
+
+    #profileSavedPosts {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+}
+
+/* ========================================
    ACCESSIBILITY IMPROVEMENTS
 ======================================== */
 

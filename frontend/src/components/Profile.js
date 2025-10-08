@@ -13,6 +13,7 @@ class Profile {
         this.currentTab = 'activity'; // Default to activity tab
         this.userPosts = [];
         this.userActivities = [];
+        this.savedPosts = []; // Saved posts for profile display
         this.activityFilters = {
             POST_CREATED: true,
             POST_EDITED: true,
@@ -355,7 +356,12 @@ class Profile {
         // Load data for the initial tab if needed
         if (this.currentTab === 'activity') {
             adminDebugLog('📊 Initial render with activity tab, loading activities...');
-            setTimeout(() => this.loadUserActivities(), 100);
+            setTimeout(() => {
+                this.loadUserActivities();
+                if (this.isOwnProfile) {
+                    this.loadSavedPosts();
+                }
+            }, 100);
         } else if (this.currentTab === 'photos') {
             adminDebugLog('📸 Initial render with photos tab, loading galleries...');
             setTimeout(() => this.loadPhotoGalleries(), 100);
@@ -524,6 +530,20 @@ class Profile {
                         Load More Activity
                     </button>
                 </div>
+
+                <!-- Saved Posts Section -->
+                ${this.isOwnProfile ? `
+                    <div class="saved-posts-section">
+                        <h3 style="margin-bottom: 1rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>📌</span> Saved Posts
+                        </h3>
+                        <div id="profileSavedPosts">
+                            <div class="loading" style="text-align: center; padding: 2rem; color: #666;">
+                                Loading saved posts...
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
 
@@ -3919,6 +3939,9 @@ class Profile {
 
                 // Load and display user badges
                 this.loadUserBadges();
+
+                // Load saved posts
+                this.loadSavedPosts();
             }, 100);
         }
 
@@ -3996,6 +4019,77 @@ class Profile {
                     </div>
                 `;
             }
+        }
+    }
+
+    async loadSavedPosts() {
+        try {
+            adminDebugLog('Profile', 'Loading saved posts...');
+            const response = await window.apiCall('/posts/saved?limit=20');
+
+            if (response.ok && response.data.success) {
+                this.savedPosts = response.data.data.posts || [];
+                adminDebugLog('Profile', `Loaded ${this.savedPosts.length} saved posts`);
+                this.renderSavedPosts();
+            } else {
+                throw new Error(response.data?.error || 'Failed to load saved posts');
+            }
+        } catch (error) {
+            adminDebugError('Profile', 'Error loading saved posts:', error);
+            const container = document.getElementById('profileSavedPosts');
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-state" style="text-align: center; padding: 2rem; color: #dc3545;">
+                        <h4>Unable to load saved posts</h4>
+                        <p>${error.message}</p>
+                        <button onclick="window.profile.loadSavedPosts()" class="btn" style="margin-top: 1rem;">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    renderSavedPosts() {
+        const container = document.getElementById('profileSavedPosts');
+        if (!container) return;
+
+        if (this.savedPosts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-saved-posts">
+                    <span class="empty-icon" style="font-size: 3rem; display: block; margin-bottom: 1rem;">🔖</span>
+                    <h4 style="margin-bottom: 0.5rem; color: #333;">No Saved Posts Yet</h4>
+                    <p style="color: #666;">Bookmark posts you want to read later by clicking the bookmark icon.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Use UnifiedPostRenderer if available
+        if (window.unifiedPostRenderer) {
+            container.innerHTML = ''; // Clear loading state
+            this.savedPosts.forEach(post => {
+                const postHtml = window.unifiedPostRenderer.render(post, { context: 'profile' });
+                container.insertAdjacentHTML('beforeend', postHtml);
+            });
+            adminDebugLog('Profile', `Rendered ${this.savedPosts.length} saved posts with UnifiedPostRenderer`);
+        } else {
+            // Fallback to basic rendering
+            adminDebugWarn('Profile', 'UnifiedPostRenderer not available, using fallback rendering');
+            container.innerHTML = this.savedPosts.map(post => `
+                <div class="saved-post-card" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong>${post.author?.displayName || post.author?.username || 'Unknown'}</strong>
+                    </div>
+                    <div style="color: #333; white-space: pre-wrap;">${post.content || ''}</div>
+                    ${post.photos && post.photos.length > 0 ? `
+                        <div style="margin-top: 0.5rem;">
+                            <img src="${post.photos[0].thumbnailUrl || post.photos[0].url}"
+                                 alt="Post image"
+                                 style="max-width: 100%; border-radius: 4px;">
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
         }
     }
 

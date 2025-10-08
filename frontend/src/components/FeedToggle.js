@@ -10,7 +10,8 @@ export class FeedToggle {
         this.currentFeed = 'discover'; // Default to discover feed
         this.caches = {
             following: [],
-            discover: []
+            discover: [],
+            saved: []
         };
         this.showNewUserBanner = false;
         this.showEmptyFollowingState = false;
@@ -80,16 +81,29 @@ export class FeedToggle {
         }
 
         const toggleHtml = `
-            <div class="feed-toggle-container">
-                <div class="feed-toggle">
-                    <button class="feed-toggle-btn ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
-                        <span class="feed-toggle-icon">🔥</span>
-                        <span class="feed-toggle-label">Discover</span>
+            <div class="feed-toggle-container feed-toggle-5item">
+                <div class="feed-toggle-5item-inner">
+                    <button class="feed-toggle-item new-post-btn" data-action="new-post">
+                        <span class="feed-toggle-item-icon">➕</span>
+                        <span class="feed-toggle-item-label">New Post</span>
                     </button>
-                    <button class="feed-toggle-btn ${this.currentFeed === 'following' ? 'active' : ''}" data-feed-type="following">
-                        <span class="feed-toggle-icon">👥</span>
-                        <span class="feed-toggle-label">Following</span>
-                        <span class="unread-badge" style="display: none;"></span>
+                    <button class="feed-toggle-item ${this.currentFeed === 'discover' ? 'active' : ''}" data-feed-type="discover">
+                        <span class="feed-toggle-item-icon">🔥</span>
+                        <span class="feed-toggle-item-label">Discover</span>
+                    </button>
+                    <button class="feed-toggle-item ${this.currentFeed === 'following' ? 'active' : ''}" data-feed-type="following">
+                        <span class="feed-toggle-item-icon">👥</span>
+                        <span class="feed-toggle-item-label">Following</span>
+                        <span class="feed-toggle-item-badge" style="display: none;"></span>
+                    </button>
+                    <button class="feed-toggle-item ${this.currentFeed === 'saved' ? 'active' : ''}" data-feed-type="saved">
+                        <span class="feed-toggle-item-icon">🔖</span>
+                        <span class="feed-toggle-item-label">Saved</span>
+                    </button>
+                    <button class="feed-toggle-item disabled" data-action="filters-coming-soon">
+                        <span class="feed-toggle-item-icon">⚙️</span>
+                        <span class="feed-toggle-item-label">Filters</span>
+                        <span class="tooltip">Coming Soon - Save your favorite filters!</span>
                     </button>
                 </div>
             </div>
@@ -163,18 +177,39 @@ export class FeedToggle {
     }
 
     attachEventListeners() {
-        document.querySelectorAll('.feed-toggle-btn').forEach(btn => {
+        // Feed type buttons
+        document.querySelectorAll('.feed-toggle-item[data-feed-type]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const feedType = btn.dataset.feedType;
                 this.switchFeed(feedType);
             });
         });
+
+        // New Post button
+        const newPostBtn = document.querySelector('.feed-toggle-item.new-post-btn');
+        if (newPostBtn) {
+            newPostBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.newPostModal) {
+                    window.newPostModal.show();
+                }
+            });
+        }
+
+        // Filters placeholder (disabled, just tooltip)
+        const filtersBtn = document.querySelector('.feed-toggle-item.disabled');
+        if (filtersBtn) {
+            filtersBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Tooltip shows on hover/tap via CSS
+            });
+        }
     }
 
     updateToggleState() {
         // Update button states
-        document.querySelectorAll('.feed-toggle-btn').forEach(btn => {
+        document.querySelectorAll('.feed-toggle-item[data-feed-type]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.feedType === this.currentFeed);
         });
     }
@@ -182,6 +217,12 @@ export class FeedToggle {
     async switchFeed(feedType) {
         if (this.currentFeed === feedType) {
             console.log(`Already on ${feedType} feed`);
+            return;
+        }
+
+        // Validate feedType
+        if (!['discover', 'following', 'saved'].includes(feedType)) {
+            console.error(`Invalid feed type: ${feedType}`);
             return;
         }
 
@@ -237,6 +278,8 @@ export class FeedToggle {
             let posts;
             if (feedType === 'following') {
                 posts = await this.loadFollowingFeed();
+            } else if (feedType === 'saved') {
+                posts = await this.loadSavedFeed();
             } else {
                 posts = await this.loadDiscoverFeed();
             }
@@ -245,7 +288,7 @@ export class FeedToggle {
             loadingDiv.remove();
 
             // Render posts
-            this.renderPosts(posts);
+            this.renderPosts(posts, feedType);
 
             // Fade in new posts
             setTimeout(() => {
@@ -347,7 +390,47 @@ export class FeedToggle {
         return [];
     }
 
-    renderPosts(posts) {
+    async loadSavedFeed() {
+        console.log('Loading saved feed...');
+
+        // Check cache first
+        if (this.caches.saved && this.caches.saved.length > 0) {
+            console.log('Using cached saved feed');
+            return this.caches.saved;
+        }
+
+        // Safety check: Ensure apiCall is available
+        if (typeof window.apiCall !== 'function') {
+            console.error('FeedToggle: apiCall not available, cannot load Saved feed');
+            return [];
+        }
+
+        // Backend endpoint is /posts/saved
+        const response = await window.apiCall('/posts/saved?limit=50', {
+            method: 'GET'
+        });
+
+        console.log('Saved feed response:', response);
+
+        // Handle different response formats
+        let posts = null;
+        if (response && response.posts) {
+            posts = response.posts;
+        } else if (response && response.data && response.data.posts) {
+            posts = response.data.posts;
+        } else if (response && response.ok && response.data && response.data.posts) {
+            posts = response.data.posts;
+        }
+
+        if (posts && Array.isArray(posts)) {
+            this.caches.saved = posts;
+            return posts;
+        }
+
+        return [];
+    }
+
+    renderPosts(posts, feedType) {
         const container = document.getElementById('myFeedPosts');
         if (!container) return;
 
@@ -355,10 +438,16 @@ export class FeedToggle {
             const emptyDiv = document.createElement('div');
             emptyDiv.style.cssText = 'text-align: center; padding: 2rem; color: #666;';
 
-            if (this.currentFeed === 'following') {
+            if (feedType === 'following') {
                 emptyDiv.innerHTML = `
                     <p>No posts from users you follow yet.</p>
                     <p><small>Try the Discover feed to find interesting people to follow!</small></p>
+                `;
+            } else if (feedType === 'saved') {
+                emptyDiv.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 16px;">🔖</div>
+                    <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No saved posts yet</p>
+                    <p><small>Save posts by clicking the bookmark icon to read them later.</small></p>
                 `;
             } else {
                 emptyDiv.innerHTML = `
@@ -648,6 +737,7 @@ export class FeedToggle {
         } else {
             this.caches.following = [];
             this.caches.discover = [];
+            this.caches.saved = [];
         }
     }
 
