@@ -41,7 +41,7 @@
 - **Root Cause**: `MobileBottomBar` component rendered once on page load, never re-rendered after login
 - **Fix**: Added event listeners to `setupAuthListeners()` method that calls `refresh()` when auth state changes
 - **Impact**: Mobile UI now immediately updates from "Login/Sign Up" to "Feed/Civic/Post/Alerts/Menu" after successful login
-- **Commits**: TBD
+- **Commits**: `bdd1c11`
 
 **Events Listened To**:
 - `userLoggedIn` - Dispatched by unified-manager.js after login
