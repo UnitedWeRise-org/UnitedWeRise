@@ -59,20 +59,20 @@ class TrendingSystemIntegration {
                 // Store original onclick handler
                 const originalOnclick = trendingThumb.onclick;
                 
+                // Add single click for main view (removed double-click requirement)
+                trendingThumb.addEventListener('click', (e) => {
+                    // Allow default panel toggle, but prevent if we want full view
+                    // For now, keep the default panel behavior
+                });
+
                 // Add context menu for different trending view options
                 trendingThumb.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.showTrendingViewOptions(e.clientX, e.clientY);
                 });
-                
-                // Add double-click for main view
-                trendingThumb.addEventListener('dblclick', (e) => {
-                    e.preventDefault();
-                    this.toggleTrendingMainView();
-                });
-                
+
                 // Update title to indicate enhanced functionality
-                trendingThumb.title = 'Trending (Double-click for full view, right-click for options)';
+                trendingThumb.title = 'Trending (Right-click for full view options)';
                 
                 if (typeof adminDebugLog !== 'undefined') {
                     adminDebugLog('TrendingSystem', 'Enhanced Trending button with multiple view options');
@@ -85,15 +85,15 @@ class TrendingSystemIntegration {
     }
 
     addTrendingViewModeSwitch() {
-        // Add a view mode button to the existing trending updates panel
+        // Add a view mode button to the existing trending updates panel header
         const trendingHeader = document.querySelector('.trending-updates-header');
         if (trendingHeader) {
             const viewModeBtn = document.createElement('button');
             viewModeBtn.className = 'trending-view-mode-btn';
             viewModeBtn.innerHTML = '📱';
-            viewModeBtn.title = 'Switch to main view';
+            viewModeBtn.title = 'View Full Trending Digest';
             viewModeBtn.onclick = () => this.toggleTrendingMainView();
-            
+
             viewModeBtn.style.cssText = `
                 background: rgba(255,255,255,0.2);
                 color: white;
@@ -105,8 +105,45 @@ class TrendingSystemIntegration {
                 font-size: 0.8rem;
                 transition: all 0.2s;
             `;
-            
+
             trendingHeader.appendChild(viewModeBtn);
+        }
+
+        // Add a "View Full Digest" button at the bottom of the trendingUpdates panel
+        const trendingPanel = document.getElementById('trendingUpdates');
+        if (trendingPanel) {
+            // Check if button already exists
+            if (!trendingPanel.querySelector('.view-full-trending-btn')) {
+                const fullViewBtn = document.createElement('button');
+                fullViewBtn.className = 'view-full-trending-btn';
+                fullViewBtn.innerHTML = '📊 View Full Trending Digest';
+                fullViewBtn.onclick = () => this.toggleTrendingMainView();
+
+                fullViewBtn.style.cssText = `
+                    display: block;
+                    width: 100%;
+                    padding: 0.75rem;
+                    margin-top: 1rem;
+                    background: #4b5c09;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    transition: background 0.2s;
+                `;
+
+                fullViewBtn.addEventListener('mouseenter', () => {
+                    fullViewBtn.style.background = '#3a4807';
+                });
+
+                fullViewBtn.addEventListener('mouseleave', () => {
+                    fullViewBtn.style.background = '#4b5c09';
+                });
+
+                trendingPanel.appendChild(fullViewBtn);
+            }
         }
     }
 

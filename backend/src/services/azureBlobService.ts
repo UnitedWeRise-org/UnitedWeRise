@@ -24,6 +24,23 @@ export class AzureBlobService {
 
       // Create container if it doesn't exist
       console.log('🔧 Creating/verifying container exists...');
+
+      // ⚠️ SECURITY DESIGN DECISION: Public blob access
+      // Current implementation: Photos are publicly accessible via URL
+      // Rationale: Simplifies sharing and reduces server load for public content
+      //
+      // FUTURE ENHANCEMENT: Implement private storage with SAS tokens for:
+      // - Private photos (user-controlled privacy settings)
+      // - Deleted content (prevent access after deletion)
+      // - Access control based on user permissions
+      //
+      // To implement private storage:
+      // 1. Change access to 'private'
+      // 2. Generate SAS tokens in uploadFile() with expiration
+      // 3. Update frontend to request signed URLs from backend
+      // 4. Implement per-photo access control based on post visibility
+      //
+      // See: https://learn.microsoft.com/en-us/azure/storage/blobs/sas-service-create
       await this.containerClient.createIfNotExists({
         access: 'blob' // Allow public read access to blobs
       });

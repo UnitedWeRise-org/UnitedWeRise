@@ -983,44 +983,48 @@ export class RelationshipUtils {
      */
     static async getSuggestions(userId: string, type: 'follow' | 'friend' = 'follow', limit: number = 10) {
         try {
-            // Get mutual connections through followers/friends
-            const mutualQuery = type === 'follow' ? `
-                SELECT DISTINCT u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified,
-                       COUNT(mutual.id) as mutual_count
-                FROM "User" u
-                JOIN "Follow" f1 ON f1."followingId" = u.id
-                JOIN "Follow" mutual ON mutual."followerId" = f1."followerId"
-                WHERE mutual."followingId" = $1 
-                  AND u.id != $1
-                  AND NOT EXISTS (
-                    SELECT 1 FROM "Follow" existing 
-                    WHERE existing."followerId" = $1 AND existing."followingId" = u.id
-                  )
-                GROUP BY u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified
-                ORDER BY mutual_count DESC, u."followersCount" DESC
-                LIMIT $2
-            ` : `
-                SELECT DISTINCT u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified,
-                       COUNT(mutual.id) as mutual_count
-                FROM "User" u
-                JOIN "Friendship" f1 ON (f1."requesterId" = u.id OR f1."recipientId" = u.id) AND f1.status = 'ACCEPTED'
-                JOIN "Friendship" mutual ON 
-                    (mutual."requesterId" = CASE WHEN f1."requesterId" = u.id THEN f1."recipientId" ELSE f1."requesterId" END
-                     OR mutual."recipientId" = CASE WHEN f1."requesterId" = u.id THEN f1."recipientId" ELSE f1."requesterId" END)
-                    AND mutual.status = 'ACCEPTED'
-                WHERE (mutual."requesterId" = $1 OR mutual."recipientId" = $1)
-                  AND u.id != $1
-                  AND NOT EXISTS (
-                    SELECT 1 FROM "Friendship" existing 
-                    WHERE (existing."requesterId" = $1 AND existing."recipientId" = u.id)
-                       OR (existing."requesterId" = u.id AND existing."recipientId" = $1)
-                  )
-                GROUP BY u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified
-                ORDER BY mutual_count DESC
-                LIMIT $2
-            `;
+            // SECURITY FIX: Use parameterized queries to prevent SQL injection
+            let suggestions;
 
-            const suggestions = await prisma.$queryRawUnsafe(mutualQuery, userId, limit);
+            if (type === 'follow') {
+                suggestions = await prisma.$queryRaw`
+                    SELECT DISTINCT u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified,
+                           COUNT(mutual.id) as mutual_count
+                    FROM "User" u
+                    JOIN "Follow" f1 ON f1."followingId" = u.id
+                    JOIN "Follow" mutual ON mutual."followerId" = f1."followerId"
+                    WHERE mutual."followingId" = ${userId}
+                      AND u.id != ${userId}
+                      AND NOT EXISTS (
+                        SELECT 1 FROM "Follow" existing
+                        WHERE existing."followerId" = ${userId} AND existing."followingId" = u.id
+                      )
+                    GROUP BY u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified
+                    ORDER BY mutual_count DESC, u."followersCount" DESC
+                    LIMIT ${limit}
+                `;
+            } else {
+                suggestions = await prisma.$queryRaw`
+                    SELECT DISTINCT u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified,
+                           COUNT(mutual.id) as mutual_count
+                    FROM "User" u
+                    JOIN "Friendship" f1 ON (f1."requesterId" = u.id OR f1."recipientId" = u.id) AND f1.status = 'ACCEPTED'
+                    JOIN "Friendship" mutual ON
+                        (mutual."requesterId" = CASE WHEN f1."requesterId" = u.id THEN f1."recipientId" ELSE f1."requesterId" END
+                         OR mutual."recipientId" = CASE WHEN f1."requesterId" = u.id THEN f1."recipientId" ELSE f1."requesterId" END)
+                        AND mutual.status = 'ACCEPTED'
+                    WHERE (mutual."requesterId" = ${userId} OR mutual."recipientId" = ${userId})
+                      AND u.id != ${userId}
+                      AND NOT EXISTS (
+                        SELECT 1 FROM "Friendship" existing
+                        WHERE (existing."requesterId" = ${userId} AND existing."recipientId" = u.id)
+                           OR (existing."requesterId" = u.id AND existing."recipientId" = ${userId})
+                      )
+                    GROUP BY u.id, u.username, u."firstName", u."lastName", u.avatar, u.verified
+                    ORDER BY mutual_count DESC
+                    LIMIT ${limit}
+                `;
+            }
 
             return {
                 success: true,

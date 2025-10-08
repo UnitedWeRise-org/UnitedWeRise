@@ -108,7 +108,7 @@ class UnifiedAuthManager {
      */
     async _setAuthenticatedState(user, csrfToken) {
         console.log('🔄 Setting authenticated state across ALL systems...');
-        
+
         // Update internal state
         this._currentAuthState = {
             isAuthenticated: true,
@@ -116,16 +116,16 @@ class UnifiedAuthManager {
             csrfToken: csrfToken,
             sessionValid: true
         };
-        
+
         // SYNCHRONIZE ALL SYSTEMS
         await this._syncAllSystems(user, csrfToken);
-        
+
         // Notify all subscribers
         this._notifySubscribers();
-        
+
         // Trigger app reinitialization
         this._triggerAppReinitialization();
-        
+
         console.log('✅ All authentication systems synchronized');
     }
 

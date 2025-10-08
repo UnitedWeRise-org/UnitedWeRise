@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
-;
+import crypto from 'crypto';
 import { sessionManager } from '../services/sessionManager';
 import { metricsService } from '../services/metricsService';
 import { isDevelopment } from '../utils/environment';
@@ -55,8 +55,9 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       return res.status(401).json({ error: 'Invalid token.' });
     }
 
-    // Check if token is blacklisted
-    const tokenId = `${decoded.userId}_${token.slice(-10)}`; // Use last 10 chars as token ID
+    // SECURITY FIX: Check if token is blacklisted using secure hash
+    // Use SHA-256 hash of full token to prevent collisions and improve security
+    const tokenId = crypto.createHash('sha256').update(token).digest('hex');
     if (await sessionManager.isTokenBlacklisted(tokenId)) {
       return res.status(401).json({ error: 'Token has been revoked.' });
     }
@@ -112,25 +113,21 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       }
     }
 
-    // Check if development environment requires admin access for specific routes
-    if (isDevelopment() && !req.user?.isAdmin) {
-      // Define admin-only routes for staging environment
-      const adminOnlyInStaging = [
-        '/api/admin/', '/api/motd/admin/', '/api/moderation/',
-        '/api/candidate-verification/', '/api/appeals/'
-      ];
+    // SECURITY FIX: Always enforce admin access for admin routes (not just in staging)
+    const adminOnlyRoutes = [
+      '/api/admin/', '/api/motd/admin/', '/api/moderation/',
+      '/api/candidate-verification/', '/api/appeals/'
+    ];
 
-      const requiresAdminInStaging = adminOnlyInStaging.some(route =>
-        req.path.startsWith(route)
-      );
+    const requiresAdminAccess = adminOnlyRoutes.some(route =>
+      req.path.startsWith(route)
+    );
 
-      if (requiresAdminInStaging) {
-        return res.status(403).json({
-          error: 'Admin access required for this staging feature.',
-          environment: 'staging'
-        });
-      }
-      // Allow user-facing routes (photos, feed, posts, etc.) to proceed for all authenticated users
+    if (requiresAdminAccess && !req.user?.isAdmin) {
+      return res.status(403).json({
+        error: 'Admin access required for this endpoint.',
+        requiredRole: 'admin'
+      });
     }
 
     next();

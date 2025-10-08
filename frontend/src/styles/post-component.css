@@ -170,6 +170,19 @@
     color: #e91e63;
 }
 
+.post-action-btn.saved {
+    color: #ffd700;
+}
+
+.post-action-btn.save-btn .action-icon {
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+.post-action-btn.save-btn.saved .action-icon {
+    filter: grayscale(0%);
+}
+
 .post-action-btn .action-icon {
     font-size: 1.1rem;
 }

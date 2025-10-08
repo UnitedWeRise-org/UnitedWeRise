@@ -112,6 +112,19 @@ export class MyFeedHandlers {
 
         // Show My Feed in main content area
         const mainContent = document.getElementById('mainContent');
+
+        // Ensure mainContent is visible (critical for mobile)
+        mainContent.style.display = 'block';
+        mainContent.style.visibility = 'visible';
+        mainContent.style.opacity = '1';
+
+        // Scroll to top of mainContent on mobile
+        const isMobile = window.innerWidth <= 767;
+        if (isMobile) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         mainContent.innerHTML = `
             <div class="my-feed">
                 <div class="sticky-composer-wrapper">
@@ -161,9 +174,20 @@ export class MyFeedHandlers {
             console.error('📷 Could not find feedMediaUpload input to attach change listener');
         }
 
+        // Render feed toggle UI
+        if (window.feedToggle) {
+            window.feedToggle.render('myFeedPosts');
+        }
+
         // Load the posts with error handling
         try {
-            await this.loadMyFeedPosts();
+            // Use feed toggle to load the appropriate feed
+            if (window.feedToggle) {
+                await window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
+            } else {
+                // Fallback to original method
+                await this.loadMyFeedPosts();
+            }
         } catch (error) {
             console.error('❌ Error loading My Feed posts:', error);
             const feedContainer = document.getElementById('myFeedPosts');
@@ -605,24 +629,49 @@ export class MyFeedHandlers {
     /**
      * Scroll event listener for infinite scroll on My Feed
      * Migrated from index.html line 2975
+     * Also handles auto-hide/show for posting box
      */
     setupMyFeedInfiniteScroll() {
         const myFeedContainer = document.getElementById('myFeedPosts');
         if (myFeedContainer) {
             console.log('✅ Setting up infinite scroll for My Feed');
+
+            let lastScrollTop = myFeedContainer.scrollTop;
+            let ticking = false;
+
             myFeedContainer.addEventListener('scroll', () => {
-                // Skip if already loading
-                if (this.isLoadingMorePosts || !this.hasMorePosts) {
-                    return;
-                }
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        const currentScrollTop = myFeedContainer.scrollTop;
 
-                const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
-                const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+                        // Auto-hide/show posting box based on scroll direction
+                        const composerWrapper = document.querySelector('.sticky-composer-wrapper');
+                        if (composerWrapper) {
+                            if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
+                                // Scrolling down - hide posting box
+                                composerWrapper.classList.add('hidden');
+                            } else if (currentScrollTop < lastScrollTop) {
+                                // Scrolling up - show posting box
+                                composerWrapper.classList.remove('hidden');
+                            }
+                        }
 
-                // Only trigger at the very bottom to prevent multiple requests
-                if (distanceFromBottom <= 50) {
-                    console.log('🔄 Infinite scroll triggered - loading more posts');
-                    this.loadMoreMyFeedPosts();
+                        // Infinite scroll logic
+                        if (!this.isLoadingMorePosts && this.hasMorePosts) {
+                            const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
+                            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+                            // Only trigger at the very bottom to prevent multiple requests
+                            if (distanceFromBottom <= 50) {
+                                console.log('🔄 Infinite scroll triggered - loading more posts');
+                                this.loadMoreMyFeedPosts();
+                            }
+                        }
+
+                        lastScrollTop = currentScrollTop;
+                        ticking = false;
+                    });
+                    ticking = true;
                 }
             });
         } else {

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cookie Test</title>
+</head>
+<body>
+    <h1>Cookie Authentication Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="checkCookies()">Check Cookies</button>
+    <button onclick="testAdminEndpoint()">Test Admin Endpoint</button>
+    <pre id="output"></pre>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(msg) {
+            output.textContent += msg + '\n';
+        }
+
+        async function testLogin() {
+            output.textContent = '';
+            log('Testing login...');
+
+            try {
+                const response = await fetch('https://dev-api.unitedwerise.org/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'jeffrey@unitedwerise.org',
+                        password: 'YOUR_PASSWORD_HERE'
+                    })
+                });
+
+                log('Login response status: ' + response.status);
+
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                log('Response headers: ' + JSON.stringify(headers, null, 2));
+
+                const data = await response.json();
+                log('Response data: ' + JSON.stringify(data, null, 2));
+
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        function checkCookies() {
+            output.textContent = '';
+            log('Current cookies:');
+            log(document.cookie || '(none)');
+        }
+
+        async function testAdminEndpoint() {
+            output.textContent = '';
+            log('Testing admin endpoint...');
+            log('Current cookies: ' + document.cookie);
+
+            try {
+                const response = await fetch('https://dev-api.unitedwerise.org/api/admin/dashboard', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                log('Admin endpoint status: ' + response.status);
+                const data = await response.json();
+                log('Response: ' + JSON.stringify(data, null, 2));
+
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

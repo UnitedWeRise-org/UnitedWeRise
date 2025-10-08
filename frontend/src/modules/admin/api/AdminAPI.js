@@ -77,7 +77,6 @@ class AdminAPI {
                     alert('Your security session has expired. Please log in again.');
 
                     // Clear all auth data (httpOnly cookies cleared server-side)
-                    localStorage.removeItem('authToken');
                     localStorage.removeItem('currentUser');
                     window.csrfToken = null;
 
@@ -98,7 +97,6 @@ class AdminAPI {
                 console.error('🔒 Admin API: Authentication failed');
 
                 // Clear auth data and redirect to login
-                localStorage.removeItem('authToken');
                 localStorage.removeItem('currentUser');
 
                 if (window.adminAuth) {

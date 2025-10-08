@@ -171,7 +171,13 @@
     <link rel="stylesheet" href="src/styles/officials-system.css">
     <link rel="stylesheet" href="src/styles/trending-system.css">
     <link rel="stylesheet" href="src/styles/post-component.css">
+    <link rel="stylesheet" href="src/styles/saved-posts.css">
     <link rel="stylesheet" href="src/styles/responsive.css">
+
+    <!-- Mobile UX Styles -->
+    <link rel="stylesheet" href="src/styles/mobile-nav.css">
+    <link rel="stylesheet" href="src/styles/mobile-topbar.css">
+    <link rel="stylesheet" href="src/styles/feed-toggle.css">
     
     <!-- External JavaScript - Heavy libraries loaded on-demand -->
     <!-- Map libraries now loaded via smart-loader when needed -->
@@ -214,7 +220,7 @@
     <script src="src/integrations/officials-system-integration.js"></script>
     <script src="src/integrations/elections-system-integration.js"></script>
     <script src="src/integrations/trending-system-integration.js"></script>
-    <script src="src/js/mobile-navigation.js"></script>
+    <!-- mobile-navigation.js REMOVED - replaced by MobileBottomBar.js ES6 component -->
     <script src="src/js/map-dummy-data.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
     <!-- donation-system.js now loaded via ES6 modules in main.js -->
@@ -789,33 +795,7 @@
         </div>
     </div>
 
-    <div id="panel-trending" class="info-panel hidden" data-offset="1">
-        <div class="panel-header">
-            <span>Trending</span>
-            <button data-nav-action="close-trending">X</button>
-        </div>
-        <div class="panel-body">
-            <div id="trendingContent">
-                <details><summary>Local</summary>
-                    <ul>
-                        <li><a href="#" data-nav-action="open-detail" data-detail-title="Zoning Issue" data-detail-level="2">Generic Zoning Issue</a></li>
-                        <li><a href="#" data-nav-action="open-detail" data-detail-title="School District Issue" data-detail-level="2">Generic School District Issue</a></li>
-                    </ul>
-                </details>
-                <details><summary>State</summary>
-                    <ul>
-                        <li><a href="#" data-nav-action="open-detail" data-detail-title="State Tax Issue" data-detail-level="2">Generic State Tax Issue</a></li>
-                    </ul>
-                </details>
-                <details><summary>National</summary>
-                    <ul>
-                        <li><a href="#" data-nav-action="open-detail" data-detail-title="Immigration Issue" data-detail-level="2">Generic Immigration Issue</a></li>
-                        <li><a href="#" data-nav-action="open-detail" data-detail-title="Foreign Policy Issue" data-detail-level="2">Generic Foreign Policy Issue</a></li>
-                    </ul>
-                </details>
-            </div>
-        </div>
-    </div>
+    <!-- Old trending panel removed - now using unified trending system -->
 
     <!-- DEPRECATED: panel-myfeed removed - My Feed now populates in main content area per CLAUDE.md documentation -->
 
@@ -1066,53 +1046,28 @@
     From monolithic inline JavaScript to pure modular architecture.
     Thousands of hours of waste eliminated permanently.
     ============================================================================ -->
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav">
-        <a href="#" class="mobile-nav-item mobile-nav-feed active" data-action="mobile-feed">
-            <div class="mobile-nav-icon">🏠</div>
-            <div>Feed</div>
-        </a>
-        <a href="#" class="mobile-nav-item" data-action="mobile-search">
-            <div class="mobile-nav-icon">🔍</div>
-            <div>Search</div>
-        </a>
-        <a href="#" class="mobile-nav-item" data-action="mobile-map">
-            <div class="mobile-nav-icon">🗺️</div>
-            <div>Map</div>
-        </a>
-        <a href="#" class="mobile-nav-item mobile-nav-profile" data-action="mobile-profile"">
-            <div class="mobile-nav-icon">👤</div>
-            <div>Profile</div>
-        </a>
-        <a href="#" class="mobile-nav-item mobile-nav-messages" onclick="showMobileMessages()">
-            <div class="mobile-nav-icon">💬</div>
-            <div>Messages</div>
-        </a>
-    </nav>
-
-    <!-- Mobile Map Close Button -->
-    <button class="mobile-map-close" onclick="hideMobileMap()">✕ Close Map</button>
+    <!-- Mobile Navigation: Dynamically created by MobileBottomBar.js component -->
 
     <!-- Civic Organizing System -->
     <div class="civic-organizing-container" id="civicOrganizingContainer" style="display: none;">
         <div class="organizing-header">
             <h3 style="margin: 0; color: #4b5c09;">📋 Civic Organizing</h3>
-            <button onclick="closeCivicOrganizing()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+            <button class="civic-close-btn" data-action="close-civic-organizing" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
         </div>
         
         <!-- Organizing Navigation -->
         <div class="organizing-nav" style="padding: 1rem; border-bottom: 1px solid #eee; background: #f9f9f9;">
             <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                <button onclick="showPetitionCreator()" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button class="civic-action-btn" data-action="create-petition" style="padding: 0.5rem 1rem; background: #4b5c09; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     📝 Create Petition
                 </button>
-                <button onclick="showEventCreator()" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button class="civic-action-btn" data-action="organize-event" style="padding: 0.5rem 1rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     📅 Organize Event
                 </button>
-                <button onclick="showCivicBrowser()" style="padding: 0.5rem 1rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button class="civic-action-btn" data-action="find-events" style="padding: 0.5rem 1rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     🔍 Find Events
                 </button>
-                <button onclick="showMyOrganizing()" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button class="civic-action-btn" data-action="my-activities" style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     📊 My Activities
                 </button>
             </div>
@@ -1124,10 +1079,10 @@
                 <h3>Welcome to Civic Organizing</h3>
                 <p>Create petitions, organize events, and mobilize your community for positive change.</p>
                 <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
-                    <button onclick="showPetitionCreator()" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    <button class="civic-action-btn primary" data-action="create-petition" style="padding: 1rem 2rem; background: #4b5c09; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                         Start a Petition
                     </button>
-                    <button onclick="showEventCreator()" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                    <button class="civic-action-btn primary" data-action="organize-event" style="padding: 1rem 2rem; background: #1976d2; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
                         Organize an Event
                     </button>
                 </div>
@@ -1137,7 +1092,48 @@
 
     <!-- Unified Authentication System -->
     <script src="js/unifiedAuth.js"></script>
-    
+
+    <!-- CRITICAL: Bulletproof loading overlay removal -->
+    <!-- This MUST execute before modules to prevent stuck loading screens -->
+    <script>
+        (function() {
+            console.log('🔧 CRITICAL: Loading overlay failsafe activated');
+
+            // Function to forcefully hide loading overlay
+            function forceHideLoadingOverlay() {
+                const overlay = document.getElementById('page-loading-overlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none'; // Double guarantee
+                    console.log('✅ CRITICAL: Loading overlay forcefully hidden');
+                }
+            }
+
+            // Hide immediately on mobile
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+                console.log('📱 CRITICAL: Mobile detected - hiding overlay immediately');
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', forceHideLoadingOverlay);
+                } else {
+                    forceHideLoadingOverlay();
+                }
+            }
+
+            // Absolute failsafe: Hide after 2 seconds no matter what
+            setTimeout(function() {
+                console.log('⏱️ CRITICAL: 2-second failsafe triggered');
+                forceHideLoadingOverlay();
+            }, 2000);
+
+            // Additional failsafe: Hide after 5 seconds (for slow connections)
+            setTimeout(function() {
+                console.log('⏱️ CRITICAL: 5-second emergency failsafe triggered');
+                forceHideLoadingOverlay();
+            }, 5000);
+        })();
+    </script>
+
     <!-- MODULAR JAVASCRIPT SYSTEM -->
     <!-- ES6 modules for modern architecture - replaces inline JavaScript -->
     <script type="module">
@@ -1150,17 +1146,77 @@
             const overlay = document.getElementById('page-loading-overlay');
             if (overlay) {
                 overlay.classList.add('hidden');
+                console.log('✅ Page loading overlay hidden');
             }
+        }
+
+        // Failsafe: Always hide loading overlay after max 2 seconds
+        setTimeout(() => {
+            console.log('⏱️ Failsafe timeout triggered - hiding loading overlay');
+            hidePageLoadingOverlay();
+        }, 2000);
+
+        // Mobile content initialization
+        function initializeMobileContent() {
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (!isMobile) return;
+
+            console.log('📱 Initializing mobile content...');
+
+            // Hide map container on mobile
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.style.display = 'none';
+                console.log('✅ Map hidden on mobile');
+            }
+
+            // Show posts container
+            const postsContainer = document.querySelector('.posts-container');
+            if (postsContainer) {
+                postsContainer.style.display = 'block';
+                console.log('✅ Posts container visible');
+            }
+
+            // Load feed if user is authenticated
+            setTimeout(() => {
+                const isAuthenticated = window.currentUser ||
+                                      localStorage.getItem('authToken');
+
+                if (isAuthenticated && typeof loadMyFeedPosts === 'function') {
+                    console.log('✅ Loading feed for authenticated user');
+                    loadMyFeedPosts();
+                } else {
+                    console.log('ℹ️ User not authenticated or loadMyFeedPosts not available');
+                }
+            }, 500);
         }
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                initializeModules();
-
-                // Hide page loading spinner after modules are loaded
-                setTimeout(() => {
+                // Hide loading overlay immediately on mobile (no map to wait for)
+                const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile) {
+                    console.log('📱 Mobile detected - hiding loading overlay immediately');
                     hidePageLoadingOverlay();
-                }, 1000);
+                }
+
+                initializeModules().catch(error => {
+                    console.error('❌ Module initialization error:', error);
+                    // Hide overlay even if modules fail
+                    hidePageLoadingOverlay();
+                });
+
+                // Initialize mobile content after modules load
+                if (isMobile) {
+                    setTimeout(initializeMobileContent, 1000);
+                }
+
+                // Hide page loading spinner after modules are loaded (desktop)
+                if (!isMobile) {
+                    setTimeout(() => {
+                        hidePageLoadingOverlay();
+                    }, 1000);
+                }
 
                 // Run diagnostics in development
                 if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
@@ -1168,11 +1224,29 @@
                 }
             });
         } else {
-            initializeModules();
-
-            setTimeout(() => {
+            // Hide loading overlay immediately on mobile (no map to wait for)
+            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+                console.log('📱 Mobile detected - hiding loading overlay immediately');
                 hidePageLoadingOverlay();
-            }, 1000);
+            }
+
+            initializeModules().catch(error => {
+                console.error('❌ Module initialization error:', error);
+                // Hide overlay even if modules fail
+                hidePageLoadingOverlay();
+            });
+
+            // Initialize mobile content after modules load
+            if (isMobile) {
+                setTimeout(initializeMobileContent, 1000);
+            }
+
+            if (!isMobile) {
+                setTimeout(() => {
+                    hidePageLoadingOverlay();
+                }, 1000);
+            }
 
             if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
                 setTimeout(testModularFunctionality, 2000);

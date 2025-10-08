@@ -288,7 +288,7 @@ export declare class RelationshipUtils {
      */
     static getSuggestions(userId: string, type?: 'follow' | 'friend', limit?: number): Promise<{
         success: boolean;
-        data: unknown;
+        data: any;
         message?: undefined;
         error?: undefined;
     } | {

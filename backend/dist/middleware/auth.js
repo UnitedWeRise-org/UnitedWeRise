@@ -1,9 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireStagingAuth = exports.requireAdmin = exports.requireAuth = void 0;
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
-;
+const crypto_1 = __importDefault(require("crypto"));
 const sessionManager_1 = require("../services/sessionManager");
 const metricsService_1 = require("../services/metricsService");
 const environment_1 = require("../utils/environment");
@@ -30,8 +33,9 @@ const requireAuth = async (req, res, next) => {
             metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
             return res.status(401).json({ error: 'Invalid token.' });
         }
-        // Check if token is blacklisted
-        const tokenId = `${decoded.userId}_${token.slice(-10)}`; // Use last 10 chars as token ID
+        // SECURITY FIX: Check if token is blacklisted using secure hash
+        // Use SHA-256 hash of full token to prevent collisions and improve security
+        const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
         if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
             return res.status(401).json({ error: 'Token has been revoked.' });
         }
@@ -80,21 +84,17 @@ const requireAuth = async (req, res, next) => {
                 console.error('Failed to update session activity:', error);
             }
         }
-        // Check if development environment requires admin access for specific routes
-        if ((0, environment_1.isDevelopment)() && !req.user?.isAdmin) {
-            // Define admin-only routes for staging environment
-            const adminOnlyInStaging = [
-                '/api/admin/', '/api/motd/admin/', '/api/moderation/',
-                '/api/candidate-verification/', '/api/appeals/'
-            ];
-            const requiresAdminInStaging = adminOnlyInStaging.some(route => req.path.startsWith(route));
-            if (requiresAdminInStaging) {
-                return res.status(403).json({
-                    error: 'Admin access required for this staging feature.',
-                    environment: 'staging'
-                });
-            }
-            // Allow user-facing routes (photos, feed, posts, etc.) to proceed for all authenticated users
+        // SECURITY FIX: Always enforce admin access for admin routes (not just in staging)
+        const adminOnlyRoutes = [
+            '/api/admin/', '/api/motd/admin/', '/api/moderation/',
+            '/api/candidate-verification/', '/api/appeals/'
+        ];
+        const requiresAdminAccess = adminOnlyRoutes.some(route => req.path.startsWith(route));
+        if (requiresAdminAccess && !req.user?.isAdmin) {
+            return res.status(403).json({
+                error: 'Admin access required for this endpoint.',
+                requiredRole: 'admin'
+            });
         }
         next();
     }

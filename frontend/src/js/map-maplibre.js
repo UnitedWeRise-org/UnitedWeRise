@@ -2479,11 +2479,48 @@ window.updateMapViewButtons = function(currentLevel) {
     });
 };
 
-// Auto-initialize the map when the script loads
-console.log('map-maplibre.js script loaded, initializing...');
+// Expose initializeMapLibre globally for manual initialization
+window.initializeMapLibre = initializeMapLibre;
+
+// Helper function to determine if map should auto-initialize
+function shouldInitializeMap() {
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) {
+        console.log('🗺️ Map container not found, skipping initialization');
+        return false;
+    }
+
+    // Check if on mobile
+    const isMobile = window.innerWidth <= 767;
+
+    // Check if map is visible
+    const isVisible = mapContainer.style.display !== 'none' &&
+                     window.getComputedStyle(mapContainer).display !== 'none';
+
+    if (isMobile && !isVisible) {
+        console.log('🗺️ Mobile device with hidden map, skipping auto-initialization (lazy-load)');
+        console.log('   Map will initialize when requested via window.initializeMapLibre()');
+        return false;
+    }
+
+    if (isMobile && isVisible) {
+        console.log('🗺️ Mobile device with visible map, initializing...');
+    }
+
+    if (!isMobile) {
+        console.log('🗺️ Desktop device, initializing map...');
+    }
+
+    return true;
+}
+
+// Auto-initialize the map when the script loads (only if needed)
+console.log('map-maplibre.js script loaded, checking if initialization needed...');
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM ready, calling initializeMapLibre()');
-    initializeMapLibre();
+    console.log('DOM ready, checking map initialization requirements...');
+    if (shouldInitializeMap()) {
+        initializeMapLibre();
+    }
 });
 
 // Also initialize immediately if DOM is already ready
@@ -2491,9 +2528,11 @@ if (document.readyState === 'loading') {
     // DOM is still loading, wait for DOMContentLoaded
     console.log('DOM still loading, waiting for DOMContentLoaded event');
 } else {
-    // DOM already loaded, initialize immediately
-    console.log('DOM already ready, calling initializeMapLibre() immediately');
-    initializeMapLibre();
+    // DOM already loaded, check if we should initialize
+    console.log('DOM already ready, checking map initialization requirements...');
+    if (shouldInitializeMap()) {
+        initializeMapLibre();
+    }
 }
 
 // Global navigation function for trending comment clicks
