@@ -17,7 +17,7 @@
 - **Initial Attempts**: Tried delays (500ms, 800ms) and grace periods - all failed on mobile
 - **Final Solution**: Page reload after successful login (industry-standard pattern)
 - **Impact**: 100% reliable login on both desktop and mobile, zero race conditions
-- **Commits**: TBD
+- **Commits**: `627cc14`
 
 **Why This Works**:
 1. User logs in → Backend sets httpOnly cookie → Login succeeds
