@@ -730,12 +730,39 @@ export class FeedToggle {
 
         console.log(`✅ Rendering ${posts.length} posts for ${this.currentFeed} feed`);
 
+        // CRITICAL FIX: Preserve feed controls before rendering
+        // renderPostsList sets innerHTML which wipes out controls
+        const feedControls = container.querySelector('.feed-controls-wrapper');
+        const feedBanners = Array.from(container.querySelectorAll('.feed-banner'));
+        console.log('💾 Preserving controls:', {
+            hasControls: !!feedControls,
+            bannerCount: feedBanners.length
+        });
+
         // Use UnifiedPostRenderer if available (PRIORITY 1: renderPostsList for consistency)
         if (window.unifiedPostRenderer) {
             console.log('✅ Using window.unifiedPostRenderer.renderPostsList()');
             try {
                 window.unifiedPostRenderer.renderPostsList(posts, 'myFeedPosts', { context: 'feed' });
                 console.log('✅ Posts rendered successfully');
+
+                // CRITICAL FIX: Restore feed controls at the top
+                if (feedControls) {
+                    console.log('✅ Restoring feed controls');
+                    container.insertBefore(feedControls, container.firstChild);
+                }
+                // Restore banners after controls
+                if (feedBanners.length > 0) {
+                    console.log(`✅ Restoring ${feedBanners.length} banners`);
+                    const insertAfter = feedControls || container.firstChild;
+                    feedBanners.forEach(banner => {
+                        if (insertAfter && insertAfter.nextSibling) {
+                            container.insertBefore(banner, insertAfter.nextSibling);
+                        } else {
+                            container.appendChild(banner);
+                        }
+                    });
+                }
             } catch (error) {
                 console.error('❌ Error rendering with UnifiedPostRenderer:', error);
                 this.renderPostsFallback(posts, container);
