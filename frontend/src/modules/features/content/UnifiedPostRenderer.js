@@ -254,12 +254,12 @@ class UnifiedPostRenderer {
             const isGif = photo.mimeType === 'image/gif';
 
             return `
-                <div class="post-media-inline single-photo" style="margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative;">
+                <div class="post-media-inline single-photo" style="margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center; background: #f8f9fa;">
                     <img src="${photo.url}"
                          alt="Post image"
                          ${settings.enableLazyLoading ? 'loading="lazy"' : ''}
                          onclick="if(window.postComponent) postComponent.openMediaViewer('${photo.url}', '${photo.mimeType}', '${photo.id}')"
-                         style="width: 100%; max-height: ${sizeConfig.maxHeight}; object-fit: cover; cursor: pointer; display: block;">
+                         style="max-width: ${sizeConfig.maxWidth}; max-height: ${sizeConfig.maxHeight}; width: auto; height: auto; object-fit: contain; cursor: pointer; display: block;">
                     ${isGif ? '<div class="media-type-badge gif-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">GIF</div>' : ''}
                 </div>
             `;
