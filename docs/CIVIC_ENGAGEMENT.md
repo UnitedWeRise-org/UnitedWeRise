@@ -4,6 +4,67 @@
 **Last Updated**: 2025-10-09
 **Feature Launch**: October 2-3, 2025
 
+---
+
+## 🤖 For Claude Code: When to Read This File
+
+**Read this documentation when the user mentions ANY of these keywords:**
+- Quest, Badge, Gamification
+- Civic Engagement, Streak, Quest System
+- Badge Vault, Quest Progress
+- "Why do we have quests?" or "What's the purpose of badges?"
+
+**What this file contains:**
+- **PHILOSOPHY documentation (WHY)**: This is NOT just an API reference. This file explains the civic engagement philosophy and design rationale behind the Quest & Badge system
+- **System design**: Quest types explained (DAILY_HABIT vs DAILY_CIVIC vs WEEKLY_ENGAGEMENT, etc.)
+- **Quest categories**: INFORMATION vs PARTICIPATION vs ADVOCACY, etc.
+- **Quest requirements schema**: JSON structure for defining quest requirements
+- **Quest rewards schema**: JSON structure for defining quest rewards
+- **Badge qualification criteria**: How badges are earned (auto-award vs manual)
+- **Streak system**: How daily/weekly streaks work
+- **Admin workflows**: How to create quests and badges
+- **Frontend integration**: QuestProgressTracker and BadgeVault components
+- **Best practices**: Quest/badge design principles
+- **Implementation examples**: Complete code flows for quest completion and badge awarding
+
+**CRITICAL - This is a PHILOSOPHY doc:**
+Unlike `API_QUESTS_BADGES.md` (which documents WHAT endpoints exist), this file explains WHY the quest/badge system exists and HOW it should be used to encourage civic engagement.
+
+**How to use this documentation:**
+1. **Check REQUIRED READING in CLAUDE.md** - This file is listed as REQUIRED when implementing quest/badge features
+2. **Read sections 1-3 first** - System Overview, Quest System Design, Badge System Design (understand the WHY before coding)
+3. **Use the slash command** - Type `/quest-badge-docs` for a quick reference
+4. **Read companion files** - This philosophy doc should be read alongside:
+   - `docs/API_QUESTS_BADGES.md` (API endpoint documentation - WHAT)
+   - `backend/src/routes/quests.ts` (current implementation - HOW)
+   - `backend/src/routes/badges.ts` (current implementation - HOW)
+   - `backend/prisma/schema.prisma` (lines 2504-2598: database models - DATA)
+
+**Quick navigation:**
+- Philosophy & Goals: Lines 45-101
+- Quest Types Explained: Lines 129-399 (understand why each type exists)
+- Badge Types Explained: Lines 777-862 (understand badge purpose)
+- Quest Requirements Schema: Lines 437-556
+- Badge Qualification Criteria: Lines 897-1160
+- Admin Workflows: Lines 1412-1714
+- Frontend Components: Lines 1716-2047
+- Troubleshooting: Lines 2617-2795
+
+**Implementation checklist:**
+- [ ] Read sections 1-3 to understand the civic engagement philosophy
+- [ ] Review quest types to understand which type fits your feature
+- [ ] Review badge types to understand badge purpose and value
+- [ ] Check existing quests/badges for patterns before creating new ones
+- [ ] Follow design principles (lines 2514-2614) when creating quests/badges
+- [ ] Test on development environment before deploying
+- [ ] Update this file if changing system philosophy or adding new quest/badge types
+
+**When to read this file vs API_QUESTS_BADGES.md:**
+- **Read THIS file when**: User asks about quest/badge system design, philosophy, or "why do we have this?"
+- **Read API_QUESTS_BADGES.md when**: User asks about specific endpoints, request/response formats, or implementation details
+
+---
+
 ## Table of Contents
 
 1. [System Overview](#system-overview)

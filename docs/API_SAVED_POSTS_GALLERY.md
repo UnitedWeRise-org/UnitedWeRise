@@ -4,6 +4,56 @@
 **Last Updated**: 2025-10-09
 **Version**: 1.0.0
 
+---
+
+## 🤖 For Claude Code: When to Read This File
+
+**Read this documentation when the user mentions ANY of these keywords:**
+- Saved Posts, Bookmarks, Save for Later
+- Photo, Gallery, Image Upload
+- Content Moderation, AI Moderation
+- Profile Picture, Avatar
+- EXIF, Photo Privacy
+- WebP conversion
+- Azure Blob Storage (for photos)
+
+**What this file contains:**
+- **Saved Posts System** (4 endpoints): Save/unsave posts, retrieve saved posts, batch check saved status
+- **Photo Gallery System** (4 endpoints): List galleries, move photos, delete photos, set profile picture
+- **Photo Upload Pipeline** (6-layer processing): File validation, EXIF stripping, AI moderation, WebP conversion, database persistence
+- Database models: SavedPost, Photo, PhotoGallery
+- Request/response schemas with JSON examples
+- Frontend integration examples
+- Security & privacy protocols (EXIF stripping, content moderation)
+
+**How to use this documentation:**
+1. **Check REQUIRED READING in CLAUDE.md** - The AI Documentation Reference Protocol tells you to read this file when implementing saved posts or photo features
+2. **Use the slash command** - Type `/photo-docs` for a quick reference guide
+3. **Read companion files** - This API doc should be read alongside:
+   - `backend/src/routes/posts.ts` (lines 1958-2164: saved post endpoints)
+   - `backend/src/routes/galleries.ts` (gallery endpoints)
+   - `backend/src/routes/photos/index.ts` (photo upload pipeline)
+   - `backend/prisma/schema.prisma` (SavedPost, Photo models)
+
+**Quick navigation:**
+- Saved Posts endpoints: Lines 52-395
+- Photo Gallery endpoints: Lines 497-808
+- Photo Upload System (6-layer pipeline): Lines 810-1084
+- Frontend integration examples: Lines 1087-1239
+- Security & Privacy: Lines 1243-1290
+- Error handling: Lines 1311-1386
+
+**Implementation checklist:**
+- [ ] Review 6-layer photo pipeline before modifying upload logic
+- [ ] Always use idempotent save/unsave operations (existing pattern)
+- [ ] Never skip EXIF stripping (privacy requirement)
+- [ ] Never bypass AI content moderation (security requirement)
+- [ ] Use WebP conversion for all photos (performance requirement)
+- [ ] Test on development environment before deploying
+- [ ] Update this file if adding new endpoints or changing behavior
+
+---
+
 ## Overview
 
 This API provides comprehensive functionality for managing saved posts (bookmarks) and photo galleries. Users can save posts for later reading, organize photos into galleries, and manage profile pictures with complete AI moderation and security.

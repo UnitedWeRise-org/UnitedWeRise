@@ -6,6 +6,64 @@
 **ORM**: Prisma
 **Total Models**: 94
 
+---
+
+## 🤖 For Claude Code: When to Read This File
+
+**Read this documentation when the user mentions ANY of these keywords:**
+- Database Schema, Models, Relations
+- Table structure, database design
+- Data migration, schema changes
+- Model relationships, foreign keys
+- Indexes, queries, performance
+- Any specific model name (User, Post, Quest, Badge, Photo, Candidate, etc.)
+
+**What this file contains:**
+- **Complete database schema**: All 94 Prisma models with fields, types, and relationships
+- **Model organization**: Models grouped by functional area (User, Content, Civic, Electoral, etc.)
+- **Detailed model documentation**: Each model with field descriptions, relationships, indexes, and business logic
+- **Enum reference**: All 50+ enums used across the schema
+- **Best practices**: Soft deletes, timestamp tracking, JSON fields, performance optimization
+- **Migration history**: Recent migrations and database changes
+
+**How to use this documentation:**
+1. **Check REQUIRED READING in CLAUDE.md** - The AI Documentation Reference Protocol tells you to read this file when working with database models
+2. **Use the slash command** - Type `/schema-docs` for a quick reference guide
+3. **Read companion files** - This schema doc should be read alongside:
+   - `backend/prisma/schema.prisma` (actual schema definition - source of truth)
+   - `CLAUDE.md` lines 463-746 (DATABASE MIGRATION SAFETY PROTOCOL - CRITICAL)
+   - `docs/API_QUESTS_BADGES.md` (Quest/Badge model API usage)
+   - `docs/API_SAVED_POSTS_GALLERY.md` (SavedPost/Photo model API usage)
+
+**Quick navigation:**
+- User Model: Lines 156-322
+- Post Model: Lines 324-448
+- Quest Model: Lines 451-528
+- Badge Model: Lines 531-588
+- Photo Model: Lines 590-668
+- Candidate Model: Lines 671-774
+- FeedFilter Model: Lines 777-884
+- Complete enum reference: Lines 1699-1801
+- Migration best practices: Lines 1483-1541
+
+**Implementation checklist:**
+- [ ] Read CLAUDE.md DATABASE MIGRATION SAFETY PROTOCOL before ANY schema changes
+- [ ] NEVER use `prisma db push` for permanent changes (only `prisma migrate dev`)
+- [ ] Always commit migration files to git
+- [ ] Always backup production database before migrations
+- [ ] Test migrations on development database first
+- [ ] Verify correct database URL before running migrations
+- [ ] Update this file if adding new models or changing relationships
+
+**Common tasks:**
+- **Find a model**: Use Model Categories (lines 29-151) or search by model name
+- **Understand relationships**: See Model Relationships Diagram (lines 1377-1436)
+- **Check indexes**: Each model lists its indexes with explanations
+- **Learn business logic**: Each model includes "Business Logic" section
+- **Create migration**: Follow workflow in CLAUDE.md (NEVER skip this!)
+
+---
+
 ## Overview
 
 UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is designed to support a comprehensive civic engagement platform with social networking, electoral information, gamification, payment processing, and administrative tools.

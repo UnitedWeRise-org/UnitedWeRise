@@ -771,6 +771,96 @@ postgresql://uwradmin:UWR-Secure2024!@unitedwerise-db.postgres.database.azure.co
   - `NODE_ENV=staging` → staging behavior
   - `NODE_ENV=production` → production behavior
 
+## AI Documentation Reference Protocol
+
+**CRITICAL FOR CLAUDE CODE:** Before implementing features, Claude MUST read relevant documentation files. This section defines when to automatically reference which documentation.
+
+### Feature Implementation Triggers
+
+When user mentions these keywords, Claude must read the specified documentation BEFORE implementing:
+
+**Quest, Badge, Streak, Gamification, Civic Engagement:**
+→ REQUIRED READING:
+1. `docs/CIVIC_ENGAGEMENT.md` (sections 1-3: philosophy & design rationale)
+2. `docs/API_QUESTS_BADGES.md` (complete API endpoint documentation)
+3. `backend/src/routes/quests.ts` (current quest implementation)
+4. `backend/src/routes/badges.ts` (current badge implementation)
+5. `backend/prisma/schema.prisma` (lines 2504-2598: Quest/Badge models)
+
+**Photo, Gallery, Image Upload, Content Moderation:**
+→ REQUIRED READING:
+1. `docs/API_SAVED_POSTS_GALLERY.md` (sections 2-3: photo system)
+2. `backend/src/routes/galleries.ts` (gallery endpoints)
+3. `backend/src/routes/photos.ts` (photo upload & moderation)
+4. `backend/prisma/schema.prisma` (Photo, PhotoGallery models)
+
+**Saved Posts, Bookmarks, Save for Later:**
+→ REQUIRED READING:
+1. `docs/API_SAVED_POSTS_GALLERY.md` (section 1: saved posts)
+2. `backend/src/routes/posts.ts` (lines 1958-2164: saved post endpoints)
+3. `backend/prisma/schema.prisma` (SavedPost model)
+
+**Database Schema, Models, Relations, Migration:**
+→ REQUIRED READING:
+1. `docs/DATABASE_SCHEMA.md` (find relevant model group)
+2. `backend/prisma/schema.prisma` (actual schema definition)
+3. CLAUDE.md "DATABASE MIGRATION SAFETY PROTOCOL" (this file, lines 463-746)
+
+**Feed, Posts, Comments, Reactions:**
+→ REQUIRED READING:
+1. `docs/MASTER_DOCUMENTATION.md` (sections 11-13: Feed System)
+2. `backend/src/routes/posts.ts` (post endpoints)
+3. `backend/src/routes/comments.ts` (comment endpoints)
+4. `backend/prisma/schema.prisma` (Post, Comment, Reaction models)
+
+**API Endpoints, REST API, Backend Routes:**
+→ REQUIRED READING:
+1. `docs/MASTER_DOCUMENTATION.md` (section 4: API Reference)
+2. Relevant route file in `backend/src/routes/`
+3. `backend/src/middleware/` (authentication, validation)
+
+**Authentication, Login, JWT, OAuth, Google Sign-In:**
+→ REQUIRED READING:
+1. `docs/MASTER_DOCUMENTATION.md` (section 7: Authentication)
+2. `backend/src/routes/auth.ts` (auth endpoints)
+3. `backend/src/middleware/authMiddleware.ts` (auth logic)
+4. `frontend/src/js/auth.js` (frontend auth)
+
+**Frontend Components, UI, JavaScript Modules:**
+→ REQUIRED READING:
+1. `docs/MASTER_DOCUMENTATION.md` (section 8: Frontend Architecture)
+2. `frontend/src/js/main.js` (module load order)
+3. Relevant component file in `frontend/src/js/components/`
+
+### Quick Reference Commands
+
+Claude can use these slash commands to quickly access documentation:
+- `/quest-badge-docs` - Quest & Badge system documentation
+- `/photo-docs` - Photo & Gallery system documentation
+- `/schema-docs` - Database schema reference
+- `/api-patterns` - Common API implementation patterns
+
+### Implementation Workflow
+
+1. **User mentions feature** → Identify trigger keywords above
+2. **Read documentation** → Follow REQUIRED READING list for that feature
+3. **Find existing patterns** → Search codebase for similar implementations
+4. **Implement feature** → Follow established patterns and architecture
+5. **Update documentation** → If adding new endpoints or changing behavior
+
+### Why This Matters
+
+Without this protocol, Claude tends to:
+- Grep codebase for patterns (misses design rationale)
+- Implement based on code inference (misses system philosophy)
+- Create inconsistent solutions (doesn't follow established patterns)
+
+With this protocol, Claude will:
+- Understand WHY systems work the way they do
+- Follow established architectural patterns
+- Create consistent, maintainable implementations
+- Reduce technical debt and rework
+
 ## Multi-Agent Coordination
 
 **Coordination files:**

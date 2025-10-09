@@ -4,6 +4,52 @@
 **Last Updated**: 2025-10-09
 **Version**: 1.0.0
 
+---
+
+## 🤖 For Claude Code: When to Read This File
+
+**Read this documentation when the user mentions ANY of these keywords:**
+- Quest, Badge, Streak, Gamification
+- Civic Engagement (in context of quests/badges)
+- Daily Quest, Weekly Quest, Monthly Quest
+- Badge Vault, Badge Collection
+- Reputation Points, Quest Progress
+- User achievements, civic participation rewards
+
+**What this file contains:**
+- Complete API documentation for all 19 Quest & Badge endpoints (9 quest + 10 badge)
+- Database models: Quest, Badge, UserQuestProgress, UserQuestStreak, UserBadge
+- Request/response schemas with JSON examples
+- Frontend integration patterns (QuestProgressTracker, BadgeVault components)
+- Admin workflows for creating/managing quests and badges
+- Error handling and troubleshooting guides
+
+**How to use this documentation:**
+1. **Check REQUIRED READING in CLAUDE.md** - The AI Documentation Reference Protocol tells you to read this file when implementing quest/badge features
+2. **Use the slash command** - Type `/quest-badge-docs` for a quick reference guide
+3. **Read companion files** - This API doc should be read alongside:
+   - `docs/CIVIC_ENGAGEMENT.md` (philosophy & design WHY)
+   - `backend/src/routes/quests.ts` (current quest implementation)
+   - `backend/src/routes/badges.ts` (current badge implementation)
+   - `backend/prisma/schema.prisma` (lines 2504-2598: database models)
+
+**Quick navigation:**
+- Quest endpoints: Lines 151-546
+- Badge endpoints: Lines 657-1093
+- Frontend integration: Lines 1096-1172
+- Admin workflows: Lines 1174-1274
+- Database models: Lines 59-148 (quests), Lines 619-654 (badges)
+
+**Implementation checklist:**
+- [ ] Read CIVIC_ENGAGEMENT.md to understand WHY quest/badge system exists
+- [ ] Review existing endpoint patterns in this file
+- [ ] Check database schema for data models
+- [ ] Follow established JSON schemas for requirements/rewards
+- [ ] Test on development environment before deploying
+- [ ] Update this file if adding new endpoints or changing behavior
+
+---
+
 ## Overview
 
 The Quest and Badge system gamifies civic engagement on UnitedWeRise by rewarding users for meaningful participation. Quests are daily, weekly, or monthly challenges that encourage users to engage with political content, participate in civic activities, and build community. Badges are earned achievements that users can display on their profiles to showcase their civic contributions.
