@@ -18,6 +18,7 @@
 
 import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
 import { closeAuthModal, showAuthMessage } from '../modules/core/auth/modal.js';
+import { unifiedAuthManager } from '../modules/core/auth/unified-manager.js';
 
 export class AuthHandlers {
     constructor() {
@@ -168,15 +169,9 @@ export class AuthHandlers {
             const data = await result.json();
 
             if (result.ok) {
-                // Store user data and CSRF token (authentication handled by httpOnly cookies)
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                window.csrfToken = data.csrfToken;
-
-                // Close auth modal and set logged in state
+                // Use unified auth manager for perfect state synchronization
+                await unifiedAuthManager.setAuthenticatedUser(data.user, data.csrfToken);
                 closeAuthModal();
-                if (typeof setUserLoggedIn === 'function') {
-                    setUserLoggedIn(data.user);
-                }
 
                 // Show welcome message for new users
                 if (data.isNewUser) {
@@ -184,6 +179,8 @@ export class AuthHandlers {
                 } else {
                     showAuthMessage('Successfully signed in with Google!', 'success');
                 }
+
+                // unified-manager handles app reinitialization automatically
             } else {
                 showAuthMessage(data.error || 'Google sign-in failed. Please try again.', 'error');
             }
