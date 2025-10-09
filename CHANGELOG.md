@@ -8,6 +8,383 @@
 
 ---
 
+## 📜 Historical Development Sessions (Relocated from MASTER_DOCUMENTATION.md)
+
+> **Note**: This section contains detailed development session history previously maintained in MASTER_DOCUMENTATION.md. Relocated on 2025-10-09 for better organization and maintainability.
+
+### September 21, 2025 - Comprehensive UI/UX Enhancement Suite
+
+#### Complete User Interface and Experience Improvements
+**Achievement**: Successfully implemented four major UI/UX enhancements addressing user feedback and modern design standards
+
+**Problems Solved**:
+1. **MOTD System Persistence Issues** - Message of the Day panel showing on every page refresh instead of proper dismissal behavior
+2. **Non-Interactive Profile Activity** - Activity items couldn't be clicked to navigate to source content (posts, comments, likes)
+3. **Poor Activity Filter Contrast** - Light gray on light gray filters were nearly invisible, poor mobile layout
+4. **Single-Line Address Limitation** - No support for apartments, suites, units in address forms
+
+**Technical Solutions Implemented**:
+
+**1. Enhanced MOTD System**:
+- **Better Naming**: Renamed `google-cta-panel` → `motd-panel` for clarity and consistency
+- **Smooth Animations**: Added slide-in/slide-out CSS animations with proper timing
+- **Enhanced Debugging**: Improved admin debugging with token tracking and persistence verification
+- **Visual Feedback**: Added animation states and visual cues for dismissal actions
+
+**2. Interactive Profile Activity System**:
+- **Click Navigation**: Made all activity items clickable with smart routing
+- **Navigation Methods**: Added `navigateToPost()`, `navigateToComment()`, `navigateToUser()` functions
+- **Visual Feedback**: Hover effects and cursor changes for better UX
+- **Context Preservation**: Maintains user context when navigating to content
+
+**3. Activity Filter Redesign**:
+- **Horizontal Scrollable Design**: Replaced stacked checkboxes with modern chip layout
+- **Improved Contrast**: Dark text (#333) on white backgrounds with proper visibility
+- **Mobile Optimization**: Reduced space usage from 8 lines to 2-3 lines
+- **Modern UI Pattern**: Chip-based filters follow current design trends
+
+**4. 2-Line Address Support**:
+- **Database Schema**: Added `streetAddress2` field to User model (optional)
+- **Form Enhancement**: Updated AddressForm.js to support apartment/suite information
+- **Backward Compatibility**: Existing single-line addresses continue working
+- **Consistent UX**: Same pattern applied across all address-related forms
+
+**Files Modified**:
+- `frontend/index.html` - Enhanced MOTD dismissal function and panel naming
+- `frontend/src/styles/modals.css` - Updated selectors and added animations
+- `frontend/src/styles/responsive.css` - Updated mobile responsive styles
+- `frontend/src/components/Profile.js` - Interactive activity system and filter redesign
+- `frontend/src/components/AddressForm.js` - 2-line address support implementation
+- `backend/prisma/schema.prisma` - Added streetAddress2 field to User model
+
+---
+
+### September 17, 2025 - JavaScript Modularization Migration Complete
+
+#### Complete ES6 Module Architecture Implementation
+**Achievement**: Successfully migrated 8,900+ lines of inline JavaScript to professional ES6 module architecture
+
+**Problem Solved**:
+- Massive inline JavaScript in index.html creating maintenance nightmares
+- Code duplication across components causing inconsistent behavior
+- Temporal dead zone errors preventing proper initialization
+- window.apiCall returning inconsistent response formats
+- No separation of concerns or dependency management
+
+**Technical Solution**:
+1. **Module Structure Created** - Organized codebase into logical ES6 modules
+2. **API Client Standardization** - Fixed window.apiCall inconsistencies
+3. **Dependency Resolution** - Eliminated temporal dead zone errors
+4. **Backend Cookie Fix** - Resolved logout endpoint issues
+
+**Performance Improvements**:
+- Reduced JavaScript bundle size through modularization
+- Eliminated ~40% duplicate code through reusable modules
+- Improved memory usage through proper cleanup and event management
+- Enhanced developer experience with proper source maps and debugging
+
+---
+
+### August 25, 2025 - TOTP Session Duration Extension & Candidate Profile Auto-Creation Fix
+
+#### Admin Dashboard UX Enhancement: Extended TOTP Sessions
+**Achievement**: Eliminated frequent re-authentication interruptions in admin dashboard
+
+**Problem Solved**:
+- Admin dashboard TOTP tokens expired every 5 minutes causing "Failed to load candidates data" errors
+- Administrators experienced frequent interruptions requiring TOTP re-verification
+- Poor user experience for legitimate admin users during extended work sessions
+
+**Technical Solution**:
+1. **Backend Token Duration** - Extended TOTP verification tokens from 5 minutes to 24 hours
+2. **Frontend Cleanup** - Removed unnecessary refresh notification system
+3. **Security Balance** - Maintained strong authentication while improving usability
+
+#### Critical Fix: Candidate Registration Completion
+**Achievement**: Implemented missing candidate profile creation in admin approval workflow
+
+**Problem Identified**:
+- Admin approval system had incomplete candidate profile creation
+- Approved candidate registrations were not creating actual Candidate database records
+- Users flagged as candidates had no searchable profiles or platform benefits
+
+---
+
+### August 24, 2025 - Database Fix & UI Enhancements
+
+#### Emergency Database Connection Exhaustion Fix
+**Status**: ✅ **CRITICAL ISSUE RESOLVED** - Platform stability restored
+**Impact**: Prevented complete platform downtime from database connection exhaustion
+**Timeline**: Morning session (1-2 hours) - Rapid diagnosis and deployment
+
+**Problem Discovery**:
+- Multiple API endpoints failing with 500 errors
+- Backend health check showed 47+ hours uptime (abnormally long)
+- Root cause: PostgreSQL connection limit exceeded
+
+**Critical Fix Implementation (60-minute turnaround)**:
+1. **Singleton Prisma Client Created** - Global singleton pattern with connection pooling
+2. **Mass Migration Script** - Automated migration of 60+ files
+3. **Syntax Error Resolution** - Fixed import errors and compilation issues
+4. **TypeScript Compilation Verification** - All 57 migrated files compile successfully
+
+**Technical Impact**:
+- **Connection Reduction**: 600+ connections → Maximum 10 connections
+- **Stability**: Platform can now run indefinitely without connection exhaustion
+- **Performance**: No more 500 errors from database connection failures
+
+**Key Lesson**: Long-running Node.js applications require singleton database clients to prevent connection pool exhaustion.
+
+---
+
+### August 21-22, 2025 - Complete TOTP Admin Dashboard Integration & Stripe Payment System
+
+#### TOTP Implementation & Admin Dashboard Security
+**Achievement**: Full TOTP system with complete admin dashboard integration
+**Impact**: Enterprise-grade security for admin functions with seamless user experience
+
+**New Security Features Implemented**:
+1. **User TOTP Management** - Complete setup/disable workflow in user settings
+2. **Admin Dashboard Security Enhancement** - TOTP now required for all admin access
+3. **Database Schema Extensions** - New TOTP fields added to User model
+
+**Critical Issues Resolved**:
+- TOTP Modal Visibility, QR Code Display, CORS Policy
+- Verification Token System, Admin API Authentication
+- Analytics SQL Errors, Database Schema Access
+
+#### Candidate Registration Admin System & Live Stripe Integration
+**Achievement**: Complete candidate management system with live payment processing
+
+**Payment-Driven Office Selection System**:
+- New Registration Flow: Personal Info → Verification → **Payment** → Campaign Info
+- Security: Cannot select Presidential office with Local payment
+- Clear pricing tiers from Local $50 to Presidential $1,000
+
+**Live Stripe Integration**:
+- Production Stripe keys configured for real payment processing
+- Candidate registration payment workflow operational
+- Tax-deductible donation receipts with 501(c)(3) compliance
+
+---
+
+### August 20, 2025 - API Optimization Implementation & Logo Integration
+
+#### Major API Optimization Rollout
+**Achievement**: 70-80% reduction in API calls through batching and caching strategies
+**Impact**: Significant performance improvement confirmed by user testing
+
+**New Optimized Endpoints Created**:
+1. **`/api/users/:userId/complete`** - Batches 5-6 profile-related calls into 1
+2. **`/api/search/unified`** - Replaces 4 separate search calls with 1
+3. **`/api/notifications/mark-read-batch`** - Batch notification operations
+
+**Frontend Integration Optimizations**:
+- **Relationship Caching**: Follow buttons use cached data (NO API CALLS!)
+- **Search Optimization**: Single unified endpoint replaces 4 parallel calls
+- **Profile Loading**: Complete user data in 1 call instead of 5-6 calls
+- **Notification Handling**: Batch operations for marking multiple items read
+
+**Performance Results**:
+- User confirmed: "That felt a lot faster" after optimization deployment
+- Console logs show only 2 API calls on page load (was 6-8+ previously)
+- Sidebar navigation now error-free with proper function scope
+
+#### Official Logo Implementation
+**Achievement**: High-quality, optimized logo integration with circular cream background
+
+**Logo Specifications**:
+- **Original**: 2.38 MB (1536x1024 pixels) - Way too large for web
+- **Final**: 2.21 KB (60x60 circular with 99% logo coverage)
+- **Display**: 50px desktop, 45px mobile with hover effects
+
+---
+
+### August 17, 2025 - Production Error Handling & UI Consistency
+
+#### Backend Error Handling Fixes
+**Critical Production Issues**: Frontend unable to connect due to CORS and rate limiting
+**Root Cause**: Rate limiting too aggressive for normal frontend operations
+
+**Fixes Implemented**:
+- **Rate Limiting**: Increased burst limits from 30→80 requests/min for anonymous users
+- **CORS Configuration**: Verified proper CORS headers and origin allowlist
+- **Error Handling**: Added try-catch blocks with safe fallbacks for all failing endpoints
+- **API Responses**: Trending topics returns empty array instead of 500 errors
+- **Friend Status**: Safe default responses instead of crashes
+
+---
+
+### August 15, 2025 - Code Audit & Documentation Consolidation
+
+#### Comprehensive Code Audit
+**Critical Incident**: Accidentally removed working infinite scroll during cleanup
+**Lesson Learned**: Always verify functionality before removing "deprecated" code
+
+**Audit Results**:
+- 200+ lines of deprecated code removed
+- Fixed double API path issue (/api/api/)
+- Corrected background image targeting
+- Eliminated redundant API call
+- **MISTAKE**: Temporarily broke infinite scroll (immediately fixed)
+
+#### Documentation Consolidation
+**Problem**: 52+ separate documentation files causing fragmentation
+**Solution**: Created MASTER_DOCUMENTATION.md
+**Result**: Single source of truth preventing information loss
+
+---
+
+### August 13-14, 2025 - UI Navigation & Feedback System Optimization
+
+#### Feedback System Optimization
+**Performance Breakthrough**:
+- **Problem**: Post creation taking 2-3 seconds
+- **Cause**: Synchronous AI analysis blocking response
+- **Solution**: Async fire-and-forget analysis
+- **Result**: 10x speed improvement (<100ms)
+
+#### UI Navigation Overhaul
+**Toggle System Implementation**:
+- All windows now have consistent toggle behavior
+- Sidebar toggle button moved to edge
+- Default view logic implemented
+- Reduced visual clutter
+
+---
+
+### August 10-12, 2025 - Advanced Features & Map Conversation Bubbles
+
+#### Relationship System
+- Complete follow/friend implementation
+- Notification system
+- Privacy controls
+- Reusable UI components
+
+#### Photo Tagging
+- Click-to-tag interface
+- Privacy controls
+- Approval workflow
+- Notification integration
+
+#### Interactive Map Features
+**Implemented**:
+- Clickable conversation bubbles
+- Topic navigation from map
+- Full conversation view in main area
+- Geographic topic distribution
+
+---
+
+### August 8-9, 2025 - Infrastructure Setup & Security Implementation
+
+#### Azure Deployment
+- Container Apps configuration
+- Static Web Apps setup
+- Database migration
+- CI/CD pipeline
+
+#### Security Implementation
+- JWT authentication
+- Rate limiting
+- CORS configuration
+- Input validation
+
+---
+
+### July-August 2025 - Initial Development & Feature Additions
+
+#### Initial Development
+- Project structure setup
+- Basic authentication
+- Post creation system
+- User profiles
+
+#### Feature Additions
+- Messaging system
+- Political profiles
+- Election features
+- Trending system
+
+#### AI Integration
+- Azure OpenAI setup
+- Reputation system
+- Topic discovery
+- Content moderation
+
+---
+
+### August 21, 2025 - MapLibre Navigation Optimizations
+
+#### Map Performance Enhancement
+**Problem**: Excessive MapLibre AbortError console messages during map navigation
+**Root Cause**: Overlapping `flyTo()` calls causing tile request cancellations
+**User Impact**: Hundreds of error messages flooding console when switching National → Local view
+
+#### Solution Implemented - Cooldown Timer System
+**Approach**: Replace animation queue with cooldown timer for better UX
+
+**Technical Implementation**:
+1. **Animation Management**: 800ms cooldown between map operations
+2. **Latest Action Wins**: Ignore requests within cooldown period (no queuing)
+3. **Error Filtering**: Suppress expected AbortErrors, show only in debug mode
+4. **Optimized Parameters**: Speed 0.8, curve 1.2 for smoother animations
+
+**User Experience Benefits**:
+- ✅ **Eliminates Console Spam**: No more hundreds of AbortError messages
+- ✅ **Responsive Feel**: Most recent user action takes immediate priority
+- ✅ **Cleaner Code**: 27 fewer lines, simplified logic vs complex queuing
+- ✅ **Debug Support**: Optional debug mode with `window.DEBUG_MAP = true`
+
+---
+
+### August 28, 2025 - User-to-Candidate Messaging & Notification System
+
+#### Comprehensive Messaging System Implementation
+**Major Achievement**: Complete User-to-Candidate messaging system with real-time notifications and comprehensive privacy controls
+
+**WebSocket System Extension**:
+- Extended existing WebSocket system with new `USER_CANDIDATE` message type
+- Added REST endpoints for candidate inbox management and conversation history
+- Real-time bidirectional communication
+
+**Candidate Inbox Interface**:
+- Sidebar Conversations List with unread counts and timestamps
+- Message Threading with sender identification
+- Reply System with option for public responses
+- Real-time Updates via WebSocket listeners
+- Notification Integration for new messages
+
+**Comprehensive Notification Settings System**:
+- Browser Notifications with granular sub-controls
+- Email Notifications for important messages, weekly digests, security alerts
+- Candidate-Specific controls for constituent messages and election reminders
+- Hierarchical Settings with smart dependencies
+- Permission Management with browser permission request and status checking
+
+**System Integration Points**:
+- Candidate Dashboard inbox accessible via "View Messages" button
+- WebSocket Messaging for real-time bidirectional communication
+- User Settings notification preferences in MyProfile Settings tab
+- Authentication protection for all endpoints
+- Database uses existing `UnifiedMessage` and `ConversationMeta` tables
+
+---
+
+## 2025-01-13 - Onboarding System Fixes
+
+### Recently Fixed Issues
+- **✅ Broken Trigger Logic**: Fixed `this.API_BASE` reference outside class context
+- **✅ Authentication Race Conditions**: Added multiple event listeners for reliable triggering
+- **✅ API Integration**: Migrated to environment-aware API client with cookie authentication
+- **✅ Error Visibility**: Enhanced error handling and logging for better debugging
+
+**System**: Onboarding System
+**Files Modified**: `frontend/src/components/OnboardingFlow.js`, onboarding integration code
+**Impact**: Improved onboarding reliability and user experience
+
+---
+
 ## 2025-10-08 - Feed Redesign & Filter Persistence (Phase 1 MVP)
 
 ### 5-Item Feed Selector (Mobile + Desktop Responsive)
