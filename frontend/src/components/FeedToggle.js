@@ -391,13 +391,14 @@ export class FeedToggle {
                     mount.innerHTML = '';
                     btn.style.display = 'flex';
 
-                    // Force feed refresh - clear cache and reload
+                    // Force feed refresh - clear cache and reload with cache bypass
                     console.log('📝 Refreshing feed after post...');
                     if (this.caches && this.caches[this.currentFeed]) {
                         this.caches[this.currentFeed] = [];
-                        console.log('📝 Cleared feed cache');
+                        console.log('📝 Cleared FeedToggle cache');
                     }
-                    await this.loadFeed(this.currentFeed);
+                    console.log('📝 Bypassing performance cache to get fresh data');
+                    await this.loadFeed(this.currentFeed, true);  // true = bypass all caches
                 } catch (error) {
                     console.error('Failed to create post:', error);
                     alert('Failed to create post. Please try again.');
@@ -447,7 +448,7 @@ export class FeedToggle {
         await this.loadFeed(feedType);
     }
 
-    async loadFeed(feedType) {
+    async loadFeed(feedType, bypassCache = false) {
         // Show loading state
         const container = document.getElementById('myFeedPosts');
         if (!container) return;
@@ -479,11 +480,11 @@ export class FeedToggle {
         try {
             let posts;
             if (feedType === 'following') {
-                posts = await this.loadFollowingFeed();
+                posts = await this.loadFollowingFeed(bypassCache);
             } else if (feedType === 'saved') {
-                posts = await this.loadSavedFeed();
+                posts = await this.loadSavedFeed(bypassCache);
             } else {
-                posts = await this.loadDiscoverFeed();
+                posts = await this.loadDiscoverFeed(bypassCache);
             }
 
             // Remove loading indicator
@@ -512,11 +513,11 @@ export class FeedToggle {
         }
     }
 
-    async loadFollowingFeed() {
-        console.log('Loading following feed...');
+    async loadFollowingFeed(bypassCache = false) {
+        console.log('Loading following feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.following.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.following.length > 0) {
             console.log('Using cached following feed');
             return this.caches.following;
         }
@@ -528,7 +529,12 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /feed/following
-        const response = await window.apiCall('/feed/following?limit=15', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/feed/following?limit=15&_=${Date.now()}`
+            : '/feed/following?limit=15';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
@@ -552,11 +558,11 @@ export class FeedToggle {
         return [];
     }
 
-    async loadDiscoverFeed() {
-        console.log('Loading discover feed...');
+    async loadDiscoverFeed(bypassCache = false) {
+        console.log('Loading discover feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.discover.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.discover.length > 0) {
             console.log('Using cached discover feed');
             return this.caches.discover;
         }
@@ -568,7 +574,12 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /feed/ (default discover)
-        const response = await window.apiCall('/feed/?limit=15', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/feed/?limit=15&_=${Date.now()}`
+            : '/feed/?limit=15';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
@@ -592,11 +603,11 @@ export class FeedToggle {
         return [];
     }
 
-    async loadSavedFeed() {
-        console.log('Loading saved feed...');
+    async loadSavedFeed(bypassCache = false) {
+        console.log('Loading saved feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.saved && this.caches.saved.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.saved && this.caches.saved.length > 0) {
             console.log('Using cached saved feed');
             return this.caches.saved;
         }
@@ -608,7 +619,12 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /posts/saved
-        const response = await window.apiCall('/posts/saved?limit=50', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/posts/saved?limit=50&_=${Date.now()}`
+            : '/posts/saved?limit=50';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
