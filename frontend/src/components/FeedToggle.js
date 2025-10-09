@@ -299,12 +299,14 @@ export class FeedToggle {
                         </div>
                     `;
 
-                    // Force display block
-                    filePreview.style.display = 'block';
-                    filePreview.style.visibility = 'visible';
-                    filePreview.style.opacity = '1';
+                    // Force display block with multiple methods
+                    filePreview.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; margin-top: 8px;';
+                    filePreview.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; margin-top: 8px;');
+
                     console.log('📎 File preview display set to:', filePreview.style.display);
                     console.log('📎 File preview HTML:', filePreview.innerHTML.substring(0, 100));
+                    console.log('📎 File preview offsetHeight:', filePreview.offsetHeight);
+                    console.log('📎 File preview parent:', filePreview.parentElement);
 
                     // Clear files button
                     const clearBtn = filePreview.querySelector('#clearFilesBtn');
@@ -358,38 +360,44 @@ export class FeedToggle {
                         postData.files = selectedFiles;
                     }
 
-                    // Use UnifiedPostCreator if available, otherwise direct API call
-                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
-                        await window.unifiedPostCreator.createPost(postData);
-                    } else if (window.apiCall) {
-                        // For files, need to use FormData
-                        if (selectedFiles.length > 0) {
-                            const formData = new FormData();
-                            formData.append('content', content);
-                            selectedFiles.forEach((file, index) => {
-                                formData.append('files', file);
-                            });
+                    // TEMPORARY: Disable file uploads until CORS/503 issue is resolved
+                    if (selectedFiles.length > 0) {
+                        alert('File uploads temporarily disabled while we fix a backend issue. Please post text only for now.');
+                        postBtn.disabled = false;
+                        postBtn.textContent = 'Post';
+                        return;
+                    }
 
-                            await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: formData,
-                                headers: {} // Let browser set Content-Type for FormData
-                            });
-                        } else {
-                            await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: JSON.stringify({ content })
-                            });
-                        }
+                    // Use UnifiedPostCreator if available, otherwise direct API call
+                    let postResult;
+                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
+                        console.log('📝 Using UnifiedPostCreator.createPost()');
+                        postResult = await window.unifiedPostCreator.createPost(postData);
+                    } else if (window.apiCall) {
+                        console.log('📝 Using direct apiCall');
+                        postResult = await window.apiCall('/posts', {
+                            method: 'POST',
+                            body: JSON.stringify({ content }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
                     } else {
                         throw new Error('No posting method available');
                     }
+
+                    console.log('📝 Post result:', postResult);
 
                     // Success - hide composer, show button, refresh feed
                     mount.style.display = 'none';
                     mount.innerHTML = '';
                     btn.style.display = 'flex';
-                    this.loadFeed(this.currentFeed);  // Refresh feed
+
+                    // Force feed refresh - clear cache and reload
+                    console.log('📝 Refreshing feed after post...');
+                    if (this.caches && this.caches[this.currentFeed]) {
+                        this.caches[this.currentFeed] = [];
+                        console.log('📝 Cleared feed cache');
+                    }
+                    await this.loadFeed(this.currentFeed);
                 } catch (error) {
                     console.error('Failed to create post:', error);
                     alert('Failed to create post. Please try again.');
