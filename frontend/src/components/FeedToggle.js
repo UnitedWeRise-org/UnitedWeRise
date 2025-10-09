@@ -360,26 +360,34 @@ export class FeedToggle {
                         postData.files = selectedFiles;
                     }
 
-                    // TEMPORARY: Disable file uploads until CORS/503 issue is resolved
-                    if (selectedFiles.length > 0) {
-                        alert('File uploads temporarily disabled while we fix a backend issue. Please post text only for now.');
-                        postBtn.disabled = false;
-                        postBtn.textContent = 'Post';
-                        return;
-                    }
-
                     // Use UnifiedPostCreator if available, otherwise direct API call
                     let postResult;
                     if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
                         console.log('📝 Using UnifiedPostCreator.createPost()');
                         postResult = await window.unifiedPostCreator.createPost(postData);
                     } else if (window.apiCall) {
-                        console.log('📝 Using direct apiCall');
-                        postResult = await window.apiCall('/posts', {
-                            method: 'POST',
-                            body: JSON.stringify({ content }),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
+                        // Use FormData for file uploads, JSON for text-only
+                        if (selectedFiles.length > 0) {
+                            console.log('📝 Using direct apiCall with FormData for file upload');
+                            const formData = new FormData();
+                            formData.append('content', content);
+                            selectedFiles.forEach((file, index) => {
+                                formData.append('files', file);
+                            });
+
+                            postResult = await window.apiCall('/posts', {
+                                method: 'POST',
+                                body: formData
+                                // Don't set Content-Type header - browser will set it with boundary
+                            });
+                        } else {
+                            console.log('📝 Using direct apiCall with JSON for text-only post');
+                            postResult = await window.apiCall('/posts', {
+                                method: 'POST',
+                                body: JSON.stringify({ content }),
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        }
                     } else {
                         throw new Error('No posting method available');
                     }
