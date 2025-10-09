@@ -386,19 +386,35 @@ export class FeedToggle {
 
                     console.log('📝 Post result:', postResult);
 
-                    // Success - hide composer, show button, refresh feed
+                    // Success - hide composer, show button
                     mount.style.display = 'none';
                     mount.innerHTML = '';
                     btn.style.display = 'flex';
 
-                    // Force feed refresh - clear cache and reload with cache bypass
-                    console.log('📝 Refreshing feed after post...');
-                    if (this.caches && this.caches[this.currentFeed]) {
-                        this.caches[this.currentFeed] = [];
-                        console.log('📝 Cleared FeedToggle cache');
+                    // INSTANT GRATIFICATION: Prepend the newly created post directly
+                    // This is the OLD WORKING approach - don't reload feed, just insert the post
+                    console.log('📝 Prepending new post to feed (instant gratification)...');
+
+                    // Extract post from response (handle different response formats)
+                    let post = null;
+                    if (postResult.data && postResult.data.post) {
+                        post = postResult.data.post;
+                    } else if (postResult.post) {
+                        post = postResult.post;
+                    } else if (postResult.data && postResult.data.id) {
+                        post = postResult.data;
                     }
-                    console.log('📝 Bypassing performance cache to get fresh data');
-                    await this.loadFeed(this.currentFeed, true);  // true = bypass all caches
+
+                    if (post && window.currentUser) {
+                        this.prependNewPost(post, window.currentUser);
+                    } else {
+                        // Fallback to reload if post object not available
+                        console.warn('⚠️ Post object not available, falling back to feed reload');
+                        if (this.caches && this.caches[this.currentFeed]) {
+                            this.caches[this.currentFeed] = [];
+                        }
+                        await this.loadFeed(this.currentFeed, true);
+                    }
                 } catch (error) {
                     console.error('Failed to create post:', error);
                     alert('Failed to create post. Please try again.');
@@ -808,6 +824,101 @@ export class FeedToggle {
 
             container.appendChild(postDiv);
         });
+    }
+
+    /**
+     * Prepend newly created post to feed for instant gratification
+     * Based on old working implementation from my-feed.js
+     *
+     * @param {Object} post - Post object from creation API
+     * @param {Object} user - Current user object
+     */
+    prependNewPost(post, user) {
+        const container = document.getElementById('myFeedPosts');
+        if (!container) {
+            console.error('❌ Cannot prepend post - container not found');
+            return;
+        }
+
+        console.log('📝 Prepending new post to feed:', {
+            id: post.id,
+            hasPhotos: !!(post.photos?.length),
+            photoCount: post.photos?.length || 0
+        });
+
+        // Format the post with user data for display
+        const postWithUser = {
+            ...post,
+            author: {
+                id: user.id,
+                username: user.username,
+                firstName: user.firstName || user.username,
+                lastName: user.lastName || '',
+                avatar: user.avatar || null,
+                verified: user.verified || false
+            },
+            likesCount: post.likesCount || 0,
+            commentsCount: post.commentsCount || 0,
+            isLiked: false,
+            createdAt: post.createdAt || new Date().toISOString(),
+            photos: post.photos || []
+        };
+
+        try {
+            // Find where to insert (after feed controls and banners)
+            const feedControls = container.querySelector('.feed-controls-wrapper');
+            const banners = container.querySelectorAll('.feed-banner');
+            let insertPoint = null;
+
+            if (banners.length > 0) {
+                // Insert after last banner
+                insertPoint = banners[banners.length - 1];
+            } else if (feedControls) {
+                // Insert after feed controls
+                insertPoint = feedControls;
+            }
+
+            // PRIORITY 1: Use UnifiedPostRenderer for consistent display
+            if (window.unifiedPostRenderer) {
+                const postHtml = window.unifiedPostRenderer.render(postWithUser, { context: 'feed' });
+
+                if (insertPoint) {
+                    insertPoint.insertAdjacentHTML('afterend', postHtml);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', postHtml);
+                }
+
+                console.log('✅ Post prepended using UnifiedPostRenderer');
+            } else if (window.postComponent) {
+                // Fallback to PostComponent
+                const postHtml = window.postComponent.renderPost(postWithUser, {
+                    showActions: true,
+                    showComments: true,
+                    inFeed: true
+                });
+
+                if (insertPoint) {
+                    insertPoint.insertAdjacentHTML('afterend', postHtml);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', postHtml);
+                }
+
+                console.log('✅ Post prepended using PostComponent (fallback)');
+            } else {
+                // Ultimate fallback - use renderPostsFallback
+                console.warn('⚠️ No renderer available, using fallback');
+                this.renderPostsFallback([postWithUser], container);
+            }
+
+            // Clear cache so next reload gets fresh data
+            if (this.caches && this.caches[this.currentFeed]) {
+                this.caches[this.currentFeed] = [];
+            }
+        } catch (error) {
+            console.error('❌ Error prepending post:', error);
+            // On error, try full feed reload
+            this.loadFeed(this.currentFeed, true);
+        }
     }
 
     /**
