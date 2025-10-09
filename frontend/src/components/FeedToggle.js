@@ -539,22 +539,33 @@ export class FeedToggle {
         });
 
         console.log('Following feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasDataPosts: !!response?.data?.posts,
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in following feed response');
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for following feed`);
             this.caches.following = posts;
             return posts;
         }
 
+        console.warn('⚠️ No posts found in following feed, returning empty array');
         return [];
     }
 
@@ -584,22 +595,38 @@ export class FeedToggle {
         });
 
         console.log('Discover feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasResponse: !!response,
+            hasData: !!response?.data,
+            hasOk: !!response?.ok,
+            hasPosts: !!response?.posts,
+            hasDataPosts: !!response?.data?.posts,
+            dataKeys: response?.data ? Object.keys(response.data) : [],
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in response. Response structure:', response);
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for discover feed`);
             this.caches.discover = posts;
             return posts;
         }
 
+        console.warn('⚠️ No posts found, returning empty array');
         return [];
     }
 
@@ -629,18 +656,28 @@ export class FeedToggle {
         });
 
         console.log('Saved feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasDataPosts: !!response?.data?.posts,
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in saved feed response');
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for saved feed`);
             this.caches.saved = posts;
             return posts;
         }
@@ -649,10 +686,23 @@ export class FeedToggle {
     }
 
     renderPosts(posts, feedType) {
+        console.log('🎨 renderPosts called:', {
+            feedType,
+            postsReceived: !!posts,
+            postsLength: posts?.length,
+            postsType: Array.isArray(posts) ? 'array' : typeof posts,
+            firstPost: posts?.[0]?.id
+        });
+
         const container = document.getElementById('myFeedPosts');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ Container #myFeedPosts not found');
+            return;
+        }
 
         if (!posts || posts.length === 0) {
+            console.warn('⚠️ No posts to render, showing empty state');
+
             const emptyDiv = document.createElement('div');
             emptyDiv.style.cssText = 'text-align: center; padding: 2rem; color: #666;';
 
@@ -678,16 +728,24 @@ export class FeedToggle {
             return;
         }
 
-        console.log(`Rendering ${posts.length} posts for ${this.currentFeed} feed`);
+        console.log(`✅ Rendering ${posts.length} posts for ${this.currentFeed} feed`);
 
-        // Use UnifiedPostRenderer if available
+        // Use UnifiedPostRenderer if available (PRIORITY 1: renderPostsList for consistency)
         if (window.unifiedPostRenderer) {
-            window.unifiedPostRenderer.appendPosts(posts, 'myFeedPosts', { context: 'feed' });
+            console.log('✅ Using window.unifiedPostRenderer.renderPostsList()');
+            try {
+                window.unifiedPostRenderer.renderPostsList(posts, 'myFeedPosts', { context: 'feed' });
+                console.log('✅ Posts rendered successfully');
+            } catch (error) {
+                console.error('❌ Error rendering with UnifiedPostRenderer:', error);
+                this.renderPostsFallback(posts, container);
+            }
         } else if (window.displayMyFeedPosts) {
+            console.log('⚠️ Using legacy window.displayMyFeedPosts()');
             // Fallback to existing feed display function
-            window.displayMyFeedPosts(posts, true); // true = append mode
+            window.displayMyFeedPosts(posts, false); // false = replace mode (not append)
         } else {
-            console.warn('No post renderer available');
+            console.warn('⚠️ No post renderer available, using fallback');
             this.renderPostsFallback(posts, container);
         }
     }
