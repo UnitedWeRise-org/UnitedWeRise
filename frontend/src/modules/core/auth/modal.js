@@ -170,11 +170,12 @@ export async function handleLogin() {
             console.log('✅ Login successful via unified manager:', result.user.username || result.user.email);
 
             // Reload page to ensure clean state with auth cookie
-            // Short delay (100ms) just to show success message
-            // The reload itself ensures clean state, not the delay
+            // CRITICAL: 600ms delay allows httpOnly cookies to fully propagate
+            // Too short (<500ms) = cookies not ready on reload = 401 errors = false logout
+            // The ignoreInitialCallback fix prevents race conditions during this window
             setTimeout(() => {
                 window.location.reload();
-            }, 100);
+            }, 600);
 
         } else if (result.requiresTOTP) {
             console.log('🔍 TOTP required, showing TOTP input...');
@@ -188,10 +189,11 @@ export async function handleLogin() {
                 if (totpResult.success) {
                     showAuthMessage('Login successful! Reloading...', 'success');
                     // Reload page to ensure clean state with auth cookie
-                    // Short delay (100ms) just to show success message
+                    // CRITICAL: 600ms delay allows httpOnly cookies to fully propagate
+                    // Too short (<500ms) = cookies not ready on reload = 401 errors = false logout
                     setTimeout(() => {
                         window.location.reload();
-                    }, 100);
+                    }, 600);
                 } else {
                     showAuthMessage(totpResult.error || 'Two-factor authentication failed', 'error', 'login');
                 }
