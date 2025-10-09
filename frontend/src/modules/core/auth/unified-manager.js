@@ -492,7 +492,19 @@ class UnifiedAuthManager {
     _setupSystemListeners() {
         // Listen for user state changes
         if (window.userState && typeof window.userState.subscribe === 'function') {
+            // Flag to ignore the immediate callback from subscribe()
+            // The subscribe() method fires immediately with current value,
+            // but we've already synced in _syncFromExistingSystems()
+            let isFirstCall = true;
+
             window.userState.subscribe((user) => {
+                // Skip the immediate callback to prevent false logout during initialization
+                if (isFirstCall) {
+                    isFirstCall = false;
+                    console.log('🔧 Ignoring initial userState callback (already synced)');
+                    return;
+                }
+
                 if (this._currentAuthState.user !== user) {
                     console.log('🔄 External user state change detected');
                     if (user) {
