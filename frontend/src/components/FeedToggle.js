@@ -352,44 +352,53 @@ export class FeedToggle {
                 postBtn.textContent = 'Posting...';
 
                 try {
-                    // Prepare post data
-                    const postData = { content };
-
-                    // Add files if selected
-                    if (selectedFiles.length > 0) {
-                        postData.files = selectedFiles;
-                    }
-
-                    // Use UnifiedPostCreator if available, otherwise direct API call
+                    // Use UnifiedPostCreator if available (handles two-step upload)
                     let postResult;
                     if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
                         console.log('📝 Using UnifiedPostCreator.createPost()');
-                        postResult = await window.unifiedPostCreator.createPost(postData);
-                    } else if (window.apiCall) {
-                        // Use FormData for file uploads, JSON for text-only
-                        if (selectedFiles.length > 0) {
-                            console.log('📝 Using direct apiCall with FormData for file upload');
-                            const formData = new FormData();
-                            formData.append('content', content);
-                            selectedFiles.forEach((file, index) => {
-                                formData.append('files', file);
-                            });
-
-                            postResult = await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: formData
-                                // Don't set Content-Type header - browser will set it with boundary
-                            });
-                        } else {
-                            console.log('📝 Using direct apiCall with JSON for text-only post');
-                            postResult = await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: JSON.stringify({ content }),
-                                headers: { 'Content-Type': 'application/json' }
-                            });
-                        }
+                        postResult = await window.unifiedPostCreator.createPost({
+                            content: content,
+                            mediaFiles: selectedFiles.length > 0 ? selectedFiles : null,
+                            type: 'post'
+                        });
                     } else {
-                        throw new Error('No posting method available');
+                        // Manual two-step process: 1) Upload media, 2) Create post
+                        let mediaIds = [];
+
+                        if (selectedFiles.length > 0) {
+                            console.log('📸 Step 1: Uploading media files...');
+
+                            // Check if uploadMediaFiles is available
+                            if (typeof window.uploadMediaFiles !== 'function') {
+                                throw new Error('Media upload system not available');
+                            }
+
+                            const uploadResult = await window.uploadMediaFiles(
+                                selectedFiles,
+                                'POST_MEDIA',
+                                'PERSONAL'
+                            );
+
+                            console.log('📸 Upload result:', uploadResult);
+
+                            if (!uploadResult.ok || !uploadResult.data?.photos) {
+                                throw new Error(uploadResult.error || 'Media upload failed');
+                            }
+
+                            mediaIds = uploadResult.data.photos.map(photo => photo.id);
+                            console.log('✅ Media uploaded, IDs:', mediaIds);
+                        }
+
+                        // Step 2: Create post with content and mediaIds
+                        console.log('📝 Step 2: Creating post with content and mediaIds...');
+                        postResult = await window.apiCall('/posts', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                content,
+                                mediaIds: mediaIds.length > 0 ? mediaIds : undefined
+                            }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
                     }
 
                     console.log('📝 Post result:', postResult);
