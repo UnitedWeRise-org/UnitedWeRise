@@ -189,10 +189,18 @@ export class NewPostModal {
                 onSuccess: (result) => {
                     console.log('✅ Post created successfully from modal');
                     this.hide();
-                    // Refresh feed
+
+                    // Prepend new post to feed for instant feedback
+                    if (window.myFeedHandlers && window.currentUser) {
+                        const post = result.data?.post || result.data;
+                        if (post) {
+                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
+                        }
+                    }
+
+                    // Refresh feed cache for next load
                     if (window.feedToggle) {
                         window.feedToggle.clearCache();
-                        window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
                     }
                 },
                 onError: (error) => {
@@ -222,9 +230,18 @@ export class NewPostModal {
                 if (response && (response.success || response.ok)) {
                     console.log('✅ Post created successfully (fallback)');
                     this.hide();
+
+                    // Prepend new post to feed for instant feedback
+                    if (window.myFeedHandlers && window.currentUser) {
+                        const post = response.data?.post || response.post || response.data;
+                        if (post) {
+                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
+                        }
+                    }
+
+                    // Refresh feed cache for next load
                     if (window.feedToggle) {
                         window.feedToggle.clearCache();
-                        window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
                     }
                 } else {
                     alert('Error creating post. Please try again.');

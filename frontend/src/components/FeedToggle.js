@@ -359,8 +359,18 @@ export class FeedToggle {
                     }
 
                     // Use UnifiedPostCreator if available, otherwise direct API call
-                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
-                        await window.unifiedPostCreator.createPost(postData);
+                    let response;
+                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
+                        // Use the proper create() method with full options
+                        const result = await window.unifiedPostCreator.create({
+                            type: 'post',
+                            content: content,
+                            mediaFiles: selectedFiles,
+                            destination: 'feed',
+                            tags: ['Public Post'],
+                            clearAfterSuccess: false  // Don't clear form, we'll do it manually
+                        });
+                        response = result.success ? result.data : null;
                     } else if (window.apiCall) {
                         // For files, need to use FormData
                         if (selectedFiles.length > 0) {
@@ -370,13 +380,13 @@ export class FeedToggle {
                                 formData.append('files', file);
                             });
 
-                            await window.apiCall('/posts', {
+                            response = await window.apiCall('/posts', {
                                 method: 'POST',
                                 body: formData,
                                 headers: {} // Let browser set Content-Type for FormData
                             });
                         } else {
-                            await window.apiCall('/posts', {
+                            response = await window.apiCall('/posts', {
                                 method: 'POST',
                                 body: JSON.stringify({ content })
                             });
@@ -385,11 +395,21 @@ export class FeedToggle {
                         throw new Error('No posting method available');
                     }
 
-                    // Success - hide composer, show button, refresh feed
+                    // Success - hide composer, show button
                     mount.style.display = 'none';
                     mount.innerHTML = '';
                     btn.style.display = 'flex';
-                    this.loadFeed(this.currentFeed);  // Refresh feed
+
+                    // Prepend new post to feed for instant feedback
+                    if (response && window.myFeedHandlers && window.currentUser) {
+                        const post = response.post || response.data?.post || response;
+                        if (post) {
+                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
+                        }
+                    }
+
+                    // Clear cache for next load
+                    this.clearCache(this.currentFeed);
                 } catch (error) {
                     console.error('Failed to create post:', error);
                     alert('Failed to create post. Please try again.');
