@@ -85,6 +85,18 @@ class AdminModuleLoader {
                 // Load modules in dependency order
                 await this.loadModulesInOrder();
 
+                // Fetch dashboard stats ONCE globally and cache
+                if (window.AdminState && window.AdminAPI) {
+                    try {
+                        console.log('📊 Fetching dashboard stats (global cache)...');
+                        const dashboardStats = await window.AdminAPI.getDashboardStats();
+                        window.AdminState.setCache('dashboard_global', dashboardStats, Infinity);
+                        console.log('✅ Dashboard stats cached globally');
+                    } catch (error) {
+                        console.error('Failed to cache dashboard stats:', error);
+                    }
+                }
+
                 // Set up global event handlers
                 this.setupGlobalHandlers();
             } else {
@@ -144,16 +156,61 @@ class AdminModuleLoader {
      * Load modules in dependency order
      */
     async loadModulesInOrder() {
-        for (const moduleName of this.loadOrder) {
+        console.log('🔄 Loading admin modules with parallel optimization...');
+
+        // Phase 1: Core dependencies (sequential - required order)
+        const coreModules = [
+            'AdminGlobalUtils',
+            'AdminTOTPModal',
+            'AdminTabsManager',
+            'AdminAPI',
+            'AdminAuth',
+            'AdminState'
+        ];
+
+        for (const moduleName of coreModules) {
             try {
                 await this.loadModule(moduleName);
                 console.log(`✅ ${moduleName} loaded successfully`);
             } catch (error) {
                 console.error(`❌ Failed to load ${moduleName}:`, error);
-                // Continue with other modules instead of stopping initialization
-                continue;
+                throw error; // Core modules are critical
             }
         }
+
+        // Phase 2: Controllers (parallel - independent)
+        const controllerModules = [
+            'OverviewController',
+            'UsersController',
+            'ContentController',
+            'SecurityController',
+            'ReportsController',
+            'CandidatesController',
+            'ExternalCandidatesController',
+            'AnalyticsController',
+            'AIInsightsController',
+            'MOTDController',
+            'DeploymentController',
+            'SystemController',
+            'ErrorsController',
+            'CivicEngagementController'
+        ];
+
+        console.log(`🚀 Loading ${controllerModules.length} controllers in parallel...`);
+        const results = await Promise.allSettled(
+            controllerModules.map(name => this.loadModule(name))
+        );
+
+        // Log results
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                console.log(`✅ ${controllerModules[index]} loaded successfully`);
+            } else {
+                console.error(`❌ Failed to load ${controllerModules[index]}:`, result.reason);
+            }
+        });
+
+        console.log('✅ All modules loaded');
     }
 
     /**

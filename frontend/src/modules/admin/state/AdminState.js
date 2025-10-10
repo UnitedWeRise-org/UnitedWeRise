@@ -28,13 +28,20 @@ class AdminState {
      */
     isCacheValid(key) {
         const cached = this.cache.get(key);
-        return cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
+        if (!cached) return false;
+
+        // Check for infinite cache (duration === Infinity)
+        if (cached.duration === Infinity) return true;
+
+        const duration = cached.duration || this.CACHE_DURATION;
+        return (Date.now() - cached.timestamp) < duration;
     }
 
-    setCache(key, data) {
+    setCache(key, data, duration = null) {
         this.cache.set(key, {
             data,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            duration: duration !== null ? duration : this.CACHE_DURATION
         });
     }
 
@@ -86,11 +93,14 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // Load dashboard stats
-            const [dashboardResponse, healthResponse] = await Promise.all([
-                window.AdminAPI.getDashboardStats(),
-                window.AdminAPI.healthCheck()
-            ]);
+            // Use cached global stats instead of fetching
+            let dashboardResponse = this.getCache('dashboard_global');
+            if (!dashboardResponse) {
+                console.warn('Dashboard stats not in cache, fetching...');
+                dashboardResponse = await window.AdminAPI.getDashboardStats();
+            }
+
+            const healthResponse = await window.AdminAPI.healthCheck();
 
             const data = dashboardResponse.data || dashboardResponse;
 
@@ -576,11 +586,10 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // Use health check and dashboard data for deployment info
-            const [healthData, dashboardData] = await Promise.all([
-                window.AdminAPI.healthCheck(),
-                window.AdminAPI.getDashboardStats()
-            ]);
+            // Use cached global stats
+            const dashboardData = this.getCache('dashboard_global');
+
+            const healthData = await window.AdminAPI.healthCheck();
 
             const deploymentData = {
                 health: healthData,
@@ -702,8 +711,8 @@ class AdminState {
         try {
             this.isLoading = true;
 
-            // Use dashboard stats for analytics
-            const data = await window.AdminAPI.getDashboardStats();
+            // Use cached global stats
+            const data = this.getCache('dashboard_global') || await window.AdminAPI.getDashboardStats();
 
             this.displayAnalyticsData(data);
             this.setCache(cacheKey, data);

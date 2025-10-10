@@ -2171,10 +2171,10 @@ Auto-refresh enabled every 60 seconds
     </div>
 
     <!-- Load Core Dependencies -->
-    <script src="js/adminDebugger.js"></script>
+    <script defer src="js/adminDebugger.js"></script>
     <!-- MIGRATION: Replaced by ES6 module src/modules/auth/UnifiedAuth.js -->
     <!-- <script src="js/unifiedAuth.js"></script> -->
-    <script src="src/js/deployment-status.js"></script>
+    <script defer src="src/js/deployment-status.js"></script>
 
     <!-- Load Authentication Module (MUST load before AdminAuth) -->
     <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>
