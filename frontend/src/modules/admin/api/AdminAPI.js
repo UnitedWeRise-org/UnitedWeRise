@@ -10,8 +10,6 @@ import { getApiBaseUrl } from '../../../utils/environment.js';
 
 class AdminAPI {
     constructor() {
-        this.totpVerified = false;
-        this.totpToken = null;
         this.BACKEND_URL = this.getBackendUrl();
 
         // Bind methods to preserve context
@@ -52,12 +50,6 @@ class AdminAPI {
         // Add CSRF token for state-changing requests
         if (window.csrfToken && options.method && options.method !== 'GET') {
             headers['X-CSRF-Token'] = window.csrfToken;
-        }
-
-        // Add TOTP verification header if verified
-        if (this.totpVerified && this.totpToken) {
-            headers['x-totp-verified'] = 'true';
-            headers['x-totp-token'] = this.totpToken;
         }
 
         // Authentication handled by httpOnly cookies automatically
@@ -317,10 +309,16 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Get comments for admin moderation
+     * @deprecated - Comments require postId parameter. Use getCommentsForPost(postId) instead.
+     * @todo Implement proper admin comments endpoint or remove if not needed
+     * @param {Object} params - Query parameters (currently unused)
+     * @returns {Promise<{ok: boolean, comments: Array}>}
+     */
     async getComments(params = {}) {
-        // Comments require postId - this method needs to be redesigned
-        // For now, return empty array since admin comments need post context
-        await adminDebugLog('AdminAPI', 'getComments called - requires postId, returning empty array');
+        console.warn('AdminAPI.getComments() is deprecated - requires redesign');
+        await adminDebugLog('AdminAPI', 'DEPRECATED: getComments called without postId');
         return { ok: true, comments: [] };
     }
 
@@ -384,7 +382,16 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Get audit logs for admin actions
+     * @stub Backend endpoint not yet implemented
+     * @todo Implement backend endpoint: GET /api/admin/audit-logs
+     * @param {Object} params - Query parameters (page, limit, action, userId, dateRange)
+     * @returns {Promise<Object>} Mock data structure until backend ready
+     */
     async getAuditLogs(params = {}) {
+        await adminDebugLog('AdminAPI', 'STUB: getAuditLogs - awaiting backend implementation');
+
         // Return mock data for missing endpoint to prevent 404 network logs
         return {
             logs: [],
@@ -421,7 +428,15 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Get Message of the Day settings
+     * @stub Backend endpoint not yet implemented
+     * @todo Implement backend endpoint: GET /api/admin/motd
+     * @returns {Promise<Object>} Mock MOTD data until backend ready
+     */
     async getMOTDSettings() {
+        await adminDebugLog('AdminAPI', 'STUB: getMOTDSettings - awaiting backend implementation');
+
         // Return mock data for missing endpoint to prevent 404 network logs
         return {
             id: 'default',
@@ -446,11 +461,11 @@ class AdminAPI {
      * Set TOTP verification status (called by authentication system)
      */
     async setTotpStatus(verified, token = null) {
-        this.totpVerified = verified;
-        this.totpToken = token;
-
-        await adminDebugLog('AdminAPI', `TOTP status updated: ${verified ? 'verified' : 'unverified'}`, {
-            hasToken: !!token
+        // TOTP status now handled entirely by secure httpOnly cookies
+        // Backend reads from req.cookies.totpSessionToken
+        await adminDebugLog('AdminAPI', 'TOTP managed via httpOnly cookies', {
+            cookieBased: true,
+            secure: true
         });
     }
 
@@ -458,8 +473,8 @@ class AdminAPI {
      * Clear TOTP verification (called on logout)
      */
     clearTotpStatus() {
-        this.totpVerified = false;
-        this.totpToken = null;
+        // TOTP cleared server-side via logout endpoint
+        // No client-side state to manage
     }
 
     /**
