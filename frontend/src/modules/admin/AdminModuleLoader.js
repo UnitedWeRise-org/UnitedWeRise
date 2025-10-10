@@ -32,6 +32,19 @@ class AdminModuleLoader {
             'CivicEngagementController'
         ];
         this.isInitialized = false;
+
+        // Lazy loading map for tab-specific controllers
+        this.lazyModules = {
+            'external-candidates': 'ExternalCandidatesController',
+            'errors': 'ErrorsController',
+            'ai-insights': 'AIInsightsController',
+            'motd': 'MOTDController',
+            'deployment': 'DeploymentController',
+            'system': 'SystemController',
+            'analytics': 'AnalyticsController',
+            'candidates': 'CandidatesController',
+            'civic-engagement': 'CivicEngagementController'
+        };
         this.dependencies = {
             'AdminGlobalUtils': [],
             'AdminTOTPModal': [],
@@ -179,24 +192,17 @@ class AdminModuleLoader {
         }
 
         // Phase 2: Controllers (parallel - independent)
+        // Only load immediately-needed controllers
         const controllerModules = [
-            'OverviewController',
-            'UsersController',
-            'ContentController',
-            'SecurityController',
-            'ReportsController',
-            'CandidatesController',
-            'ExternalCandidatesController',
-            'AnalyticsController',
-            'AIInsightsController',
-            'MOTDController',
-            'DeploymentController',
-            'SystemController',
-            'ErrorsController',
-            'CivicEngagementController'
+            'OverviewController',     // Always shown first
+            'UsersController',        // Commonly used
+            'ContentController',      // Commonly used
+            'SecurityController',     // Commonly used
+            'ReportsController'       // Commonly used
+            // Other 9 controllers will lazy load when tabs clicked
         ];
 
-        console.log(`🚀 Loading ${controllerModules.length} controllers in parallel...`);
+        console.log(`🚀 Loading ${controllerModules.length} immediately-needed controllers in parallel...`);
         const results = await Promise.allSettled(
             controllerModules.map(name => this.loadModule(name))
         );
@@ -518,7 +524,26 @@ class AdminModuleLoader {
     /**
      * Show a specific admin section
      */
-    showSection(sectionId) {
+    async showSection(sectionId) {
+        console.log(`📍 Showing section: ${sectionId}`);
+
+        // Check if lazy module needed
+        if (this.lazyModules[sectionId] && !this.modules.has(this.lazyModules[sectionId])) {
+            const moduleName = this.lazyModules[sectionId];
+            console.log(`📦 Lazy loading ${moduleName}...`);
+
+            try {
+                // Load the module on demand
+                await this.loadModule(moduleName);
+
+                console.log(`✅ ${moduleName} loaded on demand`);
+            } catch (error) {
+                console.error(`❌ Failed to lazy load ${moduleName}:`, error);
+                alert(`Failed to load ${sectionId} section. Please refresh the page.`);
+                return;
+            }
+        }
+
         // Hide all sections
         const sections = document.querySelectorAll('.dashboard-section');
         sections.forEach(section => {
