@@ -74,14 +74,13 @@ class UnifiedAuth {
                     <h3 style="margin: 0 0 20px 0; color: #333;">${modalTitle}</h3>
                     <p style="color: #666; margin-bottom: 20px;">${modalDescription}</p>
                     <input type="text" id="unifiedTotpCode" placeholder="000000" maxlength="6"
-                           style="width: 100%; padding: 15px; font-size: 24px; text-align: center; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; letter-spacing: 0.3em;"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                           style="width: 100%; padding: 15px; font-size: 24px; text-align: center; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; letter-spacing: 0.3em;">
                     <div style="display: flex; gap: 10px; justify-content: center;">
                         <button id="unifiedVerifyTotpBtn"
                                 style="background: #4b5c09; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                             Verify & Continue
                         </button>
-                        <button onclick="window.location.href='/'"
+                        <button id="unifiedCancelTotpBtn"
                                 style="background: #ccc; color: #333; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer;">
                             Cancel
                         </button>
@@ -94,15 +93,25 @@ class UnifiedAuth {
 
             const input = document.getElementById('unifiedTotpCode');
             const verifyBtn = document.getElementById('unifiedVerifyTotpBtn');
+            const cancelBtn = document.getElementById('unifiedCancelTotpBtn');
 
-            input.focus();
+            // Handle cancel button
+            cancelBtn.addEventListener('click', () => {
+                modal.remove();
+                reject(new Error('User cancelled TOTP verification'));
+            });
 
-            // Auto-submit on 6 digits
+            // Enforce numeric-only input
             input.addEventListener('input', () => {
+                input.value = input.value.replace(/[^0-9]/g, '');
+
+                // Auto-submit on 6 digits
                 if (input.value.length === 6) {
                     verifyBtn.click();
                 }
             });
+
+            input.focus();
 
             verifyBtn.onclick = async () => {
                 const code = input.value;
