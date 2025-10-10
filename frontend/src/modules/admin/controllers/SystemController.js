@@ -1266,7 +1266,7 @@ class SystemController {
 
     async checkBackendHealth() {
         try {
-            const response = await fetch(`${window.AdminAPI?.BACKEND_URL || 'https://api.unitedwerise.org'}/health`);
+            const response = await fetch(`${window.AdminAPI.BACKEND_URL}/health`);
             if (response.ok) {
                 const health = await response.json();
                 return {

@@ -152,7 +152,7 @@ class DeploymentController {
                 return { deploymentStatus: status };
             } else {
                 // Fallback to basic health check
-                const response = await fetch(`${window.AdminAPI?.BACKEND_URL || 'https://api.unitedwerise.org'}/health`);
+                const response = await fetch(`${window.AdminAPI.BACKEND_URL}/health`);
                 if (response.ok) {
                     const health = await response.json();
                     this.updateBasicDeploymentInfo(health);
