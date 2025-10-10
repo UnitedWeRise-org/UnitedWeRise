@@ -5,8 +5,6 @@
  *
  * This module handles:
  * - Google OAuth authentication
- * - Microsoft OAuth authentication
- * - Apple OAuth authentication
  * - OAuth SDK loading and initialization
  * - Password visibility utilities
  * - Auth storage management
@@ -38,18 +36,6 @@ export class AuthHandlers {
                 event.target.closest('[data-auth-google]')) {
                 event.preventDefault();
                 this.handleGoogleLogin();
-            }
-
-            if (event.target.matches('[data-auth-microsoft]') ||
-                event.target.closest('[data-auth-microsoft]')) {
-                event.preventDefault();
-                this.handleMicrosoftLogin();
-            }
-
-            if (event.target.matches('[data-auth-apple]') ||
-                event.target.closest('[data-auth-apple]')) {
-                event.preventDefault();
-                this.handleAppleLogin();
             }
 
             if (event.target.matches('[data-password-toggle]')) {
@@ -190,114 +176,6 @@ export class AuthHandlers {
         }
     }
 
-    /**
-     * Microsoft OAuth Login Handler
-     * Extracted from index.html handleMicrosoftLogin function
-     */
-    async handleMicrosoftLogin() {
-        try {
-            // For Microsoft, we'll use MSAL.js (Microsoft Authentication Library)
-            if (!window.msal) {
-                await this.loadMicrosoftAuth();
-            }
-
-            const loginRequest = {
-                scopes: ['User.Read']
-            };
-
-            const response = await window.msalInstance.loginPopup(loginRequest);
-
-            const apiBase = getApiBaseUrl();
-            const result = await fetch(`${apiBase}/oauth/microsoft`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    accessToken: response.accessToken
-                })
-            });
-
-            const data = await result.json();
-
-            if (result.ok) {
-                // Store user data for UI display (authentication handled by httpOnly cookies)
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-
-                // Close auth modal and set logged in state
-                closeAuthModal();
-                if (typeof setUserLoggedIn === 'function') {
-                    setUserLoggedIn(data.user);
-                }
-
-                // Show welcome message
-                if (data.isNewUser) {
-                    showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
-                } else {
-                    showAuthMessage('Successfully signed in with Microsoft!', 'success');
-                }
-            } else {
-                showAuthMessage(data.error || 'Microsoft sign-in failed. Please try again.', 'error');
-            }
-        } catch (error) {
-            console.error('Microsoft login error:', error);
-            showAuthMessage('Microsoft sign-in failed. Please try again.', 'error');
-        }
-    }
-
-    /**
-     * Apple OAuth Login Handler
-     * Extracted from index.html handleAppleLogin function
-     */
-    async handleAppleLogin() {
-        try {
-            // For Apple Sign In, we'll use Apple's JS SDK
-            if (!window.AppleID) {
-                await this.loadAppleSignIn();
-            }
-
-            const response = await AppleID.auth.signIn();
-
-            const apiBase = getApiBaseUrl();
-            const result = await fetch(`${apiBase}/oauth/apple`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    identityToken: response.authorization.id_token,
-                    user: response.user // Only provided on first sign in
-                })
-            });
-
-            const data = await result.json();
-
-            if (result.ok) {
-                // Store user data for UI display (authentication handled by httpOnly cookies)
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-
-                // Close auth modal and set logged in state
-                closeAuthModal();
-                if (typeof setUserLoggedIn === 'function') {
-                    setUserLoggedIn(data.user);
-                }
-
-                // Show welcome message
-                if (data.isNewUser) {
-                    showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
-                } else {
-                    showAuthMessage('Successfully signed in with Apple!', 'success');
-                }
-            } else {
-                showAuthMessage(data.error || 'Apple sign-in failed. Please try again.', 'error');
-            }
-        } catch (error) {
-            console.error('Apple login error:', error);
-            showAuthMessage('Apple sign-in failed. Please try again.', 'error');
-        }
-    }
 
     /**
      * Load Google Sign-In SDK
@@ -376,77 +254,6 @@ export class AuthHandlers {
         });
     }
 
-    /**
-     * Load Microsoft Authentication SDK
-     * Extracted from index.html loadMicrosoftAuth function
-     */
-    async loadMicrosoftAuth() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                // Fetch OAuth configuration from backend
-                const apiBase = getApiBaseUrl();
-                const configResponse = await fetch(`${apiBase}/oauth/config`);
-                const config = await configResponse.json();
-
-                if (!config.microsoft.enabled) {
-                    throw new Error('Microsoft OAuth is not configured');
-                }
-
-                const script = document.createElement('script');
-                script.src = 'https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js';
-                script.onload = () => {
-                    const msalConfig = {
-                        auth: {
-                            clientId: config.microsoft.clientId,
-                            authority: 'https://login.microsoftonline.com/common'
-                        }
-                    };
-                    window.msalInstance = new msal.PublicClientApplication(msalConfig);
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
-
-    /**
-     * Load Apple Sign-In SDK
-     * Extracted from index.html loadAppleSignIn function
-     */
-    async loadAppleSignIn() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                // Fetch OAuth configuration from backend
-                const apiBase = getApiBaseUrl();
-                const configResponse = await fetch(`${apiBase}/oauth/config`);
-                const config = await configResponse.json();
-
-                if (!config.apple.enabled) {
-                    throw new Error('Apple OAuth is not configured');
-                }
-
-                const script = document.createElement('script');
-                script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
-                script.onload = () => {
-                    AppleID.auth.init({
-                        clientId: config.apple.clientId,
-                        scope: 'name email',
-                        redirectURI: window.location.origin + '/apple-callback',
-                        state: 'signin',
-                        usePopup: true
-                    });
-                    resolve();
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
 
     /**
      * Toggle password field visibility
@@ -698,8 +505,6 @@ const authHandlers = new AuthHandlers();
 if (typeof window !== 'undefined') {
     window.handleGoogleLogin = () => authHandlers.handleGoogleLogin();
     window.handleGoogleCredentialResponse = (response) => authHandlers.handleGoogleCredentialResponse(response);
-    window.handleMicrosoftLogin = () => authHandlers.handleMicrosoftLogin();
-    window.handleAppleLogin = () => authHandlers.handleAppleLogin();
     window.togglePasswordVisibility = (fieldId) => authHandlers.togglePasswordVisibility(fieldId);
     window.fixAuthStorageIssues = () => authHandlers.fixAuthStorageIssues();
     window.testGoogleDomainAuth = () => authHandlers.testGoogleDomainAuth();

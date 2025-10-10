@@ -322,8 +322,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         riskScore: 20
       });
 
-      return res.status(401).json({ 
-        error: 'This account was created with social login. Please sign in with Google, Microsoft, or Apple.',
+      return res.status(401).json({
+        error: 'This account was created with social login. Please sign in with Google.',
         oauthOnly: true
       });
     }
