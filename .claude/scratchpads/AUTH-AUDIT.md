@@ -168,19 +168,100 @@ fetch('https://dev-api.unitedwerise.org/api/auth/me', {credentials: 'include'})
 
 ## 📋 FINDINGS
 
-(To be filled in during audit)
-
 ### Backend Findings
--
+✅ Logout endpoint clears all 4 cookies correctly (lines 768-771)
+✅ Cookie options match between set and clear (httpOnly, secure, sameSite, path)
+❌ **CRITICAL BUG FOUND:** TOTP cookies missing `domain` parameter
+
+**Lines 544-550 (totpSessionToken):**
+```typescript
+res.cookie('totpSessionToken', sessionToken, {
+  httpOnly: true,
+  secure: requireSecureCookies(),
+  sameSite: 'none',
+  maxAge: 24 * 60 * 60 * 1000,
+  path: '/'
+  // ❌ MISSING: domain: '.unitedwerise.org'
+});
+```
+
+**Lines 553-559 (totpVerified):**
+```typescript
+res.cookie('totpVerified', 'true', {
+  httpOnly: true,
+  secure: requireSecureCookies(),
+  sameSite: 'none',
+  maxAge: 24 * 60 * 60 * 1000,
+  path: '/'
+  // ❌ MISSING: domain: '.unitedwerise.org'
+});
+```
 
 ### Frontend Findings
--
+✅ localStorage cleanup on logout (session.js:181)
+✅ window.currentUser cleanup (session.js:181)
+✅ window.csrfToken cleanup (handled by unified-manager)
+✅ Timing delays increased to 1000ms (sufficient)
 
 ### Cookie Findings
--
+**The Smoking Gun:**
+
+When a cookie is set WITHOUT `domain` parameter:
+- Browser sets cookie for EXACT hostname: `dev-api.unitedwerise.org`
+- Cookie scope: ONLY that specific hostname
+
+When clearCookie is called WITH `domain: '.unitedwerise.org'`:
+- Browser tries to clear cookie for ALL subdomains: `.unitedwerise.org`
+- Cookie scope: Different from the set cookie
+
+**Result:** Browser treats these as DIFFERENT cookies!
+- Set cookie: `totpSessionToken` for `dev-api.unitedwerise.org`
+- Clear cookie: `totpSessionToken` for `.unitedwerise.org`
+- **Logout NEVER clears the TOTP cookies!**
 
 ### Root Cause
--
+**Cookie domain parameter mismatch between set and clear operations.**
+
+All other auth cookies (authToken, csrf-token) correctly include `domain: '.unitedwerise.org'` when set, so they clear properly. TOTP cookies were the only ones missing this parameter.
 
 ### Solution
--
+**Add `domain: '.unitedwerise.org'` to TOTP cookie set operations:**
+
+```typescript
+res.cookie('totpSessionToken', sessionToken, {
+  httpOnly: true,
+  secure: requireSecureCookies(),
+  sameSite: 'none',
+  maxAge: 24 * 60 * 60 * 1000,
+  path: '/',
+  domain: '.unitedwerise.org' // ✅ ADDED
+});
+
+res.cookie('totpVerified', 'true', {
+  httpOnly: true,
+  secure: requireSecureCookies(),
+  sameSite: 'none',
+  maxAge: 24 * 60 * 60 * 1000,
+  path: '/',
+  domain: '.unitedwerise.org' // ✅ ADDED
+});
+```
+
+### Deployment
+- **Commit:** 058e285
+- **Docker Tag:** backend-dev-058e285-20251009-222912
+- **Deployed:** October 9, 2025 at 22:33 UTC
+- **Status:** Live on staging (dev-api.unitedwerise.org)
+
+### Expected Results After Fix
+1. ✅ Login with TOTP account → Enter TOTP code
+2. ✅ Logout → Wait 1 second
+3. ✅ Login again → **SHOULD ASK FOR TOTP** (not skip)
+4. ✅ Fresh private window still works first try
+5. ✅ No more "ghost" TOTP sessions
+
+### Why Fresh Private Windows Always Worked
+- No prior cookies = no domain mismatch
+- Clean slate every time
+- **This proved the core login mechanism was correct all along**
+- The bug was ONLY in the state cleanup (logout)
