@@ -453,9 +453,7 @@ class CandidateSystemIntegration {
             // Call new address-based candidate endpoint
             const response = await window.apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -587,7 +585,7 @@ class CandidateSystemIntegration {
     async searchCandidatesByAddress() {
         const addressInput = document.getElementById('candidateAddressInput');
         const address = addressInput?.value?.trim();
-        
+
         if (!address) {
             this.showToast('Please enter an address', 'error');
             return;
@@ -599,9 +597,7 @@ class CandidateSystemIntegration {
 
             const response = await window.apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
 
             if (response.ok && response.data?.success) {
@@ -908,7 +904,7 @@ class CandidateSystemIntegration {
     async searchFromPlaceholder() {
         const addressInput = document.getElementById('placeholderAddressInput');
         const address = addressInput?.value?.trim();
-        
+
         if (!address) {
             this.showToast('Please enter an address', 'error');
             addressInput?.focus();
@@ -918,15 +914,13 @@ class CandidateSystemIntegration {
         try {
             const loadingIndicator = document.querySelector('#electionsLoading');
             const placeholder = document.querySelector('.elections-placeholder');
-            
+
             if (loadingIndicator) loadingIndicator.style.display = 'flex';
             if (placeholder) placeholder.style.display = 'none';
 
             const response = await window.apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
 
             if (response.ok && response.data?.success) {
@@ -2954,9 +2948,9 @@ class CandidateSystemIntegration {
             
             const response = await fetch('https://api.unitedwerise.org/api/candidates/register', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(registrationData)
             });
@@ -2991,17 +2985,9 @@ class CandidateSystemIntegration {
     // Check if current user is a verified candidate
     async checkCandidateStatus() {
         try {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                this.isCandidate = false;
-                return;
-            }
-
             const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -3318,9 +3304,7 @@ class CandidateSystemIntegration {
     async loadConstituentConversations() {
         try {
             const response = await window.apiCall('/unified-messages/candidate/user-messages', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -3580,9 +3564,9 @@ class CandidateSystemIntegration {
         try {
             const response = await window.apiCall('/unified-messages/mark-read', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ conversationId })
             });
@@ -3602,9 +3586,7 @@ class CandidateSystemIntegration {
         // Check user preferences before showing notifications
         try {
             const response = await window.apiCall('/user/notification-preferences', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             });
 
             let showBrowserNotification = true;

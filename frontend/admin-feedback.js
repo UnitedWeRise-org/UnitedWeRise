@@ -53,16 +53,11 @@ class FeedbackDashboard {
     async loadFeedbackData() {
         try {
             console.log('🔍 Loading feedback data...');
-            
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                throw new Error('No authentication token found');
-            }
 
             const response = await fetch('/api/feedback', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -88,13 +83,10 @@ class FeedbackDashboard {
 
     async loadStats() {
         try {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) return;
-
             const response = await fetch('/api/feedback/stats', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -292,15 +284,10 @@ class FeedbackDashboard {
 
     async updateFeedbackStatus(feedbackId, newStatus) {
         try {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                throw new Error('Authentication required');
-            }
-
             const response = await fetch(`/api/feedback/${feedbackId}/status`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ status: newStatus })
