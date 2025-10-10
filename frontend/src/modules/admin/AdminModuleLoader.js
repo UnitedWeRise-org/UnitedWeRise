@@ -1,9 +1,9 @@
 /**
  * AdminModuleLoader - Orchestrates loading of all admin modules
- * Replaces the monolithic admin-dashboard.html structure
+ * Coordinates initialization of 14+ controllers with dependency management
  *
  * Enterprise-grade modular architecture for UnitedWeRise admin system
- * Phase 2.4 completion - Module coordination and initialization
+ * Handles authentication-gated loading and graceful error handling
  */
 
 class AdminModuleLoader {
@@ -51,7 +51,8 @@ class AdminModuleLoader {
             'DeploymentController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'SystemController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ErrorsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'CivicEngagementController': ['AdminAPI', 'AdminState', 'adminDebugLog']
         };
 
         // Bind methods
