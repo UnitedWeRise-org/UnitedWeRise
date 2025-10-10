@@ -27,12 +27,10 @@ Current workflow:
 - development branch → staging environment (dev.unitedwerise.org)
 - main branch → production environment (www.unitedwerise.org)
 
-**CRITICAL: Database isolation**
-Always verify which database before migrations:
-```bash
-echo $DATABASE_URL | grep -o '@[^.]*'
-# Must show @unitedwerise-db-dev for safe development
-```
+**CRITICAL: Database migration safety**
+- NEVER use `prisma db push` for production or permanent changes
+- ALWAYS use `prisma migrate dev` for schema changes
+- ALWAYS verify database before migrations: `echo $DATABASE_URL | grep -o '@[^.]*'` (must show @unitedwerise-db-dev)
 - Production: unitedwerise-db.postgres.database.azure.com
 - Development: unitedwerise-db-dev.postgres.database.azure.com
 
@@ -65,16 +63,16 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 
 ---
 
-## Tier 2: Deployment Procedures
+## Tier 2: Deployment & Migration Procedures
 
 <details>
 <summary><b>Pre-deployment validation</b></summary>
 
 ```bash
-git status
-cd backend && npm run build
+git status  # Must be clean
+cd backend && npm run build  # Must compile
 cd backend && npx prisma validate && npx prisma generate
-git log origin/<current-branch>..HEAD
+git log origin/<current-branch>..HEAD  # Should be empty
 ```
 </details>
 
@@ -82,12 +80,11 @@ git log origin/<current-branch>..HEAD
 <summary><b>Deploy to staging</b></summary>
 
 ```bash
-# From whatever branch is currently active
 git pull origin <current-branch>
 git add . && git commit -m "feat: description"
 git push origin <current-branch>
 
-# If on development branch, changes auto-deploy to staging
+# If on development branch, auto-deploys to staging
 # Monitor: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
 ```
 </details>
@@ -96,7 +93,6 @@ git push origin <current-branch>
 <summary><b>Backend Docker deployment to staging</b></summary>
 
 ```bash
-# Requires being on development branch
 GIT_SHA=$(git rev-parse --short HEAD)
 DOCKER_TAG="backend-dev-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
 
@@ -117,11 +113,7 @@ az containerapp update \
   --resource-group unitedwerise-rg \
   --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
   --revision-suffix "stg-$GIT_SHA-$(date +%H%M%S)" \
-  --set-env-vars \
-    NODE_ENV=staging \
-    STAGING_ENVIRONMENT=true \
-    RELEASE_SHA=$GIT_SHA \
-    RELEASE_DIGEST=$DIGEST
+  --set-env-vars NODE_ENV=staging STAGING_ENVIRONMENT=true RELEASE_SHA=$GIT_SHA RELEASE_DIGEST=$DIGEST
 
 az containerapp update \
   --name unitedwerise-backend-staging \
@@ -134,59 +126,346 @@ curl -s "https://dev-api.unitedwerise.org/health" | grep releaseSha
 </details>
 
 <details>
-<summary><b>Production deployment</b></summary>
+<summary><b>Production deployment procedure</b></summary>
 
-**Only execute when user explicitly approves production deployment.**
+**CRITICAL: Only execute when user explicitly approves production deployment.**
 
-Full production deployment procedure → See `.claude/guides/production-deployment.md`
+### Pre-Deployment Validation
 
-Quick reference:
 ```bash
+git status  # Must be clean
+cd backend && npm run build  # Must compile
+git log origin/development..HEAD  # Should be empty
+curl -s "https://dev-api.unitedwerise.org/health"  # Verify staging works
+```
+
+### Deployment Steps
+
+```bash
+# Step 1: Merge to main (user must explicitly approve)
 git checkout main && git pull origin main
 git merge development && git push origin main
 
-# Build, deploy, verify
-# Follow production-deployment.md for complete steps
+# Step 2: Build Docker image
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+
+az acr build --registry uwracr2425 \
+  --image "unitedwerise-backend:$DOCKER_TAG" \
+  --no-wait \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+
+sleep 180
+az acr task list-runs --registry uwracr2425 --output table | head -3
+
+# Step 3: Get image digest
+DIGEST=$(az acr repository show --name uwracr2425 \
+  --image "unitedwerise-backend:$DOCKER_TAG" \
+  --query "digest" -o tsv)
+
+# Step 4: Deploy to production
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
+  --revision-suffix "prod-$GIT_SHA-$(date +%H%M%S)" \
+  --set-env-vars NODE_ENV=production RELEASE_SHA=$GIT_SHA RELEASE_DIGEST=$DIGEST
+
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+
+# Step 5: Verify deployment
+sleep 30
+curl -s "https://api.unitedwerise.org/health"  # Check status, database, releaseSha, uptime
+
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+echo "Local: $GIT_SHA | Deployed: $DEPLOYED_SHA"  # Must match
+
+az containerapp logs show \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --tail 50
 ```
+
+### Rollback Procedure (if deployment fails)
+
+```bash
+# List revisions
+az containerapp revision list \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --output table
+
+# Activate previous working revision
+az containerapp revision activate \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision <previous-revision-name>
+
+# Or revert git commit
+git checkout main && git revert HEAD && git push origin main
+# Then redeploy with Steps 2-5
+```
+
+### Emergency Hotfix
+
+```bash
+git checkout main && git pull origin main
+git checkout -b hotfix/critical-issue
+# Make minimal fix
+cd backend && npm run build
+git add . && git commit -m "hotfix: description"
+git push origin hotfix/critical-issue
+git checkout main && git merge hotfix/critical-issue && git push origin main
+# Deploy with Steps 2-5
+git checkout development && git merge hotfix/critical-issue && git push origin development
+```
+
 </details>
 
 <details>
-<summary><b>Database schema changes</b></summary>
+<summary><b>Database migration safety protocol</b></summary>
 
+**FORBIDDEN COMMANDS:**
 ```bash
-cd backend
-
-# CRITICAL: Verify development database
-echo $DATABASE_URL | grep -o '@[^.]*'
-
-npx prisma migrate dev --name "description"
-npx prisma generate
-npm run build
-
-git add . && git commit -m "schema: description"
-git push origin <current-branch>
+npx prisma db push           # Bypasses migration system
+npx prisma db push --force   # Even worse - accepts data loss
+CREATE TABLE ... / ALTER TABLE ...  # Manual SQL (unless emergency)
 ```
 
-Full database migration protocol → See `.claude/guides/database-migration-protocol.md`
+**Why:** Oct 3 2025 incident - Used `db push` instead of migrations → production 500 errors when backend expected tables that didn't exist.
+
+### Required Workflow
+
+**Step 1: Development**
+```bash
+cd backend
+# Edit backend/prisma/schema.prisma
+
+npx prisma migrate dev --name "descriptive_name"
+# Examples: "add_quest_badge_tables", "add_user_profile_fields"
+
+cat prisma/migrations/YYYYMMDD_*/migration.sql  # Review SQL
+npx prisma generate
+npm run build
+```
+
+**Step 2: Commit**
+```bash
+git add backend/prisma/migrations/ backend/prisma/schema.prisma
+git commit -m "feat: Add migration for [description]"
+git push origin development
+```
+
+**Step 3: Staging** (auto-applied during deployment)
+```bash
+# Verify after deployment
+curl https://dev-api.unitedwerise.org/health  # Should show database:connected
+```
+
+**Step 4: Production** (manual)
+```bash
+# CRITICAL: Backup first
+az postgres flexible-server backup create \
+  --resource-group unitedwerise-rg \
+  --name unitedwerise-db \
+  --backup-name "pre-migration-$(date +%Y%m%d-%H%M%S)"
+
+# Merge to main first
+git checkout main && git merge development && git push origin main
+
+# Apply migrations
+cd backend
+DATABASE_URL="<production-url>" npx prisma migrate status
+DATABASE_URL="<production-url>" npx prisma migrate deploy
+DATABASE_URL="<production-url>" npx prisma migrate status  # Verify "up to date"
+
+curl https://api.unitedwerise.org/health  # Verify database:connected
+```
+
+### Troubleshooting
+
+**"Migration already applied" but tables don't exist:**
+```bash
+DATABASE_URL="<db-url>" npx prisma migrate resolve --applied <migration-name>
+```
+
+**"Column/Table already exists":**
+```bash
+DATABASE_URL="<db-url>" npx prisma migrate resolve --applied <migration-name>
+# Or edit migration.sql to use CREATE TABLE IF NOT EXISTS
+```
+
+**Schemas differ between environments:**
+```bash
+cd backend
+npx prisma migrate dev --name "sync_schemas"  # Review SQL carefully
+DATABASE_URL="<production-url>" npx prisma migrate deploy  # Only after testing on staging
+```
+
+### Emergency Rollback
+
+```bash
+# Mark migration as rolled back
+DATABASE_URL="<db-url>" npx prisma migrate resolve --rolled-back <migration-name>
+
+# Or restore from backup
+az postgres flexible-server restore \
+  --resource-group unitedwerise-rg \
+  --name unitedwerise-db-restored \
+  --source-server unitedwerise-db \
+  --restore-time "YYYY-MM-DDTHH:MM:00Z"
+```
+
+### When `db push` IS Acceptable
+
+**ONLY for:**
+- Rapid prototyping in local development (throwaway work)
+- Experimenting with schema designs before committing
+- Personal test databases that won't be deployed
+
+**Never:**
+- Commit schema.prisma changes without a migration
+- Use on staging or production databases
+- Share schema changes made via db push with team
+
 </details>
 
 <details>
 <summary><b>Deployment failure diagnosis</b></summary>
 
-When deployments get stuck or deployed code doesn't match local code → See `.claude/guides/deployment-failure-diagnosis.md` for 8-step diagnostic workflow.
+**Symptoms:** Deployment stuck, deployed code doesn't match local, health endpoint shows old SHA, changes not visible.
 
-Quick check:
+**Execute steps in order - each verifies one pipeline component:**
+
+### Step 1: Verify commits pushed
 ```bash
-# Verify local commits pushed
+git status  # Should be clean
 git log origin/<current-branch>..HEAD  # Should be empty
-
-# Check deployment status
-gh run list --branch <current-branch> --limit 5
-
-# Verify deployed SHA matches local
-curl -s "https://dev-api.unitedwerise.org/health" | grep releaseSha
-git rev-parse --short HEAD
 ```
+
+### Step 2: Verify GitHub Actions
+```bash
+gh run list --branch <current-branch> --limit 5
+# Look for: completed/in_progress/queued/failed, time >10 min = stuck
+
+# If stuck/failed:
+gh run view <run-id>
+# Fix: Re-run from UI, fix error and push, or wait if queued >5 min
+```
+
+### Step 3: Verify frontend deployment
+```bash
+curl -I https://dev.unitedwerise.org/  # Check Date header
+curl -I https://dev.unitedwerise.org/index.html  # Check Last-Modified header
+# Fix: Wait 2-3 min for CDN, hard refresh browser (Ctrl+Shift+R)
+```
+
+### Step 4: Verify backend Docker build
+```bash
+az acr task list-runs --registry uwracr2425 --output table
+# Look for: Status "Succeeded", recent StartTime, Duration ~2-3 min
+
+# If failed:
+az acr task logs --registry uwracr2425 --run-id <run-id>
+# Common: TypeScript error, npm install failure, Dockerfile syntax error
+
+# If queued >5 min:
+az acr task cancel-run --registry uwracr2425 --run-id <run-id>
+# Then rebuild
+```
+
+### Step 5: Verify Container App deployment
+```bash
+az containerapp revision list \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --output table
+# Look for: Only ONE Active=True, TrafficWeight=100 for active revision
+
+# If traffic split (multiple active):
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --revision-mode Single
+```
+
+### Step 6: Verify container running new image
+```bash
+az containerapp show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --query "properties.template.containers[0].image" -o tsv
+# Should match DIGEST from Step 4
+
+# If wrong image:
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
+  --revision-suffix "force-$(date +%H%M%S)"
+```
+
+### Step 7: Verify deployed SHA matches local
+```bash
+DEPLOYED_SHA=$(curl -s "https://dev-api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+LOCAL_SHA=$(git rev-parse --short HEAD)
+echo "Local: $LOCAL_SHA | Deployed: $DEPLOYED_SHA"  # Must match
+
+# If mismatch:
+GIT_SHA=$(git rev-parse --short HEAD)
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --set-env-vars RELEASE_SHA=$GIT_SHA
+```
+
+### Step 8: Verify container restarted
+```bash
+curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
+# Should be <300 seconds
+
+# If >300 seconds:
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --revision-suffix "restart-$(date +%H%M%S)"
+```
+
+### Nuclear Option (if all steps fail)
+```bash
+# Rebuild and redeploy from scratch
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-nuclear-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+
+az acr build --registry uwracr2425 \
+  --image "unitedwerise-backend:$DOCKER_TAG" \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#<branch>:backend
+
+sleep 180
+DIGEST=$(az acr repository show --name uwracr2425 \
+  --image "unitedwerise-backend:$DOCKER_TAG" \
+  --query "digest" -o tsv)
+
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend@$DIGEST" \
+  --revision-suffix "nuclear-$GIT_SHA-$(date +%H%M%S)" \
+  --revision-mode Single \
+  --set-env-vars \
+    NODE_ENV=staging \
+    STAGING_ENVIRONMENT=true \
+    RELEASE_SHA=$GIT_SHA \
+    RELEASE_DIGEST=$DIGEST \
+    DEPLOYMENT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+sleep 30
+curl -s "https://dev-api.unitedwerise.org/health"
+```
+
 </details>
 
 ---
@@ -224,7 +503,7 @@ When user mentions these keywords, Claude must read the specified documentation 
 → REQUIRED READING:
 1. `docs/DATABASE_SCHEMA.md` (find relevant model group)
 2. `backend/prisma/schema.prisma` (actual schema definition)
-3. `.claude/guides/database-migration-protocol.md` (migration workflow)
+3. Database migration safety protocol (this file, collapsible section above)
 
 **Feed, Posts, Comments, Reactions:**
 → REQUIRED READING:
@@ -335,22 +614,12 @@ Never archive or mark obsolete:
 
 **Daily workflow:**
 ```bash
-# Update current branch
 git pull origin <current-branch>
-
-# Deploy to staging (from development branch)
 git add . && git commit -m "feat: changes"
 git push origin development
-
-# Check deployment
 curl -s "https://dev-api.unitedwerise.org/health" | grep uptime
-
-# TypeScript check
 cd backend && npm run build
-
-# Database safety check
 bash scripts/check-database-safety.sh
-cd backend && node test-db-isolation.js
 ```
 
 **Emergency procedures:**
@@ -392,7 +661,4 @@ See `.claude/guides/architecture-notes.md` for:
 
 - **Common Code Patterns**: `.claude/guides/common-patterns.md`
 - **Multi-Agent Workflows**: `.claude/guides/multi-agent-patterns.md`
-- **Database Migrations**: `.claude/guides/database-migration-protocol.md`
-- **Deployment Diagnosis**: `.claude/guides/deployment-failure-diagnosis.md`
-- **Production Deployment**: `.claude/guides/production-deployment.md`
 - **Architecture Notes**: `.claude/guides/architecture-notes.md`
