@@ -3,11 +3,39 @@
  * Handles login for both main site and admin dashboard with TOTP support
  */
 
-// Use existing BACKEND_URL if defined, otherwise use centralized environment detection
+/**
+ * Inline environment detection (self-contained, no module dependencies)
+ * CRITICAL: This must run BEFORE window.getApiBaseUrl is available from environment.js
+ */
+function detectEnvironment() {
+    const hostname = window.location.hostname;
+
+    // Development/staging environments
+    if (hostname === 'dev.unitedwerise.org' ||
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1') {
+        return 'development';
+    }
+
+    // Production environment
+    return 'production';
+}
+
+function getBackendUrlForEnvironment() {
+    const env = detectEnvironment();
+
+    if (env === 'development') {
+        return 'https://dev-api.unitedwerise.org';
+    }
+
+    return 'https://api.unitedwerise.org';
+}
+
+// Use existing BACKEND_URL if defined, otherwise use inline environment detection
 // Remove trailing /api from BASE_URL to get the base backend URL
 const BACKEND_URL = window.API_CONFIG
     ? window.API_CONFIG.BASE_URL.replace(/\/api$/, '') // Only remove /api at the end
-    : (window.getApiBaseUrl ? window.getApiBaseUrl().replace(/\/api$/, '') : 'https://api.unitedwerise.org'); // Use centralized environment detection (fallback to production for safety)
+    : (window.getApiBaseUrl ? window.getApiBaseUrl().replace(/\/api$/, '') : getBackendUrlForEnvironment()); // Use inline environment detection (no module dependency)
 
 /**
  * Show TOTP verification modal (extracted from admin dashboard)
