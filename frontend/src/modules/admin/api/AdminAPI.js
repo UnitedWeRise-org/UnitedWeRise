@@ -39,10 +39,15 @@ class AdminAPI {
      * Core method extracted from adminApiCall in admin-dashboard.html
      */
     async call(url, options = {}) {
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers
-        };
+        const headers = {};
+
+        // Only set Content-Type for non-FormData requests
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        // Merge with provided headers
+        Object.assign(headers, options.headers);
 
         // Add CSRF token for state-changing requests
         if (window.csrfToken && options.method && options.method !== 'GET') {
@@ -137,6 +142,7 @@ class AdminAPI {
 
     /**
      * Convenience method for GET requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async get(endpoint, params = {}) {
         let url = endpoint;
@@ -147,38 +153,92 @@ class AdminAPI {
             url += (url.includes('?') ? '&' : '?') + queryString;
         }
 
-        return this.call(url, {
+        const response = await this.call(url, {
             method: 'GET'
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for POST requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async post(endpoint, data = {}) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'POST',
             body: JSON.stringify(data)
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
+    }
+
+    /**
+     * Convenience method for POST requests with FormData (file uploads)
+     * Returns parsed JSON response with { success, data, error } structure
+     */
+    async postFormData(endpoint, formData) {
+        const response = await this.call(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for PUT requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async put(endpoint, data = {}) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'PUT',
             body: JSON.stringify(data)
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for DELETE requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async delete(endpoint) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'DELETE'
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
@@ -421,12 +481,20 @@ class AdminAPI {
     }
 }
 
+// Create singleton instance
+const adminAPI = new AdminAPI();
+
 // Export for module system
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AdminAPI;
-} else {
-    window.AdminAPI = new AdminAPI(); // Singleton pattern for global access
+    module.exports = adminAPI;
 }
+
+// Global access for legacy code
+window.AdminAPI = adminAPI;
+
+// ES6 module export
+export { adminAPI as AdminAPI };
+export default adminAPI;
 
 // Initialize admin debugging
 if (typeof adminDebugLog === 'undefined') {
