@@ -163,12 +163,13 @@ export async function logout() {
 
         if (result && result.success) {
             console.log('✅ Logout successful via unified manager');
-            // CRITICAL: 600ms delay allows httpOnly cookies to fully clear
-            // Too short (<500ms) = cookies not cleared on redirect = TOTP still valid
+            // CRITICAL: 1000ms delay allows httpOnly cookies to fully clear
+            // Browser needs time to: receive response → parse Clear-Cookie → commit to disk → be ready for redirect
+            // Too short (<1000ms) = cookies not cleared on redirect = TOTP still valid, user appears logged in
             // Same timing issue as login - cookies need propagation time
             setTimeout(() => {
                 window.location.href = '/';
-            }, 600);
+            }, 1000);
         } else {
             console.error('Logout failed:', result);
         }
@@ -177,7 +178,7 @@ export async function logout() {
         // Redirect anyway for safety (with same delay)
         setTimeout(() => {
             window.location.href = '/';
-        }, 600);
+        }, 1000);
     }
 }
 
