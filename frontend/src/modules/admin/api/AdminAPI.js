@@ -243,29 +243,30 @@ class AdminAPI {
 
     /**
      * Admin-specific API endpoints with proper error handling
+     * All methods work with normalized response structure: {success, data, error, status}
      */
     async getDashboardStats() {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/dashboard`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch dashboard stats: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getUsers(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/users`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch users: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async deleteUser(userId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/users/${userId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete user: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async updateUserRole(userId, isAdmin, isModerator, isSuperAdmin = false) {
@@ -282,10 +283,10 @@ class AdminAPI {
         const response = await this.post(`${this.BACKEND_URL}/api/admin/users/${userId}/role`, {
             role
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update user role: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async mergeAccounts(primaryAccountId, secondaryAccountId) {
@@ -293,27 +294,27 @@ class AdminAPI {
             primaryAccountId,
             secondaryAccountId
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to merge accounts: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getPosts(params = {}) {
         // Use standard feed endpoint for admin post viewing
         const response = await this.get(`${this.BACKEND_URL}/api/feed`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch posts: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async deletePost(postId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/posts/${postId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete post: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getComments(params = {}) {
@@ -325,62 +326,62 @@ class AdminAPI {
 
     async deleteComment(commentId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/comments/${commentId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete comment: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getReports(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/moderation/reports`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch reports: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async updateReportStatus(reportId, status) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/reports/${reportId}`, {
             status
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update report status: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getCandidateProfiles(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/profiles`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch candidate profiles: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getCandidateReports(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/reports`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch candidate reports: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getVerificationQueue(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/verification`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch verification queue: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async verifyCandidateProfile(profileId, verified) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/candidates/profiles/${profileId}/verify`, {
             verified
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update candidate verification: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getAuditLogs(params = {}) {
@@ -404,20 +405,20 @@ class AdminAPI {
 
     async getPayments(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/payments`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch payments: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async refundPayment(paymentId, reason) {
         const response = await this.post(`${this.BACKEND_URL}/api/admin/payments/${paymentId}/refund`, {
             reason
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to process refund: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getMOTDSettings() {
@@ -435,10 +436,10 @@ class AdminAPI {
 
     async updateMOTDSettings(settings) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/motd`, settings);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update MOTD settings: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     /**
@@ -468,9 +469,9 @@ class AdminAPI {
         try {
             const response = await this.get(`${this.BACKEND_URL}/health`);
             return {
-                healthy: response.ok,
+                healthy: response.success,
                 status: response.status,
-                data: response.ok ? await response.json() : null
+                data: response.success ? response.data : null
             };
         } catch (error) {
             return {
