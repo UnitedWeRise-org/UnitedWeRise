@@ -155,8 +155,9 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
                 // NEW: Store CSRF token and user data only
                 window.csrfToken = totpResult.csrfToken;
                 localStorage.setItem('currentUser', JSON.stringify(totpResult.user));
-                
-                
+                window.currentUser = totpResult.user; // Sync with unified-manager state
+
+
                 // TOTP tokens now stored in secure httpOnly cookies (no localStorage needed)
                 
                 // Token is now in httpOnly cookie
@@ -183,8 +184,9 @@ async function unifiedLogin(email, password, context = 'main-site', totpSessionT
             // NEW: Store CSRF token and user data only
             window.csrfToken = result.csrfToken;
             localStorage.setItem('currentUser', JSON.stringify(result.user));
-            
-            
+            window.currentUser = result.user; // Sync with unified-manager state
+
+
             // Token is now in httpOnly cookie
             adminDebugLog('UnifiedAuth', `Unified login successful for ${context} (no TOTP)`);
             return {
