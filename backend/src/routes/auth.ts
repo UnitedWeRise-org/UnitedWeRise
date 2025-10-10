@@ -546,16 +546,18 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
+        path: '/',
+        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
       });
-      
+
       // Set TOTP verified flag as httpOnly cookie
       res.cookie('totpVerified', 'true', {
         httpOnly: true,
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
+        path: '/',
+        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
       });
 
       return res.json({
