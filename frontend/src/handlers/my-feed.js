@@ -125,54 +125,20 @@ export class MyFeedHandlers {
             mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // Adjust height calculation for mobile
+        // Mobile: 60px top bar + 60px bottom nav + 60px feed controls = 180px
+        // Desktop: 200px for standard layout
+        const feedHeight = isMobile ? 'calc(100vh - 180px)' : 'calc(100vh - 200px)';
+
         mainContent.innerHTML = `
             <div class="my-feed">
-                <div class="sticky-composer-wrapper">
-                    <div class="quick-post-composer">
-                        <textarea id="feedPostContent" placeholder="What's on your mind?" style="width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-                        <div style="text-align: right; margin-top: 0.25rem; margin-bottom: 0.25rem;">
-                            <span id="feedPostCharCount" style="font-size: 0.85rem; color: #6c757d;">0/500</span>
-                            <span id="sectionIndicator" style="display: none; margin-left: 10px; font-size: 0.85rem; color: #1da1f2;">Section 1</span>
-                        </div>
-                        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <input type="file" id="feedMediaUpload" multiple accept="image/*,video/*" style="display: none;">
-                                <button onclick="document.getElementById('feedMediaUpload').click()" style="background: #666; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 0.5rem; border: none;">
-                                    📷 Add Media
-                                </button>
-                                <div id="feedMediaPreview" style="margin-top: 0.5rem;"></div>
-                            </div>
-                            <div>
-                                <button data-action="create-post-from-feed" class="btn">Post</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="myFeedPosts" style="margin-top: 1rem; min-height: 400px; height: calc(100vh - 300px); overflow-y: auto;">
+                <div id="myFeedPosts" style="min-height: 400px; height: ${feedHeight}; overflow-y: auto;">
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <p>Loading your personalized feed...</p>
                     </div>
                 </div>
             </div>
         `;
-
-        // Setup file input change event listener for media uploads
-        const fileInput = document.getElementById('feedMediaUpload');
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                console.log('📷 Feed media file input change detected');
-                if (this.files && this.files.length > 0 && window.unifiedPostCreator) {
-                    console.log('📷 Processing selected files:', this.files.length);
-                    window.unifiedPostCreator.handleMediaSelection(this);
-                } else {
-                    console.log('📷 No files selected or UnifiedPostCreator not available');
-                }
-            });
-            console.log('📷 Media upload change listener attached to feedMediaUpload');
-        } else {
-            console.error('📷 Could not find feedMediaUpload input to attach change listener');
-        }
 
         // Render feed toggle UI
         if (window.feedToggle) {
@@ -208,57 +174,9 @@ export class MyFeedHandlers {
             console.error('❌ Error setting up infinite scroll:', error);
         }
 
-        // Character counter - only shows when approaching max limit
-        this.setupCharacterCounter();
-
         // Apply background if user has one
         if (window.currentUser && window.currentUser.backgroundImage && typeof window.applyUserBackground === 'function') {
             window.applyUserBackground(window.currentUser.backgroundImage);
-        }
-    }
-
-    /**
-     * Setup character counter for post composer
-     */
-    setupCharacterCounter() {
-        const feedPostTextarea = document.getElementById('feedPostContent');
-        const feedCharCount = document.getElementById('feedPostCharCount');
-        const sectionIndicator = document.getElementById('sectionIndicator');
-
-        if (feedPostTextarea && feedCharCount) {
-            // Function to update character count
-            const updateCharCounter = () => {
-                const text = feedPostTextarea.value;
-                const charCount = text.length;
-
-                // Hide section indicator (no longer needed)
-                if (sectionIndicator) {
-                    sectionIndicator.style.display = 'none';
-                }
-
-                // Only show counter when approaching 5000 char limit
-                if (charCount >= 4900) {
-                    feedCharCount.style.display = 'inline';
-                    feedCharCount.textContent = `${charCount}/5000`;
-
-                    if (charCount > 5000) {
-                        feedCharCount.style.color = '#dc3545'; // Red
-                        feedCharCount.style.fontWeight = 'bold';
-                    } else {
-                        feedCharCount.style.color = '#ffc107'; // Orange warning
-                        feedCharCount.style.fontWeight = 'bold';
-                    }
-                } else {
-                    // Hide counter when under 4900
-                    feedCharCount.style.display = 'none';
-                }
-            };
-
-            // Initial count
-            updateCharCounter();
-
-            // Update on input
-            feedPostTextarea.addEventListener('input', updateCharCounter);
         }
     }
 
@@ -629,33 +547,17 @@ export class MyFeedHandlers {
     /**
      * Scroll event listener for infinite scroll on My Feed
      * Migrated from index.html line 2975
-     * Also handles auto-hide/show for posting box
      */
     setupMyFeedInfiniteScroll() {
         const myFeedContainer = document.getElementById('myFeedPosts');
         if (myFeedContainer) {
             console.log('✅ Setting up infinite scroll for My Feed');
 
-            let lastScrollTop = myFeedContainer.scrollTop;
             let ticking = false;
 
             myFeedContainer.addEventListener('scroll', () => {
                 if (!ticking) {
                     window.requestAnimationFrame(() => {
-                        const currentScrollTop = myFeedContainer.scrollTop;
-
-                        // Auto-hide/show posting box based on scroll direction
-                        const composerWrapper = document.querySelector('.sticky-composer-wrapper');
-                        if (composerWrapper) {
-                            if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
-                                // Scrolling down - hide posting box
-                                composerWrapper.classList.add('hidden');
-                            } else if (currentScrollTop < lastScrollTop) {
-                                // Scrolling up - show posting box
-                                composerWrapper.classList.remove('hidden');
-                            }
-                        }
-
                         // Infinite scroll logic
                         if (!this.isLoadingMorePosts && this.hasMorePosts) {
                             const { scrollTop, scrollHeight, clientHeight } = myFeedContainer;
@@ -668,7 +570,6 @@ export class MyFeedHandlers {
                             }
                         }
 
-                        lastScrollTop = currentScrollTop;
                         ticking = false;
                     });
                     ticking = true;

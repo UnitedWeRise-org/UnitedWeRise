@@ -143,6 +143,7 @@ model User {
   userBadges                  UserBadge[]
   photos                      Photo[]
   savedPosts                  SavedPost[]
+  feedFilters                 FeedFilter[]
 
   @@index([username])
   @@index([createdAt])
@@ -2329,6 +2330,42 @@ enum GeographicScope {
   REGIONAL
 }
 
+enum FilterType {
+  QUICK_FILTER       // Pre-defined system filters (Today, This Week, etc.)
+  CUSTOM             // User-created custom filters
+  SMART              // AI-suggested filters based on behavior
+}
+
+enum FeedSource {
+  DISCOVER           // Global discover feed
+  FOLLOWING          // Following feed only
+  SAVED              // Saved posts only
+  COMBINED           // Mix of multiple sources
+}
+
+enum FilterTimeframe {
+  LAST_HOUR
+  TODAY
+  THIS_WEEK
+  THIS_MONTH
+  THIS_YEAR
+  ALL_TIME
+  CUSTOM             // Use customStartDate/customEndDate
+}
+
+enum FilterSortBy {
+  RELEVANCE          // Algorithmic relevance
+  RECENT             // Most recent first
+  POPULAR            // Most engagement
+  TRENDING           // Trending score
+  PROXIMITY          // Closest geographically
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
 enum PetitionStatus {
   ACTIVE
   COMPLETED
@@ -2636,4 +2673,67 @@ model SavedPost {
   @@index([userId])
   @@index([postId])
   @@index([savedAt])
+}
+
+model FeedFilter {
+  id                String              @id @default(uuid())
+  userId            String
+  name              String              // User-defined name, e.g. "Local Politics"
+  filterType        FilterType          @default(CUSTOM)
+
+  // Feed Source
+  feedSource        FeedSource          @default(DISCOVER) // DISCOVER, FOLLOWING, SAVED
+
+  // Content Filters
+  isPolitical       Boolean?            // null = both, true = political only, false = non-political only
+  tags              String[]            @default([])        // Filter by tags
+
+  // Geographic Filters
+  geographicScope   GeographicScope?    // LOCAL, COUNTY, STATE, NATIONAL, null = all
+  h3Resolution      Int?                // H3 resolution for proximity (null = use user's location)
+  centerLat         Float?              // Custom center point
+  centerLng         Float?
+  radiusMiles       Float?              // Proximity radius
+
+  // Author Filters
+  authorTypes       PoliticalProfileType[] @default([]) // CITIZEN, CANDIDATE, ELECTED_OFFICIAL, etc.
+  authorIds         String[]            @default([])    // Specific users to include/exclude
+  excludeAuthorIds  String[]            @default([])
+
+  // Topic & Category Filters
+  topicIds          String[]            @default([])    // Filter by topics
+  categories        IssueCategory[]     @default([])    // HEALTHCARE, EDUCATION, etc.
+
+  // Engagement Filters
+  minLikes          Int?                // Minimum engagement thresholds
+  minComments       Int?
+  minShares         Int?
+
+  // Time Filters
+  timeframe         FilterTimeframe     @default(ALL_TIME)
+  customStartDate   DateTime?           // For custom timeframe
+  customEndDate     DateTime?
+
+  // Sort & Display
+  sortBy            FilterSortBy        @default(RELEVANCE)
+  sortOrder         SortOrder           @default(DESC)
+
+  // User Preferences
+  isDefault         Boolean             @default(false)  // User's default filter
+  isPinned          Boolean             @default(false)  // Show in quick access
+  displayOrder      Int                 @default(0)      // Order in user's filter list
+
+  // Metadata
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  lastUsedAt        DateTime?
+  useCount          Int                 @default(0)
+
+  // Relations
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId, isPinned])
+  @@index([userId, isDefault])
+  @@index([userId, lastUsedAt])
 }

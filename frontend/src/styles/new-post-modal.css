@@ -1,0 +1,173 @@
+/**
+ * NewPostModal Component Styles
+ * Responsive modal/bottom sheet for post creation
+ */
+
+/* Modal Container */
+.new-post-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 200ms ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Backdrop */
+.new-post-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+/* Modal Content Card */
+.new-post-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform, opacity;
+}
+
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal Header */
+.new-post-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.new-post-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Close Button */
+.new-post-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.new-post-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Modal Body */
+.new-post-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ============================================
+   MOBILE: Bottom Sheet (≤767px)
+   ============================================ */
+@media screen and (max-width: 767px) {
+    .new-post-modal {
+        align-items: flex-end;
+    }
+
+    .new-post-modal-content {
+        width: 100%;
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 16px 16px 0 0;
+        animation: bottomSheetSlideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes bottomSheetSlideUp {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    /* Handle bar for drag-to-dismiss hint */
+    .new-post-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 2px;
+    }
+
+    .new-post-modal-header {
+        padding-top: 24px; /* Space for handle bar */
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    .new-post-modal,
+    .new-post-modal-content {
+        animation: none !important;
+    }
+
+    .new-post-modal-content {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Focus States */
+.new-post-modal-close:focus {
+    outline: 2px solid #4b5c09;
+    outline-offset: 2px;
+}

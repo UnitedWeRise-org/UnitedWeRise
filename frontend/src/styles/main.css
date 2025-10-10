@@ -1221,12 +1221,13 @@ details {
 .main {
     margin-left: 3vw;
     margin-right: 26%; /* Permanently sized for collapsed map space */
-    padding-top: 1vh; /* Small top padding in vh */
+    padding-top: 0; /* No top padding - feed controls stick to top */
     padding-left: 1rem;
     padding-right: 1rem;
     padding-bottom: 1vh;
     flex-grow: 1;
     height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
+    min-height: calc(100vh - 5.5vh); /* Ensure minimum height */
     box-sizing: border-box;
     overflow: hidden; /* Prevent main container from scrolling - let content handle it */
 }
