@@ -332,7 +332,7 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 riskScore: 20
             });
             return res.status(401).json({
-                error: 'This account was created with social login. Please sign in with Google, Microsoft, or Apple.',
+                error: 'This account was created with social login. Please sign in with Google.',
                 oauthOnly: true
             });
         }
@@ -527,7 +527,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 secure: (0, environment_1.requireSecureCookies)(),
                 sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
             });
             // Set TOTP verified flag as httpOnly cookie
             res.cookie('totpVerified', 'true', {
@@ -535,7 +536,8 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
                 secure: (0, environment_1.requireSecureCookies)(),
                 sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
                 maxAge: 24 * 60 * 60 * 1000, // 24 hours
-                path: '/'
+                path: '/',
+                domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
             });
             return res.json({
                 message: 'Login successful',
