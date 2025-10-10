@@ -1075,7 +1075,9 @@
     </div>
 
     <!-- Unified Authentication System -->
-    <script src="js/unifiedAuth.js"></script>
+    <!-- MIGRATION: Replaced by ES6 module src/modules/auth/UnifiedAuth.js -->
+    <!-- <script src="js/unifiedAuth.js"></script> -->
+    <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>
 
     <!-- CRITICAL: Bulletproof loading overlay removal -->
     <!-- This MUST execute before modules to prevent stuck loading screens -->
