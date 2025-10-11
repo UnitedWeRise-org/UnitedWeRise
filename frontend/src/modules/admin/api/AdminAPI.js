@@ -245,6 +245,19 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Fetch all dashboard initialization data in one batch request
+     * Combines dashboard stats, recent users, posts, and reports into a single API call
+     * @returns {Promise<Object>} Complete dashboard initialization data
+     */
+    async getDashboardBatch() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/batch/dashboard-init`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch dashboard batch data: ${response.status}`);
+        }
+        return response.data;
+    }
+
     async getUsers(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/users`, params);
         if (!response.success) {

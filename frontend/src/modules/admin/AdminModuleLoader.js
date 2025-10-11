@@ -179,15 +179,29 @@ class AdminModuleLoader {
             }
         }
 
-        // Phase 1.5: Pre-fetch and cache shared data BEFORE initializing controllers
+        // Phase 1.5: Batch-fetch ALL dashboard data in a single request
         if (window.AdminState && window.AdminAPI) {
             try {
-                console.log('📊 Pre-fetching dashboard stats (global cache)...');
-                const dashboardStats = await window.AdminAPI.getDashboardStats();
-                window.AdminState.setCache('dashboard_global', dashboardStats, Infinity);
-                console.log('✅ Dashboard stats cached globally - controllers can now use cache');
+                console.log('📊 Batch-fetching ALL dashboard data in single request...');
+                const batchData = await window.AdminAPI.getDashboardBatch();
+
+                // Cache all data with infinite duration so controllers can use it
+                window.AdminState.setCache('dashboard_global', batchData.stats, Infinity);
+                window.AdminState.setCache('users_{"limit":50,"page":1}', batchData.users, Infinity);
+                window.AdminState.setCache('content_{}', {
+                    posts: batchData.posts,
+                    comments: { ok: true, comments: [] } // Comments deprecated
+                }, Infinity);
+                window.AdminState.setCache('reports_{}', batchData.reports, Infinity);
+
+                console.log('✅ All dashboard data cached (batch) - 6 API calls → 1', {
+                    stats: '✓',
+                    users: `${batchData.users.users.length} users`,
+                    posts: `${batchData.posts.posts.length} posts`,
+                    reports: `${batchData.reports.reports.length} reports`
+                });
             } catch (error) {
-                console.error('⚠️ Failed to pre-cache dashboard stats:', error);
+                console.error('⚠️ Failed to batch-fetch dashboard data:', error);
                 // Continue anyway - controllers will fetch individually if needed
             }
         }
