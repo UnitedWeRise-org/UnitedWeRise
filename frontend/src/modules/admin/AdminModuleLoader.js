@@ -95,20 +95,8 @@ class AdminModuleLoader {
             // Only load modules if authentication is successful
             // This prevents controllers from trying to load data before login
             if (this.shouldLoadModules()) {
-                // Load modules in dependency order
+                // Load modules in dependency order (includes pre-caching shared data)
                 await this.loadModulesInOrder();
-
-                // Fetch dashboard stats ONCE globally and cache
-                if (window.AdminState && window.AdminAPI) {
-                    try {
-                        console.log('📊 Fetching dashboard stats (global cache)...');
-                        const dashboardStats = await window.AdminAPI.getDashboardStats();
-                        window.AdminState.setCache('dashboard_global', dashboardStats, Infinity);
-                        console.log('✅ Dashboard stats cached globally');
-                    } catch (error) {
-                        console.error('Failed to cache dashboard stats:', error);
-                    }
-                }
 
                 // Set up global event handlers
                 this.setupGlobalHandlers();
@@ -191,7 +179,20 @@ class AdminModuleLoader {
             }
         }
 
-        // Phase 2: Controllers (parallel - independent)
+        // Phase 1.5: Pre-fetch and cache shared data BEFORE initializing controllers
+        if (window.AdminState && window.AdminAPI) {
+            try {
+                console.log('📊 Pre-fetching dashboard stats (global cache)...');
+                const dashboardStats = await window.AdminAPI.getDashboardStats();
+                window.AdminState.setCache('dashboard_global', dashboardStats, Infinity);
+                console.log('✅ Dashboard stats cached globally - controllers can now use cache');
+            } catch (error) {
+                console.error('⚠️ Failed to pre-cache dashboard stats:', error);
+                // Continue anyway - controllers will fetch individually if needed
+            }
+        }
+
+        // Phase 2: Controllers (parallel - independent with stagger)
         // Only load immediately-needed controllers
         const controllerModules = [
             'OverviewController',     // Always shown first
@@ -202,9 +203,14 @@ class AdminModuleLoader {
             // Other 9 controllers will lazy load when tabs clicked
         ];
 
-        console.log(`🚀 Loading ${controllerModules.length} immediately-needed controllers in parallel...`);
+        console.log(`🚀 Loading ${controllerModules.length} immediately-needed controllers with stagger...`);
+        // Stagger controller loads by 50ms to prevent burst requests
         const results = await Promise.allSettled(
-            controllerModules.map(name => this.loadModule(name))
+            controllerModules.map((name, index) =>
+                new Promise(resolve =>
+                    setTimeout(() => resolve(this.loadModule(name)), index * 50)
+                )
+            )
         );
 
         // Log results
