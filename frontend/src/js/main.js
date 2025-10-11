@@ -10,6 +10,13 @@ console.log('🚀 Loading modern ES6 module system...');
 
 // Phase 1: Core utilities (no dependencies)
 import '../utils/environment.js';
+import '../utils/performance.js';
+import '../utils/error-handler.js';
+import '../utils/advanced-caching.js';
+import '../utils/smart-loader.js';
+
+// Phase 1a: Admin debug system (used by many modules, loaded early)
+import '../../js/adminDebugger.js';
 
 // Phase 2: Configuration layer (depends on environment)
 import '../config/api.js';
