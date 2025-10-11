@@ -12,7 +12,7 @@ export interface OAuthProfile {
   firstName?: string;
   lastName?: string;
   picture?: string;
-  provider: 'GOOGLE' | 'MICROSOFT' | 'APPLE';
+  provider: 'GOOGLE';
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: Date;
@@ -282,7 +282,7 @@ export class OAuthService {
   /**
    * Unlink OAuth provider from user account
    */
-  static async unlinkOAuthProvider(userId: string, provider: 'GOOGLE' | 'MICROSOFT' | 'APPLE'): Promise<void> {
+  static async unlinkOAuthProvider(userId: string, provider: 'GOOGLE'): Promise<void> {
     try {
       // Check if user has a password or other OAuth providers
       const user = await prisma.user.findUnique({

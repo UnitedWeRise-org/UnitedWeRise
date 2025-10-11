@@ -365,15 +365,7 @@
                             </svg>
                             Google
                         </button>
-                        <!-- Microsoft and Apple OAuth temporarily disabled -->
-                        <!--
-                        <button class="oauth-btn microsoft-btn" data-auth-microsoft>
-                            Microsoft
-                        </button>
-                        <button class="oauth-btn apple-btn" data-auth-apple>
-                            Apple  
-                        </button>
-                        -->
+                        <!-- Microsoft and Apple OAuth removed (never configured) -->
                     </div>
                     
                     <div class="auth-switch">
@@ -451,15 +443,7 @@
                             </svg>
                             Google
                         </button>
-                        <!-- Microsoft and Apple OAuth temporarily disabled -->
-                        <!--
-                        <button class="oauth-btn microsoft-btn" data-auth-microsoft>
-                            Microsoft
-                        </button>
-                        <button class="oauth-btn apple-btn" data-auth-apple>
-                            Apple  
-                        </button>
-                        -->
+                        <!-- Microsoft and Apple OAuth removed (never configured) -->
                     </div>
                     
                     <div class="auth-switch">
@@ -1091,7 +1075,9 @@
     </div>
 
     <!-- Unified Authentication System -->
-    <script src="js/unifiedAuth.js"></script>
+    <!-- MIGRATION: Replaced by ES6 module src/modules/auth/UnifiedAuth.js -->
+    <!-- <script src="js/unifiedAuth.js"></script> -->
+    <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>
 
     <!-- CRITICAL: Bulletproof loading overlay removal -->
     <!-- This MUST execute before modules to prevent stuck loading screens -->

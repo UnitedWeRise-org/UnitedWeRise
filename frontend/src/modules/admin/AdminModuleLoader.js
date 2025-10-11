@@ -1,9 +1,9 @@
 /**
  * AdminModuleLoader - Orchestrates loading of all admin modules
- * Replaces the monolithic admin-dashboard.html structure
+ * Coordinates initialization of 14+ controllers with dependency management
  *
  * Enterprise-grade modular architecture for UnitedWeRise admin system
- * Phase 2.4 completion - Module coordination and initialization
+ * Handles authentication-gated loading and graceful error handling
  */
 
 class AdminModuleLoader {
@@ -32,6 +32,19 @@ class AdminModuleLoader {
             'CivicEngagementController'
         ];
         this.isInitialized = false;
+
+        // Lazy loading map for tab-specific controllers
+        this.lazyModules = {
+            'external-candidates': 'ExternalCandidatesController',
+            'errors': 'ErrorsController',
+            'ai-insights': 'AIInsightsController',
+            'motd': 'MOTDController',
+            'deployment': 'DeploymentController',
+            'system': 'SystemController',
+            'analytics': 'AnalyticsController',
+            'candidates': 'CandidatesController',
+            'civic-engagement': 'CivicEngagementController'
+        };
         this.dependencies = {
             'AdminGlobalUtils': [],
             'AdminTOTPModal': [],
@@ -51,7 +64,8 @@ class AdminModuleLoader {
             'DeploymentController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'SystemController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
             'ErrorsController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
-            'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation']
+            'ExternalCandidatesController': ['AdminAPI', 'AdminState', 'adminDebugLog', 'requestTOTPConfirmation'],
+            'CivicEngagementController': ['AdminAPI', 'AdminState', 'adminDebugLog']
         };
 
         // Bind methods
@@ -81,7 +95,7 @@ class AdminModuleLoader {
             // Only load modules if authentication is successful
             // This prevents controllers from trying to load data before login
             if (this.shouldLoadModules()) {
-                // Load modules in dependency order
+                // Load modules in dependency order (includes pre-caching shared data)
                 await this.loadModulesInOrder();
 
                 // Set up global event handlers
@@ -143,16 +157,86 @@ class AdminModuleLoader {
      * Load modules in dependency order
      */
     async loadModulesInOrder() {
-        for (const moduleName of this.loadOrder) {
+        console.log('🔄 Loading admin modules with parallel optimization...');
+
+        // Phase 1: Core dependencies (sequential - required order)
+        const coreModules = [
+            'AdminGlobalUtils',
+            'AdminTOTPModal',
+            'AdminTabsManager',
+            'AdminAPI',
+            'AdminAuth',
+            'AdminState'
+        ];
+
+        for (const moduleName of coreModules) {
             try {
                 await this.loadModule(moduleName);
                 console.log(`✅ ${moduleName} loaded successfully`);
             } catch (error) {
                 console.error(`❌ Failed to load ${moduleName}:`, error);
-                // Continue with other modules instead of stopping initialization
-                continue;
+                throw error; // Core modules are critical
             }
         }
+
+        // Phase 1.5: Batch-fetch ALL dashboard data in a single request
+        if (window.AdminState && window.AdminAPI) {
+            try {
+                console.log('📊 Batch-fetching ALL dashboard data in single request...');
+                const batchData = await window.AdminAPI.getDashboardBatch();
+
+                // Cache all data with infinite duration so controllers can use it
+                window.AdminState.setCache('dashboard_global', batchData.stats, Infinity);
+                window.AdminState.setCache('users_{"limit":50,"page":1}', batchData.users, Infinity);
+                window.AdminState.setCache('content_{}', {
+                    posts: batchData.posts,
+                    comments: { ok: true, comments: [] } // Comments deprecated
+                }, Infinity);
+                window.AdminState.setCache('reports_{}', batchData.reports, Infinity);
+
+                console.log('✅ All dashboard data cached (batch) - 6 API calls → 1', {
+                    stats: '✓',
+                    users: `${batchData.users.users.length} users`,
+                    posts: `${batchData.posts.posts.length} posts`,
+                    reports: `${batchData.reports.reports.length} reports`
+                });
+            } catch (error) {
+                console.error('⚠️ Failed to batch-fetch dashboard data:', error);
+                // Continue anyway - controllers will fetch individually if needed
+            }
+        }
+
+        // Phase 2: Controllers (parallel - independent with stagger)
+        // Only load immediately-needed controllers
+        const controllerModules = [
+            'OverviewController',     // Always shown first
+            'UsersController',        // Commonly used
+            'ContentController',      // Commonly used
+            'SecurityController',     // Commonly used
+            'ReportsController'       // Commonly used
+            // Other 9 controllers will lazy load when tabs clicked
+        ];
+
+        console.log(`🚀 Loading ${controllerModules.length} immediately-needed controllers with stagger...`);
+        // Stagger controller loads by 50ms to prevent burst requests
+        const results = await Promise.allSettled(
+            controllerModules.map((name, index) =>
+                new Promise(resolve =>
+                    setTimeout(() => resolve(this.loadModule(name)), index * 50)
+                )
+            )
+        );
+
+        // Log results
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                console.log(`✅ ${controllerModules[index]} loaded successfully`);
+            } else {
+                console.error(`❌ Failed to load ${controllerModules[index]}:`, result.reason);
+            }
+        });
+
+        console.log('✅ All modules loaded');
     }
 
     /**
@@ -460,7 +544,26 @@ class AdminModuleLoader {
     /**
      * Show a specific admin section
      */
-    showSection(sectionId) {
+    async showSection(sectionId) {
+        console.log(`📍 Showing section: ${sectionId}`);
+
+        // Check if lazy module needed
+        if (this.lazyModules[sectionId] && !this.modules.has(this.lazyModules[sectionId])) {
+            const moduleName = this.lazyModules[sectionId];
+            console.log(`📦 Lazy loading ${moduleName}...`);
+
+            try {
+                // Load the module on demand
+                await this.loadModule(moduleName);
+
+                console.log(`✅ ${moduleName} loaded on demand`);
+            } catch (error) {
+                console.error(`❌ Failed to lazy load ${moduleName}:`, error);
+                alert(`Failed to load ${sectionId} section. Please refresh the page.`);
+                return;
+            }
+        }
+
         // Hide all sections
         const sections = document.querySelectorAll('.dashboard-section');
         sections.forEach(section => {

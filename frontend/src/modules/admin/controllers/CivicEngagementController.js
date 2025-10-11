@@ -12,6 +12,11 @@ class CivicEngagementController {
         this.badgeData = [];
     }
 
+    // Standard init() method expected by AdminModuleLoader
+    async init() {
+        return await this.initializeCivicEngagement();
+    }
+
     async initializeCivicEngagement() {
         try {
             await this.loadEngagementStatistics();
@@ -122,17 +127,30 @@ class CivicEngagementController {
             return;
         }
 
-        grid.innerHTML = this.badgeData.map(badge => `
+        // Add qualification check button at the top
+        const headerHTML = `
+            <div class="badge-grid-header" style="grid-column: 1 / -1; margin-bottom: 1rem;">
+                <button data-action="runQualificationChecks" class="btn btn-primary">
+                    🔄 Run Auto-Award Qualification Checks
+                </button>
+                <span style="margin-left: 1rem; color: #666;">
+                    Check all users against badge criteria and auto-award qualifying badges
+                </span>
+            </div>
+        `;
+
+        grid.innerHTML = headerHTML + this.badgeData.map(badge => `
             <div class="badge-card">
                 <img src="${badge.imageUrl}" alt="${badge.name}" class="badge-image" />
                 <h4>${badge.name}</h4>
                 <p>${badge.description}</p>
                 <div class="badge-stats">
                     <small>${badge._count?.userBadges || 0} awarded</small>
+                    <br><small>${badge.isAutoAwarded ? '🤖 Auto-awarded' : '👤 Manual only'}</small>
                 </div>
                 <div class="badge-actions">
                     <button data-action="editBadge" data-badge-id="${badge.id}" class="btn-small">Edit</button>
-                    <button data-action="awardBadgeManually" data-badge-id="${badge.id}" class="btn-small">Award</button>
+                    <button data-action="awardBadgeManually" data-badge-id="${badge.id}" data-badge-name="${badge.name}" class="btn-small">Award</button>
                 </div>
             </div>
         `).join('');
@@ -657,8 +675,29 @@ class CivicEngagementController {
 
                     case 'awardBadgeManually':
                         const badgeIdAward = e.target.getAttribute('data-badge-id');
+                        const badgeName = e.target.getAttribute('data-badge-name');
                         if (badgeIdAward) {
-                            this.awardBadgeManually(badgeIdAward);
+                            this.awardBadgeManually(badgeIdAward, badgeName);
+                        }
+                        break;
+
+                    case 'runQualificationChecks':
+                        this.runQualificationChecks();
+                        break;
+
+                    case 'closeAwardBadgeModal':
+                        this.closeAwardBadgeModal();
+                        break;
+
+                    case 'searchUsersForBadgeAward':
+                        this.searchUsersForBadgeAward();
+                        break;
+
+                    case 'selectUserForBadge':
+                        const selectedUserId = e.target.getAttribute('data-user-id');
+                        const selectedUsername = e.target.getAttribute('data-username');
+                        if (selectedUserId && selectedUsername) {
+                            this.selectUserForBadgeAward(selectedUserId, selectedUsername);
                         }
                         break;
 
@@ -712,8 +751,29 @@ class CivicEngagementController {
             if (e.target.id === 'badge-modal') this.closeBadgeModal();
         });
 
+        const awardBadgeModal = document.getElementById('award-badge-modal');
+        if (awardBadgeModal) {
+            awardBadgeModal.addEventListener('click', (e) => {
+                if (e.target.id === 'award-badge-modal') this.closeAwardBadgeModal();
+            });
+        }
+
         // Image upload preview
         this.handleBadgeImageUpload();
+
+        // User search input debounced listener
+        const userSearchInput = document.getElementById('user-search-input');
+        if (userSearchInput) {
+            let searchTimeout;
+            userSearchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    if (userSearchInput.value.trim().length >= 2) {
+                        this.searchUsersForBadgeAward();
+                    }
+                }, 300); // Debounce 300ms
+            });
+        }
     }
 
     showSuccessMessage(message) {
@@ -774,14 +834,141 @@ class CivicEngagementController {
         }
     }
 
-    async awardBadgeManually(badgeId) {
+    async awardBadgeManually(badgeId, badgeName) {
         try {
-            // TODO: Implement manual badge awarding with user selection
-            console.log('Award badge manually:', badgeId);
-            this.showErrorMessage('Manual badge awarding is not yet implemented');
+            // Show user search modal
+            const modal = document.getElementById('award-badge-modal');
+            if (!modal) {
+                this.showErrorMessage('Award badge modal not found in HTML');
+                return;
+            }
+
+            // Set modal title
+            document.getElementById('award-modal-title').textContent = `Award Badge: ${badgeName}`;
+            document.getElementById('award-modal-badge-id').value = badgeId;
+
+            // Clear previous search results
+            document.getElementById('user-search-input').value = '';
+            document.getElementById('user-search-results').innerHTML = '';
+
+            // Show modal
+            modal.style.display = 'block';
         } catch (error) {
-            console.error('Error awarding badge manually:', error);
+            console.error('Error showing award badge modal:', error);
             this.showErrorMessage('Error awarding badge: ' + error.message);
+        }
+    }
+
+    async searchUsersForBadgeAward() {
+        try {
+            const searchTerm = document.getElementById('user-search-input').value.trim();
+
+            if (searchTerm.length < 2) {
+                document.getElementById('user-search-results').innerHTML =
+                    '<p style="color: #666; text-align: center; padding: 1rem;">Enter at least 2 characters to search</p>';
+                return;
+            }
+
+            // Show loading
+            document.getElementById('user-search-results').innerHTML =
+                '<p style="color: #666; text-align: center; padding: 1rem;">Searching...</p>';
+
+            const response = await AdminAPI.get(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`);
+
+            if (!response.success || !response.data || response.data.length === 0) {
+                document.getElementById('user-search-results').innerHTML =
+                    '<p style="color: #666; text-align: center; padding: 1rem;">No users found</p>';
+                return;
+            }
+
+            // Render user results
+            const resultsHTML = response.data.map(user => `
+                <div class="user-search-result" data-user-id="${user.id}">
+                    <div class="user-result-info">
+                        <strong>${user.username}</strong>
+                        <br><small>${user.email}</small>
+                    </div>
+                    <button
+                        class="btn-small btn-primary"
+                        data-action="selectUserForBadge"
+                        data-user-id="${user.id}"
+                        data-username="${user.username}">
+                        Select
+                    </button>
+                </div>
+            `).join('');
+
+            document.getElementById('user-search-results').innerHTML = resultsHTML;
+        } catch (error) {
+            console.error('Error searching users:', error);
+            document.getElementById('user-search-results').innerHTML =
+                '<p style="color: #d00; text-align: center; padding: 1rem;">Error searching users</p>';
+        }
+    }
+
+    async selectUserForBadgeAward(userId, username) {
+        try {
+            const badgeId = document.getElementById('award-modal-badge-id').value;
+
+            if (!confirm(`Award this badge to ${username}?`)) {
+                return;
+            }
+
+            const response = await AdminAPI.post('/api/admin/badges/award', {
+                badgeId: badgeId,
+                userId: userId
+            });
+
+            if (response.success) {
+                this.closeAwardBadgeModal();
+                await this.loadBadges();
+                await this.loadEngagementStatistics();
+                this.showSuccessMessage(`Badge successfully awarded to ${username}!`);
+            } else {
+                throw new Error(response.error || 'Failed to award badge');
+            }
+        } catch (error) {
+            console.error('Error awarding badge:', error);
+            this.showErrorMessage('Error awarding badge: ' + error.message);
+        }
+    }
+
+    closeAwardBadgeModal() {
+        const modal = document.getElementById('award-badge-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('user-search-input').value = '';
+            document.getElementById('user-search-results').innerHTML = '';
+        }
+    }
+
+    async runQualificationChecks() {
+        try {
+            if (!confirm('Run auto-award qualification checks for all users?\n\nThis will check all active auto-awarded badges and award them to qualifying users.')) {
+                return;
+            }
+
+            // Show loading state
+            this.showSuccessMessage('Running qualification checks... This may take a moment.');
+
+            const response = await AdminAPI.post('/api/admin/badges/run-qualifications', {});
+
+            if (response.success) {
+                const results = response.data || {};
+                const message = `Qualification checks complete!\n\n` +
+                    `- Users checked: ${results.usersChecked || 0}\n` +
+                    `- Badges awarded: ${results.badgesAwarded || 0}\n` +
+                    `- Users qualified: ${results.usersQualified || 0}`;
+
+                await this.loadBadges();
+                await this.loadEngagementStatistics();
+                this.showSuccessMessage(message);
+            } else {
+                throw new Error(response.error || 'Failed to run qualification checks');
+            }
+        } catch (error) {
+            console.error('Error running qualification checks:', error);
+            this.showErrorMessage('Error running qualification checks: ' + error.message);
         }
     }
 }

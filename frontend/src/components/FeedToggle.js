@@ -299,12 +299,14 @@ export class FeedToggle {
                         </div>
                     `;
 
-                    // Force display block
-                    filePreview.style.display = 'block';
-                    filePreview.style.visibility = 'visible';
-                    filePreview.style.opacity = '1';
+                    // Force display block with multiple methods
+                    filePreview.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; margin-top: 8px;';
+                    filePreview.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; margin-top: 8px;');
+
                     console.log('📎 File preview display set to:', filePreview.style.display);
                     console.log('📎 File preview HTML:', filePreview.innerHTML.substring(0, 100));
+                    console.log('📎 File preview offsetHeight:', filePreview.offsetHeight);
+                    console.log('📎 File preview parent:', filePreview.parentElement);
 
                     // Clear files button
                     const clearBtn = filePreview.querySelector('#clearFilesBtn');
@@ -350,66 +352,86 @@ export class FeedToggle {
                 postBtn.textContent = 'Posting...';
 
                 try {
-                    // Prepare post data
-                    const postData = { content };
-
-                    // Add files if selected
-                    if (selectedFiles.length > 0) {
-                        postData.files = selectedFiles;
-                    }
-
-                    // Use UnifiedPostCreator if available, otherwise direct API call
-                    let response;
-                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.create === 'function') {
-                        // Use the proper create() method with full options
-                        const result = await window.unifiedPostCreator.create({
-                            type: 'post',
+                    // Use UnifiedPostCreator if available (handles two-step upload)
+                    let postResult;
+                    if (window.unifiedPostCreator && typeof window.unifiedPostCreator.createPost === 'function') {
+                        console.log('📝 Using UnifiedPostCreator.createPost()');
+                        postResult = await window.unifiedPostCreator.createPost({
                             content: content,
-                            mediaFiles: selectedFiles,
-                            destination: 'feed',
-                            tags: ['Public Post'],
-                            clearAfterSuccess: false  // Don't clear form, we'll do it manually
+                            mediaFiles: selectedFiles.length > 0 ? selectedFiles : null,
+                            type: 'post'
                         });
-                        response = result.success ? result.data : null;
-                    } else if (window.apiCall) {
-                        // For files, need to use FormData
-                        if (selectedFiles.length > 0) {
-                            const formData = new FormData();
-                            formData.append('content', content);
-                            selectedFiles.forEach((file, index) => {
-                                formData.append('files', file);
-                            });
-
-                            response = await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: formData,
-                                headers: {} // Let browser set Content-Type for FormData
-                            });
-                        } else {
-                            response = await window.apiCall('/posts', {
-                                method: 'POST',
-                                body: JSON.stringify({ content })
-                            });
-                        }
                     } else {
-                        throw new Error('No posting method available');
+                        // Manual two-step process: 1) Upload media, 2) Create post
+                        let mediaIds = [];
+
+                        if (selectedFiles.length > 0) {
+                            console.log('📸 Step 1: Uploading media files...');
+
+                            // Check if uploadMediaFiles is available
+                            if (typeof window.uploadMediaFiles !== 'function') {
+                                throw new Error('Media upload system not available');
+                            }
+
+                            const uploadResult = await window.uploadMediaFiles(
+                                selectedFiles,
+                                'POST_MEDIA',
+                                'PERSONAL'
+                            );
+
+                            console.log('📸 Upload result:', uploadResult);
+
+                            if (!uploadResult.ok || !uploadResult.data?.photos) {
+                                throw new Error(uploadResult.error || 'Media upload failed');
+                            }
+
+                            mediaIds = uploadResult.data.photos.map(photo => photo.id);
+                            console.log('✅ Media uploaded, IDs:', mediaIds);
+                        }
+
+                        // Step 2: Create post with content and mediaIds
+                        console.log('📝 Step 2: Creating post with content and mediaIds...');
+                        postResult = await window.apiCall('/posts', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                content,
+                                mediaIds: mediaIds.length > 0 ? mediaIds : undefined
+                            }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
                     }
+
+                    console.log('📝 Post result:', postResult);
 
                     // Success - hide composer, show button
                     mount.style.display = 'none';
                     mount.innerHTML = '';
                     btn.style.display = 'flex';
 
-                    // Prepend new post to feed for instant feedback
-                    if (response && window.myFeedHandlers && window.currentUser) {
-                        const post = response.post || response.data?.post || response;
-                        if (post) {
-                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
-                        }
+                    // INSTANT GRATIFICATION: Prepend the newly created post directly
+                    // This is the OLD WORKING approach - don't reload feed, just insert the post
+                    console.log('📝 Prepending new post to feed (instant gratification)...');
+
+                    // Extract post from response (handle different response formats)
+                    let post = null;
+                    if (postResult.data && postResult.data.post) {
+                        post = postResult.data.post;
+                    } else if (postResult.post) {
+                        post = postResult.post;
+                    } else if (postResult.data && postResult.data.id) {
+                        post = postResult.data;
                     }
 
-                    // Clear cache for next load
-                    this.clearCache(this.currentFeed);
+                    if (post && window.currentUser) {
+                        this.prependNewPost(post, window.currentUser);
+                    } else {
+                        // Fallback to reload if post object not available
+                        console.warn('⚠️ Post object not available, falling back to feed reload');
+                        if (this.caches && this.caches[this.currentFeed]) {
+                            this.caches[this.currentFeed] = [];
+                        }
+                        await this.loadFeed(this.currentFeed, true);
+                    }
                 } catch (error) {
                     console.error('Failed to create post:', error);
                     alert('Failed to create post. Please try again.');
@@ -459,7 +481,7 @@ export class FeedToggle {
         await this.loadFeed(feedType);
     }
 
-    async loadFeed(feedType) {
+    async loadFeed(feedType, bypassCache = false) {
         // Show loading state
         const container = document.getElementById('myFeedPosts');
         if (!container) return;
@@ -491,11 +513,11 @@ export class FeedToggle {
         try {
             let posts;
             if (feedType === 'following') {
-                posts = await this.loadFollowingFeed();
+                posts = await this.loadFollowingFeed(bypassCache);
             } else if (feedType === 'saved') {
-                posts = await this.loadSavedFeed();
+                posts = await this.loadSavedFeed(bypassCache);
             } else {
-                posts = await this.loadDiscoverFeed();
+                posts = await this.loadDiscoverFeed(bypassCache);
             }
 
             // Remove loading indicator
@@ -524,11 +546,11 @@ export class FeedToggle {
         }
     }
 
-    async loadFollowingFeed() {
-        console.log('Loading following feed...');
+    async loadFollowingFeed(bypassCache = false) {
+        console.log('Loading following feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.following.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.following.length > 0) {
             console.log('Using cached following feed');
             return this.caches.following;
         }
@@ -540,35 +562,51 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /feed/following
-        const response = await window.apiCall('/feed/following?limit=15', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/feed/following?limit=15&_=${Date.now()}`
+            : '/feed/following?limit=15';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
         console.log('Following feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasDataPosts: !!response?.data?.posts,
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in following feed response');
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for following feed`);
             this.caches.following = posts;
             return posts;
         }
 
+        console.warn('⚠️ No posts found in following feed, returning empty array');
         return [];
     }
 
-    async loadDiscoverFeed() {
-        console.log('Loading discover feed...');
+    async loadDiscoverFeed(bypassCache = false) {
+        console.log('Loading discover feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.discover.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.discover.length > 0) {
             console.log('Using cached discover feed');
             return this.caches.discover;
         }
@@ -580,35 +618,56 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /feed/ (default discover)
-        const response = await window.apiCall('/feed/?limit=15', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/feed/?limit=15&_=${Date.now()}`
+            : '/feed/?limit=15';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
         console.log('Discover feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasResponse: !!response,
+            hasData: !!response?.data,
+            hasOk: !!response?.ok,
+            hasPosts: !!response?.posts,
+            hasDataPosts: !!response?.data?.posts,
+            dataKeys: response?.data ? Object.keys(response.data) : [],
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in response. Response structure:', response);
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for discover feed`);
             this.caches.discover = posts;
             return posts;
         }
 
+        console.warn('⚠️ No posts found, returning empty array');
         return [];
     }
 
-    async loadSavedFeed() {
-        console.log('Loading saved feed...');
+    async loadSavedFeed(bypassCache = false) {
+        console.log('Loading saved feed...', bypassCache ? '(bypassing cache)' : '');
 
-        // Check cache first
-        if (this.caches.saved && this.caches.saved.length > 0) {
+        // Check cache first (unless bypassing)
+        if (!bypassCache && this.caches.saved && this.caches.saved.length > 0) {
             console.log('Using cached saved feed');
             return this.caches.saved;
         }
@@ -620,23 +679,38 @@ export class FeedToggle {
         }
 
         // Backend endpoint is /posts/saved
-        const response = await window.apiCall('/posts/saved?limit=50', {
+        // Add timestamp to bust performance cache when needed
+        const url = bypassCache
+            ? `/posts/saved?limit=50&_=${Date.now()}`
+            : '/posts/saved?limit=50';
+
+        const response = await window.apiCall(url, {
             method: 'GET'
         });
 
         console.log('Saved feed response:', response);
+        console.log('📊 Response structure check:', {
+            hasDataPosts: !!response?.data?.posts,
+            dataPostsLength: response?.data?.posts?.length,
+        });
 
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
+            console.log('✅ Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
+            console.log('✅ Found posts at response.ok.data.posts');
             posts = response.data.posts;
+        } else {
+            console.error('❌ Could not find posts in saved feed response');
         }
 
         if (posts && Array.isArray(posts)) {
+            console.log(`✅ Returning ${posts.length} posts for saved feed`);
             this.caches.saved = posts;
             return posts;
         }
@@ -645,10 +719,23 @@ export class FeedToggle {
     }
 
     renderPosts(posts, feedType) {
+        console.log('🎨 renderPosts called:', {
+            feedType,
+            postsReceived: !!posts,
+            postsLength: posts?.length,
+            postsType: Array.isArray(posts) ? 'array' : typeof posts,
+            firstPost: posts?.[0]?.id
+        });
+
         const container = document.getElementById('myFeedPosts');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ Container #myFeedPosts not found');
+            return;
+        }
 
         if (!posts || posts.length === 0) {
+            console.warn('⚠️ No posts to render, showing empty state');
+
             const emptyDiv = document.createElement('div');
             emptyDiv.style.cssText = 'text-align: center; padding: 2rem; color: #666;';
 
@@ -674,16 +761,51 @@ export class FeedToggle {
             return;
         }
 
-        console.log(`Rendering ${posts.length} posts for ${this.currentFeed} feed`);
+        console.log(`✅ Rendering ${posts.length} posts for ${this.currentFeed} feed`);
 
-        // Use UnifiedPostRenderer if available
+        // CRITICAL FIX: Preserve feed controls before rendering
+        // renderPostsList sets innerHTML which wipes out controls
+        const feedControls = container.querySelector('.feed-controls-wrapper');
+        const feedBanners = Array.from(container.querySelectorAll('.feed-banner'));
+        console.log('💾 Preserving controls:', {
+            hasControls: !!feedControls,
+            bannerCount: feedBanners.length
+        });
+
+        // Use UnifiedPostRenderer if available (PRIORITY 1: renderPostsList for consistency)
         if (window.unifiedPostRenderer) {
-            window.unifiedPostRenderer.appendPosts(posts, 'myFeedPosts', { context: 'feed' });
+            console.log('✅ Using window.unifiedPostRenderer.renderPostsList()');
+            try {
+                window.unifiedPostRenderer.renderPostsList(posts, 'myFeedPosts', { context: 'feed' });
+                console.log('✅ Posts rendered successfully');
+
+                // CRITICAL FIX: Restore feed controls at the top
+                if (feedControls) {
+                    console.log('✅ Restoring feed controls');
+                    container.insertBefore(feedControls, container.firstChild);
+                }
+                // Restore banners after controls
+                if (feedBanners.length > 0) {
+                    console.log(`✅ Restoring ${feedBanners.length} banners`);
+                    const insertAfter = feedControls || container.firstChild;
+                    feedBanners.forEach(banner => {
+                        if (insertAfter && insertAfter.nextSibling) {
+                            container.insertBefore(banner, insertAfter.nextSibling);
+                        } else {
+                            container.appendChild(banner);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Error rendering with UnifiedPostRenderer:', error);
+                this.renderPostsFallback(posts, container);
+            }
         } else if (window.displayMyFeedPosts) {
+            console.log('⚠️ Using legacy window.displayMyFeedPosts()');
             // Fallback to existing feed display function
-            window.displayMyFeedPosts(posts, true); // true = append mode
+            window.displayMyFeedPosts(posts, false); // false = replace mode (not append)
         } else {
-            console.warn('No post renderer available');
+            console.warn('⚠️ No post renderer available, using fallback');
             this.renderPostsFallback(posts, container);
         }
     }
@@ -719,6 +841,101 @@ export class FeedToggle {
 
             container.appendChild(postDiv);
         });
+    }
+
+    /**
+     * Prepend newly created post to feed for instant gratification
+     * Based on old working implementation from my-feed.js
+     *
+     * @param {Object} post - Post object from creation API
+     * @param {Object} user - Current user object
+     */
+    prependNewPost(post, user) {
+        const container = document.getElementById('myFeedPosts');
+        if (!container) {
+            console.error('❌ Cannot prepend post - container not found');
+            return;
+        }
+
+        console.log('📝 Prepending new post to feed:', {
+            id: post.id,
+            hasPhotos: !!(post.photos?.length),
+            photoCount: post.photos?.length || 0
+        });
+
+        // Format the post with user data for display
+        const postWithUser = {
+            ...post,
+            author: {
+                id: user.id,
+                username: user.username,
+                firstName: user.firstName || user.username,
+                lastName: user.lastName || '',
+                avatar: user.avatar || null,
+                verified: user.verified || false
+            },
+            likesCount: post.likesCount || 0,
+            commentsCount: post.commentsCount || 0,
+            isLiked: false,
+            createdAt: post.createdAt || new Date().toISOString(),
+            photos: post.photos || []
+        };
+
+        try {
+            // Find where to insert (after feed controls and banners)
+            const feedControls = container.querySelector('.feed-controls-wrapper');
+            const banners = container.querySelectorAll('.feed-banner');
+            let insertPoint = null;
+
+            if (banners.length > 0) {
+                // Insert after last banner
+                insertPoint = banners[banners.length - 1];
+            } else if (feedControls) {
+                // Insert after feed controls
+                insertPoint = feedControls;
+            }
+
+            // PRIORITY 1: Use UnifiedPostRenderer for consistent display
+            if (window.unifiedPostRenderer) {
+                const postHtml = window.unifiedPostRenderer.render(postWithUser, { context: 'feed' });
+
+                if (insertPoint) {
+                    insertPoint.insertAdjacentHTML('afterend', postHtml);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', postHtml);
+                }
+
+                console.log('✅ Post prepended using UnifiedPostRenderer');
+            } else if (window.postComponent) {
+                // Fallback to PostComponent
+                const postHtml = window.postComponent.renderPost(postWithUser, {
+                    showActions: true,
+                    showComments: true,
+                    inFeed: true
+                });
+
+                if (insertPoint) {
+                    insertPoint.insertAdjacentHTML('afterend', postHtml);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', postHtml);
+                }
+
+                console.log('✅ Post prepended using PostComponent (fallback)');
+            } else {
+                // Ultimate fallback - use renderPostsFallback
+                console.warn('⚠️ No renderer available, using fallback');
+                this.renderPostsFallback([postWithUser], container);
+            }
+
+            // Clear cache so next reload gets fresh data
+            if (this.caches && this.caches[this.currentFeed]) {
+                this.caches[this.currentFeed] = [];
+            }
+        } catch (error) {
+            console.error('❌ Error prepending post:', error);
+            // On error, try full feed reload
+            this.loadFeed(this.currentFeed, true);
+        }
     }
 
     /**

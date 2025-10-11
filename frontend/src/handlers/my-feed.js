@@ -125,9 +125,14 @@ export class MyFeedHandlers {
             mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // Adjust height calculation for mobile
+        // Mobile: 60px top bar + 60px bottom nav + 60px feed controls = 180px
+        // Desktop: 200px for standard layout
+        const feedHeight = isMobile ? 'calc(100vh - 180px)' : 'calc(100vh - 200px)';
+
         mainContent.innerHTML = `
             <div class="my-feed">
-                <div id="myFeedPosts" style="min-height: 400px; height: calc(100vh - 200px); overflow-y: auto;">
+                <div id="myFeedPosts" style="min-height: 400px; height: ${feedHeight}; overflow-y: auto;">
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <p>Loading your personalized feed...</p>
                     </div>

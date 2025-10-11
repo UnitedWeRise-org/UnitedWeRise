@@ -20,6 +20,18 @@ const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
 /**
+ * Debug logging helper - only logs in development/staging environments
+ * Prevents verbose debugging logs in production
+ */
+const isDevelopment = () => process.env.NODE_ENV === 'development' || process.env.STAGING_ENVIRONMENT === 'true';
+
+const debugLog = (...args: any[]) => {
+    if (isDevelopment()) {
+        console.log(...args);
+    }
+};
+
+/**
  * @swagger
  * /api/auth/register:
  *   post:
@@ -227,7 +239,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     res.cookie('csrf-token', csrfToken, {
       httpOnly: false, // CSRF token needs to be readable by JavaScript
       secure: requireSecureCookies(),
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
       domain: '.unitedwerise.org'
@@ -322,8 +334,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         riskScore: 20
       });
 
-      return res.status(401).json({ 
-        error: 'This account was created with social login. Please sign in with Google, Microsoft, or Apple.',
+      return res.status(401).json({
+        error: 'This account was created with social login. Please sign in with Google.',
         oauthOnly: true
       });
     }
@@ -349,16 +361,16 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       }
     });
 
-    // Additional check: Try the exact same query as the working status endpoint  
+    // Additional check: Try the exact same query as the working status endpoint
     const statusCheck = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { 
-        totpEnabled: true, 
+      select: {
+        totpEnabled: true,
         totpSetupAt: true,
         totpBackupCodes: true
       }
     });
-    console.log(`🔍 Status endpoint style query result:`, statusCheck);
+    debugLog(`🔍 Status endpoint style query result:`, statusCheck);
 
     // Debug: Add TOTP status to response for testing
     const totpDebug = {
@@ -369,17 +381,17 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       hasSecret: !!userData?.totpSecret,
       totpLastUsedAt: userData?.totpLastUsedAt
     };
-    console.log(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
-    console.log(`🔍 Raw userData query result:`, userData);
+    debugLog(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
+    debugLog(`🔍 Raw userData query result:`, userData);
 
-    console.log(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
+    debugLog(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
     
     // Use statusCheck result as authoritative since that logic works
     const actualTotpEnabled = statusCheck?.totpEnabled || false;
-    console.log(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
-    
+    debugLog(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
+
     if (actualTotpEnabled && userData?.totpSecret) {
-      console.log(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
+      debugLog(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
       const { totpToken } = req.body;
       
       // Check for TOTP session token in httpOnly cookies (secure)
@@ -475,7 +487,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
       // No valid session token - require TOTP verification
       if (!totpToken) {
-        console.log(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
+        debugLog(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
         return res.status(200).json({
           requiresTOTP: true,
           message: 'Two-factor authentication required',
@@ -546,16 +558,18 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
+        path: '/',
+        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
       });
-      
+
       // Set TOTP verified flag as httpOnly cookie
       res.cookie('totpVerified', 'true', {
         httpOnly: true,
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
+        path: '/',
+        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
       });
 
       return res.json({

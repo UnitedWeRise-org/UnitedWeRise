@@ -111,8 +111,7 @@ function setupMobileInterface() {
     // Set initial view based on login status
     const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
                            window.currentUser ||
-                           (window.userState && window.userState.current) ||
-                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+                           (window.userState && window.userState.current);
 
     if (!isAuthenticated) {
         // Show login if not authenticated
@@ -360,8 +359,7 @@ function showMobileMessages() {
     // Check if user is logged in
     const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
                            window.currentUser ||
-                           (window.userState && window.userState.current) ||
-                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+                           (window.userState && window.userState.current);
 
     if (!isAuthenticated) {
         showTemporaryView('Messages', 'Please log in to view your messages.');
@@ -400,8 +398,7 @@ function showMobileCivic() {
     // Check if user is logged in
     const isAuthenticated = window.authUtils?.isUserAuthenticated() ||
                            window.currentUser ||
-                           (window.userState && window.userState.current) ||
-                           (localStorage.getItem('authToken') && localStorage.getItem('authToken') !== 'null');
+                           (window.userState && window.userState.current);
 
     if (!isAuthenticated) {
         showTemporaryView('Civic Engagement', 'Please log in to access civic organizing tools.');
