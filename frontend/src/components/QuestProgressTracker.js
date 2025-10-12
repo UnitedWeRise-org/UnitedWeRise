@@ -4,6 +4,8 @@
  * Integrates with existing quest API endpoints
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class QuestProgressTracker {
     constructor() {
         this.userQuests = [];
@@ -40,8 +42,8 @@ class QuestProgressTracker {
         try {
             // Load data in parallel for better performance
             const [questsResponse, streaksResponse] = await Promise.all([
-                window.apiCall('/quests/daily'),
-                window.apiCall('/quests/streaks')
+                apiCall('/quests/daily'),
+                apiCall('/quests/streaks')
             ]);
 
             if (questsResponse.ok && questsResponse.data.success) {
