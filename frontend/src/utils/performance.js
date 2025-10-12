@@ -1,3 +1,9 @@
+/**
+ * @module utils/performance
+ * @description Frontend performance optimization utilities with caching, retry mechanisms, and loading states
+ * Migrated to ES6 modules: October 11, 2025 (Batch 1)
+ */
+
 // Frontend Performance Optimization Utilities
 // Implements caching, retry mechanisms, and loading states
 
@@ -391,9 +397,15 @@ function createPerformanceDebugPanel() {
     });
 }
 
-// Export for use
-window.performanceOptimizer = performanceOptimizer;
-window.createOptimizedApiCall = createOptimizedApiCall;
+// ES6 Module Exports
+export { performanceOptimizer, createOptimizedApiCall };
+export default performanceOptimizer;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.performanceOptimizer = performanceOptimizer;
+    window.createOptimizedApiCall = createOptimizedApiCall;
+}
 
 // Auto-initialize
 document.addEventListener('DOMContentLoaded', () => {

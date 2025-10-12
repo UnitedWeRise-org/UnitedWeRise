@@ -1,6 +1,11 @@
-// Candidate System Integration for United We Rise Frontend
-// This script integrates the enhanced candidate system with the existing frontend
-// 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
+/**
+ * @module integrations/candidate-system-integration
+ * @description Candidate System Integration for United We Rise Frontend
+ * This script integrates the enhanced candidate system with the existing frontend
+ * Provides comprehensive candidate registration, management, and constituent inbox features
+ * 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
+ * Migrated to ES6 modules: October 11, 2025 (Batch 10 - "Final Boss")
+ */
 
 class CandidateSystemIntegration {
     constructor() {
@@ -3663,11 +3668,15 @@ class CandidateSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.CandidateSystemIntegration = CandidateSystemIntegration;
-
 // Auto-initialize when script loads
-const integration = new CandidateSystemIntegration();
+const candidateSystemIntegration = new CandidateSystemIntegration();
 
-// Make integration available globally for other scripts
-window.candidateSystemIntegration = integration;
+// ES6 Module Exports
+export { CandidateSystemIntegration, candidateSystemIntegration };
+export default candidateSystemIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.CandidateSystemIntegration = CandidateSystemIntegration;
+    window.candidateSystemIntegration = candidateSystemIntegration;
+}

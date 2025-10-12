@@ -1,3 +1,10 @@
+/**
+ * @module components/AddressForm
+ * @description Standardized address form component with US states dropdown and validation
+ * Provides reusable form for capturing user addresses with proper validation
+ * Migrated to ES6 modules: October 11, 2025 (Batch 5)
+ */
+
 // US States data for dropdown
 const US_STATES = [
     { code: 'AL', name: 'Alabama' },
@@ -362,7 +369,12 @@ function createAddressForm(options = {}) {
     };
 }
 
-// Export for use in main application
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { createAddressForm, US_STATES };
+// ES6 Module Exports
+export { createAddressForm, US_STATES };
+export default createAddressForm;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.createAddressForm = createAddressForm;
+    window.US_STATES = US_STATES;
 }

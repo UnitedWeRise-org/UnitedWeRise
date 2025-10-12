@@ -1,4 +1,10 @@
-// Content reporting and moderation interface for United We Rise
+/**
+ * @module components/ContentReporting
+ * @description Content reporting and moderation interface for United We Rise
+ * Handles user reports for posts, comments, and inappropriate content
+ * Migrated to ES6 modules: October 11, 2025 (Batch 6)
+ */
+
 class ContentReporting {
     constructor() {
         this.API_BASE = 'https://api.unitedwerise.org/api';
@@ -522,3 +528,12 @@ initializeContentReporting();
 document.addEventListener('userLoggedIn', () => {
     contentReporting.checkModerationStatus();
 });
+
+// ES6 Module Exports
+export { ContentReporting, initializeContentReporting };
+export default ContentReporting;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.ContentReporting = ContentReporting;
+}

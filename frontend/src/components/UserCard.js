@@ -1,8 +1,8 @@
 /**
- * UserCard Component
+ * @module components/UserCard
+ * @description Anchored popup card component for quick user interactions
  * Created: September 21, 2025
- * Purpose: Anchored popup card for quick user interactions
- * Author: Claude Code Assistant
+ * Migrated to ES6 modules: October 11, 2025 (Batch 6)
  */
 
 class UserCard {
@@ -744,15 +744,23 @@ class UserCard {
     }
 }
 
-// Make UserCard class available globally
-window.UserCard = UserCard;
-
 // Initialize global instance
-window.userCard = new UserCard();
+const userCard = new UserCard();
 
 // Global helper function for easy integration
-window.showUserCard = (triggerElement, userId, context = {}) => {
-    window.userCard.showCard(triggerElement, userId, context);
-};
+function showUserCard(triggerElement, userId, context = {}) {
+    return userCard.showCard(triggerElement, userId, context);
+}
 
 console.log('✅ UserCard component loaded and available globally');
+
+// ES6 Module Exports
+export { UserCard, userCard, showUserCard };
+export default userCard;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.UserCard = UserCard;
+    window.userCard = userCard;
+    window.showUserCard = showUserCard;
+}

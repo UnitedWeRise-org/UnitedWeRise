@@ -1,10 +1,14 @@
 /**
  * @module auth/UnifiedAuth
- * @description Unified Authentication System for United We Rise
+ * @description Unified Authentication System for United We Rise (Layer 1 of 3)
  *
  * Handles login/logout for both main site and admin dashboard with TOTP support.
- * Replaces legacy js/unifiedAuth.js with proper ES6 module architecture.
+ * Part of 3-layer complementary auth architecture:
+ *   - Layer 1 (this): UnifiedAuth.js - Auth flows and UI
+ *   - Layer 2: critical-functions.js - Backward-compatible globals (window.setCurrentUser, window.apiCall)
+ *   - Layer 3: unified-manager.js - State synchronization coordinator
  *
+ * Migration from legacy js/unifiedAuth.js completed September 2025.
  * Enterprise-grade modular authentication system.
  */
 

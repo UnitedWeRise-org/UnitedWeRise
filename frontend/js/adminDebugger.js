@@ -1,13 +1,21 @@
 /**
- * Secure Admin-Only Debugging System
- * 
+ * @module adminDebugger
+ * @description Secure Admin-Only Debugging System
+ *
  * Provides debugging functionality that only works for authenticated admin users
  * Uses existing admin verification endpoint to ensure security
- * 
+ *
+ * Used by 16+ files across the codebase for debugging
+ * Migrated to ES6 modules: October 11, 2025 (Batch 2)
+ *
  * Usage:
+ *   import { adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive } from '../js/adminDebugger.js';
  *   await adminDebugLog('Component initialized', componentData);
  *   await adminDebugError('API call failed', errorDetails);
  *   await adminDebugTable('Database results', queryResults);
+ *
+ * Legacy usage (backward compatible):
+ *   await window.adminDebugLog('Component initialized', componentData);
  */
 
 class AdminDebugger {
@@ -160,41 +168,55 @@ class AdminDebugger {
     }
 }
 
-// Create global instance
+// Create singleton instance
 const adminDebugger = new AdminDebugger();
 
-// Export convenience functions for easy use
-window.adminDebugLog = async (component, message, data) => {
+// ES6 Module Exports - Primary interface
+export async function adminDebugLog(component, message, data) {
     await adminDebugger.log(component, message, data);
-};
+}
 
-window.adminDebugError = async (component, message, errorData) => {
+export async function adminDebugError(component, message, errorData) {
     await adminDebugger.error(component, message, errorData);
-};
+}
 
-window.adminDebugWarn = async (component, message, data) => {
+export async function adminDebugWarn(component, message, data) {
     await adminDebugger.warn(component, message, data);
-};
+}
 
-window.adminDebugTable = async (component, message, tableData) => {
+export async function adminDebugTable(component, message, tableData) {
     await adminDebugger.table(component, message, tableData);
-};
+}
 
-window.adminDebugSensitive = async (component, message, sensitiveData) => {
+export async function adminDebugSensitive(component, message, sensitiveData) {
     await adminDebugger.sensitive(component, message, sensitiveData);
-};
+}
 
-window.adminDebugTime = async (component, label) => {
+export async function adminDebugTime(component, label) {
     await adminDebugger.time(component, label);
-};
+}
 
-window.adminDebugTimeEnd = async (component, label) => {
+export async function adminDebugTimeEnd(component, label) {
     await adminDebugger.timeEnd(component, label);
-};
+}
 
 // Export the instance for advanced usage
-window.adminDebugger = adminDebugger;
+export { adminDebugger };
 
-console.log('🔧 Admin-only debugging system loaded');
-console.log('🔧 Available functions: adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive');
-console.log('🔧 Debugging output will only appear for verified admin users');
+// Maintain backward compatibility during transition period
+// All 16+ dependent files can continue using window.* until migrated
+if (typeof window !== 'undefined') {
+    window.adminDebugLog = adminDebugLog;
+    window.adminDebugError = adminDebugError;
+    window.adminDebugWarn = adminDebugWarn;
+    window.adminDebugTable = adminDebugTable;
+    window.adminDebugSensitive = adminDebugSensitive;
+    window.adminDebugTime = adminDebugTime;
+    window.adminDebugTimeEnd = adminDebugTimeEnd;
+    window.adminDebugger = adminDebugger;
+
+    console.log('🔧 Admin-only debugging system loaded (ES6 module)');
+    console.log('🔧 Available functions: adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive');
+    console.log('🔧 Debugging output will only appear for verified admin users');
+    console.log('🔧 Migration status: ES6 exports available, window.* compatibility maintained');
+}
