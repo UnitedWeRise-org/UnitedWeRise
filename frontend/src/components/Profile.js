@@ -7,6 +7,7 @@
 
 import { isDevelopment, getAdminDashboardUrl } from '../utils/environment.js';
 import { uploadMediaFiles } from '../modules/features/feed/my-feed.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class Profile {
     constructor() {
@@ -181,8 +182,8 @@ class Profile {
             if (isOwnProfile) {
                 // Load current user's profile and posts (existing behavior)
                 const [profileResponse, postsResponse] = await Promise.all([
-                    window.apiCall('/users/profile'),
-                    window.apiCall('/posts/me')
+                    apiCall('/users/profile'),
+                    apiCall('/posts/me')
                 ]);
 
                 if (profileResponse.ok) {
@@ -197,9 +198,9 @@ class Profile {
             } else {
                 // Load other user's profile with privacy filtering
                 const [profileResponse, postsResponse, activityResponse] = await Promise.all([
-                    window.apiCall(`/users/${targetUserId}`),
-                    window.apiCall(`/posts/user/${targetUserId}`),
-                    window.apiCall(`/users/activity/${targetUserId}`)
+                    apiCall(`/users/${targetUserId}`),
+                    apiCall(`/posts/user/${targetUserId}`),
+                    apiCall(`/users/activity/${targetUserId}`)
                 ]);
 
                 if (profileResponse.ok) {
@@ -236,8 +237,8 @@ class Profile {
         try {
             // Load user profile and posts with bypassed cache
             const [profileResponse, postsResponse] = await Promise.all([
-                window.apiCall('/users/profile', { bypassCache: true }),
-                window.apiCall('/posts/me', { bypassCache: true })
+                apiCall('/users/profile', { bypassCache: true }),
+                apiCall('/posts/me', { bypassCache: true })
             ]);
 
             if (profileResponse.ok) {
@@ -1461,7 +1462,7 @@ class Profile {
         const zipCode = document.getElementById('editZipCode').value;
         
         try {
-            const response = await window.apiCall('/political/profile', {
+            const response = await apiCall('/political/profile', {
                 method: 'PUT',
                 body: JSON.stringify({
                     streetAddress,
@@ -1514,7 +1515,7 @@ class Profile {
     // Verification methods
     async resendEmailVerification() {
         try {
-            const response = await window.apiCall('/verification/email/send', {
+            const response = await apiCall('/verification/email/send', {
                 method: 'POST'
             });
             
@@ -1589,7 +1590,7 @@ class Profile {
     async loadTOTPStatus() {
         try {
             adminDebugLog('🔒 Loading TOTP status...');
-            const response = await window.apiCall('/totp/status');
+            const response = await apiCall('/totp/status');
             adminDebugLog('🔒 TOTP status API response:', response);
             if (response.ok) {
                 // Extract nested data like other endpoints
@@ -1673,7 +1674,7 @@ class Profile {
     async setupTOTP() {
         adminDebugLog('🔒 Starting TOTP setup... [MyProfile.js v1.3.1]');
         try {
-            const response = await window.apiCall('/totp/setup', { method: 'POST' });
+            const response = await apiCall('/totp/setup', { method: 'POST' });
             adminDebugLog('🔒 TOTP setup API response:', response);
             if (response.ok) {
                 adminDebugLog('🔒 API success, showing modal with data:', response.data);
@@ -1820,7 +1821,7 @@ class Profile {
         }
 
         try {
-            const response = await window.apiCall('/totp/verify-setup', {
+            const response = await apiCall('/totp/verify-setup', {
                 method: 'POST',
                 body: JSON.stringify({ token: code })
             });
@@ -1927,7 +1928,7 @@ class Profile {
         if (!token) return;
 
         try {
-            const response = await window.apiCall('/totp/regenerate-backup-codes', {
+            const response = await apiCall('/totp/regenerate-backup-codes', {
                 method: 'POST',
                 body: JSON.stringify({ token })
             });
@@ -1953,7 +1954,7 @@ class Profile {
         if (!password) return;
 
         try {
-            const response = await window.apiCall('/totp/disable', {
+            const response = await apiCall('/totp/disable', {
                 method: 'POST',
                 body: JSON.stringify({ password })
             });
@@ -1981,7 +1982,7 @@ class Profile {
         
         adminDebugLog('📸 Making API call to /photos/galleries...');
         try {
-            const response = await window.apiCall('/photos/galleries', { bypassCache });
+            const response = await apiCall('/photos/galleries', { bypassCache });
             
             adminDebugLog('📡 Raw galleries API response:', response);
             
@@ -2118,7 +2119,7 @@ class Profile {
 
     async setAsProfilePicture(photoId) {
         try {
-            const response = await window.apiCall(`/photos/galleries/${photoId}/set-profile`, {
+            const response = await apiCall(`/photos/galleries/${photoId}/set-profile`, {
                 method: 'POST'
             });
 
@@ -2139,7 +2140,7 @@ class Profile {
         if (!newGallery) return;
 
         try {
-            const response = await window.apiCall(`/photos/galleries/${photoId}/gallery`, {
+            const response = await apiCall(`/photos/galleries/${photoId}/gallery`, {
                 method: 'PUT',
                 body: { gallery: newGallery }
             });
@@ -2161,7 +2162,7 @@ class Profile {
         }
 
         try {
-            const response = await window.apiCall(`/photos/galleries/${photoId}`, {
+            const response = await apiCall(`/photos/galleries/${photoId}`, {
                 method: 'DELETE'
             });
 
@@ -3230,7 +3231,7 @@ class Profile {
                 document.querySelector('.sub-settings').classList.remove('disabled');
             }
 
-            const response = await window.apiCall('/photo-tags/preferences', {
+            const response = await apiCall('/photo-tags/preferences', {
                 method: 'PUT',
                 body: JSON.stringify({ [preference]: value })
             });
@@ -3266,7 +3267,7 @@ class Profile {
      */
     async viewPendingTags() {
         try {
-            const response = await window.apiCall('/photo-tags/pending');
+            const response = await apiCall('/photo-tags/pending');
             
             if (response.ok) {
                 const pendingTags = response.data.pendingTags || [];
@@ -3343,7 +3344,7 @@ class Profile {
      */
     async respondToTag(tagId, approve) {
         try {
-            const response = await window.apiCall(`/photo-tags/${tagId}/respond`, {
+            const response = await apiCall(`/photo-tags/${tagId}/respond`, {
                 method: 'POST',
                 body: JSON.stringify({ approve })
             });
@@ -3381,7 +3382,7 @@ class Profile {
      */
     async updatePendingTagsCount() {
         try {
-            const response = await window.apiCall('/photo-tags/pending');
+            const response = await apiCall('/photo-tags/pending');
             
             if (response.ok) {
                 const count = response.data.count || 0;
@@ -3400,7 +3401,7 @@ class Profile {
      */
     async loadCandidateMessages() {
         try {
-            const response = await window.apiCall('/candidate/admin-messages');
+            const response = await apiCall('/candidate/admin-messages');
             
             if (response.ok && response.data) {
                 // Handle the API response structure: { success: true, data: { candidate, messages, unreadAdminCount } }
@@ -3580,7 +3581,7 @@ class Profile {
             // Use REST API if WebSocket failed or unavailable
             if (!messageSent) {
                 adminDebugLog('📤 Sending candidate message via REST API');
-                const response = await window.apiCall('/unified-messages/send', {
+                const response = await apiCall('/unified-messages/send', {
                     method: 'POST',
                     body: JSON.stringify({
                         type: 'ADMIN_CANDIDATE',
@@ -3630,7 +3631,7 @@ class Profile {
      */
     async updateUnreadBadge() {
         try {
-            const response = await window.apiCall('/candidate/admin-messages/unread-count');
+            const response = await apiCall('/candidate/admin-messages/unread-count');
             
             if (response.ok && response.data) {
                 const unreadCount = response.data.unreadCount || 0;
@@ -3698,7 +3699,7 @@ class Profile {
 
     async updateNotificationPreference(key, value) {
         try {
-            const response = await window.apiCall('/user/notification-preferences', {
+            const response = await apiCall('/user/notification-preferences', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3859,7 +3860,7 @@ class Profile {
                 [key]: value
             };
 
-            const response = await window.apiCall('/users/profile-privacy', {
+            const response = await apiCall('/users/profile-privacy', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3890,7 +3891,7 @@ class Profile {
     // Check if user is a candidate and show candidate-specific notification settings
     async checkCandidateNotificationSettings() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status');
+            const response = await apiCall('/candidate-policy-platform/candidate/status');
 
             if (response.ok && response.data?.success) {
                 // User is a candidate, show candidate notification settings
@@ -3986,7 +3987,7 @@ class Profile {
                 params.append('search', this.activitySearchQuery);
             }
 
-            const response = await window.apiCall(`/users/activity/me?${params}`);
+            const response = await apiCall(`/users/activity/me?${params}`);
 
             if (response.ok && response.data.success) {
                 const newActivities = response.data.data.activities;
@@ -4025,7 +4026,7 @@ class Profile {
     async loadSavedPosts() {
         try {
             adminDebugLog('Profile', 'Loading saved posts...');
-            const response = await window.apiCall('/posts/saved?limit=20');
+            const response = await apiCall('/posts/saved?limit=20');
 
             if (response.ok && response.data.success) {
                 this.savedPosts = response.data.data.posts || [];
@@ -4517,7 +4518,7 @@ class Profile {
     // Load and display user's badges
     async loadUserBadges() {
         try {
-            const response = await window.apiCall('/badges/vault');
+            const response = await apiCall('/badges/vault');
 
             if (response.ok && response.data.success) {
                 const badgeData = response.data.data;
