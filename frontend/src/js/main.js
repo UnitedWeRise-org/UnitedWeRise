@@ -88,6 +88,11 @@ import '../components/FeedToggle.js';
 import '../components/NewPostModal.js';
 import '../components/SavedPostsView.js';
 
+// Phase 5c: Lightweight Components (Batch 5)
+import '../components/AddressForm.js';  // US states dropdown & validation
+import '../components/user-relationship-display.js';  // User relationship UI
+import '../js/reputation-badges.js';  // Reputation & badge display
+
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';
 
