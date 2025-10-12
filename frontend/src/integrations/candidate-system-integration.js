@@ -6,6 +6,7 @@
  * 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
  * Migrated to ES6 modules: October 11, 2025 (Batch 10 - "Final Boss")
  */
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class CandidateSystemIntegration {
     constructor() {
@@ -456,7 +457,7 @@ class CandidateSystemIntegration {
         
         try {
             // Call new address-based candidate endpoint
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -600,7 +601,7 @@ class CandidateSystemIntegration {
             const loadingIndicator = document.querySelector('#electionsLoading');
             if (loadingIndicator) loadingIndicator.style.display = 'flex';
 
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
                 credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
@@ -923,7 +924,7 @@ class CandidateSystemIntegration {
             if (loadingIndicator) loadingIndicator.style.display = 'flex';
             if (placeholder) placeholder.style.display = 'none';
 
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
                 credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
@@ -2990,7 +2991,7 @@ class CandidateSystemIntegration {
     // Check if current user is a verified candidate
     async checkCandidateStatus() {
         try {
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
+            const response = await apiCall('/candidate-policy-platform/candidate/status', {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -3308,7 +3309,7 @@ class CandidateSystemIntegration {
     // Load constituent conversations for candidate
     async loadConstituentConversations() {
         try {
-            const response = await window.apiCall('/unified-messages/candidate/user-messages', {
+            const response = await apiCall('/unified-messages/candidate/user-messages', {
                 credentials: 'include'
             });
 
@@ -3567,7 +3568,7 @@ class CandidateSystemIntegration {
     // Mark conversation as read
     async markConversationRead(conversationId) {
         try {
-            const response = await window.apiCall('/unified-messages/mark-read', {
+            const response = await apiCall('/unified-messages/mark-read', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -3590,7 +3591,7 @@ class CandidateSystemIntegration {
     async showInboxNotification(title, content) {
         // Check user preferences before showing notifications
         try {
-            const response = await window.apiCall('/user/notification-preferences', {
+            const response = await apiCall('/user/notification-preferences', {
                 credentials: 'include'
             });
 

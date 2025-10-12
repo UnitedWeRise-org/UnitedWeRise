@@ -4,6 +4,7 @@
  * Created: September 21, 2025
  * Migrated to ES6 modules: October 11, 2025 (Batch 6)
  */
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class UserCard {
     constructor() {
@@ -151,7 +152,7 @@ class UserCard {
         }
 
         try {
-            const response = await window.apiCall(`/users/${userId}`);
+            const response = await apiCall(`/users/${userId}`);
 
             if (response.ok) {
                 const userData = response.data.user;

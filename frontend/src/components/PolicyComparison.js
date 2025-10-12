@@ -2,6 +2,8 @@
  * Policy Comparison Component
  * AI-powered semantic analysis and comparison of candidate policy positions
  */
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class PolicyComparison {
     constructor() {
         this.similarityThreshold = 0.7; // Threshold for considering positions similar
@@ -84,7 +86,7 @@ class PolicyComparison {
         
         for (const candidateId of candidateIds) {
             try {
-                const response = await window.apiCall(`/candidate-policy-platform/candidate/${candidateId}/positions?published=true`);
+                const response = await apiCall(`/candidate-policy-platform/candidate/${candidateId}/positions?published=true`);
                 
                 if (response.ok && response.data?.success) {
                     const candidatePositions = response.data.data.filter(pos => pos.categoryId === categoryId);

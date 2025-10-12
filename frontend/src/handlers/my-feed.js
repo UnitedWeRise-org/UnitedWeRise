@@ -14,6 +14,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class MyFeedHandlers {
     constructor() {
@@ -305,7 +306,7 @@ export class MyFeedHandlers {
 
         try {
             console.log('🌐 Making API call to /feed/');
-            const response = await window.apiCall('/feed/?limit=15', {
+            const response = await apiCall('/feed/?limit=15', {
                 method: 'GET'
             });
 
@@ -483,7 +484,7 @@ export class MyFeedHandlers {
         try {
             // Use offset-based pagination
             console.log(`🔄 Loading more My Feed posts... (offset: ${this.currentFeedOffset})`);
-            const response = await window.apiCall(`/feed/?limit=15&offset=${this.currentFeedOffset}`, {
+            const response = await apiCall(`/feed/?limit=15&offset=${this.currentFeedOffset}`, {
                 method: 'GET'
             });
 

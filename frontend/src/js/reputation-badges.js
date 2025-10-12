@@ -4,6 +4,7 @@
  * Green: 95-100, Yellow: 30-49, Brown: 0-29, Nothing: 50-94
  * Migrated to ES6 modules: October 11, 2025 (Batch 5)
  */
+import { apiCall } from './api-compatibility-shim.js';
 
 /**
  * Get badge color and text based on reputation score
@@ -213,7 +214,7 @@ function initializeReputationBadges() {
  */
 async function loadCurrentUserReputation() {
     try {
-        const response = await window.apiCall('/reputation/me');
+        const response = await apiCall('/reputation/me');
 
         if (response.ok) {
             const data = response.data;

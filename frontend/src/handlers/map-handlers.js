@@ -12,6 +12,8 @@
  * @module handlers/map-handlers
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 console.log('🗺️ Loading map-handlers.js module...');
 
 export class MapHandlers {
@@ -377,7 +379,7 @@ export class MapHandlers {
                 this.mapTopicCache.length === 0 ||
                 this.lastMapTopicScope !== currentScope) {
 
-                const response = await window.apiCall(`/trending/map-topics?count=9&scope=${currentScope}`);
+                const response = await apiCall(`/trending/map-topics?count=9&scope=${currentScope}`);
 
                 if (response.ok && response.data.topics) {
                     this.mapTopicCache = response.data.topics;
@@ -436,7 +438,7 @@ export class MapHandlers {
     async updateMapWithTrendingTopics() {
         try {
             // Get current trending topics
-            const response = await window.apiCall('/trending/topics?limit=20');
+            const response = await apiCall('/trending/topics?limit=20');
             if (response.ok && response.data.topics) {
                 const geographicTopics = this.getGeographicLayeredTopics(response.data.topics, this.currentZoomLevel || 'national');
                 this.updateMapVisualization(geographicTopics);

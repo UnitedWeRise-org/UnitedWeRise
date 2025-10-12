@@ -12,6 +12,7 @@
 
 // Import dependencies
 import { apiClient } from '../modules/core/api/client.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 console.log('📱 Loading messaging handlers...');
 
@@ -67,7 +68,7 @@ const messagingHandlers = new MessagingHandlers();
 async function openConversation(conversationId, username) {
     try {
         // Load messages for this conversation
-        const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`);
+        const response = await apiCall(`/messages/conversations/${conversationId}/messages`);
 
         if (response.ok) {
             showConversationView(conversationId, username, response.data.messages);
@@ -91,7 +92,7 @@ async function sendMessage(conversationId) {
     if (!content) return;
 
     try {
-        const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`, {
+        const response = await apiCall(`/messages/conversations/${conversationId}/messages`, {
             method: 'POST',
             body: JSON.stringify({ content })
         });
