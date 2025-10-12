@@ -1,3 +1,17 @@
+/**
+ * @module js/api-manager
+ * @description Advanced API Request Manager with retry, deduplication, and caching
+ *
+ * Provides centralized API communication with:
+ * - Automatic retry with exponential backoff
+ * - Request deduplication (prevents duplicate simultaneous requests)
+ * - Response caching
+ * - Batch request support
+ *
+ * Migrated to ES6 modules: October 11, 2025 (Batch 3)
+ * Bug fix: apiCall now uses apiManager.request() instead of raw fetch()
+ */
+
 // Advanced API Request Manager for United We Rise
 // Implements request deduplication, caching, and intelligent batching
 
@@ -337,42 +351,72 @@ window.apiManager = new APIRequestManager();
 
 // Enhanced apiCall function for backward compatibility
 // Wraps the response in the expected format: {ok, status, data}
-window.apiCall = async (endpoint, options = {}) => {
+// BUG FIX (Oct 11, 2025): Now uses apiManager.request() instead of raw fetch()
+// This enables retry logic, request deduplication, and caching
+async function apiCall(endpoint, options = {}) {
     try {
-        // Get the API base URL
-        const baseUrl = window.apiManager.config.baseURL;
-        const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+        // Use the apiManager's advanced request method (retry, dedup, cache)
+        const response = await window.apiManager.request(endpoint, {
+            method: options.method || 'GET',
+            headers: options.headers || {},
+            body: options.body,
+            bypassCache: options.bypassCache,
+            cacheTimeout: options.cacheTimeout,
+            skipContentType: options.skipContentType
+        });
 
-        // Build fetch options with all the proper headers
-        const fetchOptions = window.apiManager.buildFetchOptions(options);
-
-        // Make the actual fetch request
-        const response = await fetch(url, fetchOptions);
-
-        // Parse the response
-        const data = await response.json();
-
-        // Return wrapped response in expected format
+        // apiManager.request() returns parsed JSON data directly
+        // Wrap it in the expected {ok, status, data} format
         return {
-            ok: response.ok,
-            status: response.status,
-            data: data
+            ok: true,
+            status: 200,
+            data: response
         };
     } catch (error) {
         // Return error in consistent format
+        console.error('apiCall error:', error);
         return {
             ok: false,
-            status: 0,
-            data: { error: error.message }
+            status: error.status || 500,
+            data: null,
+            error: error.message
         };
     }
-};
+}
 
 // Batch API call function
-window.apiBatch = async (requests) => {
+async function apiBatch(requests) {
     return window.apiManager.batchRequest(requests);
-};
+}
 
 if (typeof adminDebugLog !== 'undefined') {
     adminDebugLog('APIManager', 'Advanced API Manager initialized');
+}
+
+/**
+ * ES6 Module Exports
+ * Migrated to ES6 modules: October 11, 2025 (Batch 3)
+ */
+
+// Export the apiCall function
+export { apiCall };
+
+// Export batch function
+export { apiBatch };
+
+// Export the APIRequestManager class
+export { APIRequestManager };
+
+// Export singleton instance
+const apiManager = window.apiManager;
+export { apiManager };
+
+// Default export
+export default apiManager;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.apiCall = apiCall;
+    window.apiBatch = apiBatch;
+    window.apiManager = apiManager;
 }

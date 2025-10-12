@@ -558,6 +558,20 @@ class NavigationHandlers {
             this.closeAllPanels();
             panel.classList.remove('hidden');
             this.currentPanel = name;
+
+            // Load live data when panel opens (enhancement from critical-functions.js)
+            // This ensures users always see fresh content when opening panels
+            if (name === 'trending') {
+                console.log('🔄 Loading live trending data...');
+                if (window.loadTrendingPosts && typeof window.loadTrendingPosts === 'function') {
+                    window.loadTrendingPosts();
+                }
+            } else if (name === 'officials') {
+                console.log('🔄 Loading live officials content...');
+                if (window.loadOfficialsContent && typeof window.loadOfficialsContent === 'function') {
+                    window.loadOfficialsContent();
+                }
+            }
         } else {
             // Panel is visible, hide it and show default view
             panel.classList.add('hidden');

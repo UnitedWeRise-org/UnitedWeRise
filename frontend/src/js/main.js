@@ -18,11 +18,19 @@ import '../utils/smart-loader.js';
 // Phase 1a: Admin debug system (used by many modules, loaded early)
 import '../../js/adminDebugger.js';
 
+// Phase 1b: API Infrastructure (Batch 3)
+import '../js/api-manager.js';  // Advanced API request manager
+import '../js/reputation-integration.js';  // Decorates API calls with reputation data
+import '../js/api-compatibility-shim.js';  // TEMPORARY: Maintains window.apiCall during migration
+
 // Phase 2: Configuration layer (depends on environment)
 import '../config/api.js';
 
 // Phase 3: Integration layer (depends on config)
 import '../integrations/backend-integration.js';
+
+// Phase 3a: HCaptcha integration (Batch 3)
+import '../integrations/hcaptcha-integration.js';  // CAPTCHA verification
 
 // Phase 4: WebSocket and real-time services
 import './websocket-client.js';
@@ -129,6 +137,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log('🎉 Performance optimizations active!');
 });
+
+/**
+ * BATCH 3 MIGRATION STATUS (October 11, 2025):
+ * ✅ api-manager.js - Bug fixed, now uses apiManager.request() properly
+ * ✅ reputation-integration.js - Converted to ES6, decorates apiCall
+ * ✅ api-compatibility-shim.js - TEMPORARY shim for window.apiCall
+ * ✅ hcaptcha-integration.js - Extracted from critical-functions.js
+ * ✅ critical-functions.js - Cleaned up (118 lines removed, only setCurrentUser remains)
+ *
+ * NEXT: Batches 4-10 will migrate 165+ window.apiCall usages to ES6 imports
+ * THEN: Remove api-compatibility-shim.js and delete critical-functions.js entirely
+ */
 
 console.log('✅ ES6 Module system loaded successfully');
 console.log('📋 All dependencies loaded in correct order');
