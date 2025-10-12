@@ -32,6 +32,12 @@ import '../integrations/backend-integration.js';
 // Phase 3a: HCaptcha integration (Batch 3)
 import '../integrations/hcaptcha-integration.js';  // CAPTCHA verification
 
+// Phase 3b: Standalone Utilities (Batch 4)
+import '../../js/posting.js';  // Unified post creation system
+import '../js/deployment-status.js';  // Deployment status checker (admin-only)
+import '../js/legal-modal.js';  // Legal documents modal handler
+import '../js/map-dummy-data.js';  // Dummy map data for testing
+
 // Phase 4: WebSocket and real-time services
 import './websocket-client.js';
 

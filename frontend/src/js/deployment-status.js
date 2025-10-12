@@ -1,8 +1,13 @@
 /**
- * Deployment Status Checker
- * 
- * Shows deployment timestamps for all components in the browser console
- * Helps track whether changes have actually deployed across the system
+ * @module js/deployment-status
+ * @description Deployment status checker for admin dashboard
+ *
+ * Monitors and displays deployment status, release information, and system health.
+ * Shows deployment timestamps for all components in the browser console.
+ * Helps track whether changes have actually deployed across the system.
+ * Admin-only feature.
+ *
+ * Migrated to ES6 modules: October 11, 2025 (Batch 4)
  */
 
 (function() {
@@ -359,13 +364,13 @@
     window.deploymentStatus = {
         check: () => deploymentChecker.forceCheck(),
         getStatus: () => deploymentChecker.getLastStatus(),
-        
+
         // Helper methods for debugging
         checkBackend: () => deploymentChecker.checkBackend(),
         checkDatabase: () => deploymentChecker.checkDatabase(),
         checkReputation: () => deploymentChecker.checkReputationSystem()
     };
-    
+
     // Add console helper
     if (typeof adminDebugLog !== 'undefined') {
         adminDebugLog('DeploymentStatus', '💡 Deployment Status Commands Available', {
@@ -375,5 +380,22 @@
             ]
         });
     }
-    
+
+    // ============================================
+    // ES6 MODULE EXPORTS (within IIFE)
+    // ============================================
+
+    // Export the class to window for backward compatibility
+    if (typeof window !== 'undefined') {
+        window.DeploymentStatusChecker = DeploymentStatusChecker;
+    }
+
 })();
+
+// ============================================
+// ES6 MODULE EXPORTS (outside IIFE)
+// ============================================
+
+// Export window-attached objects for ES6 module consumers
+export const DeploymentStatusChecker = typeof window !== 'undefined' ? window.DeploymentStatusChecker : null;
+export const deploymentStatus = typeof window !== 'undefined' ? window.deploymentStatus : null;
