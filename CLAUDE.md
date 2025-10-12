@@ -7,6 +7,29 @@ Dev = development branch = staging = dev site/server
 
 ---
 
+## ⚠️ CRITICAL RULE: Environment-Branch Mapping (NEVER VIOLATE)
+
+**THIS RULE IS ABSOLUTE AND INVIOLABLE:**
+
+- **Development branch** === **Staging environment** (dev.unitedwerise.org / dev-api.unitedwerise.org)
+  - Staging ONLY EVER runs development branch code
+  - If staging is not running development code, it is WRONG and must be fixed immediately
+
+- **Main branch** === **Production environment** (www.unitedwerise.org / api.unitedwerise.org)
+  - Production ONLY EVER runs main branch code
+  - If production is not running main code, it is WRONG and must be fixed immediately
+
+**There are NO exceptions to this rule. ANY deviation means something is broken.**
+
+If backend health endpoint or any monitoring shows a mismatch (e.g., staging showing "main" branch), this indicates:
+1. A bug in the health endpoint reporting
+2. An accidental deployment to wrong environment
+3. An emergency that must be corrected immediately
+
+**Always assume staging = development and production = main. Period.**
+
+---
+
 ## Tier 1: Project-Specific Core Rules
 
 **Modular architecture:**

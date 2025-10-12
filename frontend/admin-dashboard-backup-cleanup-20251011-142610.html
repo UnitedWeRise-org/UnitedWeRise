@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UnitedWeRise - Admin Dashboard (Modular)</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <link rel="stylesheet" href="src/styles/admin-dashboard.css">
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-required">
+        <div class="login-form">
+            <h2>Admin Dashboard Access</h2>
+            <p>Please log in with your admin credentials</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div id="loginError" class="error" style="display: none;"></div>
+                <button type="submit" class="nav-button" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardMain" class="admin-dashboard" style="display: none;">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>Admin Dashboard (Modular)</h1>
+                <p id="welcomeMessage">Welcome back</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="lastRefreshTime" style="font-size: 0.875rem; color: #666;"></span>
+                <button id="refreshAllBtn" class="nav-button">
+                    <span id="refreshIcon">🔄</span> Refresh
+                </button>
+                <button data-action="logout" class="nav-button">Logout</button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="admin-nav">
+            <button class="nav-button active" data-section="overview">Overview</button>
+            <button class="nav-button" data-section="security">Security</button>
+            <button class="nav-button" data-section="users">Users</button>
+            <button class="nav-button" data-section="content">Content</button>
+            <button class="nav-button" data-section="reports">Reports</button>
+            <button class="nav-button" data-section="candidates">Candidates</button>
+            <button class="nav-button" data-section="external-candidates">🌐 External Candidates</button>
+            <button class="nav-button" data-section="analytics">Analytics</button>
+            <button class="nav-button" data-section="ai-insights">🤖 AI Insights</button>
+            <button class="nav-button" data-section="motd">MOTD</button>
+            <button class="nav-button" data-section="civic-engagement">🏛️ Civic Engagement</button>
+            <button class="nav-button" data-section="deployment">🚀 Deployment</button>
+            <button class="nav-button" data-section="system">System</button>
+            <button class="nav-button" data-section="errors">🚨 Errors</button>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview" class="dashboard-section active">
+            <h2>System Overview</h2>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card" data-type="users">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card" data-type="users">
+                    <div class="stat-number" id="activeUsers">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card" data-type="posts">
+                    <div class="stat-number" id="totalPosts">0</div>
+                    <div class="stat-label">Total Posts</div>
+                </div>
+                <div class="stat-card" data-type="reports">
+                    <div class="stat-number" id="pendingReports">0</div>
+                    <div class="stat-label">Pending Reports</div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div>
+                <h3>Performance Metrics</h3>
+                <div id="performanceMetrics">
+                    <p>Loading performance data...</p>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div>
+                <h3>System Health</h3>
+                <div id="healthStatus">
+                    <p>Checking system health...</p>
+                </div>
+            </div>
+
+            <div id="overviewError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Security Section -->
+        <div id="security" class="dashboard-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2>🛡️ Security Monitor</h2>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="securityLastRefreshTime" style="font-size: 0.875rem; color: #666;"></span>
+                    <button id="refreshSecurityBtn" class="nav-button">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Security Metrics Dashboard -->
+            <div>
+                <h3>🔒 Security Overview</h3>
+                <div id="securityMetrics">
+                    <p>Loading security metrics...</p>
+                </div>
+            </div>
+
+            <!-- Security Controls -->
+            <div class="security-controls">
+                <h3>⚙️ Security Controls</h3>
+
+                <div class="control-group">
+                    <label for="ipAddressInput">Block IP Address:</label>
+                    <input type="text" id="ipAddressInput" placeholder="Enter IP address (e.g., 192.168.1.1)" />
+                    <button id="blockIPBtn" class="ip-block-btn">🚫 Block IP</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="loginMonitoringToggle">Login Monitoring:</label>
+                    <input type="checkbox" id="loginMonitoringToggle" checked />
+                    <span>Enable enhanced login attempt monitoring</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="securitySearch">Search Security Events:</label>
+                    <input type="text" id="securitySearch" placeholder="Search by IP, username, or location..." />
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button id="clearBlockedIPsBtn" class="nav-button" style="background: #dc3545; border-color: #dc3545;">
+                        🗑️ Clear All Blocked IPs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Failed Login Attempts -->
+            <div>
+                <h3>❌ Failed Login Attempts</h3>
+                <div id="failedLoginsTable">
+                    <div class="loading">Loading failed login attempts...</div>
+                </div>
+            </div>
+
+            <!-- Suspicious Activity Alerts -->
+            <div>
+                <h3>🚨 Suspicious Activity</h3>
+                <div id="suspiciousActivityPanel">
+                    <div class="loading">Loading suspicious activity...</div>
+                </div>
+            </div>
+
+            <!-- Blocked IPs -->
+            <div>
+                <h3>🚫 Blocked IP Addresses</h3>
+                <div id="blockedIPsList">
+                    <div class="loading">Loading blocked IPs...</div>
+                </div>
+            </div>
+
+            <div id="securityError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users" class="dashboard-section">
+            <h2>👥 User Management</h2>
+
+            <div>
+                <input type="text" id="userSearch" placeholder="Search users..." style="width: 300px; padding: 0.5rem; margin-bottom: 1rem;">
+                <button class="nav-button">Search</button>
+            </div>
+
+            <!-- Account Merge Tool -->
+            <div style="background: #fff3cd; border: 1px solid #f0c36d; border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                <h3 style="margin-top: 0; color: #856404;">🔧 Account Merge Tool</h3>
+                <p style="margin: 0.5rem 0; color: #856404; font-size: 0.9rem;">
+                    Merge duplicate accounts (e.g., OAuth email variations like jeffrey@gmail.com vs jeffrey.a.benson@gmail.com)
+                </p>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                    <input type="text" id="primaryAccountId" placeholder="Primary Account ID (keep this one)" style="flex: 1; padding: 0.5rem;">
+                    <input type="text" id="duplicateAccountId" placeholder="Duplicate Account ID (delete this one)" style="flex: 1; padding: 0.5rem;">
+                    <button class="nav-button" style="background: #e67e22; border-color: #e67e22;">🔄 Merge</button>
+                </div>
+                <div id="mergeStatus" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
+            </div>
+
+            <div id="usersTable">
+                <div class="loading">Loading users...</div>
+            </div>
+        </div>
+
+        <!-- Content Section -->
+        <div id="content" class="dashboard-section">
+            <h2>📝 Content Moderation</h2>
+
+            <!-- Content Moderation Tabs -->
+            <div style="display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                <button id="userReportsTab" class="tab-button active">
+                    🚨 User Reports
+                </button>
+                <button id="aiFlagsTab" class="tab-button">
+                    🤖 AI Flagged
+                </button>
+            </div>
+
+            <!-- User Reports Tab Content -->
+            <div id="userReportsContent" class="tab-content active">
+                <h3>User-Submitted Reports</h3>
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <select id="reportStatusFilter" style="padding: 0.5rem;">
+                            <option value="PENDING">Pending Review</option>
+                            <option value="IN_REVIEW">In Review</option>
+                            <option value="RESOLVED">Resolved</option>
+                            <option value="all">All Statuses</option>
+                        </select>
+                        <select id="reportTargetTypeFilter" style="padding: 0.5rem;">
+                            <option value="all">All Types</option>
+                            <option value="POST">Posts</option>
+                            <option value="COMMENT">Comments</option>
+                            <option value="USER">Users</option>
+                            <option value="CANDIDATE">Candidates</option>
+                        </select>
+                        <select id="reportPriorityFilter" style="padding: 0.5rem;">
+                            <option value="all">All Priorities</option>
+                            <option value="URGENT">Urgent</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                        <button class="nav-button">🔍 Search</button>
+                    </div>
+
+                    <!-- Report Statistics -->
+                    <div id="userReportStats" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                        <!-- Stats will be populated by ContentController -->
+                    </div>
+
+                    <!-- Reports Table -->
+                    <div id="userReportsTable">
+                        <div class="loading">Loading user reports...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Flags Tab Content -->
+            <div id="aiFlagsContent" class="tab-content">
+                <h3>AI-Flagged Content</h3>
+                <div id="flaggedContent">
+                    <div class="loading">Loading flagged content...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports" class="dashboard-section">
+            <div class="section-header">
+                <h2>📊 Report Management</h2>
+                <div class="section-controls">
+                    <button id="refreshReportsBtn" class="action-btn">🔄 Refresh</button>
+                    <button id="exportReportsBtn" class="action-btn secondary">📊 Export</button>
+                    <div id="reportsLastRefreshTime" class="last-refresh">Last updated: Never</div>
+                </div>
+            </div>
+
+            <div id="reportsError" class="error-message" style="display: none;"></div>
+
+            <!-- Reports Analytics Dashboard -->
+            <div id="reportsAnalytics" class="reports-analytics-section">
+                <div class="loading">Loading reports analytics...</div>
+            </div>
+
+            <!-- Reports Filters -->
+            <div class="reports-filters-section">
+                <h3>🔍 Filter Reports</h3>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="reportTypeFilter">Report Type:</label>
+                        <select id="reportTypeFilter">
+                            <option value="all">All Types</option>
+                            <option value="harassment">Harassment/Abuse</option>
+                            <option value="spam">Spam/Scam</option>
+                            <option value="inappropriate content">Inappropriate Content</option>
+                            <option value="fake account">Fake Account</option>
+                            <option value="copyright">Copyright Infringement</option>
+                            <option value="privacy violation">Privacy Violation</option>
+                            <option value="misinformation">Misinformation</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="reportStatusFilter">Status:</label>
+                        <select id="reportStatusFilter">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="dismissed">Dismissed</option>
+                            <option value="escalated">Escalated</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="reportPriorityFilter">Priority:</label>
+                        <select id="reportPriorityFilter">
+                            <option value="all">All Priority</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="reportDateRangeFilter">Date Range:</label>
+                        <select id="reportDateRangeFilter">
+                            <option value="1">Last 24 hours</option>
+                            <option value="7" selected>Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="reportsSearch">Search Reporter:</label>
+                        <input type="text" id="reportsSearch" placeholder="Username or email...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Queue -->
+            <div class="reports-queue-section">
+                <h3>📋 Reports Queue</h3>
+                <div id="reportsQueueTable">
+                    <div class="loading">Loading reports queue...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidates Section -->
+        <div id="candidates" class="dashboard-section">
+            <div class="section-header">
+                <h2>🗳️ Candidate Management</h2>
+                <div class="section-actions">
+                    <button id="refreshCandidatesBtn" class="action-btn primary">🔄 Refresh</button>
+                    <button id="exportCandidatesBtn" class="action-btn secondary">📊 Export</button>
+                    <span id="candidatesLastRefreshTime" class="last-refresh">Last updated: --</span>
+                </div>
+            </div>
+
+            <!-- Candidates Analytics Dashboard -->
+            <div id="candidatesAnalytics" class="candidates-analytics">
+                <!-- Analytics will be populated by CandidatesController -->
+            </div>
+
+            <!-- Multi-Tab Navigation -->
+            <div id="candidatesTabContainer" class="candidates-tabs-container">
+                <div class="candidates-tabs">
+                    <button class="tab-button active" data-tab="registrations">
+                        📝 Registrations
+                        <span class="tab-badge" id="registrationsBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="profiles">
+                        👤 Profiles
+                        <span class="tab-badge" id="profilesBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="reports">
+                        📋 Reports
+                        <span class="tab-badge" id="reportsBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="verification">
+                        🔍 Verification
+                        <span class="tab-badge urgent" id="verificationBadge">0</span>
+                    </button>
+                </div>
+
+                <!-- Tab Content Areas -->
+                <div class="tab-content">
+                    <!-- Registrations Tab -->
+                    <div id="registrations-tab" class="tab-pane active">
+                        <div class="tab-header">
+                            <h3>📝 Candidate Registrations</h3>
+                            <div class="tab-filters">
+                                <select id="candidateStatusFilter">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="under-review">Under Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                                <select id="candidateOfficeFilter">
+                                    <option value="all">All Offices</option>
+                                    <option value="president">President</option>
+                                    <option value="senate">Senate</option>
+                                    <option value="house">House</option>
+                                    <option value="governor">Governor</option>
+                                    <option value="mayor">Mayor</option>
+                                    <option value="local">Local Office</option>
+                                </select>
+                                <select id="candidateStateFilter">
+                                    <option value="all">All States</option>
+                                </select>
+                                <input type="text" id="candidatesSearch" placeholder="🔍 Search candidates..." class="search-input">
+                            </div>
+                        </div>
+                        <div id="candidatesRegistrationsTable" class="candidates-table-container">
+                            <!-- Registrations table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Profiles Tab -->
+                    <div id="profiles-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>👤 Candidate Profiles</h3>
+                            <div class="tab-filters">
+                                <select id="profileStatusFilter">
+                                    <option value="all">All Campaigns</option>
+                                    <option value="active">Active</option>
+                                    <option value="planning">Planning</option>
+                                    <option value="suspended">Suspended</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <select id="profileComplianceFilter">
+                                    <option value="all">All Compliance</option>
+                                    <option value="compliant">Compliant</option>
+                                    <option value="issues">Has Issues</option>
+                                    <option value="pending">Pending Review</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesProfilesTable" class="candidates-table-container">
+                            <!-- Profiles table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Reports Tab -->
+                    <div id="reports-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>📋 Candidate Reports</h3>
+                            <div class="tab-filters">
+                                <select id="reportSeverityFilter">
+                                    <option value="all">All Severity</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <select id="reportTypeFilter">
+                                    <option value="all">All Types</option>
+                                    <option value="campaign-finance">Campaign Finance</option>
+                                    <option value="ethics">Ethics Violation</option>
+                                    <option value="misinformation">Misinformation</option>
+                                    <option value="legal">Legal Issue</option>
+                                </select>
+                                <select id="reportStatusFilter">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="investigating">Investigating</option>
+                                    <option value="resolved">Resolved</option>
+                                    <option value="escalated">Escalated</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesReportsTable" class="candidates-table-container">
+                            <!-- Reports table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+
+                    <!-- Verification Tab -->
+                    <div id="verification-tab" class="tab-pane">
+                        <div class="tab-header">
+                            <h3>🔍 Candidate Verification</h3>
+                            <div class="tab-filters">
+                                <select id="candidateVerificationFilter">
+                                    <option value="all">All Verification</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                                <select id="verificationTypeFilter">
+                                    <option value="all">All Types</option>
+                                    <option value="identity">Identity</option>
+                                    <option value="eligibility">Eligibility</option>
+                                    <option value="background">Background</option>
+                                    <option value="documents">Documents</option>
+                                    <option value="references">References</option>
+                                </select>
+                                <select id="priorityFilter">
+                                    <option value="all">All Priority</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="candidatesVerificationTable" class="candidates-table-container">
+                            <!-- Verification table will be populated by CandidatesController -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Upload Area -->
+            <div class="document-upload-section" style="display: none;">
+                <h4>📄 Document Upload</h4>
+                <input type="file" id="candidateDocumentUpload" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <div class="upload-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <span class="progress-text">0%</span>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="candidatesError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- External Candidates Section -->
+        <div id="external-candidates" class="dashboard-section">
+            <div class="section-header">
+                <h2>🌐 External Candidate Tracking</h2>
+                <div class="section-actions">
+                    <button id="refreshExternalCandidatesBtn" class="action-btn primary">🔄 Refresh External Data</button>
+                    <button id="syncAllDataSourcesBtn" class="action-btn secondary">🔗 Sync All Sources</button>
+                    <button id="exportExternalDataBtn" class="action-btn secondary">📊 Export Data</button>
+                    <button id="validateExternalDataBtn" class="action-btn secondary">✅ Validate Data</button>
+                    <span id="externalCandidatesLastRefreshTime" class="last-refresh">Last updated: --</span>
+                </div>
+            </div>
+
+            <!-- Real-time Updates Toggle -->
+            <div class="real-time-controls">
+                <label class="toggle-container">
+                    <input type="checkbox" id="realTimeUpdatesToggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">🔴 Real-time Updates</span>
+                </label>
+            </div>
+
+            <!-- External Candidates Analytics Dashboard -->
+            <div id="externalCandidatesAnalytics" class="external-analytics">
+                <!-- Analytics will be populated by ExternalCandidatesController -->
+            </div>
+
+            <!-- Data Source Health Status -->
+            <div id="dataSourceHealthStatus" class="data-source-health">
+                <!-- Health status will be populated by ExternalCandidatesController -->
+            </div>
+
+            <!-- Multi-Tab Navigation -->
+            <div id="externalCandidatesTabContainer" class="external-candidates-tabs-container">
+                <div class="external-candidates-tabs">
+                    <button class="tab-button active" data-tab="vote-tracking">
+                        🗳️ Vote Tracking
+                        <span class="tab-badge realtime" id="voteTrackingBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="campaign-finance">
+                        💰 Campaign Finance
+                        <span class="tab-badge" id="campaignFinanceBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="news-tracking">
+                        📰 News Tracking
+                        <span class="tab-badge" id="newsTrackingBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="polling-data">
+                        📊 Polling Data
+                        <span class="tab-badge" id="pollingDataBadge">0</span>
+                    </button>
+                    <button class="tab-button" data-tab="data-sources">
+                        🔌 Data Sources
+                        <span class="tab-badge" id="dataSourcesBadge">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="external-filter-controls">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="externalOfficeFilter">Office:</label>
+                        <select id="externalOfficeFilter">
+                            <option value="all">All Offices</option>
+                            <option value="president">President</option>
+                            <option value="senate">Senate</option>
+                            <option value="house">House</option>
+                            <option value="governor">Governor</option>
+                            <option value="state-legislature">State Legislature</option>
+                            <option value="local">Local</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalStateFilter">State:</label>
+                        <select id="externalStateFilter">
+                            <option value="all">All States</option>
+                            <option value="AL">Alabama</option>
+                            <option value="CA">California</option>
+                            <option value="FL">Florida</option>
+                            <option value="TX">Texas</option>
+                            <option value="NY">New York</option>
+                            <!-- Add more states as needed -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalPartyFilter">Party:</label>
+                        <select id="externalPartyFilter">
+                            <option value="all">All Parties</option>
+                            <option value="democratic">Democratic</option>
+                            <option value="republican">Republican</option>
+                            <option value="independent">Independent</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalDataSourceFilter">Data Source:</label>
+                        <select id="externalDataSourceFilter">
+                            <option value="all">All Sources</option>
+                            <option value="fec">FEC</option>
+                            <option value="news">News APIs</option>
+                            <option value="polling">Polling Organizations</option>
+                            <option value="election-offices">Election Offices</option>
+                            <option value="social-media">Social Media</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="externalCandidatesSearch">Search:</label>
+                        <input type="text" id="externalCandidatesSearch" placeholder="Search candidates, offices, or sources...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content Containers -->
+            <div class="external-tab-content">
+                <!-- Vote Tracking Tab -->
+                <div id="voteTrackingContent" class="tab-content active">
+                    <div id="voteTrackingTable" class="table-container">
+                        <!-- Vote tracking table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Campaign Finance Tab -->
+                <div id="campaignFinanceContent" class="tab-content">
+                    <div id="campaignFinanceTable" class="table-container">
+                        <!-- Campaign finance table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- News Tracking Tab -->
+                <div id="newsTrackingContent" class="tab-content">
+                    <div id="newsTrackingTable" class="table-container">
+                        <!-- News tracking table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Polling Data Tab -->
+                <div id="pollingDataContent" class="tab-content">
+                    <div id="pollingDataTable" class="table-container">
+                        <!-- Polling data table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+
+                <!-- Data Sources Tab -->
+                <div id="dataSourcesContent" class="tab-content">
+                    <div id="dataSourcesTable" class="table-container">
+                        <!-- Data sources table will be populated by ExternalCandidatesController -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="external-quick-actions">
+                <button id="syncFECBtn" class="action-btn fec-btn">📋 Sync FEC Data</button>
+                <button id="syncNewsBtn" class="action-btn news-btn">📰 Sync News Data</button>
+                <button id="syncPollingBtn" class="action-btn polling-btn">📊 Sync Polling Data</button>
+                <button id="generateAlertBtn" class="action-btn alert-btn">🚨 Generate Alerts</button>
+                <button id="complianceCheckBtn" class="action-btn compliance-btn">⚖️ Compliance Check</button>
+            </div>
+
+            <!-- Error Display -->
+            <div id="externalCandidatesError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics" class="dashboard-section">
+            <div class="analytics-header">
+                <h2>Analytics Dashboard</h2>
+                <div class="analytics-controls">
+                    <div class="control-group">
+                        <label for="analyticsDateRange">Date Range:</label>
+                        <select id="analyticsDateRange">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="custom-date-range" style="display: none;">
+                        <input type="date" id="customStartDate" placeholder="Start Date">
+                        <input type="date" id="customEndDate" placeholder="End Date">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="realTimeToggle"> Real-time Updates
+                        </label>
+                    </div>
+                    <button id="refreshAnalytics" class="btn btn-secondary">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div class="last-updated">
+                    Last updated: <span id="lastRefreshTime">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Core Metrics Dashboard -->
+            <div class="analytics-metrics">
+                <div class="metric-cards-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Users</div>
+                            <div class="metric-value" id="totalUsersMetric">-</div>
+                            <div class="metric-trend" id="totalUsersTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Active Users</div>
+                            <div class="metric-value" id="activeUsersMetric">-</div>
+                            <div class="metric-trend" id="activeUsersTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✨</div>
+                        <div class="metric-content">
+                            <div class="metric-label">New Registrations</div>
+                            <div class="metric-value" id="newRegistrationsMetric">-</div>
+                            <div class="metric-trend" id="newRegistrationsTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📝</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Posts</div>
+                            <div class="metric-value" id="totalPostsMetric">-</div>
+                            <div class="metric-trend" id="totalPostsTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💖</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Engagement Rate</div>
+                            <div class="metric-value" id="engagementRateMetric">-</div>
+                            <div class="metric-trend" id="engagementRateTrend"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🔁</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Retention Rate</div>
+                            <div class="metric-value" id="retentionRateMetric">-</div>
+                            <div class="metric-trend" id="retentionRateTrend"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="analytics-charts">
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>User Growth Over Time</h3>
+                        <canvas id="userGrowthChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>User Engagement Metrics</h3>
+                        <canvas id="engagementChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Content Type Distribution</h3>
+                        <canvas id="contentPerformanceChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Geographic User Distribution</h3>
+                        <canvas id="geographicChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>User Retention Analysis</h3>
+                        <canvas id="retentionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Device Usage Statistics</h3>
+                        <canvas id="deviceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Advanced Analytics -->
+            <div class="analytics-filters">
+                <h3>Advanced Filters</h3>
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label for="demographicsFilter">Demographics:</label>
+                        <select id="demographicsFilter">
+                            <option value="all">All Demographics</option>
+                            <option value="18-25">18-25 years</option>
+                            <option value="26-35">26-35 years</option>
+                            <option value="36-50">36-50 years</option>
+                            <option value="51+">51+ years</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="geographyFilter">Geography:</label>
+                        <select id="geographyFilter">
+                            <option value="all">All Regions</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                            <option value="east">East</option>
+                            <option value="west">West</option>
+                            <option value="midwest">Midwest</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="contentTypeFilter">Content Type:</label>
+                        <select id="contentTypeFilter">
+                            <option value="all">All Content</option>
+                            <option value="text">Text Posts</option>
+                            <option value="photo">Photo Posts</option>
+                            <option value="civic">Civic Content</option>
+                            <option value="discussion">Discussions</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics Sections -->
+            <div class="analytics-details">
+                <div class="analytics-tabs">
+                    <button class="analytics-tab active" data-tab="engagement">User Engagement</button>
+                    <button class="analytics-tab" data-tab="content">Content Performance</button>
+                    <button class="analytics-tab" data-tab="growth">Growth Metrics</button>
+                </div>
+
+                <div class="analytics-tab-content">
+                    <!-- User Engagement Tab -->
+                    <div id="engagementTab" class="tab-panel active">
+                        <h3>User Engagement Analytics</h3>
+                        <div id="userEngagementContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+
+                    <!-- Content Performance Tab -->
+                    <div id="contentTab" class="tab-panel">
+                        <h3>Content Performance Analytics</h3>
+                        <div id="contentPerformanceContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+
+                    <!-- Growth Metrics Tab -->
+                    <div id="growthTab" class="tab-panel">
+                        <h3>Growth Metrics Analytics</h3>
+                        <div id="growthMetricsContainer">
+                            <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Reports Section -->
+            <div class="custom-reports">
+                <h3>Custom Reports</h3>
+                <div class="report-builder">
+                    <div class="metric-selectors">
+                        <h4>Select Metrics to Include:</h4>
+                        <div class="metric-checkboxes">
+                            <label><input type="checkbox" class="metric-selector" value="userGrowth"> User Growth</label>
+                            <label><input type="checkbox" class="metric-selector" value="engagement"> Engagement Metrics</label>
+                            <label><input type="checkbox" class="metric-selector" value="content"> Content Performance</label>
+                            <label><input type="checkbox" class="metric-selector" value="retention"> User Retention</label>
+                            <label><input type="checkbox" class="metric-selector" value="geographic"> Geographic Data</label>
+                            <label><input type="checkbox" class="metric-selector" value="device"> Device Usage</label>
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <button id="generateCustomReport" class="btn btn-primary">Generate Custom Report</button>
+                        <button id="exportCSV" class="btn btn-secondary">Export CSV</button>
+                        <button id="exportPDF" class="btn btn-secondary">Export PDF</button>
+                    </div>
+                </div>
+                <div id="customReportContainer">
+                    <!-- Generated reports appear here -->
+                </div>
+            </div>
+
+            <!-- Analytics Content Container -->
+            <div id="analyticsContent">
+                <!-- Main analytics content populated by controller -->
+            </div>
+
+            <!-- Error Display -->
+            <div id="analyticsError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- AI Insights Section -->
+        <div id="ai-insights" class="dashboard-section">
+            <div class="section-header">
+                <h2>🤖 AI Insights & Analytics</h2>
+                <div class="section-controls">
+                    <button id="runAIAnalysis" class="action-btn primary">⚡ Run Analysis</button>
+                    <button id="generateAIReport" class="action-btn secondary">📊 Generate Report</button>
+                    <button id="refreshAIInsights" class="action-btn">🔄 Refresh</button>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="aiRealTimeToggle">
+                        <span class="toggle-slider"></span>
+                        Real-time
+                    </label>
+                </div>
+            </div>
+
+            <!-- AI Metrics Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalSuggestions">-</div>
+                    <div class="stat-label">User Suggestions</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="implementedSuggestions">-</div>
+                    <div class="stat-label">Implemented</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="aiModerationActions">-</div>
+                    <div class="stat-label">AI Moderation Actions</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="aiAccuracy">-</div>
+                    <div class="stat-label">AI Accuracy</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="topicsDiscovered">-</div>
+                    <div class="stat-label">Topics Discovered</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="sentimentScore">-</div>
+                    <div class="stat-label">Avg Sentiment</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="predictionAccuracy">-</div>
+                    <div class="stat-label">Prediction Accuracy</div>
+                    <div class="metric-trend"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="contentClassified">-</div>
+                    <div class="stat-label">Content Classified</div>
+                    <div class="metric-trend"></div>
+                </div>
+            </div>
+
+            <!-- AI Insights Filter Controls -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="suggestionCategoryFilter">Category:</label>
+                    <select id="suggestionCategoryFilter">
+                        <option value="all">All Categories</option>
+                        <option value="ui_ux">UI/UX Improvements</option>
+                        <option value="features">Feature Requests</option>
+                        <option value="performance">Performance Issues</option>
+                        <option value="bugs">Bug Reports</option>
+                        <option value="moderation">Moderation Feedback</option>
+                        <option value="content">Content Strategy</option>
+                        <option value="engagement">User Engagement</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="suggestionStatusFilter">Status:</label>
+                    <select id="suggestionStatusFilter">
+                        <option value="all">All Status</option>
+                        <option value="new">New</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="implemented">Implemented</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="in_progress">In Progress</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="aiTimeRange">Time Range:</label>
+                    <select id="aiTimeRange">
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d" selected>Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
+                        <option value="1y">Last year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="aiAnalysisType">Analysis Type:</label>
+                    <select id="aiAnalysisType">
+                        <option value="all">All Types</option>
+                        <option value="content">Content Analysis</option>
+                        <option value="sentiment">Sentiment Analysis</option>
+                        <option value="topics">Topic Discovery</option>
+                        <option value="predictions">Predictive Analytics</option>
+                        <option value="recommendations">AI Recommendations</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- AI Insights Dashboard Grid -->
+            <div class="ai-insights-grid">
+                <!-- Content Analysis Panel -->
+                <div class="ai-panel">
+                    <h3>📊 Content Analysis</h3>
+                    <div id="contentAnalysisContainer">
+                        <div class="loading">Loading content analysis...</div>
+                    </div>
+                    <canvas id="contentClassificationChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Topic Discovery Panel -->
+                <div class="ai-panel">
+                    <h3>🎯 Topic Discovery</h3>
+                    <div id="topicDiscoveryContainer">
+                        <div class="loading">Loading topic discovery...</div>
+                    </div>
+                    <canvas id="topicChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Sentiment Analysis Panel -->
+                <div class="ai-panel">
+                    <h3>📈 Sentiment Analysis</h3>
+                    <div id="sentimentAnalysisContainer">
+                        <div class="loading">Loading sentiment analysis...</div>
+                    </div>
+                    <canvas id="sentimentChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Predictive Analytics Panel -->
+                <div class="ai-panel">
+                    <h3>🔮 Predictive Analytics</h3>
+                    <div id="predictiveAnalyticsContainer">
+                        <div class="loading">Loading predictive analytics...</div>
+                    </div>
+                    <canvas id="engagementPredictionChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- AI Recommendations Panel -->
+                <div class="ai-panel">
+                    <h3>💡 AI Recommendations</h3>
+                    <div id="aiRecommendationsContainer">
+                        <div class="loading">Loading AI recommendations...</div>
+                    </div>
+                </div>
+
+                <!-- AI Model Performance Panel -->
+                <div class="ai-panel">
+                    <h3>🎯 Model Performance</h3>
+                    <div id="aiModelPerformanceContainer">
+                        <div class="loading">Loading model performance...</div>
+                    </div>
+                    <canvas id="aiAccuracyChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- AI Insights Report Container -->
+            <div id="aiReportContainer" style="margin-top: 2rem;">
+                <!-- Generated reports will appear here -->
+            </div>
+
+            <!-- Last Refresh Info -->
+            <div class="section-footer">
+                <span>Last refreshed: <span id="aiLastRefreshTime">-</span></span>
+                <span>Real-time updates: <span id="aiRealTimeStatus">Disabled</span></span>
+            </div>
+
+            <!-- Error Display -->
+            <div id="aiInsightsError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- MOTD Section -->
+        <div id="motd" class="dashboard-section">
+            <div class="section-header">
+                <h2>📢 Message of the Day Management</h2>
+                <div class="section-controls">
+                    <button id="createMOTDBtn" class="action-btn primary">✏️ Create MOTD</button>
+                    <button id="scheduleMOTDBtn" class="action-btn secondary">📅 Schedule</button>
+                    <button id="refreshMOTDBtn" class="action-btn">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- MOTD Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMOTDs">0</div>
+                    <div class="stat-label">Total MOTDs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeMOTDs">0</div>
+                    <div class="stat-label">Active MOTDs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalViews">0</div>
+                    <div class="stat-label">Total Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgEngagement">0%</div>
+                    <div class="stat-label">Avg Engagement</div>
+                </div>
+            </div>
+
+            <!-- MOTD Tabs -->
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="active">🟢 Active MOTDs</button>
+                    <button class="tab-button" data-tab="history">📜 History</button>
+                    <button class="tab-button" data-tab="analytics">📊 Analytics</button>
+                </div>
+
+                <!-- Active MOTDs Tab -->
+                <div id="activeMOTDsTab" class="tab-content active">
+                    <div class="section-controls" style="margin-bottom: 1rem;">
+                        <div class="filter-controls">
+                            <select id="motdPriorityFilter" class="filter-select">
+                                <option value="">All Priorities</option>
+                                <option value="high">🔴 High Priority</option>
+                                <option value="medium">🟡 Medium Priority</option>
+                                <option value="low">🟢 Low Priority</option>
+                            </select>
+                            <select id="motdAudienceFilter" class="filter-select">
+                                <option value="">All Audiences</option>
+                                <option value="all">👥 All Users</option>
+                                <option value="new">🆕 New Users</option>
+                                <option value="active">⚡ Active Users</option>
+                                <option value="admins">👑 Admins</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="activeMOTDsList" class="motd-list">
+                        <div class="loading">Loading active MOTDs...</div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="motdHistoryTab" class="tab-content">
+                    <div class="section-controls" style="margin-bottom: 1rem;">
+                        <input type="text" id="motdHistorySearch" placeholder="Search MOTDs by title..." class="search-input">
+                        <select id="motdStatusFilter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="active">🟢 Active</option>
+                            <option value="scheduled">🟡 Scheduled</option>
+                            <option value="expired">🔴 Expired</option>
+                        </select>
+                    </div>
+
+                    <div id="motdHistoryTable" class="table-container">
+                        <div class="loading">Loading MOTD history...</div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div id="motdAnalyticsTab" class="tab-content">
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h3>📊 Performance Overview</h3>
+                            <div id="motdPerformanceChart" class="chart-container">
+                                <div class="chart-placeholder">Performance charts will be displayed here</div>
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <h3>🎯 Engagement Metrics</h3>
+                            <div id="motdEngagementMetrics" class="metrics-container">
+                                <div class="metric-item">
+                                    <span class="metric-label">Click-through Rate:</span>
+                                    <span class="metric-value" id="motdCTR">0%</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Dismissal Rate:</span>
+                                    <span class="metric-value" id="motdDismissalRate">0%</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Average View Time:</span>
+                                    <span class="metric-value" id="motdAvgViewTime">0s</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Best Performing Time:</span>
+                                    <span class="metric-value" id="motdBestTime">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOTD Editor Modal -->
+            <div id="motdEditor" class="modal-overlay" style="display: none;">
+                <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3 id="motdEditorTitle">Create New MOTD</h3>
+                        <button class="modal-close" data-action="close-motd-editor">✕</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <form id="motdForm" data-action="handle-update-motd">
+                            <!-- Basic Information -->
+                            <div class="form-section">
+                                <h4>📝 Basic Information</h4>
+                                <div class="form-group">
+                                    <label for="motdTitle">Title *</label>
+                                    <input type="text" id="motdTitle" required maxlength="100"
+                                           placeholder="Enter MOTD title (max 100 characters)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="motdContent">Content *</label>
+                                    <div class="editor-container">
+                                        <!-- Rich Text Toolbar -->
+                                        <div id="motdToolbar" class="editor-toolbar">
+                                            <!-- Toolbar buttons will be added by JavaScript -->
+                                        </div>
+
+                                        <textarea id="motdContent" required
+                                                  placeholder="Enter your message content. HTML formatting is supported."
+                                                  rows="8"></textarea>
+
+                                        <div class="editor-footer">
+                                            <div id="characterCount" class="char-count">0/2000</div>
+                                            <div class="editor-actions">
+                                                <button type="button" id="previewMOTDBtn" class="btn-secondary">👁️ Preview</button>
+                                                <div id="autoSaveIndicator" class="auto-save-indicator">Auto-save enabled</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Preview Area -->
+                                    <div id="motdPreview" class="content-preview" style="display: none;">
+                                        <h5>Preview:</h5>
+                                        <div class="preview-content"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="motdTemplateSelect">Quick Templates</label>
+                                    <select id="motdTemplateSelect" class="form-control">
+                                        <option value="">Select a template...</option>
+                                        <!-- Templates will be loaded by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Configuration -->
+                            <div class="form-section">
+                                <h4>⚙️ Configuration</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="motdPriority">Priority</label>
+                                        <select id="motdPriority" class="form-control">
+                                            <option value="low">🟢 Low Priority</option>
+                                            <option value="medium" selected>🟡 Medium Priority</option>
+                                            <option value="high">🔴 High Priority</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="motdTargetAudience">Target Audience</label>
+                                        <select id="motdTargetAudience" class="form-control">
+                                            <option value="all">👥 All Users</option>
+                                            <option value="new">🆕 New Users (< 30 days)</option>
+                                            <option value="active">⚡ Active Users</option>
+                                            <option value="inactive">😴 Inactive Users</option>
+                                            <option value="admins">👑 Admins Only</option>
+                                            <option value="moderators">🛡️ Moderators</option>
+                                            <option value="candidates">🗳️ Candidates</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Scheduling -->
+                            <div class="form-section">
+                                <h4>📅 Scheduling</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="motdStartDate">Start Date & Time *</label>
+                                        <input type="datetime-local" id="motdStartDate" required class="form-control">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="motdEndDate">End Date & Time</label>
+                                        <input type="datetime-local" id="motdEndDate" class="form-control">
+                                        <small>Leave empty for no expiration</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Display Options -->
+                            <div class="form-section">
+                                <h4>🎨 Display Options</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdIsActive" checked>
+                                        <span class="checkmark"></span>
+                                        Activate immediately
+                                    </label>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdIsDismissible" checked>
+                                        <span class="checkmark"></span>
+                                        Allow users to dismiss
+                                    </label>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motdShowOnce">
+                                        <span class="checkmark"></span>
+                                        Show only once per user
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" data-action="cancel-motd-editor">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    💾 Save MOTD
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduling Modal -->
+            <div id="scheduleModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📅 Schedule MOTD</h3>
+                        <button class="modal-close" data-action="close-schedule-modal">✕</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <form id="scheduleForm" data-action="handle-schedule-motd">
+                            <div class="form-group">
+                                <label for="scheduleMOTDSelect">Select MOTD</label>
+                                <select id="scheduleMOTDSelect" required class="form-control">
+                                    <option value="">Choose a MOTD to schedule...</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="scheduleStartDate">Start Date & Time</label>
+                                    <input type="datetime-local" id="scheduleStartDate" required class="form-control">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="scheduleEndDate">End Date & Time</label>
+                                    <input type="datetime-local" id="scheduleEndDate" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="scheduleTimezone">Timezone</label>
+                                <select id="scheduleTimezone" class="form-control">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                </select>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" data-action="cancel-schedule-modal">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    📅 Schedule MOTD
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="motdError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- Deployment Status Section -->
+        <div id="deployment" class="dashboard-section">
+            <div class="section-header">
+                <h2>🚀 Deployment Status & Container Monitoring</h2>
+                <div class="section-controls">
+                    <button id="refreshDeploymentBtn" class="action-btn">🔄 Check Status Now</button>
+                    <button id="deploymentHistoryBtn" class="action-btn secondary">📜 Deployment History</button>
+                    <button id="environmentComparisonBtn" class="action-btn secondary">🔀 Environment Comparison</button>
+                </div>
+            </div>
+
+            <!-- Deployment Statistics -->
+            <div class="stats-grid" id="deploymentStats">
+                <div class="stat-card">
+                    <div class="stat-number" id="backendUptime">-</div>
+                    <div class="stat-label">Backend Uptime (hours)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="lastDeploy">-</div>
+                    <div class="stat-label">Last Deploy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="frontendVersion">-</div>
+                    <div class="stat-label">Frontend Version</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="schemaVersion">-</div>
+                    <div class="stat-label">Schema Version</div>
+                </div>
+            </div>
+
+            <!-- Deployment Monitoring Dashboard -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                <div>
+                    <h3>🏭 Component Status</h3>
+                    <div id="componentStatus" class="deployment-dashboard">
+                        <div class="loading">Checking component status...</div>
+                    </div>
+                </div>
+                <div>
+                    <h3>⚡ Advanced Deployment Actions</h3>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button id="containerHealthBtn" class="action-btn secondary" style="margin: 0;">
+                            📊 Container Health
+                        </button>
+                        <button id="buildPipelineBtn" class="action-btn secondary" style="margin: 0;">
+                            🔨 Build Pipeline Status
+                        </button>
+                        <button id="emergencyRollbackBtn" class="action-btn danger" style="margin: 0;">
+                            ⚠️ Emergency Rollback
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Monitoring Panel -->
+            <div style="margin-top: 2rem;">
+                <h3>📊 Real-Time Container Monitoring</h3>
+                <div class="container-health" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="health-metric">
+                        <div class="metric-label">Production CPU</div>
+                        <div class="metric-value" id="prodCPU">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Production Memory</div>
+                        <div class="metric-value" id="prodMemory">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Staging CPU</div>
+                        <div class="metric-value" id="stagingCPU">-</div>
+                    </div>
+                    <div class="health-metric">
+                        <div class="metric-label">Staging Memory</div>
+                        <div class="metric-value" id="stagingMemory">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployment Console Output -->
+            <div style="margin-top: 2rem;">
+                <h3>📝 Deployment Console Output</h3>
+                <div id="deploymentConsole" class="deployment-console">
+Loading deployment status...
+                </div>
+            </div>
+
+            <!-- Build Status Display -->
+            <div style="margin-top: 2rem;">
+                <h3>🔨 CI/CD Pipeline Status</h3>
+                <div class="build-status" id="buildStatus">
+                    <div class="loading">Loading build pipeline status...</div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="deploymentError" class="error-message" style="display: none;"></div>
+        </div>
+
+        <!-- System Section -->
+        <div id="system" class="dashboard-section">
+            <h2>🖥️ System Administration</h2>
+
+            <!-- System Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">System Status</div>
+                    <div class="stat-number" id="systemStatus">Unknown</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">System Uptime</div>
+                    <div class="stat-number" id="systemUptime">0h</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Maintenance Mode</div>
+                    <div class="stat-number" id="maintenanceStatus">Inactive</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Update</div>
+                    <div class="stat-number" id="lastSystemUpdate">Never</div>
+                </div>
+            </div>
+
+            <!-- System Administration Controls -->
+            <div class="admin-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+                <!-- Configuration Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">⚙️ Configuration Management</h3>
+                    <button id="configUpdateBtn" class="action-btn" style="margin-bottom: 0.5rem;">Update Configuration</button>
+                    <button id="configAuditBtn" class="action-btn" style="margin-bottom: 0.5rem;">Configuration Audit</button>
+                    <button id="configBackupBtn" class="action-btn">Backup Configuration</button>
+                </div>
+
+                <!-- Database Administration -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">💾 Database Administration</h3>
+                    <button id="dbManagementBtn" class="action-btn" style="margin-bottom: 0.5rem;">Database Management</button>
+                    <button id="dbOptimizeBtn" class="action-btn" style="margin-bottom: 0.5rem;">Optimize Database</button>
+                    <button id="dbBackupBtn" class="action-btn">Database Backup</button>
+                </div>
+
+                <!-- Cache Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🚀 Cache Management</h3>
+                    <button id="cacheControlBtn" class="action-btn" style="margin-bottom: 0.5rem;">Cache Control</button>
+                    <button id="cacheInvalidateBtn" class="action-btn" style="margin-bottom: 0.5rem;">Invalidate Cache</button>
+                    <button id="cacheWarmBtn" class="action-btn">Warm Cache</button>
+                </div>
+
+                <!-- System Monitoring -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📊 System Monitoring</h3>
+                    <button id="systemHealthBtn" class="action-btn" style="margin-bottom: 0.5rem;">System Health</button>
+                    <button id="resourceMonitorBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resource Monitor</button>
+                    <button id="systemDiagnosticsBtn" class="action-btn">System Diagnostics</button>
+                </div>
+
+                <!-- Maintenance & Backup -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🛠️ Maintenance & Backup</h3>
+                    <button id="maintenanceModeBtn" class="action-btn" style="margin-bottom: 0.5rem;">Enable Maintenance</button>
+                    <button id="backupRestoreBtn" class="action-btn" style="margin-bottom: 0.5rem;">Backup & Restore</button>
+                    <button id="performanceTuningBtn" class="action-btn">Performance Tuning</button>
+                </div>
+
+                <!-- System Actions -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🔄 System Actions</h3>
+                    <button id="refreshSystemBtn" class="action-btn" style="margin-bottom: 0.5rem;">🔄 Refresh Status</button>
+                    <button id="systemRestartBtn" class="action-btn danger" style="margin-bottom: 0.5rem;">⚠️ System Restart</button>
+                    <button id="emergencyModeBtn" class="action-btn danger">🚨 Emergency Mode</button>
+                </div>
+            </div>
+
+            <!-- System Status Displays -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+                <!-- System Health Status -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🏥 System Health</h3>
+                    <div id="systemHealthStatus" style="font-family: monospace; font-size: 0.9rem;">
+                        <div style="color: #666;">Loading system health data...</div>
+                    </div>
+                </div>
+
+                <!-- Configuration Status -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">⚙️ Configuration</h3>
+                    <div id="systemConfigStatus" style="font-family: monospace; font-size: 0.9rem;">
+                        <div style="color: #666;">Loading configuration data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics Display -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📈 Performance Metrics</h3>
+                <div id="systemPerformanceStatus" style="font-family: monospace; font-size: 0.9rem;">
+                    <div style="color: #666;">Loading performance metrics...</div>
+                </div>
+            </div>
+
+            <!-- System Console -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">💻 System Console</h3>
+                <div id="systemConsole" style="background: #1e1e1e; color: #00ff00; font-family: 'Courier New', monospace; font-size: 0.9rem; padding: 1rem; border-radius: 4px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
+                    🖥️ System Administration Console
+================================
+
+📅 Initializing system administration interface...
+⚡ SystemController loading...
+🔄 Waiting for system data...
+
+Use system action buttons for detailed management
+Auto-refresh enabled every 60 seconds
+                </div>
+            </div>
+        </div>
+
+        <!-- Errors Section -->
+        <div id="errors" class="dashboard-section">
+            <h2>🚨 Error Monitoring & Tracking</h2>
+
+            <!-- Error Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Errors (24h)</div>
+                    <div class="stat-number" id="totalErrors">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Critical Errors</div>
+                    <div class="stat-number" id="criticalErrors" style="color: #d32f2f;">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Error Rate</div>
+                    <div class="stat-number" id="errorRate">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Error</div>
+                    <div class="stat-number" id="lastErrorTime" style="font-size: 0.9rem;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Error Management Controls -->
+            <div class="admin-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+                <!-- Error Filtering -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #d32f2f;">🔍 Error Filtering</h3>
+                    <div style="display: grid; gap: 0.5rem;">
+                        <select id="errorSeverityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <select id="errorTypeFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Types</option>
+                            <option value="client">Client-side</option>
+                            <option value="server">Server-side</option>
+                            <option value="api">API</option>
+                            <option value="database">Database</option>
+                            <option value="auth">Authentication</option>
+                            <option value="network">Network</option>
+                        </select>
+                        <select id="errorTimeframeFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="1h">Last Hour</option>
+                            <option value="6h">Last 6 Hours</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                        <select id="errorStatusFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Statuses</option>
+                            <option value="new">New</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <button id="errorSeverityFilterBtn" class="action-btn">Apply Filters</button>
+                    </div>
+                </div>
+
+                <!-- Error Analysis -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #ff9800;">📊 Error Analysis</h3>
+                    <button id="errorDetailsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Detailed Analysis</button>
+                    <button id="errorTrendsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Trends & Patterns</button>
+                    <button id="errorClassificationBtn" class="action-btn" style="margin-bottom: 0.5rem;">Auto Classification</button>
+                    <button id="errorImpactBtn" class="action-btn">Impact Assessment</button>
+                </div>
+
+                <!-- Error Management -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🛠️ Error Management</h3>
+                    <button id="errorResolutionBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resolve Selected</button>
+                    <button id="errorWorkflowBtn" class="action-btn" style="margin-bottom: 0.5rem;">Resolution Workflow</button>
+                    <button id="errorAlertsBtn" class="action-btn" style="margin-bottom: 0.5rem;">Alert Configuration</button>
+                    <button id="errorReportBtn" class="action-btn">Generate Report</button>
+                </div>
+
+                <!-- Advanced Analytics -->
+                <div class="control-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #9c27b0;">🔬 Advanced Analytics</h3>
+                    <button id="errorPerformanceBtn" class="action-btn" style="margin-bottom: 0.5rem;">Performance Correlation</button>
+                    <button id="errorUserCorrelationBtn" class="action-btn" style="margin-bottom: 0.5rem;">User Correlation</button>
+                    <button id="realTimeToggleBtn" class="action-btn" style="margin-bottom: 0.5rem; background-color: #1976d2;">Enable Real-time</button>
+                    <button id="refreshErrorsBtn" class="action-btn">Refresh Data</button>
+                </div>
+
+            </div>
+
+            <!-- Error Dashboard Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+
+                <!-- Error Analytics Panel -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📈 Error Analytics</h3>
+                    <div id="errorAnalyticsStatus" style="font-size: 0.9rem;">
+                        Loading error analytics...
+                    </div>
+                </div>
+
+                <!-- Error Trends Panel -->
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <h3 style="margin: 0 0 1rem 0; color: #ff9800;">📊 Error Trends</h3>
+                    <div id="errorTrendsStatus" style="font-size: 0.9rem;">
+                        Loading error trends...
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Error Logs Table -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #d32f2f;">📋 Recent Error Logs</h3>
+                <div id="errorLogsTable" style="overflow-x: auto;">
+                    Loading error logs...
+                </div>
+            </div>
+
+            <!-- Error Console -->
+            <div style="background: #1e1e1e; color: #f0f0f0; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #4fc3f7;">💻 Error Monitoring Console</h3>
+                <pre id="errorsConsole" style="background: transparent; border: none; color: inherit; margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4;">Loading error monitoring console...</pre>
+            </div>
+
+            <!-- Error Classification Legend -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🏷️ Error Classification Guide</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="border-left: 4px solid #d32f2f; padding-left: 1rem;">
+                        <strong style="color: #d32f2f;">🚨 Critical</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">System down, data loss, security breach</p>
+                    </div>
+                    <div style="border-left: 4px solid #ff9800; padding-left: 1rem;">
+                        <strong style="color: #ff9800;">⚠️ High</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">Core features broken, significant user impact</p>
+                    </div>
+                    <div style="border-left: 4px solid #1976d2; padding-left: 1rem;">
+                        <strong style="color: #1976d2;">⚡ Medium</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">Minor features affected, some users impacted</p>
+                    </div>
+                    <div style="border-left: 4px solid #388e3c; padding-left: 1rem;">
+                        <strong style="color: #388e3c;">ℹ️ Low</strong>
+                        <p style="margin: 0.25rem 0; font-size: 0.9rem;">UI glitches, minimal user impact</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Monitoring Features -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
+                <h3 style="margin: 0 0 1rem 0; color: #1976d2;">🎯 Available Features</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #d32f2f;">Error Classification</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Automated error categorization</li>
+                            <li>Stack trace analysis</li>
+                            <li>Error pattern recognition</li>
+                            <li>Browser & device correlation</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #ff9800;">Real-time Monitoring</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Live error stream</li>
+                            <li>Instant notifications</li>
+                            <li>Threshold-based alerts</li>
+                            <li>Geographic error tracking</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1976d2;">Impact Analysis</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>User experience impact</li>
+                            <li>Performance correlation</li>
+                            <li>Business impact assessment</li>
+                            <li>Resolution time tracking</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: #9c27b0;">Advanced Analytics</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>Error trend analysis</li>
+                            <li>Predictive error modeling</li>
+                            <li>Root cause analysis</li>
+                            <li>Resolution workflow optimization</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Civic Engagement Section -->
+        <div id="civic-engagement" class="dashboard-section">
+            <h2>🏛️ Civic Engagement Management</h2>
+
+            <!-- Engagement Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" data-action="showSubSection" data-section="quest-stats">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-number" id="total-quests">-</div>
+                    <div class="stat-label">Active Quests</div>
+                </div>
+                <div class="stat-card" data-action="showSubSection" data-section="badge-stats">
+                    <div class="stat-icon">🏅</div>
+                    <div class="stat-number" id="total-badges">-</div>
+                    <div class="stat-label">Available Badges</div>
+                </div>
+                <div class="stat-card" data-action="showSubSection" data-section="engagement-stats">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-number" id="avg-quest-completion">-</div>
+                    <div class="stat-label">Avg. Completion Rate</div>
+                </div>
+                <div class="stat-card" data-action="showSubSection" data-section="streak-stats">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-number" id="active-streaks">-</div>
+                    <div class="stat-label">Active Streaks</div>
+                </div>
+            </div>
+
+            <!-- Civic Engagement Tab Navigation -->
+            <div class="engagement-tabs">
+                <button class="tab-button active" data-action="switchEngagementTab" data-tab="quests">Quest Management</button>
+                <button class="tab-button" data-action="switchEngagementTab" data-tab="badges">Badge Management</button>
+                <button class="tab-button" data-action="switchEngagementTab" data-tab="analytics">Engagement Analytics</button>
+            </div>
+
+            <!-- Quest Management Tab -->
+            <div id="quest-tab" class="engagement-tab active">
+                <div class="section-header">
+                    <h3>Quest Management</h3>
+                    <button class="btn btn-primary" data-action="showCreateQuestModal">+ Create Quest</button>
+                </div>
+
+                <!-- Quest List -->
+                <div class="quest-list">
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Quest</th>
+                                    <th>Type</th>
+                                    <th>Timeframe</th>
+                                    <th>Completions</th>
+                                    <th>Active</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quest-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading quests...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badge Management Tab -->
+            <div id="badge-tab" class="engagement-tab">
+                <div class="section-header">
+                    <h3>Badge Management</h3>
+                    <button class="btn btn-primary" data-action="showCreateBadgeModal">+ Create Badge</button>
+                </div>
+
+                <!-- Badge Grid -->
+                <div class="badge-grid" id="badge-grid">
+                    <div class="loading-badge">Loading badges...</div>
+                </div>
+            </div>
+
+            <!-- Engagement Analytics Tab -->
+            <div id="analytics-tab" class="engagement-tab">
+                <h3>Engagement Analytics</h3>
+
+                <!-- Analytics Charts Placeholder -->
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h4>Quest Completion Trends</h4>
+                        <div id="quest-completion-chart" class="chart-placeholder">
+                            Chart will be implemented
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Badge Award Distribution</h4>
+                        <div id="badge-distribution-chart" class="chart-placeholder">
+                            Chart will be implemented
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quest Creation Modal -->
+    <div id="quest-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="quest-modal-title">Create New Quest</h3>
+                <span class="close" data-action="closeQuestModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="quest-form">
+                    <!-- Basic Quest Info -->
+                    <div class="form-group">
+                        <label for="quest-title">Quest Title *</label>
+                        <input type="text" id="quest-title" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quest-description">Description *</label>
+                        <textarea id="quest-description" name="description" required rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quest-short-description">Short Description (for quest cards)</label>
+                        <input type="text" id="quest-short-description" name="shortDescription" placeholder="e.g., Read 3 posts from your feed">
+                    </div>
+
+                    <!-- Quest Configuration -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quest-type">Quest Type *</label>
+                            <select id="quest-type" name="type" required>
+                                <option value="DAILY_HABIT">Daily Habit</option>
+                                <option value="DAILY_CIVIC">Daily Civic</option>
+                                <option value="WEEKLY_ENGAGEMENT">Weekly Engagement</option>
+                                <option value="MONTHLY_CONSISTENCY">Monthly Consistency</option>
+                                <option value="SPECIAL_EVENT">Special Event</option>
+                                <option value="CIVIC_ACTION">Civic Action</option>
+                                <option value="EDUCATIONAL">Educational</option>
+                                <option value="SOCIAL_ENGAGEMENT">Social Engagement</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quest-category">Category *</label>
+                            <select id="quest-category" name="category" required>
+                                <option value="INFORMATION">Information</option>
+                                <option value="PARTICIPATION">Participation</option>
+                                <option value="COMMUNITY">Community</option>
+                                <option value="ADVOCACY">Advocacy</option>
+                                <option value="EDUCATION">Education</option>
+                                <option value="SOCIAL">Social</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quest-timeframe">Timeframe *</label>
+                            <select id="quest-timeframe" name="timeframe" required data-action="toggleLimitedTimeFields">
+                                <option value="DAILY">Daily</option>
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="ONGOING">Ongoing</option>
+                                <option value="LIMITED_TIME">Limited Time</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Requirements Section (Flexible JSON) -->
+                    <div class="form-group">
+                        <label>Quest Requirements</label>
+                        <div class="requirement-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="requirement-type">Requirement Type *</label>
+                                    <select id="requirement-type" data-action="updateRequirementFields">
+                                        <option value="LOGIN">Login</option>
+                                        <option value="READ_POSTS">Read Posts</option>
+                                        <option value="CIVIC_ACTION">Civic Action</option>
+                                        <option value="SOCIAL_INTERACTION">Social Interaction</option>
+                                        <option value="COMPLETE_QUESTS">Complete Other Quests</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="requirement-target">Target Number *</label>
+                                    <input type="number" id="requirement-target" min="1" value="1">
+                                </div>
+                            </div>
+
+                            <!-- Dynamic requirement fields -->
+                            <div id="dynamic-requirement-fields"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rewards Section -->
+                    <div class="form-group">
+                        <label>Quest Rewards</label>
+                        <div class="reward-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="reputation-points">Reputation Points</label>
+                                    <input type="number" id="reputation-points" min="0" value="2">
+                                </div>
+                                <div class="form-group">
+                                    <label for="experience-points">Experience Points</label>
+                                    <input type="number" id="experience-points" min="0" value="10">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="reward-badges">Badge Rewards (comma-separated IDs)</label>
+                                <input type="text" id="reward-badges" placeholder="badge_id_1,badge_id_2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="quest-active" checked> Quest is Active
+                        </label>
+                    </div>
+
+                    <!-- Limited Time Settings -->
+                    <div id="limited-time-fields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-date">Start Date</label>
+                                <input type="datetime-local" id="start-date" name="startDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="end-date">End Date</label>
+                                <input type="datetime-local" id="end-date" name="endDate">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="closeQuestModal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="saveQuest">Save Quest</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Badge Creation Modal -->
+    <div id="badge-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Badge</h3>
+                <span class="close" data-action="closeBadgeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="badge-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="badge-name">Badge Name *</label>
+                        <input type="text" id="badge-name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="badge-description">Description *</label>
+                        <textarea id="badge-description" name="description" required rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="badge-image">Badge Image *</label>
+                        <input type="file" id="badge-image" name="image" accept="image/*" required>
+                        <div id="image-preview"></div>
+                    </div>
+
+                    <!-- Badge Qualification Criteria -->
+                    <div class="form-group">
+                        <label>Qualification Criteria</label>
+                        <div class="criteria-builder">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="criteria-type">Criteria Type *</label>
+                                    <select id="criteria-type" data-action="updateCriteriaFields">
+                                        <option value="QUEST_COMPLETION">Quest Completion</option>
+                                        <option value="USER_ACTIVITY">User Activity</option>
+                                        <option value="CIVIC_ACTION">Civic Action</option>
+                                        <option value="SOCIAL_METRIC">Social Metric</option>
+                                        <option value="CUSTOM_ENDPOINT">Custom Criteria</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic criteria fields -->
+                            <div id="dynamic-criteria-fields"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="auto-awarded" checked> Automatically Award
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="closeBadgeModal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="saveBadge">Create Badge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Award Badge Modal -->
+    <div id="award-badge-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="award-modal-title">Award Badge</h3>
+                <span class="close" data-action="closeAwardBadgeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="award-modal-badge-id">
+
+                <div class="form-group">
+                    <label for="user-search-input">Search for User</label>
+                    <input
+                        type="text"
+                        id="user-search-input"
+                        placeholder="Enter username or email..."
+                        autocomplete="off">
+                    <small>Start typing to search (minimum 2 characters)</small>
+                </div>
+
+                <div id="user-search-results" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                    <!-- Search results will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="closeAwardBadgeModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Core Dependencies -->
+    <script defer src="js/adminDebugger.js"></script>
+    <!-- MIGRATION: Replaced by ES6 module src/modules/auth/UnifiedAuth.js -->
+    <!-- <script src="js/unifiedAuth.js"></script> -->
+    <script defer src="src/js/deployment-status.js"></script>
+
+    <!-- Load Authentication Module (MUST load before AdminAuth) -->
+    <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>
+
+    <!-- Load Admin Utility Modules First -->
+    <script type="module" src="src/modules/admin/utils/AdminGlobalUtils.js"></script>
+    <script type="module" src="src/modules/admin/utils/AdminTOTPModal.js"></script>
+    <script type="module" src="src/modules/admin/utils/AdminTabsManager.js"></script>
+
+    <!-- Load Admin Core Modules -->
+    <script type="module" src="src/modules/admin/api/AdminAPI.js"></script>
+    <script type="module" src="src/modules/admin/auth/AdminAuth.js"></script>
+    <script type="module" src="src/modules/admin/state/AdminState.js"></script>
+    <script type="module" src="src/modules/admin/controllers/OverviewController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/UsersController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/ContentController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/SecurityController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/ReportsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/CandidatesController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/ExternalCandidatesController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/AnalyticsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/AIInsightsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/MOTDController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/DeploymentController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/SystemController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/ErrorsController.js"></script>
+    <script type="module" src="src/modules/admin/controllers/CivicEngagementController.js"></script>
+
+    <!-- Load Module Loader (orchestrates everything) -->
+    <script type="module" src="src/modules/admin/AdminModuleLoader.js"></script>
+
+    <!-- Analytics Tab Functionality -->
+    <!-- Analytics tab functionality now handled by AdminTabsManager module -->
+
+    <!-- Global utilities, TOTP modal, and error handling now handled by AdminGlobalUtils module -->
+</body>
+</html>
