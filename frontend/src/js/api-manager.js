@@ -283,7 +283,10 @@ class APIRequestManager {
         if (options.body) {
             fetchOptions.body = options.body instanceof FormData
                 ? options.body
-                : JSON.stringify(options.body);
+                // Only stringify if not already a string (prevent double-stringification)
+                : typeof options.body === 'string'
+                    ? options.body
+                    : JSON.stringify(options.body);
         }
 
         // Add any other options that aren't method, headers, credentials, or body
