@@ -277,6 +277,12 @@ class PostComponent {
                     }
                     state.button.querySelector('.reaction-count').textContent = state.originalCount;
                 });
+            } else {
+                // Invalidate post cache so focused view shows updated reactions
+                if (window.apiClient) {
+                    window.apiClient.invalidateCache(`/posts/${postId}$`);
+                    window.apiClient.invalidateCache(`/posts/${postId}/comments`);
+                }
             }
         } catch (error) {
             console.error('Error toggling reaction:', error);
@@ -490,6 +496,11 @@ class PostComponent {
                     if (postIndex !== -1) {
                         window.currentPosts[postIndex].isSaved = !wasSaved;
                     }
+                }
+
+                // Invalidate post cache so focused view shows updated save status
+                if (window.apiClient) {
+                    window.apiClient.invalidateCache(`/posts/${postId}$`);
                 }
 
                 // Show success toast
@@ -2412,16 +2423,20 @@ class PostComponent {
     async openPostFocus(postId) {
         console.log('🎯 PostComponent: Opening focused view for post:', postId);
         try {
-            // Fetch full post details
-            const response = await window.apiCall(`/posts/${postId}`);
+            // Fetch full post details (bypass cache to get latest reactions/save status)
+            const response = await window.apiCall(`/posts/${postId}`, {
+                bypassCache: true
+            });
             if (!response || (!response.post && !response.ok)) {
                 throw new Error('Failed to load post details');
             }
-            
+
             const post = response.data?.post || response.post || response;
-            
-            // Fetch comments for the post
-            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`);
+
+            // Fetch comments for the post (bypass cache to get latest comments)
+            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`, {
+                bypassCache: true
+            });
             const comments = commentsResponse?.comments || commentsResponse?.data?.comments || [];
             
             // Calculate total comment character count for AI summary threshold
@@ -2509,12 +2524,7 @@ class PostComponent {
      */
     showPostFocusModal(post, comments, aiSummary) {
         console.log('🎯 showPostFocusModal: Starting focused view setup');
-        // Save current content for back navigation
-        const mainContent = document.getElementById('mainContent');
-        if (!mainContent.dataset.originalContent) {
-            mainContent.dataset.originalContent = mainContent.innerHTML;
-        }
-        
+
         // Format full post content (including extended content)
         let fullPostContent = this.formatPostContent(post.content, post);
         if (post.extendedContent) {
@@ -2537,9 +2547,11 @@ class PostComponent {
         adminDebugLog('FocusedPostAvatar', 'Avatar URL to use', post.author?.avatar || `placeholder with ${authorInitial}`);
         adminDebugLog('FocusedPostAvatar', '=== FOCUSED POST AVATAR DIAGNOSTIC END ===');
 
-        // Display focused post in main content area
-        mainContent.innerHTML = `
-            <div class="post-focus-view">
+        // Create modal overlay structure
+        const modalHTML = `
+            <div class="post-focus-overlay" onclick="if (event.target === this) postComponent.returnToFeed()">
+                <div class="post-focus-modal">
+                    <div class="post-focus-view">
                 <div class="post-focus-header">
                     <button class="btn btn-secondary" onclick="postComponent.returnToFeed()" style="margin-bottom: 1rem;">
                         ← Back to Feed
@@ -2624,47 +2636,24 @@ class PostComponent {
                         <!-- Comments will be rendered here by existing renderComments method -->
                     </div>
                 </div>
+                </div>
             </div>
         `;
-        
-        console.log('🎯 showPostFocusModal: Main content HTML set, checking elements...');
-        const focusView = mainContent.querySelector('.post-focus-view');
-        const commentsList = mainContent.querySelector('.comments-list');
+
+        // Append modal to body instead of replacing mainContent
+        const modalContainer = document.createElement('div');
+        modalContainer.id = 'post-focus-container';
+        modalContainer.innerHTML = modalHTML;
+        document.body.appendChild(modalContainer);
+
+        console.log('🎯 showPostFocusModal: Modal appended to body, checking elements...');
+        const focusView = modalContainer.querySelector('.post-focus-view');
+        const commentsList = modalContainer.querySelector('.comments-list');
         console.log('🎯 Post focus view element:', focusView ? 'Found' : 'Not found');
         console.log('🎯 Comments list element:', commentsList ? 'Found' : 'Not found');
-        if (commentsList) {
-            const computedStyle = window.getComputedStyle(commentsList);
-            console.log('🎯 Comments list CSS - max-height:', computedStyle.maxHeight, 'overflow-y:', computedStyle.overflowY);
-            
-            // Force CSS application directly via JavaScript as fallback
-            console.log('🎯 Applying CSS directly to comments list...');
-            commentsList.style.maxHeight = 'none';
-            commentsList.style.overflowY = 'visible';
-            commentsList.style.overflow = 'visible';
-            commentsList.style.height = 'auto';
-            
-            // Check again after direct application
-            setTimeout(() => {
-                const newComputedStyle = window.getComputedStyle(commentsList);
-                console.log('🎯 After direct CSS - max-height:', newComputedStyle.maxHeight, 'overflow-y:', newComputedStyle.overflowY);
-                
-                // Also check the body and main content scrolling
-                const bodyStyle = window.getComputedStyle(document.body);
-                const mainContentStyle = window.getComputedStyle(mainContent);
-                console.log('🎯 Body overflow:', bodyStyle.overflow, bodyStyle.overflowY);
-                console.log('🎯 Main content overflow:', mainContentStyle.overflow, mainContentStyle.overflowY);
-                console.log('🎯 Page scroll height vs client height:', document.body.scrollHeight, 'vs', document.body.clientHeight);
-                
-                // FIX: Enable scrolling on body and main content for focused view
-                console.log('🎯 FIXING: Enabling page scrolling for focused view...');
-                document.body.style.overflow = 'auto';
-                document.body.style.overflowY = 'auto';
-                mainContent.style.overflow = 'auto';
-                mainContent.style.overflowY = 'auto';
-                
-                console.log('🎯 Scrolling should now work!');
-            }, 100);
-        }
+
+        // Body overflow remains locked - modal handles its own scrolling
+        console.log('🎯 Body overflow remains locked for modal isolation');
         
         // Render comments using existing system
         if (comments.length > 0) {
@@ -2679,23 +2668,15 @@ class PostComponent {
      * Return to feed from focused post view
      */
     returnToFeed() {
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent.dataset.originalContent) {
-            mainContent.innerHTML = mainContent.dataset.originalContent;
-            delete mainContent.dataset.originalContent;
-        } else {
-            // Fallback to toggle feed if original content not saved
-            if (typeof window.toggleMyFeed === 'function') {
-                window.toggleMyFeed();
-            }
+        // Remove the modal overlay from DOM
+        const modalContainer = document.getElementById('post-focus-container');
+        if (modalContainer) {
+            modalContainer.remove();
+            console.log('🎯 Focused post modal removed');
         }
-        
-        // Restore original overflow settings when returning to feed
-        console.log('🎯 Restoring original overflow settings...');
-        document.body.style.overflow = '';
-        document.body.style.overflowY = '';
-        mainContent.style.overflow = '';
-        mainContent.style.overflowY = '';
+
+        // Body overflow stays locked (no changes needed)
+        console.log('🎯 Body overflow remains locked');
     }
 
     /**

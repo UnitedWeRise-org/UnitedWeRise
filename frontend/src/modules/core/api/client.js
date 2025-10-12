@@ -38,9 +38,9 @@ class APIClient {
     async call(endpoint, options = {}) {
         // Build full URL
         const url = this._buildURL(endpoint, options.params);
-        
-        // Check cache for GET requests
-        if (!options.method || options.method === 'GET') {
+
+        // Check cache for GET requests (unless bypassCache is explicitly set)
+        if ((!options.method || options.method === 'GET') && !options.bypassCache) {
             const cached = this._getFromCache(url);
             if (cached) return cached;
         }
@@ -285,6 +285,29 @@ class APIClient {
      */
     clearCache() {
         this.cache.clear();
+    }
+
+    /**
+     * Invalidate cache for specific endpoint pattern
+     * @param {string} pattern - URL pattern to match (supports wildcards with *)
+     * @example invalidateCache('/posts/123$') - exact match
+     * @example invalidateCache('/posts/*/comments') - wildcard match
+     */
+    invalidateCache(pattern) {
+        const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+        const urlsToDelete = [];
+
+        for (const [url, _] of this.cache) {
+            if (regex.test(url)) {
+                urlsToDelete.push(url);
+            }
+        }
+
+        urlsToDelete.forEach(url => this.cache.delete(url));
+
+        if (urlsToDelete.length > 0) {
+            console.log(`🗑️ Cache invalidated: ${urlsToDelete.length} entries matching pattern: ${pattern}`);
+        }
     }
 
     /**

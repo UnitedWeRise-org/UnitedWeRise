@@ -114,9 +114,9 @@ class ElectionsSystemIntegration {
     }
 
     showElectionsMainView(mainContent) {
-        // Store original content so we can restore it later
-        if (!mainContent.dataset.originalContent) {
-            mainContent.dataset.originalContent = mainContent.innerHTML;
+        // Store original content so we can restore it later (use namespaced key to avoid collision)
+        if (!mainContent.dataset.electionsOriginal) {
+            mainContent.dataset.electionsOriginal = mainContent.innerHTML;
         }
 
         // Create full-width elections interface
@@ -1326,12 +1326,12 @@ class ElectionsSystemIntegration {
     }
 
     restoreMainContent() {
-        const mainContent = document.querySelector('#mainContent') || 
+        const mainContent = document.querySelector('#mainContent') ||
                            document.querySelector('.main');
-        
-        if (mainContent && mainContent.dataset.originalContent) {
-            mainContent.innerHTML = mainContent.dataset.originalContent;
-            delete mainContent.dataset.originalContent;
+
+        if (mainContent && mainContent.dataset.electionsOriginal) {
+            mainContent.innerHTML = mainContent.dataset.electionsOriginal;
+            delete mainContent.dataset.electionsOriginal;
             
             // Restore map to original state
             const mapContainer = document.querySelector('#mapContainer');
