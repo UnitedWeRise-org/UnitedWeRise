@@ -172,7 +172,16 @@ The initial estimate of "343+ usages across 47 files" included 178 usages in bac
 ```
 
 ### Active Issues:
-*No issues yet - will be populated as they arise*
+
+**Issue #1:** Duplicate Script Loading - ES6 Module Syntax Errors
+**Discovered:** October 11, 2025 - Batch 1-2 staging deployment
+**Severity:** High (non-blocking - files worked but console showed errors)
+**Description:** Files were loaded twice - as non-module scripts AND as ES6 modules. Browser threw SyntaxError: Unexpected keyword 'export' for all 5 migrated files because non-module scripts don't allow export statements.
+**Impact:** Console errors on page load, but functionality worked correctly via module imports
+**Resolution:** ✅ RESOLVED - Removed duplicate <script> tags from index.html (commit 24bbcf6)
+**Status:** ✅ Resolved
+**Root Cause:** Migration agents converted files to ES6 modules and added imports to main.js, but forgot to remove old script tags from index.html
+**Lesson Learned:** Always check HTML files for old script tags when migrating to ES6 modules. Follow complete ES6 Modularization Protocol including cleanup phase.
 
 ---
 
@@ -203,7 +212,7 @@ The initial estimate of "343+ usages across 47 files" included 178 usages in bac
 - [x] JSDoc headers added with migration timestamp
 
 **Completion Date:** October 11, 2025
-**Commit SHA:** Pending (ready for commit)
+**Commit SHA:** 73499b4
 **Notes:**
 - All 4 files successfully converted to ES6 module format
 - Added comprehensive JSDoc module headers with migration dates
@@ -242,7 +251,7 @@ The initial estimate of "343+ usages across 47 files" included 178 usages in bac
 - [x] Documentation updated with ES6 import examples
 
 **Completion Date:** October 11, 2025
-**Commit SHA:** Pending (ready for commit)
+**Commit SHA:** 73499b4
 **Notes:**
 - Migration completed successfully
 - Added comprehensive JSDoc with module description
@@ -532,7 +541,10 @@ git commit -m "rollback: Restore compatibility layer due to [reason]"
 
 ## 🎓 LESSONS LEARNED
 
-*Will be populated as project progresses*
+**Lesson #1:** Always Remove Old Script Tags When Migrating to ES6
+**Discovered During:** Batch 1-2 Deployment
+**Insight:** Converting files to ES6 modules is a two-step process: (1) Add ES6 exports and import in main.js, (2) Remove old <script> tags from HTML. Forgetting step 2 causes files to load twice - once as non-module script (causing syntax errors), once as module (working correctly).
+**Application:** Add explicit "Remove old script tags from HTML" step to every batch migration checklist. Use grep to verify all old tags are removed before deployment.
 
 ### Pattern Template:
 ```
@@ -554,4 +566,4 @@ git commit -m "rollback: Restore compatibility layer due to [reason]"
 
 ---
 
-**Last Updated:** October 11, 2025 - Batch 1 & 2 complete (5/47 files migrated)
+**Last Updated:** October 11, 2025 - Batch 1 & 2 complete + hotfix deployed (5/47 files migrated, Issue #1 resolved)
