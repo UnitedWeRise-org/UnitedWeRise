@@ -101,6 +101,10 @@ import '../components/UserCard.js';  // User profile card popup
 // Phase 5e: Heavy Component (Batch 7)
 import '../components/CandidateSystem.js';  // Candidate registration & management
 
+// Phase 5f: Small Integrations (Batch 8)
+import '../js/force-optimization.js';  // Force override old initialization system
+import '../integrations/officials-system-integration.js';  // Officials system integration
+
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';
 

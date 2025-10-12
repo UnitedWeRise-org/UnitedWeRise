@@ -1,5 +1,9 @@
-// Force Override Old Initialization System
-// This script ensures the new optimized system takes priority
+/**
+ * @module js/force-optimization
+ * @description Force Override Old Initialization System
+ * This script ensures the new optimized system takes priority over legacy initialization
+ * Migrated to ES6 modules: October 11, 2025 (Batch 8)
+ */
 
 if (typeof adminDebugLog !== 'undefined') {
     adminDebugLog('ForceOptimization', 'Force optimization script loading...');
@@ -84,3 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof adminDebugLog !== 'undefined') {
     adminDebugLog('ForceOptimization', 'Force optimization script ready');
 }
+
+// ES6 Module Exports
+// This module's functionality is primarily side-effect based (overriding window functions)
+// No explicit exports needed, but export empty object for module conformity
+export default {};
