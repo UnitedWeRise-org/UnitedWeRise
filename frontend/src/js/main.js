@@ -98,6 +98,9 @@ import '../components/VerificationFlow.js';  // User verification workflow
 import '../components/ContentReporting.js';  // Content moderation reporting
 import '../components/UserCard.js';  // User profile card popup
 
+// Phase 5e: Heavy Component (Batch 7)
+import '../components/CandidateSystem.js';  // Candidate registration & management
+
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';
 
