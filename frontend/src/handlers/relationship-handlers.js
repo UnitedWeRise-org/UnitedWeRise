@@ -13,6 +13,8 @@
  * - showFriendsList(), displayFriendsForMessaging() [lines 7109-7350]
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 export class RelationshipHandlers {
     constructor() {
         this.setupEventListeners();
@@ -91,7 +93,7 @@ export class RelationshipHandlers {
      */
     async followUser(userId, buttonElement) {
         try {
-            const response = await window.apiCall(`/users/follow/${userId}`, {
+            const response = await apiCall(`/users/follow/${userId}`, {
                 method: 'POST'
             });
 
@@ -121,7 +123,7 @@ export class RelationshipHandlers {
      */
     async unfollowUser(userId, buttonElement) {
         try {
-            const response = await window.apiCall(`/users/follow/${userId}`, {
+            const response = await apiCall(`/users/follow/${userId}`, {
                 method: 'DELETE'
             });
 
@@ -152,7 +154,7 @@ export class RelationshipHandlers {
     async addFriend(userId) {
         console.log('Adding friend:', userId);
         try {
-            const response = await window.apiCall('/relationships/friend-request', {
+            const response = await apiCall('/relationships/friend-request', {
                 method: 'POST',
                 data: { targetUserId: userId }
             });
@@ -176,7 +178,7 @@ export class RelationshipHandlers {
      */
     async showFriendRequestsPanel() {
         try {
-            const response = await window.apiCall('/relationships/friend-requests/pending', {
+            const response = await apiCall('/relationships/friend-requests/pending', {
                 method: 'GET'
             });
 
@@ -287,7 +289,7 @@ export class RelationshipHandlers {
      */
     async acceptFriendRequest(userId) {
         try {
-            const response = await window.apiCall('/relationships/friend-request/accept', {
+            const response = await apiCall('/relationships/friend-request/accept', {
                 method: 'POST',
                 data: { userId }
             });
@@ -303,7 +305,7 @@ export class RelationshipHandlers {
      */
     async rejectFriendRequest(userId) {
         try {
-            const response = await window.apiCall('/relationships/friend-request/reject', {
+            const response = await apiCall('/relationships/friend-request/reject', {
                 method: 'POST',
                 data: { userId }
             });
@@ -319,7 +321,7 @@ export class RelationshipHandlers {
      */
     async sendFriendRequest(userId) {
         try {
-            const response = await window.apiCall('/relationships/friend-request', {
+            const response = await apiCall('/relationships/friend-request', {
                 method: 'POST',
                 data: { targetUserId: userId }
             });
@@ -416,7 +418,7 @@ export class RelationshipHandlers {
      */
     async showFriendsList() {
         try {
-            const response = await window.apiCall('/relationships/friends', {
+            const response = await apiCall('/relationships/friends', {
                 method: 'GET'
             });
 
@@ -438,7 +440,7 @@ export class RelationshipHandlers {
      */
     async showFollowersList(userId) {
         try {
-            const response = await window.apiCall(`/users/${userId}/followers`);
+            const response = await apiCall(`/users/${userId}/followers`);
 
             if (response.ok) {
                 this.displayUsersList(response.data.followers, 'Followers');
@@ -457,7 +459,7 @@ export class RelationshipHandlers {
      */
     async showFollowingList(userId) {
         try {
-            const response = await window.apiCall(`/users/${userId}/following`);
+            const response = await apiCall(`/users/${userId}/following`);
 
             if (response.ok) {
                 this.displayUsersList(response.data.following, 'Following');

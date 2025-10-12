@@ -13,6 +13,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class TrendingHandlers {
     constructor() {
@@ -81,7 +82,7 @@ export class TrendingHandlers {
             // Try AI topic aggregation with dual-vector clustering
             let response;
             try {
-                response = await window.apiCall(`/trending/topics?scope=${scope}&limit=7`);
+                response = await apiCall(`/trending/topics?scope=${scope}&limit=7`);
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     // Store topics for later use
                     this.allTrendingTopics = response.data.topics;
@@ -103,7 +104,7 @@ export class TrendingHandlers {
             }
 
             // Fallback to post-based trending if AI aggregation fails
-            response = await window.apiCall('/feed/trending?limit=20');
+            response = await apiCall('/feed/trending?limit=20');
 
             if (response.ok) {
                 this.allTrendingPosts = response.data.posts;
@@ -195,7 +196,7 @@ export class TrendingHandlers {
             }
 
             // Fetch posts for this topic
-            const response = await window.apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
+            const response = await apiCall(`/trending/topics/${topicId}/posts?limit=20&stance=all`);
 
             if (response.ok) {
                 this.currentTopicMode = {
@@ -460,7 +461,7 @@ export class TrendingHandlers {
             // Try AI topic discovery first, fallback to posts if needed
             let response;
             try {
-                response = await window.apiCall('/topic-navigation/trending?limit=20');
+                response = await apiCall('/topic-navigation/trending?limit=20');
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     this.updateTrendingTopicsPanel(response.data.topics);
                     return;
@@ -470,7 +471,7 @@ export class TrendingHandlers {
             }
 
             // Fallback to post-based trending for sidebar
-            response = await window.apiCall('/feed/trending');
+            response = await apiCall('/feed/trending');
 
             if (response.ok) {
                 this.updateTrendingPanel(response.data.posts);
@@ -697,7 +698,7 @@ export class TrendingHandlers {
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/like`, {
+            const response = await apiCall(`/posts/${postId}/like`, {
                 method: 'POST'
             });
 
@@ -724,7 +725,7 @@ export class TrendingHandlers {
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await apiCall(`/posts/${postId}/comments`, {
                 method: 'POST'
             });
 
