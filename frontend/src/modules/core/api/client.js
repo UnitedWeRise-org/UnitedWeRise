@@ -289,9 +289,9 @@ class APIClient {
 
     /**
      * Invalidate cache for specific endpoint pattern
-     * @param {string} pattern - URL pattern to match (supports wildcards with *)
-     * @example invalidateCache('/posts/123$') - exact match
-     * @example invalidateCache('/posts/*/comments') - wildcard match
+     * @param {string} pattern - URL pattern to match (supports wildcards)
+     * @example invalidateCache('/posts/123$') // exact match
+     * @example invalidateCache('/posts/.asterisk./comments') // wildcard match (replace .asterisk. with *)
      */
     invalidateCache(pattern) {
         const regex = new RegExp(pattern.replace(/\*/g, '.*'));
