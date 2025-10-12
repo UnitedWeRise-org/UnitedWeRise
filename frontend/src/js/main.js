@@ -105,6 +105,10 @@ import '../components/CandidateSystem.js';  // Candidate registration & manageme
 import '../js/force-optimization.js';  // Force override old initialization system
 import '../integrations/officials-system-integration.js';  // Officials system integration
 
+// Phase 5g: Large Integrations (Batch 9)
+import '../integrations/elections-system-integration.js';  // Elections system integration
+import '../integrations/trending-system-integration.js';  // Trending system integration
+
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';
 

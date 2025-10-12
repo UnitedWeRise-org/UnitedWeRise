@@ -1,5 +1,9 @@
-// Trending System Integration for United We Rise Frontend
-// This script enhances the trending system to provide better space utilization options
+/**
+ * @module integrations/trending-system-integration
+ * @description Trending System Integration for United We Rise Frontend
+ * This script enhances the trending system to provide better space utilization options
+ * Migrated to ES6 modules: October 11, 2025 (Batch 9)
+ */
 
 class TrendingSystemIntegration {
     constructor() {
@@ -2091,11 +2095,15 @@ class TrendingSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.TrendingSystemIntegration = TrendingSystemIntegration;
-
 // Auto-initialize when script loads
 const trendingIntegration = new TrendingSystemIntegration();
 
-// Make integration available globally for other scripts
-window.trendingSystemIntegration = trendingIntegration;
+// ES6 Module Exports
+export { TrendingSystemIntegration, trendingIntegration };
+export default trendingIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.TrendingSystemIntegration = TrendingSystemIntegration;
+    window.trendingSystemIntegration = trendingIntegration;
+}

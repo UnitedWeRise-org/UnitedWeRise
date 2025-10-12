@@ -1,5 +1,9 @@
-// Elections System Integration for United We Rise Frontend
-// This script enhances the upcoming elections panel to use the main content area effectively
+/**
+ * @module integrations/elections-system-integration
+ * @description Elections System Integration for United We Rise Frontend
+ * This script enhances the upcoming elections panel to use the main content area effectively
+ * Migrated to ES6 modules: October 11, 2025 (Batch 9)
+ */
 
 class ElectionsSystemIntegration {
     constructor() {
@@ -1730,11 +1734,15 @@ class ElectionsSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.ElectionsSystemIntegration = ElectionsSystemIntegration;
-
 // Auto-initialize when script loads
 const electionsIntegration = new ElectionsSystemIntegration();
 
-// Make integration available globally for other scripts
-window.electionsSystemIntegration = electionsIntegration;
+// ES6 Module Exports
+export { ElectionsSystemIntegration, electionsIntegration };
+export default electionsIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.ElectionsSystemIntegration = ElectionsSystemIntegration;
+    window.electionsSystemIntegration = electionsIntegration;
+}
