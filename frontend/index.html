@@ -186,12 +186,9 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
-    <!-- Performance & Optimization Utilities (Load First) -->
-    <script src="src/utils/performance.js"></script>
-    <script src="src/utils/error-handler.js"></script>
-    <script src="src/utils/advanced-caching.js"></script>
-    <script src="src/utils/smart-loader.js"></script>
+
+    <!-- Performance & Optimization Utilities now loaded via ES6 modules in main.js (Batch 1 - Oct 11, 2025) -->
+    <!-- ✅ performance.js, error-handler.js, advanced-caching.js, smart-loader.js removed - now ES6 modules -->
 
     <!-- Core Application JavaScript - Modern ES6 Module System -->
     <script type="module" src="src/js/main.js"></script>
@@ -223,7 +220,7 @@
     <script src="src/js/map-dummy-data.js"></script>
     <script src="src/components/user-relationship-display.js"></script>
     <!-- donation-system.js now loaded via ES6 modules in main.js -->
-    <script src="js/adminDebugger.js"></script>
+    <!-- ✅ adminDebugger.js removed - now ES6 module loaded in main.js (Batch 2 - Oct 11, 2025) -->
     <script src="src/js/deployment-status.js"></script>
     <script src="src/js/legal-modal.js"></script>
     
