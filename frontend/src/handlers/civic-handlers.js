@@ -12,6 +12,8 @@
  * @module handlers/civic-handlers
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 console.log('🏛️ Loading civic-handlers.js module...');
 
 export class CivicHandlers {
@@ -87,7 +89,7 @@ export class CivicHandlers {
         console.log('👤 Loading user content...');
 
         try {
-            const response = await window.apiCall('/users/profile');
+            const response = await apiCall('/users/profile');
 
             if (response.ok) {
                 const data = response.data;
@@ -146,7 +148,7 @@ export class CivicHandlers {
         console.log(`🏛️ Loading elected officials for ${zipCode}, ${state}...`);
 
         try {
-            const response = await window.apiCall('/political/representatives');
+            const response = await apiCall('/political/representatives');
 
             if (response.ok && response.data) {
                 const representatives = response.data.representatives;
@@ -520,7 +522,7 @@ export class CivicHandlers {
                 </div>
             `;
 
-            const response = await window.apiCall(`/legislative/officials/${officialId}`);
+            const response = await apiCall(`/legislative/officials/${officialId}`);
             if (response.ok && response.data) {
                 const official = response.data;
                 this.displayOfficialProfile(official);

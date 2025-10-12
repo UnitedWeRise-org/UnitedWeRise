@@ -12,6 +12,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class ContentHandlers {
     constructor() {
@@ -220,7 +221,7 @@ export class ContentHandlers {
             // Try AI topic discovery first, fallback to posts if needed
             let response;
             try {
-                response = await window.apiCall('/topic-navigation/trending?limit=20');
+                response = await apiCall('/topic-navigation/trending?limit=20');
                 if (response.ok && response.data.topics && response.data.topics.length > 0) {
                     this.updateTrendingTopicsPanel(response.data.topics);
                     return;
@@ -230,7 +231,7 @@ export class ContentHandlers {
             }
 
             // Fallback to post-based trending for sidebar
-            response = await window.apiCall('/feed/trending');
+            response = await apiCall('/feed/trending');
 
             if (response.ok) {
                 this.updateTrendingPanel(response.data.posts);
@@ -328,7 +329,7 @@ export class ContentHandlers {
     async loadUserContent() {
         // Load user's elected officials if they have an address
         try {
-            const response = await window.apiCall('/users/profile');
+            const response = await apiCall('/users/profile');
 
             if (response.ok) {
                 const data = response.data;
@@ -384,7 +385,7 @@ export class ContentHandlers {
      */
     async loadElectedOfficials(zipCode, state) {
         try {
-            const response = await window.apiCall('/political/representatives');
+            const response = await apiCall('/political/representatives');
 
             if (response.ok && response.data) {
                 const representatives = response.data.representatives;
@@ -523,7 +524,7 @@ export class ContentHandlers {
         if (!window.currentUser) return;
 
         try {
-            const response = await window.apiCall('/messages/conversations');
+            const response = await apiCall('/messages/conversations');
 
             if (response.ok) {
                 this.displayConversations(response.data.conversations);

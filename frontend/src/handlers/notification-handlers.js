@@ -30,6 +30,7 @@
 // Import dependencies
 import { apiClient } from '../modules/core/api/client.js';
 import { getTimeAgo } from '../utils/date-helpers.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 console.log('🔔 Loading notification handlers...');
 
@@ -351,7 +352,7 @@ async function openNotifications() {
  */
 async function markAllNotificationsRead() {
     try {
-        const response = await window.apiCall('/notifications/mark-all-read', {
+        const response = await apiCall('/notifications/mark-all-read', {
             method: 'POST'
         });
 
@@ -381,7 +382,7 @@ async function markAllNotificationsRead() {
 async function handleNotificationClick(notificationId, notificationType) {
     try {
         // Mark single notification as read
-        const response = await window.apiCall(`/notifications/${notificationId}/read`, {
+        const response = await apiCall(`/notifications/${notificationId}/read`, {
             method: 'POST'
         });
 
@@ -495,7 +496,7 @@ function getCachedRelationshipStatus(userId) {
  */
 async function refreshFriendStatus(userId) {
     try {
-        const response = await window.apiCall(`/friends/status/${userId}`, {
+        const response = await apiCall(`/friends/status/${userId}`, {
             method: 'GET'
         });
 
@@ -531,7 +532,7 @@ async function refreshFriendStatus(userId) {
  * Helper function to retrieve notifications from the backend
  */
 async function fetchNotifications() {
-    const response = await window.apiCall('/notifications', {
+    const response = await apiCall('/notifications', {
         method: 'GET'
     });
 
