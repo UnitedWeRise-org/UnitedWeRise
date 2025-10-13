@@ -1903,13 +1903,14 @@ details {
     max-width: 600px;
     margin: 0 auto;
     padding: 0 1rem;
+    height: 100%; /* Fill parent container height */
 }
 
 #myFeedPosts {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    max-height: calc(100vh - 250px); /* Allow room for header and composer */
+    height: 100%; /* Fill parent container height */
     overflow-y: auto;
 }
 
