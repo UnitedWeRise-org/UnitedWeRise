@@ -3,6 +3,7 @@
  * @description Frontend performance optimization utilities with caching, retry mechanisms, and loading states
  * Migrated to ES6 modules: October 11, 2025 (Batch 1)
  */
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 // Frontend Performance Optimization Utilities
 // Implements caching, retry mechanisms, and loading states
@@ -188,7 +189,7 @@ class PerformanceOptimizer {
             try {
                 // Skip political officials if it's likely to fail (user needs address)
                 if (endpoint === '/political/officials') {
-                    const authResponse = await this.apiCallWithCache(window.apiCall, '/auth/me', {
+                    const authResponse = await this.apiCallWithCache(apiCall, '/auth/me', {
                         useCache: true,
                         silent: true
                     });
@@ -198,7 +199,7 @@ class PerformanceOptimizer {
                     }
                 }
 
-                await this.apiCallWithCache(window.apiCall, endpoint, {
+                await this.apiCallWithCache(apiCall, endpoint, {
                     useCache: true,
                     showLoading: false,
                     cacheTTL: 10 * 60 * 1000 // 10 minutes for critical content
@@ -227,7 +228,7 @@ class PerformanceOptimizer {
 
         userEndpoints.forEach(endpoint => {
             // Fire and forget - don't await these
-            this.apiCallWithCache(window.apiCall, endpoint, {
+            this.apiCallWithCache(apiCall, endpoint, {
                 useCache: true,
                 showLoading: false,
                 cacheTTL: 3 * 60 * 1000 // 3 minutes for user content
@@ -364,7 +365,7 @@ function addPerformanceCSS() {
 // Initialize performance optimizer
 const performanceOptimizer = new PerformanceOptimizer();
 
-// Enhanced window.apiCall that uses performance optimization
+// Enhanced apiCall that uses performance optimization
 function createOptimizedApiCall(originalApiCall) {
     return async function(endpoint, options = {}) {
         return performanceOptimizer.apiCallWithCache(originalApiCall, endpoint, options);

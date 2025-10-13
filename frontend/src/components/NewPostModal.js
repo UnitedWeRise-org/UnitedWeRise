@@ -5,6 +5,8 @@
  * - Mobile: Bottom sheet slide-up
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 export class NewPostModal {
     constructor() {
         this.modal = null;
@@ -211,12 +213,12 @@ export class NewPostModal {
         } else {
             // Fallback: Direct API call
             try {
-                if (typeof window.apiCall !== 'function') {
+                if (typeof apiCall !== 'function') {
                     alert('Post creation system not available. Please refresh the page.');
                     return;
                 }
 
-                const response = await window.apiCall('/posts', {
+                const response = await apiCall('/posts', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

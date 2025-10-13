@@ -107,6 +107,182 @@ router.get('/dashboard', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOT
         res.status(500).json({ error: 'Failed to load dashboard' });
     }
 });
+// Batch endpoint for dashboard initialization - combines all initial data in one request
+router.get('/batch/dashboard-init', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
+    try {
+        // Fetch all dashboard data in parallel for maximum performance
+        const [dashboardStats, recentUsers, recentPosts, openReports] = await Promise.all([
+            // 1. Dashboard statistics (same as /admin/dashboard)
+            (async () => {
+                const [totalUsers, activeUsers, totalPosts, totalComments, pendingReports, resolvedReports, activeSuspensions, totalFlags, moderatorCount] = await Promise.all([
+                    prisma_1.prisma.user.count(),
+                    prisma_1.prisma.user.count({
+                        where: {
+                            lastSeenAt: {
+                                gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+                            }
+                        }
+                    }),
+                    prisma_1.prisma.post.count(),
+                    prisma_1.prisma.comment.count(),
+                    prisma_1.prisma.report.count({ where: { status: 'PENDING' } }),
+                    prisma_1.prisma.report.count({ where: { status: 'RESOLVED' } }),
+                    prisma_1.prisma.userSuspension.count({ where: { isActive: true } }),
+                    prisma_1.prisma.contentFlag.count({ where: { resolved: false } }),
+                    prisma_1.prisma.user.count({ where: { isModerator: true } })
+                ]);
+                const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                const [newUsers, newPosts, newReports] = await Promise.all([
+                    prisma_1.prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
+                    prisma_1.prisma.post.count({ where: { createdAt: { gte: last30Days } } }),
+                    prisma_1.prisma.report.count({ where: { createdAt: { gte: last30Days } } })
+                ]);
+                const recentReports = await prisma_1.prisma.report.findMany({
+                    where: { priority: { in: ['HIGH', 'URGENT'] } },
+                    include: {
+                        reporter: {
+                            select: { id: true, username: true, email: true }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 10
+                });
+                const performanceData = (0, performanceMonitor_1.getPerformanceMetrics)();
+                return {
+                    overview: {
+                        totalUsers, activeUsers, totalPosts, totalComments,
+                        pendingReports, resolvedReports, activeSuspensions,
+                        totalFlags, moderatorCount
+                    },
+                    growth: {
+                        newUsers, newPosts, newReports,
+                        period: '30 days'
+                    },
+                    recentActivity: {
+                        highPriorityReports: recentReports,
+                        lastUpdated: new Date().toISOString()
+                    },
+                    performance: {
+                        ...performanceData,
+                        lastUpdated: new Date().toISOString()
+                    }
+                };
+            })(),
+            // 2. Recent users (for Users section)
+            prisma_1.prisma.user.findMany({
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    createdAt: true,
+                    lastSeenAt: true,
+                    emailVerified: true,
+                    isAdmin: true,
+                    isModerator: true,
+                    isSuspended: true,
+                    verified: true
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+            }),
+            // 3. Recent posts (for Content section)
+            prisma_1.prisma.post.findMany({
+                where: {
+                    isDeleted: false
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            verified: true
+                        }
+                    },
+                    photos: true,
+                    _count: {
+                        select: {
+                            likes: true,
+                            comments: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            }),
+            // 4. Open reports (for Reports section)
+            prisma_1.prisma.report.findMany({
+                where: {
+                    status: 'PENDING'
+                },
+                include: {
+                    reporter: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+            })
+        ]);
+        // Format posts to match frontend expectations
+        const formattedPosts = recentPosts.map(post => ({
+            ...post,
+            likesCount: post._count.likes,
+            commentsCount: post._count.comments,
+            _count: undefined
+        }));
+        // Return all data in one response
+        res.json({
+            success: true,
+            data: {
+                stats: dashboardStats,
+                users: {
+                    users: recentUsers,
+                    total: dashboardStats.overview.totalUsers,
+                    pagination: {
+                        page: 1,
+                        limit: 50,
+                        total: dashboardStats.overview.totalUsers,
+                        pages: Math.ceil(dashboardStats.overview.totalUsers / 50)
+                    }
+                },
+                posts: {
+                    posts: formattedPosts,
+                    pagination: {
+                        limit: 20,
+                        offset: 0,
+                        count: formattedPosts.length
+                    }
+                },
+                reports: {
+                    reports: openReports,
+                    pagination: {
+                        page: 1,
+                        limit: 50,
+                        total: openReports.length,
+                        pages: 1
+                    }
+                },
+                timestamp: new Date().toISOString()
+            }
+        });
+    }
+    catch (error) {
+        console.error('Admin batch initialization error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to load dashboard data'
+        });
+    }
+});
 // User Management
 router.get('/users', auth_1.requireAuth, requireAdmin, totpAuth_1.requireTOTPForAdmin, async (req, res) => {
     try {

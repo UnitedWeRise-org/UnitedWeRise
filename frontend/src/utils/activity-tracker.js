@@ -6,6 +6,8 @@
  * - startActivityTracking
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 console.log('📊 Loading activity tracker...');
 
 // Auto-update activity every 2 minutes when user is active
@@ -16,7 +18,7 @@ async function updateUserActivity() {
     if (!window.currentUser) return;
 
     try {
-        await window.apiCall('/users/activity', {
+        await apiCall('/users/activity', {
             method: 'POST',
             body: JSON.stringify({ timestamp: new Date().toISOString() })
         });

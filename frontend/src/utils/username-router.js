@@ -4,6 +4,8 @@
  * Supports both regular users and candidates
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class UsernameRouter {
     constructor() {
         // Routes that are reserved and should not be treated as usernames
@@ -55,7 +57,7 @@ class UsernameRouter {
             this.showLoadingState();
 
             // Call existing API endpoint
-            const response = await window.apiCall(`/api/users/by-username/${username}`);
+            const response = await apiCall(`/api/users/by-username/${username}`);
 
             if (response.ok) {
                 const user = response.data.user;

@@ -4,6 +4,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class FeedToggle {
     constructor() {
@@ -46,8 +47,8 @@ export class FeedToggle {
             this.currentFeed = 'discover';
 
             // Check if user is new (no follows) to show helpful banner
-            if (typeof window.apiCall === 'function') {
-                const followResponse = await window.apiCall('/auth/me', { method: 'GET' });
+            if (typeof apiCall === 'function') {
+                const followResponse = await apiCall('/auth/me', { method: 'GET' });
                 const followingCount = followResponse?.data?.data?.followingCount || 0;
 
                 if (followingCount === 0) {
@@ -391,7 +392,7 @@ export class FeedToggle {
 
                         // Step 2: Create post with content and mediaIds
                         console.log('📝 Step 2: Creating post with content and mediaIds...');
-                        postResult = await window.apiCall('/posts', {
+                        postResult = await apiCall('/posts', {
                             method: 'POST',
                             body: JSON.stringify({
                                 content,
@@ -556,7 +557,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Following feed');
             return [];
         }
@@ -567,7 +568,7 @@ export class FeedToggle {
             ? `/feed/following?limit=15&_=${Date.now()}`
             : '/feed/following?limit=15';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
@@ -612,7 +613,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Discover feed');
             return [];
         }
@@ -623,7 +624,7 @@ export class FeedToggle {
             ? `/feed/?limit=15&_=${Date.now()}`
             : '/feed/?limit=15';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
@@ -673,7 +674,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Saved feed');
             return [];
         }
@@ -684,7 +685,7 @@ export class FeedToggle {
             ? `/posts/saved?limit=50&_=${Date.now()}`
             : '/posts/saved?limit=50';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
@@ -944,7 +945,7 @@ export class FeedToggle {
     async getUnreadCount() {
         try {
             // Safety check: Ensure apiCall is available
-            if (typeof window.apiCall !== 'function') {
+            if (typeof apiCall !== 'function') {
                 return 0;
             }
 
@@ -953,7 +954,7 @@ export class FeedToggle {
             if (!lastView) return 0;
 
             // Fetch Following feed preview
-            const response = await window.apiCall('/feed/following?limit=100', { method: 'GET' });
+            const response = await apiCall('/feed/following?limit=100', { method: 'GET' });
             const posts = response?.data?.posts || response?.posts || [];
 
             // Count posts newer than last view

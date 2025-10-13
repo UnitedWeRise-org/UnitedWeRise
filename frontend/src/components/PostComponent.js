@@ -4,6 +4,8 @@
  * Created to standardize post behavior across all views
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class PostComponent {
     constructor() {
         this.apiBase = window.API_BASE || '/api';
@@ -251,7 +253,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/reaction`, {
+            const response = await apiCall(`/posts/${postId}/reaction`, {
                 method: 'POST',
                 body: JSON.stringify({
                     reactionType,
@@ -354,7 +356,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/posts/comments/${commentId}/reaction`, {
+            const response = await apiCall(`/posts/comments/${commentId}/reaction`, {
                 method: 'POST',
                 body: JSON.stringify({
                     reactionType,
@@ -467,7 +469,7 @@ class PostComponent {
             const endpoint = wasSaved ? `/posts/${postId}/save` : `/posts/${postId}/save`;
             const method = wasSaved ? 'DELETE' : 'POST';
 
-            const response = await window.apiCall(endpoint, {
+            const response = await apiCall(endpoint, {
                 method: method
             });
 
@@ -573,7 +575,7 @@ class PostComponent {
         if (!currentUser) return {};
 
         try {
-            const response = await window.apiCall('/posts/saved/check', {
+            const response = await apiCall('/posts/saved/check', {
                 method: 'POST',
                 body: JSON.stringify({ postIds })
             });
@@ -595,7 +597,7 @@ class PostComponent {
     async showExtendedContentInline(postId) {
         try {
             // Get the post data to check for extended content
-            const postResponse = await window.apiCall(`/posts/${postId}`);
+            const postResponse = await apiCall(`/posts/${postId}`);
             if (!postResponse.ok || !postResponse.data.post || !postResponse.data.post.extendedContent) {
                 return; // No extended content to show
             }
@@ -669,7 +671,7 @@ class PostComponent {
 
         try {
             // Bypass cache to ensure fresh data
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await apiCall(`/posts/${postId}/comments`, {
                 bypassCache: true
             });
             console.log('Load comments response:', response);
@@ -1124,7 +1126,7 @@ class PostComponent {
         input.disabled = true;
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/comments`, {
+            const response = await apiCall(`/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content, parentId })
             });
@@ -1297,7 +1299,7 @@ class PostComponent {
      */
     async performSimpleShare(postId) {
         try {
-            const response = await window.apiCall(`/posts/${postId}/share`, {
+            const response = await apiCall(`/posts/${postId}/share`, {
                 method: 'POST',
                 body: JSON.stringify({
                     shareType: 'SIMPLE'
@@ -1383,7 +1385,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/posts/${postId}/share`, {
+            const response = await apiCall(`/posts/${postId}/share`, {
                 method: 'POST',
                 body: JSON.stringify({
                     shareType: 'QUOTE',
@@ -2210,7 +2212,7 @@ class PostComponent {
         }
 
         try {
-            const response = await window.apiCall(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
+            const response = await apiCall(`/photo-tags/search-users?q=${encodeURIComponent(query)}`);
             
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const users = response.data.users;
@@ -2236,7 +2238,7 @@ class PostComponent {
      */
     async tagUser(userId, x, y, photoId) {
         try {
-            const response = await window.apiCall('/photo-tags', {
+            const response = await apiCall('/photo-tags', {
                 method: 'POST',
                 body: JSON.stringify({
                     photoId,
@@ -2265,7 +2267,7 @@ class PostComponent {
      */
     async loadPhotoTags(photoId) {
         try {
-            const response = await window.apiCall(`/photo-tags/photo/${photoId}`);
+            const response = await apiCall(`/photo-tags/photo/${photoId}`);
             
             if (response && (response.success || response.comment || response.message === 'Comment added successfully' || response.ok)) {
                 const tags = response.data.tags;
@@ -2424,7 +2426,7 @@ class PostComponent {
         console.log('🎯 PostComponent: Opening focused view for post:', postId);
         try {
             // Fetch full post details (bypass cache to get latest reactions/save status)
-            const response = await window.apiCall(`/posts/${postId}`, {
+            const response = await apiCall(`/posts/${postId}`, {
                 bypassCache: true
             });
             if (!response || (!response.post && !response.ok)) {
@@ -2434,7 +2436,7 @@ class PostComponent {
             const post = response.data?.post || response.post || response;
 
             // Fetch comments for the post (bypass cache to get latest comments)
-            const commentsResponse = await window.apiCall(`/posts/${postId}/comments?limit=100`, {
+            const commentsResponse = await apiCall(`/posts/${postId}/comments?limit=100`, {
                 bypassCache: true
             });
             const comments = commentsResponse?.comments || commentsResponse?.data?.comments || [];
@@ -2486,7 +2488,7 @@ class PostComponent {
     async generateCommentSummary(post, comments) {
         try {
             // Use new public comment summarization endpoint
-            const summaryResponse = await window.apiCall(`/posts/${post.id}/comments/summarize`, {
+            const summaryResponse = await apiCall(`/posts/${post.id}/comments/summarize`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });

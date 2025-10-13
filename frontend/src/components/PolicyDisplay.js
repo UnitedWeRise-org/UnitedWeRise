@@ -2,6 +2,8 @@
  * Policy Display Component
  * Displays candidate policy positions for voters
  */
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class PolicyDisplay {
     constructor() {
         this.policyCategories = {
@@ -40,7 +42,7 @@ class PolicyDisplay {
         try {
             container.innerHTML = '<div class="loading-message">Loading policy positions...</div>';
 
-            const response = await window.apiCall(`/candidate-policy-platform/candidate/${candidateId}/positions?published=true`);
+            const response = await apiCall(`/candidate-policy-platform/candidate/${candidateId}/positions?published=true`);
 
             if (response.ok && response.data?.success) {
                 const positions = response.data.data;
@@ -83,7 +85,7 @@ class PolicyDisplay {
         try {
             container.innerHTML = '<div class="loading-message">Loading race comparison...</div>';
 
-            const response = await window.apiCall(`/candidate-policy-platform/race/${officeId}/comparison`);
+            const response = await apiCall(`/candidate-policy-platform/race/${officeId}/comparison`);
 
             if (response.ok && response.data?.success) {
                 const comparisonData = response.data.data;

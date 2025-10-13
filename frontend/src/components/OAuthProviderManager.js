@@ -3,6 +3,8 @@
  * Handles linking/unlinking social login providers in user settings
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class OAuthProviderManager {
     constructor(containerId) {
         this.containerId = containerId;
@@ -17,7 +19,7 @@ class OAuthProviderManager {
 
     async loadLinkedProviders() {
         try {
-            const response = await window.apiCall('/oauth/linked');
+            const response = await apiCall('/oauth/linked');
 
             if (response.ok) {
                 this.linkedProviders = response.data?.providers || [];
@@ -157,7 +159,7 @@ class OAuthProviderManager {
         if (!confirmed) return;
 
         try {
-            const response = await window.apiCall(`/oauth/unlink/${provider}`, {
+            const response = await apiCall(`/oauth/unlink/${provider}`, {
                 method: 'DELETE'
             });
 
