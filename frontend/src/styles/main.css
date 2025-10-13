@@ -1079,7 +1079,6 @@ details {
 .container {
     display: flex;
     height: calc(100vh - 5.5vh); /* Full height minus top bar */
-    margin-top: 5.5vh;
     overflow: hidden; /* Prevent container overflow */
 }
 
@@ -1226,8 +1225,8 @@ details {
     padding-right: 1rem;
     padding-bottom: 1vh;
     flex-grow: 1;
-    height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
-    min-height: calc(100vh - 5.5vh); /* Ensure minimum height */
+    height: calc(100vh); /* Full viewport height minus top bar */
+    min-height: calc(100vh); /* Ensure minimum height */
     box-sizing: border-box;
     overflow: hidden; /* Prevent main container from scrolling - let content handle it */
 }

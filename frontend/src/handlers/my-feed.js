@@ -126,9 +126,9 @@ export class MyFeedHandlers {
         }
 
         // Adjust height calculation for mobile
-        // Mobile: 60px top bar + 60px bottom nav + 60px feed controls = 180px
-        // Desktop: 200px for standard layout
-        const feedHeight = isMobile ? 'calc(100vh - 180px)' : 'calc(100vh - 200px)';
+        // Extend feed container below visible area for pre-loading content
+        // Mobile: extend 180px below, Desktop: extend 200px below
+        const feedHeight = isMobile ? 'calc(100% + 180px)' : 'calc(100% + 200px)';
 
         mainContent.innerHTML = `
             <div class="my-feed">
