@@ -7,7 +7,9 @@
 
 ### Tier 1: Modals & Overlays (10000+)
 - **10003** - TOTP Modal Overlay (`main.css:177`)
-- **10002** - Map control tooltips (`map.css:347`)
+- **10002** - Tooltips that must appear above navigation:
+  - Map control tooltips (`map.css:347`)
+  - Feed toggle tooltips (`feed-toggle.css:171`, `359`)
 - **10000** - Critical modals and overlays:
   - Badge vault modal (`badge-vault.css:5`)
   - Badge details modal (`badges.css:127`)
@@ -69,8 +71,9 @@ Sticky composer:   3
 
 ### ✅ RESOLVED
 - Feed controls vs Map overlay: Feed controls (4) now below map (5)
-- Feed controls vs Top bar: Feed controls (4) now properly slide under top bar (1000)
-- Logo vs Main content: Logo (1001) now extends above top bar (1000)
+- Feed controls vs Top bar: Feed controls (4) now properly slide under top bar (9999)
+- Logo vs Main content: Logo (10000) now extends above top bar (9999)
+- Tooltips vs Top bar: Tooltips (10002) now appear above top bar (9999)
 
 ### ⚠️ POTENTIAL ISSUES
 1. **Multiple elements at z-index: 1000**
@@ -83,10 +86,10 @@ Sticky composer:   3
    - Should work if properly managed (shown one at a time)
    - **Recommendation**: Consider modal manager to ensure only one active
 
-3. **Tooltips at z-index: 1000**
-   - Feed toggle tooltips use 1000
-   - Could conflict with top bar (also 1000)
-   - **Recommendation**: Move tooltips to 1002 to ensure they appear above top bar
+3. **Tooltips now standardized at 10002** ✅ RESOLVED
+   - Feed toggle tooltips moved from 1000 to 10002
+   - Now appear above top bar (9999) and logo (10000)
+   - Consistent with map control tooltips
 
 ## Recommendations
 
@@ -133,4 +136,5 @@ Before adding new z-index values:
 ## Last Updated
 - 2025-10-13: Initial audit
 - Added feed controls fix (z-index: 4)
-- Elevated top bar/sidebar to 1000s tier
+- Elevated top bar/sidebar to 9000s tier
+- Standardized all tooltips to z-index: 10002

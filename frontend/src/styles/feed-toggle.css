@@ -168,7 +168,7 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
-    z-index: 1000;
+    z-index: 10002; /* Above top bar (9999) and logo (10000) */
 }
 
 .feed-toggle-btn.disabled:hover .tooltip-filters {
@@ -356,7 +356,7 @@
     border-radius: 6px;
     font-size: 13px;
     white-space: nowrap;
-    z-index: 1000;
+    z-index: 10002; /* Above top bar (9999) and logo (10000) */
     animation: tooltipFadeIn 300ms ease-out;
 }
 
