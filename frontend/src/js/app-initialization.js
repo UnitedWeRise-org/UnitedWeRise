@@ -89,23 +89,24 @@ class AppInitializer {
                     retries: 1 // Only retry once to avoid cascading failures
                 });
                 AppInitializer.log('🔄 Received response from /batch/initialize:', {
-                    ok: initData?.ok,
-                    status: initData?.status,
+                    hasInitData: !!initData,
+                    hasSuccess: !!initData?.success,
                     hasData: !!initData?.data,
-                    hasUser: !!initData?.data?.data?.user,
+                    hasUser: !!initData?.data?.user,
                     error: initData?.error || 'none'
                 });
 
-                if (initData && initData.ok && initData.data && initData.data.success) {
+                // API client returns raw data format: {success: true, data: {...}}
+                if (initData && initData.success && initData.data) {
                     AppInitializer.log('✅ Batch initialization successful');
-                    
+
                     // Store fresh user data
-                    this.userData = initData.data.data.user;
+                    this.userData = initData.data.user;
                     
                     // Use unified auth manager to set user data if available
                     if (this.unifiedAuthManager) {
                         AppInitializer.log('🔧 Setting user via unified auth manager');
-                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.data.csrfToken);
+                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.csrfToken);
                     } else {
                         // Fallback to direct setting
                         localStorage.setItem('currentUser', JSON.stringify(this.userData));
@@ -113,8 +114,8 @@ class AppInitializer {
                     }
 
                     // CACHE RELATIONSHIPS FOR ENTIRE SESSION - NO MORE INDIVIDUAL API CALLS!
-                    if (initData.data.data.relationships) {
-                        window.userRelationships = initData.data.data.relationships;
+                    if (initData.data.relationships) {
+                        window.userRelationships = initData.data.relationships;
                         localStorage.setItem('userRelationships', JSON.stringify(window.userRelationships));
                         AppInitializer.log('✅ Cached user relationships:', {
                             friends: window.userRelationships.friends?.length || 0,
@@ -124,29 +125,26 @@ class AppInitializer {
                     }
 
                     // Set logged in state with all data
-                    this.setLoggedInState(initData.data.data);
-                    
+                    this.setLoggedInState(initData.data);
+
                     this.isInitialized = true;
-                    return { 
-                        authenticated: true, 
+                    return {
+                        authenticated: true,
                         userData: this.userData,
-                        initData: initData.data.data
+                        initData: initData.data
                     };
                 } else {
                     // Log why batch failed
                     AppInitializer.log('❌ Batch response structure issue:', {
                         hasInitData: !!initData,
-                        hasOk: !!initData?.ok,
+                        hasSuccess: !!initData?.success,
                         hasData: !!initData?.data,
-                        hasSuccess: !!initData?.data?.success,
-                        status: initData?.status,
-                        errorMessage: initData?.data?.error
+                        errorMessage: initData?.error
                     }, 'warn');
-                    
+
                     // If we got a response but it's not successful, throw an error to trigger fallback
-                    if (initData && !initData.ok) {
-                        const error = new Error(initData.data?.error || `HTTP ${initData.status}`);
-                        error.status = initData.status;
+                    if (initData && !initData.success) {
+                        const error = new Error(initData.error || 'Batch initialization failed');
                         throw error;
                     }
                 }
