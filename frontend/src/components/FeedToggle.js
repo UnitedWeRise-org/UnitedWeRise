@@ -1068,32 +1068,36 @@ export class FeedToggle {
 
     /**
      * Setup scroll behavior for auto-hide/show toggle
+     * Hides controls when scrolling UP, shows when scrolling DOWN
      */
     setupScrollBehavior() {
         const controlsWrapper = document.querySelector('.feed-controls-wrapper');
-        if (!controlsWrapper) return;
+        const feedContainer = document.getElementById('myFeedPosts');
 
-        let lastScrollY = window.scrollY;
+        if (!controlsWrapper || !feedContainer) return;
+
+        let lastScrollTop = 0;
         let ticking = false;
 
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
+            const currentScrollTop = feedContainer.scrollTop;
 
             // Determine scroll direction
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                // Scrolling down - hide controls
-                controlsWrapper.classList.add('hidden');
-            } else if (currentScrollY < lastScrollY) {
-                // Scrolling up - show controls
+            if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
+                // Scrolling DOWN (reading newer content) - show controls
                 controlsWrapper.classList.remove('hidden');
+            } else if (currentScrollTop < lastScrollTop) {
+                // Scrolling UP (reading older content) - hide controls
+                controlsWrapper.classList.add('hidden');
             }
 
-            lastScrollY = currentScrollY;
+            lastScrollTop = currentScrollTop;
             ticking = false;
         };
 
         // Use requestAnimationFrame for smooth performance
-        window.addEventListener('scroll', () => {
+        // Listen to scroll on the feed container, not window
+        feedContainer.addEventListener('scroll', () => {
             if (!ticking) {
                 window.requestAnimationFrame(handleScroll);
                 ticking = true;
@@ -1101,7 +1105,7 @@ export class FeedToggle {
         }, { passive: true });
 
         if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('FeedToggle', 'Scroll behavior initialized');
+            adminDebugLog('FeedToggle', 'Scroll behavior initialized on #myFeedPosts');
         }
     }
 
