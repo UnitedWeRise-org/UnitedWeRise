@@ -101,15 +101,20 @@ class NavigationHandlers {
             case 'close-trending':
                 this.closePanel('trending');
                 break;
-            case 'close-officials':
-                this.closePanel('officials');
-                break;
             case 'show-elections':
                 // Trigger modern elections system
                 if (window.electionsSystemIntegration && typeof window.electionsSystemIntegration.toggleElectionsPanel === 'function') {
                     window.electionsSystemIntegration.toggleElectionsPanel();
                 } else {
                     console.warn('Elections system not available');
+                }
+                break;
+            case 'show-officials':
+                // Trigger modern officials system
+                if (window.officialsSystemIntegration && typeof window.officialsSystemIntegration.toggleOfficialsPanel === 'function') {
+                    window.officialsSystemIntegration.toggleOfficialsPanel();
+                } else {
+                    console.warn('Officials system not available');
                 }
                 break;
 
