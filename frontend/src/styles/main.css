@@ -866,6 +866,8 @@ details {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 2px 5px rgba(0,0,0,0.25);
     border-radius: 50%;  /* Keeps the hover effect circular */
+    position: relative;
+    z-index: 11; /* Above top bar (10) to extend beyond bar */
     /* Circle fills the whole image now, so no special fitting needed */
 }
 
