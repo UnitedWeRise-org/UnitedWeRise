@@ -420,15 +420,20 @@ class OnboardingTrigger {
             // Use environment-aware API client with cookie authentication
             const progress = await window.apiClient.call('/onboarding/progress');
 
+            // Calculate user age safely with null check
+            const createdDate = user?.createdAt ? new Date(user.createdAt) : null;
+            const userAge = createdDate && !isNaN(createdDate.getTime())
+                ? Date.now() - createdDate.getTime()
+                : Infinity; // Very old if no date (skip onboarding)
+
             console.log('🔍 Onboarding progress check:', {
-                userAge: Date.now() - new Date(user.createdAt).getTime(),
+                userAge: userAge === Infinity ? 'unknown' : userAge,
                 isComplete: progress.isComplete,
                 currentStep: progress.currentStep,
                 totalSteps: progress.totalSteps
             });
 
             // Show onboarding if not complete and user has been registered for less than 7 days
-            const userAge = Date.now() - new Date(user.createdAt).getTime();
             const weekInMs = 7 * 24 * 60 * 60 * 1000;
 
             const shouldShowOnboarding = !progress.isComplete && userAge < weekInMs;
@@ -444,7 +449,7 @@ class OnboardingTrigger {
             } else {
                 console.log('✅ Onboarding not needed:', {
                     complete: progress.isComplete,
-                    userAge: Math.round(userAge / (24 * 60 * 60 * 1000)),
+                    userAge: userAge === Infinity ? 'unknown' : Math.round(userAge / (24 * 60 * 60 * 1000)),
                     weekLimit: 7
                 });
             }
@@ -453,7 +458,10 @@ class OnboardingTrigger {
 
             // Fallback: Show onboarding for very new users (created in last hour)
             // This covers edge cases where API might fail
-            const userAge = Date.now() - new Date(user.createdAt).getTime();
+            const createdDate = user?.createdAt ? new Date(user.createdAt) : null;
+            const userAge = createdDate && !isNaN(createdDate.getTime())
+                ? Date.now() - createdDate.getTime()
+                : Infinity; // Very old if no date (skip onboarding)
             const oneHourMs = 60 * 60 * 1000;
 
             if (userAge < oneHourMs && window.onboardingFlow) {

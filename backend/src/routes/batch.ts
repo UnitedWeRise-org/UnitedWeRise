@@ -85,6 +85,7 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
       }),
 
       // Trending topics (consolidate multiple trending endpoints)
+      // NOTE: Fetch recent posts and sort by engagement in-memory since Prisma doesn't support orderBy on relation counts
       prisma.post.findMany({
         where: {
           createdAt: {
@@ -111,14 +112,12 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
           createdAt: true,
           topics: true
         },
-        orderBy: [
-          { likes: { _count: 'desc' } },
-          { comments: { _count: 'desc' } }
-        ],
-        take: 20
+        orderBy: { createdAt: 'desc' }, // Sort by recency, will sort by engagement after fetching
+        take: 100 // Fetch more to sort later
       }),
 
       // Trending posts (popular posts for feed)
+      // NOTE: Fetch recent posts and sort by engagement in-memory since Prisma doesn't support orderBy on relation counts
       prisma.post.findMany({
         where: {
           createdAt: {
@@ -142,11 +141,8 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
             }
           }
         },
-        orderBy: [
-          { likes: { _count: 'desc' } },
-          { comments: { _count: 'desc' } }
-        ],
-        take: 12
+        orderBy: { createdAt: 'desc' }, // Sort by recency, will sort by engagement after fetching
+        take: 50 // Fetch more to sort later
       }),
 
       // Get all relationships in parallel (no blocking system implemented yet)
@@ -181,6 +177,23 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
       ])
     ]);
 
+    // Sort trending topics and posts by engagement (likes + comments)
+    const sortedTrendingTopics = trendingTopics
+      .sort((a, b) => {
+        const aEngagement = (a._count?.likes || 0) + (a._count?.comments || 0);
+        const bEngagement = (b._count?.likes || 0) + (b._count?.comments || 0);
+        return bEngagement - aEngagement;
+      })
+      .slice(0, 20); // Take top 20
+
+    const sortedTrendingPosts = trendingPosts
+      .sort((a, b) => {
+        const aEngagement = (a._count?.likes || 0) + (a._count?.comments || 0);
+        const bEngagement = (b._count?.likes || 0) + (b._count?.comments || 0);
+        return bEngagement - aEngagement;
+      })
+      .slice(0, 12); // Take top 12
+
     // Process relationships into efficient lookup structures
     const friendsList = new Set<string>();
     const friendRequests = {
@@ -193,7 +206,7 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
     // Process relationships
     if (relationships) {
       const [friendships, follows] = relationships;
-      
+
       // Process friendships
       friendships.forEach(f => {
         if (f.status === 'ACCEPTED') {
@@ -231,8 +244,8 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
         user: user,
         unreadNotifications: notifications,
         recentPosts: recentPosts,
-        trendingTopics: trendingTopics,
-        trendingPosts: trendingPosts,
+        trendingTopics: sortedTrendingTopics,
+        trendingPosts: sortedTrendingPosts,
         relationships: {
           friends: Array.from(friendsList),
           friendRequests: {

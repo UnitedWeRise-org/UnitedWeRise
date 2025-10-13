@@ -11,6 +11,9 @@ import { apiCall } from '../js/api-compatibility-shim.js';
 class CandidateSystemIntegration {
     constructor() {
         this.candidateSystem = null;
+        this.hasCheckedStatus = false; // Track if we've checked candidate status
+        this.isCandidate = false; // Default to false
+        this.candidateData = null;
         this.init();
     }
 
@@ -35,10 +38,10 @@ class CandidateSystemIntegration {
         if (window.CandidateSystem) {
             this.candidateSystem = new window.CandidateSystem();
         }
-        
-        // Check candidate status for current user
-        this.checkCandidateStatus();
-        
+
+        // NOTE: Candidate status check is now lazy-loaded on demand
+        // to avoid unnecessary 404 errors for non-candidates on every page load
+
         // Enhance existing UI elements
         this.enhanceExistingElements();
         
@@ -302,7 +305,10 @@ class CandidateSystemIntegration {
         this.showCandidateMainView(mainContent);
     }
 
-    showCandidateMainView(mainContent) {
+    async showCandidateMainView(mainContent) {
+        // Ensure candidate status is checked before rendering
+        await this.ensureCandidateStatus();
+
         // Store original content so we can restore it later
         if (!mainContent.dataset.originalContent) {
             mainContent.dataset.originalContent = mainContent.innerHTML;
@@ -2988,6 +2994,14 @@ class CandidateSystemIntegration {
         }
     }
 
+    // Ensure candidate status is checked (lazy loading with caching)
+    async ensureCandidateStatus() {
+        if (this.hasCheckedStatus) {
+            return; // Already checked, use cached value
+        }
+        await this.checkCandidateStatus();
+    }
+
     // Check if current user is a verified candidate
     async checkCandidateStatus() {
         try {
@@ -3004,14 +3018,19 @@ class CandidateSystemIntegration {
                 this.isCandidate = false;
                 adminDebugLog('ℹ️ User is not a candidate');
             }
+            this.hasCheckedStatus = true; // Mark as checked
         } catch (error) {
             adminDebugError('Error checking candidate status:', error);
             this.isCandidate = false;
+            this.hasCheckedStatus = true; // Mark as checked even on error
         }
     }
 
     // Show candidate dashboard for verified candidates
-    showCandidateDashboard() {
+    async showCandidateDashboard() {
+        // Ensure candidate status is checked before proceeding
+        await this.ensureCandidateStatus();
+
         if (!this.isCandidate) {
             adminDebugError('Access denied: User is not a verified candidate');
             return;
@@ -3242,6 +3261,9 @@ class CandidateSystemIntegration {
 
     // Open constituent inbox for candidate
     async openConstituentInbox() {
+        // Ensure candidate status is checked before proceeding
+        await this.ensureCandidateStatus();
+
         if (!this.isCandidate) {
             adminDebugError('Access denied: User is not a verified candidate');
             return;
