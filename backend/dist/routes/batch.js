@@ -30,6 +30,8 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
                     state: true,
                     streetAddress: true,
                     zipCode: true,
+                    isAdmin: true,
+                    isSuperAdmin: true,
                     _count: {
                         select: {
                             posts: true,

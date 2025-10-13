@@ -38,8 +38,8 @@ class AdminDebugger {
         }
 
         try {
-            // Check if user has admin flag BEFORE making admin API calls
-            if (!window.currentUser || !window.currentUser.isAdmin) {
+            // Check if user has admin or super-admin flag BEFORE making admin API calls
+            if (!window.currentUser || !(window.currentUser.isAdmin || window.currentUser.isSuperAdmin)) {
                 this.adminVerified = false;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
                 return false;
