@@ -809,7 +809,7 @@ details {
     align-items: center;
     justify-content: space-between;
     padding: 0 1rem;
-    z-index: 10;
+    z-index: 1000; /* Always on top - never hidden */
     box-sizing: border-box;
 }
 
@@ -867,7 +867,7 @@ details {
     box-shadow: 0 2px 5px rgba(0,0,0,0.25);
     border-radius: 50%;  /* Keeps the hover effect circular */
     position: relative;
-    z-index: 11; /* Above top bar (10) to extend beyond bar */
+    z-index: 1001; /* Above top bar to extend beyond bar */
     /* Circle fills the whole image now, so no special fitting needed */
 }
 
@@ -1096,7 +1096,7 @@ details {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    z-index: 9;
+    z-index: 999; /* Always on top - never hidden */
 }
 
 .sidebar.expanded {

@@ -11,7 +11,7 @@
     transform: translateX(-50%); /* Center the wrapper itself */
     width: auto; /* Shrink to content width */
     max-width: 520px; /* Limit maximum width */
-    z-index: 8; /* Below top bar (10) and sidebar (9) */
+    z-index: 5; /* Below top bar (1000) - slides under during hide animation */
     background: #fefdf8; /* Warm cream with yellow undertones */
     padding: 2px 2px; /* Reduced vertical padding */
     border-bottom: 1px solid #e8e2d5; /* Warm greige border */
