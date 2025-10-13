@@ -6,13 +6,18 @@ import { isProduction } from '../utils/environment.js';
 
 class AppInitializer {
     // Production logging helper - only shows important messages
-    static log(message, type = 'info') {
+    static log(message, dataOrType = 'info', typeOverride = null) {
+        // Determine if second arg is data object or type string
+        const isDataObject = typeof dataOrType === 'object' && dataOrType !== null;
+        const type = typeOverride || (isDataObject ? 'info' : dataOrType);
+        const data = isDataObject ? dataOrType : null;
+
         if (type === 'error') {
-            console.error(message); // Always show errors
+            console.error(message, ...(data ? [data] : [])); // Always show errors
         } else if (type === 'warn') {
-            console.warn(message); // Always show warnings
+            console.warn(message, ...(data ? [data] : [])); // Always show warnings
         } else if (!isProduction()) {
-            console.log(message); // Only show debug in development
+            console.log(message, ...(data ? [data] : [])); // Only show debug in development
         }
     }
     constructor() {
