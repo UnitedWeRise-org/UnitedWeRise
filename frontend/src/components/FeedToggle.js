@@ -1084,11 +1084,11 @@ export class FeedToggle {
 
             // Determine scroll direction
             if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
-                // Scrolling DOWN (reading newer content) - show controls
-                controlsWrapper.classList.remove('hidden');
-            } else if (currentScrollTop < lastScrollTop) {
-                // Scrolling UP (reading older content) - hide controls
+                // Scrolling DOWN page (text moves bottom→top) - HIDE controls
                 controlsWrapper.classList.add('hidden');
+            } else if (currentScrollTop < lastScrollTop) {
+                // Scrolling UP page (text moves top→bottom) - SHOW controls
+                controlsWrapper.classList.remove('hidden');
             }
 
             lastScrollTop = currentScrollTop;
