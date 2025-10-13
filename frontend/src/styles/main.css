@@ -174,7 +174,7 @@
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    z-index: 10003 !important;
+    z-index: 50000 !important; /* Reserved range: 50000+ for critical modals over everything */
 }
 
 /* Override for modal hiding - must come after modal-overlay rule */
@@ -809,7 +809,7 @@ details {
     align-items: center;
     justify-content: space-between;
     padding: 0 1rem;
-    z-index: 1000; /* Always on top - never hidden */
+    z-index: 9999; /* Reserved range: 9000-9999 for persistent navigation */
     box-sizing: border-box;
 }
 
@@ -867,7 +867,7 @@ details {
     box-shadow: 0 2px 5px rgba(0,0,0,0.25);
     border-radius: 50%;  /* Keeps the hover effect circular */
     position: relative;
-    z-index: 1001; /* Above top bar to extend beyond bar */
+    z-index: 10000; /* Above top bar (9999) to extend beyond bar */
     /* Circle fills the whole image now, so no special fitting needed */
 }
 
@@ -1096,7 +1096,7 @@ details {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    z-index: 999; /* Always on top - never hidden */
+    z-index: 9998; /* Reserved range: 9000-9999 for persistent navigation */
 }
 
 .sidebar.expanded {
@@ -1542,7 +1542,7 @@ details {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.9);
-    z-index: 10000;
+    z-index: 40000; /* Reserved range: 40000-49999 for media/photo viewers */
     display: flex;
     justify-content: center;
     align-items: center;
