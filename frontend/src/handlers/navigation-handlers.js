@@ -101,11 +101,16 @@ class NavigationHandlers {
             case 'close-trending':
                 this.closePanel('trending');
                 break;
-            case 'close-upcoming':
-                this.closePanel('upcoming');
-                break;
             case 'close-officials':
                 this.closePanel('officials');
+                break;
+            case 'show-elections':
+                // Trigger modern elections system
+                if (window.electionsSystemIntegration && typeof window.electionsSystemIntegration.toggleElectionsPanel === 'function') {
+                    window.electionsSystemIntegration.toggleElectionsPanel();
+                } else {
+                    console.warn('Elections system not available');
+                }
                 break;
 
             // Authentication actions

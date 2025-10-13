@@ -649,7 +649,7 @@
             <div class="thumbs">
                 <div class="thumb" data-nav-toggle="feed" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
                 <div class="thumb" data-nav-toggle="trending" title="Trending">🔥 <span class="label">Trending</span></div>
-                <div class="thumb" data-nav-toggle="panel-upcoming" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
+                <div class="thumb" data-action="show-elections" title="Upcoming Elections">📅 <span class="label">Elections</span></div>
                 <div class="thumb" data-nav-toggle="panel-officials" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" data-nav-toggle="map" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" data-nav-toggle="messages" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
@@ -779,33 +779,7 @@
 
     <!-- DEPRECATED: panel-myfeed removed - My Feed now populates in main content area per CLAUDE.md documentation -->
 
-    <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
-        <div class="panel-header">
-            <span>Upcoming Contests</span>
-            <button data-nav-action="close-upcoming">X</button>
-        </div>
-        <div class="panel-body">
-            <details><summary>Local</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="Mayor" data-detail-level="2">Mayor</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="City Council" data-detail-level="2">City Council</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="School Board" data-detail-level="2">School Board</a></li>
-                </ul>
-            </details>
-            <details><summary>State</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="Governor" data-detail-level="2">Governor</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="State Senate" data-detail-level="2">State Senate</a></li>
-                </ul>
-            </details>
-            <details><summary>National</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="President" data-detail-level="2">President</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="U.S. House" data-detail-level="2">U.S. House</a></li>
-                </ul>
-            </details>
-        </div>
-    </div>
+    <!-- DEPRECATED: panel-upcoming removed - Elections now use modern elections-system-integration.js (Oct 2025) -->
 
     <div id="panel-officials" class="info-panel hidden" data-offset="1">
         <div class="panel-header">

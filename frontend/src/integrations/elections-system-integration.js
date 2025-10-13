@@ -52,25 +52,10 @@ class ElectionsSystemIntegration {
     }
 
     addElectionsNavigation() {
-        // Find the existing Upcoming thumb button and enhance it
-        const sidebar = document.querySelector('#sidebar .thumbs');
-        if (sidebar) {
-            const upcomingThumb = Array.from(sidebar.children).find(thumb => 
-                thumb.textContent.includes('Upcoming')
-            );
-            
-            if (upcomingThumb) {
-                // Store original onclick handler
-                const originalOnclick = upcomingThumb.onclick;
-                
-                // Replace with our enhanced handler
-                upcomingThumb.onclick = () => this.toggleElectionsPanel();
-                upcomingThumb.title = 'Enhanced Elections View';
-                
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('ElectionsSystem', 'Enhanced Upcoming Elections button in sidebar');
-                }
-            }
+        // Elections button now handled by navigation-handlers.js via data-action="show-elections"
+        // No need to enhance button here - navigation system calls toggleElectionsPanel() directly
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('ElectionsSystem', 'Elections navigation ready (handled by navigation system)');
         }
     }
 
@@ -261,18 +246,9 @@ class ElectionsSystemIntegration {
             
         } catch (error) {
             adminDebugError('Failed to load elections:', error);
-            
-            // Fallback to mock data if API fails
-            adminDebugLog('🔄 Falling back to mock data...');
-            const originalPanel = document.querySelector('#panel-upcoming');
-            
-            if (originalPanel) {
-                setTimeout(() => {
-                    this.enhanceElectionsDisplay(originalPanel);
-                }, 500);
-            } else {
-                this.showElectionsError('Election data not available.');
-            }
+
+            // Show proper error message instead of falling back to obsolete mock data
+            this.showElectionsError('Unable to load election data. Please try again later.');
         } finally {
             // Hide loading indicator
             if (loadingIndicator) loadingIndicator.style.display = 'none';
