@@ -899,7 +899,9 @@ class OnboardingFlow {
         // Don't load steps if user is not logged in
         // Use unified authentication check instead of localStorage
         if (!window.authUtils?.isUserAuthenticated()) {
-            console.log('User not authenticated, skipping onboarding steps load');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('OnboardingFlow', 'User not authenticated, skipping onboarding steps load');
+            }
             return;
         }
 

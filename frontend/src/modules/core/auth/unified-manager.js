@@ -1,26 +1,27 @@
 /**
  * @module core/auth/unified-manager
  * @description UNIFIED AUTHENTICATION MANAGER - Single source of truth for all auth systems
- * 
+ *
  * This module ensures ALL authentication systems stay perfectly synchronized:
  * - Modular login system (modal.js)
- * - Legacy UI system (index.html) 
+ * - Legacy UI system (index.html)
  * - User state system (user.js)
  * - API client system (client.js)
  * - App initialization system (app-initialization.js)
- * 
+ *
  * @example
  * import { unifiedAuthManager } from './unified-manager.js';
- * 
+ *
  * // Login with perfect synchronization
  * await unifiedAuthManager.login(email, password);
- * 
+ *
  * // Subscribe to auth changes
  * unifiedAuthManager.subscribe((authState) => {
  *   console.log('Auth state changed:', authState);
  * });
  */
 
+import { adminDebugLog } from '../../../../js/adminDebugger.js';
 import { userState } from '../state/user.js';
 import { setUserLoggedIn, setUserLoggedOut } from './session.js';
 
@@ -36,7 +37,8 @@ class UnifiedAuthManager {
             sessionValid: false
         };
 
-        console.log('🔧 Unified Authentication Manager initialized');
+        // Note: constructor cannot be async, so we don't await here
+        adminDebugLog('UnifiedAuthManager', 'Unified Authentication Manager initialized');
     }
 
     /**
@@ -44,41 +46,41 @@ class UnifiedAuthManager {
      */
     async initialize() {
         if (this._isInitialized) return;
-        
-        console.log('🚀 Initializing unified authentication manager...');
-        
+
+        await adminDebugLog('UnifiedAuthManager', 'Initializing unified authentication manager...');
+
         // Sync with existing user state
         this._syncFromExistingSystems();
-        
+
         // Listen for external changes
         this._setupSystemListeners();
-        
+
         this._isInitialized = true;
-        console.log('✅ Unified authentication manager ready');
+        await adminDebugLog('UnifiedAuthManager', 'Unified authentication manager ready');
     }
 
     /**
      * Perform login with COMPLETE system synchronization
      */
     async login(email, password, totpToken = null) {
-        console.log('🔐 Unified login starting...');
-        
+        await adminDebugLog('UnifiedAuthManager', 'Unified login starting...');
+
         try {
             // Use the existing API client for consistency
             const loginData = { email, password };
             if (totpToken) loginData.totpToken = totpToken;
-            
+
             const response = await window.apiClient.call('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify(loginData)
             });
-            
-            console.log('🔍 Unified login response:', response);
-            
+
+            await adminDebugLog('UnifiedAuthManager', 'Unified login response', response);
+
             // Handle TOTP requirement
             if (response.requiresTOTP) {
-                console.log('🔐 TOTP required, delegating to unified auth system');
-                
+                await adminDebugLog('UnifiedAuthManager', 'TOTP required, delegating to unified auth system');
+
                 // Use the existing unifiedLogin for TOTP handling
                 const result = await window.unifiedLogin(email, password, 'main-site');
                 if (result.success) {
@@ -88,7 +90,7 @@ class UnifiedAuthManager {
                     return { success: false, error: result.error || 'TOTP authentication failed' };
                 }
             }
-            
+
             // Handle successful login
             if ((response.success || response.message === 'Login successful') && response.user) {
                 await this._setAuthenticatedState(response.user, response.csrfToken);
@@ -96,7 +98,7 @@ class UnifiedAuthManager {
             } else {
                 return { success: false, error: response.message || 'Login failed' };
             }
-            
+
         } catch (error) {
             console.error('❌ Unified login error:', error);
             return { success: false, error: error.message };
@@ -107,7 +109,7 @@ class UnifiedAuthManager {
      * Set authenticated state and sync ALL systems
      */
     async _setAuthenticatedState(user, csrfToken) {
-        console.log('🔄 Setting authenticated state across ALL systems...');
+        await adminDebugLog('UnifiedAuthManager', 'Setting authenticated state across ALL systems...');
 
         // Update internal state
         this._currentAuthState = {
@@ -126,41 +128,41 @@ class UnifiedAuthManager {
         // Trigger app reinitialization
         this._triggerAppReinitialization();
 
-        console.log('✅ All authentication systems synchronized');
+        await adminDebugLog('UnifiedAuthManager', 'All authentication systems synchronized');
     }
 
     /**
      * Synchronize authentication state across ALL systems
      */
     async _syncAllSystems(user, csrfToken) {
-        console.log('🔧 Synchronizing all authentication systems...');
-        
+        await adminDebugLog('UnifiedAuthManager', 'Synchronizing all authentication systems...');
+
         // 1. Update user state module
         if (window.userState) {
             window.userState.current = user;
         }
-        
+
         // 2. Update legacy global user
         window.currentUser = user;
-        
+
         // 3. Update localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
-        
+
         // 4. Synchronize CSRF tokens everywhere
         if (csrfToken) {
             window.csrfToken = csrfToken;
             if (window.apiClient) {
                 window.apiClient.csrfToken = csrfToken;
             }
-            console.log('🔑 CSRF token synchronized globally:', csrfToken.substring(0, 8) + '...');
+            await adminDebugLog('UnifiedAuthManager', 'CSRF token synchronized globally', csrfToken.substring(0, 8) + '...');
         }
-        
+
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
-            console.log('🔄 Calling legacy setUserLoggedIn...');
+            await adminDebugLog('UnifiedAuthManager', 'Calling legacy setUserLoggedIn...');
             await window.setUserLoggedIn(user);
         } else {
-            console.log('🔄 Calling modular setUserLoggedIn...');
+            await adminDebugLog('UnifiedAuthManager', 'Calling modular setUserLoggedIn...');
             setUserLoggedIn(user);
         }
 
@@ -170,14 +172,15 @@ class UnifiedAuthManager {
             detail: { authenticated: true, user, csrfToken }
         }));
 
-        console.log('✅ All systems synchronized with user:', user.username || user.email);
+        await adminDebugLog('UnifiedAuthManager', 'All systems synchronized with user', user.username || user.email);
     }
 
     /**
      * Synchronous version of _syncAllSystems for initialization
      */
     _syncAllSystemsSync(user, csrfToken) {
-        console.log('🔧 Synchronizing all authentication systems (sync)...');
+        // Note: Cannot use await in sync method
+        adminDebugLog('UnifiedAuthManager', 'Synchronizing all authentication systems (sync)...');
 
         // 1. Update user state module
         if (window.userState) {
@@ -196,22 +199,22 @@ class UnifiedAuthManager {
             if (window.apiClient) {
                 window.apiClient.csrfToken = csrfToken;
             }
-            console.log('🔑 CSRF token synchronized globally:', csrfToken.substring(0, 8) + '...');
+            adminDebugLog('UnifiedAuthManager', 'CSRF token synchronized globally', csrfToken.substring(0, 8) + '...');
         }
 
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
-            console.log('🔄 Calling legacy setUserLoggedIn (sync)...');
+            adminDebugLog('UnifiedAuthManager', 'Calling legacy setUserLoggedIn (sync)...');
             window.setUserLoggedIn(user);
         } else {
-            console.log('🔄 Calling modular setUserLoggedIn (sync)...');
+            adminDebugLog('UnifiedAuthManager', 'Calling modular setUserLoggedIn (sync)...');
             setUserLoggedIn(user);
         }
 
         // 6. Update the local currentUser variable in index.html
         // This is the variable that showMyFeedInMain() checks
         if (window.setCurrentUser && typeof window.setCurrentUser === 'function') {
-            console.log('🔧 Unified auth calling setCurrentUser for sync');
+            adminDebugLog('UnifiedAuthManager', 'Unified auth calling setCurrentUser for sync');
             window.setCurrentUser(user);
         } else {
             console.warn('⚠️ window.setCurrentUser function not available during sync');
@@ -223,7 +226,7 @@ class UnifiedAuthManager {
             detail: { authenticated: true, user, csrfToken }
         }));
 
-        console.log('✅ All systems synchronized (sync) with user:', user.username || user.email);
+        adminDebugLog('UnifiedAuthManager', 'All systems synchronized (sync) with user', user.username || user.email);
     }
 
     /**
@@ -274,7 +277,8 @@ class UnifiedAuthManager {
      * Trigger app reinitialization with proper error handling
      */
     _triggerAppReinitialization() {
-        console.log('🔄 Triggering app reinitialization...');
+        // Note: Cannot use await in non-async method, but adminDebugLog handles this
+        adminDebugLog('UnifiedAuthManager', 'Triggering app reinitialization...');
 
         // Show post-login loading immediately
         this._showPostLoginLoading();
@@ -282,16 +286,16 @@ class UnifiedAuthManager {
         setTimeout(async () => {
             try {
                 if (window.initializeApp && typeof window.initializeApp === 'function') {
-                    console.log('🚀 Calling initializeApp()...');
+                    await adminDebugLog('UnifiedAuthManager', 'Calling initializeApp()...');
                     await window.initializeApp();
-                    console.log('✅ App reinitialization completed');
+                    await adminDebugLog('UnifiedAuthManager', 'App reinitialization completed');
                 } else {
                     console.warn('⚠️ initializeApp() function not available');
                 }
 
                 // Trigger onboarding check after app initialization completes
                 if (this._currentAuthState.isAuthenticated && this._currentAuthState.user) {
-                    console.log('🎯 Triggering onboarding check post-initialization...');
+                    await adminDebugLog('UnifiedAuthManager', 'Triggering onboarding check post-initialization...');
                     // Dispatch event to trigger onboarding check
                     window.dispatchEvent(new CustomEvent('appInitializationComplete', {
                         detail: { user: this._currentAuthState.user }
@@ -310,7 +314,7 @@ class UnifiedAuthManager {
      * Logout and clear ALL systems
      */
     async logout() {
-        console.log('🚪 Unified logout starting...');
+        await adminDebugLog('UnifiedAuthManager', 'Unified logout starting...');
 
         // Set logout flag to prevent re-authentication
         this._isLoggingOut = true;
@@ -320,7 +324,7 @@ class UnifiedAuthManager {
             await window.apiClient.call('/auth/logout', {
                 method: 'POST'
             });
-            console.log('✅ Backend logout endpoint called successfully');
+            await adminDebugLog('UnifiedAuthManager', 'Backend logout endpoint called successfully');
         } catch (error) {
             console.warn('⚠️ Backend logout endpoint failed:', error);
             // Continue with frontend logout even if backend fails
@@ -341,12 +345,12 @@ class UnifiedAuthManager {
         this._notifySubscribers();
 
         // Reset logout flag after a delay
-        setTimeout(() => {
+        setTimeout(async () => {
             this._isLoggingOut = false;
-            console.log('🔓 Logout flag cleared, re-authentication allowed');
+            await adminDebugLog('UnifiedAuthManager', 'Logout flag cleared, re-authentication allowed');
         }, 2000); // 2 second delay
 
-        console.log('✅ Logout completed across all systems');
+        await adminDebugLog('UnifiedAuthManager', 'Logout completed across all systems');
         return { success: true };
     }
 
@@ -354,16 +358,16 @@ class UnifiedAuthManager {
      * Missing methods that other systems call
      */
     async setAuthenticatedUser(user, csrfToken = null) {
-        console.log('🔧 Setting authenticated user via unified manager...');
+        await adminDebugLog('UnifiedAuthManager', 'Setting authenticated user via unified manager...');
         await this._setAuthenticatedState(user, csrfToken || window.csrfToken);
     }
 
     async verifySession() {
-        console.log('🔍 Verifying session via unified manager...');
+        await adminDebugLog('UnifiedAuthManager', 'Verifying session via unified manager...');
 
         // Don't verify session if we're in the middle of logging out
         if (this._isLoggingOut) {
-            console.log('🚫 Skipping session verification during logout');
+            await adminDebugLog('UnifiedAuthManager', 'Skipping session verification during logout');
             return { success: false, error: 'Logout in progress' };
         }
 
@@ -383,7 +387,7 @@ class UnifiedAuthManager {
     }
 
     async clearAuthentication() {
-        console.log('🧹 Clearing authentication via unified manager...');
+        await adminDebugLog('UnifiedAuthManager', 'Clearing authentication via unified manager...');
         await this.logout();
     }
 
@@ -395,16 +399,16 @@ class UnifiedAuthManager {
         if (window.userState) {
             window.userState.current = null;
         }
-        
+
         // Clear legacy global user
         window.currentUser = null;
-        
+
         // Clear localStorage
         localStorage.removeItem('currentUser');
-        
+
         // Call legacy setUserLoggedOut if available
         if (window.setUserLoggedOut && typeof window.setUserLoggedOut === 'function') {
-            console.log('🔄 Calling legacy setUserLoggedOut...');
+            adminDebugLog('UnifiedAuthManager', 'Calling legacy setUserLoggedOut...');
             window.setUserLoggedOut();
         }
 
@@ -413,14 +417,14 @@ class UnifiedAuthManager {
         if (window.apiClient) {
             window.apiClient.csrfToken = null;
         }
-        
+
         // Update UI
         setUserLoggedOut();
-        
+
         // Dispatch events
         window.dispatchEvent(new CustomEvent('userLoggedOut'));
-        window.dispatchEvent(new CustomEvent('authStateChanged', { 
-            detail: { authenticated: false, user: null } 
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { authenticated: false, user: null }
         }));
     }
 
@@ -463,15 +467,15 @@ class UnifiedAuthManager {
      */
     _syncFromExistingSystems() {
         // Check if user is already logged in
-        const existingUser = window.currentUser || 
+        const existingUser = window.currentUser ||
                            (window.userState && window.userState.current) ||
                            (localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null);
-        
-        const existingToken = window.csrfToken || 
+
+        const existingToken = window.csrfToken ||
                             (window.apiClient && window.apiClient.csrfToken);
-        
+
         if (existingUser) {
-            console.log('🔄 Syncing from existing user session:', existingUser.username || existingUser.email);
+            adminDebugLog('UnifiedAuthManager', 'Syncing from existing user session', existingUser.username || existingUser.email);
             this._currentAuthState = {
                 isAuthenticated: true,
                 user: existingUser,
@@ -501,12 +505,12 @@ class UnifiedAuthManager {
                 // Skip the immediate callback to prevent false logout during initialization
                 if (isFirstCall) {
                     isFirstCall = false;
-                    console.log('🔧 Ignoring initial userState callback (already synced)');
+                    adminDebugLog('UnifiedAuthManager', 'Ignoring initial userState callback (already synced)');
                     return;
                 }
 
                 if (this._currentAuthState.user !== user) {
-                    console.log('🔄 External user state change detected');
+                    adminDebugLog('UnifiedAuthManager', 'External user state change detected');
                     if (user) {
                         this._currentAuthState.user = user;
                         this._currentAuthState.isAuthenticated = true;

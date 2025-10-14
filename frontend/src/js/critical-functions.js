@@ -11,6 +11,8 @@
  * This file will be deleted once all critical functions are migrated.
  */
 
+import { adminDebugLog } from './adminDebugger.js';
+
 console.log('🔧 Loading critical functions for Phase 4D-2 minimal script block...');
 
 // ============================================================================
@@ -34,11 +36,11 @@ const REPRESENTATIVES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for represe
  * Set the local currentUser variable from external systems
  * CRITICAL: This function must remain global for auth system integration
  */
-window.setCurrentUser = function(user) {
-    console.log('🔧 setCurrentUser called with:', user?.username || user?.email || 'null user');
+window.setCurrentUser = async function(user) {
+    await adminDebugLog('CriticalFunctions', 'setCurrentUser called', { username: user?.username || user?.email || 'null user' });
     currentUser = user;
     window.currentUser = user;
-    console.log('🔧 Local currentUser now set to:', currentUser?.username || 'null');
+    await adminDebugLog('CriticalFunctions', 'Local currentUser set', { username: currentUser?.username || 'null' });
 };
 
 // ============================================================================
@@ -70,8 +72,8 @@ window.setCurrentUser = function(user) {
 // ============================================================================
 
 // Check for existing auth on page load
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 Critical functions DOMContentLoaded - initializing essential systems...');
+document.addEventListener('DOMContentLoaded', async function() {
+    await adminDebugLog('CriticalFunctions', 'DOMContentLoaded - initializing essential systems');
 
     // Use new optimized initialization system if available
     if (typeof initializeApp !== 'undefined') {

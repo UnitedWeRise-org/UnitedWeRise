@@ -4,6 +4,7 @@
  * Migrated to ES6 modules: October 11, 2025 (Batch 1)
  */
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { adminDebugLog } from '../js/adminDebugger.js';
 
 // Frontend Performance Optimization Utilities
 // Implements caching, retry mechanisms, and loading states
@@ -45,14 +46,14 @@ class PerformanceOptimizer {
         if (useCache) {
             const cached = this.getCache(cacheKey);
             if (cached) {
-                console.log(`📦 Cache hit for ${endpoint}`);
+                adminDebugLog('Performance', `Cache hit for ${endpoint}`);
                 return cached;
             }
         }
 
         // Check if already loading
         if (this.loadingStates.has(cacheKey)) {
-            console.log(`⏳ Request already in progress for ${endpoint}`);
+            adminDebugLog('Performance', `Request already in progress for ${endpoint}`);
             return this.loadingStates.get(cacheKey);
         }
 
@@ -112,7 +113,7 @@ class PerformanceOptimizer {
             // Retry if under limit and error is retryable
             if (attempts < this.maxRetries && this.isRetryableError(error)) {
                 const delay = Math.pow(2, attempts) * 1000; // Exponential backoff
-                console.log(`🔄 Retrying ${endpoint} in ${delay}ms (attempt ${attempts}/${this.maxRetries})`);
+                adminDebugLog('Performance', `Retrying ${endpoint} in ${delay}ms (attempt ${attempts}/${this.maxRetries})`);
 
                 await this.delay(delay);
                 return this.executeWithRetry(apiCall, endpoint, options);
@@ -183,7 +184,7 @@ class PerformanceOptimizer {
             '/political/officials'
         ];
 
-        console.log('🚀 Preloading critical content...');
+        await adminDebugLog('Performance', 'Preloading critical content...');
 
         const preloadPromises = criticalEndpoints.map(async endpoint => {
             try {
@@ -194,7 +195,7 @@ class PerformanceOptimizer {
                         silent: true
                     });
                     if (!authResponse?.data?.zipCode) {
-                        console.log('📝 Skipping political/officials preload - user needs to add address');
+                        await adminDebugLog('Performance', 'Skipping political/officials preload - user needs to add address');
                         return;
                     }
                 }
@@ -204,14 +205,14 @@ class PerformanceOptimizer {
                     showLoading: false,
                     cacheTTL: 10 * 60 * 1000 // 10 minutes for critical content
                 });
-                console.log(`✅ Preloaded ${endpoint}`);
+                await adminDebugLog('Performance', `Preloaded ${endpoint}`);
             } catch (error) {
                 console.warn(`⚠️ Failed to preload ${endpoint}:`, error);
             }
         });
 
         await Promise.allSettled(preloadPromises);
-        console.log('🎉 Critical content preload complete');
+        await adminDebugLog('Performance', 'Critical content preload complete');
     }
 
     // Cache warming for user-specific content
@@ -224,7 +225,7 @@ class PerformanceOptimizer {
             `/notifications`
         ];
 
-        console.log(`🔥 Warming cache for user ${userId}...`);
+        await adminDebugLog('Performance', `Warming cache for user ${userId}...`);
 
         userEndpoints.forEach(endpoint => {
             // Fire and forget - don't await these
@@ -246,12 +247,11 @@ class PerformanceOptimizer {
                 const result = await fn.apply(this, args);
                 const duration = performance.now() - start;
 
-                console.log(`⏱️ ${name} took ${duration.toFixed(2)}ms`);
+                await adminDebugLog('Performance', `${name} took ${duration.toFixed(2)}ms`);
 
                 // Log slow operations
                 if (duration > 1000) {
-                    console.warn(`🐌 Slow operation detected: ${name} (${duration.toFixed(2)}ms)`);
-                }
+                    await adminDebugLog('Performance', `Slow operation detected: ${name} (${duration.toFixed(2)}ms)`);
 
                 return result;
             } catch (error) {
@@ -263,11 +263,11 @@ class PerformanceOptimizer {
     }
 
     // Clear cache (for logout, etc.)
-    clearCache() {
+    async clearCache() {
         this.cache.clear();
         this.loadingStates.clear();
         this.retryAttempts.clear();
-        console.log('🧹 Performance cache cleared');
+        await adminDebugLog('Performance', 'Performance cache cleared');
     }
 
     // Cache statistics

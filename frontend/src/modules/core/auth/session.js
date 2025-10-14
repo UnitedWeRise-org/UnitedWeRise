@@ -79,8 +79,10 @@ export function setUserLoggedIn(user) {
     // Dispatch events
     window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { user } }));
     window.dispatchEvent(new CustomEvent('authStateChanged', { detail: { authenticated: true, user } }));
-    
-    console.log('✅ User logged in:', user.username || user.email);
+
+    if (typeof adminDebugLog !== 'undefined') {
+        adminDebugLog('Session', 'User logged in', { username: user.username || user.email });
+    }
 }
 
 /**

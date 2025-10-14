@@ -3,6 +3,7 @@
 // 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
 import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
+import { adminDebugLog } from '../js/adminDebugger.js';
 
 class BackendIntegration {
     constructor() {
@@ -404,9 +405,9 @@ class OnboardingTrigger {
         });
 
         // Listen for app initialization complete event (ensures onboarding triggers after full app load)
-        window.addEventListener('appInitializationComplete', (event) => {
+        window.addEventListener('appInitializationComplete', async (event) => {
             if (event.detail && event.detail.user) {
-                console.log('🎯 App initialization complete, checking onboarding...');
+                await adminDebugLog('BackendIntegration', 'App initialization complete, checking onboarding...');
                 // Delay onboarding check to allow cookies to propagate
                 setTimeout(() => {
                     this.checkOnboardingStatus(event.detail.user);
@@ -426,7 +427,7 @@ class OnboardingTrigger {
                 ? Date.now() - createdDate.getTime()
                 : Infinity; // Very old if no date (skip onboarding)
 
-            console.log('🔍 Onboarding progress check:', {
+            await adminDebugLog('BackendIntegration', 'Onboarding progress check', {
                 userAge: userAge === Infinity ? 'unknown' : userAge,
                 isComplete: progress.isComplete,
                 currentStep: progress.currentStep,
@@ -447,7 +448,7 @@ class OnboardingTrigger {
             } else if (shouldShowOnboarding) {
                 console.warn('⚠️ Should show onboarding but OnboardingFlow not available');
             } else {
-                console.log('✅ Onboarding not needed:', {
+                await adminDebugLog('BackendIntegration', 'Onboarding not needed', {
                     complete: progress.isComplete,
                     userAge: userAge === Infinity ? 'unknown' : Math.round(userAge / (24 * 60 * 60 * 1000)),
                     weekLimit: 7

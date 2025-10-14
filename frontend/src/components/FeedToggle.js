@@ -5,6 +5,7 @@
 
 import { getApiBaseUrl } from '../utils/environment.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
+import { adminDebugLog } from '../js/adminDebugger.js';
 
 export class FeedToggle {
     constructor() {
@@ -604,7 +605,7 @@ export class FeedToggle {
     }
 
     async loadDiscoverFeed(bypassCache = false) {
-        console.log('Loading discover feed...', bypassCache ? '(bypassing cache)' : '');
+        await adminDebugLog('FeedToggle', 'Loading discover feed...', { bypassCache });
 
         // Check cache first (unless bypassing)
         if (!bypassCache && this.caches.discover.length > 0) {
@@ -628,8 +629,8 @@ export class FeedToggle {
             method: 'GET'
         });
 
-        console.log('Discover feed response:', response);
-        console.log('📊 Response structure check:', {
+        await adminDebugLog('FeedToggle', 'Discover feed response', response);
+        await adminDebugLog('FeedToggle', 'Response structure check', {
             hasResponse: !!response,
             hasData: !!response?.data,
             hasOk: !!response?.ok,
@@ -642,20 +643,20 @@ export class FeedToggle {
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
-            console.log('✅ Found posts at response.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
-            console.log('✅ Found posts at response.data.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
-            console.log('✅ Found posts at response.ok.data.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.ok.data.posts');
             posts = response.data.posts;
         } else {
             console.error('❌ Could not find posts in response. Response structure:', response);
         }
 
         if (posts && Array.isArray(posts)) {
-            console.log(`✅ Returning ${posts.length} posts for discover feed`);
+            await adminDebugLog('FeedToggle', `Returning ${posts.length} posts for discover feed`);
             this.caches.discover = posts;
             return posts;
         }
@@ -719,8 +720,8 @@ export class FeedToggle {
         return [];
     }
 
-    renderPosts(posts, feedType) {
-        console.log('🎨 renderPosts called:', {
+    async renderPosts(posts, feedType) {
+        await adminDebugLog('FeedToggle', 'renderPosts called', {
             feedType,
             postsReceived: !!posts,
             postsLength: posts?.length,
@@ -735,7 +736,7 @@ export class FeedToggle {
         }
 
         if (!posts || posts.length === 0) {
-            console.warn('⚠️ No posts to render, showing empty state');
+            await adminDebugLog('FeedToggle', 'No posts to render, showing empty state');
 
             const emptyDiv = document.createElement('div');
             emptyDiv.style.cssText = 'text-align: center; padding: 2rem; color: #666;';

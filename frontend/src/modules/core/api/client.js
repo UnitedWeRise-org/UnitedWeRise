@@ -2,11 +2,13 @@
  * @module core/api/client
  * @description Unified API client for all backend communications
  * Handles authentication, caching, and error management
- * 
+ *
  * @example
  * import { apiClient } from '@/modules/core/api/client';
  * const response = await apiClient.call('/users/profile');
  */
+
+import { adminDebugLog } from '../../../../js/adminDebugger.js';
 
 const API_CONFIG = {
     get BASE_URL() {
@@ -37,7 +39,7 @@ class APIClient {
      */
     async call(endpoint, options = {}) {
         // Build full URL
-        const url = this._buildURL(endpoint, options.params);
+        const url = await this._buildURL(endpoint, options.params);
 
         // Check cache for GET requests (unless bypassCache is explicitly set)
         if ((!options.method || options.method === 'GET') && !options.bypassCache) {
@@ -191,12 +193,12 @@ class APIClient {
      * Build full URL with query parameters
      * @private
      */
-    _buildURL(endpoint, params) {
+    async _buildURL(endpoint, params) {
         const baseURL = endpoint.startsWith('http')
             ? endpoint
             : `${API_CONFIG.BASE_URL}${endpoint}`;
 
-        console.log('🔧 API Client _buildURL:', {
+        await adminDebugLog('APIClient', 'Building URL', {
             endpoint,
             baseURL: API_CONFIG.BASE_URL,
             fullURL: baseURL
@@ -316,17 +318,19 @@ class APIClient {
     async upload(endpoint, file, onProgress) {
         const formData = new FormData();
         formData.append('file', file);
-        
+
+        const url = await this._buildURL(endpoint);
+
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            
+
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable && onProgress) {
                     const percentComplete = (e.loaded / e.total) * 100;
                     onProgress(percentComplete);
                 }
             });
-            
+
             xhr.addEventListener('load', () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
@@ -339,14 +343,14 @@ class APIClient {
                     reject(new Error(`Upload failed: ${xhr.status}`));
                 }
             });
-            
+
             xhr.addEventListener('error', () => {
                 reject(new Error('Upload failed'));
             });
-            
-            xhr.open('POST', this._buildURL(endpoint));
+
+            xhr.open('POST', url);
             xhr.withCredentials = true;
-            
+
             const csrfToken = this.csrfToken || window.csrfToken;
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRF-Token', csrfToken);
@@ -354,7 +358,7 @@ class APIClient {
                 this.csrfToken = csrfToken;
                 window.csrfToken = csrfToken;
             }
-            
+
             xhr.send(formData);
         });
     }

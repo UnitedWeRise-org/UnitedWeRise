@@ -10,6 +10,7 @@
 
 import { apiClient } from '../../core/api/client.js';
 import { userState } from '../../core/state/user.js';
+import { adminDebugLog } from '../../../../js/adminDebugger.js';
 
 // Variables for infinite scroll functionality
 let isLoadingMorePosts = false;
@@ -28,7 +29,7 @@ let selectedPostMedia = null;
  * @returns {Promise<Object>} Upload response from backend
  */
 async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption = '', gallery = null) {
-    console.log('📸 Uploading media files:', { files, photoType, purpose });
+    await adminDebugLog('MyFeed', 'Uploading media files:', { files, photoType, purpose });
 
     const fileArray = Array.isArray(files) ? files : [files];
     const uploadedPhotos = [];
@@ -43,7 +44,7 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
             if (caption) formData.append('caption', caption);
             if (gallery) formData.append('gallery', gallery);
 
-            console.log(`📤 Uploading ${file.name} to backend...`);
+            await adminDebugLog('MyFeed', `Uploading ${file.name} to backend...`);
 
             const response = await apiClient.call('/photos/upload', {
                 method: 'POST',
@@ -51,7 +52,7 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
                 // DO NOT set Content-Type header - browser sets it automatically with boundary
             });
 
-            console.log(`✅ Upload response:`, response);
+            await adminDebugLog('MyFeed', `Upload response:`, response);
 
             // PhotoPipeline returns photoId directly in response.data
             const photoData = response.data;
@@ -61,7 +62,7 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
                     url: photoData.url,
                     ...photoData                // Include all other fields
                 });
-                console.log(`✅ Photo uploaded: ${photoData.photoId}`);
+                await adminDebugLog('MyFeed', `Photo uploaded: ${photoData.photoId}`);
             } else {
                 console.error('❌ No photo data in response:', response);
             }
@@ -84,7 +85,7 @@ async function uploadMediaFiles(files, photoType, purpose = 'PERSONAL', caption 
  * Extracted from index.html line 4550
  */
 export async function loadMyFeedPosts() {
-    console.log('🔄 Loading My Feed posts...');
+    await adminDebugLog('MyFeed', 'Loading My Feed posts...');
     
     // Ensure user is authenticated
     if (!window.currentUser) {
@@ -99,12 +100,12 @@ export async function loadMyFeedPosts() {
     }
     
     try {
-        console.log('🌐 Making API call to /feed/');
+        await adminDebugLog('MyFeed', 'Making API call to /feed/');
         const response = await apiClient.call('/feed/?limit=15', {
             method: 'GET'
         });
-        
-        console.log('📦 My Feed API Response:', response);
+
+        await adminDebugLog('MyFeed', 'My Feed API Response:', response);
         
         // Handle different response formats
         let posts = null;
@@ -120,13 +121,13 @@ export async function loadMyFeedPosts() {
         }
         
         if (posts && Array.isArray(posts) && posts.length > 0) {
-            console.log(`✅ Found ${posts.length} posts for My Feed`);
+            await adminDebugLog('MyFeed', `Found ${posts.length} posts for My Feed`);
             // Reset offset for initial load
             currentFeedOffset = posts.length;
             hasMorePosts = true;
             displayMyFeedPosts(posts);
         } else {
-            console.log('📝 No posts found in My Feed');
+            await adminDebugLog('MyFeed', 'No posts found in My Feed');
             const feedContainer = document.getElementById('myFeedPosts');
             if (feedContainer) {
                 feedContainer.innerHTML = `
@@ -174,14 +175,14 @@ export function displayMyFeedPosts(posts, appendMode = false) {
         }
         return;
     }
-    
-    console.log(`🎯 ${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
+
+    await adminDebugLog('MyFeed', `${appendMode ? 'Appending' : 'Displaying'} ${posts.length} posts in My Feed`);
 
     // DIAGNOSTIC: Log photo data received from API
     const postsWithPhotos = posts.filter(p => p.photos && p.photos.length > 0);
-    console.log(`📸 FRONTEND - ${postsWithPhotos.length} posts have photos out of ${posts.length} total`);
+    await adminDebugLog('MyFeed', `FRONTEND - ${postsWithPhotos.length} posts have photos out of ${posts.length} total`);
     if (postsWithPhotos.length > 0) {
-        console.log(`📸 FRONTEND - Sample post with photos:`, {
+        await adminDebugLog('MyFeed', `FRONTEND - Sample post with photos:`, {
             postId: postsWithPhotos[0].id,
             photoCount: postsWithPhotos[0].photos.length,
             photoData: postsWithPhotos[0].photos
@@ -190,7 +191,7 @@ export function displayMyFeedPosts(posts, appendMode = false) {
 
     // Use UnifiedPostRenderer for consistent photo rendering across all contexts
     if (window.unifiedPostRenderer) {
-        console.log('✅ Using UnifiedPostRenderer for My Feed display');
+        await adminDebugLog('MyFeed', 'Using UnifiedPostRenderer for My Feed display');
 
         if (appendMode) {
             window.unifiedPostRenderer.appendPosts(posts, 'myFeedPosts', {
@@ -212,7 +213,7 @@ export function displayMyFeedPosts(posts, appendMode = false) {
             });
         }
     } else if (window.postComponent) {
-        console.log('⚠️ UnifiedPostRenderer not available, using PostComponent fallback');
+        await adminDebugLog('MyFeed', 'UnifiedPostRenderer not available, using PostComponent fallback');
         let html = '';
 
         posts.forEach(post => {
@@ -240,8 +241,8 @@ export function displayMyFeedPosts(posts, appendMode = false) {
  * Fallback display function for My Feed
  * Extracted from index.html line 4656
  */
-function displayMyFeedPostsFallback(posts, container, appendMode = false) {
-    console.log(`🔧 Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
+async function displayMyFeedPostsFallback(posts, container, appendMode = false) {
+    await adminDebugLog('MyFeed', `Using fallback display for My Feed (${appendMode ? 'append' : 'replace'} mode)`);
 
     let html = '';
     posts.forEach(post => {
@@ -326,12 +327,12 @@ export async function loadMoreMyFeedPosts() {
 
     try {
         // Use offset-based pagination
-        console.log(`🔄 Loading more My Feed posts... (offset: ${currentFeedOffset})`);
+        await adminDebugLog('MyFeed', `Loading more My Feed posts... (offset: ${currentFeedOffset})`);
         const response = await apiClient.call(`/feed/?limit=15&offset=${currentFeedOffset}`, {
             method: 'GET'
         });
 
-        console.log('📦 Load more response:', response);
+        await adminDebugLog('MyFeed', 'Load more response:', response);
         
         // Handle different response formats
         let posts = null;
@@ -357,14 +358,14 @@ export async function loadMoreMyFeedPosts() {
         }
 
         // Append new posts to existing feed
-        console.log(`✅ Appending ${posts.length} more posts (total offset: ${currentFeedOffset})`);
+        await adminDebugLog('MyFeed', `Appending ${posts.length} more posts (total offset: ${currentFeedOffset})`);
         displayMyFeedPosts(posts, true); // true = append mode
         currentFeedOffset += posts.length;
         
         // Check if backend indicates more posts available
         if (response.pagination && response.pagination.hasMore === false) {
             hasMorePosts = false;
-            console.log('📝 Backend indicates no more posts available');
+            await adminDebugLog('MyFeed', 'Backend indicates no more posts available');
         }
 
     } catch (error) {
@@ -392,10 +393,10 @@ export async function loadMoreMyFeedPosts() {
  * Setup infinite scroll for My Feed
  * Extracted from index.html line 4773
  */
-export function setupMyFeedInfiniteScroll() {
+export async function setupMyFeedInfiniteScroll() {
     const myFeedContainer = document.getElementById('myFeedPosts');
     if (myFeedContainer) {
-        console.log('✅ Setting up infinite scroll for My Feed');
+        await adminDebugLog('MyFeed', 'Setting up infinite scroll for My Feed');
         myFeedContainer.addEventListener('scroll', () => {
             // Skip if already loading
             if (isLoadingMorePosts || !hasMorePosts) {
@@ -407,14 +408,14 @@ export function setupMyFeedInfiniteScroll() {
             
             // Only trigger at the very bottom to prevent multiple requests
             if (distanceFromBottom <= 50) {
-                console.log('🔄 Infinite scroll triggered - loading more posts');
+                adminDebugLog('MyFeed', 'Infinite scroll triggered - loading more posts');
                 loadMoreMyFeedPosts();
             }
         });
     } else {
         // Don't warn on initial setup - container may not exist yet
         // Will be called again when feed is shown
-        console.log('📝 myFeedPosts container not ready yet, will setup infinite scroll when needed');
+        await adminDebugLog('MyFeed', 'myFeedPosts container not ready yet, will setup infinite scroll when needed');
     }
 }
 
@@ -446,13 +447,13 @@ export function attachMediaToPost() {
 export { uploadMediaFiles };
 
 export async function handlePostMediaUpload(input) {
-    console.log('🔧 handlePostMediaUpload called with input:', input);
-    console.log('🔧 Input element type:', input.type);
-    console.log('🔧 Files selected:', input.files?.length || 0);
+    await adminDebugLog('MyFeed', 'handlePostMediaUpload called with input:', input);
+    await adminDebugLog('MyFeed', 'Input element type:', input.type);
+    await adminDebugLog('MyFeed', 'Files selected:', input.files?.length || 0);
 
     const file = input.files[0];
     if (!file) {
-        console.log('🔧 No file selected, returning early');
+        await adminDebugLog('MyFeed', 'No file selected, returning early');
         return;
     }
 
@@ -477,7 +478,7 @@ export async function handlePostMediaUpload(input) {
     selectedPostMedia = file;
 
     // DEBUG: Log file at selection time
-    console.log('📁 File at SELECTION time:', {
+    await adminDebugLog('MyFeed', 'File at SELECTION time:', {
         name: file.name,
         size: file.size,
         type: file.type,
@@ -539,7 +540,7 @@ export function clearMediaAttachment() {
  * Creates posts from any textarea using UnifiedPostCreator
  */
 export async function createPostFromTextarea(textareaId, onSuccess = null, options = {}) {
-    console.log('🎯 createPostFromTextarea() - using UnifiedPostCreator');
+    await adminDebugLog('MyFeed', 'createPostFromTextarea() - using UnifiedPostCreator');
 
     if (!window.unifiedPostCreator) {
         console.error('❌ UnifiedPostCreator not available');
@@ -554,8 +555,8 @@ export async function createPostFromTextarea(textareaId, onSuccess = null, optio
         destination: options.destination || 'feed',
         tags: options.tags || ['Public Post'],
         clearAfterSuccess: options.clearMedia !== false,
-        onSuccess: (result) => {
-            console.log('✅ Post created successfully via UnifiedPostCreator');
+        onSuccess: async (result) => {
+            await adminDebugLog('MyFeed', 'Post created successfully via UnifiedPostCreator');
 
             // Call the user-provided success callback if provided
             if (onSuccess && typeof onSuccess === 'function') {
@@ -585,11 +586,11 @@ export async function createPostFromTextarea(textareaId, onSuccess = null, optio
  * Prepend user's newly created post to the top of My Feed for instant gratification
  * This doesn't affect the feed algorithm - just shows the post immediately
  */
-function prependUserPostToFeed(post, user) {
+async function prependUserPostToFeed(post, user) {
     const feedContainer = document.getElementById('myFeedPosts');
     if (!feedContainer) return;
 
-    console.log('📝 Prepending new post to feed:', {
+    await adminDebugLog('MyFeed', 'Prepending new post to feed:', {
         id: post.id,
         hasPhotos: !!(post.photos?.length),
         photoCount: post.photos?.length || 0
@@ -654,7 +655,7 @@ function prependUserPostToFeed(post, user) {
  * Uses UnifiedPostCreator for consistent posting across entire platform
  */
 export async function createPostFromFeed() {
-    console.log('🎯 createPostFromFeed() - using UnifiedPostCreator');
+    await adminDebugLog('MyFeed', 'createPostFromFeed() - using UnifiedPostCreator');
 
     if (!window.unifiedPostCreator) {
         console.error('❌ UnifiedPostCreator not available');
@@ -669,8 +670,8 @@ export async function createPostFromFeed() {
         destination: 'feed',
         tags: ['Public Post'],
         clearAfterSuccess: true,
-        onSuccess: (result) => {
-            console.log('✅ Post created successfully via UnifiedPostCreator');
+        onSuccess: async (result) => {
+            await adminDebugLog('MyFeed', 'Post created successfully via UnifiedPostCreator');
 
             // Update character counter
             const charCount = document.getElementById('feedPostCharCount');
@@ -709,12 +710,12 @@ if (document.readyState === 'loading') {
 function setupUnifiedAuthListener() {
     // Listen for authentication state changes to automatically refresh feed
     if (window.unifiedAuthManager) {
-        window.unifiedAuthManager.subscribe((authState) => {
-            console.log('🎯 My Feed: Auth state changed:', authState.isAuthenticated);
-            
+        window.unifiedAuthManager.subscribe(async (authState) => {
+            await adminDebugLog('MyFeed', 'Auth state changed:', authState.isAuthenticated);
+
             if (authState.isAuthenticated && authState.user) {
                 // User just logged in - refresh feed
-                console.log('🔄 My Feed: User logged in, auto-loading feed...');
+                await adminDebugLog('MyFeed', 'User logged in, auto-loading feed...');
                 setTimeout(() => {
                     if (typeof window.showMyFeedInMain === 'function') {
                         window.showMyFeedInMain();
@@ -724,13 +725,13 @@ function setupUnifiedAuthListener() {
                 }, 200);
             }
         });
-        console.log('✅ My Feed: Listening to unified auth manager');
+        adminDebugLog('MyFeed', 'Listening to unified auth manager');
     } else {
-        console.log('⚠️ My Feed: Unified auth manager not available, using fallback listeners');
-        
+        adminDebugLog('MyFeed', 'Unified auth manager not available, using fallback listeners');
+
         // Fallback to custom events
-        window.addEventListener('userLoggedIn', () => {
-            console.log('🔄 My Feed: User logged in event received');
+        window.addEventListener('userLoggedIn', async () => {
+            await adminDebugLog('MyFeed', 'User logged in event received');
             setTimeout(() => {
                 if (typeof window.showMyFeedInMain === 'function') {
                     window.showMyFeedInMain();

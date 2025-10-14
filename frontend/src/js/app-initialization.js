@@ -2,11 +2,12 @@
 // Reduces API calls on page load and implements smart caching
 // Now integrated with unified authentication manager for perfect sync
 
+import { adminDebugLog } from './adminDebugger.js';
 import { isProduction } from '../utils/environment.js';
 
 class AppInitializer {
     // Production logging helper - only shows important messages
-    static log(message, dataOrType = 'info', typeOverride = null) {
+    static async log(message, dataOrType = 'info', typeOverride = null) {
         // Determine if second arg is data object or type string
         const isDataObject = typeof dataOrType === 'object' && dataOrType !== null;
         const type = typeOverride || (isDataObject ? 'info' : dataOrType);
@@ -17,7 +18,7 @@ class AppInitializer {
         } else if (type === 'warn') {
             console.warn(message, ...(data ? [data] : [])); // Always show warnings
         } else if (!isProduction()) {
-            console.log(message, ...(data ? [data] : [])); // Only show debug in development
+            await adminDebugLog('AppInitializer', message, data); // Admin-only debug in development
         }
     }
     constructor() {
@@ -517,12 +518,12 @@ class AppInitializer {
                     });
                 }
             }
-            
-            console.log('🏗️ ================================================');
-            
+
+            await adminDebugLog('AppInitializer', '================================================');
+
         } catch (error) {
-            console.log(`❌ Backend Status: Unreachable (${error.message})`);
-            console.log('🏗️ ================================================');
+            await adminDebugLog('AppInitializer', `Backend Status: Unreachable (${error.message})`);
+            await adminDebugLog('AppInitializer', '================================================');
         }
     }
 }
