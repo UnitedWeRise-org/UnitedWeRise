@@ -90,7 +90,7 @@ class PostComponent {
 
         // Generate the main post content
         const mainPostContent = `
-            <div class="post-component" data-post-id="${post.id}" data-author-reputation="${post.authorReputation || 70}">
+            <div class="post-component" data-post-id="${post.id}" data-author-id="${post.author?.id || ''}" data-author-reputation="${post.authorReputation || 70}">
                 ${settings.showAuthor ? `
                     <div class="post-header">
                         <div class="post-avatar user-card-trigger"
@@ -1200,6 +1200,15 @@ class PostComponent {
         const currentUser = window.currentUser;
         if (!currentUser) {
             alert('Please log in to share posts');
+            return;
+        }
+
+        // Check if user is trying to share their own post
+        const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+        const authorId = postElement?.getAttribute('data-author-id');
+
+        if (authorId === currentUser.id) {
+            this.showToast('You cannot share your own posts', 'info');
             return;
         }
 

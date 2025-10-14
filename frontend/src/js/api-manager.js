@@ -145,25 +145,34 @@ class APIRequestManager {
                     if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After')) || 60;
                         await adminDebugWarn('APIManager', `Rate limited, backing off for ${retryAfter}s`);
-                        
+
                         if (attempt < this.config.maxRetries) {
                             await this.delay(retryAfter * 1000);
                             continue;
                         }
                     }
-                    
+
                     const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                    const error = new Error(errorData.error || `HTTP ${response.status}`);
+                    error.status = response.status; // Attach status code for retry logic
+                    throw error;
                 }
-                
+
                 const data = await response.json();
                 await adminDebugLog('APIManager', `API Success: ${endpoint}`);
                 return data;
-                
+
             } catch (error) {
                 lastError = error;
                 await adminDebugWarn('APIManager', `API Request failed (attempt ${attempt + 1}): ${endpoint}`, error.message);
-                
+
+                // Don't retry 4xx client errors (400-499) - these will never succeed on retry
+                // Only retry network errors (no status) or 5xx server errors (500-599)
+                if (error.status && error.status >= 400 && error.status < 500) {
+                    await adminDebugLog('APIManager', `Client error (${error.status}), not retrying`);
+                    break; // Exit retry loop immediately for client errors
+                }
+
                 if (attempt < this.config.maxRetries) {
                     await this.delay(this.config.retryDelay * Math.pow(2, attempt));
                 }
