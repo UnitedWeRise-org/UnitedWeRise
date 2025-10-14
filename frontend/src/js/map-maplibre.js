@@ -907,10 +907,6 @@ class UWRMapLibre {
         } while (popupCount === this.lastBubbleCount && maxBubbles > 1);
         this.lastBubbleCount = popupCount;
 
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MapSystem', `Creating ${popupCount} bubbles sequentially (${isCollapsed ? 'collapsed' : 'expanded'} state)`, null);
-        }
-
         const newCycle = {
             timestamp: timestamp,
             popups: [],
@@ -1058,10 +1054,6 @@ class UWRMapLibre {
                     popupContent.style.opacity = '1';
                 }
             }, 50);
-
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'Starting 3-second fade-in animation', null);
-            }
         }
     }
 
@@ -1234,16 +1226,10 @@ class UWRMapLibre {
     }
 
     async fetchTrendingComment(jurisdiction) {
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
-        }
-
         // Check if user is authenticated before making API calls
         const authToken = localStorage.getItem('authToken');
         if (!authToken) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'No auth token available, using dummy data', null);
-            }
+            // Silent fallback to dummy data when not authenticated
             return this.getDummyTopicFromHelper(jurisdiction);
         }
 
@@ -1251,9 +1237,7 @@ class UWRMapLibre {
         const now = Date.now();
         if (!this.lastApiCall) this.lastApiCall = 0;
         if (now - this.lastApiCall < 2000) { // Wait at least 2 seconds between API calls
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'Rate limiting API calls, using dummy data', null);
-            }
+            // Silent fallback to dummy data when rate limited
             return this.getDummyTopicFromHelper(jurisdiction);
         }
         this.lastApiCall = now;
@@ -1344,16 +1328,8 @@ class UWRMapLibre {
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
-            }
-
             if (dummyTopics.length > 0) {
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
-                }
 
                 return {
                     id: topic.id,
@@ -1477,16 +1453,8 @@ class UWRMapLibre {
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
-            }
-
             if (dummyTopics.length > 0) {
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
-                }
 
                 return {
                     id: topic.id,
