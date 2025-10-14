@@ -137,9 +137,8 @@ class UWRMapLibre {
             this.showLoadingError();
         });
 
-        // FALLBACK: Force show map after maximum wait time (for localhost testing)
-        setTimeout(async () => {
-            await adminDebugLog('MapLibre', 'TIMEOUT FALLBACK: Force showing map after 5 seconds');
+        // FALLBACK: Force show map after maximum wait time (silent during normal operation)
+        setTimeout(() => {
             this.showMapContainer();
         }, 5000);
         
@@ -678,10 +677,9 @@ class UWRMapLibre {
 
     // Loading state management
     async showMapContainer() {
-        await adminDebugLog('MapLibre', 'showMapContainer called - hiding loading state');
         const loadingState = document.getElementById('mapLoadingState');
         const mapContainer = document.getElementById('mapContainer');
-        
+
         if (loadingState && mapContainer) {
             // Add minimum loading time to prevent flickering
             const minLoadingTime = 1000; // 1 second minimum
@@ -689,20 +687,16 @@ class UWRMapLibre {
             const elapsed = Date.now() - loadStartTime;
             const remainingTime = Math.max(0, minLoadingTime - elapsed);
 
-            await adminDebugLog('MapLibre', `Loading for ${elapsed}ms, waiting ${remainingTime}ms more`);
-
-            setTimeout(async () => {
+            setTimeout(() => {
                 // Hide loading state - map should now be ready
                 loadingState.classList.add('hidden');
                 loadingState.style.display = 'none';
-                await adminDebugLog('MapLibre', 'Loading state hidden, map should be visible');
 
                 // Ensure map container is visible
                 mapContainer.style.display = 'block';
 
                 // Trigger resize to ensure map renders correctly
-                setTimeout(async () => {
-                    await adminDebugLog('MapLibre', 'Triggering map resize');
+                setTimeout(() => {
                     this.handleResize();
                 }, 100);
             }, remainingTime);
@@ -1132,73 +1126,39 @@ class UWRMapLibre {
         // Wait for container CSS transition to complete
         setTimeout(async () => {
             try {
-                // Get current map state before adjustment
-                const beforeZoom = this.map.getZoom();
-                const beforeCenter = this.map.getCenter();
-                await adminDebugLog('MapLibre', `Before adjustment - Zoom: ${beforeZoom.toFixed(2)}, Center: [${beforeCenter.lng.toFixed(2)}, ${beforeCenter.lat.toFixed(2)}]`);
-
-                // Debug map properties that might prevent zoom changes
-                await adminDebugLog('MapLibre', `Map debug info:`);
-                await adminDebugLog('MapLibre', `   - Min zoom: ${this.map.getMinZoom()}`);
-                await adminDebugLog('MapLibre', `   - Max zoom: ${this.map.getMaxZoom()}`);
-                await adminDebugLog('MapLibre', `   - Is moving: ${this.map.isMoving()}`);
-                await adminDebugLog('MapLibre', `   - Is zooming: ${this.map.isZooming()}`);
-                await adminDebugLog('MapLibre', `   - Is rotating: ${this.map.isRotating()}`);
-                await adminDebugLog('MapLibre', `   - Map loaded: ${this.map.loaded()}`);
-
-                // Resize map to fit new container
-                await adminDebugLog('MapLibre', 'Calling map.resize()...');
+                // Resize map to fit new container (silent during normal operation)
                 this.map.resize();
-                
+
                 // Set appropriate view based on current jurisdiction and container state
                 if (this.currentJurisdiction === 'national') {
                     if (isCollapsed) {
-                        await adminDebugLog('MapLibre', 'Setting COLLAPSED state: Zoom way out to fit US in small container');
                         // Collapsed: Use jumpTo for immediate zoom change
-                        await adminDebugLog('MapLibre', 'Using jumpTo() for immediate zoom change...');
                         this.map.jumpTo({
                             center: [-97.5, 39],  // Center on continental US
                             zoom: 2.1             // STANDARDIZED: Collapsed state zoom (preferred by user)
                         });
                     } else {
-                        await adminDebugLog('MapLibre', 'Setting EXPANDED state: Zoom in for detail in large container');
                         // Expanded: Use jumpTo for immediate zoom change
-                        await adminDebugLog('MapLibre', 'Using jumpTo() for immediate zoom change...');
                         this.map.jumpTo({
                             center: [-97.5, 39],  // Center on continental US
                             zoom: 3.6             // Match default zoom level
                         });
                     }
-                    
-                    // Log the change after animation completes
+
+                    // Verify zoom reached expected level (silent unless error)
                     setTimeout(async () => {
                         const afterZoom = this.map.getZoom();
-                        const afterCenter = this.map.getCenter();
-                        await adminDebugLog('MapLibre', `After adjustment - Zoom: ${afterZoom.toFixed(2)}, Center: [${afterCenter.lng.toFixed(2)}, ${afterCenter.lat.toFixed(2)}]`);
-                        await adminDebugLog('MapLibre', `Zoom change: ${beforeZoom.toFixed(2)} → ${afterZoom.toFixed(2)} (${afterZoom > beforeZoom ? '+' : ''}${(afterZoom - beforeZoom).toFixed(2)})`);
-
-                        // Double-check if zoom didn't change as expected
                         const expectedZoom = isCollapsed ? 2.1 : 3.6;
                         if (Math.abs(afterZoom - expectedZoom) > 0.1) {
-                            await adminDebugLog('MapLibre', `Zoom didn't reach expected level! Expected: ${expectedZoom}, Actual: ${afterZoom.toFixed(2)}`);
-                            await adminDebugLog('MapLibre', `Attempting to force zoom to ${expectedZoom}...`);
+                            await adminDebugLog('MapLibre', `Zoom issue! Expected: ${expectedZoom}, Actual: ${afterZoom.toFixed(2)}, forcing...`);
                             this.map.setZoom(expectedZoom);
-
-                            // Verify the forced zoom worked
-                            setTimeout(async () => {
-                                const finalZoom = this.map.getZoom();
-                                await adminDebugLog('MapLibre', `Final zoom after force: ${finalZoom.toFixed(2)}`);
-                            }, 100);
                         }
-                    }, 500); // Wait longer for easeTo animation
-                    
+                    }, 500);
+
                 } else {
-                    await adminDebugLog('MapLibre', 'Non-national jurisdiction, just resizing...');
                     // For state/local views, just resize without changing bounds
                     this.map.resize();
                 }
-
-                await adminDebugLog('MapLibre', 'Map adjusted for new container state');
             } catch (error) {
                 console.error('❌ Error adjusting map for container state:', error);
             }

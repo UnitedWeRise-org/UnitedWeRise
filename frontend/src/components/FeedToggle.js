@@ -615,7 +615,7 @@ export class FeedToggle {
     }
 
     async loadDiscoverFeed(bypassCache = false) {
-        await adminDebugLog('FeedToggle', 'Loading discover feed...', { bypassCache });
+        // Load discover feed (silent during normal operation)
 
         // Check cache first (unless bypassing)
         if (!bypassCache && this.caches.discover.length > 0) {
@@ -1115,9 +1115,7 @@ export class FeedToggle {
             }
         }, { passive: true });
 
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('FeedToggle', 'Scroll behavior initialized on #myFeedPosts');
-        }
+        // Scroll behavior initialized (silent during normal operation)
     }
 
     /**

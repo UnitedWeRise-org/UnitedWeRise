@@ -436,16 +436,8 @@ class OnboardingTrigger {
                 ? Date.now() - createdDate.getTime()
                 : Infinity; // Very old if no date (skip onboarding)
 
-            await adminDebugLog('BackendIntegration', 'Onboarding progress check', {
-                userAge: userAge === Infinity ? 'unknown' : userAge,
-                isComplete: progress.isComplete,
-                currentStep: progress.currentStep,
-                totalSteps: progress.totalSteps
-            });
-
             // Show onboarding if not complete and user has been registered for less than 7 days
             const weekInMs = 7 * 24 * 60 * 60 * 1000;
-
             const shouldShowOnboarding = !progress.isComplete && userAge < weekInMs;
 
             if (shouldShowOnboarding && window.onboardingFlow) {
@@ -456,13 +448,8 @@ class OnboardingTrigger {
                 }, 1500);
             } else if (shouldShowOnboarding) {
                 console.warn('⚠️ Should show onboarding but OnboardingFlow not available');
-            } else {
-                await adminDebugLog('BackendIntegration', 'Onboarding not needed', {
-                    complete: progress.isComplete,
-                    userAge: userAge === Infinity ? 'unknown' : Math.round(userAge / (24 * 60 * 60 * 1000)),
-                    weekLimit: 7
-                });
             }
+            // Silently skip onboarding if not needed (reduces console noise)
         } catch (error) {
             console.error('Failed to check onboarding status:', error);
 

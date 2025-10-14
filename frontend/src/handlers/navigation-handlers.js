@@ -638,9 +638,7 @@ class NavigationHandlers {
     }
 
     async showMyFeedInMain() {
-        if (typeof adminDebugLog !== 'undefined') {
-            await adminDebugLog('Navigation', 'Showing My Feed in main content area');
-        }
+        // Show My Feed in main content area (silent during normal operation)
 
         // Hide other main view systems
         this.hideOtherMainViews();
@@ -837,11 +835,7 @@ class NavigationHandlers {
             this.mapContainer = document.getElementById('mapContainer');
             const toggleBtn = document.getElementById('mapToggleBtn');
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('UISystem', 'mapContainer found', !!this.mapContainer);
-                adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
-            }
-
+            // Setup collapse button handler (silent during normal operation)
             if (toggleBtn && this.mapContainer) {
                 // Remove any existing listeners
                 toggleBtn.replaceWith(toggleBtn.cloneNode(true));
@@ -849,10 +843,6 @@ class NavigationHandlers {
 
                 // Add click handler
                 newToggleBtn.addEventListener('click', this.handleCollapseClick.bind(this), false);
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('UISystem', 'Collapse button handler attached successfully');
-                }
             } else {
                 if (typeof adminDebugError !== 'undefined') {
                     adminDebugError('UISystem', 'Could not find button or container elements');

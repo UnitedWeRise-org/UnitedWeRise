@@ -66,9 +66,7 @@ export class MyFeedHandlers {
      * Migrated from index.html line 2586
      */
     async showMyFeedInMain() {
-        if (typeof adminDebugLog !== 'undefined') {
-            await adminDebugLog('MyFeed', 'Showing My Feed in main content area');
-        }
+        // Show My Feed in main content area (silent during normal operation)
 
         // Hide Civic Organizing container if open
         const civicOrganizing = document.querySelector('.civic-organizing-container');
@@ -102,10 +100,6 @@ export class MyFeedHandlers {
                 </div>
             `;
             return;
-        }
-
-        if (typeof adminDebugLog !== 'undefined') {
-            await adminDebugLog('MyFeed', 'Authenticated user found for My Feed', { username: window.currentUser.username });
         }
 
         // Hide other content

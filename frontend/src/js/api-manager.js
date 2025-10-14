@@ -40,18 +40,16 @@ class APIRequestManager {
     // Main request method with deduplication and caching
     async request(endpoint, options = {}) {
         const key = this.createRequestKey(endpoint, options);
-        
-        // Check if request is already pending
+
+        // Check if request is already pending (silent deduplication)
         if (this.pendingRequests.has(key)) {
-            await adminDebugLog('APIManager', `Deduplicating request: ${endpoint}`);
             return this.pendingRequests.get(key);
         }
-        
-        // Check cache if not bypassed
+
+        // Check cache if not bypassed (silent cache hit)
         if (!options.bypassCache) {
             const cached = this.getFromCache(key);
             if (cached) {
-                await adminDebugLog('APIManager', `Cache hit: ${endpoint}`);
                 return cached;
             }
         }
@@ -77,14 +75,14 @@ class APIRequestManager {
 
     // Batch multiple requests together
     async batchRequest(requests) {
-        await adminDebugLog('APIManager', `Batching ${requests.length} requests`);
-        
+        // Silent batching of multiple requests
+
         const batchKey = `batch_${Date.now()}`;
-        
+
         // Check cache for individual requests first
         const results = new Map();
         const uncachedRequests = [];
-        
+
         for (const req of requests) {
             const key = this.createRequestKey(req.endpoint, req.options);
             const cached = this.getFromCache(key);
@@ -94,10 +92,9 @@ class APIRequestManager {
                 uncachedRequests.push(req);
             }
         }
-        
-        // If all requests were cached, return immediately
+
+        // If all requests were cached, return immediately (silent cache hit)
         if (uncachedRequests.length === 0) {
-            await adminDebugLog('APIManager', 'All batch requests cached');
             return results;
         }
         
@@ -136,10 +133,9 @@ class APIRequestManager {
         let lastError;
         for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
             try {
-                await adminDebugLog('APIManager', `API Request (attempt ${attempt + 1}): ${endpoint}`);
-                
+                // Execute request (silent during normal operation)
                 const response = await fetch(url, fetchOptions);
-                
+
                 if (!response.ok) {
                     // Handle rate limiting with exponential backoff
                     if (response.status === 429) {
@@ -159,7 +155,6 @@ class APIRequestManager {
                 }
 
                 const data = await response.json();
-                await adminDebugLog('APIManager', `API Success: ${endpoint}`);
                 return data;
 
             } catch (error) {
@@ -169,8 +164,7 @@ class APIRequestManager {
                 // Don't retry 4xx client errors (400-499) - these will never succeed on retry
                 // Only retry network errors (no status) or 5xx server errors (500-599)
                 if (error.status && error.status >= 400 && error.status < 500) {
-                    await adminDebugLog('APIManager', `Client error (${error.status}), not retrying`);
-                    break; // Exit retry loop immediately for client errors
+                    break; // Exit retry loop immediately for client errors (silent)
                 }
 
                 if (attempt < this.config.maxRetries) {

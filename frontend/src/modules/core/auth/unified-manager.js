@@ -109,9 +109,7 @@ class UnifiedAuthManager {
      * Set authenticated state and sync ALL systems
      */
     async _setAuthenticatedState(user, csrfToken) {
-        await adminDebugLog('UnifiedAuthManager', 'Setting authenticated state across ALL systems...');
-
-        // Update internal state
+        // Update internal state (silent during normal login)
         this._currentAuthState = {
             isAuthenticated: true,
             user: user,
@@ -127,15 +125,13 @@ class UnifiedAuthManager {
 
         // Trigger app reinitialization
         this._triggerAppReinitialization();
-
-        await adminDebugLog('UnifiedAuthManager', 'All authentication systems synchronized');
     }
 
     /**
      * Synchronize authentication state across ALL systems
      */
     async _syncAllSystems(user, csrfToken) {
-        await adminDebugLog('UnifiedAuthManager', 'Synchronizing all authentication systems...');
+        // Synchronize all systems (silent during normal login)
 
         // 1. Update user state module
         if (window.userState) {
@@ -154,15 +150,12 @@ class UnifiedAuthManager {
             if (window.apiClient) {
                 window.apiClient.csrfToken = csrfToken;
             }
-            await adminDebugLog('UnifiedAuthManager', 'CSRF token synchronized globally', csrfToken.substring(0, 8) + '...');
         }
 
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
-            await adminDebugLog('UnifiedAuthManager', 'Calling legacy setUserLoggedIn...');
             await window.setUserLoggedIn(user);
         } else {
-            await adminDebugLog('UnifiedAuthManager', 'Calling modular setUserLoggedIn...');
             setUserLoggedIn(user);
         }
 
@@ -171,16 +164,13 @@ class UnifiedAuthManager {
         window.dispatchEvent(new CustomEvent('authStateChanged', {
             detail: { authenticated: true, user, csrfToken }
         }));
-
-        await adminDebugLog('UnifiedAuthManager', 'All systems synchronized with user', user.username || user.email);
     }
 
     /**
      * Synchronous version of _syncAllSystems for initialization
      */
     _syncAllSystemsSync(user, csrfToken) {
-        // Note: Cannot use await in sync method
-        adminDebugLog('UnifiedAuthManager', 'Synchronizing all authentication systems (sync)...');
+        // Synchronize all systems during initialization (silent during normal operation)
 
         // 1. Update user state module
         if (window.userState) {
@@ -215,22 +205,18 @@ class UnifiedAuthManager {
             if (window.apiClient) {
                 window.apiClient.csrfToken = csrfToken;
             }
-            adminDebugLog('UnifiedAuthManager', 'CSRF token synchronized globally', csrfToken.substring(0, 8) + '...');
         }
 
         // 5. Update UI - prefer legacy function if available, fallback to modular
         if (window.setUserLoggedIn && typeof window.setUserLoggedIn === 'function') {
-            adminDebugLog('UnifiedAuthManager', 'Calling legacy setUserLoggedIn (sync)...');
             window.setUserLoggedIn(user);
         } else {
-            adminDebugLog('UnifiedAuthManager', 'Calling modular setUserLoggedIn (sync)...');
             setUserLoggedIn(user);
         }
 
         // 6. Update the local currentUser variable in index.html
         // This is the variable that showMyFeedInMain() checks
         if (window.setCurrentUser && typeof window.setCurrentUser === 'function') {
-            adminDebugLog('UnifiedAuthManager', 'Unified auth calling setCurrentUser for sync');
             window.setCurrentUser(user);
         } else {
             console.warn('⚠️ window.setCurrentUser function not available during sync');
@@ -241,8 +227,6 @@ class UnifiedAuthManager {
         window.dispatchEvent(new CustomEvent('authStateChanged', {
             detail: { authenticated: true, user, csrfToken }
         }));
-
-        adminDebugLog('UnifiedAuthManager', 'All systems synchronized (sync) with user', user.username || user.email);
     }
 
     /**
@@ -293,8 +277,7 @@ class UnifiedAuthManager {
      * Trigger app reinitialization with proper error handling
      */
     _triggerAppReinitialization() {
-        // Note: Cannot use await in non-async method, but adminDebugLog handles this
-        adminDebugLog('UnifiedAuthManager', 'Triggering app reinitialization...');
+        // Trigger app reinitialization after login (silent during normal operation)
 
         // Show post-login loading immediately
         this._showPostLoginLoading();
@@ -302,16 +285,13 @@ class UnifiedAuthManager {
         setTimeout(async () => {
             try {
                 if (window.initializeApp && typeof window.initializeApp === 'function') {
-                    await adminDebugLog('UnifiedAuthManager', 'Calling initializeApp()...');
                     await window.initializeApp();
-                    await adminDebugLog('UnifiedAuthManager', 'App reinitialization completed');
                 } else {
                     console.warn('⚠️ initializeApp() function not available');
                 }
 
                 // Trigger onboarding check after app initialization completes
                 if (this._currentAuthState.isAuthenticated && this._currentAuthState.user) {
-                    await adminDebugLog('UnifiedAuthManager', 'Triggering onboarding check post-initialization...');
                     // Dispatch event to trigger onboarding check
                     window.dispatchEvent(new CustomEvent('appInitializationComplete', {
                         detail: { user: this._currentAuthState.user }
