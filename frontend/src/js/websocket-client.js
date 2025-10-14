@@ -10,13 +10,28 @@ class UnifiedMessagingClient {
         this.typingHandlers = new Map();
         this.connectionHandlers = [];
         this.disabled = false; // Circuit breaker
-        
-        // Delay initial connection to prevent immediate spam
-        setTimeout(() => {
-            if (!this.disabled) {
-                this.connect();
-            }
-        }, 2000);
+
+        // Only connect after user authentication completes
+        this.initializeWhenAuthenticated();
+    }
+
+    // Initialize WebSocket connection only after user is authenticated
+    initializeWhenAuthenticated() {
+        if (window.currentUser && window.csrfToken) {
+            // User already authenticated, connect now
+            console.log('WebSocket: User authenticated, connecting...');
+            this.connect();
+        } else {
+            // Wait for authentication
+            console.log('WebSocket: Waiting for authentication before connecting...');
+            window.addEventListener('userLoggedIn', () => {
+                // Small delay to ensure csrfToken is set
+                setTimeout(() => {
+                    console.log('WebSocket: Authentication complete, connecting...');
+                    this.connect();
+                }, 500);
+            }, { once: true });
+        }
     }
 
     // Connect to WebSocket server
@@ -26,10 +41,8 @@ class UnifiedMessagingClient {
             return;
         }
 
-        // Check if user is authenticated (user data exists)
-        const currentUser = localStorage.getItem('currentUser');
-        
-        if (!currentUser) {
+        // Verify user is still authenticated (belt and suspenders check)
+        if (!window.currentUser || !window.csrfToken) {
             adminDebugWarn('WebSocket', 'No user authentication available for WebSocket connection');
             return;
         }
@@ -333,8 +346,9 @@ class UnifiedMessagingClient {
     }
 }
 
-// Global instance
-window.unifiedMessaging = new UnifiedMessagingClient();
+// Create single global instance (avoid duplicate instantiation)
+const unifiedMessaging = new UnifiedMessagingClient();
+window.unifiedMessaging = unifiedMessaging;
 
 // Convenience functions for specific message types
 window.sendUserMessage = (recipientId, content, conversationId) => {
@@ -351,10 +365,4 @@ window.sendUserCandidateMessage = (candidateId, content, conversationId) => {
 
 // ES6 Module Exports
 export { UnifiedMessagingClient };
-
-// Auto-initialize global instance
-const unifiedMessaging = new UnifiedMessagingClient();
-window.unifiedMessaging = unifiedMessaging;
-
-// Export global instance too
 export { unifiedMessaging };
