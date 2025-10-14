@@ -4,7 +4,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
-import { adminDebugLog } from './adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 class UWRMapLibre {
     constructor(containerId = 'map') {

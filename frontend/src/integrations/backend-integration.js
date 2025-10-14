@@ -3,7 +3,7 @@
 // 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
 import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
-import { adminDebugLog } from '../js/adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 class BackendIntegration {
     constructor() {

@@ -2,7 +2,7 @@
 // Reduces API calls on page load and implements smart caching
 // Now integrated with unified authentication manager for perfect sync
 
-import { adminDebugLog } from './adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 import { isProduction } from '../utils/environment.js';
 
 class AppInitializer {

@@ -5,7 +5,7 @@
 
 import { getApiBaseUrl } from '../utils/environment.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
-import { adminDebugLog } from '../js/adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 export class FeedToggle {
     constructor() {

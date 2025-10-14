@@ -4,7 +4,7 @@
  * Migrated to ES6 modules: October 11, 2025 (Batch 1)
  */
 import { apiCall } from '../js/api-compatibility-shim.js';
-import { adminDebugLog } from '../js/adminDebugger.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 // Frontend Performance Optimization Utilities
 // Implements caching, retry mechanisms, and loading states
