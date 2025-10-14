@@ -246,5 +246,3 @@ if (typeof window !== 'undefined') {
     window.openMessageDialog = openMessageDialog;
     window.addRelationshipDisplay = addRelationshipDisplay;
 }
-
-console.log('User relationship display component loaded');

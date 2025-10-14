@@ -32,8 +32,6 @@ import { apiClient } from '../modules/core/api/client.js';
 import { getTimeAgo } from '../utils/date-helpers.js';
 import { apiCall } from '../js/api-compatibility-shim.js';
 
-console.log('🔔 Loading notification handlers...');
-
 // ============================================================================
 // NOTIFICATION STATE MANAGEMENT
 // ============================================================================
@@ -594,8 +592,4 @@ if (typeof window !== 'undefined') {
     // Expose state variables for compatibility
     window.notificationsCache = notificationsCache;
     window.notificationDropdownOpen = notificationDropdownOpen;
-
-    console.log('🌐 Notification handlers available globally');
 }
-
-console.log('✅ Notification handlers loaded - Phase 2B-9 + Phase 4D-2 complete!');

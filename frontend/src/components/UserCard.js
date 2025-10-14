@@ -753,8 +753,6 @@ function showUserCard(triggerElement, userId, context = {}) {
     return userCard.showCard(triggerElement, userId, context);
 }
 
-console.log('✅ UserCard component loaded and available globally');
-
 // ES6 Module Exports
 export { UserCard, userCard, showUserCard };
 export default userCard;

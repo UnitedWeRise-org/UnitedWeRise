@@ -813,5 +813,3 @@ if (typeof window !== 'undefined') {
     window.currentTopicMode = null;
     window.trendingRefreshInterval = null;
 }
-
-console.log('✅ Trending handlers module loaded (Topic Mode, Geographic Scope, AI Topics)');

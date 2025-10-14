@@ -6,8 +6,6 @@
  * following industry standards for dependency management and load order.
  */
 
-console.log('🚀 Loading modern ES6 module system...');
-
 // Phase 1: Core utilities (no dependencies)
 import '../utils/environment.js';
 import '../utils/performance.js';
@@ -136,36 +134,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize search handlers
     if (window.SearchHandlers) {
         window.searchHandlers = new window.SearchHandlers();
-        console.log('🔍 Search handlers initialized');
     }
 
     // Initialize payment systems
     initializeDonationSystem();
-    console.log('💳 Payment systems initialized');
-
-    // Performance optimizations (migrated from index.html inline script)
-    console.log('🚀 Initializing performance optimizations...');
 
     // Wrap apiCall with performance optimization if available
     if (window.createOptimizedApiCall && window.apiCall) {
         const originalApiCall = window.apiCall;
         window.apiCall = window.createOptimizedApiCall(originalApiCall);
-        console.log('✅ API calls optimized with caching and retry');
     }
 
     // Wrap apiCall with error handling if available
     if (window.createErrorAwareApiCall && window.apiCall) {
         const currentApiCall = window.apiCall;
         window.apiCall = window.createErrorAwareApiCall(currentApiCall);
-        console.log('✅ API calls enhanced with user-friendly error handling');
     }
 
     // Preload critical content
     if (window.performanceOptimizer) {
         window.performanceOptimizer.preloadCriticalContent();
     }
-
-    console.log('🎉 Performance optimizations active!');
 });
 
 /**
@@ -186,7 +175,3 @@ document.addEventListener('DOMContentLoaded', () => {
  * - Delete critical-functions.js entirely
  * - Production deployment validation
  */
-
-console.log('✅ ES6 Module system loaded successfully');
-console.log('📋 All dependencies loaded in correct order');
-console.log('🎯 Modern JavaScript architecture active');

@@ -685,5 +685,3 @@ if (typeof window !== 'undefined') {
     window.displayConversations = displayConversations;
     window.contentHandlers = contentHandlers;
 }
-
-console.log('✅ Content handlers module loaded (MOTD, Trending, Officials, Conversations)');

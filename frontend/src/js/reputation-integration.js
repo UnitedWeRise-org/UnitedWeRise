@@ -12,8 +12,6 @@
 
 import { apiCall as baseApiCall } from './api-manager.js';
 
-console.log('🏆 Loading reputation system integration module...');
-
 // ============================================================================
 // API CALL DECORATION
 // ============================================================================
@@ -63,8 +61,6 @@ function enhancePostDataWithReputation(data) {
  * Initialize reputation system integration
  */
 function initializeReputationIntegration() {
-    console.log('🔗 Initializing reputation integration...');
-
     // Hook into existing feed loading
     enhanceFeedSystem();
 
@@ -73,8 +69,6 @@ function initializeReputationIntegration() {
 
     // Hook into profile system
     enhanceProfileSystem();
-
-    console.log('✅ Reputation integration initialized');
 }
 
 /**

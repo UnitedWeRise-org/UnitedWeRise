@@ -116,8 +116,6 @@ export class NewPostModal {
                 textarea.focus();
             }
         }, 100);
-
-        console.log('✅ NewPostModal: Modal shown');
     }
 
     setupInlineComposer() {
@@ -265,8 +263,6 @@ export class NewPostModal {
         if (this.composerMount) {
             this.composerMount.innerHTML = '';
         }
-
-        console.log('✅ NewPostModal: Modal hidden');
     }
 }
 
@@ -277,5 +273,3 @@ if (typeof window !== 'undefined') {
 
 // Export for module use
 export default NewPostModal;
-
-console.log('✅ NewPostModal component loaded');

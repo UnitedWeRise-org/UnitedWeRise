@@ -2498,38 +2498,22 @@ function shouldInitializeMap() {
                      window.getComputedStyle(mapContainer).display !== 'none';
 
     if (isMobile && !isVisible) {
-        console.log('🗺️ Mobile device with hidden map, skipping auto-initialization (lazy-load)');
-        console.log('   Map will initialize when requested via window.initializeMapLibre()');
         return false;
-    }
-
-    if (isMobile && isVisible) {
-        console.log('🗺️ Mobile device with visible map, initializing...');
-    }
-
-    if (!isMobile) {
-        console.log('🗺️ Desktop device, initializing map...');
     }
 
     return true;
 }
 
 // Auto-initialize the map when the script loads (only if needed)
-console.log('map-maplibre.js script loaded, checking if initialization needed...');
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM ready, checking map initialization requirements...');
     if (shouldInitializeMap()) {
         initializeMapLibre();
     }
 });
 
 // Also initialize immediately if DOM is already ready
-if (document.readyState === 'loading') {
-    // DOM is still loading, wait for DOMContentLoaded
-    console.log('DOM still loading, waiting for DOMContentLoaded event');
-} else {
+if (document.readyState !== 'loading') {
     // DOM already loaded, check if we should initialize
-    console.log('DOM already ready, checking map initialization requirements...');
     if (shouldInitializeMap()) {
         initializeMapLibre();
     }

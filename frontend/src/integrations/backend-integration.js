@@ -486,5 +486,3 @@ const backendIntegration = new BackendIntegration();
 // Make globally available for legacy compatibility
 window.BackendIntegration = BackendIntegration;
 window.backendIntegration = backendIntegration;
-
-console.log('🔗 Backend Integration loaded via ES6 module');

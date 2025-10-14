@@ -961,17 +961,12 @@ class NavigationHandlers {
     }
 
     setupSidebarMapButton() {
-        console.log('🔧 Setting up sidebar map button handler...');
-
         const mapThumb = document.getElementById('mapThumb');
-        console.log('🔍 mapThumb found:', !!mapThumb);
 
         if (mapThumb) {
             // Remove existing onclick and replace with proper handler
             mapThumb.removeAttribute('onclick');
             mapThumb.addEventListener('click', this.handleSidebarMapClick.bind(this));
-
-            console.log('✅ Sidebar map button handler attached successfully');
         } else {
             console.error('❌ Could not find sidebar map button element');
         }
@@ -1007,7 +1002,6 @@ class NavigationHandlers {
                 arrow.textContent = '▶';
                 toggleButton.title = 'Expand Sidebar';
             }
-            console.log('Initial sidebar state set');
         }
     }
 }

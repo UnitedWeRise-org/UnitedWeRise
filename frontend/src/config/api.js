@@ -38,7 +38,3 @@ window.API_CONFIG = API_CONFIG;
 
 // Display environment banner in console
 logEnvironmentInfo();
-
-console.log('🔗 API Configuration loaded via ES6 module');
-console.log('📊 API Base URL:', API_CONFIG.BASE_URL);
-console.log('🌍 Environment:', API_CONFIG.ENVIRONMENT);

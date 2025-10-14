@@ -14,16 +14,10 @@
 
 import { apiCall } from '../js/api-compatibility-shim.js';
 
-console.log('🏛️ Loading civic-handlers.js module...');
-
 export class CivicHandlers {
     constructor() {
-        console.log('🏛️ Initializing CivicHandlers...');
-
         // Initialize event listeners with delegation
         this.initializeEventListeners();
-
-        console.log('✅ CivicHandlers initialized successfully');
     }
 
     /**
@@ -77,8 +71,6 @@ export class CivicHandlers {
                     break;
             }
         });
-
-        console.log('🎯 Civic event delegation initialized');
     }
 
     /**
@@ -639,7 +631,5 @@ window.viewOfficialProfile = (officialId) => civicHandlers.viewOfficialProfile(o
 window.viewVotingRecords = (bioguideId) => civicHandlers.viewVotingRecords(bioguideId);
 window.viewOfficialNews = (officialName) => civicHandlers.viewOfficialNews(officialName);
 window.showMainFeed = () => civicHandlers.showMainFeed();
-
-console.log('✅ Civic handlers module loaded and exported globally');
 
 export { civicHandlers };

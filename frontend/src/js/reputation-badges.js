@@ -164,8 +164,6 @@ function updateProfileBadge(userScore) {
  * Initialize reputation badge system
  */
 function initializeReputationBadges() {
-    console.log('🏆 Initializing reputation badge system...');
-    
     // Update existing posts
     updateAllPostBadges();
     
@@ -205,8 +203,6 @@ function initializeReputationBadges() {
         childList: true,
         subtree: true
     });
-    
-    console.log('✅ Reputation badge system initialized');
 }
 
 /**

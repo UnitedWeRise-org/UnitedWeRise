@@ -86,11 +86,7 @@ export function getAdminDashboardUrl() {
  */
 export function logEnvironmentInfo() {
     const env = getEnvironment();
-    console.log(`🌍 FRONTEND ENVIRONMENT: ${env.toUpperCase()}`);
-    console.log(`📍 Hostname: ${window.location.hostname}`);
-    console.log(`🔗 API Base URL: ${getApiBaseUrl()}`);
-    console.log(`📡 WebSocket URL: ${getWebSocketUrl()}`);
-    console.log(`👥 Admin Dashboard: ${getAdminDashboardUrl()}`);
+    console.log(`🌍 Environment: ${env} | API: ${getApiBaseUrl()}`);
 }
 
 // Export functions globally for backward compatibility with legacy code
@@ -105,6 +101,5 @@ if (typeof window !== 'undefined') {
 
 // Auto-log environment info when loaded in development
 if (isDevelopment()) {
-    console.log('🌍 Environment detection system loaded');
     logEnvironmentInfo();
 }

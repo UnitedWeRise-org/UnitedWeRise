@@ -126,5 +126,3 @@ if (document.readyState === 'loading') {
 
 // Export for module use
 export default TopBarController;
-
-console.log('✅ TopBarController component loaded');

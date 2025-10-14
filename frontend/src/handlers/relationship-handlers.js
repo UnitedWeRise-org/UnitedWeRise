@@ -689,5 +689,3 @@ if (typeof window !== 'undefined') {
     window.displayFriendsForMessaging = displayFriendsForMessaging;
     window.relationshipHandlers = relationshipHandlers;
 }
-
-console.log('✅ Relationship handlers module loaded (Friends, Following, Social Connections)');

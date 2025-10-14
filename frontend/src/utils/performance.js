@@ -418,5 +418,3 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceOptimizer.preloadCriticalContent();
     }, 1000);
 });
-
-console.log('🚀 Performance optimization utilities loaded');

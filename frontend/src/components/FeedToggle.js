@@ -1187,5 +1187,3 @@ window.feedToggle = new FeedToggle();
 
 // Export for module use
 export default FeedToggle;
-
-console.log('✅ FeedToggle component loaded');

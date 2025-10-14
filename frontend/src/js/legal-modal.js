@@ -269,5 +269,3 @@ if (typeof window !== 'undefined') {
     window.openLegalModal = openLegalModal;
     window.closeLegalModal = closeLegalModal;
 }
-
-console.log('Legal modal system loaded');

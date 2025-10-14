@@ -22,18 +22,13 @@ export class MobileBottomBar {
                            /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                console.log('MobileBottomBar: Desktop detected, skipping mobile nav');
                 return;
             }
-
-            console.log('MobileBottomBar: Mobile detected, rendering...');
 
             this.render();
             this.attachEventListeners();
             this.setupAuthListeners();
             this.restoreState();
-
-            console.log('✅ MobileBottomBar: Initialized successfully');
 
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('MobileBottomBar', 'Mobile bottom navigation initialized');
@@ -42,7 +37,6 @@ export class MobileBottomBar {
             console.error('❌ MobileBottomBar init error:', error);
             // Try to render anyway after a delay
             setTimeout(() => {
-                console.log('MobileBottomBar: Retrying render...');
                 try {
                     this.render();
                     this.attachEventListeners();
@@ -55,37 +49,24 @@ export class MobileBottomBar {
 
     render() {
         try {
-            console.log('MobileBottomBar: Starting render...');
-
             // Find or create the mobile-nav element
             let mobileNav = document.querySelector('.mobile-nav');
 
             if (!mobileNav) {
-                console.log('MobileBottomBar: Creating new mobile-nav element');
                 mobileNav = document.createElement('nav');
                 mobileNav.className = 'mobile-nav';
                 document.body.appendChild(mobileNav);
-            } else {
-                console.log('MobileBottomBar: Found existing mobile-nav element');
             }
 
             // Render buttons based on authentication state
             if (this.isAuthenticated) {
-                console.log('MobileBottomBar: Rendering authenticated nav');
                 mobileNav.innerHTML = this.renderAuthenticatedNav();
             } else {
-                console.log('MobileBottomBar: Rendering unauthenticated nav');
                 mobileNav.innerHTML = this.renderUnauthenticatedNav();
             }
 
-            // Verify it's visible
-            const computed = window.getComputedStyle(mobileNav);
-            console.log('MobileBottomBar: display =', computed.display, ', visibility =', computed.visibility);
-
             // Create submenu container
             this.createSubmenuContainer();
-
-            console.log('✅ MobileBottomBar: Render complete');
         } catch (error) {
             console.error('❌ MobileBottomBar render error:', error);
             throw error;
@@ -210,21 +191,16 @@ export class MobileBottomBar {
     setupAuthListeners() {
         // Listen for authentication state changes and refresh navigation
         window.addEventListener('userLoggedIn', () => {
-            console.log('🔄 MobileBottomBar: User logged in, refreshing navigation...');
             this.refresh();
         });
 
         window.addEventListener('userLoggedOut', () => {
-            console.log('🔄 MobileBottomBar: User logged out, refreshing navigation...');
             this.refresh();
         });
 
         window.addEventListener('authStateChanged', (event) => {
-            console.log('🔄 MobileBottomBar: Auth state changed, refreshing navigation...', event.detail);
             this.refresh();
         });
-
-        console.log('✅ MobileBottomBar: Auth listeners setup complete');
     }
 
     showSubmenu(buttonAction) {
@@ -414,5 +390,3 @@ if (document.readyState === 'loading') {
 
 // Export for module use
 export default MobileBottomBar;
-
-console.log('✅ MobileBottomBar component loaded');

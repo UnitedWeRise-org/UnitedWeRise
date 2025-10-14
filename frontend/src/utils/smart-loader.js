@@ -180,5 +180,3 @@ export default smartLoader;
 if (typeof window !== 'undefined') {
     window.smartLoader = smartLoader;
 }
-
-console.log('🧠 Smart loading system ready - scripts will load only when needed!');

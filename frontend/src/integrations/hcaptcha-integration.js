@@ -9,8 +9,6 @@
  * Created: October 11, 2025 (Batch 3 - extracted from critical-functions.js)
  */
 
-console.log('🔐 Loading HCaptcha integration module...');
-
 // ============================================================================
 // HCAPTCHA CALLBACK
 // ============================================================================
@@ -162,5 +160,3 @@ if (typeof window !== 'undefined') {
     window.resetHCaptcha = resetHCaptcha;
     window.isHCaptchaComplete = isHCaptchaComplete;
 }
-
-console.log('✅ HCaptcha integration module loaded');

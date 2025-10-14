@@ -4577,8 +4577,6 @@ window.Profile.showUserProfile = showUserProfile;
 // Log that Profile component is loaded
 if (typeof adminDebugLog === 'function') {
     adminDebugLog('Profile', '✅ Profile component loaded and initialized');
-} else {
-    console.log('✅ Profile component loaded and initialized');
 }
 
 // Profile integration functions for modular system
@@ -4683,5 +4681,3 @@ if (typeof window !== 'undefined') {
     window.showProfileFromUrl = showProfileFromUrl;
     window.toggleProfile = toggleProfile;
 }
-
-console.log('👤 Profile component loaded via ES6 module');

@@ -358,5 +358,3 @@ window.unifiedMessaging = unifiedMessaging;
 
 // Export global instance too
 export { unifiedMessaging };
-
-console.log('📡 WebSocket client loaded via ES6 module');

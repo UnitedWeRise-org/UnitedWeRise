@@ -221,8 +221,6 @@ class SavedPostsView {
 const savedPostsView = new SavedPostsView();
 window.savedPostsView = savedPostsView;
 
-console.log('SavedPostsView: Component initialized');
-
 // For module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SavedPostsView;

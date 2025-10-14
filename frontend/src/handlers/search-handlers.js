@@ -19,7 +19,6 @@ class SearchHandlers {
         this.globalSearchTimeout = null;
 
         this.setupEventListeners();
-        console.log('SearchHandlers initialized');
     }
 
     setupEventListeners() {

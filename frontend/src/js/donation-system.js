@@ -806,12 +806,9 @@ export class DonationSystem {
 export function initializeDonationSystem() {
     if (!window.donationSystem) {
         window.donationSystem = new DonationSystem();
-        console.log('💝 Donation system initialized via ES6 module');
     }
     return window.donationSystem;
 }
 
 // Legacy compatibility - maintain global access
 window.DonationSystem = DonationSystem;
-
-console.log('💝 Donation system ES6 module loaded');

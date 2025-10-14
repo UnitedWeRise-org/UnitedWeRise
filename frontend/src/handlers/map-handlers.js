@@ -14,12 +14,8 @@
 
 import { apiCall } from '../js/api-compatibility-shim.js';
 
-console.log('🗺️ Loading map-handlers.js module...');
-
 export class MapHandlers {
     constructor() {
-        console.log('🗺️ Initializing MapHandlers...');
-
         // Instance variables for map state
         this.map = null;
         this.topics = [];
@@ -31,8 +27,6 @@ export class MapHandlers {
 
         // Initialize event listeners with delegation
         this.initializeEventListeners();
-
-        console.log('✅ MapHandlers initialized successfully');
     }
 
     /**
@@ -73,8 +67,6 @@ export class MapHandlers {
                 this.toggleMapLayer(layerName);
             }
         });
-
-        console.log('🎯 Map event delegation initialized');
     }
 
     /**
@@ -1017,7 +1009,5 @@ if (typeof window !== 'undefined') {
         setTimeout(() => mapHandlers.updateLocationPlaceholder(), 1000);
     });
 }
-
-console.log('✅ Map handlers module loaded and exported globally');
 
 export { mapHandlers };

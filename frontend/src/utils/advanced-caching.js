@@ -273,10 +273,11 @@ class AdvancedCaching {
 
         keysToRemove.forEach(key => {
             this.storage.localStorage.removeItem(key);
-            console.log(`🗑️ Removed expired cache: ${key}`);
         });
 
-        console.log(`🧹 Cache cleanup complete. Removed ${keysToRemove.length} expired items.`);
+        if (keysToRemove.length > 0) {
+            console.log(`🧹 Cache cleanup: Removed ${keysToRemove.length} expired items.`);
+        }
     }
 
     clearUserCache(userId) {
@@ -428,6 +429,3 @@ export default advancedCache;
 if (typeof window !== 'undefined') {
     window.advancedCache = advancedCache;
 }
-
-console.log('🚀 Advanced caching system loaded!');
-console.log('📊 Cache stats:', advancedCache.getCacheStats());

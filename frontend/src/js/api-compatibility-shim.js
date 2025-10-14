@@ -20,7 +20,4 @@ export { apiCall };
 // Maintain global access during transition (TEMPORARY)
 if (typeof window !== 'undefined') {
     window.apiCall = apiCall;
-
-    console.log('⚠️ API Compatibility Shim active - window.apiCall available');
-    console.log('📋 This is temporary during ES6 migration (Batches 4-10)');
 }
