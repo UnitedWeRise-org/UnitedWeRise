@@ -251,7 +251,8 @@ class PerformanceOptimizer {
 
                 // Log slow operations
                 if (duration > 1000) {
-                    await adminDebugLog('Performance', `Slow operation detected: ${name} (${duration.toFixed(2)}ms)`);
+                    await adminDebugLog('Performance', `Slow operation detected: ${name} (${duration.toFixed(2)}ms`);
+                }
 
                 return result;
             } catch (error) {
