@@ -37,58 +37,20 @@ class AdminDebugger {
             return this.adminVerified;
         }
 
-        try {
-            // Check if user has admin or super-admin flag BEFORE making admin API calls
-            if (!window.currentUser || !(window.currentUser.isAdmin || window.currentUser.isSuperAdmin)) {
-                // Diagnostic: Log why admin verification failed (only on first check)
-                if (!this.adminVerified) {
-                    console.log('🔍 AdminDebugger: Verification check', {
-                        hasCurrentUser: !!window.currentUser,
-                        username: window.currentUser?.username || 'none',
-                        hasIsAdmin: !!window.currentUser?.isAdmin,
-                        hasIsSuperAdmin: !!window.currentUser?.isSuperAdmin
-                    });
-                }
-                this.adminVerified = false;
-                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return false;
-            }
+        // SIMPLIFIED: Just check window.currentUser flags - no backend API call needed
+        // The isAdmin/isSuperAdmin flags come from the authenticated /batch/initialize endpoint
+        // so they're already secure. No need to re-verify and risk triggering auth errors.
 
-            // Use AdminAPI for modular admin system
-            if (!window.AdminAPI || typeof window.AdminAPI.call !== 'function') {
-                // Fall back to regular apiCall for non-admin pages
-                if (typeof window.apiCall !== 'function') {
-                    this.adminVerified = false;
-                    this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                    return false;
-                }
-
-                // User has isAdmin flag, now verify with backend
-                const response = await window.apiCall('/admin/users?limit=1');
-                this.adminVerified = response.ok;
-                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return this.adminVerified;
-            }
-
-            // User has isAdmin flag (already checked above), now verify with AdminAPI
-            const response = await window.AdminAPI.get(`${window.AdminAPI.BACKEND_URL}/api/admin/users`, { limit: 1 });
-            this.adminVerified = response.ok;
-            this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-            
-            if (!this.adminVerified && response.status === 403) {
-                console.log('🔧 AdminDebugger: Access denied - not admin or TOTP required');
-            } else if (!this.adminVerified && response.status === 401) {
-                console.log('🔧 AdminDebugger: Unauthorized - auth token invalid or expired');
-            }
-            
-            return this.adminVerified;
-        } catch (error) {
-            // Fail secure - if verification fails, assume not admin
-            console.warn('🔧 AdminDebugger: Admin verification failed, disabling debug output');
+        if (!window.currentUser || !(window.currentUser.isAdmin || window.currentUser.isSuperAdmin)) {
             this.adminVerified = false;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
             return false;
         }
+
+        // User has admin flags - trust them (they came from authenticated endpoint)
+        this.adminVerified = true;
+        this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+        return true;
     }
 
     /**

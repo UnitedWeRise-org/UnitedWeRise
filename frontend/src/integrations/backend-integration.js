@@ -166,25 +166,34 @@ class BackendIntegration {
     }
 
     handleAuthError() {
+        // Prevent infinite loops - only handle once every 5 seconds
+        if (this._lastAuthErrorHandled && Date.now() - this._lastAuthErrorHandled < 5000) {
+            console.warn('⚠️ Auth error handler called too soon, skipping to prevent loop');
+            return;
+        }
+        this._lastAuthErrorHandled = Date.now();
+
         // Clear invalid session data
         window.csrfToken = null;
         if (typeof window.authToken !== 'undefined') {
             window.authToken = null;
         }
-        
+
         if (window.setUserLoggedOut) {
             setUserLoggedOut();
         }
-        
+
         // More user-friendly session expiry notification
         const expiredMsg = document.createElement('div');
         expiredMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; z-index: 10000; border: 1px solid #f5c6cb; max-width: 300px;';
         expiredMsg.innerHTML = '⏰ Your session has expired. Please log in again to continue.';
         document.body.appendChild(expiredMsg);
-        
+
         setTimeout(() => {
             expiredMsg.remove();
-            openAuthModal('login');
+            if (typeof openAuthModal !== 'undefined') {
+                openAuthModal('login');
+            }
         }, 3000);
     }
 
