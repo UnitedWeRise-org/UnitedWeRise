@@ -151,10 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.apiCall = window.createErrorAwareApiCall(currentApiCall);
     }
 
-    // Preload critical content
-    if (window.performanceOptimizer) {
-        window.performanceOptimizer.preloadCriticalContent();
-    }
+    // Note: preloadCriticalContent is handled by performance.js with proper auth checks
+    // Don't call it directly here to avoid duplicate API calls before authentication
 });
 
 /**
