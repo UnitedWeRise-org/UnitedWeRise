@@ -3387,7 +3387,7 @@ window.displayPostsFallback = (posts, containerId, appendMode) => postComponent.
 window.showCommentsInline = (postId, comments) => postComponent.showCommentsInline(postId, comments);
 window.hideComments = (postId) => postComponent.hideComments(postId);
 
-console.log('PostComponent: Post interaction functions migrated and exposed globally (Phase 2B-7)');
+// PostComponent: Post interaction functions migrated and exposed globally (Phase 2B-7)
 
 // For module systems
 if (typeof module !== 'undefined' && module.exports) {

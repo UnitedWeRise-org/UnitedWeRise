@@ -144,7 +144,6 @@ window.addEventListener('load', function() {
             checkHCaptchaStatus();
         }
         // No manual rendering needed - hCaptcha script auto-renders widgets with data-sitekey
-        console.log('Relying on hCaptcha auto-render via data-sitekey attribute');
     }, 2000);
 });
 

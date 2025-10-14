@@ -638,7 +638,9 @@ class NavigationHandlers {
     }
 
     async showMyFeedInMain() {
-        console.log('🎯 Showing My Feed in main content area');
+        if (typeof adminDebugLog !== 'undefined') {
+            await adminDebugLog('Navigation', 'Showing My Feed in main content area');
+        }
 
         // Hide other main view systems
         this.hideOtherMainViews();
@@ -921,14 +923,11 @@ class NavigationHandlers {
 
         setTimeout(() => {
             const closeBtn = document.querySelector('.map-action-btn.close-btn');
-            console.log('🔍 closeBtn found:', !!closeBtn);
 
             if (closeBtn) {
                 // Remove existing onclick and replace with proper handler
                 closeBtn.removeAttribute('onclick');
                 closeBtn.addEventListener('click', this.handleCloseClick.bind(this));
-
-                console.log('✅ Close button handler attached successfully');
             } else {
                 console.error('❌ Could not find close button element');
             }

@@ -66,7 +66,9 @@ export class MyFeedHandlers {
      * Migrated from index.html line 2586
      */
     async showMyFeedInMain() {
-        console.log('🎯 Showing My Feed in main content area');
+        if (typeof adminDebugLog !== 'undefined') {
+            await adminDebugLog('MyFeed', 'Showing My Feed in main content area');
+        }
 
         // Hide Civic Organizing container if open
         const civicOrganizing = document.querySelector('.civic-organizing-container');
@@ -102,7 +104,9 @@ export class MyFeedHandlers {
             return;
         }
 
-        console.log('✅ Authenticated user found for My Feed:', window.currentUser.username);
+        if (typeof adminDebugLog !== 'undefined') {
+            await adminDebugLog('MyFeed', 'Authenticated user found for My Feed', { username: window.currentUser.username });
+        }
 
         // Hide other content
         if (typeof window.closeAllPanels === 'function') {
@@ -552,7 +556,9 @@ export class MyFeedHandlers {
     setupMyFeedInfiniteScroll() {
         const myFeedContainer = document.getElementById('myFeedPosts');
         if (myFeedContainer) {
-            console.log('✅ Setting up infinite scroll for My Feed');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MyFeed', 'Setting up infinite scroll for My Feed');
+            }
 
             let ticking = false;
 
@@ -618,4 +624,4 @@ if (typeof window !== 'undefined') {
     window.currentFeedOffset = 0;
 }
 
-console.log('✅ My Feed handlers module loaded (Feed Management System)');
+// My Feed handlers module loaded (Feed Management System)
