@@ -12,12 +12,10 @@
  * @module handlers/map-handlers
  */
 
-console.log('🗺️ Loading map-handlers.js module...');
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class MapHandlers {
     constructor() {
-        console.log('🗺️ Initializing MapHandlers...');
-
         // Instance variables for map state
         this.map = null;
         this.topics = [];
@@ -29,8 +27,6 @@ export class MapHandlers {
 
         // Initialize event listeners with delegation
         this.initializeEventListeners();
-
-        console.log('✅ MapHandlers initialized successfully');
     }
 
     /**
@@ -71,8 +67,6 @@ export class MapHandlers {
                 this.toggleMapLayer(layerName);
             }
         });
-
-        console.log('🎯 Map event delegation initialized');
     }
 
     /**
@@ -377,7 +371,7 @@ export class MapHandlers {
                 this.mapTopicCache.length === 0 ||
                 this.lastMapTopicScope !== currentScope) {
 
-                const response = await window.apiCall(`/trending/map-topics?count=9&scope=${currentScope}`);
+                const response = await apiCall(`/trending/map-topics?count=9&scope=${currentScope}`);
 
                 if (response.ok && response.data.topics) {
                     this.mapTopicCache = response.data.topics;
@@ -436,7 +430,7 @@ export class MapHandlers {
     async updateMapWithTrendingTopics() {
         try {
             // Get current trending topics
-            const response = await window.apiCall('/trending/topics?limit=20');
+            const response = await apiCall('/trending/topics?limit=20');
             if (response.ok && response.data.topics) {
                 const geographicTopics = this.getGeographicLayeredTopics(response.data.topics, this.currentZoomLevel || 'national');
                 this.updateMapVisualization(geographicTopics);
@@ -1015,7 +1009,5 @@ if (typeof window !== 'undefined') {
         setTimeout(() => mapHandlers.updateLocationPlaceholder(), 1000);
     });
 }
-
-console.log('✅ Map handlers module loaded and exported globally');
 
 export { mapHandlers };

@@ -1,3 +1,17 @@
+/**
+ * @module js/api-manager
+ * @description Advanced API Request Manager with retry, deduplication, and caching
+ *
+ * Provides centralized API communication with:
+ * - Automatic retry with exponential backoff
+ * - Request deduplication (prevents duplicate simultaneous requests)
+ * - Response caching
+ * - Batch request support
+ *
+ * Migrated to ES6 modules: October 11, 2025 (Batch 3)
+ * Bug fix: apiCall now uses apiManager.request() instead of raw fetch()
+ */
+
 // Advanced API Request Manager for United We Rise
 // Implements request deduplication, caching, and intelligent batching
 
@@ -26,18 +40,16 @@ class APIRequestManager {
     // Main request method with deduplication and caching
     async request(endpoint, options = {}) {
         const key = this.createRequestKey(endpoint, options);
-        
-        // Check if request is already pending
+
+        // Check if request is already pending (silent deduplication)
         if (this.pendingRequests.has(key)) {
-            await adminDebugLog('APIManager', `Deduplicating request: ${endpoint}`);
             return this.pendingRequests.get(key);
         }
-        
-        // Check cache if not bypassed
+
+        // Check cache if not bypassed (silent cache hit)
         if (!options.bypassCache) {
             const cached = this.getFromCache(key);
             if (cached) {
-                await adminDebugLog('APIManager', `Cache hit: ${endpoint}`);
                 return cached;
             }
         }
@@ -63,14 +75,14 @@ class APIRequestManager {
 
     // Batch multiple requests together
     async batchRequest(requests) {
-        await adminDebugLog('APIManager', `Batching ${requests.length} requests`);
-        
+        // Silent batching of multiple requests
+
         const batchKey = `batch_${Date.now()}`;
-        
+
         // Check cache for individual requests first
         const results = new Map();
         const uncachedRequests = [];
-        
+
         for (const req of requests) {
             const key = this.createRequestKey(req.endpoint, req.options);
             const cached = this.getFromCache(key);
@@ -80,10 +92,9 @@ class APIRequestManager {
                 uncachedRequests.push(req);
             }
         }
-        
-        // If all requests were cached, return immediately
+
+        // If all requests were cached, return immediately (silent cache hit)
         if (uncachedRequests.length === 0) {
-            await adminDebugLog('APIManager', 'All batch requests cached');
             return results;
         }
         
@@ -122,34 +133,40 @@ class APIRequestManager {
         let lastError;
         for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
             try {
-                await adminDebugLog('APIManager', `API Request (attempt ${attempt + 1}): ${endpoint}`);
-                
+                // Execute request (silent during normal operation)
                 const response = await fetch(url, fetchOptions);
-                
+
                 if (!response.ok) {
                     // Handle rate limiting with exponential backoff
                     if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After')) || 60;
                         await adminDebugWarn('APIManager', `Rate limited, backing off for ${retryAfter}s`);
-                        
+
                         if (attempt < this.config.maxRetries) {
                             await this.delay(retryAfter * 1000);
                             continue;
                         }
                     }
-                    
+
                     const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                    const error = new Error(errorData.error || `HTTP ${response.status}`);
+                    error.status = response.status; // Attach status code for retry logic
+                    throw error;
                 }
-                
+
                 const data = await response.json();
-                await adminDebugLog('APIManager', `API Success: ${endpoint}`);
                 return data;
-                
+
             } catch (error) {
                 lastError = error;
                 await adminDebugWarn('APIManager', `API Request failed (attempt ${attempt + 1}): ${endpoint}`, error.message);
-                
+
+                // Don't retry 4xx client errors (400-499) - these will never succeed on retry
+                // Only retry network errors (no status) or 5xx server errors (500-599)
+                if (error.status && error.status >= 400 && error.status < 500) {
+                    break; // Exit retry loop immediately for client errors (silent)
+                }
+
                 if (attempt < this.config.maxRetries) {
                     await this.delay(this.config.retryDelay * Math.pow(2, attempt));
                 }
@@ -269,7 +286,10 @@ class APIRequestManager {
         if (options.body) {
             fetchOptions.body = options.body instanceof FormData
                 ? options.body
-                : JSON.stringify(options.body);
+                // Only stringify if not already a string (prevent double-stringification)
+                : typeof options.body === 'string'
+                    ? options.body
+                    : JSON.stringify(options.body);
         }
 
         // Add any other options that aren't method, headers, credentials, or body
@@ -337,42 +357,72 @@ window.apiManager = new APIRequestManager();
 
 // Enhanced apiCall function for backward compatibility
 // Wraps the response in the expected format: {ok, status, data}
-window.apiCall = async (endpoint, options = {}) => {
+// BUG FIX (Oct 11, 2025): Now uses apiManager.request() instead of raw fetch()
+// This enables retry logic, request deduplication, and caching
+async function apiCall(endpoint, options = {}) {
     try {
-        // Get the API base URL
-        const baseUrl = window.apiManager.config.baseURL;
-        const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+        // Use the apiManager's advanced request method (retry, dedup, cache)
+        const response = await window.apiManager.request(endpoint, {
+            method: options.method || 'GET',
+            headers: options.headers || {},
+            body: options.body,
+            bypassCache: options.bypassCache,
+            cacheTimeout: options.cacheTimeout,
+            skipContentType: options.skipContentType
+        });
 
-        // Build fetch options with all the proper headers
-        const fetchOptions = window.apiManager.buildFetchOptions(options);
-
-        // Make the actual fetch request
-        const response = await fetch(url, fetchOptions);
-
-        // Parse the response
-        const data = await response.json();
-
-        // Return wrapped response in expected format
+        // apiManager.request() returns parsed JSON data directly
+        // Wrap it in the expected {ok, status, data} format
         return {
-            ok: response.ok,
-            status: response.status,
-            data: data
+            ok: true,
+            status: 200,
+            data: response
         };
     } catch (error) {
         // Return error in consistent format
+        console.error('apiCall error:', error);
         return {
             ok: false,
-            status: 0,
-            data: { error: error.message }
+            status: error.status || 500,
+            data: null,
+            error: error.message
         };
     }
-};
+}
 
 // Batch API call function
-window.apiBatch = async (requests) => {
+async function apiBatch(requests) {
     return window.apiManager.batchRequest(requests);
-};
+}
 
 if (typeof adminDebugLog !== 'undefined') {
     adminDebugLog('APIManager', 'Advanced API Manager initialized');
+}
+
+/**
+ * ES6 Module Exports
+ * Migrated to ES6 modules: October 11, 2025 (Batch 3)
+ */
+
+// Export the apiCall function
+export { apiCall };
+
+// Export batch function
+export { apiBatch };
+
+// Export the APIRequestManager class
+export { APIRequestManager };
+
+// Export singleton instance
+const apiManager = window.apiManager;
+export { apiManager };
+
+// Default export
+export default apiManager;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.apiCall = apiCall;
+    window.apiBatch = apiBatch;
+    window.apiManager = apiManager;
 }

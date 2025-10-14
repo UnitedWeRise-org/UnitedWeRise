@@ -1,3 +1,11 @@
+/**
+ * @module utils/performance
+ * @description Frontend performance optimization utilities with caching, retry mechanisms, and loading states
+ * Migrated to ES6 modules: October 11, 2025 (Batch 1)
+ */
+import { apiCall } from '../js/api-compatibility-shim.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
+
 // Frontend Performance Optimization Utilities
 // Implements caching, retry mechanisms, and loading states
 
@@ -38,14 +46,14 @@ class PerformanceOptimizer {
         if (useCache) {
             const cached = this.getCache(cacheKey);
             if (cached) {
-                console.log(`📦 Cache hit for ${endpoint}`);
+                adminDebugLog('Performance', `Cache hit for ${endpoint}`);
                 return cached;
             }
         }
 
         // Check if already loading
         if (this.loadingStates.has(cacheKey)) {
-            console.log(`⏳ Request already in progress for ${endpoint}`);
+            adminDebugLog('Performance', `Request already in progress for ${endpoint}`);
             return this.loadingStates.get(cacheKey);
         }
 
@@ -105,7 +113,7 @@ class PerformanceOptimizer {
             // Retry if under limit and error is retryable
             if (attempts < this.maxRetries && this.isRetryableError(error)) {
                 const delay = Math.pow(2, attempts) * 1000; // Exponential backoff
-                console.log(`🔄 Retrying ${endpoint} in ${delay}ms (attempt ${attempts}/${this.maxRetries})`);
+                adminDebugLog('Performance', `Retrying ${endpoint} in ${delay}ms (attempt ${attempts}/${this.maxRetries})`);
 
                 await this.delay(delay);
                 return this.executeWithRetry(apiCall, endpoint, options);
@@ -176,35 +184,35 @@ class PerformanceOptimizer {
             '/political/officials'
         ];
 
-        console.log('🚀 Preloading critical content...');
+        await adminDebugLog('Performance', 'Preloading critical content...');
 
         const preloadPromises = criticalEndpoints.map(async endpoint => {
             try {
                 // Skip political officials if it's likely to fail (user needs address)
                 if (endpoint === '/political/officials') {
-                    const authResponse = await this.apiCallWithCache(window.apiCall, '/auth/me', {
+                    const authResponse = await this.apiCallWithCache(apiCall, '/auth/me', {
                         useCache: true,
                         silent: true
                     });
                     if (!authResponse?.data?.zipCode) {
-                        console.log('📝 Skipping political/officials preload - user needs to add address');
+                        await adminDebugLog('Performance', 'Skipping political/officials preload - user needs to add address');
                         return;
                     }
                 }
 
-                await this.apiCallWithCache(window.apiCall, endpoint, {
+                await this.apiCallWithCache(apiCall, endpoint, {
                     useCache: true,
                     showLoading: false,
                     cacheTTL: 10 * 60 * 1000 // 10 minutes for critical content
                 });
-                console.log(`✅ Preloaded ${endpoint}`);
+                await adminDebugLog('Performance', `Preloaded ${endpoint}`);
             } catch (error) {
                 console.warn(`⚠️ Failed to preload ${endpoint}:`, error);
             }
         });
 
         await Promise.allSettled(preloadPromises);
-        console.log('🎉 Critical content preload complete');
+        await adminDebugLog('Performance', 'Critical content preload complete');
     }
 
     // Cache warming for user-specific content
@@ -217,11 +225,11 @@ class PerformanceOptimizer {
             `/notifications`
         ];
 
-        console.log(`🔥 Warming cache for user ${userId}...`);
+        await adminDebugLog('Performance', `Warming cache for user ${userId}...`);
 
         userEndpoints.forEach(endpoint => {
             // Fire and forget - don't await these
-            this.apiCallWithCache(window.apiCall, endpoint, {
+            this.apiCallWithCache(apiCall, endpoint, {
                 useCache: true,
                 showLoading: false,
                 cacheTTL: 3 * 60 * 1000 // 3 minutes for user content
@@ -239,11 +247,11 @@ class PerformanceOptimizer {
                 const result = await fn.apply(this, args);
                 const duration = performance.now() - start;
 
-                console.log(`⏱️ ${name} took ${duration.toFixed(2)}ms`);
+                await adminDebugLog('Performance', `${name} took ${duration.toFixed(2)}ms`);
 
                 // Log slow operations
                 if (duration > 1000) {
-                    console.warn(`🐌 Slow operation detected: ${name} (${duration.toFixed(2)}ms)`);
+                    await adminDebugLog('Performance', `Slow operation detected: ${name} (${duration.toFixed(2)}ms`);
                 }
 
                 return result;
@@ -256,11 +264,11 @@ class PerformanceOptimizer {
     }
 
     // Clear cache (for logout, etc.)
-    clearCache() {
+    async clearCache() {
         this.cache.clear();
         this.loadingStates.clear();
         this.retryAttempts.clear();
-        console.log('🧹 Performance cache cleared');
+        await adminDebugLog('Performance', 'Performance cache cleared');
     }
 
     // Cache statistics
@@ -358,7 +366,7 @@ function addPerformanceCSS() {
 // Initialize performance optimizer
 const performanceOptimizer = new PerformanceOptimizer();
 
-// Enhanced window.apiCall that uses performance optimization
+// Enhanced apiCall that uses performance optimization
 function createOptimizedApiCall(originalApiCall) {
     return async function(endpoint, options = {}) {
         return performanceOptimizer.apiCallWithCache(originalApiCall, endpoint, options);
@@ -391,19 +399,38 @@ function createPerformanceDebugPanel() {
     });
 }
 
-// Export for use
-window.performanceOptimizer = performanceOptimizer;
-window.createOptimizedApiCall = createOptimizedApiCall;
+// ES6 Module Exports
+export { performanceOptimizer, createOptimizedApiCall };
+export default performanceOptimizer;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.performanceOptimizer = performanceOptimizer;
+    window.createOptimizedApiCall = createOptimizedApiCall;
+}
 
 // Auto-initialize
 document.addEventListener('DOMContentLoaded', () => {
     addPerformanceCSS();
     createPerformanceDebugPanel();
 
-    // Preload critical content after a short delay
-    setTimeout(() => {
-        performanceOptimizer.preloadCriticalContent();
-    }, 1000);
-});
+    // Preload critical content only after user authentication
+    const preloadWhenAuthenticated = () => {
+        if (window.currentUser) {
+            // User already authenticated, preload now
+            setTimeout(() => {
+                performanceOptimizer.preloadCriticalContent();
+            }, 1000);
+        } else {
+            // Wait for authentication
+            console.log('Performance: Waiting for authentication before preloading...');
+            window.addEventListener('userLoggedIn', () => {
+                setTimeout(() => {
+                    performanceOptimizer.preloadCriticalContent();
+                }, 1000);
+            }, { once: true });
+        }
+    };
 
-console.log('🚀 Performance optimization utilities loaded');
+    preloadWhenAuthenticated();
+});

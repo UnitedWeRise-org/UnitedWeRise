@@ -16,16 +16,11 @@ export class MobileTopBar {
                            /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                console.log('MobileTopBar: Desktop detected, skipping mobile top bar');
                 return;
             }
 
-            console.log('MobileTopBar: Mobile detected, rendering...');
-
             this.render();
             this.attachEventListeners();
-
-            console.log('✅ MobileTopBar: Initialized successfully');
 
             if (typeof adminDebugLog !== 'undefined') {
                 adminDebugLog('MobileTopBar', 'Mobile top bar initialized');
@@ -37,8 +32,6 @@ export class MobileTopBar {
 
     render() {
         try {
-            console.log('MobileTopBar: Starting render...');
-
             // Remove existing mobile-top-bar if present
             const existingTopBar = document.querySelector('.mobile-top-bar');
             if (existingTopBar) {
@@ -81,8 +74,6 @@ export class MobileTopBar {
             }
 
             this.topBar = mobileTopBar;
-
-            console.log('✅ MobileTopBar: Render complete');
         } catch (error) {
             console.error('❌ MobileTopBar render error:', error);
             throw error;
@@ -163,5 +154,3 @@ window.addEventListener('resize', () => {
 
 // Export for module use
 export default MobileTopBar;
-
-console.log('✅ MobileTopBar component loaded');

@@ -10,8 +10,6 @@ import { getApiBaseUrl } from '../../../utils/environment.js';
 
 class AdminAPI {
     constructor() {
-        this.totpVerified = false;
-        this.totpToken = null;
         this.BACKEND_URL = this.getBackendUrl();
 
         // Bind methods to preserve context
@@ -39,20 +37,19 @@ class AdminAPI {
      * Core method extracted from adminApiCall in admin-dashboard.html
      */
     async call(url, options = {}) {
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers
-        };
+        const headers = {};
+
+        // Only set Content-Type for non-FormData requests
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        // Merge with provided headers
+        Object.assign(headers, options.headers);
 
         // Add CSRF token for state-changing requests
         if (window.csrfToken && options.method && options.method !== 'GET') {
             headers['X-CSRF-Token'] = window.csrfToken;
-        }
-
-        // Add TOTP verification header if verified
-        if (this.totpVerified && this.totpToken) {
-            headers['x-totp-verified'] = 'true';
-            headers['x-totp-token'] = this.totpToken;
         }
 
         // Authentication handled by httpOnly cookies automatically
@@ -137,6 +134,7 @@ class AdminAPI {
 
     /**
      * Convenience method for GET requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async get(endpoint, params = {}) {
         let url = endpoint;
@@ -147,65 +145,133 @@ class AdminAPI {
             url += (url.includes('?') ? '&' : '?') + queryString;
         }
 
-        return this.call(url, {
+        const response = await this.call(url, {
             method: 'GET'
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for POST requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async post(endpoint, data = {}) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'POST',
             body: JSON.stringify(data)
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
+    }
+
+    /**
+     * Convenience method for POST requests with FormData (file uploads)
+     * Returns parsed JSON response with { success, data, error } structure
+     */
+    async postFormData(endpoint, formData) {
+        const response = await this.call(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for PUT requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async put(endpoint, data = {}) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'PUT',
             body: JSON.stringify(data)
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Convenience method for DELETE requests
+     * Returns parsed JSON response with { success, data, error } structure
      */
     async delete(endpoint) {
-        return this.call(endpoint, {
+        const response = await this.call(endpoint, {
             method: 'DELETE'
         });
+
+        const json = await response.json();
+        return {
+            success: response.ok,
+            data: json.data || json,
+            error: json.error || null,
+            status: response.status
+        };
     }
 
     /**
      * Admin-specific API endpoints with proper error handling
+     * All methods work with normalized response structure: {success, data, error, status}
      */
     async getDashboardStats() {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/dashboard`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch dashboard stats: ${response.status}`);
         }
-        return response.json();
+        return response.data;
+    }
+
+    /**
+     * Fetch all dashboard initialization data in one batch request
+     * Combines dashboard stats, recent users, posts, and reports into a single API call
+     * @returns {Promise<Object>} Complete dashboard initialization data
+     */
+    async getDashboardBatch() {
+        const response = await this.get(`${this.BACKEND_URL}/api/admin/batch/dashboard-init`);
+        if (!response.success) {
+            throw new Error(`Failed to fetch dashboard batch data: ${response.status}`);
+        }
+        return response.data;
     }
 
     async getUsers(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/users`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch users: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async deleteUser(userId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/users/${userId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete user: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async updateUserRole(userId, isAdmin, isModerator, isSuperAdmin = false) {
@@ -222,10 +288,10 @@ class AdminAPI {
         const response = await this.post(`${this.BACKEND_URL}/api/admin/users/${userId}/role`, {
             role
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update user role: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async mergeAccounts(primaryAccountId, secondaryAccountId) {
@@ -233,97 +299,112 @@ class AdminAPI {
             primaryAccountId,
             secondaryAccountId
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to merge accounts: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getPosts(params = {}) {
         // Use standard feed endpoint for admin post viewing
         const response = await this.get(`${this.BACKEND_URL}/api/feed`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch posts: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async deletePost(postId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/posts/${postId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete post: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
+    /**
+     * Get comments for admin moderation
+     * @deprecated - Comments require postId parameter. Use getCommentsForPost(postId) instead.
+     * @todo Implement proper admin comments endpoint or remove if not needed
+     * @param {Object} params - Query parameters (currently unused)
+     * @returns {Promise<{ok: boolean, comments: Array}>}
+     */
     async getComments(params = {}) {
-        // Comments require postId - this method needs to be redesigned
-        // For now, return empty array since admin comments need post context
-        await adminDebugLog('AdminAPI', 'getComments called - requires postId, returning empty array');
+        console.warn('AdminAPI.getComments() is deprecated - requires redesign');
+        await adminDebugLog('AdminAPI', 'DEPRECATED: getComments called without postId');
         return { ok: true, comments: [] };
     }
 
     async deleteComment(commentId) {
         const response = await this.delete(`${this.BACKEND_URL}/api/admin/comments/${commentId}`);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to delete comment: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getReports(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/moderation/reports`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch reports: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async updateReportStatus(reportId, status) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/reports/${reportId}`, {
             status
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update report status: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getCandidateProfiles(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/profiles`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch candidate profiles: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getCandidateReports(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/reports`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch candidate reports: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async getVerificationQueue(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/candidates/verification`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch verification queue: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async verifyCandidateProfile(profileId, verified) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/candidates/profiles/${profileId}/verify`, {
             verified
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update candidate verification: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
+    /**
+     * Get audit logs for admin actions
+     * @stub Backend endpoint not yet implemented
+     * @todo Implement backend endpoint: GET /api/admin/audit-logs
+     * @param {Object} params - Query parameters (page, limit, action, userId, dateRange)
+     * @returns {Promise<Object>} Mock data structure until backend ready
+     */
     async getAuditLogs(params = {}) {
+        await adminDebugLog('AdminAPI', 'STUB: getAuditLogs - awaiting backend implementation');
+
         // Return mock data for missing endpoint to prevent 404 network logs
         return {
             logs: [],
@@ -344,23 +425,31 @@ class AdminAPI {
 
     async getPayments(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/admin/payments`, params);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to fetch payments: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     async refundPayment(paymentId, reason) {
         const response = await this.post(`${this.BACKEND_URL}/api/admin/payments/${paymentId}/refund`, {
             reason
         });
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to process refund: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
+    /**
+     * Get Message of the Day settings
+     * @stub Backend endpoint not yet implemented
+     * @todo Implement backend endpoint: GET /api/admin/motd
+     * @returns {Promise<Object>} Mock MOTD data until backend ready
+     */
     async getMOTDSettings() {
+        await adminDebugLog('AdminAPI', 'STUB: getMOTDSettings - awaiting backend implementation');
+
         // Return mock data for missing endpoint to prevent 404 network logs
         return {
             id: 'default',
@@ -375,21 +464,21 @@ class AdminAPI {
 
     async updateMOTDSettings(settings) {
         const response = await this.put(`${this.BACKEND_URL}/api/admin/motd`, settings);
-        if (!response.ok) {
+        if (!response.success) {
             throw new Error(`Failed to update MOTD settings: ${response.status}`);
         }
-        return response.json();
+        return response.data;
     }
 
     /**
      * Set TOTP verification status (called by authentication system)
      */
     async setTotpStatus(verified, token = null) {
-        this.totpVerified = verified;
-        this.totpToken = token;
-
-        await adminDebugLog('AdminAPI', `TOTP status updated: ${verified ? 'verified' : 'unverified'}`, {
-            hasToken: !!token
+        // TOTP status now handled entirely by secure httpOnly cookies
+        // Backend reads from req.cookies.totpSessionToken
+        await adminDebugLog('AdminAPI', 'TOTP managed via httpOnly cookies', {
+            cookieBased: true,
+            secure: true
         });
     }
 
@@ -397,8 +486,8 @@ class AdminAPI {
      * Clear TOTP verification (called on logout)
      */
     clearTotpStatus() {
-        this.totpVerified = false;
-        this.totpToken = null;
+        // TOTP cleared server-side via logout endpoint
+        // No client-side state to manage
     }
 
     /**
@@ -408,9 +497,9 @@ class AdminAPI {
         try {
             const response = await this.get(`${this.BACKEND_URL}/health`);
             return {
-                healthy: response.ok,
+                healthy: response.success,
                 status: response.status,
-                data: response.ok ? await response.json() : null
+                data: response.success ? response.data : null
             };
         } catch (error) {
             return {
@@ -421,12 +510,20 @@ class AdminAPI {
     }
 }
 
+// Create singleton instance
+const adminAPI = new AdminAPI();
+
 // Export for module system
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AdminAPI;
-} else {
-    window.AdminAPI = new AdminAPI(); // Singleton pattern for global access
+    module.exports = adminAPI;
 }
+
+// Global access for legacy code
+window.AdminAPI = adminAPI;
+
+// ES6 module export
+export { adminAPI as AdminAPI };
+export default adminAPI;
 
 // Initialize admin debugging
 if (typeof adminDebugLog === 'undefined') {

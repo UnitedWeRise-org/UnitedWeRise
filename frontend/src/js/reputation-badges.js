@@ -1,9 +1,10 @@
 /**
- * Reputation Badge System
- * 
- * Simple color-coded badges based on reputation score
+ * @module js/reputation-badges
+ * @description Reputation Badge System - Color-coded badges based on reputation score
  * Green: 95-100, Yellow: 30-49, Brown: 0-29, Nothing: 50-94
+ * Migrated to ES6 modules: October 11, 2025 (Batch 5)
  */
+import { apiCall } from './api-compatibility-shim.js';
 
 /**
  * Get badge color and text based on reputation score
@@ -163,8 +164,6 @@ function updateProfileBadge(userScore) {
  * Initialize reputation badge system
  */
 function initializeReputationBadges() {
-    console.log('🏆 Initializing reputation badge system...');
-    
     // Update existing posts
     updateAllPostBadges();
     
@@ -204,8 +203,6 @@ function initializeReputationBadges() {
         childList: true,
         subtree: true
     });
-    
-    console.log('✅ Reputation badge system initialized');
 }
 
 /**
@@ -213,7 +210,7 @@ function initializeReputationBadges() {
  */
 async function loadCurrentUserReputation() {
     try {
-        const response = await window.apiCall('/reputation/me');
+        const response = await apiCall('/reputation/me');
 
         if (response.ok) {
             const data = response.data;
@@ -250,13 +247,40 @@ const checkAndLoadReputation = () => {
 checkAndLoadReputation();
 setTimeout(checkAndLoadReputation, 2000);
 
-// Export functions for use in other modules
-window.ReputationBadges = {
+// ES6 Module Exports
+export {
     getReputationBadge,
     createReputationBadgeElement,
     addReputationBadgeToPost,
     addReputationBadgeToProfile,
     updateAllPostBadges,
     updateProfileBadge,
-    loadCurrentUserReputation
+    loadCurrentUserReputation,
+    initializeReputationBadges
 };
+
+// Export as default object for convenience
+export default {
+    getReputationBadge,
+    createReputationBadgeElement,
+    addReputationBadgeToPost,
+    addReputationBadgeToProfile,
+    updateAllPostBadges,
+    updateProfileBadge,
+    loadCurrentUserReputation,
+    initializeReputationBadges
+};
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.ReputationBadges = {
+        getReputationBadge,
+        createReputationBadgeElement,
+        addReputationBadgeToPost,
+        addReputationBadgeToProfile,
+        updateAllPostBadges,
+        updateProfileBadge,
+        loadCurrentUserReputation,
+        initializeReputationBadges
+    };
+}

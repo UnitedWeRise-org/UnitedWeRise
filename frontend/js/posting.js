@@ -1,7 +1,11 @@
 /**
- * UNIFIED POST CREATION SYSTEM
+ * @module js/posting
+ * @description Unified post creation system
+ *
+ * Provides centralized post creation functionality across the application.
+ *
  * Created: September 6, 2025
- * Purpose: Centralize all post creation logic with proper tagging
+ * Migrated to ES6 modules: October 11, 2025 (Batch 4)
  */
 
 /**
@@ -122,14 +126,42 @@ function getPostTypeLabel(post) {
     return null; // Regular public posts don't need labels
 }
 
+// ============================================
+// ES6 MODULE EXPORTS
+// ============================================
+
+// Export post creation functions
+export {
+    createPostWithTag,
+    createPostPublic,
+    createPostVolunteer,
+    createPostCandidate,
+    createPostOfficial
+};
+
+// Export post identification functions
+export {
+    isPublicPost,
+    isVolunteerPost,
+    isCandidatePost,
+    isOfficialPost,
+    getPostTypeLabel
+};
+
+// ============================================
+// BACKWARD COMPATIBILITY
+// ============================================
+
 // Make functions available globally for backward compatibility
-window.createPostWithTag = createPostWithTag;  // CRITICAL: Base function used by UnifiedPostCreator
-window.createPostPublic = createPostPublic;
-window.createPostVolunteer = createPostVolunteer;
-window.createPostCandidate = createPostCandidate;
-window.createPostOfficial = createPostOfficial;
-window.isPublicPost = isPublicPost;
-window.isVolunteerPost = isVolunteerPost;
-window.isCandidatePost = isCandidatePost;
-window.isOfficialPost = isOfficialPost;
-window.getPostTypeLabel = getPostTypeLabel;
+if (typeof window !== 'undefined') {
+    window.createPostWithTag = createPostWithTag;  // CRITICAL: Base function used by UnifiedPostCreator
+    window.createPostPublic = createPostPublic;
+    window.createPostVolunteer = createPostVolunteer;
+    window.createPostCandidate = createPostCandidate;
+    window.createPostOfficial = createPostOfficial;
+    window.isPublicPost = isPublicPost;
+    window.isVolunteerPost = isVolunteerPost;
+    window.isCandidatePost = isCandidatePost;
+    window.isOfficialPost = isOfficialPost;
+    window.getPostTypeLabel = getPostTypeLabel;
+}

@@ -101,11 +101,21 @@ class NavigationHandlers {
             case 'close-trending':
                 this.closePanel('trending');
                 break;
-            case 'close-upcoming':
-                this.closePanel('upcoming');
+            case 'show-elections':
+                // Trigger modern elections system
+                if (window.electionsSystemIntegration && typeof window.electionsSystemIntegration.toggleElectionsPanel === 'function') {
+                    window.electionsSystemIntegration.toggleElectionsPanel();
+                } else {
+                    console.warn('Elections system not available');
+                }
                 break;
-            case 'close-officials':
-                this.closePanel('officials');
+            case 'show-officials':
+                // Trigger modern officials system
+                if (window.officialsSystemIntegration && typeof window.officialsSystemIntegration.toggleOfficialsPanel === 'function') {
+                    window.officialsSystemIntegration.toggleOfficialsPanel();
+                } else {
+                    console.warn('Officials system not available');
+                }
                 break;
 
             // Authentication actions
@@ -558,6 +568,20 @@ class NavigationHandlers {
             this.closeAllPanels();
             panel.classList.remove('hidden');
             this.currentPanel = name;
+
+            // Load live data when panel opens (enhancement from critical-functions.js)
+            // This ensures users always see fresh content when opening panels
+            if (name === 'trending') {
+                console.log('🔄 Loading live trending data...');
+                if (window.loadTrendingPosts && typeof window.loadTrendingPosts === 'function') {
+                    window.loadTrendingPosts();
+                }
+            } else if (name === 'officials') {
+                console.log('🔄 Loading live officials content...');
+                if (window.loadOfficialsContent && typeof window.loadOfficialsContent === 'function') {
+                    window.loadOfficialsContent();
+                }
+            }
         } else {
             // Panel is visible, hide it and show default view
             panel.classList.add('hidden');
@@ -614,7 +638,7 @@ class NavigationHandlers {
     }
 
     async showMyFeedInMain() {
-        console.log('🎯 Showing My Feed in main content area');
+        // Show My Feed in main content area (silent during normal operation)
 
         // Hide other main view systems
         this.hideOtherMainViews();
@@ -811,11 +835,7 @@ class NavigationHandlers {
             this.mapContainer = document.getElementById('mapContainer');
             const toggleBtn = document.getElementById('mapToggleBtn');
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('UISystem', 'mapContainer found', !!this.mapContainer);
-                adminDebugLog('UISystem', 'toggleBtn found', !!toggleBtn);
-            }
-
+            // Setup collapse button handler (silent during normal operation)
             if (toggleBtn && this.mapContainer) {
                 // Remove any existing listeners
                 toggleBtn.replaceWith(toggleBtn.cloneNode(true));
@@ -823,10 +843,6 @@ class NavigationHandlers {
 
                 // Add click handler
                 newToggleBtn.addEventListener('click', this.handleCollapseClick.bind(this), false);
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('UISystem', 'Collapse button handler attached successfully');
-                }
             } else {
                 if (typeof adminDebugError !== 'undefined') {
                     adminDebugError('UISystem', 'Could not find button or container elements');
@@ -897,14 +913,11 @@ class NavigationHandlers {
 
         setTimeout(() => {
             const closeBtn = document.querySelector('.map-action-btn.close-btn');
-            console.log('🔍 closeBtn found:', !!closeBtn);
 
             if (closeBtn) {
                 // Remove existing onclick and replace with proper handler
                 closeBtn.removeAttribute('onclick');
                 closeBtn.addEventListener('click', this.handleCloseClick.bind(this));
-
-                console.log('✅ Close button handler attached successfully');
             } else {
                 console.error('❌ Could not find close button element');
             }
@@ -937,17 +950,12 @@ class NavigationHandlers {
     }
 
     setupSidebarMapButton() {
-        console.log('🔧 Setting up sidebar map button handler...');
-
         const mapThumb = document.getElementById('mapThumb');
-        console.log('🔍 mapThumb found:', !!mapThumb);
 
         if (mapThumb) {
             // Remove existing onclick and replace with proper handler
             mapThumb.removeAttribute('onclick');
             mapThumb.addEventListener('click', this.handleSidebarMapClick.bind(this));
-
-            console.log('✅ Sidebar map button handler attached successfully');
         } else {
             console.error('❌ Could not find sidebar map button element');
         }
@@ -983,7 +991,6 @@ class NavigationHandlers {
                 arrow.textContent = '▶';
                 toggleButton.title = 'Expand Sidebar';
             }
-            console.log('Initial sidebar state set');
         }
     }
 }

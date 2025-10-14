@@ -6,8 +6,6 @@
  * - getTimeAgo (COMPLETE)
  */
 
-console.log('📅 Loading date helpers...');
-
 function getTimeAgo(date) {
     const now = new Date();
     const diffMs = now - date;
@@ -27,7 +25,4 @@ export {
 // Global exposure for compatibility (temporary during migration)
 if (typeof window !== 'undefined') {
     window.getTimeAgo = getTimeAgo;
-    console.log('🌐 Date helpers available globally');
 }
-
-console.log('✅ Date helpers loaded');

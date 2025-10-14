@@ -4,6 +4,8 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 export class FeedToggle {
     constructor() {
@@ -20,6 +22,16 @@ export class FeedToggle {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('FeedToggle: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Determine smart default based on user's follows and content
         await this.determineDefaultFeed();
 
@@ -46,8 +58,8 @@ export class FeedToggle {
             this.currentFeed = 'discover';
 
             // Check if user is new (no follows) to show helpful banner
-            if (typeof window.apiCall === 'function') {
-                const followResponse = await window.apiCall('/auth/me', { method: 'GET' });
+            if (typeof apiCall === 'function') {
+                const followResponse = await apiCall('/auth/me', { method: 'GET' });
                 const followingCount = followResponse?.data?.data?.followingCount || 0;
 
                 if (followingCount === 0) {
@@ -391,7 +403,7 @@ export class FeedToggle {
 
                         // Step 2: Create post with content and mediaIds
                         console.log('📝 Step 2: Creating post with content and mediaIds...');
-                        postResult = await window.apiCall('/posts', {
+                        postResult = await apiCall('/posts', {
                             method: 'POST',
                             body: JSON.stringify({
                                 content,
@@ -556,7 +568,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Following feed');
             return [];
         }
@@ -567,7 +579,7 @@ export class FeedToggle {
             ? `/feed/following?limit=15&_=${Date.now()}`
             : '/feed/following?limit=15';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
@@ -603,7 +615,7 @@ export class FeedToggle {
     }
 
     async loadDiscoverFeed(bypassCache = false) {
-        console.log('Loading discover feed...', bypassCache ? '(bypassing cache)' : '');
+        // Load discover feed (silent during normal operation)
 
         // Check cache first (unless bypassing)
         if (!bypassCache && this.caches.discover.length > 0) {
@@ -612,7 +624,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Discover feed');
             return [];
         }
@@ -623,12 +635,12 @@ export class FeedToggle {
             ? `/feed/?limit=15&_=${Date.now()}`
             : '/feed/?limit=15';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
-        console.log('Discover feed response:', response);
-        console.log('📊 Response structure check:', {
+        await adminDebugLog('FeedToggle', 'Discover feed response', response);
+        await adminDebugLog('FeedToggle', 'Response structure check', {
             hasResponse: !!response,
             hasData: !!response?.data,
             hasOk: !!response?.ok,
@@ -641,20 +653,20 @@ export class FeedToggle {
         // Handle different response formats
         let posts = null;
         if (response && response.posts) {
-            console.log('✅ Found posts at response.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.posts');
             posts = response.posts;
         } else if (response && response.data && response.data.posts) {
-            console.log('✅ Found posts at response.data.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.data.posts');
             posts = response.data.posts;
         } else if (response && response.ok && response.data && response.data.posts) {
-            console.log('✅ Found posts at response.ok.data.posts');
+            await adminDebugLog('FeedToggle', 'Found posts at response.ok.data.posts');
             posts = response.data.posts;
         } else {
             console.error('❌ Could not find posts in response. Response structure:', response);
         }
 
         if (posts && Array.isArray(posts)) {
-            console.log(`✅ Returning ${posts.length} posts for discover feed`);
+            await adminDebugLog('FeedToggle', `Returning ${posts.length} posts for discover feed`);
             this.caches.discover = posts;
             return posts;
         }
@@ -673,7 +685,7 @@ export class FeedToggle {
         }
 
         // Safety check: Ensure apiCall is available
-        if (typeof window.apiCall !== 'function') {
+        if (typeof apiCall !== 'function') {
             console.error('FeedToggle: apiCall not available, cannot load Saved feed');
             return [];
         }
@@ -684,7 +696,7 @@ export class FeedToggle {
             ? `/posts/saved?limit=50&_=${Date.now()}`
             : '/posts/saved?limit=50';
 
-        const response = await window.apiCall(url, {
+        const response = await apiCall(url, {
             method: 'GET'
         });
 
@@ -718,8 +730,8 @@ export class FeedToggle {
         return [];
     }
 
-    renderPosts(posts, feedType) {
-        console.log('🎨 renderPosts called:', {
+    async renderPosts(posts, feedType) {
+        await adminDebugLog('FeedToggle', 'renderPosts called', {
             feedType,
             postsReceived: !!posts,
             postsLength: posts?.length,
@@ -734,7 +746,7 @@ export class FeedToggle {
         }
 
         if (!posts || posts.length === 0) {
-            console.warn('⚠️ No posts to render, showing empty state');
+            await adminDebugLog('FeedToggle', 'No posts to render, showing empty state');
 
             const emptyDiv = document.createElement('div');
             emptyDiv.style.cssText = 'text-align: center; padding: 2rem; color: #666;';
@@ -944,7 +956,7 @@ export class FeedToggle {
     async getUnreadCount() {
         try {
             // Safety check: Ensure apiCall is available
-            if (typeof window.apiCall !== 'function') {
+            if (typeof apiCall !== 'function') {
                 return 0;
             }
 
@@ -953,7 +965,7 @@ export class FeedToggle {
             if (!lastView) return 0;
 
             // Fetch Following feed preview
-            const response = await window.apiCall('/feed/following?limit=100', { method: 'GET' });
+            const response = await apiCall('/feed/following?limit=100', { method: 'GET' });
             const posts = response?.data?.posts || response?.posts || [];
 
             // Count posts newer than last view
@@ -1067,41 +1079,43 @@ export class FeedToggle {
 
     /**
      * Setup scroll behavior for auto-hide/show toggle
+     * Hides controls when scrolling UP, shows when scrolling DOWN
      */
     setupScrollBehavior() {
         const controlsWrapper = document.querySelector('.feed-controls-wrapper');
-        if (!controlsWrapper) return;
+        const feedContainer = document.getElementById('myFeedPosts');
 
-        let lastScrollY = window.scrollY;
+        if (!controlsWrapper || !feedContainer) return;
+
+        let lastScrollTop = 0;
         let ticking = false;
 
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
+            const currentScrollTop = feedContainer.scrollTop;
 
             // Determine scroll direction
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                // Scrolling down - hide controls
+            if (currentScrollTop > lastScrollTop && currentScrollTop > 50) {
+                // Scrolling DOWN page (text moves bottom→top) - HIDE controls
                 controlsWrapper.classList.add('hidden');
-            } else if (currentScrollY < lastScrollY) {
-                // Scrolling up - show controls
+            } else if (currentScrollTop < lastScrollTop) {
+                // Scrolling UP page (text moves top→bottom) - SHOW controls
                 controlsWrapper.classList.remove('hidden');
             }
 
-            lastScrollY = currentScrollY;
+            lastScrollTop = currentScrollTop;
             ticking = false;
         };
 
         // Use requestAnimationFrame for smooth performance
-        window.addEventListener('scroll', () => {
+        // Listen to scroll on the feed container, not window
+        feedContainer.addEventListener('scroll', () => {
             if (!ticking) {
                 window.requestAnimationFrame(handleScroll);
                 ticking = true;
             }
         }, { passive: true });
 
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('FeedToggle', 'Scroll behavior initialized');
-        }
+        // Scroll behavior initialized (silent during normal operation)
     }
 
     /**
@@ -1182,5 +1196,3 @@ window.feedToggle = new FeedToggle();
 
 // Export for module use
 export default FeedToggle;
-
-console.log('✅ FeedToggle component loaded');

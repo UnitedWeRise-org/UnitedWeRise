@@ -861,5 +861,3 @@ window.unsubscribeFromUser = (userId) => SubscriptionUtils.unsubscribeFromUser(u
 
 // ES6 Module Exports
 export { FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils };
-
-console.log('🤝 Relationship utilities loaded via ES6 module - FollowUtils, FriendUtils, SubscriptionUtils, RelationshipUtils available globally');

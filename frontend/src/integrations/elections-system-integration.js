@@ -1,5 +1,9 @@
-// Elections System Integration for United We Rise Frontend
-// This script enhances the upcoming elections panel to use the main content area effectively
+/**
+ * @module integrations/elections-system-integration
+ * @description Elections System Integration for United We Rise Frontend
+ * This script enhances the upcoming elections panel to use the main content area effectively
+ * Migrated to ES6 modules: October 11, 2025 (Batch 9)
+ */
 
 class ElectionsSystemIntegration {
     constructor() {
@@ -48,25 +52,10 @@ class ElectionsSystemIntegration {
     }
 
     addElectionsNavigation() {
-        // Find the existing Upcoming thumb button and enhance it
-        const sidebar = document.querySelector('#sidebar .thumbs');
-        if (sidebar) {
-            const upcomingThumb = Array.from(sidebar.children).find(thumb => 
-                thumb.textContent.includes('Upcoming')
-            );
-            
-            if (upcomingThumb) {
-                // Store original onclick handler
-                const originalOnclick = upcomingThumb.onclick;
-                
-                // Replace with our enhanced handler
-                upcomingThumb.onclick = () => this.toggleElectionsPanel();
-                upcomingThumb.title = 'Enhanced Elections View';
-                
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('ElectionsSystem', 'Enhanced Upcoming Elections button in sidebar');
-                }
-            }
+        // Elections button now handled by navigation-handlers.js via data-action="show-elections"
+        // No need to enhance button here - navigation system calls toggleElectionsPanel() directly
+        if (typeof adminDebugLog !== 'undefined') {
+            adminDebugLog('ElectionsSystem', 'Elections navigation ready (handled by navigation system)');
         }
     }
 
@@ -114,9 +103,9 @@ class ElectionsSystemIntegration {
     }
 
     showElectionsMainView(mainContent) {
-        // Store original content so we can restore it later
-        if (!mainContent.dataset.originalContent) {
-            mainContent.dataset.originalContent = mainContent.innerHTML;
+        // Store original content so we can restore it later (use namespaced key to avoid collision)
+        if (!mainContent.dataset.electionsOriginal) {
+            mainContent.dataset.electionsOriginal = mainContent.innerHTML;
         }
 
         // Create full-width elections interface
@@ -257,18 +246,9 @@ class ElectionsSystemIntegration {
             
         } catch (error) {
             adminDebugError('Failed to load elections:', error);
-            
-            // Fallback to mock data if API fails
-            adminDebugLog('🔄 Falling back to mock data...');
-            const originalPanel = document.querySelector('#panel-upcoming');
-            
-            if (originalPanel) {
-                setTimeout(() => {
-                    this.enhanceElectionsDisplay(originalPanel);
-                }, 500);
-            } else {
-                this.showElectionsError('Election data not available.');
-            }
+
+            // Show proper error message instead of falling back to obsolete mock data
+            this.showElectionsError('Unable to load election data. Please try again later.');
         } finally {
             // Hide loading indicator
             if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -1326,12 +1306,12 @@ class ElectionsSystemIntegration {
     }
 
     restoreMainContent() {
-        const mainContent = document.querySelector('#mainContent') || 
+        const mainContent = document.querySelector('#mainContent') ||
                            document.querySelector('.main');
-        
-        if (mainContent && mainContent.dataset.originalContent) {
-            mainContent.innerHTML = mainContent.dataset.originalContent;
-            delete mainContent.dataset.originalContent;
+
+        if (mainContent && mainContent.dataset.electionsOriginal) {
+            mainContent.innerHTML = mainContent.dataset.electionsOriginal;
+            delete mainContent.dataset.electionsOriginal;
             
             // Restore map to original state
             const mapContainer = document.querySelector('#mapContainer');
@@ -1730,11 +1710,15 @@ class ElectionsSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.ElectionsSystemIntegration = ElectionsSystemIntegration;
-
 // Auto-initialize when script loads
 const electionsIntegration = new ElectionsSystemIntegration();
 
-// Make integration available globally for other scripts
-window.electionsSystemIntegration = electionsIntegration;
+// ES6 Module Exports
+export { ElectionsSystemIntegration, electionsIntegration };
+export default electionsIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.ElectionsSystemIntegration = ElectionsSystemIntegration;
+    window.electionsSystemIntegration = electionsIntegration;
+}

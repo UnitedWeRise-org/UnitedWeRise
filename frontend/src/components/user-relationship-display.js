@@ -1,8 +1,8 @@
 /**
- * User Relationship Display Component
- * 
- * Reusable component for displaying follow/friend status and controls
+ * @module components/user-relationship-display
+ * @description Reusable component for displaying follow/friend status and controls
  * Can be used in user profiles, post headers, user lists, etc.
+ * Migrated to ES6 modules: October 11, 2025 (Batch 5)
  */
 
 class UserRelationshipDisplay {
@@ -191,15 +191,15 @@ class UserRelationshipDisplay {
 }
 
 // Global action handlers
-window.handleFollowAction = async function(userId, currentlyFollowing) {
+async function handleFollowAction(userId, currentlyFollowing) {
     try {
         await FollowUtils.toggleFollow(userId, currentlyFollowing);
     } catch (error) {
         console.error('Follow action failed:', error);
     }
-};
+}
 
-window.handleFriendAction = async function(userId, action) {
+async function handleFriendAction(userId, action) {
     try {
         switch (action) {
             case 'sendFriendRequest':
@@ -215,20 +215,34 @@ window.handleFriendAction = async function(userId, action) {
     } catch (error) {
         console.error('Friend action failed:', error);
     }
-};
+}
 
-window.openMessageDialog = function(userId) {
+function openMessageDialog(userId) {
     // TODO: Implement message dialog
     console.log('Opening message dialog for user:', userId);
     window.dispatchEvent(new CustomEvent('openMessage', { detail: { userId } }));
-};
+}
 
 // Utility function to quickly add relationship display to any element
-window.addRelationshipDisplay = function(userId, containerElement, options = {}) {
+function addRelationshipDisplay(userId, containerElement, options = {}) {
     return new UserRelationshipDisplay(userId, containerElement, options);
+}
+
+// ES6 Module Exports
+export {
+    UserRelationshipDisplay,
+    handleFollowAction,
+    handleFriendAction,
+    openMessageDialog,
+    addRelationshipDisplay
 };
+export default UserRelationshipDisplay;
 
-// Export for module usage
-window.UserRelationshipDisplay = UserRelationshipDisplay;
-
-console.log('User relationship display component loaded');
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.UserRelationshipDisplay = UserRelationshipDisplay;
+    window.handleFollowAction = handleFollowAction;
+    window.handleFriendAction = handleFriendAction;
+    window.openMessageDialog = openMessageDialog;
+    window.addRelationshipDisplay = addRelationshipDisplay;
+}

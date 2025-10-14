@@ -1,4 +1,10 @@
-// Content reporting and moderation interface for United We Rise
+/**
+ * @module components/ContentReporting
+ * @description Content reporting and moderation interface for United We Rise
+ * Handles user reports for posts, comments, and inappropriate content
+ * Migrated to ES6 modules: October 11, 2025 (Batch 6)
+ */
+
 class ContentReporting {
     constructor() {
         this.API_BASE = 'https://api.unitedwerise.org/api';
@@ -394,12 +400,11 @@ class ContentReporting {
         }
         
         try {
-            const authToken = localStorage.getItem('authToken');
             const response = await fetch(`${this.API_BASE}/moderation/reports`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     targetType: this.currentReport.targetType,
@@ -450,14 +455,9 @@ class ContentReporting {
 
     // Check and display user moderation status
     async checkModerationStatus() {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) return;
-
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             });
             
             if (response.ok) {
@@ -504,9 +504,8 @@ function initializeContentReporting() {
         // Make it globally available
         window.contentReporting = contentReporting;
 
-        // Check moderation status when auth token is available
-        const authToken = localStorage.getItem('authToken');
-        if (authToken) {
+        // Check moderation status if user is authenticated
+        if (window.authUtils?.isUserAuthenticated()) {
             contentReporting.checkModerationStatus();
         }
     } else {
@@ -515,8 +514,7 @@ function initializeContentReporting() {
             const contentReporting = new ContentReporting();
             window.contentReporting = contentReporting;
 
-            const authToken = localStorage.getItem('authToken');
-            if (authToken) {
+            if (window.authUtils?.isUserAuthenticated()) {
                 contentReporting.checkModerationStatus();
             }
         });
@@ -530,3 +528,12 @@ initializeContentReporting();
 document.addEventListener('userLoggedIn', () => {
     contentReporting.checkModerationStatus();
 });
+
+// ES6 Module Exports
+export { ContentReporting, initializeContentReporting };
+export default ContentReporting;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.ContentReporting = ContentReporting;
+}

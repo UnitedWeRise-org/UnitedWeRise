@@ -18,6 +18,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class MessagesHandlers {
     constructor() {
@@ -88,7 +89,7 @@ export class MessagesHandlers {
         if (!window.currentUser) return;
 
         try {
-            const response = await window.apiCall('/messages/conversations');
+            const response = await apiCall('/messages/conversations');
 
             if (response.ok) {
                 this.displayConversations(response.data.conversations);
@@ -194,7 +195,7 @@ export class MessagesHandlers {
      */
     async startConversationWithUser(userId, username) {
         try {
-            const response = await window.apiCall('/messages/conversations', {
+            const response = await apiCall('/messages/conversations', {
                 method: 'POST',
                 body: JSON.stringify({ participantId: userId })
             });
@@ -218,7 +219,7 @@ export class MessagesHandlers {
     async openConversation(conversationId, username) {
         try {
             // Load messages for this conversation
-            const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`);
+            const response = await apiCall(`/messages/conversations/${conversationId}/messages`);
 
             if (response.ok) {
                 this.showConversationView(conversationId, username, response.data.messages);
@@ -324,7 +325,7 @@ export class MessagesHandlers {
         if (!content) return;
 
         try {
-            const response = await window.apiCall(`/messages/conversations/${conversationId}/messages`, {
+            const response = await apiCall(`/messages/conversations/${conversationId}/messages`, {
                 method: 'POST',
                 body: JSON.stringify({ content })
             });
@@ -418,7 +419,7 @@ export class MessagesHandlers {
             console.log('Opening message with friend:', userId);
 
             // Get user info first to have their username
-            const userResponse = await window.apiCall(`/users/profile/${userId}`);
+            const userResponse = await apiCall(`/users/profile/${userId}`);
             if (!userResponse || !userResponse.username) {
                 showToast('Failed to load user information');
                 return;

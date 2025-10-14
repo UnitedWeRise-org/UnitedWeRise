@@ -1,3 +1,9 @@
+/**
+ * @module utils/smart-loader
+ * @description Simple smart loading system - loads JavaScript only when users actually need it
+ * Migrated to ES6 modules: October 11, 2025 (Batch 1)
+ */
+
 // Simple Smart Loading System
 // Load JavaScript only when users actually need it
 
@@ -166,7 +172,11 @@ smartLoader.loadOnClick('/src/components/MessagingSystem.js', '[data-action="ope
 // 7. 🔍 ADVANCED SEARCH - Only when user uses search
 smartLoader.loadOnClick('/src/modules/features/search/global-search.js', '[data-action="search"], #advanced-search', 'Advanced Search');
 
-// Export for manual use
-window.smartLoader = smartLoader;
+// ES6 Module Exports
+export { SmartLoader, smartLoader };
+export default smartLoader;
 
-console.log('🧠 Smart loading system ready - scripts will load only when needed!');
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.smartLoader = smartLoader;
+}

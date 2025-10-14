@@ -1,4 +1,10 @@
-// Enhanced verification flow component for United We Rise
+/**
+ * @module components/VerificationFlow
+ * @description Enhanced verification flow component for user email and phone verification
+ * Handles account verification workflow with multi-step process
+ * Migrated to ES6 modules: October 11, 2025 (Batch 6)
+ */
+
 class VerificationFlow {
     constructor() {
         this.currentStep = 'welcome';
@@ -705,3 +711,12 @@ function initializeVerificationFlow() {
 
 // Initialize
 initializeVerificationFlow();
+
+// ES6 Module Exports
+export { VerificationFlow, initializeVerificationFlow };
+export default VerificationFlow;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.VerificationFlow = VerificationFlow;
+}

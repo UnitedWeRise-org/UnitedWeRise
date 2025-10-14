@@ -1,13 +1,21 @@
 /**
- * Secure Admin-Only Debugging System
- * 
+ * @module adminDebugger
+ * @description Secure Admin-Only Debugging System
+ *
  * Provides debugging functionality that only works for authenticated admin users
  * Uses existing admin verification endpoint to ensure security
- * 
+ *
+ * Used by 16+ files across the codebase for debugging
+ * Migrated to ES6 modules: October 11, 2025 (Batch 2)
+ *
  * Usage:
+ *   import { adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive } from '../js/adminDebugger.js';
  *   await adminDebugLog('Component initialized', componentData);
  *   await adminDebugError('API call failed', errorDetails);
  *   await adminDebugTable('Database results', queryResults);
+ *
+ * Legacy usage (backward compatible):
+ *   await window.adminDebugLog('Component initialized', componentData);
  */
 
 class AdminDebugger {
@@ -29,49 +37,20 @@ class AdminDebugger {
             return this.adminVerified;
         }
 
-        try {
-            // Check if user has admin flag BEFORE making admin API calls
-            if (!window.currentUser || !window.currentUser.isAdmin) {
-                this.adminVerified = false;
-                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return false;
-            }
+        // SIMPLIFIED: Just check window.currentUser flags - no backend API call needed
+        // The isAdmin/isSuperAdmin flags come from the authenticated /batch/initialize endpoint
+        // so they're already secure. No need to re-verify and risk triggering auth errors.
 
-            // Use AdminAPI for modular admin system
-            if (!window.AdminAPI || typeof window.AdminAPI.call !== 'function') {
-                // Fall back to regular apiCall for non-admin pages
-                if (typeof window.apiCall !== 'function') {
-                    this.adminVerified = false;
-                    this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                    return false;
-                }
-
-                // User has isAdmin flag, now verify with backend
-                const response = await window.apiCall('/admin/users?limit=1');
-                this.adminVerified = response.ok;
-                this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-                return this.adminVerified;
-            }
-
-            // User has isAdmin flag (already checked above), now verify with AdminAPI
-            const response = await window.AdminAPI.get(`${window.AdminAPI.BACKEND_URL}/api/admin/users`, { limit: 1 });
-            this.adminVerified = response.ok;
-            this.verificationExpiry = Date.now() + this.CACHE_DURATION;
-            
-            if (!this.adminVerified && response.status === 403) {
-                console.log('🔧 AdminDebugger: Access denied - not admin or TOTP required');
-            } else if (!this.adminVerified && response.status === 401) {
-                console.log('🔧 AdminDebugger: Unauthorized - auth token invalid or expired');
-            }
-            
-            return this.adminVerified;
-        } catch (error) {
-            // Fail secure - if verification fails, assume not admin
-            console.warn('🔧 AdminDebugger: Admin verification failed, disabling debug output');
+        if (!window.currentUser || !(window.currentUser.isAdmin || window.currentUser.isSuperAdmin)) {
             this.adminVerified = false;
             this.verificationExpiry = Date.now() + this.CACHE_DURATION;
             return false;
         }
+
+        // User has admin flags - trust them (they came from authenticated endpoint)
+        this.adminVerified = true;
+        this.verificationExpiry = Date.now() + this.CACHE_DURATION;
+        return true;
     }
 
     /**
@@ -86,6 +65,12 @@ class AdminDebugger {
      * Standard debug logging - only visible to admins
      */
     async log(component, message, data = null) {
+        // One-time diagnostic: Confirm adminDebugLog is being called
+        if (!this._firstCallLogged) {
+            console.log('🔍 AdminDebugger: First adminDebugLog() call detected, checking admin status...');
+            this._firstCallLogged = true;
+        }
+
         if (await this.verifyAdminStatus()) {
             const timestamp = new Date().toLocaleTimeString();
             console.log(`🔧 [${timestamp}] [${component}] ${message}`, data);
@@ -160,41 +145,53 @@ class AdminDebugger {
     }
 }
 
-// Create global instance
+// Create singleton instance
 const adminDebugger = new AdminDebugger();
 
-// Export convenience functions for easy use
-window.adminDebugLog = async (component, message, data) => {
+// ES6 Module Exports - Primary interface
+export async function adminDebugLog(component, message, data) {
     await adminDebugger.log(component, message, data);
-};
+}
 
-window.adminDebugError = async (component, message, errorData) => {
+export async function adminDebugError(component, message, errorData) {
     await adminDebugger.error(component, message, errorData);
-};
+}
 
-window.adminDebugWarn = async (component, message, data) => {
+export async function adminDebugWarn(component, message, data) {
     await adminDebugger.warn(component, message, data);
-};
+}
 
-window.adminDebugTable = async (component, message, tableData) => {
+export async function adminDebugTable(component, message, tableData) {
     await adminDebugger.table(component, message, tableData);
-};
+}
 
-window.adminDebugSensitive = async (component, message, sensitiveData) => {
+export async function adminDebugSensitive(component, message, sensitiveData) {
     await adminDebugger.sensitive(component, message, sensitiveData);
-};
+}
 
-window.adminDebugTime = async (component, label) => {
+export async function adminDebugTime(component, label) {
     await adminDebugger.time(component, label);
-};
+}
 
-window.adminDebugTimeEnd = async (component, label) => {
+export async function adminDebugTimeEnd(component, label) {
     await adminDebugger.timeEnd(component, label);
-};
+}
 
 // Export the instance for advanced usage
-window.adminDebugger = adminDebugger;
+export { adminDebugger };
 
-console.log('🔧 Admin-only debugging system loaded');
-console.log('🔧 Available functions: adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive');
-console.log('🔧 Debugging output will only appear for verified admin users');
+// Maintain backward compatibility during transition period
+// All 16+ dependent files can continue using window.* until migrated
+if (typeof window !== 'undefined') {
+    window.adminDebugLog = adminDebugLog;
+    window.adminDebugError = adminDebugError;
+    window.adminDebugWarn = adminDebugWarn;
+    window.adminDebugTable = adminDebugTable;
+    window.adminDebugSensitive = adminDebugSensitive;
+    window.adminDebugTime = adminDebugTime;
+    window.adminDebugTimeEnd = adminDebugTimeEnd;
+    window.adminDebugger = adminDebugger;
+
+    // Admin debugger loaded - intro messages removed to reduce console noise
+    // Debug output will only appear for verified admin users (isAdmin or isSuperAdmin flags)
+}

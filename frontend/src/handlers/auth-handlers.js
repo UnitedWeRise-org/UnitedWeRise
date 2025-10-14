@@ -23,7 +23,6 @@ export class AuthHandlers {
         this.googleClientId = '496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleusercontent.com';
         this.initialized = false;
         this.setupEventListeners();
-        console.log('🔐 AuthHandlers initialized');
     }
 
     /**

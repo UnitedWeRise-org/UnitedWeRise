@@ -1,5 +1,9 @@
-// Officials System Integration for United We Rise Frontend
-// This script enhances the officials panel to use the main content area effectively
+/**
+ * @module integrations/officials-system-integration
+ * @description Officials System Integration for United We Rise Frontend
+ * This script enhances the officials panel to use the main content area effectively
+ * Migrated to ES6 modules: October 11, 2025 (Batch 8)
+ */
 
 class OfficialsSystemIntegration {
     constructor() {
@@ -1151,11 +1155,15 @@ class OfficialsSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.OfficialsSystemIntegration = OfficialsSystemIntegration;
-
 // Auto-initialize when script loads
 const officialsIntegration = new OfficialsSystemIntegration();
 
-// Make integration available globally for other scripts
-window.officialsSystemIntegration = officialsIntegration;
+// ES6 Module Exports
+export { OfficialsSystemIntegration, officialsIntegration };
+export default officialsIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.OfficialsSystemIntegration = OfficialsSystemIntegration;
+    window.officialsSystemIntegration = officialsIntegration;
+}

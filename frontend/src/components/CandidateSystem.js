@@ -1,5 +1,9 @@
-// Enhanced Candidate System Components for United We Rise Frontend
-// Integrates with the robust backend candidate system
+/**
+ * @module components/CandidateSystem
+ * @description Enhanced Candidate System Components for United We Rise Frontend
+ * Integrates with the robust backend candidate system for election and candidate management
+ * Migrated to ES6 modules: October 11, 2025 (Batch 7)
+ */
 
 class CandidateSystem {
     constructor() {
@@ -758,5 +762,11 @@ class CandidateSystem {
     }
 }
 
-// Initialize the enhanced candidate system
-window.CandidateSystem = CandidateSystem;
+// ES6 Module Exports
+export { CandidateSystem };
+export default CandidateSystem;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.CandidateSystem = CandidateSystem;
+}

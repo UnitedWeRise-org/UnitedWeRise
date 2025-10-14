@@ -4,6 +4,8 @@
  * Integrates with existing quest API endpoints
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class QuestProgressTracker {
     constructor() {
         this.userQuests = [];
@@ -17,6 +19,16 @@ class QuestProgressTracker {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('QuestProgressTracker: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Auto-load quest data on component initialization
         await this.loadQuestData();
 
@@ -40,8 +52,8 @@ class QuestProgressTracker {
         try {
             // Load data in parallel for better performance
             const [questsResponse, streaksResponse] = await Promise.all([
-                window.apiCall('/quests/daily'),
-                window.apiCall('/quests/streaks')
+                apiCall('/quests/daily'),
+                apiCall('/quests/streaks')
             ]);
 
             if (questsResponse.ok && questsResponse.data.success) {

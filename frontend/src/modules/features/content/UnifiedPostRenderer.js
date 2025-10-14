@@ -651,5 +651,3 @@ if (typeof window !== 'undefined') {
     window.unifiedPostRenderer = unifiedPostRenderer;
     window.UnifiedPostRenderer = UnifiedPostRenderer;
 }
-
-console.log('✅ UnifiedPostRenderer module loaded - Ready to consolidate all post display logic');

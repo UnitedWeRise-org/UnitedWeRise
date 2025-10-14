@@ -6,16 +6,35 @@
  * following industry standards for dependency management and load order.
  */
 
-console.log('🚀 Loading modern ES6 module system...');
-
 // Phase 1: Core utilities (no dependencies)
 import '../utils/environment.js';
+import '../utils/performance.js';
+import '../utils/error-handler.js';
+import '../utils/advanced-caching.js';
+import '../utils/smart-loader.js';
+
+// Phase 1a: Admin debug system (used by many modules, loaded early)
+import '../../js/adminDebugger.js';
+
+// Phase 1b: API Infrastructure (Batch 3)
+import '../js/api-manager.js';  // Advanced API request manager
+import '../js/reputation-integration.js';  // Decorates API calls with reputation data
+import '../js/api-compatibility-shim.js';  // TEMPORARY: Maintains window.apiCall during migration
 
 // Phase 2: Configuration layer (depends on environment)
 import '../config/api.js';
 
 // Phase 3: Integration layer (depends on config)
 import '../integrations/backend-integration.js';
+
+// Phase 3a: HCaptcha integration (Batch 3)
+import '../integrations/hcaptcha-integration.js';  // CAPTCHA verification
+
+// Phase 3b: Standalone Utilities (Batch 4)
+import '../../js/posting.js';  // Unified post creation system
+import '../js/deployment-status.js';  // Deployment status checker (admin-only)
+import '../js/legal-modal.js';  // Legal documents modal handler
+import '../js/map-dummy-data.js';  // Dummy map data for testing
 
 // Phase 4: WebSocket and real-time services
 import './websocket-client.js';
@@ -67,6 +86,30 @@ import '../components/FeedToggle.js';
 import '../components/NewPostModal.js';
 import '../components/SavedPostsView.js';
 
+// Phase 5c: Lightweight Components (Batch 5)
+import '../components/AddressForm.js';  // US states dropdown & validation
+import '../components/user-relationship-display.js';  // User relationship UI
+import '../js/reputation-badges.js';  // Reputation & badge display
+
+// Phase 5d: Medium Components (Batch 6)
+import '../components/VerificationFlow.js';  // User verification workflow
+import '../components/ContentReporting.js';  // Content moderation reporting
+import '../components/UserCard.js';  // User profile card popup
+
+// Phase 5e: Heavy Component (Batch 7)
+import '../components/CandidateSystem.js';  // Candidate registration & management
+
+// Phase 5f: Small Integrations (Batch 8)
+import '../js/force-optimization.js';  // Force override old initialization system
+import '../integrations/officials-system-integration.js';  // Officials system integration
+
+// Phase 5g: Large Integrations (Batch 9)
+import '../integrations/elections-system-integration.js';  // Elections system integration
+import '../integrations/trending-system-integration.js';  // Trending system integration
+
+// Phase 5h: Final Boss Integration (Batch 10)
+import '../integrations/candidate-system-integration.js';  // Comprehensive candidate system integration (3672 lines)
+
 // Phase 4j: My Feed handlers (personalized feed system)
 import '../handlers/my-feed.js';
 
@@ -91,38 +134,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize search handlers
     if (window.SearchHandlers) {
         window.searchHandlers = new window.SearchHandlers();
-        console.log('🔍 Search handlers initialized');
     }
 
     // Initialize payment systems
     initializeDonationSystem();
-    console.log('💳 Payment systems initialized');
-
-    // Performance optimizations (migrated from index.html inline script)
-    console.log('🚀 Initializing performance optimizations...');
 
     // Wrap apiCall with performance optimization if available
     if (window.createOptimizedApiCall && window.apiCall) {
         const originalApiCall = window.apiCall;
         window.apiCall = window.createOptimizedApiCall(originalApiCall);
-        console.log('✅ API calls optimized with caching and retry');
     }
 
     // Wrap apiCall with error handling if available
     if (window.createErrorAwareApiCall && window.apiCall) {
         const currentApiCall = window.apiCall;
         window.apiCall = window.createErrorAwareApiCall(currentApiCall);
-        console.log('✅ API calls enhanced with user-friendly error handling');
     }
 
-    // Preload critical content
-    if (window.performanceOptimizer) {
-        window.performanceOptimizer.preloadCriticalContent();
-    }
-
-    console.log('🎉 Performance optimizations active!');
+    // Note: preloadCriticalContent is handled by performance.js with proper auth checks
+    // Don't call it directly here to avoid duplicate API calls before authentication
 });
 
-console.log('✅ ES6 Module system loaded successfully');
-console.log('📋 All dependencies loaded in correct order');
-console.log('🎯 Modern JavaScript architecture active');
+/**
+ * ES6 MODULE MIGRATION - COMPLETE (October 11, 2025):
+ *
+ * ✅ Batch 1-10: ALL batches complete (23/47 files migrated to ES6 modules)
+ * ✅ Batch 10 "Final Boss": candidate-system-integration.js (3672 lines) - COMPLETE
+ * ✅ 100% of planned migration batches finished
+ *
+ * MIGRATION SUMMARY:
+ * - Core utilities, API layer, components, and integrations → ES6 modules
+ * - Proper dependency ordering in main.js (Phases 1-6)
+ * - Backward compatibility maintained via window.* assignments
+ * - All old <script> tags removed from index.html
+ *
+ * NEXT STEPS (Post-Migration Cleanup):
+ * - Remove api-compatibility-shim.js (temporary layer)
+ * - Delete critical-functions.js entirely
+ * - Production deployment validation
+ */

@@ -899,21 +899,16 @@ class OnboardingFlow {
         // Don't load steps if user is not logged in
         // Use unified authentication check instead of localStorage
         if (!window.authUtils?.isUserAuthenticated()) {
-            console.log('User not authenticated, skipping onboarding steps load');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('OnboardingFlow', 'User not authenticated, skipping onboarding steps load');
+            }
             return;
         }
-        
+
         try {
             const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                console.log('No auth token found, skipping onboarding steps load');
-                return;
-            }
             const response = await fetch(`${API_BASE}/onboarding/steps`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok) {
@@ -1208,8 +1203,7 @@ class OnboardingFlow {
 
     async skipStep() {
         const currentStep = this.steps[this.currentStepIndex];
-        const token = localStorage.getItem('authToken');
-        
+
         if (currentStep.required) {
             this.showMessage('This step is required', 'error');
             return;
@@ -1219,9 +1213,9 @@ class OnboardingFlow {
             const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             await fetch(`${API_BASE}/onboarding/skip-step`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ stepId: currentStep.id })
             });
@@ -1286,14 +1280,13 @@ class OnboardingFlow {
 
     async completeCurrentStep(step) {
         const stepData = this.stepData[step.id] || this.stepData[step.id.replace('step-', '')];
-        const token = localStorage.getItem('authToken');
-        
+
         const API_BASE = 'https://api.unitedwerise.org/api';
         const response = await fetch(`${API_BASE}/onboarding/complete-step`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 stepId: step.id,
@@ -1362,14 +1355,11 @@ window.onboardingFlow = onboardingFlow;
 
 // Auto-show onboarding for new users
 document.addEventListener('DOMContentLoaded', async () => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
+    if (window.authUtils?.isUserAuthenticated()) {
         try {
             const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
             const response = await fetch(`${API_BASE}/onboarding/progress`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                credentials: 'include'
             });
             
             if (response.ok) {

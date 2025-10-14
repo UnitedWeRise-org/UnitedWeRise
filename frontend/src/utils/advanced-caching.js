@@ -1,3 +1,9 @@
+/**
+ * @module utils/advanced-caching
+ * @description Advanced client-side caching system for modules, API responses, and user data
+ * Migrated to ES6 modules: October 11, 2025 (Batch 1)
+ */
+
 // Advanced Client-Side Caching System
 // Cache modules, API responses, and user data locally for faster performance
 
@@ -267,10 +273,11 @@ class AdvancedCaching {
 
         keysToRemove.forEach(key => {
             this.storage.localStorage.removeItem(key);
-            console.log(`🗑️ Removed expired cache: ${key}`);
         });
 
-        console.log(`🧹 Cache cleanup complete. Removed ${keysToRemove.length} expired items.`);
+        if (keysToRemove.length > 0) {
+            console.log(`🧹 Cache cleanup: Removed ${keysToRemove.length} expired items.`);
+        }
     }
 
     clearUserCache(userId) {
@@ -414,8 +421,11 @@ function handleLogout(userId) {
 // Automatic cache cleanup on startup
 advancedCache.clearExpiredCache();
 
-// Export for global use
-window.advancedCache = advancedCache;
+// ES6 Module Exports
+export { AdvancedCaching, advancedCache };
+export default advancedCache;
 
-console.log('🚀 Advanced caching system loaded!');
-console.log('📊 Cache stats:', advancedCache.getCacheStats());
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.advancedCache = advancedCache;
+}

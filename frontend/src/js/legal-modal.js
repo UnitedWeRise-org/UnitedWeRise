@@ -1,4 +1,12 @@
-// Legal Documents Modal Handler
+/**
+ * @module js/legal-modal
+ * @description Legal documents modal handler
+ *
+ * Displays Terms of Service, Privacy Policy, and other legal documents
+ * in modal windows with keyboard navigation and accessibility support.
+ *
+ * Migrated to ES6 modules: October 11, 2025 (Batch 4)
+ */
 
 // Legal document content storage
 const legalDocuments = {
@@ -253,8 +261,11 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Make functions globally available
-window.openLegalModal = openLegalModal;
-window.closeLegalModal = closeLegalModal;
+// ES6 Module Exports
+export { openLegalModal, closeLegalModal, legalDocuments };
 
-console.log('Legal modal system loaded');
+// Maintain backward compatibility for inline onclick handlers
+if (typeof window !== 'undefined') {
+    window.openLegalModal = openLegalModal;
+    window.closeLegalModal = closeLegalModal;
+}

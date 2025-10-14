@@ -14,6 +14,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class MyFeedHandlers {
     constructor() {
@@ -65,7 +66,7 @@ export class MyFeedHandlers {
      * Migrated from index.html line 2586
      */
     async showMyFeedInMain() {
-        console.log('🎯 Showing My Feed in main content area');
+        // Show My Feed in main content area (silent during normal operation)
 
         // Hide Civic Organizing container if open
         const civicOrganizing = document.querySelector('.civic-organizing-container');
@@ -101,8 +102,6 @@ export class MyFeedHandlers {
             return;
         }
 
-        console.log('✅ Authenticated user found for My Feed:', window.currentUser.username);
-
         // Hide other content
         if (typeof window.closeAllPanels === 'function') {
             window.closeAllPanels();
@@ -126,9 +125,9 @@ export class MyFeedHandlers {
         }
 
         // Adjust height calculation for mobile
-        // Mobile: 60px top bar + 60px bottom nav + 60px feed controls = 180px
-        // Desktop: 200px for standard layout
-        const feedHeight = isMobile ? 'calc(100vh - 180px)' : 'calc(100vh - 200px)';
+        // Extend feed container below visible area for pre-loading content
+        // Mobile: extend 180px below, Desktop: extend 200px below
+        const feedHeight = isMobile ? 'calc(100% + 180px)' : 'calc(100% + 200px)';
 
         mainContent.innerHTML = `
             <div class="my-feed">
@@ -305,7 +304,7 @@ export class MyFeedHandlers {
 
         try {
             console.log('🌐 Making API call to /feed/');
-            const response = await window.apiCall('/feed/?limit=15', {
+            const response = await apiCall('/feed/?limit=15', {
                 method: 'GET'
             });
 
@@ -483,7 +482,7 @@ export class MyFeedHandlers {
         try {
             // Use offset-based pagination
             console.log(`🔄 Loading more My Feed posts... (offset: ${this.currentFeedOffset})`);
-            const response = await window.apiCall(`/feed/?limit=15&offset=${this.currentFeedOffset}`, {
+            const response = await apiCall(`/feed/?limit=15&offset=${this.currentFeedOffset}`, {
                 method: 'GET'
             });
 
@@ -551,7 +550,9 @@ export class MyFeedHandlers {
     setupMyFeedInfiniteScroll() {
         const myFeedContainer = document.getElementById('myFeedPosts');
         if (myFeedContainer) {
-            console.log('✅ Setting up infinite scroll for My Feed');
+            if (typeof adminDebugLog !== 'undefined') {
+                adminDebugLog('MyFeed', 'Setting up infinite scroll for My Feed');
+            }
 
             let ticking = false;
 
@@ -617,4 +618,4 @@ if (typeof window !== 'undefined') {
     window.currentFeedOffset = 0;
 }
 
-console.log('✅ My Feed handlers module loaded (Feed Management System)');
+// My Feed handlers module loaded (Feed Management System)

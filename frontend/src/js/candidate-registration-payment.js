@@ -2,6 +2,7 @@
  * Candidate Registration Fee Payment System
  * Handles non-tax-deductible registration fees for candidate accounts
  */
+import { apiCall } from './api-compatibility-shim.js';
 
 class CandidateRegistrationPayment {
     constructor() {
@@ -21,7 +22,7 @@ class CandidateRegistrationPayment {
 
         try {
             // Call the fee payment endpoint using apiCall for cookie authentication
-            const response = await window.apiCall('/payments/fee', {
+            const response = await apiCall('/payments/fee', {
                 method: 'POST',
                 body: {
                     amount: this.registrationFee,

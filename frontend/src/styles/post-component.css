@@ -631,3 +631,136 @@
     font-size: 0.75rem;
     opacity: 0.8;
 }
+
+/* ===================================================================
+ * POST FOCUS MODAL - True Modal Overlay with Isolation
+ * ===================================================================
+ * Created to isolate focused post view from rest of page content.
+ * Prevents scrolling to sibling elements and security issues.
+ * Body overflow remains locked - only modal container scrolls.
+ */
+
+/* Modal Overlay - Full viewport backdrop */
+.post-focus-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Modal Container - Scrollable content area */
+.post-focus-modal {
+    background: white;
+    border-radius: 8px;
+    max-width: 800px;
+    width: 100%;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;  /* Internal scrolling ONLY */
+    overflow-x: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal Content */
+.post-focus-view {
+    padding: 1.5rem;
+}
+
+.post-focus-header {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1rem;
+}
+
+.post-focus-header h2 {
+    margin: 0.5rem 0 0 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.focused-post {
+    margin-bottom: 1.5rem;
+}
+
+.post-focus-comments {
+    margin-top: 2rem;
+}
+
+.post-focus-comments h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+/* Override default comments-list max-height in modal context */
+.post-focus-modal .comments-list {
+    max-height: none;  /* No height restriction in modal */
+    overflow: visible;  /* No separate scrolling - use modal scroll */
+}
+
+/* AI Summary Styling */
+.ai-comment-summary {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f5 100%);
+    border-left: 4px solid #4b5c09;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.ai-comment-summary h4 {
+    margin: 0 0 0.75rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.ai-comment-summary p {
+    margin: 0;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .post-focus-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .post-focus-modal {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        height: 100%;
+    }
+
+    .post-focus-view {
+        padding: 1rem;
+    }
+
+    .post-focus-header h2 {
+        font-size: 1.25rem;
+    }
+}

@@ -1,12 +1,14 @@
 /**
  * Topic Discovery and Navigation Component
- * 
+ *
  * Implements the complete topic navigation system:
  * - Trending topics discovery and display
  * - Topic summaries with prevailing positions and critiques
  * - Topic-filtered content browsing
  * - Seamless return to algorithm-based feed
  */
+
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class TopicNavigation {
     constructor() {
@@ -41,7 +43,7 @@ class TopicNavigation {
      */
     async loadTrendingTopics() {
         try {
-            const response = await window.apiCall('/topic-navigation/trending', {
+            const response = await apiCall('/topic-navigation/trending', {
                 method: 'GET'
             });
 
@@ -140,7 +142,7 @@ class TopicNavigation {
         try {
             console.log(`🎯 Entering topic: ${topicId}`);
             
-            const response = await window.apiCall(`/topic-navigation/enter/${topicId}`, {
+            const response = await apiCall(`/topic-navigation/enter/${topicId}`, {
                 method: 'POST',
                 body: JSON.stringify({ limit: 30 })
             });
@@ -289,7 +291,7 @@ class TopicNavigation {
         try {
             console.log('🔙 Exiting topic mode');
             
-            const response = await window.apiCall('/topic-navigation/exit', {
+            const response = await apiCall('/topic-navigation/exit', {
                 method: 'POST'
             });
 
@@ -329,7 +331,7 @@ class TopicNavigation {
         }
 
         try {
-            const response = await window.apiCall(`/topic-navigation/${this.activeTopic.id}/post`, {
+            const response = await apiCall(`/topic-navigation/${this.activeTopic.id}/post`, {
                 method: 'POST',
                 body: JSON.stringify({ content })
             });
@@ -362,7 +364,7 @@ class TopicNavigation {
             const currentPosts = document.querySelectorAll('.topic-post').length;
             const offset = refresh ? 0 : currentPosts;
 
-            const response = await window.apiCall(`/topic-navigation/${this.activeTopic.id}/posts?offset=${offset}&limit=20`);
+            const response = await apiCall(`/topic-navigation/${this.activeTopic.id}/posts?offset=${offset}&limit=20`);
 
             if (!response.success) {
                 throw new Error(response.error || 'Failed to load topic posts');
@@ -386,7 +388,7 @@ class TopicNavigation {
      */
     async checkCurrentNavigationState() {
         try {
-            const response = await window.apiCall('/topic-navigation/current');
+            const response = await apiCall('/topic-navigation/current');
             
             if (response.success && response.navigationMode === 'topic-filtered') {
                 this.currentNavigationMode = 'topic-filtered';

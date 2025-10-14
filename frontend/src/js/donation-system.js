@@ -3,6 +3,7 @@
  * Handles tax-deductible donations through Stripe Checkout
  * ES6 Module Version
  */
+import { apiCall } from './api-compatibility-shim.js';
 
 export class DonationSystem {
     constructor() {
@@ -703,7 +704,7 @@ export class DonationSystem {
             console.log('💳 Sending donation request:', donationData);
             
             // Call API to create Stripe checkout session using apiCall for cookie auth
-            const response = await window.apiCall('/payments/donation', {
+            const response = await apiCall('/payments/donation', {
                 method: 'POST',
                 body: donationData
             });
@@ -805,12 +806,9 @@ export class DonationSystem {
 export function initializeDonationSystem() {
     if (!window.donationSystem) {
         window.donationSystem = new DonationSystem();
-        console.log('💝 Donation system initialized via ES6 module');
     }
     return window.donationSystem;
 }
 
 // Legacy compatibility - maintain global access
 window.DonationSystem = DonationSystem;
-
-console.log('💝 Donation system ES6 module loaded');

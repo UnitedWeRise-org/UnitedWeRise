@@ -1,3 +1,9 @@
+/**
+ * @module utils/error-handler
+ * @description User-friendly error handling system that converts technical errors to helpful messages with recovery suggestions
+ * Migrated to ES6 modules: October 11, 2025 (Batch 1)
+ */
+
 // User-Friendly Error Handling System
 // Converts technical errors to helpful messages with recovery suggestions
 
@@ -584,9 +590,15 @@ window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault(); // Prevent console error
 });
 
-// Export for use
-window.globalErrorHandler = globalErrorHandler;
-window.createErrorAwareApiCall = createErrorAwareApiCall;
+// ES6 Module Exports
+export { globalErrorHandler, createErrorAwareApiCall, ErrorHandler };
+export default globalErrorHandler;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.globalErrorHandler = globalErrorHandler;
+    window.createErrorAwareApiCall = createErrorAwareApiCall;
+}
 
 // Auto-initialize
 document.addEventListener('DOMContentLoaded', () => {

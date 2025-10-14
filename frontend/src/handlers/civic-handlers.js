@@ -12,16 +12,12 @@
  * @module handlers/civic-handlers
  */
 
-console.log('🏛️ Loading civic-handlers.js module...');
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 export class CivicHandlers {
     constructor() {
-        console.log('🏛️ Initializing CivicHandlers...');
-
         // Initialize event listeners with delegation
         this.initializeEventListeners();
-
-        console.log('✅ CivicHandlers initialized successfully');
     }
 
     /**
@@ -75,8 +71,6 @@ export class CivicHandlers {
                     break;
             }
         });
-
-        console.log('🎯 Civic event delegation initialized');
     }
 
     /**
@@ -87,7 +81,7 @@ export class CivicHandlers {
         console.log('👤 Loading user content...');
 
         try {
-            const response = await window.apiCall('/users/profile');
+            const response = await apiCall('/users/profile');
 
             if (response.ok) {
                 const data = response.data;
@@ -146,7 +140,7 @@ export class CivicHandlers {
         console.log(`🏛️ Loading elected officials for ${zipCode}, ${state}...`);
 
         try {
-            const response = await window.apiCall('/political/representatives');
+            const response = await apiCall('/political/representatives');
 
             if (response.ok && response.data) {
                 const representatives = response.data.representatives;
@@ -520,7 +514,7 @@ export class CivicHandlers {
                 </div>
             `;
 
-            const response = await window.apiCall(`/legislative/officials/${officialId}`);
+            const response = await apiCall(`/legislative/officials/${officialId}`);
             if (response.ok && response.data) {
                 const official = response.data;
                 this.displayOfficialProfile(official);
@@ -637,7 +631,5 @@ window.viewOfficialProfile = (officialId) => civicHandlers.viewOfficialProfile(o
 window.viewVotingRecords = (bioguideId) => civicHandlers.viewVotingRecords(bioguideId);
 window.viewOfficialNews = (officialName) => civicHandlers.viewOfficialNews(officialName);
 window.showMainFeed = () => civicHandlers.showMainFeed();
-
-console.log('✅ Civic handlers module loaded and exported globally');
 
 export { civicHandlers };

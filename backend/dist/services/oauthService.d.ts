@@ -5,7 +5,7 @@ export interface OAuthProfile {
     firstName?: string;
     lastName?: string;
     picture?: string;
-    provider: 'GOOGLE' | 'MICROSOFT' | 'APPLE';
+    provider: 'GOOGLE';
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -39,7 +39,7 @@ export declare class OAuthService {
     /**
      * Unlink OAuth provider from user account
      */
-    static unlinkOAuthProvider(userId: string, provider: 'GOOGLE' | 'MICROSOFT' | 'APPLE'): Promise<void>;
+    static unlinkOAuthProvider(userId: string, provider: 'GOOGLE'): Promise<void>;
     /**
      * Get user's linked OAuth providers
      */

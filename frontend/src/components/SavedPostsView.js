@@ -3,6 +3,8 @@
  * Displays user's saved posts with infinite scroll
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class SavedPostsView {
     constructor() {
         this.currentPage = 0;
@@ -66,7 +68,7 @@ class SavedPostsView {
 
         try {
             const offset = this.currentPage * this.limit;
-            const response = await window.apiCall(`/posts/saved?limit=${this.limit}&offset=${offset}`, {
+            const response = await apiCall(`/posts/saved?limit=${this.limit}&offset=${offset}`, {
                 method: 'GET'
             });
 
@@ -218,8 +220,6 @@ class SavedPostsView {
 // Initialize and export
 const savedPostsView = new SavedPostsView();
 window.savedPostsView = savedPostsView;
-
-console.log('SavedPostsView: Component initialized');
 
 // For module systems
 if (typeof module !== 'undefined' && module.exports) {

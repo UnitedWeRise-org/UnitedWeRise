@@ -186,47 +186,43 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
-    <!-- Performance & Optimization Utilities (Load First) -->
-    <script src="src/utils/performance.js"></script>
-    <script src="src/utils/error-handler.js"></script>
-    <script src="src/utils/advanced-caching.js"></script>
-    <script src="src/utils/smart-loader.js"></script>
+
+    <!-- Performance & Optimization Utilities now loaded via ES6 modules in main.js (Batch 1 - Oct 11, 2025) -->
+    <!-- ✅ performance.js, error-handler.js, advanced-caching.js, smart-loader.js removed - now ES6 modules -->
 
     <!-- Core Application JavaScript - Modern ES6 Module System -->
     <script type="module" src="src/js/main.js"></script>
 
     <!-- Legacy utility scripts that aren't yet converted to modules -->
-    <script src="src/js/api-manager.js"></script>
-    <script src="src/js/reputation-badges.js"></script>
-    <script src="src/js/force-optimization.js"></script>
-    <script src="js/posting.js"></script>
+    <!-- ✅ api-manager.js removed - now ES6 module in main.js (Batch 3) -->
+    <!-- ✅ posting.js removed - now ES6 module in main.js (Batch 4) -->
+    <!-- ✅ reputation-badges.js removed - now ES6 module in main.js (Batch 5) -->
+    <!-- ✅ force-optimization.js removed - now ES6 module in main.js (Batch 8) -->
 
     <!-- Performance initialization moved to main.js -->
 
-    
-    <script src="src/components/AddressForm.js"></script>
-    <script src="src/components/VerificationFlow.js"></script>
-    <script src="src/components/ContentReporting.js"></script>
-    <script src="src/components/CandidateSystem.js"></script>
-    <!-- ✅ PostComponent.js removed - already loaded via ES6 module in main.js -->
-    <script src="src/components/QuestProgressTracker.js"></script>
-    <script src="src/components/BadgeVault.js"></script>
-    <script src="src/components/UserCard.js"></script>
-    <!-- ✅ ES6 MODULES: Profile, PostComponent, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
 
-    <!-- Legacy integration scripts (not yet converted to ES6 modules) -->
-    <script src="src/integrations/candidate-system-integration.js"></script>
-    <script src="src/integrations/officials-system-integration.js"></script>
-    <script src="src/integrations/elections-system-integration.js"></script>
-    <script src="src/integrations/trending-system-integration.js"></script>
+    <!-- ✅ AddressForm.js removed - now ES6 module in main.js (Batch 5) -->
+    <!-- ✅ VerificationFlow.js removed - now ES6 module in main.js (Batch 6) -->
+    <!-- ✅ ContentReporting.js removed - now ES6 module in main.js (Batch 6) -->
+    <!-- ✅ CandidateSystem.js removed - now ES6 module in main.js (Batch 7) -->
+    <!-- ✅ PostComponent.js removed - already loaded via ES6 module in main.js -->
+    <!-- ✅ QuestProgressTracker.js and BadgeVault.js removed - already loaded via ES6 module in main.js (Oct 11, 2025) -->
+    <!-- ✅ UserCard.js removed - now ES6 module in main.js (Batch 6) -->
+    <!-- ✅ ES6 MODULES: Profile, PostComponent, QuestProgressTracker, BadgeVault, backend-integration, map-maplibre, relationship-utils now loaded via main.js -->
+
+    <!-- ✅ ALL LEGACY INTEGRATION SCRIPTS MIGRATED TO ES6 MODULES! -->
+    <!-- ✅ candidate-system-integration.js removed - now ES6 module in main.js (Batch 10 - "Final Boss") -->
+    <!-- ✅ officials-system-integration.js removed - now ES6 module in main.js (Batch 8) -->
+    <!-- ✅ elections-system-integration.js removed - now ES6 module in main.js (Batch 9) -->
+    <!-- ✅ trending-system-integration.js removed - now ES6 module in main.js (Batch 9) -->
     <!-- mobile-navigation.js REMOVED - replaced by MobileBottomBar.js ES6 component -->
-    <script src="src/js/map-dummy-data.js"></script>
-    <script src="src/components/user-relationship-display.js"></script>
+    <!-- ✅ map-dummy-data.js removed - now ES6 module in main.js (Batch 4) -->
+    <!-- ✅ deployment-status.js removed - now ES6 module in main.js (Batch 4) -->
+    <!-- ✅ legal-modal.js removed - now ES6 module in main.js (Batch 4) -->
+    <!-- ✅ user-relationship-display.js removed - now ES6 module in main.js (Batch 5) -->
     <!-- donation-system.js now loaded via ES6 modules in main.js -->
-    <script src="js/adminDebugger.js"></script>
-    <script src="src/js/deployment-status.js"></script>
-    <script src="src/js/legal-modal.js"></script>
+    <!-- ✅ adminDebugger.js removed - now ES6 module loaded in main.js (Batch 2 - Oct 11, 2025) -->
     
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
@@ -653,8 +649,8 @@
             <div class="thumbs">
                 <div class="thumb" data-nav-toggle="feed" title="My Feed" id="feedThumb">📰 <span class="label">My Feed</span></div>
                 <div class="thumb" data-nav-toggle="trending" title="Trending">🔥 <span class="label">Trending</span></div>
-                <div class="thumb" data-nav-toggle="panel-upcoming" title="Upcoming Contests">📅 <span class="label">Upcoming</span></div>
-                <div class="thumb" data-nav-toggle="panel-officials" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
+                <div class="thumb" data-action="show-elections" title="Upcoming Elections">📅 <span class="label">Elections</span></div>
+                <div class="thumb" data-action="show-officials" title="My Elected Officials">🏛️ <span class="label">Officials</span></div>
                 <div class="thumb" data-nav-toggle="map" title="Show Map" id="mapThumb">🗺️ <span class="label">Map</span></div>
                 <div class="thumb" data-nav-toggle="messages" title="Messages" id="messagesThumb">💬 <span class="label">Messages</span></div>
                 <div class="thumb" data-action="open-donation" title="Support Our Mission" id="donationThumb">💝 <span class="label">Donate</span></div>
@@ -783,46 +779,9 @@
 
     <!-- DEPRECATED: panel-myfeed removed - My Feed now populates in main content area per CLAUDE.md documentation -->
 
-    <div id="panel-upcoming" class="info-panel hidden" data-offset="1">
-        <div class="panel-header">
-            <span>Upcoming Contests</span>
-            <button data-nav-action="close-upcoming">X</button>
-        </div>
-        <div class="panel-body">
-            <details><summary>Local</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="Mayor" data-detail-level="2">Mayor</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="City Council" data-detail-level="2">City Council</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="School Board" data-detail-level="2">School Board</a></li>
-                </ul>
-            </details>
-            <details><summary>State</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="Governor" data-detail-level="2">Governor</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="State Senate" data-detail-level="2">State Senate</a></li>
-                </ul>
-            </details>
-            <details><summary>National</summary>
-                <ul>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="President" data-detail-level="2">President</a></li>
-                    <li><a href="#" data-nav-action="open-detail" data-detail-title="U.S. House" data-detail-level="2">U.S. House</a></li>
-                </ul>
-            </details>
-        </div>
-    </div>
+    <!-- DEPRECATED: panel-upcoming removed - Elections now use modern elections-system-integration.js (Oct 2025) -->
 
-    <div id="panel-officials" class="info-panel hidden" data-offset="1">
-        <div class="panel-header">
-            <span>Find Representatives</span>
-            <button data-nav-action="close-officials">X</button>
-        </div>
-        <div class="panel-body">
-            <div id="officialsContent">
-                <p>Enter any address to find elected representatives.</p>
-            </div>
-        </div>
-    </div>
-
+    <!-- DEPRECATED: panel-officials removed - Officials now use modern officials-system-integration.js (Oct 2025) -->
 
     <div id="detail-panel" class="detail-panel hidden" data-offset="2">
         <div class="panel-header">
@@ -1074,8 +1033,42 @@
         </div>
     </div>
 
-    <!-- Unified Authentication System -->
-    <script src="js/unifiedAuth.js"></script>
+    <!--
+    ============================================================================
+    AUTHENTICATION SYSTEM ARCHITECTURE (3-Layer Complementary Design)
+    ============================================================================
+
+    The UnitedWeRise authentication system uses three complementary layers:
+
+    1. UnifiedAuth.js (ES6 Module) - src/modules/auth/UnifiedAuth.js
+       - Handles auth flows: login, TOTP, OAuth, logout
+       - Provides modal UI for authentication
+       - Feature-complete modern auth system
+       - Loaded here as ES6 module
+
+    2. critical-functions.js - src/js/critical-functions.js
+       - Provides backward-compatible global functions
+       - Exposes: window.setCurrentUser(), window.togglePanel(), window.apiCall()
+       - Required by 343+ locations across 47 files
+       - Bridge layer for legacy code compatibility
+
+    3. unified-manager.js - src/modules/core/auth/unified-manager.js
+       - Coordinates auth state across modules
+       - Synchronizes user state between systems
+       - Auto-loaded via module-loader.js
+
+    Why Three Layers?
+    - Layer 1 (UnifiedAuth): Modern ES6 implementation
+    - Layer 2 (critical-functions): Backward compatibility for existing code
+    - Layer 3 (unified-manager): State synchronization coordinator
+
+    These systems work TOGETHER, not as duplicates. Do not remove any layer
+    without a comprehensive migration plan affecting 47+ files.
+
+    Migration from old js/unifiedAuth.js completed: September 2025
+    ============================================================================
+    -->
+    <script type="module" src="src/modules/auth/UnifiedAuth.js"></script>
 
     <!-- CRITICAL: Bulletproof loading overlay removal -->
     <!-- This MUST execute before modules to prevent stuck loading screens -->
@@ -1119,123 +1112,7 @@
     </script>
 
     <!-- MODULAR JAVASCRIPT SYSTEM -->
-    <!-- ES6 modules for modern architecture - replaces inline JavaScript -->
-    <script type="module">
-        import { initializeModules, testModularFunctionality } from './src/modules/module-loader.js';
-        
-        console.log('🚀 Loading modular JavaScript system...');
-        
-        // Hide page loading overlay and initialize modules when DOM is ready
-        function hidePageLoadingOverlay() {
-            const overlay = document.getElementById('page-loading-overlay');
-            if (overlay) {
-                overlay.classList.add('hidden');
-                console.log('✅ Page loading overlay hidden');
-            }
-        }
-
-        // Failsafe: Always hide loading overlay after max 2 seconds
-        setTimeout(() => {
-            console.log('⏱️ Failsafe timeout triggered - hiding loading overlay');
-            hidePageLoadingOverlay();
-        }, 2000);
-
-        // Mobile content initialization
-        function initializeMobileContent() {
-            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-            if (!isMobile) return;
-
-            console.log('📱 Initializing mobile content...');
-
-            // Hide map container on mobile
-            const mapContainer = document.getElementById('mapContainer');
-            if (mapContainer) {
-                mapContainer.style.display = 'none';
-                console.log('✅ Map hidden on mobile');
-            }
-
-            // Show posts container
-            const postsContainer = document.querySelector('.posts-container');
-            if (postsContainer) {
-                postsContainer.style.display = 'block';
-                console.log('✅ Posts container visible');
-            }
-
-            // Load feed if user is authenticated
-            setTimeout(() => {
-                const isAuthenticated = window.currentUser ||
-                                      localStorage.getItem('authToken');
-
-                if (isAuthenticated && typeof loadMyFeedPosts === 'function') {
-                    console.log('✅ Loading feed for authenticated user');
-                    loadMyFeedPosts();
-                } else {
-                    console.log('ℹ️ User not authenticated or loadMyFeedPosts not available');
-                }
-            }, 500);
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                // Hide loading overlay immediately on mobile (no map to wait for)
-                const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                if (isMobile) {
-                    console.log('📱 Mobile detected - hiding loading overlay immediately');
-                    hidePageLoadingOverlay();
-                }
-
-                initializeModules().catch(error => {
-                    console.error('❌ Module initialization error:', error);
-                    // Hide overlay even if modules fail
-                    hidePageLoadingOverlay();
-                });
-
-                // Initialize mobile content after modules load
-                if (isMobile) {
-                    setTimeout(initializeMobileContent, 1000);
-                }
-
-                // Hide page loading spinner after modules are loaded (desktop)
-                if (!isMobile) {
-                    setTimeout(() => {
-                        hidePageLoadingOverlay();
-                    }, 1000);
-                }
-
-                // Run diagnostics in development
-                if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
-                    setTimeout(testModularFunctionality, 2000);
-                }
-            });
-        } else {
-            // Hide loading overlay immediately on mobile (no map to wait for)
-            const isMobile = window.innerWidth <= 767 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-            if (isMobile) {
-                console.log('📱 Mobile detected - hiding loading overlay immediately');
-                hidePageLoadingOverlay();
-            }
-
-            initializeModules().catch(error => {
-                console.error('❌ Module initialization error:', error);
-                // Hide overlay even if modules fail
-                hidePageLoadingOverlay();
-            });
-
-            // Initialize mobile content after modules load
-            if (isMobile) {
-                setTimeout(initializeMobileContent, 1000);
-            }
-
-            if (!isMobile) {
-                setTimeout(() => {
-                    hidePageLoadingOverlay();
-                }, 1000);
-            }
-
-            if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
-                setTimeout(testModularFunctionality, 2000);
-            }
-        }
-    </script>
+    <!-- ES6 modules auto-initialize via main.js (no inline script needed) -->
+    <!-- Module loader has built-in initialization - duplicate manual calls removed Oct 11, 2025 -->
 </body>
 </html>

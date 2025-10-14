@@ -4,6 +4,7 @@
  */
 
 import { getEnvironment } from '../utils/environment.js';
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class SearchHandlers {
     constructor() {
@@ -18,7 +19,6 @@ class SearchHandlers {
         this.globalSearchTimeout = null;
 
         this.setupEventListeners();
-        console.log('SearchHandlers initialized');
     }
 
     setupEventListeners() {
@@ -190,7 +190,7 @@ class SearchHandlers {
             if (topicFilter) searchParams.append('topic', topicFilter);
 
             // Execute search API call
-            const response = await window.apiCall(`/search/unified?${searchParams.toString()}`);
+            const response = await apiCall(`/search/unified?${searchParams.toString()}`);
             console.log('🔍 Search response:', response);
 
             if (response.ok && response.data && response.data.success) {
@@ -408,7 +408,7 @@ class SearchHandlers {
             this.closeSearch();
 
             // Load single post and display in My Feed
-            const response = await window.apiCall(`/posts/${postId}`);
+            const response = await apiCall(`/posts/${postId}`);
             if (response.ok && response.data) {
                 // Show the post in main content
                 const mainContent = document.getElementById('mainContent');
@@ -635,7 +635,7 @@ class SearchHandlers {
             this.closeSearch();
 
             // Load single post and display in My Feed
-            const response = await window.apiCall(`/posts/${postId}`);
+            const response = await apiCall(`/posts/${postId}`);
             if (response.ok && response.data) {
                 // Show the post in main content
                 if (typeof showMyFeedInMain === 'function') {
@@ -694,8 +694,8 @@ class SearchHandlers {
 
             // Load user's profile and posts in parallel
             const [profileResponse, postsResponse] = await Promise.all([
-                window.apiCall(`/users/${userId}`),
-                window.apiCall(`/posts/user/${userId}`)
+                apiCall(`/users/${userId}`),
+                apiCall(`/posts/user/${userId}`)
             ]);
 
             if (profileResponse.ok && postsResponse.ok) {
@@ -752,7 +752,7 @@ class SearchHandlers {
         } else {
             // Fallback implementation
             try {
-                const response = await window.apiCall('/friends/request', {
+                const response = await apiCall('/friends/request', {
                     method: 'POST',
                     body: JSON.stringify({ targetUserId: userId })
                 });

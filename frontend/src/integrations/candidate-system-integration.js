@@ -1,10 +1,19 @@
-// Candidate System Integration for United We Rise Frontend
-// This script integrates the enhanced candidate system with the existing frontend
-// 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
+/**
+ * @module integrations/candidate-system-integration
+ * @description Candidate System Integration for United We Rise Frontend
+ * This script integrates the enhanced candidate system with the existing frontend
+ * Provides comprehensive candidate registration, management, and constituent inbox features
+ * 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
+ * Migrated to ES6 modules: October 11, 2025 (Batch 10 - "Final Boss")
+ */
+import { apiCall } from '../js/api-compatibility-shim.js';
 
 class CandidateSystemIntegration {
     constructor() {
         this.candidateSystem = null;
+        this.hasCheckedStatus = false; // Track if we've checked candidate status
+        this.isCandidate = false; // Default to false
+        this.candidateData = null;
         this.init();
     }
 
@@ -29,10 +38,10 @@ class CandidateSystemIntegration {
         if (window.CandidateSystem) {
             this.candidateSystem = new window.CandidateSystem();
         }
-        
-        // Check candidate status for current user
-        this.checkCandidateStatus();
-        
+
+        // NOTE: Candidate status check is now lazy-loaded on demand
+        // to avoid unnecessary 404 errors for non-candidates on every page load
+
         // Enhance existing UI elements
         this.enhanceExistingElements();
         
@@ -296,7 +305,10 @@ class CandidateSystemIntegration {
         this.showCandidateMainView(mainContent);
     }
 
-    showCandidateMainView(mainContent) {
+    async showCandidateMainView(mainContent) {
+        // Ensure candidate status is checked before rendering
+        await this.ensureCandidateStatus();
+
         // Store original content so we can restore it later
         if (!mainContent.dataset.originalContent) {
             mainContent.dataset.originalContent = mainContent.innerHTML;
@@ -451,11 +463,9 @@ class CandidateSystemIntegration {
         
         try {
             // Call new address-based candidate endpoint
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -587,7 +597,7 @@ class CandidateSystemIntegration {
     async searchCandidatesByAddress() {
         const addressInput = document.getElementById('candidateAddressInput');
         const address = addressInput?.value?.trim();
-        
+
         if (!address) {
             this.showToast('Please enter an address', 'error');
             return;
@@ -597,11 +607,9 @@ class CandidateSystemIntegration {
             const loadingIndicator = document.querySelector('#electionsLoading');
             if (loadingIndicator) loadingIndicator.style.display = 'flex';
 
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
 
             if (response.ok && response.data?.success) {
@@ -908,7 +916,7 @@ class CandidateSystemIntegration {
     async searchFromPlaceholder() {
         const addressInput = document.getElementById('placeholderAddressInput');
         const address = addressInput?.value?.trim();
-        
+
         if (!address) {
             this.showToast('Please enter an address', 'error');
             addressInput?.focus();
@@ -918,15 +926,13 @@ class CandidateSystemIntegration {
         try {
             const loadingIndicator = document.querySelector('#electionsLoading');
             const placeholder = document.querySelector('.elections-placeholder');
-            
+
             if (loadingIndicator) loadingIndicator.style.display = 'flex';
             if (placeholder) placeholder.style.display = 'none';
 
-            const response = await window.apiCall('/api/external-candidates/for-address', {
+            const response = await apiCall('/api/external-candidates/for-address', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+                credentials: 'include'
             }, `?address=${encodeURIComponent(address)}`);
 
             if (response.ok && response.data?.success) {
@@ -2954,9 +2960,9 @@ class CandidateSystemIntegration {
             
             const response = await fetch('https://api.unitedwerise.org/api/candidates/register', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(registrationData)
             });
@@ -2988,20 +2994,20 @@ class CandidateSystemIntegration {
         }
     }
 
+    // Ensure candidate status is checked (lazy loading with caching)
+    async ensureCandidateStatus() {
+        if (this.hasCheckedStatus) {
+            return; // Already checked, use cached value
+        }
+        await this.checkCandidateStatus();
+    }
+
     // Check if current user is a verified candidate
     async checkCandidateStatus() {
         try {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                this.isCandidate = false;
-                return;
-            }
-
-            const response = await window.apiCall('/candidate-policy-platform/candidate/status', {
+            const response = await apiCall('/candidate-policy-platform/candidate/status', {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -3012,14 +3018,19 @@ class CandidateSystemIntegration {
                 this.isCandidate = false;
                 adminDebugLog('ℹ️ User is not a candidate');
             }
+            this.hasCheckedStatus = true; // Mark as checked
         } catch (error) {
             adminDebugError('Error checking candidate status:', error);
             this.isCandidate = false;
+            this.hasCheckedStatus = true; // Mark as checked even on error
         }
     }
 
     // Show candidate dashboard for verified candidates
-    showCandidateDashboard() {
+    async showCandidateDashboard() {
+        // Ensure candidate status is checked before proceeding
+        await this.ensureCandidateStatus();
+
         if (!this.isCandidate) {
             adminDebugError('Access denied: User is not a verified candidate');
             return;
@@ -3250,6 +3261,9 @@ class CandidateSystemIntegration {
 
     // Open constituent inbox for candidate
     async openConstituentInbox() {
+        // Ensure candidate status is checked before proceeding
+        await this.ensureCandidateStatus();
+
         if (!this.isCandidate) {
             adminDebugError('Access denied: User is not a verified candidate');
             return;
@@ -3317,10 +3331,8 @@ class CandidateSystemIntegration {
     // Load constituent conversations for candidate
     async loadConstituentConversations() {
         try {
-            const response = await window.apiCall('/unified-messages/candidate/user-messages', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+            const response = await apiCall('/unified-messages/candidate/user-messages', {
+                credentials: 'include'
             });
 
             if (response.ok && response.data?.success) {
@@ -3578,11 +3590,11 @@ class CandidateSystemIntegration {
     // Mark conversation as read
     async markConversationRead(conversationId) {
         try {
-            const response = await window.apiCall('/unified-messages/mark-read', {
+            const response = await apiCall('/unified-messages/mark-read', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ conversationId })
             });
@@ -3601,10 +3613,8 @@ class CandidateSystemIntegration {
     async showInboxNotification(title, content) {
         // Check user preferences before showing notifications
         try {
-            const response = await window.apiCall('/user/notification-preferences', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                }
+            const response = await apiCall('/user/notification-preferences', {
+                credentials: 'include'
             });
 
             let showBrowserNotification = true;
@@ -3681,11 +3691,15 @@ class CandidateSystemIntegration {
     }
 }
 
-// Initialize the integration
-window.CandidateSystemIntegration = CandidateSystemIntegration;
-
 // Auto-initialize when script loads
-const integration = new CandidateSystemIntegration();
+const candidateSystemIntegration = new CandidateSystemIntegration();
 
-// Make integration available globally for other scripts
-window.candidateSystemIntegration = integration;
+// ES6 Module Exports
+export { CandidateSystemIntegration, candidateSystemIntegration };
+export default candidateSystemIntegration;
+
+// Maintain backward compatibility during transition
+if (typeof window !== 'undefined') {
+    window.CandidateSystemIntegration = CandidateSystemIntegration;
+    window.candidateSystemIntegration = candidateSystemIntegration;
+}

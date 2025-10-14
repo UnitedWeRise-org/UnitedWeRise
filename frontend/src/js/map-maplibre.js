@@ -4,6 +4,7 @@
  */
 
 import { getApiBaseUrl } from '../utils/environment.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 class UWRMapLibre {
     constructor(containerId = 'map') {
@@ -136,9 +137,8 @@ class UWRMapLibre {
             this.showLoadingError();
         });
 
-        // FALLBACK: Force show map after maximum wait time (for localhost testing)
+        // FALLBACK: Force show map after maximum wait time (silent during normal operation)
         setTimeout(() => {
-            console.log('TIMEOUT FALLBACK: Force showing map after 5 seconds');
             this.showMapContainer();
         }, 5000);
         
@@ -463,24 +463,24 @@ class UWRMapLibre {
     }
 
     // Map visibility and layout methods
-    toggleCollapsed() {
-        console.log('toggleCollapsed called');
+    async toggleCollapsed() {
+        await adminDebugLog('MapLibre', 'toggleCollapsed called');
         const containerSelector = this.containerId + 'Container';
-        console.log('Looking for container:', containerSelector);
+        await adminDebugLog('MapLibre', 'Looking for container:', containerSelector);
         const container = document.getElementById(containerSelector);
-        console.log('Found container:', container);
-        
+        await adminDebugLog('MapLibre', 'Found container:', container);
+
         if (container) {
             const isCurrentlyCollapsed = container.classList.contains('collapsed');
-            console.log('Currently collapsed:', isCurrentlyCollapsed);
+            await adminDebugLog('MapLibre', 'Currently collapsed:', isCurrentlyCollapsed);
             container.classList.toggle('collapsed');
-            console.log('Toggled to collapsed:', !isCurrentlyCollapsed);
-            
+            await adminDebugLog('MapLibre', 'Toggled to collapsed:', !isCurrentlyCollapsed);
+
             // Update toggle button text
             const toggleBtn = document.getElementById('mapToggleBtn');
             if (toggleBtn) {
                 toggleBtn.textContent = isCurrentlyCollapsed ? 'Collapse' : 'Expand';
-                console.log('Button text updated to:', toggleBtn.textContent);
+                await adminDebugLog('MapLibre', 'Button text updated to:', toggleBtn.textContent);
             }
             
             // Resize map after layout change
@@ -676,32 +676,27 @@ class UWRMapLibre {
     }
 
     // Loading state management
-    showMapContainer() {
-        console.log('showMapContainer called - hiding loading state');
+    async showMapContainer() {
         const loadingState = document.getElementById('mapLoadingState');
         const mapContainer = document.getElementById('mapContainer');
-        
+
         if (loadingState && mapContainer) {
             // Add minimum loading time to prevent flickering
             const minLoadingTime = 1000; // 1 second minimum
             const loadStartTime = window.mapLoadStartTime || Date.now();
             const elapsed = Date.now() - loadStartTime;
             const remainingTime = Math.max(0, minLoadingTime - elapsed);
-            
-            console.log(`Loading for ${elapsed}ms, waiting ${remainingTime}ms more`);
-            
+
             setTimeout(() => {
                 // Hide loading state - map should now be ready
                 loadingState.classList.add('hidden');
                 loadingState.style.display = 'none';
-                console.log('Loading state hidden, map should be visible');
-                
+
                 // Ensure map container is visible
                 mapContainer.style.display = 'block';
-                
+
                 // Trigger resize to ensure map renders correctly
                 setTimeout(() => {
-                    console.log('Triggering map resize');
                     this.handleResize();
                 }, 100);
             }, remainingTime);
@@ -906,10 +901,6 @@ class UWRMapLibre {
         } while (popupCount === this.lastBubbleCount && maxBubbles > 1);
         this.lastBubbleCount = popupCount;
 
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MapSystem', `Creating ${popupCount} bubbles sequentially (${isCollapsed ? 'collapsed' : 'expanded'} state)`, null);
-        }
-
         const newCycle = {
             timestamp: timestamp,
             popups: [],
@@ -946,10 +937,6 @@ class UWRMapLibre {
         const isExpired = (now - currentCache.timestamp) > this.cacheValidityMs;
 
         if (currentCache.topics.length === 0 || isExpired) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Refreshing ${this.currentJurisdiction} topic cache - fetching new batch`, null);
-            }
-
             // Fetch a batch of topics (12-15 topics for 3-minute cache period)
             const batchSize = 15;
             const newTopics = [];
@@ -1057,10 +1044,6 @@ class UWRMapLibre {
                     popupContent.style.opacity = '1';
                 }
             }, 50);
-
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'Starting 3-second fade-in animation', null);
-            }
         }
     }
 
@@ -1091,10 +1074,6 @@ class UWRMapLibre {
 
     fadeOutCycleSequentially(cycle) {
         if (cycle.popups && cycle.popups.length > 0) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Fading out ${cycle.popups.length} bubbles sequentially`, null);
-            }
-
             // Fade out all bubbles simultaneously (3 seconds before new cycle)
             cycle.popups.forEach(popup => {
                 this.fadeOutBubbleGradually(popup);
@@ -1113,8 +1092,8 @@ class UWRMapLibre {
     // Legacy fade methods removed - using enhanced gradual fade methods above
 
     // Map transition methods for smooth bubble handling
-    hideAllBubblesDuringTransition() {
-        console.log('🔄 Hiding all bubbles for map transition...');
+    async hideAllBubblesDuringTransition() {
+        await adminDebugLog('MapLibre', 'Hiding all bubbles for map transition...');
         this.trendingPopups.forEach(popup => {
             const popupElement = popup.getElement();
             if (popupElement) {
@@ -1124,8 +1103,8 @@ class UWRMapLibre {
         });
     }
 
-    showAllBubblesAfterTransition() {
-        console.log('✨ Restoring all bubbles after map transition...');
+    async showAllBubblesAfterTransition() {
+        await adminDebugLog('MapLibre', 'Restoring all bubbles after map transition...');
         // Wait for map transition to complete, then restore bubbles
         setTimeout(() => {
             this.trendingPopups.forEach(popup => {
@@ -1139,81 +1118,47 @@ class UWRMapLibre {
     }
 
     // Map container state adjustment with different zoom levels
-    adjustForContainerState(isCollapsed) {
-        console.log(`🗺️ Adjusting map for container state: ${isCollapsed ? 'collapsed' : 'expanded'}`);
-        console.log(`🔍 Current jurisdiction: ${this.currentJurisdiction}`);
-        console.log(`🔍 Map object exists: ${!!this.map}`);
+    async adjustForContainerState(isCollapsed) {
+        await adminDebugLog('MapLibre', `Adjusting map for container state: ${isCollapsed ? 'collapsed' : 'expanded'}`);
+        await adminDebugLog('MapLibre', `Current jurisdiction: ${this.currentJurisdiction}`);
+        await adminDebugLog('MapLibre', `Map object exists: ${!!this.map}`);
         
         // Wait for container CSS transition to complete
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                // Get current map state before adjustment
-                const beforeZoom = this.map.getZoom();
-                const beforeCenter = this.map.getCenter();
-                console.log(`📊 Before adjustment - Zoom: ${beforeZoom.toFixed(2)}, Center: [${beforeCenter.lng.toFixed(2)}, ${beforeCenter.lat.toFixed(2)}]`);
-                
-                // Debug map properties that might prevent zoom changes
-                console.log(`🔍 Map debug info:`);
-                console.log(`   - Min zoom: ${this.map.getMinZoom()}`);
-                console.log(`   - Max zoom: ${this.map.getMaxZoom()}`);
-                console.log(`   - Is moving: ${this.map.isMoving()}`);
-                console.log(`   - Is zooming: ${this.map.isZooming()}`);
-                console.log(`   - Is rotating: ${this.map.isRotating()}`);
-                console.log(`   - Map loaded: ${this.map.loaded()}`);
-                
-                // Resize map to fit new container
-                console.log('🔄 Calling map.resize()...');
+                // Resize map to fit new container (silent during normal operation)
                 this.map.resize();
-                
+
                 // Set appropriate view based on current jurisdiction and container state
                 if (this.currentJurisdiction === 'national') {
                     if (isCollapsed) {
-                        console.log('📍 Setting COLLAPSED state: Zoom way out to fit US in small container');
                         // Collapsed: Use jumpTo for immediate zoom change
-                        console.log('🚀 Using jumpTo() for immediate zoom change...');
                         this.map.jumpTo({
                             center: [-97.5, 39],  // Center on continental US
                             zoom: 2.1             // STANDARDIZED: Collapsed state zoom (preferred by user)
                         });
                     } else {
-                        console.log('📍 Setting EXPANDED state: Zoom in for detail in large container');
                         // Expanded: Use jumpTo for immediate zoom change
-                        console.log('🚀 Using jumpTo() for immediate zoom change...');
                         this.map.jumpTo({
                             center: [-97.5, 39],  // Center on continental US
                             zoom: 3.6             // Match default zoom level
                         });
                     }
-                    
-                    // Log the change after animation completes
-                    setTimeout(() => {
+
+                    // Verify zoom reached expected level (silent unless error)
+                    setTimeout(async () => {
                         const afterZoom = this.map.getZoom();
-                        const afterCenter = this.map.getCenter();
-                        console.log(`📊 After adjustment - Zoom: ${afterZoom.toFixed(2)}, Center: [${afterCenter.lng.toFixed(2)}, ${afterCenter.lat.toFixed(2)}]`);
-                        console.log(`📈 Zoom change: ${beforeZoom.toFixed(2)} → ${afterZoom.toFixed(2)} (${afterZoom > beforeZoom ? '+' : ''}${(afterZoom - beforeZoom).toFixed(2)})`);
-                        
-                        // Double-check if zoom didn't change as expected
                         const expectedZoom = isCollapsed ? 2.1 : 3.6;
                         if (Math.abs(afterZoom - expectedZoom) > 0.1) {
-                            console.warn(`⚠️ Zoom didn't reach expected level! Expected: ${expectedZoom}, Actual: ${afterZoom.toFixed(2)}`);
-                            console.log(`🔄 Attempting to force zoom to ${expectedZoom}...`);
+                            await adminDebugLog('MapLibre', `Zoom issue! Expected: ${expectedZoom}, Actual: ${afterZoom.toFixed(2)}, forcing...`);
                             this.map.setZoom(expectedZoom);
-                            
-                            // Verify the forced zoom worked
-                            setTimeout(() => {
-                                const finalZoom = this.map.getZoom();
-                                console.log(`✅ Final zoom after force: ${finalZoom.toFixed(2)}`);
-                            }, 100);
                         }
-                    }, 500); // Wait longer for easeTo animation
-                    
+                    }, 500);
+
                 } else {
-                    console.log('🔄 Non-national jurisdiction, just resizing...');
                     // For state/local views, just resize without changing bounds
                     this.map.resize();
                 }
-                
-                console.log('✅ Map adjusted for new container state');
             } catch (error) {
                 console.error('❌ Error adjusting map for container state:', error);
             }
@@ -1233,16 +1178,10 @@ class UWRMapLibre {
     }
 
     async fetchTrendingComment(jurisdiction) {
-        if (typeof adminDebugLog !== 'undefined') {
-            adminDebugLog('MapSystem', `Fetching trending comment for jurisdiction: ${jurisdiction}`, null);
-        }
-
         // Check if user is authenticated before making API calls
         const authToken = localStorage.getItem('authToken');
         if (!authToken) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'No auth token available, using dummy data', null);
-            }
+            // Silent fallback to dummy data when not authenticated
             return this.getDummyTopicFromHelper(jurisdiction);
         }
 
@@ -1250,9 +1189,7 @@ class UWRMapLibre {
         const now = Date.now();
         if (!this.lastApiCall) this.lastApiCall = 0;
         if (now - this.lastApiCall < 2000) { // Wait at least 2 seconds between API calls
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', 'Rate limiting API calls, using dummy data', null);
-            }
+            // Silent fallback to dummy data when rate limited
             return this.getDummyTopicFromHelper(jurisdiction);
         }
         this.lastApiCall = now;
@@ -1343,16 +1280,8 @@ class UWRMapLibre {
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
-            }
-
             if (dummyTopics.length > 0) {
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
-                }
 
                 return {
                     id: topic.id,
@@ -1476,16 +1405,8 @@ class UWRMapLibre {
         if (window.mapDummyData && window.mapDummyData.shouldUseDummyData()) {
             const dummyTopics = window.mapDummyData.getTopics(jurisdiction);
 
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Using ${dummyTopics.length} dummy topics for ${jurisdiction}`, null);
-            }
-
             if (dummyTopics.length > 0) {
                 const topic = dummyTopics[Math.floor(Math.random() * dummyTopics.length)];
-
-                if (typeof adminDebugLog !== 'undefined') {
-                    adminDebugLog('MapSystem', `Selected dummy topic: "${topic.text}" for ${jurisdiction}`, null);
-                }
 
                 return {
                     id: topic.id,
@@ -1775,19 +1696,19 @@ class UWRMapLibre {
     }
 
     // Layer Management System
-    toggleLayer(layerName) {
-        console.log(`🔧 Toggling layer: ${layerName}`);
-        
+    async toggleLayer(layerName) {
+        await adminDebugLog('MapLibre', `Toggling layer: ${layerName}`);
+
         if (this.activeLayers.has(layerName)) {
             // Deactivate layer
             this.activeLayers.delete(layerName);
             this.clearLayerPopups(layerName);
-            console.log(`❌ Layer ${layerName} deactivated`);
+            await adminDebugLog('MapLibre', `Layer ${layerName} deactivated`);
         } else {
             // Activate layer
             this.activeLayers.add(layerName);
             this.startLayerContent(layerName);
-            console.log(`✅ Layer ${layerName} activated`);
+            await adminDebugLog('MapLibre', `Layer ${layerName} activated`);
         }
     }
 
@@ -1826,8 +1747,8 @@ class UWRMapLibre {
         // Add other layer types here as they're implemented
     }
 
-    setJurisdiction(jurisdiction) {
-        console.log(`🗺️ Setting jurisdiction to: ${jurisdiction}`);
+    async setJurisdiction(jurisdiction) {
+        await adminDebugLog('MapLibre', `Setting jurisdiction to: ${jurisdiction}`);
 
         if (typeof adminDebugLog !== 'undefined') {
             adminDebugLog('MapSystem', `Jurisdiction changed from ${this.currentJurisdiction} to ${jurisdiction}`, null);
@@ -1889,8 +1810,8 @@ class UWRMapLibre {
     }
 
     // Civic Social Infrastructure Methods
-    joinCivicGroup(jurisdiction, topic) {
-        console.log(`Joining civic group: ${jurisdiction} - ${topic}`);
+    async joinCivicGroup(jurisdiction, topic) {
+        await adminDebugLog('MapLibre', `Joining civic group: ${jurisdiction} - ${topic}`);
         
         // Create or join civic group
         const groupKey = `${jurisdiction}-${topic}`;
@@ -1911,8 +1832,8 @@ class UWRMapLibre {
         this.showCivicGroupModal(jurisdiction, topic);
     }
 
-    takeAction(commentId, actionType) {
-        console.log(`Taking action: ${actionType} for comment ${commentId}`);
+    async takeAction(commentId, actionType) {
+        await adminDebugLog('MapLibre', `Taking action: ${actionType} for comment ${commentId}`);
         
         // Track user's civic action
         const action = {
@@ -2313,10 +2234,10 @@ function getDummyCivicContent() {
     };
 }
 
-function initializeMapLibre() {
+async function initializeMapLibre() {
     // Prevent double initialization
     if (window.mapLibreInitialized) {
-        console.log('🗺️ MapLibre already initialized, skipping');
+        await adminDebugLog('MapLibre', 'MapLibre already initialized, skipping');
         return;
     }
     
@@ -2343,15 +2264,15 @@ function initializeMapLibre() {
     const useMapLibre = true; // Set to false to use Leaflet
     
     if (useMapLibre) {
-        console.log('Initializing MapLibre GL map...');
-        
+        await adminDebugLog('MapLibre', 'Initializing MapLibre GL map...');
+
         // IMPROVED FIX: Show map container but keep loading state visible during initialization
         // MapLibre needs the container to be visible to measure dimensions correctly
         const mapContainer = document.getElementById('mapContainer');
         const loadingState = document.getElementById('mapLoadingState');
-        
+
         if (mapContainer && !mapWasClosed) {
-            console.log('Making map container visible for MapLibre initialization...');
+            await adminDebugLog('MapLibre', 'Making map container visible for MapLibre initialization...');
             // Show the map container immediately (loading state is now inside as overlay)
             mapContainer.style.display = 'block';
             
@@ -2359,13 +2280,13 @@ function initializeMapLibre() {
                 // Ensure loading state is visible as overlay
                 loadingState.style.display = 'flex';
                 loadingState.classList.remove('hidden');
-                console.log('Loading state shown as overlay');
+                await adminDebugLog('MapLibre', 'Loading state shown as overlay');
             }
         }
         
         uwrMap = new UWRMapLibre('map');
-        uwrMap.initialize().then(map => {
-            console.log('MapLibre map initialized successfully - PROMISE CALLBACK');
+        uwrMap.initialize().then(async map => {
+            await adminDebugLog('MapLibre', 'MapLibre map initialized successfully - PROMISE CALLBACK');
             
             // Check if map was previously closed
             const mapWasClosed = localStorage.getItem('mapClosed') === 'true';
@@ -2388,8 +2309,8 @@ function initializeMapLibre() {
                 closePopup: () => uwrMap.closeAllPopups(),
                 fitBounds: (bounds) => uwrMap.fitBounds(bounds),
                 // New MapLibre-specific methods
-                toggleCollapsed: () => {
-                    console.log('window.map.toggleCollapsed called');
+                toggleCollapsed: async () => {
+                    await adminDebugLog('MapLibre', 'window.map.toggleCollapsed called');
                     return uwrMap.toggleCollapsed();
                 },
                 closeMap: () => uwrMap.closeMap(),
@@ -2412,9 +2333,9 @@ function initializeMapLibre() {
                 _maplibre: map,
                 _uwrMap: uwrMap
             };
-            
-            console.log('window.map object created:', window.map);
-            console.log('toggleCollapsed method:', window.map.toggleCollapsed);
+
+            await adminDebugLog('MapLibre', 'window.map object created:', window.map);
+            await adminDebugLog('MapLibre', 'toggleCollapsed method:', window.map.toggleCollapsed);
             
             // Make uwrMap globally available too
             window.uwrMap = uwrMap;
@@ -2422,8 +2343,8 @@ function initializeMapLibre() {
             console.error('MapLibre initialization failed:', error);
             // Create a fallback window.map object
             window.map = {
-                toggleCollapsed: () => {
-                    console.log('Fallback toggleCollapsed called - MapLibre failed to initialize');
+                toggleCollapsed: async () => {
+                    await adminDebugLog('MapLibre', 'Fallback toggleCollapsed called - MapLibre failed to initialize');
                     // Fallback toggle logic
                     const container = document.getElementById('mapContainer');
                     if (container) {
@@ -2483,10 +2404,10 @@ window.updateMapViewButtons = function(currentLevel) {
 window.initializeMapLibre = initializeMapLibre;
 
 // Helper function to determine if map should auto-initialize
-function shouldInitializeMap() {
+async function shouldInitializeMap() {
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) {
-        console.log('🗺️ Map container not found, skipping initialization');
+        await adminDebugLog('MapLibre', 'Map container not found, skipping initialization');
         return false;
     }
 
@@ -2498,46 +2419,30 @@ function shouldInitializeMap() {
                      window.getComputedStyle(mapContainer).display !== 'none';
 
     if (isMobile && !isVisible) {
-        console.log('🗺️ Mobile device with hidden map, skipping auto-initialization (lazy-load)');
-        console.log('   Map will initialize when requested via window.initializeMapLibre()');
         return false;
-    }
-
-    if (isMobile && isVisible) {
-        console.log('🗺️ Mobile device with visible map, initializing...');
-    }
-
-    if (!isMobile) {
-        console.log('🗺️ Desktop device, initializing map...');
     }
 
     return true;
 }
 
 // Auto-initialize the map when the script loads (only if needed)
-console.log('map-maplibre.js script loaded, checking if initialization needed...');
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM ready, checking map initialization requirements...');
     if (shouldInitializeMap()) {
         initializeMapLibre();
     }
 });
 
 // Also initialize immediately if DOM is already ready
-if (document.readyState === 'loading') {
-    // DOM is still loading, wait for DOMContentLoaded
-    console.log('DOM still loading, waiting for DOMContentLoaded event');
-} else {
+if (document.readyState !== 'loading') {
     // DOM already loaded, check if we should initialize
-    console.log('DOM already ready, checking map initialization requirements...');
     if (shouldInitializeMap()) {
         initializeMapLibre();
     }
 }
 
 // Global navigation function for trending comment clicks
-window.navigateToComment = function(commentId) {
-    console.log('Navigating to comment:', commentId);
+window.navigateToComment = async function(commentId) {
+    await adminDebugLog('MapLibre', 'Navigating to comment:', commentId);
     
     try {
         // Get the main content area
@@ -2550,9 +2455,9 @@ window.navigateToComment = function(commentId) {
         // Get the comment data from the dummy content
         const dummyContent = getDummyCivicContent();
         const topicData = dummyContent.trendingTopics.find(topic => topic.id === commentId);
-        
+
         if (topicData) {
-            console.log('Found topic data, populating main content...');
+            await adminDebugLog('MapLibre', 'Found topic data, populating main content...');
             
             // Create conversation view in main content area
             const conversationHtml = `
@@ -2660,12 +2565,12 @@ window.navigateToComment = function(commentId) {
             
             // Scroll to top of conversation
             postsFeed.scrollTop = 0;
-            
+
             // Show a brief success message
-            console.log('✅ Conversation loaded in main content area');
-            
+            await adminDebugLog('MapLibre', 'Conversation loaded in main content area');
+
         } else {
-            console.log('Topic data not found, showing general message');
+            await adminDebugLog('MapLibre', 'Topic data not found, showing general message');
             
             // Show a general "join the conversation" view
             const generalHtml = `
@@ -2711,8 +2616,8 @@ window.navigateToComment = function(commentId) {
 };
 
 // Function to go back to the main feed
-window.goBackToFeed = function() {
-    console.log('Going back to main feed...');
+window.goBackToFeed = async function() {
+    await adminDebugLog('MapLibre', 'Going back to main feed...');
     const postsFeed = document.getElementById('postsFeed');
     if (postsFeed) {
         postsFeed.innerHTML = `
@@ -2735,4 +2640,4 @@ export { UWRMapLibre };
 // Legacy global export for compatibility
 window.UWRMapLibre = UWRMapLibre;
 
-console.log('🗺️ MapLibre component loaded via ES6 module');
+adminDebugLog('MapLibre', 'MapLibre component loaded via ES6 module');

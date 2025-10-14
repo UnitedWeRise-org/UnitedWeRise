@@ -4,6 +4,8 @@
  * Allows users to select which badges appear on their nameplate
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 class BadgeVault {
     constructor() {
         this.userBadges = [];
@@ -20,6 +22,16 @@ class BadgeVault {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('BadgeVault: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Load user's badge collection and available badges
         await this.loadBadgeData();
         this.setupAutoSave();
@@ -36,8 +48,8 @@ class BadgeVault {
         try {
             // Load user's badge vault and available badges in parallel
             const [vaultResponse, availableResponse] = await Promise.all([
-                window.apiCall('/badges/vault'),
-                window.apiCall('/badges/available')
+                apiCall('/badges/vault'),
+                apiCall('/badges/available')
             ]);
 
             if (vaultResponse.ok && vaultResponse.data.success) {
@@ -85,7 +97,7 @@ class BadgeVault {
                     isDisplayed: true
                 }));
 
-            const response = await window.apiCall('/badges/display', 'POST', {
+            const response = await apiCall('/badges/display', 'POST', {
                 displayBadges: displayBadges,
                 settings: this.vaultSettings
             });

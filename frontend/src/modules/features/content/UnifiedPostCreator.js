@@ -521,5 +521,3 @@ if (typeof window !== 'undefined') {
     window.unifiedPostCreator = unifiedPostCreator;
     window.UnifiedPostCreator = UnifiedPostCreator;
 }
-
-console.log('✅ UnifiedPostCreator module loaded');

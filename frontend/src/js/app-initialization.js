@@ -2,17 +2,25 @@
 // Reduces API calls on page load and implements smart caching
 // Now integrated with unified authentication manager for perfect sync
 
+import { adminDebugLog } from '../../js/adminDebugger.js';
 import { isProduction } from '../utils/environment.js';
 
 class AppInitializer {
     // Production logging helper - only shows important messages
-    static log(message, type = 'info') {
+    static log(message, dataOrType = 'info', typeOverride = null) {
+        // Determine if second arg is data object or type string
+        const isDataObject = typeof dataOrType === 'object' && dataOrType !== null;
+        const type = typeOverride || (isDataObject ? 'info' : dataOrType);
+        const data = isDataObject ? dataOrType : null;
+
         if (type === 'error') {
-            console.error(message); // Always show errors
+            console.error(message, ...(data ? [data] : [])); // Always show errors
         } else if (type === 'warn') {
-            console.warn(message); // Always show warnings
+            console.warn(message, ...(data ? [data] : [])); // Always show warnings
         } else if (!isProduction()) {
-            console.log(message); // Only show debug in development
+            // Use regular console.log in development - needs to show BEFORE auth completes
+            // (adminDebugLog requires admin verification which creates circular dependency)
+            console.log(`[AppInitializer] ${message}`, ...(data ? [data] : []));
         }
     }
     constructor() {
@@ -84,23 +92,24 @@ class AppInitializer {
                     retries: 1 // Only retry once to avoid cascading failures
                 });
                 AppInitializer.log('🔄 Received response from /batch/initialize:', {
-                    ok: initData?.ok,
-                    status: initData?.status,
+                    hasInitData: !!initData,
+                    hasSuccess: !!initData?.success,
                     hasData: !!initData?.data,
-                    hasUser: !!initData?.data?.data?.user,
+                    hasUser: !!initData?.data?.user,
                     error: initData?.error || 'none'
                 });
 
-                if (initData && initData.ok && initData.data && initData.data.success) {
+                // API client returns raw data format: {success: true, data: {...}}
+                if (initData && initData.success && initData.data) {
                     AppInitializer.log('✅ Batch initialization successful');
-                    
+
                     // Store fresh user data
-                    this.userData = initData.data.data.user;
+                    this.userData = initData.data.user;
                     
                     // Use unified auth manager to set user data if available
                     if (this.unifiedAuthManager) {
                         AppInitializer.log('🔧 Setting user via unified auth manager');
-                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.data.csrfToken);
+                        this.unifiedAuthManager.setAuthenticatedUser(this.userData, initData.data.csrfToken);
                     } else {
                         // Fallback to direct setting
                         localStorage.setItem('currentUser', JSON.stringify(this.userData));
@@ -108,8 +117,8 @@ class AppInitializer {
                     }
 
                     // CACHE RELATIONSHIPS FOR ENTIRE SESSION - NO MORE INDIVIDUAL API CALLS!
-                    if (initData.data.data.relationships) {
-                        window.userRelationships = initData.data.data.relationships;
+                    if (initData.data.relationships) {
+                        window.userRelationships = initData.data.relationships;
                         localStorage.setItem('userRelationships', JSON.stringify(window.userRelationships));
                         AppInitializer.log('✅ Cached user relationships:', {
                             friends: window.userRelationships.friends?.length || 0,
@@ -119,29 +128,26 @@ class AppInitializer {
                     }
 
                     // Set logged in state with all data
-                    this.setLoggedInState(initData.data.data);
-                    
+                    this.setLoggedInState(initData.data);
+
                     this.isInitialized = true;
-                    return { 
-                        authenticated: true, 
+                    return {
+                        authenticated: true,
                         userData: this.userData,
-                        initData: initData.data.data
+                        initData: initData.data
                     };
                 } else {
                     // Log why batch failed
                     AppInitializer.log('❌ Batch response structure issue:', {
                         hasInitData: !!initData,
-                        hasOk: !!initData?.ok,
+                        hasSuccess: !!initData?.success,
                         hasData: !!initData?.data,
-                        hasSuccess: !!initData?.data?.success,
-                        status: initData?.status,
-                        errorMessage: initData?.data?.error
+                        errorMessage: initData?.error
                     }, 'warn');
-                    
+
                     // If we got a response but it's not successful, throw an error to trigger fallback
-                    if (initData && !initData.ok) {
-                        const error = new Error(initData.data?.error || `HTTP ${initData.status}`);
-                        error.status = initData.status;
+                    if (initData && !initData.success) {
+                        const error = new Error(initData.error || 'Batch initialization failed');
                         throw error;
                     }
                 }
@@ -514,12 +520,12 @@ class AppInitializer {
                     });
                 }
             }
-            
-            console.log('🏗️ ================================================');
-            
+
+            await adminDebugLog('AppInitializer', '================================================');
+
         } catch (error) {
-            console.log(`❌ Backend Status: Unreachable (${error.message})`);
-            console.log('🏗️ ================================================');
+            await adminDebugLog('AppInitializer', `Backend Status: Unreachable (${error.message})`);
+            await adminDebugLog('AppInitializer', '================================================');
         }
     }
 }

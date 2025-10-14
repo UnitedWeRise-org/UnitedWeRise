@@ -5,6 +5,8 @@
  * - Mobile: Bottom sheet slide-up
  */
 
+import { apiCall } from '../js/api-compatibility-shim.js';
+
 export class NewPostModal {
     constructor() {
         this.modal = null;
@@ -114,8 +116,6 @@ export class NewPostModal {
                 textarea.focus();
             }
         }, 100);
-
-        console.log('✅ NewPostModal: Modal shown');
     }
 
     setupInlineComposer() {
@@ -189,10 +189,18 @@ export class NewPostModal {
                 onSuccess: (result) => {
                     console.log('✅ Post created successfully from modal');
                     this.hide();
-                    // Refresh feed
+
+                    // Prepend new post to feed for instant feedback
+                    if (window.myFeedHandlers && window.currentUser) {
+                        const post = result.data?.post || result.data;
+                        if (post) {
+                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
+                        }
+                    }
+
+                    // Refresh feed cache for next load
                     if (window.feedToggle) {
                         window.feedToggle.clearCache();
-                        window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
                     }
                 },
                 onError: (error) => {
@@ -203,12 +211,12 @@ export class NewPostModal {
         } else {
             // Fallback: Direct API call
             try {
-                if (typeof window.apiCall !== 'function') {
+                if (typeof apiCall !== 'function') {
                     alert('Post creation system not available. Please refresh the page.');
                     return;
                 }
 
-                const response = await window.apiCall('/posts', {
+                const response = await apiCall('/posts', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -222,9 +230,18 @@ export class NewPostModal {
                 if (response && (response.success || response.ok)) {
                     console.log('✅ Post created successfully (fallback)');
                     this.hide();
+
+                    // Prepend new post to feed for instant feedback
+                    if (window.myFeedHandlers && window.currentUser) {
+                        const post = response.data?.post || response.post || response.data;
+                        if (post) {
+                            window.myFeedHandlers.prependUserPostToFeed(post, window.currentUser);
+                        }
+                    }
+
+                    // Refresh feed cache for next load
                     if (window.feedToggle) {
                         window.feedToggle.clearCache();
-                        window.feedToggle.loadFeed(window.feedToggle.getCurrentFeed());
                     }
                 } else {
                     alert('Error creating post. Please try again.');
@@ -246,8 +263,6 @@ export class NewPostModal {
         if (this.composerMount) {
             this.composerMount.innerHTML = '';
         }
-
-        console.log('✅ NewPostModal: Modal hidden');
     }
 }
 
@@ -258,5 +273,3 @@ if (typeof window !== 'undefined') {
 
 // Export for module use
 export default NewPostModal;
-
-console.log('✅ NewPostModal component loaded');

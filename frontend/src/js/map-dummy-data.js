@@ -1,7 +1,14 @@
 /**
- * Map Dummy Data Fallback System
- * Provides fallback content when real posts are not available
- * TO DISABLE: Set window.MAP_USE_DUMMY_DATA = false or remove script import
+ * @module js/map-dummy-data
+ * @description Dummy map data for testing and development
+ *
+ * Provides sample geolocation data for testing map features
+ * without requiring real API data.
+ *
+ * Development/testing only - provides fallback content when real posts are not available.
+ * TO DISABLE: Set window.MAP_USE_DUMMY_DATA = false
+ *
+ * Migrated to ES6 modules: October 11, 2025 (Batch 4)
  */
 
 // Simple US coordinate generation
@@ -123,12 +130,17 @@ function shouldUseDummyData() {
     return !hasRealData;
 }
 
-// Export for map system
-window.mapDummyData = {
-    shouldUseDummyData,
-    getTopics: getDummyMapTopics,
-    getRandomCoordinate: getRandomUSCoordinate
-};
+// ES6 Module Exports
+export { shouldUseDummyData, getDummyMapTopics, getRandomUSCoordinate };
+
+// Maintain backward compatibility - export as window.mapDummyData object
+if (typeof window !== 'undefined') {
+    window.mapDummyData = {
+        shouldUseDummyData,
+        getTopics: getDummyMapTopics,
+        getRandomCoordinate: getRandomUSCoordinate
+    };
+}
 
 // Log status
 if (typeof adminDebugLog !== 'undefined') {

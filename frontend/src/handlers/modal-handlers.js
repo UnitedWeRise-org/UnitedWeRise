@@ -295,5 +295,3 @@ if (typeof window !== 'undefined') {
     window.closeVolunteerModal = closeVolunteerModal;
     window.modalHandlers = modalHandlers;
 }
-
-console.log('✅ Modal handlers module loaded (About & Volunteer modals)');

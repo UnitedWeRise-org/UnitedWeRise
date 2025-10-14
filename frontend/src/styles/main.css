@@ -174,7 +174,7 @@
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    z-index: 10003 !important;
+    z-index: 50000 !important; /* Reserved range: 50000+ for critical modals over everything */
 }
 
 /* Override for modal hiding - must come after modal-overlay rule */
@@ -809,7 +809,7 @@ details {
     align-items: center;
     justify-content: space-between;
     padding: 0 1rem;
-    z-index: 10;
+    z-index: 9999; /* Reserved range: 9000-9999 for persistent navigation */
     box-sizing: border-box;
 }
 
@@ -866,6 +866,8 @@ details {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 2px 5px rgba(0,0,0,0.25);
     border-radius: 50%;  /* Keeps the hover effect circular */
+    position: relative;
+    z-index: 10000; /* Above top bar (9999) to extend beyond bar */
     /* Circle fills the whole image now, so no special fitting needed */
 }
 
@@ -1079,7 +1081,6 @@ details {
 .container {
     display: flex;
     height: calc(100vh - 5.5vh); /* Full height minus top bar */
-    margin-top: 5.5vh;
     overflow: hidden; /* Prevent container overflow */
 }
 
@@ -1095,7 +1096,7 @@ details {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    z-index: 9;
+    z-index: 9998; /* Reserved range: 9000-9999 for persistent navigation */
 }
 
 .sidebar.expanded {
@@ -1226,8 +1227,8 @@ details {
     padding-right: 1rem;
     padding-bottom: 1vh;
     flex-grow: 1;
-    height: calc(100vh - 5.5vh); /* Full viewport height minus top bar */
-    min-height: calc(100vh - 5.5vh); /* Ensure minimum height */
+    height: calc(100vh); /* Full viewport height minus top bar */
+    min-height: calc(100vh); /* Ensure minimum height */
     box-sizing: border-box;
     overflow: hidden; /* Prevent main container from scrolling - let content handle it */
 }
@@ -1541,7 +1542,7 @@ details {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.9);
-    z-index: 10000;
+    z-index: 40000; /* Reserved range: 40000-49999 for media/photo viewers */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1904,13 +1905,14 @@ details {
     max-width: 600px;
     margin: 0 auto;
     padding: 0 1rem;
+    height: 100%; /* Fill parent container height */
 }
 
 #myFeedPosts {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    max-height: calc(100vh - 250px); /* Allow room for header and composer */
+    height: 100%; /* Fill parent container height */
     overflow-y: auto;
 }
 

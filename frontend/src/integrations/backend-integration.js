@@ -3,6 +3,7 @@
 // 🔐 MIGRATION STATUS: Updated for httpOnly cookie authentication
 
 import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 class BackendIntegration {
     constructor() {
@@ -165,25 +166,34 @@ class BackendIntegration {
     }
 
     handleAuthError() {
+        // Prevent infinite loops - only handle once every 5 seconds
+        if (this._lastAuthErrorHandled && Date.now() - this._lastAuthErrorHandled < 5000) {
+            console.warn('⚠️ Auth error handler called too soon, skipping to prevent loop');
+            return;
+        }
+        this._lastAuthErrorHandled = Date.now();
+
         // Clear invalid session data
         window.csrfToken = null;
         if (typeof window.authToken !== 'undefined') {
             window.authToken = null;
         }
-        
+
         if (window.setUserLoggedOut) {
             setUserLoggedOut();
         }
-        
+
         // More user-friendly session expiry notification
         const expiredMsg = document.createElement('div');
         expiredMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; z-index: 10000; border: 1px solid #f5c6cb; max-width: 300px;';
         expiredMsg.innerHTML = '⏰ Your session has expired. Please log in again to continue.';
         document.body.appendChild(expiredMsg);
-        
+
         setTimeout(() => {
             expiredMsg.remove();
-            openAuthModal('login');
+            if (typeof openAuthModal !== 'undefined') {
+                openAuthModal('login');
+            }
         }, 3000);
     }
 
@@ -404,9 +414,9 @@ class OnboardingTrigger {
         });
 
         // Listen for app initialization complete event (ensures onboarding triggers after full app load)
-        window.addEventListener('appInitializationComplete', (event) => {
+        window.addEventListener('appInitializationComplete', async (event) => {
             if (event.detail && event.detail.user) {
-                console.log('🎯 App initialization complete, checking onboarding...');
+                await adminDebugLog('BackendIntegration', 'App initialization complete, checking onboarding...');
                 // Delay onboarding check to allow cookies to propagate
                 setTimeout(() => {
                     this.checkOnboardingStatus(event.detail.user);
@@ -420,17 +430,14 @@ class OnboardingTrigger {
             // Use environment-aware API client with cookie authentication
             const progress = await window.apiClient.call('/onboarding/progress');
 
-            console.log('🔍 Onboarding progress check:', {
-                userAge: Date.now() - new Date(user.createdAt).getTime(),
-                isComplete: progress.isComplete,
-                currentStep: progress.currentStep,
-                totalSteps: progress.totalSteps
-            });
+            // Calculate user age safely with null check
+            const createdDate = user?.createdAt ? new Date(user.createdAt) : null;
+            const userAge = createdDate && !isNaN(createdDate.getTime())
+                ? Date.now() - createdDate.getTime()
+                : Infinity; // Very old if no date (skip onboarding)
 
             // Show onboarding if not complete and user has been registered for less than 7 days
-            const userAge = Date.now() - new Date(user.createdAt).getTime();
             const weekInMs = 7 * 24 * 60 * 60 * 1000;
-
             const shouldShowOnboarding = !progress.isComplete && userAge < weekInMs;
 
             if (shouldShowOnboarding && window.onboardingFlow) {
@@ -441,19 +448,17 @@ class OnboardingTrigger {
                 }, 1500);
             } else if (shouldShowOnboarding) {
                 console.warn('⚠️ Should show onboarding but OnboardingFlow not available');
-            } else {
-                console.log('✅ Onboarding not needed:', {
-                    complete: progress.isComplete,
-                    userAge: Math.round(userAge / (24 * 60 * 60 * 1000)),
-                    weekLimit: 7
-                });
             }
+            // Silently skip onboarding if not needed (reduces console noise)
         } catch (error) {
             console.error('Failed to check onboarding status:', error);
 
             // Fallback: Show onboarding for very new users (created in last hour)
             // This covers edge cases where API might fail
-            const userAge = Date.now() - new Date(user.createdAt).getTime();
+            const createdDate = user?.createdAt ? new Date(user.createdAt) : null;
+            const userAge = createdDate && !isNaN(createdDate.getTime())
+                ? Date.now() - createdDate.getTime()
+                : Infinity; // Very old if no date (skip onboarding)
             const oneHourMs = 60 * 60 * 1000;
 
             if (userAge < oneHourMs && window.onboardingFlow) {
@@ -478,5 +483,3 @@ const backendIntegration = new BackendIntegration();
 // Make globally available for legacy compatibility
 window.BackendIntegration = BackendIntegration;
 window.backendIntegration = backendIntegration;
-
-console.log('🔗 Backend Integration loaded via ES6 module');
