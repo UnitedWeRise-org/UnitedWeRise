@@ -7,7 +7,7 @@ import { isProduction } from '../utils/environment.js';
 
 class AppInitializer {
     // Production logging helper - only shows important messages
-    static async log(message, dataOrType = 'info', typeOverride = null) {
+    static log(message, dataOrType = 'info', typeOverride = null) {
         // Determine if second arg is data object or type string
         const isDataObject = typeof dataOrType === 'object' && dataOrType !== null;
         const type = typeOverride || (isDataObject ? 'info' : dataOrType);
@@ -18,7 +18,9 @@ class AppInitializer {
         } else if (type === 'warn') {
             console.warn(message, ...(data ? [data] : [])); // Always show warnings
         } else if (!isProduction()) {
-            await adminDebugLog('AppInitializer', message, data); // Admin-only debug in development
+            // Use regular console.log in development - needs to show BEFORE auth completes
+            // (adminDebugLog requires admin verification which creates circular dependency)
+            console.log(`[AppInitializer] ${message}`, ...(data ? [data] : []));
         }
     }
     constructor() {
