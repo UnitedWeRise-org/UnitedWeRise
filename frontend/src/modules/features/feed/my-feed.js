@@ -157,7 +157,7 @@ export async function loadMyFeedPosts() {
  * Display posts in My Feed
  * Extracted from index.html line 4620
  */
-export function displayMyFeedPosts(posts, appendMode = false) {
+export async function displayMyFeedPosts(posts, appendMode = false) {
     const container = document.getElementById('myFeedPosts');
     
     if (!container) {
