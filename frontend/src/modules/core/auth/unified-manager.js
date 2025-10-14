@@ -190,6 +190,16 @@ class UnifiedAuthManager {
         // 2. Update legacy global user - THIS IS THE CRITICAL FIX
         window.currentUser = user;
 
+        // DIAGNOSTIC: Show what's actually in window.currentUser (including admin flags)
+        console.log('🔍 UnifiedAuthManager: window.currentUser set', {
+            username: user?.username || user?.email,
+            hasIsAdmin: !!user?.isAdmin,
+            hasIsSuperAdmin: !!user?.isSuperAdmin,
+            isAdminValue: user?.isAdmin,
+            isSuperAdminValue: user?.isSuperAdmin,
+            allKeys: Object.keys(user || {})
+        });
+
         // 3. Update localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
 
