@@ -200,6 +200,12 @@ class UnifiedAuthManager {
             allKeys: Object.keys(user || {})
         });
 
+        // CRITICAL FIX: Clear admin verification cache so adminDebugLog re-checks with new user
+        if (window.adminDebugger && typeof window.adminDebugger.clearCache === 'function') {
+            window.adminDebugger.clearCache();
+            console.log('✅ Admin verification cache cleared - will re-check with new user data');
+        }
+
         // 3. Update localStorage
         localStorage.setItem('currentUser', JSON.stringify(user));
 
