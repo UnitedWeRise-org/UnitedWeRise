@@ -943,10 +943,6 @@ class UWRMapLibre {
         const isExpired = (now - currentCache.timestamp) > this.cacheValidityMs;
 
         if (currentCache.topics.length === 0 || isExpired) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Refreshing ${this.currentJurisdiction} topic cache - fetching new batch`, null);
-            }
-
             // Fetch a batch of topics (12-15 topics for 3-minute cache period)
             const batchSize = 15;
             const newTopics = [];
@@ -1084,10 +1080,6 @@ class UWRMapLibre {
 
     fadeOutCycleSequentially(cycle) {
         if (cycle.popups && cycle.popups.length > 0) {
-            if (typeof adminDebugLog !== 'undefined') {
-                adminDebugLog('MapSystem', `Fading out ${cycle.popups.length} bubbles sequentially`, null);
-            }
-
             // Fade out all bubbles simultaneously (3 seconds before new cycle)
             cycle.popups.forEach(popup => {
                 this.fadeOutBubbleGradually(popup);
