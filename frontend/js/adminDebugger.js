@@ -40,6 +40,15 @@ class AdminDebugger {
         try {
             // Check if user has admin or super-admin flag BEFORE making admin API calls
             if (!window.currentUser || !(window.currentUser.isAdmin || window.currentUser.isSuperAdmin)) {
+                // Diagnostic: Log why admin verification failed (only on first check)
+                if (!this.adminVerified) {
+                    console.log('🔍 AdminDebugger: Verification check', {
+                        hasCurrentUser: !!window.currentUser,
+                        username: window.currentUser?.username || 'none',
+                        hasIsAdmin: !!window.currentUser?.isAdmin,
+                        hasIsSuperAdmin: !!window.currentUser?.isSuperAdmin
+                    });
+                }
                 this.adminVerified = false;
                 this.verificationExpiry = Date.now() + this.CACHE_DURATION;
                 return false;
@@ -94,6 +103,12 @@ class AdminDebugger {
      * Standard debug logging - only visible to admins
      */
     async log(component, message, data = null) {
+        // One-time diagnostic: Confirm adminDebugLog is being called
+        if (!this._firstCallLogged) {
+            console.log('🔍 AdminDebugger: First adminDebugLog() call detected, checking admin status...');
+            this._firstCallLogged = true;
+        }
+
         if (await this.verifyAdminStatus()) {
             const timestamp = new Date().toLocaleTimeString();
             console.log(`🔧 [${timestamp}] [${component}] ${message}`, data);
@@ -215,8 +230,6 @@ if (typeof window !== 'undefined') {
     window.adminDebugTimeEnd = adminDebugTimeEnd;
     window.adminDebugger = adminDebugger;
 
-    console.log('🔧 Admin-only debugging system loaded (ES6 module)');
-    console.log('🔧 Available functions: adminDebugLog, adminDebugError, adminDebugWarn, adminDebugTable, adminDebugSensitive');
-    console.log('🔧 Debugging output will only appear for verified admin users');
-    console.log('🔧 Migration status: ES6 exports available, window.* compatibility maintained');
+    // Admin debugger loaded - intro messages removed to reduce console noise
+    // Debug output will only appear for verified admin users (isAdmin or isSuperAdmin flags)
 }

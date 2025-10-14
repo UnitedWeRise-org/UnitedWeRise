@@ -99,7 +99,4 @@ if (typeof window !== 'undefined') {
     window.getAdminDashboardUrl = getAdminDashboardUrl;
 }
 
-// Auto-log environment info when loaded in development
-if (isDevelopment()) {
-    logEnvironmentInfo();
-}
+// Auto-log removed - now called once from api.js to avoid duplication
