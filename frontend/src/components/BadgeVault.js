@@ -22,6 +22,16 @@ class BadgeVault {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('BadgeVault: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Load user's badge collection and available badges
         await this.loadBadgeData();
         this.setupAutoSave();

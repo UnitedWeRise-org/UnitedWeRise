@@ -22,6 +22,16 @@ export class FeedToggle {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('FeedToggle: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Determine smart default based on user's follows and content
         await this.determineDefaultFeed();
 

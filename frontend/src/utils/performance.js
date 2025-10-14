@@ -414,8 +414,23 @@ document.addEventListener('DOMContentLoaded', () => {
     addPerformanceCSS();
     createPerformanceDebugPanel();
 
-    // Preload critical content after a short delay
-    setTimeout(() => {
-        performanceOptimizer.preloadCriticalContent();
-    }, 1000);
+    // Preload critical content only after user authentication
+    const preloadWhenAuthenticated = () => {
+        if (window.currentUser) {
+            // User already authenticated, preload now
+            setTimeout(() => {
+                performanceOptimizer.preloadCriticalContent();
+            }, 1000);
+        } else {
+            // Wait for authentication
+            console.log('Performance: Waiting for authentication before preloading...');
+            window.addEventListener('userLoggedIn', () => {
+                setTimeout(() => {
+                    performanceOptimizer.preloadCriticalContent();
+                }, 1000);
+            }, { once: true });
+        }
+    };
+
+    preloadWhenAuthenticated();
 });

@@ -19,6 +19,16 @@ class QuestProgressTracker {
     }
 
     async init() {
+        // Only initialize if user is authenticated
+        if (!window.currentUser) {
+            console.log('QuestProgressTracker: Waiting for authentication...');
+            // Listen for auth and initialize when user logs in
+            window.addEventListener('userLoggedIn', () => {
+                this.init();
+            }, { once: true });
+            return;
+        }
+
         // Auto-load quest data on component initialization
         await this.loadQuestData();
 
