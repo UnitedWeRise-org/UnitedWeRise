@@ -24,11 +24,6 @@ export interface OAuthLoginResult {
 }
 export declare class OAuthService {
     /**
-     * Normalize email for OAuth account matching
-     * Gmail ignores dots and plus signs in email addresses
-     */
-    private static normalizeEmail;
-    /**
      * Handle OAuth login/registration flow
      */
     static handleOAuthLogin(profile: OAuthProfile): Promise<OAuthLoginResult>;

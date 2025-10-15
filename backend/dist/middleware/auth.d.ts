@@ -9,6 +9,8 @@ export interface AuthRequest extends Request {
         isModerator?: boolean;
         isAdmin?: boolean;
         isSuperAdmin?: boolean;
+        totpVerified?: boolean;
+        totpVerifiedAt?: number | null;
     };
     sensitiveAction?: {
         description: string;
