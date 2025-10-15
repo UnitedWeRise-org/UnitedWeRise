@@ -379,6 +379,34 @@ class AdminAPI {
         return response.data;
     }
 
+    /**
+     * Permanently delete a message (Super-Admin only with TOTP)
+     * @param {string} messageId - The ID of the message to delete
+     * @param {string} reason - Reason for deletion (10-500 characters, required)
+     * @returns {Promise<Object>} Deletion audit data
+     * @throws {Error} If deletion fails or user lacks super-admin privileges
+     */
+    async deleteMessage(messageId, reason) {
+        if (!reason || reason.length < 10 || reason.length > 500) {
+            throw new Error('Reason must be between 10 and 500 characters');
+        }
+
+        const response = await this.call(`${this.BACKEND_URL}/api/admin/messages/${messageId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ reason })
+        });
+
+        const json = await response.json();
+        if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error('Super admin access required for message deletion');
+            }
+            throw new Error(json.error || 'Failed to delete message');
+        }
+
+        return json;
+    }
+
     async getReports(params = {}) {
         const response = await this.get(`${this.BACKEND_URL}/api/moderation/reports`, params);
         if (!response.success) {

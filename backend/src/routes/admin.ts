@@ -801,6 +801,116 @@ router.delete('/users/:userId',
   }
 );
 
+// Permanently delete message (Super-Admin only with TOTP)
+router.delete('/messages/:messageId',
+  requireAuth,
+  requireAdmin,
+  requireTOTPForAdmin,
+  requireFreshTOTP,
+  [
+    body('reason').isLength({ min: 10, max: 500 }).withMessage('Reason must be 10-500 characters'),
+    handleValidationErrors
+  ],
+  async (req: AuthRequest, res) => {
+    try {
+      // Super-admin check
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({
+          error: 'Super admin access required for message deletion'
+        });
+      }
+
+      const { messageId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user!.id;
+
+      // Fetch message details before deletion for audit trail
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              email: true
+            }
+          },
+          conversation: {
+            select: {
+              id: true,
+              participants: {
+                select: {
+                  userId: true,
+                  user: {
+                    select: {
+                      username: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      // Prepare audit trail data
+      const auditData = {
+        messageId: message.id,
+        senderId: message.senderId,
+        senderUsername: message.sender.username,
+        conversationId: message.conversationId,
+        participantCount: message.conversation.participants.length,
+        participants: message.conversation.participants.map(p => p.user.username).join(', '),
+        contentLength: message.content.length,
+        messageType: message.messageType,
+        createdAt: message.createdAt,
+        deletedAt: new Date(),
+        deletedBy: req.sensitiveAction?.adminUsername || req.user.username,
+        deletedById: adminId,
+        reason
+      };
+
+      // Permanently delete the message
+      await prisma.message.delete({
+        where: { id: messageId }
+      });
+
+      // Log the deletion action with full audit trail
+      console.log(`🔥 PERMANENT MESSAGE DELETION by Super-Admin ${auditData.deletedBy} (${adminId})`);
+      console.log(`   Message ID: ${messageId}`);
+      console.log(`   Sender: ${auditData.senderUsername} (${message.senderId})`);
+      console.log(`   Conversation: ${message.conversationId}`);
+      console.log(`   Participants: ${auditData.participants}`);
+      console.log(`   Content Length: ${auditData.contentLength} chars`);
+      console.log(`   Created: ${message.createdAt.toISOString()}`);
+      console.log(`   Reason: ${reason}`);
+      console.log(`   Audit ID: admin_msg_delete_${messageId}_${Date.now()}`);
+
+      res.json({
+        message: 'Message permanently deleted',
+        audit: {
+          messageId,
+          senderId: message.senderId,
+          senderUsername: auditData.senderUsername,
+          conversationId: message.conversationId,
+          deletedBy: auditData.deletedBy,
+          deletedAt: auditData.deletedAt,
+          reason,
+          auditId: `admin_msg_delete_${messageId}_${Date.now()}`
+        }
+      });
+
+    } catch (error) {
+      console.error('Delete message error:', error);
+      res.status(500).json({ error: 'Failed to delete message' });
+    }
+  }
+);
+
 // Content Management
 router.get('/content/flagged', requireAuth, requireAdmin, requireTOTPForAdmin, async (req: AuthRequest, res) => {
   try {
