@@ -45,6 +45,12 @@ class QuestProgressTracker {
      * Load all quest data from API
      */
     async loadQuestData() {
+        // Check if user is still authenticated before making API calls
+        if (!window.currentUser) {
+            console.log('QuestProgressTracker: User not authenticated, skipping quest data load');
+            return;
+        }
+
         if (this.isLoading) return;
 
         this.isLoading = true;
@@ -69,7 +75,10 @@ class QuestProgressTracker {
 
         } catch (error) {
             console.error('Failed to load quest data:', error);
-            this.renderError('Failed to load quest progress');
+            // Don't show error UI if user is no longer authenticated
+            if (window.currentUser) {
+                this.renderError('Failed to load quest progress');
+            }
         } finally {
             this.isLoading = false;
         }
