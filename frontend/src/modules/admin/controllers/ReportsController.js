@@ -61,11 +61,12 @@ class ReportsController {
                 await this.displayReportsData(window.AdminState.cache.reports);
                 await adminDebugLog('ReportsController', 'Using cached reports data from batch call');
             } else {
-                // Fallback: load data if cache not available
-                await this.loadData();
+                // Don't make API call during initialization to avoid race condition with auth
+                // The auto-refresh will handle loading data after the first interval
+                await adminDebugLog('ReportsController', 'No cached data available yet - will load on first auto-refresh');
             }
 
-            // Set up automatic refresh
+            // Set up automatic refresh (will load data after 60 seconds if cache wasn't available)
             this.setupAutoRefresh();
 
             this.isInitialized = true;
