@@ -20,13 +20,18 @@ export const comparePassword = async (password: string, hashedPassword: string):
   return await bcrypt.compare(password, hashedPassword);
 };
 
-export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
+export const generateToken = (userId: string, totpVerified: boolean = false): string => {
+  const payload = {
+    userId,
+    totpVerified,
+    totpVerifiedAt: totpVerified ? Date.now() : null
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
 };
 
-export const verifyToken = (token: string): (JwtPayload & { userId: string }) | null => {
+export const verifyToken = (token: string): (JwtPayload & { userId: string; totpVerified?: boolean; totpVerifiedAt?: number | null }) | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { userId: string; totpVerified?: boolean; totpVerifiedAt?: number | null };
     return decoded;
   } catch (error) {
     return null;

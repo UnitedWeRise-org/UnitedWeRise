@@ -12,6 +12,7 @@ import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
 import { requiresCaptcha, requireSecureCookies, enableRequestLogging } from '../utils/environment';
+import { normalizeEmail } from '../utils/emailNormalization';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
@@ -151,7 +152,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
       }
     }
 
-    // Check if user exists
+    // Check if user exists with exact match
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -172,6 +173,23 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
       if (phoneNumber && existingUser.phoneNumber === phoneNumber) {
         return res.status(400).json({ error: 'Phone number is already registered' });
       }
+    }
+
+    // Check for normalized email duplicates (prevents Gmail variants like jeffrey.a.benson@gmail.com vs jeffreyabenson@gmail.com)
+    const normalizedEmail = normalizeEmail(email);
+    const allUsers = await prisma.user.findMany({
+      select: { email: true }
+    });
+
+    const hasNormalizedDuplicate = allUsers.some(user =>
+      normalizeEmail(user.email) === normalizedEmail
+    );
+
+    if (hasNormalizedDuplicate) {
+      return res.status(400).json({
+        error: 'An account with this email address already exists. If you previously signed up with Google, please use the Google sign-in button.',
+        suggestion: 'oauth'
+      });
     }
 
     // Hash password
@@ -393,99 +411,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     if (actualTotpEnabled && userData?.totpSecret) {
       debugLog(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
       const { totpToken } = req.body;
-      
-      // Check for TOTP session token in httpOnly cookies (secure)
-      const totpSessionToken = req.cookies?.totpSessionToken;
-      const totpVerified = req.cookies?.totpVerified === 'true';
-      
-      // Check if user has a valid TOTP session token (24-hour window)
-      if (totpSessionToken && userData.totpSecret) {
-        const validSessionToken = speakeasy.totp.verify({
-          secret: userData.totpSecret,
-          encoding: 'base32',
-          token: totpSessionToken,
-          step: 86400, // 24 hours
-          window: 1
-        });
 
-        if (validSessionToken) {
-          // Valid session token - extend it by updating last used time and generating new session token
-          const newSessionToken = speakeasy.totp({
-            secret: userData.totpSecret,
-            encoding: 'base32',
-            step: 86400 // Generate new 24-hour token
-          });
-
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { totpLastUsedAt: new Date() }
-          });
-
-          // Successful login with extended session
-          await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
-          const token = generateToken(user.id);
-          metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp_session: 'extended' });
-          metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_extended' });
-
-          // Set httpOnly cookie for auth token
-          res.cookie('authToken', token, {
-            httpOnly: true,
-            secure: requireSecureCookies(),
-            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-            path: '/',
-            domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
-          });
-          
-          // Generate and set CSRF token
-          const csrfToken = require('crypto').randomBytes(32).toString('hex');
-          res.cookie('csrf-token', csrfToken, {
-            httpOnly: false, // Needs to be readable by JS
-            secure: requireSecureCookies(),
-            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-            path: '/',
-            domain: '.unitedwerise.org'
-          });
-
-          // Set TOTP session token as httpOnly cookie
-          res.cookie('totpSessionToken', newSessionToken, {
-            httpOnly: true,
-            secure: requireSecureCookies(),
-            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/',
-            domain: '.unitedwerise.org'
-          });
-          
-          // Set TOTP verified flag as httpOnly cookie
-          res.cookie('totpVerified', 'true', {
-            httpOnly: true,
-            secure: requireSecureCookies(),
-            sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            path: '/',
-            domain: '.unitedwerise.org'
-          });
-
-          return res.json({
-            message: 'Login successful',
-            user: {
-              id: user.id,
-              email: user.email,
-              username: user.username,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              isAdmin: user.isAdmin,
-              isModerator: user.isModerator
-            },
-            csrfToken,
-            totpVerified: true // Simple flag for frontend
-          });
-        }
-      }
-
-      // No valid session token - require TOTP verification
+      // Require TOTP verification
       if (!totpToken) {
         debugLog(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
         return res.status(200).json({
@@ -513,13 +440,6 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         return res.status(401).json({ error: 'Invalid TOTP token' });
       }
 
-      // Generate 24-hour session token for future logins
-      const sessionToken = speakeasy.totp({
-        secret: userData.totpSecret,
-        encoding: 'base32',
-        step: 86400
-      });
-
       await prisma.user.update({
         where: { id: user.id },
         data: { totpLastUsedAt: new Date() }
@@ -527,7 +447,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
 
       // Successful login with TOTP
       await SecurityService.handleSuccessfulLogin(user.id, ipAddress, userAgent);
-      const token = generateToken(user.id);
+      const token = generateToken(user.id, true); // TOTP verified
       metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
       metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_verified' });
 
@@ -550,26 +470,6 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/',
         domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
-      });
-
-      // Set TOTP session token as httpOnly cookie
-      res.cookie('totpSessionToken', sessionToken, {
-        httpOnly: true,
-        secure: requireSecureCookies(),
-        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/',
-        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
-      });
-
-      // Set TOTP verified flag as httpOnly cookie
-      res.cookie('totpVerified', 'true', {
-        httpOnly: true,
-        secure: requireSecureCookies(),
-        sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/',
-        domain: '.unitedwerise.org' // CRITICAL: Must match logout clearCookie domain
       });
 
       return res.json({
@@ -781,9 +681,7 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
 
     res.clearCookie('authToken', httpOnlyCookieOptions);
     res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
-    res.clearCookie('totpSessionToken', httpOnlyCookieOptions);
-    res.clearCookie('totpVerified', httpOnlyCookieOptions);
-    
+
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -821,8 +719,8 @@ router.post('/refresh', async (req, res) => {
         return res.status(401).json({ error: 'User not found' });
       }
 
-      // Generate new token
-      const newToken = generateToken(decoded.userId);
+      // Generate new token - preserve TOTP verification status from old token
+      const newToken = generateToken(decoded.userId, decoded.totpVerified || false);
 
       // Set new httpOnly cookie
       res.cookie('authToken', newToken, {
@@ -1016,15 +914,77 @@ router.post('/check-email', async (req: express.Request, res: express.Response) 
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Check if email exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+    const normalizedEmail = normalizeEmail(email);
+
+    // Check for both exact match and normalized match
+    // This prevents duplicate accounts from Gmail variants (e.g., jeffrey.a.benson@gmail.com vs jeffreyabenson@gmail.com)
+    const allUsers = await prisma.user.findMany({
+      select: { email: true }
     });
 
-    res.json({ available: !existingUser });
+    const hasDuplicate = allUsers.some(user =>
+      normalizeEmail(user.email) === normalizedEmail
+    );
+
+    res.json({ available: !hasDuplicate });
   } catch (error) {
     console.error('Email check error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Complete onboarding for OAuth users (select username)
+router.post('/complete-onboarding', requireAuth, async (req: AuthRequest, res: express.Response) => {
+  try {
+    const userId = req.user!.id;
+    const { username } = req.body;
+
+    // Validate username
+    if (!username || username.length < 3 || username.length > 30) {
+      return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+    }
+
+    // Check username format (alphanumeric and underscores only)
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
+    }
+
+    // Check if username is available
+    const existingUser = await prisma.user.findUnique({
+      where: { username }
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
+
+    // Update user with selected username and mark onboarding as complete
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        username,
+        onboardingCompleted: true
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        onboardingCompleted: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Onboarding completed successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Complete onboarding error:', error);
+    res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 });
 
