@@ -65,9 +65,11 @@ export class AuthHandlers {
                     await this.loadGoogleSignIn();
                     console.log('✅ Google Sign-In loaded successfully');
                 } catch (loadError) {
-                    console.error('❌ Failed to load Google Sign-In:', loadError.message);
+                    console.error('❌ Failed to load Google Sign-In:', loadError);
 
-                    if (loadError.message.includes('domain authorization')) {
+                    // Handle both Error objects and Event objects from script loading failures
+                    const errorMessage = loadError?.message || loadError?.type || 'Unknown error';
+                    if (errorMessage.includes('domain authorization')) {
                         showAuthMessage('Google Sign-In is still initializing. Domain authorization may be propagating. Please try again in 15-30 minutes.', 'warning');
                         console.log('💡 Run testGoogleDomainAuth() to check status');
                     } else {
