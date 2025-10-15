@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 ;
 const auth_1 = require("../middleware/auth");
 const onboardingService_1 = require("../services/onboardingService");
+const representativeService_1 = require("../services/representativeService");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -46,8 +47,8 @@ const router = express_1.default.Router();
  */
 router.get('/steps', auth_1.requireAuth, async (req, res) => {
     try {
-        // Temporary stub - return empty steps array
-        const steps = [];
+        const userId = req.user.id;
+        const steps = await onboardingService_1.onboardingService.getOnboardingSteps(userId);
         res.json({ steps });
     }
     catch (error) {
@@ -109,11 +110,14 @@ router.post('/complete-step', auth_1.requireAuth, async (req, res) => {
         }
         const profile = await onboardingService_1.onboardingService.completeStep(userId, stepId, stepData);
         await onboardingService_1.onboardingService.trackOnboardingEvent(userId, 'step_completed', stepId, stepData);
-        // If location step completed, fetch representatives
+        // If location step completed, fetch and cache representatives
         if (stepId === 'location' && stepData?.zipCode) {
             try {
-                // await googleCivicService.updateUserRepresentatives(userId, stepData.zipCode);
-                console.log('Representative fetching would happen here for:', stepData.zipCode);
+                // Fetch representatives using RepresentativeService (with automatic caching)
+                const address = stepData.address || stepData.zipCode;
+                const state = stepData.state;
+                await representativeService_1.RepresentativeService.getRepresentativesByAddress(address, stepData.zipCode, state);
+                console.log(`Representatives fetched and cached for ${stepData.zipCode}, ${state}`);
             }
             catch (error) {
                 console.error('Failed to fetch representatives:', error);
@@ -220,19 +224,42 @@ router.post('/location/validate', async (req, res) => {
         }
         // Use the address if provided, otherwise use ZIP code
         const locationQuery = address || zipCode;
-        // const representatives = await googleCivicService.getRepresentatives(locationQuery);
-        const representatives = []; // Temporary placeholder
-        if (!representatives || representatives.length === 0) {
+        // Fetch representatives using RepresentativeService (Geocodio + Google Civic + cache)
+        const result = await representativeService_1.RepresentativeService.getRepresentativesByAddress(locationQuery, zipCode, undefined // state will be extracted from address
+        );
+        if (!result || !result.representatives) {
             return res.status(400).json({
                 error: 'Unable to find representatives for this location. Please check your ZIP code or address.'
             });
         }
-        // Extract location info from the first representative's address
+        // Convert to array if grouped by level
+        let reps = Array.isArray(result.representatives)
+            ? result.representatives
+            : [
+                ...(result.representatives.federal || []),
+                ...(result.representatives.state || []),
+                ...(result.representatives.local || [])
+            ];
+        if (reps.length === 0) {
+            return res.status(400).json({
+                error: 'Unable to find representatives for this location. Please check your ZIP code or address.'
+            });
+        }
+        // Extract location info
         const locationInfo = {
-            zipCode,
+            zipCode: result.location.zipCode || zipCode,
+            city: result.location.city,
+            state: result.location.state,
             address,
-            representatives: representatives.slice(0, 5), // Return first 5 for preview
-            totalRepresentatives: representatives.length
+            representatives: reps.slice(0, 5).map(rep => ({
+                name: rep.name,
+                office: rep.office,
+                party: rep.party,
+                photoUrl: rep.photoUrl,
+                level: rep.level
+            })),
+            totalRepresentatives: reps.length,
+            source: result.source // 'cache', 'geocodio', 'google_civic', 'google_civic+geocodio'
         };
         res.json({
             message: 'Location validated successfully',

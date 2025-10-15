@@ -96,17 +96,6 @@ export class OnboardingService {
         completed: profile.completedSteps.includes('welcome')
       },
       {
-        id: 'verification',
-        title: 'Verify Your Account',
-        description: 'Confirm your email and phone number for account security',
-        required: true,
-        completed: user?.emailVerified && user?.phoneVerified || false,
-        data: {
-          emailVerified: user?.emailVerified || false,
-          phoneVerified: user?.phoneVerified || false
-        }
-      },
-      {
         id: 'location',
         title: 'Find Your Representatives',
         description: 'Add your location to connect with your local and federal representatives',
@@ -121,30 +110,6 @@ export class OnboardingService {
         required: false,
         completed: profile.completedSteps.includes('interests'),
         data: profile.profileData.interests || []
-      },
-      {
-        id: 'experience',
-        title: 'Your Political Engagement',
-        description: 'Help us tailor your experience based on your engagement level',
-        required: false,
-        completed: profile.completedSteps.includes('experience'),
-        data: profile.profileData.experienceLevel
-      },
-      {
-        id: 'notifications',
-        title: 'Communication Preferences',
-        description: 'Choose how you\'d like to stay informed and engaged',
-        required: false,
-        completed: profile.completedSteps.includes('notifications'),
-        data: profile.profileData.communicationPreferences
-      },
-      {
-        id: 'profile',
-        title: 'Complete Your Profile',
-        description: 'Add a photo and bio to help others connect with you',
-        required: false,
-        completed: profile.completedSteps.includes('profile') || (!!user?.bio && !!user?.avatar),
-        data: profile.profileData.profileSetup
       }
     ];
 
@@ -211,17 +176,6 @@ export class OnboardingService {
         break;
       case 'interests':
         updateData.interests = stepData;
-        break;
-      case 'experience':
-        updateData.politicalExperience = stepData;
-        break;
-      case 'notifications':
-        updateData.notificationPreferences = stepData;
-        break;
-      case 'profile':
-        if (stepData.bio) updateData.bio = stepData.bio;
-        if (stepData.avatar) updateData.avatar = stepData.avatar;
-        if (stepData.displayName) updateData.displayName = stepData.displayName;
         break;
     }
 

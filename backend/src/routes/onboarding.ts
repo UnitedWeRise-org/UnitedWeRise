@@ -3,7 +3,7 @@ import express from 'express';
 ;
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { onboardingService } from '../services/onboardingService';
-import { googleCivicService } from '../services/googleCivic';
+import { RepresentativeService } from '../services/representativeService';
 import { metricsService } from '../services/metricsService';
 
 const router = express.Router();
@@ -46,8 +46,8 @@ const router = express.Router();
  */
 router.get('/steps', requireAuth, async (req: AuthRequest, res) => {
   try {
-    // Temporary stub - return empty steps array
-    const steps: any[] = [];
+    const userId = req.user!.id;
+    const steps = await onboardingService.getOnboardingSteps(userId);
     res.json({ steps });
   } catch (error) {
     console.error('Get onboarding steps error:', error);
@@ -114,11 +114,20 @@ router.post('/complete-step', requireAuth, async (req: AuthRequest, res) => {
     
     await onboardingService.trackOnboardingEvent(userId, 'step_completed', stepId, stepData);
     
-    // If location step completed, fetch representatives
+    // If location step completed, fetch and cache representatives
     if (stepId === 'location' && stepData?.zipCode) {
       try {
-        // await googleCivicService.updateUserRepresentatives(userId, stepData.zipCode);
-        console.log('Representative fetching would happen here for:', stepData.zipCode);
+        // Fetch representatives using RepresentativeService (with automatic caching)
+        const address = stepData.address || stepData.zipCode;
+        const state = stepData.state;
+
+        await RepresentativeService.getRepresentativesByAddress(
+          address,
+          stepData.zipCode,
+          state
+        );
+
+        console.log(`Representatives fetched and cached for ${stepData.zipCode}, ${state}`);
       } catch (error) {
         console.error('Failed to fetch representatives:', error);
         // Don't fail the onboarding step if rep fetching fails
@@ -231,22 +240,50 @@ router.post('/location/validate', async (req, res) => {
 
     // Use the address if provided, otherwise use ZIP code
     const locationQuery = address || zipCode;
-    
-    // const representatives = await googleCivicService.getRepresentatives(locationQuery);
-    const representatives = []; // Temporary placeholder
-    
-    if (!representatives || representatives.length === 0) {
-      return res.status(400).json({ 
-        error: 'Unable to find representatives for this location. Please check your ZIP code or address.' 
+
+    // Fetch representatives using RepresentativeService (Geocodio + Google Civic + cache)
+    const result = await RepresentativeService.getRepresentativesByAddress(
+      locationQuery,
+      zipCode,
+      undefined // state will be extracted from address
+    );
+
+    if (!result || !result.representatives) {
+      return res.status(400).json({
+        error: 'Unable to find representatives for this location. Please check your ZIP code or address.'
       });
     }
 
-    // Extract location info from the first representative's address
+    // Convert to array if grouped by level
+    let reps = Array.isArray(result.representatives)
+      ? result.representatives
+      : [
+          ...(result.representatives.federal || []),
+          ...(result.representatives.state || []),
+          ...(result.representatives.local || [])
+        ];
+
+    if (reps.length === 0) {
+      return res.status(400).json({
+        error: 'Unable to find representatives for this location. Please check your ZIP code or address.'
+      });
+    }
+
+    // Extract location info
     const locationInfo = {
-      zipCode,
+      zipCode: result.location.zipCode || zipCode,
+      city: result.location.city,
+      state: result.location.state,
       address,
-      representatives: representatives.slice(0, 5), // Return first 5 for preview
-      totalRepresentatives: representatives.length
+      representatives: reps.slice(0, 5).map(rep => ({
+        name: rep.name,
+        office: rep.office,
+        party: rep.party,
+        photoUrl: rep.photoUrl,
+        level: rep.level
+      })),
+      totalRepresentatives: reps.length,
+      source: result.source // 'cache', 'geocodio', 'google_civic', 'google_civic+geocodio'
     };
 
     res.json({
@@ -255,8 +292,8 @@ router.post('/location/validate', async (req, res) => {
     });
   } catch (error) {
     console.error('Location validation error:', error);
-    res.status(400).json({ 
-      error: 'Invalid location. Please check your ZIP code or address and try again.' 
+    res.status(400).json({
+      error: 'Invalid location. Please check your ZIP code or address and try again.'
     });
   }
 });

@@ -12,7 +12,6 @@ class QuestService {
             where: { id: userId },
             select: {
                 interests: true,
-                politicalExperience: true,
                 createdAt: true,
                 lastLoginAt: true
             }
