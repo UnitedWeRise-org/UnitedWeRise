@@ -1,0 +1,1 @@
+{"version":3,"file":"verificationEnforcement.d.ts","sourceRoot":"","sources":["../../src/middleware/verificationEnforcement.ts"],"names":[],"mappings":"AAAA,OAAO,EAAW,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAE1D,OAAO,EAAE,WAAW,EAAE,MAAM,QAAQ,CAAC;AAIrC,wBAAsB,uBAAuB,CAC3C,GAAG,EAAE,WAAW,EAChB,GAAG,EAAE,QAAQ,EACb,IAAI,EAAE,YAAY,sDAqDnB"}

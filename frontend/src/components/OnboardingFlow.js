@@ -24,7 +24,7 @@ class OnboardingFlow {
                                 <div class="progress-fill" id="onboardingProgress"></div>
                             </div>
                             <div class="progress-text">
-                                <span id="currentStepNum">1</span> of <span id="totalSteps">7</span>
+                                <span id="currentStepNum">1</span> of <span id="totalSteps">3</span>
                             </div>
                         </div>
                         <button class="close-btn" onclick="onboardingFlow.close()" title="Exit onboarding">&times;</button>
@@ -165,161 +165,6 @@ class OnboardingFlow {
                             </div>
                         </div>
 
-                        <!-- Experience Step -->
-                        <div id="step-experience" class="onboarding-step" style="display: none;">
-                            <div class="step-header">
-                                <div class="step-icon">🌱</div>
-                                <h2>Your Political Engagement</h2>
-                                <p class="step-subtitle">Help us tailor your experience to your engagement level</p>
-                            </div>
-                            
-                            <div class="experience-options">
-                                <div class="experience-option" data-value="new">
-                                    <div class="option-icon">🌟</div>
-                                    <h4>New to Politics</h4>
-                                    <p>I'm just starting to learn about political issues and want to get more involved</p>
-                                    <div class="option-features">
-                                        <span class="feature-tag">Beginner guides</span>
-                                        <span class="feature-tag">Educational content</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="experience-option" data-value="casual">
-                                    <div class="option-icon">👀</div>
-                                    <h4>Casual Observer</h4>
-                                    <p>I follow politics occasionally and like to stay informed about major issues</p>
-                                    <div class="option-features">
-                                        <span class="feature-tag">News summaries</span>
-                                        <span class="feature-tag">Key updates</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="experience-option" data-value="engaged">
-                                    <div class="option-icon">💪</div>
-                                    <h4>Actively Engaged</h4>
-                                    <p>I regularly follow politics and participate in discussions and civic activities</p>
-                                    <div class="option-features">
-                                        <span class="feature-tag">In-depth discussions</span>
-                                        <span class="feature-tag">Action opportunities</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="experience-option" data-value="activist">
-                                    <div class="option-icon">🔥</div>
-                                    <h4>Political Activist</h4>
-                                    <p>I'm heavily involved in political advocacy and community organizing</p>
-                                    <div class="option-features">
-                                        <span class="feature-tag">Advanced tools</span>
-                                        <span class="feature-tag">Organizing features</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Notifications Step -->
-                        <div id="step-notifications" class="onboarding-step" style="display: none;">
-                            <div class="step-header">
-                                <div class="step-icon">🔔</div>
-                                <h2>Stay Connected</h2>
-                                <p class="step-subtitle">Choose how you'd like to receive updates and notifications</p>
-                            </div>
-                            
-                            <div class="notifications-form">
-                                <div class="notification-group">
-                                    <h4>Email Notifications</h4>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="emailUpdates" checked>
-                                        <label for="emailUpdates">
-                                            <strong>Important Updates</strong>
-                                            <span>Security alerts, policy changes, and important announcements</span>
-                                        </label>
-                                    </div>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="weeklyDigest" checked>
-                                        <label for="weeklyDigest">
-                                            <strong>Weekly Digest</strong>
-                                            <span>Summary of trending discussions and representative activity</span>
-                                        </label>
-                                    </div>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="repUpdates">
-                                        <label for="repUpdates">
-                                            <strong>Representative Updates</strong>
-                                            <span>When your representatives post updates or take positions</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="notification-group">
-                                    <h4>In-App Notifications</h4>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="mentions" checked>
-                                        <label for="mentions">
-                                            <strong>Mentions & Replies</strong>
-                                            <span>When someone mentions you or replies to your posts</span>
-                                        </label>
-                                    </div>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="discussions">
-                                        <label for="discussions">
-                                            <strong>Discussion Updates</strong>
-                                            <span>New activity in discussions you're following</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="notification-group">
-                                    <h4>SMS Notifications (if phone verified)</h4>
-                                    <div class="notification-option">
-                                        <input type="checkbox" id="urgentSMS">
-                                        <label for="urgentSMS">
-                                            <strong>Urgent Alerts Only</strong>
-                                            <span>Critical security alerts and emergency announcements</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Profile Step -->
-                        <div id="step-profile" class="onboarding-step" style="display: none;">
-                            <div class="step-header">
-                                <div class="step-icon">👤</div>
-                                <h2>Complete Your Profile</h2>
-                                <p class="step-subtitle">Help others connect with you in the community</p>
-                            </div>
-                            
-                            <div class="profile-form">
-                                <div class="avatar-section">
-                                    <div class="avatar-upload">
-                                        <div id="avatarPreview" class="avatar-preview">
-                                            <span class="avatar-placeholder">📷</span>
-                                        </div>
-                                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
-                                        <button onclick="document.getElementById('avatarUpload').click()" class="btn btn-secondary">
-                                            Choose Photo
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="displayName">Display Name (Optional)</label>
-                                    <input type="text" id="displayName" class="form-input" placeholder="How you'd like to be known">
-                                    <small>Leave blank to use your first name</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="profileBio">Bio (Optional)</label>
-                                    <textarea id="profileBio" class="form-textarea" placeholder="Tell the community a bit about yourself..." maxlength="500"></textarea>
-                                    <small class="char-count">0 / 500 characters</small>
-                                </div>
-                                
-                                <div class="privacy-notice">
-                                    <h4>Privacy Note</h4>
-                                    <p>Your profile information is optional and can be updated anytime. Only information you choose to share will be visible to other users.</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="onboarding-footer">
@@ -862,36 +707,9 @@ class OnboardingFlow {
     }
 
     setupEventListeners() {
-        // Avatar upload
-        document.getElementById('avatarUpload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const preview = document.getElementById('avatarPreview');
-                    preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Bio character counter
-        document.getElementById('profileBio').addEventListener('input', (e) => {
-            const count = e.target.value.length;
-            document.querySelector('.char-count').textContent = `${count} / 500 characters`;
-        });
-
         // ZIP code validation
         document.getElementById('zipCode').addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5);
-        });
-
-        // Experience option selection
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.experience-option')) {
-                document.querySelectorAll('.experience-option').forEach(opt => opt.classList.remove('selected'));
-                e.target.closest('.experience-option').classList.add('selected');
-            }
         });
     }
 
@@ -1094,11 +912,6 @@ class OnboardingFlow {
                     });
                 }
                 break;
-            case 'experience':
-                if (step.data) {
-                    document.querySelector(`[data-value="${step.data}"]`)?.classList.add('selected');
-                }
-                break;
         }
     }
 
@@ -1246,33 +1059,6 @@ class OnboardingFlow {
                     return false;
                 }
                 break;
-            case 'experience':
-                const selected = document.querySelector('.experience-option.selected');
-                if (!selected) {
-                    this.showMessage('Please select your engagement level', 'error');
-                    return false;
-                }
-                this.stepData.experience = selected.dataset.value;
-                break;
-            case 'notifications':
-                // Collect notification preferences
-                this.stepData.notifications = {
-                    email: document.getElementById('emailUpdates').checked,
-                    weeklyDigest: document.getElementById('weeklyDigest').checked,
-                    repUpdates: document.getElementById('repUpdates').checked,
-                    mentions: document.getElementById('mentions').checked,
-                    discussions: document.getElementById('discussions').checked,
-                    sms: document.getElementById('urgentSMS').checked
-                };
-                break;
-            case 'profile':
-                // Collect profile data
-                this.stepData.profile = {
-                    displayName: document.getElementById('displayName').value,
-                    bio: document.getElementById('profileBio').value,
-                    avatar: document.getElementById('avatarPreview').querySelector('img')?.src
-                };
-                break;
         }
 
         return true;
@@ -1281,7 +1067,7 @@ class OnboardingFlow {
     async completeCurrentStep(step) {
         const stepData = this.stepData[step.id] || this.stepData[step.id.replace('step-', '')];
 
-        const API_BASE = 'https://api.unitedwerise.org/api';
+        const API_BASE = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'https://api.unitedwerise.org/api';
         const response = await fetch(`${API_BASE}/onboarding/complete-step`, {
             method: 'POST',
             credentials: 'include',

@@ -913,7 +913,6 @@ model User {
   officialTitle               String?
   termStart                   DateTime?
   termEnd                     DateTime?
-  politicalExperience         String?
 
   // Email & Phone Verification
   emailVerified               Boolean                   @default(false)
@@ -8508,11 +8507,11 @@ if (!window.currentUser) return showLogin(); // Reliable auth check
 ---
 
 ## 🌟 ONBOARDING SYSTEM {#onboarding-system}
-**Last Updated**: January 13, 2025
-**Status**: ✅ Fully Operational with Event-Driven Architecture
+**Last Updated**: October 14, 2025
+**Status**: ✅ Fully Operational with Event-Driven Architecture & Simplified 3-Step Flow
 
 ### Overview
-Complete user onboarding system that introduces new users to platform features after account creation, with intelligent triggering and progress tracking.
+Complete user onboarding system that introduces new users to platform features after account creation, with intelligent triggering, progress tracking, and soft verification enforcement. Simplified to 3 essential steps for better user retention.
 
 ### System Architecture
 
@@ -8613,37 +8612,192 @@ async initialize() {
 
 ### API Integration
 
+#### Onboarding Steps Endpoint
+**Endpoint**: `GET /api/onboarding/steps`
+**Authentication**: Required (httpOnly cookies)
+**Response Format**:
+```javascript
+{
+    "steps": [
+        {
+            "id": "welcome",
+            "title": "Welcome to United We Rise",
+            "description": "Learn how our platform helps you engage with representatives",
+            "required": true,
+            "completed": boolean,
+            "data": {}
+        },
+        {
+            "id": "location",
+            "title": "Find Your Representatives",
+            "description": "Add your location to connect with elected officials",
+            "required": true,
+            "completed": boolean,
+            "data": {
+                "zipCode": string,
+                "city": string,
+                "state": string
+            }
+        },
+        {
+            "id": "interests",
+            "title": "Choose Your Interests",
+            "description": "Select the issues and topics you care about",
+            "required": false,
+            "completed": boolean,
+            "data": ["Healthcare", "Education", ...]
+        }
+    ]
+}
+```
+
 #### Onboarding Progress Endpoint
 **Endpoint**: `GET /api/onboarding/progress`
 **Authentication**: Required (httpOnly cookies)
 **Response Format**:
 ```javascript
 {
-    "ok": true,
-    "data": {
-        "completed": boolean,
-        "currentStep": string,
-        "steps": {
-            "welcome": boolean,
-            "profile": boolean,
-            "connections": boolean,
-            "features": boolean
-        },
-        "lastUpdated": "ISO date string"
+    "currentStep": number,
+    "totalSteps": 3,
+    "completedSteps": number,
+    "requiredCompleted": number,
+    "requiredTotal": number,
+    "isComplete": boolean,
+    "nextStep": {
+        "id": "location",
+        "title": "Find Your Representatives",
+        "required": true
     }
 }
 ```
 
-#### Onboarding Update Endpoint
-**Endpoint**: `POST /api/onboarding/update`
+#### Complete Step Endpoint
+**Endpoint**: `POST /api/onboarding/complete-step`
 **Authentication**: Required (httpOnly cookies)
 **Request Body**:
 ```javascript
 {
-    "step": "welcome|profile|connections|features",
-    "completed": boolean
+    "stepId": "welcome|location|interests",
+    "stepData": {
+        // Location step
+        "zipCode": "12345",
+        "city": "City Name",
+        "state": "ST"
+
+        // OR interests step
+        // ["Healthcare", "Education", "Economy"]
+    }
 }
 ```
+
+#### Skip Step Endpoint
+**Endpoint**: `POST /api/onboarding/skip-step`
+**Authentication**: Required (httpOnly cookies)
+**Request Body**:
+```javascript
+{
+    "stepId": "interests" // Only non-required steps can be skipped
+}
+```
+
+### Soft Verification Enforcement
+
+**Purpose**: Encourage email verification without blocking new user access
+**Grace Period**: 7 days from registration
+**Enforcement**: Account suspension (reversible upon verification)
+
+#### Verification Workflow
+```
+User Registration
+        ↓
+7-Day Grace Period (Full Access)
+        ↓
+Daily Verification Reminder Banner
+        ↓
+Day 7: Account Suspended if Unverified
+        ↓
+User Verifies Email → Account Reactivated
+```
+
+#### VerificationBanner Component
+**Location**: `frontend/src/components/VerificationBanner.js`
+**Purpose**: Persistent dismissible banner for unverified users
+
+**Features**:
+- Shows days remaining in grace period
+- "Verify Now" button links to verification flow
+- Auto-dismissible but reappears on page reload
+- Responsive design with warning styling
+
+**Banner Triggers**:
+- User is authenticated
+- Email not verified
+- Within 7-day grace period OR past grace period
+
+#### Verification Enforcement Middleware
+**Location**: `backend/src/middleware/verificationEnforcement.ts`
+**Applied to**: Protected routes requiring verified accounts
+
+**Logic**:
+```typescript
+if (!user.emailVerified) {
+    const daysSinceRegistration = calculateDays(user.createdAt);
+
+    if (daysSinceRegistration > GRACE_PERIOD_DAYS) {
+        // Suspend account (reversible)
+        return 403 "Please verify email to continue";
+    } else {
+        // Show warning, allow access
+        response.locals.verificationWarning = {
+            daysRemaining: GRACE_PERIOD_DAYS - daysSinceRegistration
+        };
+    }
+}
+```
+
+**Configuration**:
+- `VERIFICATION_GRACE_PERIOD_DAYS`: 7 (configurable)
+- `UNVERIFIED_CAN_POST`: true (during grace period)
+- `UNVERIFIED_CAN_COMMENT`: true (during grace period)
+
+### Onboarding Steps
+
+#### Step 1: Welcome (Required)
+**Purpose**: Introduce platform features and community values
+**Can Skip**: Yes (marks as completed)
+**Duration**: ~30 seconds
+
+**Content**:
+- Platform overview (representatives, discussions, civic action)
+- Community values (respectful dialogue, fact-based, no attacks)
+- 4 key features with icons
+
+#### Step 2: Location (Required)
+**Purpose**: Connect user with elected representatives
+**Can Skip**: No (must provide ZIP code)
+**Duration**: ~1 minute
+
+**Data Collected**:
+- ZIP code (required)
+- Full address (optional, for better accuracy)
+
+**Backend Integration**:
+- Validates location via Google Civic API
+- Previews top 3 representatives
+- Stores location in User model (zipCode, city, state)
+
+#### Step 3: Interests (Optional)
+**Purpose**: Personalize feed algorithm
+**Can Skip**: Yes
+**Duration**: ~1 minute
+
+**Available Interests** (20 categories):
+Healthcare, Education, Economy & Jobs, Environment & Climate, Infrastructure, Social Security, Immigration, Criminal Justice, Technology & Privacy, Veterans Affairs, Housing, Transportation, Energy, Agriculture, Small Business, International Relations, Civil Rights, Public Safety, Taxes & Budget, Government Reform
+
+**Algorithm Integration**:
+- Interests used as keywords for content weighting
+- Posts matching user interests ranked higher in feed
+- Trending topics filtered by interest alignment
 
 ### Event-Driven Architecture
 
@@ -8689,14 +8843,21 @@ Show Onboarding Flow (if applicable)
 ### Integration Points
 
 #### Files Modified for Onboarding System
+- **`frontend/src/components/OnboardingFlow.js`**: 3-step onboarding UI component
+- **`frontend/src/components/VerificationBanner.js`**: Email verification reminder banner
 - **`frontend/src/integrations/backend-integration.js`**: OnboardingTrigger class implementation
 - **`frontend/src/modules/core/auth/unified-manager.js`**: App initialization event dispatch
-- **`frontend/src/modules/core/api/client.js`**: Environment-aware API client with enhanced error handling
+- **`backend/src/services/onboardingService.ts`**: Simplified 3-step onboarding logic
+- **`backend/src/routes/onboarding.ts`**: Fixed /steps endpoint, enabled Google Civic API
+- **`backend/src/middleware/verificationEnforcement.ts`**: Soft verification enforcement middleware
+- **`backend/prisma/schema.prisma`**: Removed politicalExperience field from User model
 
 #### Dependencies
 - **Unified Authentication System**: Requires `window.authUtils` and `window.unifiedAuthManager`
 - **API Client**: Requires `window.apiClient.call()` for backend communication
-- **OnboardingFlow Component**: Requires `window.OnboardingFlow` for UI display
+- **OnboardingFlow Component**: Requires `window.onboardingFlow` for UI display
+- **VerificationBanner Component**: Requires `window.verificationBanner` for verification prompts
+- **Google Civic API**: Optional integration for representative fetching (currently commented out)
 
 ### Error Handling & Debugging
 
@@ -8758,18 +8919,29 @@ window.apiClient.call('/onboarding/progress').then(console.log);
 
 ### Known Issues & Resolutions
 
-**Recently Fixed Issues**: See CHANGELOG.md (2025-01-13) for recently resolved onboarding system issues.
+**Recently Fixed Issues**: See CHANGELOG.md (2025-10-14) for recently resolved onboarding system issues.
+
+#### Recent Updates (October 14, 2025)
+- ✅ Simplified from 7 steps to 3 steps for better retention
+- ✅ Removed: verification step, experience level, notifications, profile setup
+- ✅ Kept: welcome, location (required), interests (optional)
+- ✅ Fixed /steps endpoint to return actual step data
+- ✅ Implemented soft verification enforcement (7-day grace period)
+- ✅ Created VerificationBanner component for unverified users
+- ✅ Removed politicalExperience field from User model
 
 #### Current Limitations
-- Requires manual initialization of `OnboardingFlow` component
-- No automatic onboarding flow progression (user must manually advance steps)
-- Limited customization options for onboarding content
+- Google Civic API integration disabled (methods not implemented yet)
+- Representative fetching returns empty array until API is enabled
+- No analytics tracking for onboarding completion rates (planned)
+- VerificationBanner not yet integrated into main.js module loading
 
 ### Future Enhancements
-- **Progressive Onboarding**: Multi-session onboarding with intelligent timing
-- **Personalized Content**: Customized onboarding based on user interests
+- **Google Civic API Integration**: Enable live representative fetching by location
 - **Analytics Integration**: Track onboarding completion rates and drop-off points
 - **A/B Testing**: Test different onboarding flows for optimization
+- **Progressive Onboarding**: Show additional features after initial 3-step flow
+- **Interest-Based Feed Seeding**: Pre-populate feed based on selected interests
 
 ---
 

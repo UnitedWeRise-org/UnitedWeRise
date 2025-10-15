@@ -55,8 +55,15 @@ class ReportsController {
             // Set up data-action event delegation
             await this.setupDataActionDelegation();
 
-            // Load initial data
-            await this.loadData();
+            // Use cached data from batch call (avoid immediate API call during login)
+            // The batch call in AdminModuleLoader already fetched reports data
+            if (window.AdminState && window.AdminState.cache.reports) {
+                await this.displayReportsData(window.AdminState.cache.reports);
+                await adminDebugLog('ReportsController', 'Using cached reports data from batch call');
+            } else {
+                // Fallback: load data if cache not available
+                await this.loadData();
+            }
 
             // Set up automatic refresh
             this.setupAutoRefresh();

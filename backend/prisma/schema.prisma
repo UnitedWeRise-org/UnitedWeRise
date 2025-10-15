@@ -56,7 +56,6 @@ model User {
   onboardingData              Json?
   onboardingCompleted         Boolean                   @default(false)
   interests                   String[]                  @default([])
-  politicalExperience         String?
   notificationPreferences     Json?
   displayName                 String?
   followingCount              Int                       @default(0)
