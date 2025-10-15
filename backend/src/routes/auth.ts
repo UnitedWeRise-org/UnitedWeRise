@@ -793,31 +793,37 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
 
 // Token refresh endpoint
 router.post('/refresh', async (req, res) => {
+  const startTime = Date.now();
+  const ipAddress = req.ip || 'unknown';
+
   try {
     const token = req.cookies?.authToken;
-    
+
     if (!token) {
+      console.log(`🔄 Token refresh failed: No token provided (IP: ${ipAddress})`);
       return res.status(401).json({ error: 'No token provided' });
     }
-    
+
     try {
       const decoded = verifyToken(token);
       if (!decoded || !decoded.userId) {
+        console.log(`🔄 Token refresh failed: Invalid token (IP: ${ipAddress})`);
         return res.status(401).json({ error: 'Invalid token' });
       }
-      
+
       // Verify user still exists
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId }
       });
-      
+
       if (!user) {
+        console.log(`🔄 Token refresh failed: User not found (userId: ${decoded.userId}, IP: ${ipAddress})`);
         return res.status(401).json({ error: 'User not found' });
       }
-      
+
       // Generate new token
       const newToken = generateToken(decoded.userId);
-      
+
       // Set new httpOnly cookie
       res.cookie('authToken', newToken, {
         httpOnly: true,
@@ -827,7 +833,7 @@ router.post('/refresh', async (req, res) => {
         path: '/',
         domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
       });
-      
+
       // Generate new CSRF token
       const csrfToken = require('crypto').randomBytes(32).toString('hex');
       res.cookie('csrf-token', csrfToken, {
@@ -838,16 +844,20 @@ router.post('/refresh', async (req, res) => {
         path: '/',
         domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
       });
-      
-      res.json({ 
+
+      const duration = Date.now() - startTime;
+      console.log(`✅ Token refreshed successfully for user ${user.username || user.email} (userId: ${user.id}, IP: ${ipAddress}, duration: ${duration}ms)`);
+
+      res.json({
         success: true,
         csrfToken
       });
     } catch (tokenError) {
+      console.log(`🔄 Token refresh failed: Token verification error (IP: ${ipAddress})`, tokenError);
       return res.status(401).json({ error: 'Invalid token' });
     }
   } catch (error) {
-    console.error('Token refresh error:', error);
+    console.error(`❌ Token refresh error (IP: ${ipAddress}):`, error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

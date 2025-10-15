@@ -89,20 +89,56 @@ class AdminAPI {
                 }
             }
 
-            // Handle authentication errors
+            // Handle authentication errors - but verify session first
+            // (401 can be from connection timeout, not just JWT expiration)
             if (response.status === 401) {
-                console.error('🔒 Admin API: Authentication failed');
+                console.warn('⚠️ Admin API: Received 401 - verifying session...');
 
-                // Clear auth data and redirect to login
-                localStorage.removeItem('currentUser');
+                // Attempt to verify session before logging out
+                try {
+                    const verifyResponse = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
 
-                if (window.adminAuth) {
-                    window.adminAuth.showLogin();
-                } else {
-                    window.location.href = '/admin-dashboard.html';
+                    if (verifyResponse.ok) {
+                        // Session is still valid - 401 was likely connection error
+                        console.log('✅ Session verified valid - 401 was likely connection error');
+                        await adminDebugLog('AdminAPI', '401 error but session valid - connection timeout suspected', {
+                            originalUrl: url,
+                            method: options.method || 'GET'
+                        });
+
+                        // Return the original 401 response to let caller handle retry
+                        return response;
+                    } else {
+                        // Session is truly invalid - log out
+                        console.error('🔒 Session verification failed - logging out');
+                        await adminDebugError('AdminAPI', 'Authentication failed - session invalid', {
+                            verifyStatus: verifyResponse.status
+                        });
+
+                        // Clear auth data and redirect to login
+                        localStorage.removeItem('currentUser');
+
+                        if (window.adminAuth) {
+                            window.adminAuth.showLogin();
+                        } else {
+                            window.location.href = '/admin-dashboard.html';
+                        }
+
+                        return response;
+                    }
+                } catch (verifyError) {
+                    // Network error during verification - don't log out
+                    console.warn('⚠️ Could not verify session due to network error - keeping user logged in');
+                    await adminDebugWarn('AdminAPI', 'Session verification failed due to network error', {
+                        error: verifyError.message
+                    });
+
+                    return response;
                 }
-
-                return response;
             }
 
             // Log successful admin API calls for debugging

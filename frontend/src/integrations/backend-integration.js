@@ -121,22 +121,62 @@ class BackendIntegration {
     enhanceErrorHandling() {
         // Enhance global error handling for backend errors
         const originalFetch = window.fetch;
-        
+
         window.fetch = async (...args) => {
             try {
                 const response = await originalFetch(...args);
-                
-                // Handle authentication errors globally, but not during app initialization
+
+                // Handle authentication errors - but verify session first
+                // (401 can be from connection timeout, not just JWT expiration)
                 if (response.status === 401) {
                     // Don't interfere with app initialization flow - let it handle auth gracefully
                     const isInitializationCall = args[0] && (
                         args[0].includes('/batch/initialize') ||
                         args[0].includes('/auth/me') ||
+                        args[0].includes('/auth/refresh') ||
                         args[0].includes('/users/profile')
                     );
-                    
+
                     if (!isInitializationCall && window.appInitializer && window.appInitializer.isAppInitialized()) {
-                        this.handleAuthError();
+                        // Verify session before logging out
+                        console.warn('⚠️ Received 401 - verifying session...');
+
+                        try {
+                            const verifyResponse = await originalFetch(`${this.API_BASE}/auth/me`, {
+                                method: 'GET',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+
+                            if (verifyResponse.ok) {
+                                // Session is still valid - 401 was likely connection error
+                                console.log('✅ Session verified valid - 401 was likely connection error');
+                                if (typeof adminDebugLog !== 'undefined') {
+                                    adminDebugLog('BackendIntegration', '401 error but session valid - connection timeout suspected', {
+                                        originalUrl: args[0],
+                                        method: args[1]?.method || 'GET'
+                                    });
+                                }
+                                // Don't call handleAuthError - let caller handle retry
+                            } else {
+                                // Session is truly invalid - log out
+                                console.error('🔒 Session verification failed - logging out');
+                                if (typeof adminDebugError !== 'undefined') {
+                                    adminDebugError('BackendIntegration', 'Authentication failed - session invalid', {
+                                        verifyStatus: verifyResponse.status
+                                    });
+                                }
+                                this.handleAuthError();
+                            }
+                        } catch (verifyError) {
+                            // Network error during verification - don't log out
+                            console.warn('⚠️ Could not verify session due to network error - keeping user logged in');
+                            if (typeof adminDebugWarn !== 'undefined') {
+                                adminDebugWarn('BackendIntegration', 'Session verification failed due to network error', {
+                                    error: verifyError.message
+                                });
+                            }
+                        }
                     }
                     // Otherwise let the initialization system handle it with fallbacks
                 }

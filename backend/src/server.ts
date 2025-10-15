@@ -62,6 +62,13 @@ app.set('trust proxy', 1);
 
 const httpServer = http.createServer(app);
 
+// Configure HTTP keep-alive timeouts to work with Azure Container Apps 30-minute timeout
+// Azure Container Apps has a hard-coded 30-minute timeout for HTTP connections
+// By setting keep-alive to 25 minutes, Express gracefully closes connections before Azure forcibly terminates them
+// This allows frontend to refresh connections smoothly without encountering abrupt closures
+httpServer.keepAliveTimeout = 25 * 60 * 1000; // 25 minutes (in milliseconds)
+httpServer.headersTimeout = 25 * 60 * 1000 + 1000; // Must be > keepAliveTimeout to prevent race conditions
+
 // Prisma singleton is now imported from lib/prisma.ts to prevent connection leaks
 // Previously, 60+ files were each creating their own PrismaClient instance
 

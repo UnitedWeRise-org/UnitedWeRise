@@ -21,29 +21,7 @@ export const comparePassword = async (password: string, hashedPassword: string):
 };
 
 export const generateToken = (userId: string): string => {
-  // TEMPORARY DEBUG: Log JWT expiration to diagnose 30-minute session issue
-  console.log('🔐 Generating JWT with JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
-
-  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
-
-  // Decode to verify actual expiration time
-  const decoded = jwt.decode(token) as any;
-  if (decoded && decoded.exp) {
-    const expiresAt = new Date(decoded.exp * 1000);
-    const issuedAt = new Date(decoded.iat * 1000);
-    const durationMs = expiresAt.getTime() - issuedAt.getTime();
-    const durationMinutes = Math.floor(durationMs / 60000);
-
-    console.log('🔐 JWT Token Details:', {
-      userId,
-      issuedAt: issuedAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      durationMinutes: `${durationMinutes} minutes`,
-      durationHours: `${(durationMinutes / 60).toFixed(1)} hours`
-    });
-  }
-
-  return token;
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
 };
 
 export const verifyToken = (token: string): (JwtPayload & { userId: string }) | null => {
