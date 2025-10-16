@@ -37,7 +37,8 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
 
   // Get CSRF token from request header or body
-  const token = req.headers['x-csrf-token'] || req.body._csrf;
+  // Note: req.body might be undefined for multipart/form-data before body parsing
+  const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
 
   // Get CSRF token from cookie
   const cookie = req.cookies['csrf-token'];
@@ -82,14 +83,14 @@ export const warnCsrf = (req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'GET' || req.method === 'OPTIONS') {
     return next();
   }
-  
-  const token = req.headers['x-csrf-token'] || req.body._csrf;
+
+  const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
   const cookie = req.cookies['csrf-token'];
-  
+
   if (!token || !cookie || token !== cookie) {
     console.warn(`⚠️  CSRF Warning: ${req.method} ${req.path} - Missing or mismatched CSRF token`);
     // Continue with request but log the warning
   }
-  
+
   next();
 };
