@@ -613,7 +613,9 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
             if (decoded) {
                 // Calculate token expiration time
                 const tokenExp = decoded.exp ? decoded.exp * 1000 : Date.now() + (7 * 24 * 60 * 60 * 1000);
-                const tokenId = `${decoded.userId}_${token.slice(-10)}`;
+                // SECURITY FIX: Use SHA-256 hash of token for blacklisting (matches authMiddleware.ts)
+                // This ensures logout properly blacklists tokens and prevents token reuse
+                const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
                 // Blacklist the token
                 await sessionManager_1.sessionManager.blacklistToken(tokenId, tokenExp);
             }
