@@ -23,8 +23,15 @@ export const initializeWebSocket = (httpServer: HTTPServer) => {
   // Authentication middleware - reads JWT from httpOnly cookie (like REST API)
   io.use(async (socket: any, next) => {
     try {
+      console.log('🔌 WebSocket connection attempt from:', socket.handshake.address);
+
       // Parse cookies from socket handshake headers
       const cookieHeader = socket.handshake.headers.cookie;
+      console.log('🍪 Cookie header present:', !!cookieHeader);
+      if (cookieHeader) {
+        console.log('🍪 Cookie header length:', cookieHeader.length);
+      }
+
       let token: string | undefined;
 
       if (cookieHeader) {
@@ -36,22 +43,27 @@ export const initializeWebSocket = (httpServer: HTTPServer) => {
         }, {});
 
         token = cookies.authToken;
+        console.log('🔑 authToken from cookie:', token ? `${token.substring(0, 20)}...` : 'not found');
       }
 
       // Fallback: Check auth.token for manual token passing (backwards compatibility)
       if (!token) {
         token = socket.handshake.auth.token;
+        console.log('🔑 Token from auth.token:', token ? `${token.substring(0, 20)}...` : 'not found');
       }
 
       if (!token) {
+        console.error('❌ WebSocket auth failed: No token provided in cookies or auth.token');
         return next(new Error('No token provided'));
       }
 
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      console.log('✅ JWT decoded successfully, userId:', decoded.userId);
 
       // SECURITY FIX: Check if token is blacklisted
       const tokenId = crypto.createHash('sha256').update(token).digest('hex');
       if (await sessionManager.isTokenBlacklisted(tokenId)) {
+        console.error('❌ WebSocket auth failed: Token has been revoked');
         return next(new Error('Token has been revoked'));
       }
 
@@ -61,13 +73,16 @@ export const initializeWebSocket = (httpServer: HTTPServer) => {
       });
 
       if (!user) {
+        console.error('❌ WebSocket auth failed: User not found for userId:', decoded.userId);
         return next(new Error('User not found'));
       }
 
       socket.userId = user.id;
       socket.user = user;
+      console.log('✅ WebSocket authentication successful for user:', user.username);
       next();
     } catch (error) {
+      console.error('❌ WebSocket auth error:', error instanceof Error ? error.message : error);
       next(new Error('Invalid authentication token'));
     }
   });
