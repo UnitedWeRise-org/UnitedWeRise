@@ -122,7 +122,19 @@ const requireTOTPForAdmin = async (req, res, next) => {
         // Check if TOTP verification is present in secure httpOnly cookies
         const totpVerified = req.cookies?.totpVerified === 'true';
         const totpToken = req.cookies?.totpSessionToken;
+        // 🚨 DEBUG: Log cookie details to diagnose transmission issues
+        console.log('🔒 TOTP Middleware - Cookie Debug:', {
+            userId: user.id,
+            username: user.username,
+            path: req.path,
+            hasCookies: !!req.cookies,
+            totpVerified,
+            hasTotpToken: !!totpToken,
+            allCookies: Object.keys(req.cookies || {}),
+            cookieHeader: req.headers.cookie ? 'present' : 'missing'
+        });
         if (!totpVerified || !totpToken) {
+            console.warn(`⚠️ TOTP verification failed for ${user.username}: missing=${!totpToken ? 'token' : 'verified flag'}`);
             return res.status(403).json({
                 error: 'TOTP_VERIFICATION_REQUIRED',
                 message: 'Please verify your TOTP token to access admin features.'

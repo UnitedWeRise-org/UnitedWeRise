@@ -13,6 +13,8 @@ class AdminAuth {
         this.currentUser = null;
         this.totpVerified = false;
         this.autoRefreshInterval = null;
+        this.tokenRefreshInterval = null; // Separate interval for token refresh (14-min)
+        this.lastTokenRefresh = null;
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
 
@@ -22,6 +24,7 @@ class AdminAuth {
         this.logout = this.logout.bind(this);
         this.showLogin = this.showLogin.bind(this);
         this.showDashboard = this.showDashboard.bind(this);
+        this.refreshToken = this.refreshToken.bind(this);
 
         // Load current user from localStorage on initialization
         this.loadCurrentUser();
@@ -59,6 +62,68 @@ class AdminAuth {
             console.error('Error loading user from localStorage:', error);
             localStorage.removeItem('currentUser');
         }
+    }
+
+    /**
+     * Refresh authentication token to prevent Azure 30-minute timeout
+     * Called every 14 minutes to maintain session with dual redundancy (14, 28, 42...)
+     */
+    async refreshToken() {
+        // Skip if tab is hidden (browser throttles background tabs)
+        if (document.hidden) {
+            console.log('⏸️ Token refresh skipped (tab hidden)');
+            return;
+        }
+
+        // Skip if not authenticated
+        if (!this.isAuthenticated()) {
+            console.log('⏸️ Token refresh skipped (not authenticated)');
+            return;
+        }
+
+        const maxRetries = 3;
+        const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
+
+                const response = await fetch(`${this.API_BASE}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include', // Include httpOnly cookies
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update CSRF token if provided
+                    if (data.csrfToken) {
+                        window.csrfToken = data.csrfToken;
+                        if (window.AdminAPI) {
+                            window.AdminAPI.csrfToken = data.csrfToken;
+                        }
+                    }
+
+                    this.lastTokenRefresh = new Date();
+                    console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
+                    return;
+                } else {
+                    console.warn(`⚠️ Token refresh failed with status ${response.status} (attempt ${attempt + 1}/${maxRetries})`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+            }
+
+            // Wait before retry (unless this was the last attempt)
+            if (attempt < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+            }
+        }
+
+        console.error('❌ All token refresh attempts failed - session may expire');
     }
 
     /**
@@ -219,6 +284,12 @@ class AdminAuth {
         this.autoRefreshInterval = setInterval(() => {
             this.refreshAllData();
         }, 300000);
+
+        // Set up token refresh every 14 minutes to prevent Azure 30-minute timeout
+        // Dual redundancy: refreshes at 14, 28, 42... minutes
+        this.tokenRefreshInterval = setInterval(() => {
+            this.refreshToken();
+        }, 14 * 60 * 1000); // 14 minutes in milliseconds
     }
 
     /**
@@ -230,6 +301,10 @@ class AdminAuth {
 
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
+        }
+
+        if (this.tokenRefreshInterval) {
+            clearInterval(this.tokenRefreshInterval);
         }
 
         this.currentUser = null;
@@ -323,6 +398,10 @@ class AdminAuth {
     destroy() {
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
+        }
+
+        if (this.tokenRefreshInterval) {
+            clearInterval(this.tokenRefreshInterval);
         }
 
         // Remove event listeners

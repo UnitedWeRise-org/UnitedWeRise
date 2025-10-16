@@ -23,8 +23,13 @@ const comparePassword = async (password, hashedPassword) => {
     return await bcryptjs_1.default.compare(password, hashedPassword);
 };
 exports.comparePassword = comparePassword;
-const generateToken = (userId) => {
-    return jsonwebtoken_1.default.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+const generateToken = (userId, totpVerified = false) => {
+    const payload = {
+        userId,
+        totpVerified,
+        totpVerifiedAt: totpVerified ? Date.now() : null
+    };
+    return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 exports.generateToken = generateToken;
 const verifyToken = (token) => {

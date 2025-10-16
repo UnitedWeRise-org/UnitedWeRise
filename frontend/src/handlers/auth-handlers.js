@@ -17,6 +17,7 @@
 import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
 import { closeAuthModal, showAuthMessage } from '../modules/core/auth/modal.js';
 import { unifiedAuthManager } from '../modules/core/auth/unified-manager.js';
+import { usernameModal } from '../modules/core/auth/username-modal.js';
 
 export class AuthHandlers {
     constructor() {
@@ -156,18 +157,28 @@ export class AuthHandlers {
             const data = await result.json();
 
             if (result.ok) {
-                // Use unified auth manager for perfect state synchronization
-                await unifiedAuthManager.setAuthenticatedUser(data.user, data.csrfToken);
-                closeAuthModal();
+                // Check if user needs to complete onboarding (select username)
+                if (data.user && data.user.onboardingCompleted === false) {
+                    console.log('🔧 User needs to complete onboarding (select username)');
 
-                // Show welcome message for new users
-                if (data.isNewUser) {
-                    showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
+                    // Show username selection modal
+                    usernameModal.show(data.user, data.csrfToken, (updatedUser) => {
+                        console.log('✅ Onboarding completed successfully');
+                    });
                 } else {
-                    showAuthMessage('Successfully signed in with Google!', 'success');
-                }
+                    // User already has username, proceed normally
+                    await unifiedAuthManager.setAuthenticatedUser(data.user, data.csrfToken);
+                    closeAuthModal();
 
-                // unified-manager handles app reinitialization automatically
+                    // Show welcome message for new users
+                    if (data.isNewUser) {
+                        showAuthMessage('Welcome to United We Rise! Your account has been created.', 'success');
+                    } else {
+                        showAuthMessage('Successfully signed in with Google!', 'success');
+                    }
+
+                    // unified-manager handles app reinitialization automatically
+                }
             } else {
                 showAuthMessage(data.error || 'Google sign-in failed. Please try again.', 'error');
             }

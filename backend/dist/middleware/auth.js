@@ -46,7 +46,12 @@ const requireAuth = async (req, res, next) => {
         if (!user) {
             return res.status(401).json({ error: 'User not found.' });
         }
-        req.user = user;
+        // Add TOTP verification status from JWT to user object
+        req.user = {
+            ...user,
+            totpVerified: decoded.totpVerified || false,
+            totpVerifiedAt: decoded.totpVerifiedAt || null
+        };
         // 🔍 LAYER 5 DEBUG: Authentication successful
         console.log('🔍 LAYER 5 | Authentication | User authenticated:', {
             userId: user.id,
@@ -107,6 +112,14 @@ exports.requireAuth = requireAuth;
 const requireAdmin = async (req, res, next) => {
     if (!req.user?.isAdmin) {
         return res.status(403).json({ error: 'Admin access required.' });
+    }
+    // Check TOTP verification for admin users
+    // Admin users must have TOTP verified in their JWT token
+    if (!req.user?.totpVerified) {
+        return res.status(403).json({
+            error: 'TOTP_REQUIRED',
+            message: 'Two-factor authentication required for admin access. Please log in with TOTP.'
+        });
     }
     next();
 };

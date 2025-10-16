@@ -7,26 +7,15 @@ exports.OAuthService = void 0;
 const prisma_1 = require("../lib/prisma");
 ;
 const auth_1 = require("../utils/auth");
+const emailNormalization_1 = require("../utils/emailNormalization");
 const crypto_1 = __importDefault(require("crypto"));
 class OAuthService {
-    /**
-     * Normalize email for OAuth account matching
-     * Gmail ignores dots and plus signs in email addresses
-     */
-    static normalizeEmail(email) {
-        const [localPart, domain] = email.toLowerCase().split('@');
-        // For Gmail and Google Workspace domains, ignore dots and everything after +
-        if (domain === 'gmail.com' || domain === 'googlemail.com') {
-            return localPart.replace(/\./g, '').replace(/\+.*/, '') + '@' + domain;
-        }
-        return email.toLowerCase();
-    }
     /**
      * Handle OAuth login/registration flow
      */
     static async handleOAuthLogin(profile) {
         try {
-            const normalizedEmail = this.normalizeEmail(profile.email);
+            const normalizedEmail = (0, emailNormalization_1.normalizeEmail)(profile.email);
             // First, check if user already has this OAuth provider linked
             const existingOAuthProvider = await prisma_1.prisma.userOAuthProvider.findUnique({
                 where: {
@@ -76,7 +65,7 @@ class OAuthService {
                         email: { contains: '@gmail.com' }
                     }
                 });
-                existingUser = allUsers.find(user => this.normalizeEmail(user.email) === normalizedEmail) || null;
+                existingUser = allUsers.find(user => (0, emailNormalization_1.normalizeEmail)(user.email) === normalizedEmail) || null;
             }
             if (existingUser) {
                 // Link OAuth provider to existing user account

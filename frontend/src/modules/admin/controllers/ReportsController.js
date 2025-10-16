@@ -66,7 +66,7 @@ class ReportsController {
                 await adminDebugLog('ReportsController', 'No cached data available yet - will load on first auto-refresh');
             }
 
-            // Set up automatic refresh (will load data after 60 seconds if cache wasn't available)
+            // Set up automatic refresh (will load data after 5 minutes if cache wasn't available)
             this.setupAutoRefresh();
 
             this.isInitialized = true;
@@ -238,14 +238,14 @@ class ReportsController {
      * Set up automatic refresh for reports data
      */
     setupAutoRefresh() {
-        // Refresh reports data every 60 seconds
+        // Refresh reports data every 5 minutes (reduces server load and prevents auth issues)
         this.refreshInterval = setInterval(async () => {
             try {
                 await this.loadData(false); // Force fresh data
             } catch (error) {
                 console.error('Auto-refresh failed:', error);
             }
-        }, 60000);
+        }, 300000);
     }
 
     /**
