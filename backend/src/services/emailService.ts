@@ -583,6 +583,365 @@ The United We Rise Moderation Team`,
     };
   }
 
+  // Candidate registration approval template
+  generateCandidateApprovalTemplate(email: string, candidateName: string, officeTitle: string, officeLevelName: string, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+
+    return {
+      to: email,
+      subject: 'Congratulations! Your Candidate Registration is Approved - United We Rise',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Registration Approved</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">🎉 Registration Approved!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Candidate Registration - United We Rise</p>
+          </div>
+
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Congratulations, ${name}!</h2>
+
+            <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #155724; font-weight: 600;">
+                Your candidate registration has been approved for ${officeTitle} (${officeLevelName} level).
+              </p>
+            </div>
+
+            <p>Your candidate profile has been created and is now active on United We Rise. You can start connecting with constituents and sharing your campaign message.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/candidate-dashboard"
+                 style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                Access Your Candidate Dashboard
+              </a>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Next Steps:</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #666;">
+                <li>Complete your candidate profile with additional details</li>
+                <li>Upload campaign photos and materials</li>
+                <li>Set up your candidate inbox preferences</li>
+                <li>Begin responding to constituent questions</li>
+                <li>Share your profile on social media</li>
+              </ul>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              Need help getting started? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+            </p>
+
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
+              <p style="margin: 0;">
+                <strong>United We Rise</strong><br>
+                Connecting Citizens with Candidates
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Congratulations, ${name}!
+
+        Your candidate registration has been approved for ${officeTitle} (${officeLevelName} level).
+
+        Your candidate profile is now active on United We Rise. Access your dashboard at:
+        ${process.env.FRONTEND_URL}/candidate-dashboard
+
+        Next Steps:
+        - Complete your candidate profile
+        - Upload campaign materials
+        - Set up inbox preferences
+        - Engage with constituents
+
+        Questions? Contact candidates@unitedwerise.org
+
+        United We Rise - Connecting Citizens with Candidates
+      `
+    };
+  }
+
+  // Candidate registration rejection template
+  generateCandidateRejectionTemplate(email: string, candidateName: string, officeTitle: string, rejectionReason: string, notes?: string, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+
+    return {
+      to: email,
+      subject: 'Candidate Registration Update - United We Rise',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Registration Update</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">📋 Registration Update</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Candidate Registration - United We Rise</p>
+          </div>
+
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Hello ${name},</h2>
+
+            <p>Thank you for your interest in becoming a candidate on United We Rise. We have reviewed your registration for ${officeTitle}.</p>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #856404; font-weight: 600;">
+                Unfortunately, we are unable to approve your candidate registration at this time.
+              </p>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Reason:</h4>
+              <p style="margin: 0; color: #666;">${rejectionReason}</p>
+              ${notes ? `
+                <h4 style="color: #4b5c09; margin: 20px 0 10px 0;">Additional Information:</h4>
+                <p style="margin: 0; color: #666;">${notes}</p>
+              ` : ''}
+            </div>
+
+            <p>If you believe this decision was made in error or would like to address the issues raised, you may:</p>
+
+            <ul style="padding-left: 20px; color: #666;">
+              <li><strong>Resubmit:</strong> Submit a new registration with corrected information</li>
+              <li><strong>Appeal:</strong> Contact our candidate support team to discuss your application</li>
+              <li><strong>Get Help:</strong> Reach out for guidance on meeting registration requirements</li>
+            </ul>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/support"
+                 style="background: #4b5c09; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                Contact Support
+              </a>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              Questions or want to appeal? Contact us at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+            </p>
+
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
+              <p style="margin: 0;">
+                <strong>United We Rise</strong><br>
+                Connecting Citizens with Candidates
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Hello ${name},
+
+        Thank you for your interest in becoming a candidate on United We Rise.
+
+        Unfortunately, we are unable to approve your registration for ${officeTitle} at this time.
+
+        Reason: ${rejectionReason}
+        ${notes ? `\nAdditional Information: ${notes}` : ''}
+
+        You may:
+        - Resubmit with corrected information
+        - Appeal this decision
+        - Contact support for guidance
+
+        Contact: candidates@unitedwerise.org
+
+        United We Rise - Connecting Citizens with Candidates
+      `
+    };
+  }
+
+  // Candidate status change notification template
+  generateCandidateStatusChangeTemplate(email: string, candidateName: string, oldStatus: string, newStatus: string, reason?: string, notes?: string, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+    const statusColors: { [key: string]: string } = {
+      'ACTIVE': '#28a745',
+      'SUSPENDED': '#ffc107',
+      'REVOKED': '#dc3545',
+      'WITHDRAWN': '#6c757d'
+    };
+    const color = statusColors[newStatus] || '#4b5c09';
+
+    return {
+      to: email,
+      subject: `Candidate Status Update: ${newStatus} - United We Rise`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Status Update</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">📢 Status Update</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Candidate Account - United We Rise</p>
+          </div>
+
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Hello ${name},</h2>
+
+            <p>Your candidate account status has been updated by our administrative team.</p>
+
+            <div style="background: #f8f9fa; border-left: 4px solid ${color}; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; font-weight: 600; color: #333;">
+                Status changed from <strong>${oldStatus}</strong> to <strong style="color: ${color};">${newStatus}</strong>
+              </p>
+            </div>
+
+            ${reason ? `
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Reason:</h4>
+                <p style="margin: 0; color: #666;">${reason}</p>
+              </div>
+            ` : ''}
+
+            ${notes ? `
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #4b5c09; margin: 0 0 10px 0;">Additional Information:</h4>
+                <p style="margin: 0; color: #666;">${notes}</p>
+              </div>
+            ` : ''}
+
+            <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #0066cc; margin: 0 0 10px 0;">What This Means:</h4>
+              ${newStatus === 'ACTIVE' ? '<p style="margin: 0; color: #333;">Your candidate profile is active and visible to constituents.</p>' : ''}
+              ${newStatus === 'SUSPENDED' ? '<p style="margin: 0; color: #333;">Your candidate profile is temporarily suspended. You may have limited access to certain features.</p>' : ''}
+              ${newStatus === 'REVOKED' ? '<p style="margin: 0; color: #333;">Your candidate status has been revoked. Your profile is no longer visible to constituents.</p>' : ''}
+              ${newStatus === 'WITHDRAWN' ? '<p style="margin: 0; color: #333;">Your candidacy has been marked as withdrawn.</p>' : ''}
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/candidate-dashboard"
+                 style="background: #4b5c09; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                View Your Dashboard
+              </a>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              Questions or concerns? Contact our candidate support team at <a href="mailto:candidates@unitedwerise.org" style="color: #4b5c09;">candidates@unitedwerise.org</a>
+            </p>
+
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
+              <p style="margin: 0;">
+                <strong>United We Rise</strong><br>
+                Connecting Citizens with Candidates
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Hello ${name},
+
+        Your candidate account status has been updated.
+
+        Status changed from ${oldStatus} to ${newStatus}
+
+        ${reason ? `Reason: ${reason}\n` : ''}
+        ${notes ? `Additional Information: ${notes}\n` : ''}
+
+        View your dashboard: ${process.env.FRONTEND_URL}/candidate-dashboard
+
+        Questions? Contact candidates@unitedwerise.org
+
+        United We Rise - Connecting Citizens with Candidates
+      `
+    };
+  }
+
+  // Admin message notification template
+  generateAdminMessageTemplate(email: string, candidateName: string, subject: string, messagePreview: string, messageType: string, priority: string, firstName?: string): EmailTemplate {
+    const name = firstName || candidateName.split(' ')[0];
+    const priorityColors: { [key: string]: string } = {
+      'HIGH': '#dc3545',
+      'MEDIUM': '#ffc107',
+      'LOW': '#6c757d'
+    };
+    const priorityColor = priorityColors[priority] || '#4b5c09';
+
+    return {
+      to: email,
+      subject: `${priority === 'HIGH' ? '🚨 ' : ''}Admin Message: ${subject} - United We Rise`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Admin Message</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4b5c09 0%, #6b7f1a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">✉️ New Message</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">From United We Rise Admin Team</p>
+          </div>
+
+          <div style="background: #fff; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #4b5c09; margin-top: 0;">Hello ${name},</h2>
+
+            <div style="background: ${priority === 'HIGH' ? '#fff5f5' : '#f8f9fa'}; border-left: 4px solid ${priorityColor}; padding: 20px; margin: 20px 0; border-radius: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: 600; color: #333;">Priority: ${priority}</span>
+                <span style="font-size: 12px; color: #666; text-transform: uppercase;">${messageType.replace('_', ' ')}</span>
+              </div>
+              <h3 style="margin: 0; color: #333;">${subject}</h3>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #666;">${messagePreview}</p>
+            </div>
+
+            <p>You have received a new message from the United We Rise admin team. Please log in to your candidate dashboard to view the full message and respond.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/candidate-dashboard/messages"
+                 style="background: #4b5c09; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px;">
+                View Message in Dashboard
+              </a>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              <strong>Note:</strong> This is an automated notification. Please do not reply to this email. Use your candidate dashboard to respond to admin messages.
+            </p>
+
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 14px; color: #666;">
+              <p style="margin: 0;">
+                <strong>United We Rise</strong><br>
+                Connecting Citizens with Candidates
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Hello ${name},
+
+        You have received a new message from the United We Rise admin team.
+
+        Priority: ${priority}
+        Type: ${messageType.replace('_', ' ')}
+        Subject: ${subject}
+
+        ${messagePreview}
+
+        View and respond in your dashboard: ${process.env.FRONTEND_URL}/candidate-dashboard/messages
+
+        Note: Please do not reply to this email. Use your candidate dashboard to respond.
+
+        United We Rise - Connecting Citizens with Candidates
+      `
+    };
+  }
+
   // Test email service
   async testConnection(): Promise<boolean> {
     if (!this.transporter) {
