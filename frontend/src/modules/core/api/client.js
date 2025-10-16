@@ -107,6 +107,13 @@ class APIClient {
                 // Sync the tokens bidirectionally
                 this.csrfToken = csrfToken;
                 window.csrfToken = csrfToken;
+            } else {
+                // CRITICAL: Warn if CSRF token is missing for state-changing requests
+                if (fetchOptions.method && fetchOptions.method !== 'GET' && fetchOptions.method !== 'OPTIONS') {
+                    console.warn(`⚠️ CSRF token missing for ${fetchOptions.method} request to ${url}`);
+                    console.warn(`⚠️ this.csrfToken:`, this.csrfToken);
+                    console.warn(`⚠️ window.csrfToken:`, window.csrfToken);
+                }
             }
             
             // Set timeout
