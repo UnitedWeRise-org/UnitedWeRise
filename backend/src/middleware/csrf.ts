@@ -11,44 +11,63 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'GET') {
     return next();
   }
-  
+
   // Skip CSRF verification for OPTIONS requests (CORS preflight)
   if (req.method === 'OPTIONS') {
     return next();
   }
-  
+
+  // CRITICAL: Exempt authentication routes from CSRF protection
+  // These routes are accessed before users have CSRF tokens
+  const exemptedPaths = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/google',
+    '/api/auth/google/callback',
+    '/api/auth/refresh',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/health',
+    '/api/health'
+  ];
+
+  // Check if current path is exempted
+  if (exemptedPaths.some(path => req.path === path || req.path.startsWith(path))) {
+    return next();
+  }
+
   // Get CSRF token from request header or body
   const token = req.headers['x-csrf-token'] || req.body._csrf;
-  
+
   // Get CSRF token from cookie
   const cookie = req.cookies['csrf-token'];
-  
+
   // Verify both tokens exist
   if (!token) {
     metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_token' });
-    return res.status(403).json({ 
+    return res.status(403).json({
       error: 'CSRF token missing in request',
       code: 'CSRF_TOKEN_MISSING'
     });
   }
-  
+
   if (!cookie) {
     metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_cookie' });
-    return res.status(403).json({ 
+    return res.status(403).json({
       error: 'CSRF token missing in cookies',
       code: 'CSRF_COOKIE_MISSING'
     });
   }
-  
+
   // Verify tokens match (double-submit cookie pattern)
   if (token !== cookie) {
     metricsService.incrementCounter('csrf_failures_total', { reason: 'token_mismatch' });
-    return res.status(403).json({ 
+    return res.status(403).json({
       error: 'Invalid CSRF token',
       code: 'CSRF_TOKEN_MISMATCH'
     });
   }
-  
+
   // CSRF validation passed
   metricsService.incrementCounter('csrf_validations_total', { status: 'success' });
   next();

@@ -181,3 +181,47 @@ app.get('/api/security-metrics', requireAuth, requireAdmin, (req, res) => { ... 
 - Non-admin users receive 403 Forbidden
 - Only admin users with valid TOTP can access system metrics
 - Prevents information disclosure of system performance, database stats, active users, etc.
+
+---
+
+## CRITICAL BLOCKER DISCOVERED: CSRF Breaking Login ❌
+
+**Discovered**: October 16, 2025 during staging testing
+**Issue**: CSRF middleware blocking all login attempts
+**Error**: `"CSRF token missing in request"` on `POST /api/auth/login`
+**Root Cause**: CSRF middleware applied to ALL POST requests including authentication endpoints
+**Impact**: CRITICAL - Users cannot login to staging
+
+### Problem Analysis
+The CSRF middleware was correctly applied to all POST/PUT/DELETE/PATCH requests in server.ts. However, it did NOT exempt authentication routes. This creates a chicken-and-egg problem:
+
+1. User tries to login → POST /api/auth/login
+2. CSRF middleware checks for CSRF token → Not found (user not logged in yet)
+3. Middleware returns 403 Forbidden → Login fails
+4. User never gets CSRF token because they can't login
+
+### Solution: Exempt Authentication Routes
+Updated `backend/src/middleware/csrf.ts` to exempt these paths:
+- `/api/auth/login` - Initial login
+- `/api/auth/register` - User registration
+- `/api/auth/google` - OAuth login
+- `/api/auth/google/callback` - OAuth callback
+- `/api/auth/refresh` - Token refresh
+- `/api/auth/forgot-password` - Password reset request
+- `/api/auth/reset-password` - Password reset completion
+- `/health` - Health check endpoint
+- `/api/health` - API health check
+
+**Rationale:**
+- These endpoints are accessed BEFORE users have CSRF tokens
+- They implement their own security (JWT, OAuth, rate limiting, etc.)
+- CSRF protection applies AFTER authentication for state-changing operations
+- This is the standard pattern for CSRF protection in modern web apps
+
+### Status
+- [x] Bug identified during staging testing
+- [x] Root cause analyzed
+- [x] Solution implemented (exempt auth routes in csrf.ts)
+- [ ] Backend rebuilt with fix
+- [ ] Redeployed to staging
+- [ ] Re-tested login flow
