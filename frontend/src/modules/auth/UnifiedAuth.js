@@ -289,21 +289,29 @@ class UnifiedAuth {
      * Unified logout function
      * @param {string} context - 'main-site' or 'admin-dashboard'
      */
-    logout(context = 'main-site') {
-        // Call logout endpoint to clear cookies
-        fetch(`${this.BACKEND_URL}/api/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'X-CSRF-Token': window.csrfToken
+    async logout(context = 'main-site') {
+        try {
+            // Call logout endpoint to clear cookies - WAIT for it to complete
+            const response = await fetch(`${this.BACKEND_URL}/api/auth/logout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-CSRF-Token': window.csrfToken || '' // Empty string if undefined
+                }
+            });
+
+            if (!response.ok) {
+                console.warn('Logout endpoint returned error:', response.status);
             }
-        }).catch(error => {
+        } catch (error) {
             console.warn('Logout endpoint call failed:', error);
-        });
+            // Continue with local cleanup even if API call fails
+        }
 
         // Clear local data
         localStorage.removeItem('currentUser');
         window.csrfToken = null;
+        window.currentUser = null;
 
         // Clear TOTP sessions for both contexts
         this.clearTOTPSession('main-site');

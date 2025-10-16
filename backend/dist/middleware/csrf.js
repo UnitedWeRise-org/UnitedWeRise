@@ -17,13 +17,14 @@ const verifyCsrf = (req, res, next) => {
         return next();
     }
     // CRITICAL: Exempt authentication routes from CSRF protection
-    // These routes are accessed before users have CSRF tokens
+    // These routes are accessed before users have CSRF tokens or during logout
     const exemptedPaths = [
         '/api/auth/login',
         '/api/auth/register',
         '/api/auth/google',
         '/api/auth/google/callback',
         '/api/auth/refresh',
+        '/api/auth/logout', // Logout must work even if CSRF token issues
         '/api/auth/forgot-password',
         '/api/auth/reset-password',
         '/health',
