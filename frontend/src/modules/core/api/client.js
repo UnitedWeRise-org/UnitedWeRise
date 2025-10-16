@@ -100,11 +100,11 @@ class APIClient {
                 }
             }
             
-            // Add CSRF token if available - check both instance and global tokens
-            const csrfToken = this.csrfToken || window.csrfToken;
+            // Add CSRF token if available - check instance → global → cookie (defense in depth)
+            const csrfToken = this.csrfToken || window.csrfToken || getCookie('csrf-token');
             if (csrfToken) {
                 fetchOptions.headers['X-CSRF-Token'] = csrfToken;
-                // Sync the tokens bidirectionally
+                // Sync the tokens bidirectionally (including when read from cookie)
                 this.csrfToken = csrfToken;
                 window.csrfToken = csrfToken;
             } else {
@@ -113,6 +113,7 @@ class APIClient {
                     console.warn(`⚠️ CSRF token missing for ${fetchOptions.method} request to ${url}`);
                     console.warn(`⚠️ this.csrfToken:`, this.csrfToken);
                     console.warn(`⚠️ window.csrfToken:`, window.csrfToken);
+                    console.warn(`⚠️ document.cookie (csrf-token):`, getCookie('csrf-token'));
                 }
             }
             
@@ -358,7 +359,7 @@ class APIClient {
             xhr.open('POST', url);
             xhr.withCredentials = true;
 
-            const csrfToken = this.csrfToken || window.csrfToken;
+            const csrfToken = this.csrfToken || window.csrfToken || getCookie('csrf-token');
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRF-Token', csrfToken);
                 // Sync the tokens bidirectionally
@@ -369,6 +370,20 @@ class APIClient {
             xhr.send(formData);
         });
     }
+}
+
+/**
+ * Get cookie value by name
+ * @param {string} name - Cookie name
+ * @returns {string|null} - Cookie value or null
+ */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return null;
 }
 
 // Create singleton instance
