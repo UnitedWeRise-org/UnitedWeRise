@@ -52,6 +52,8 @@ import { setupSwagger } from './swagger';
 import { metricsService } from './services/metricsService';
 import { performanceMiddleware } from './middleware/performanceMonitor';
 import { enableRequestLogging, enableApiDocs, getEnvironment } from './utils/environment';
+import { verifyCsrf } from './middleware/csrf';
+import { requireAuth, requireAdmin } from './middleware/auth';
 
 dotenv.config();
 
@@ -274,6 +276,19 @@ app.use(metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMiddleware);
 
+// CSRF Protection - Apply to all state-changing requests (POST, PUT, DELETE, PATCH)
+// Must be after cookie-parser to read CSRF tokens from cookies
+// Must be before routes to protect all endpoints
+app.use((req, res, next) => {
+  // Exempt GET and OPTIONS requests from CSRF protection
+  if (req.method === 'GET' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  // Apply CSRF verification to all other methods
+  return verifyCsrf(req, res, next);
+});
+
 // 🚨 DEBUGGING ROUTE: Test if our backend is being hit
 app.get('/api/debug-test', (req, res) => {
   console.log('🎯🎯🎯 DEBUG TEST ENDPOINT HIT!');
@@ -366,19 +381,19 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Prometheus metrics endpoint
-app.get('/metrics', (req, res) => {
+// Prometheus metrics endpoint (SECURITY: Admin-only access)
+app.get('/metrics', requireAuth, requireAdmin, (req, res) => {
   res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
   res.end(metricsService.getPrometheusMetrics());
 });
 
-// JSON metrics endpoint for custom dashboards
-app.get('/api/metrics', (req, res) => {
+// JSON metrics endpoint for custom dashboards (SECURITY: Admin-only access)
+app.get('/api/metrics', requireAuth, requireAdmin, (req, res) => {
   res.json(metricsService.getJSONMetrics());
 });
 
-// Security-focused metrics endpoint
-app.get('/api/security-metrics', (req, res) => {
+// Security-focused metrics endpoint (SECURITY: Admin-only access)
+app.get('/api/security-metrics', requireAuth, requireAdmin, (req, res) => {
   const metrics = metricsService.getJSONMetrics();
   
   // Extract security-relevant metrics
