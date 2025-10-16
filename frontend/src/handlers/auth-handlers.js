@@ -18,6 +18,7 @@ import { getApiBaseUrl, isDevelopment } from '../utils/environment.js';
 import { closeAuthModal, showAuthMessage } from '../modules/core/auth/modal.js';
 import { unifiedAuthManager } from '../modules/core/auth/unified-manager.js';
 import { usernameModal } from '../modules/core/auth/username-modal.js';
+import { adminDebugLog } from '../../js/adminDebugger.js';
 
 export class AuthHandlers {
     constructor() {
@@ -56,15 +57,15 @@ export class AuthHandlers {
      */
     async handleGoogleLogin() {
         try {
-            console.log('🚀 Starting Google Sign-In process...');
-            console.log('   Domain:', window.location.origin);
+            await adminDebugLog('AuthHandlers', 'Starting Google Sign-In process');
+            await adminDebugLog('AuthHandlers', 'Domain', { origin: window.location.origin });
 
             // Initialize Google Sign-In if not already done
             if (!window.google?.accounts?.id) {
-                console.log('📥 Google Sign-In not loaded, attempting to load...');
+                await adminDebugLog('AuthHandlers', 'Google Sign-In not loaded, attempting to load');
                 try {
                     await this.loadGoogleSignIn();
-                    console.log('✅ Google Sign-In loaded successfully');
+                    await adminDebugLog('AuthHandlers', 'Google Sign-In loaded successfully');
                 } catch (loadError) {
                     console.error('❌ Failed to load Google Sign-In:', loadError);
 
@@ -72,7 +73,7 @@ export class AuthHandlers {
                     const errorMessage = loadError?.message || loadError?.type || 'Unknown error';
                     if (errorMessage.includes('domain authorization')) {
                         showAuthMessage('Google Sign-In is still initializing. Domain authorization may be propagating. Please try again in 15-30 minutes.', 'warning');
-                        console.log('💡 Run testGoogleDomainAuth() to check status');
+                        await adminDebugLog('AuthHandlers', 'Run testGoogleDomainAuth() to check status');
                     } else {
                         showAuthMessage('Google Sign-In is temporarily unavailable. Please try again later.', 'error');
                     }
@@ -80,7 +81,7 @@ export class AuthHandlers {
                 }
             }
 
-            console.log('🔧 Creating Google Sign-In button...');
+            await adminDebugLog('AuthHandlers', 'Creating Google Sign-In button');
 
             // Use the One Tap prompt with immediate fallback to button render
             const buttonContainer = document.createElement('div');
@@ -102,13 +103,13 @@ export class AuthHandlers {
                 width: 250
             });
 
-            console.log('🖱️  Triggering Google Sign-In dialog...');
+            await adminDebugLog('AuthHandlers', 'Triggering Google Sign-In dialog');
 
             // Click the rendered button programmatically
-            setTimeout(() => {
+            setTimeout(async () => {
                 const googleButton = buttonContainer.querySelector('[role="button"]');
                 if (googleButton) {
-                    console.log('✅ Google Sign-In button found, clicking...');
+                    await adminDebugLog('AuthHandlers', 'Google Sign-In button found, clicking');
                     googleButton.click();
                 } else {
                     console.error('❌ Google Sign-In button not found in container');
@@ -134,14 +135,14 @@ export class AuthHandlers {
      */
     async handleGoogleCredentialResponse(response) {
         try {
-            console.log('Google credential response received');
+            await adminDebugLog('AuthHandlers', 'Google credential response received');
 
             // Debug API configuration
-            console.log('🔧 Debug - Current hostname:', window.location.hostname);
-            console.log('🔧 Debug - window.API_CONFIG:', window.API_CONFIG);
+            await adminDebugLog('AuthHandlers', 'Current hostname', { hostname: window.location.hostname });
+            await adminDebugLog('AuthHandlers', 'window.API_CONFIG', window.API_CONFIG);
 
             const apiBase = getApiBaseUrl();
-            console.log('🔧 Debug - Using API base:', apiBase);
+            await adminDebugLog('AuthHandlers', 'Using API base', { apiBase });
 
             const result = await fetch(`${apiBase}/oauth/google`, {
                 method: 'POST',
@@ -159,11 +160,11 @@ export class AuthHandlers {
             if (result.ok) {
                 // Check if user needs to complete onboarding (select username)
                 if (data.user && data.user.onboardingCompleted === false) {
-                    console.log('🔧 User needs to complete onboarding (select username)');
+                    await adminDebugLog('AuthHandlers', 'User needs to complete onboarding (select username)');
 
                     // Show username selection modal
-                    usernameModal.show(data.user, data.csrfToken, (updatedUser) => {
-                        console.log('✅ Onboarding completed successfully');
+                    usernameModal.show(data.user, data.csrfToken, async (updatedUser) => {
+                        await adminDebugLog('AuthHandlers', 'Onboarding completed successfully');
                     });
                 } else {
                     // User already has username, proceed normally
@@ -198,44 +199,48 @@ export class AuthHandlers {
             try {
                 const currentDomain = window.location.origin;
 
-                console.log('🚀 Loading Google Sign-In...');
-                console.log('   Client ID:', this.googleClientId);
-                console.log('   Current domain:', currentDomain);
-                console.log('   Expected authorized domain: https://www.unitedwerise.org');
+                await adminDebugLog('AuthHandlers', 'Loading Google Sign-In', {
+                    clientId: this.googleClientId,
+                    currentDomain,
+                    expectedDomain: 'https://www.unitedwerise.org'
+                });
 
                 // Check if we're on the authorized domain
                 if (currentDomain !== 'https://www.unitedwerise.org') {
-                    console.warn('⚠️  Domain mismatch detected!');
-                    console.log('   Current:', currentDomain);
-                    console.log('   Authorized:', 'https://www.unitedwerise.org');
+                    await adminDebugLog('AuthHandlers', 'Domain mismatch detected', {
+                        current: currentDomain,
+                        authorized: 'https://www.unitedwerise.org'
+                    });
                 }
 
                 const script = document.createElement('script');
                 script.src = 'https://accounts.google.com/gsi/client';
                 script.async = true;
                 script.defer = true;
-                script.onload = () => {
-                    console.log('✅ Google Sign-In script loaded successfully');
+                script.onload = async () => {
+                    await adminDebugLog('AuthHandlers', 'Google Sign-In script loaded successfully');
 
                     // Add debugging for library availability
-                    setTimeout(() => {
-                        console.log('🔍 Checking Google library...');
-                        console.log('   window.google exists:', !!window.google);
-                        console.log('   window.google.accounts exists:', !!window.google?.accounts);
-                        console.log('   window.google.accounts.id exists:', !!window.google?.accounts?.id);
+                    setTimeout(async () => {
+                        await adminDebugLog('AuthHandlers', 'Checking Google library', {
+                            googleExists: !!window.google,
+                            accountsExists: !!window.google?.accounts,
+                            idExists: !!window.google?.accounts?.id
+                        });
 
                         if (!window.google?.accounts?.id) {
                             console.error('❌ Google Sign-In library not available after script load');
-                            console.log('💡 This usually means:');
-                            console.log('   1. Domain authorization still propagating (wait 15-30 more minutes)');
-                            console.log('   2. CORS blocking the library (domain not authorized)');
-                            console.log('   3. Network connectivity issues');
+                            await adminDebugLog('AuthHandlers', 'Library not available - possible causes', {
+                                reason1: 'Domain authorization still propagating (wait 15-30 more minutes)',
+                                reason2: 'CORS blocking the library (domain not authorized)',
+                                reason3: 'Network connectivity issues'
+                            });
                             reject(new Error('Google Sign-In library failed to initialize - domain authorization may still be propagating'));
                             return;
                         }
 
                         try {
-                            console.log('🔧 Initializing Google Sign-In...');
+                            await adminDebugLog('AuthHandlers', 'Initializing Google Sign-In');
                             google.accounts.id.initialize({
                                 client_id: this.googleClientId,
                                 callback: this.handleGoogleCredentialResponse.bind(this),
@@ -243,8 +248,8 @@ export class AuthHandlers {
                                 cancel_on_tap_outside: false,
                                 use_fedcm_for_prompt: false // Disable FedCM which can cause issues
                             });
-                            console.log('✅ Google Sign-In initialized successfully');
-                            console.log('💡 You can now test Google OAuth by clicking the Google Sign-In button');
+                            await adminDebugLog('AuthHandlers', 'Google Sign-In initialized successfully');
+                            await adminDebugLog('AuthHandlers', 'You can now test Google OAuth by clicking the Google Sign-In button');
                             resolve();
                         } catch (initError) {
                             console.error('❌ Error initializing Google Sign-In:', initError);
@@ -252,10 +257,11 @@ export class AuthHandlers {
                         }
                     }, 500);
                 };
-                script.onerror = (error) => {
+                script.onerror = async (error) => {
                     console.error('❌ Failed to load Google Sign-In script:', error);
-                    console.log('💡 This usually indicates CORS blocking due to unauthorized domain');
-                    console.log('   Solution: Wait for Google domain authorization to propagate');
+                    await adminDebugLog('AuthHandlers', 'CORS blocking detected - unauthorized domain', {
+                        solution: 'Wait for Google domain authorization to propagate'
+                    });
                     reject(error);
                 };
                 document.head.appendChild(script);
@@ -293,8 +299,8 @@ export class AuthHandlers {
      * Fix authentication storage issues
      * Extracted from index.html fixAuthStorageIssues function
      */
-    fixAuthStorageIssues() {
-        console.log('🔧 Fixing auth storage issues...');
+    async fixAuthStorageIssues() {
+        await adminDebugLog('AuthHandlers', 'Fixing auth storage issues');
 
         // Clear auth-related localStorage
         localStorage.removeItem('authToken'); // Clear any legacy tokens
@@ -314,7 +320,7 @@ export class AuthHandlers {
         if (userSection) userSection.style.display = 'none';
         if (userGreeting) userGreeting.textContent = '';
 
-        console.log('✅ Auth storage cleared. Please refresh the page and log in again.');
+        await adminDebugLog('AuthHandlers', 'Auth storage cleared. Please refresh the page and log in again');
         return 'Auth storage cleared. Please refresh the page and log in again.';
     }
 
@@ -323,30 +329,33 @@ export class AuthHandlers {
      * Debugging utility extracted from index.html
      */
     async testGoogleDomainAuth() {
-        console.log('🔍 Testing Google domain authorization...');
-        console.log('   Current domain:', window.location.origin);
-        console.log('   Time since domain added: ~45-60 minutes');
+        await adminDebugLog('AuthHandlers', 'Testing Google domain authorization', {
+            currentDomain: window.location.origin,
+            timeSinceDomainAdded: '~45-60 minutes'
+        });
 
         try {
             const testResponse = await fetch('https://accounts.google.com/gsi/client', {
                 method: 'HEAD',
                 mode: 'cors'
             });
-            console.log('✅ Google GSI client accessible (CORS allowed)');
-            console.log('   Response status:', testResponse.status);
+            await adminDebugLog('AuthHandlers', 'Google GSI client accessible (CORS allowed)', {
+                responseStatus: testResponse.status
+            });
         } catch (corsError) {
-            console.log('❌ CORS error still present:', corsError.message);
-            console.log('💡 Domain authorization not yet propagated');
+            await adminDebugLog('AuthHandlers', 'CORS error still present - domain authorization not yet propagated', {
+                error: corsError.message
+            });
             return false;
         }
 
         // Try to load and test the library
         try {
             await this.loadGoogleSignIn();
-            console.log('🎉 Google OAuth is now ready for testing!');
+            await adminDebugLog('AuthHandlers', 'Google OAuth is now ready for testing');
             return true;
         } catch (loadError) {
-            console.log('❌ Library load failed:', loadError.message);
+            await adminDebugLog('AuthHandlers', 'Library load failed', { error: loadError.message });
             return false;
         }
     }
@@ -356,15 +365,14 @@ export class AuthHandlers {
      * Debugging utility extracted from index.html
      */
     async retryGoogleOAuth() {
-        console.log('🔄 Retrying Google OAuth setup...');
+        await adminDebugLog('AuthHandlers', 'Retrying Google OAuth setup');
 
         const isReady = await this.testGoogleDomainAuth();
         if (isReady) {
-            console.log('✅ Google OAuth is ready! Try clicking the Google Sign-In button.');
+            await adminDebugLog('AuthHandlers', 'Google OAuth is ready! Try clicking the Google Sign-In button');
             return true;
         } else {
-            console.log('⏳ Still waiting for Google domain authorization to propagate...');
-            console.log('💡 Try again in 15-30 minutes or run: retryGoogleOAuth()');
+            await adminDebugLog('AuthHandlers', 'Still waiting for Google domain authorization to propagate. Try again in 15-30 minutes or run: retryGoogleOAuth()');
             return false;
         }
     }
@@ -400,7 +408,7 @@ export class AuthHandlers {
                 });
             }
         } catch (error) {
-            console.log('Username check failed:', error);
+            await adminDebugLog('AuthHandlers', 'Username check failed', { error: error.message });
             this.updateValidationUI('username', null);
         }
     }
@@ -436,7 +444,7 @@ export class AuthHandlers {
                 });
             }
         } catch (error) {
-            console.log('Email check failed:', error);
+            await adminDebugLog('AuthHandlers', 'Email check failed', { error: error.message });
             this.updateValidationUI('email', null);
         }
     }
