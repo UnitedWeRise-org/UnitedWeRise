@@ -14,8 +14,9 @@ class AdminAuth {
         this.totpVerified = false;
         this.autoRefreshInterval = null;
         this.tokenRefreshInterval = null; // Separate interval for token refresh (14-min)
-        this.lastTokenRefresh = null;
+        this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
 
@@ -164,21 +165,34 @@ class AdminAuth {
 
     /**
      * Handle tab visibility change - refresh token when tab becomes visible after being hidden
+     * Debounced to prevent rapid-fire refreshes from multiple visibility events
      */
     handleVisibilityChange() {
-        if (!document.hidden && this.isAuthenticated()) {
-            // Tab became visible - check if token needs refresh
-            const now = new Date();
-            const timeSinceLastRefresh = this.lastTokenRefresh
-                ? (now - this.lastTokenRefresh) / 1000 / 60 // minutes
-                : Infinity;
-
-            // If more than 10 minutes since last refresh, refresh immediately
-            if (timeSinceLastRefresh > 10) {
-                console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
-                this.refreshToken(true); // Force refresh
-            }
+        // Clear any pending debounce timer
+        if (this.visibilityChangeDebounceTimer) {
+            clearTimeout(this.visibilityChangeDebounceTimer);
         }
+
+        // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
+        this.visibilityChangeDebounceTimer = setTimeout(() => {
+            if (!document.hidden && this.isAuthenticated()) {
+                // Prevent concurrent refreshes from visibility changes
+                if (this.isRefreshingToken) {
+                    console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                    return;
+                }
+
+                // Tab became visible - check if token needs refresh
+                const now = new Date();
+                const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
+
+                // If more than 10 minutes since last refresh, refresh immediately
+                if (timeSinceLastRefresh > 10) {
+                    console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
+                    this.refreshToken(true); // Force refresh
+                }
+            }
+        }, 1000); // 1 second debounce
     }
 
     /**
@@ -457,6 +471,10 @@ class AdminAuth {
 
         if (this.tokenRefreshInterval) {
             clearInterval(this.tokenRefreshInterval);
+        }
+
+        if (this.visibilityChangeDebounceTimer) {
+            clearTimeout(this.visibilityChangeDebounceTimer);
         }
 
         // Remove event listeners
