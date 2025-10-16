@@ -33,10 +33,35 @@ class AdminAPI {
     }
 
     /**
+     * Wait for any in-progress token refresh to complete
+     * Prevents race condition where API call uses old token
+     */
+    async waitForTokenRefresh() {
+        if (window.adminAuth && window.adminAuth.isRefreshingToken) {
+            console.log('⏸️ Waiting for token refresh to complete...');
+            const maxWait = 10000; // 10 seconds max
+            const startTime = Date.now();
+
+            while (window.adminAuth.isRefreshingToken && (Date.now() - startTime) < maxWait) {
+                await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
+            }
+
+            if (window.adminAuth.isRefreshingToken) {
+                console.warn('⚠️ Token refresh taking too long, proceeding anyway');
+            } else {
+                console.log('✅ Token refresh complete, proceeding with API call');
+            }
+        }
+    }
+
+    /**
      * Enhanced API call function with TOTP support and comprehensive error handling
      * Core method extracted from adminApiCall in admin-dashboard.html
      */
-    async call(url, options = {}) {
+    async call(url, options = {}, retryCount = 0) {
+        // Wait for any in-progress token refresh before making API call
+        await this.waitForTokenRefresh();
+
         const headers = {};
 
         // Only set Content-Type for non-FormData requests
@@ -94,6 +119,26 @@ class AdminAPI {
             if (response.status === 401) {
                 console.warn('⚠️ Admin API: Received 401 - verifying session...');
 
+                // If this is a retry, don't retry again
+                if (retryCount > 0) {
+                    console.error('🔒 401 after retry - session is invalid');
+                    await adminDebugError('AdminAPI', '401 error persists after retry - logging out', {
+                        url: url,
+                        retryCount: retryCount
+                    });
+
+                    // Clear auth data and redirect to login
+                    localStorage.removeItem('currentUser');
+
+                    if (window.adminAuth) {
+                        window.adminAuth.showLogin();
+                    } else {
+                        window.location.href = '/admin-dashboard.html';
+                    }
+
+                    return response;
+                }
+
                 // Attempt to verify session before logging out
                 try {
                     const verifyResponse = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
@@ -103,15 +148,18 @@ class AdminAPI {
                     });
 
                     if (verifyResponse.ok) {
-                        // Session is still valid - 401 was likely connection error
-                        console.log('✅ Session verified valid - 401 was likely connection error');
-                        await adminDebugLog('AdminAPI', '401 error but session valid - connection timeout suspected', {
+                        // Session is still valid - 401 was likely timing issue after token refresh
+                        console.log('✅ Session verified valid - 401 was likely timing issue, retrying...');
+                        await adminDebugLog('AdminAPI', '401 error but session valid - retrying request', {
                             originalUrl: url,
-                            method: options.method || 'GET'
+                            method: options.method || 'GET',
+                            retryCount: retryCount
                         });
 
-                        // Return the original 401 response to let caller handle retry
-                        return response;
+                        // Wait a moment for cookies to propagate, then retry
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        console.log('🔄 Retrying API call after 401...');
+                        return this.call(url, options, retryCount + 1);
                     } else {
                         // Session is truly invalid - log out
                         console.error('🔒 Session verification failed - logging out');

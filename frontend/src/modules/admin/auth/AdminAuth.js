@@ -15,6 +15,7 @@ class AdminAuth {
         this.autoRefreshInterval = null;
         this.tokenRefreshInterval = null; // Separate interval for token refresh (14-min)
         this.lastTokenRefresh = null;
+        this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this.API_BASE = this.getApiBase();
         this.BACKEND_URL = this.getBackendUrl();
 
@@ -25,9 +26,13 @@ class AdminAuth {
         this.showLogin = this.showLogin.bind(this);
         this.showDashboard = this.showDashboard.bind(this);
         this.refreshToken = this.refreshToken.bind(this);
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
 
         // Load current user from localStorage on initialization
         this.loadCurrentUser();
+
+        // Listen for visibility changes to refresh token when tab becomes visible
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
 
     /**
@@ -68,62 +73,112 @@ class AdminAuth {
      * Refresh authentication token to prevent Azure 30-minute timeout
      * Called every 14 minutes to maintain session with dual redundancy (14, 28, 42...)
      */
-    async refreshToken() {
-        // Skip if tab is hidden (browser throttles background tabs)
-        if (document.hidden) {
-            console.log('⏸️ Token refresh skipped (tab hidden)');
-            return;
+    async refreshToken(forceRefresh = false) {
+        // Prevent concurrent refresh attempts
+        if (this.isRefreshingToken) {
+            console.log('⏸️ Token refresh already in progress');
+            return false;
+        }
+
+        // Skip if tab is hidden (unless forced)
+        if (!forceRefresh && document.hidden) {
+            console.log('⏸️ Token refresh skipped (tab hidden) - will refresh when tab becomes visible');
+            return false;
         }
 
         // Skip if not authenticated
         if (!this.isAuthenticated()) {
             console.log('⏸️ Token refresh skipped (not authenticated)');
-            return;
+            return false;
         }
 
+        this.isRefreshingToken = true;
         const maxRetries = 3;
         const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
+        try {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
 
-                const response = await fetch(`${this.API_BASE}/auth/refresh`, {
-                    method: 'POST',
-                    credentials: 'include', // Include httpOnly cookies
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                    const response = await fetch(`${this.API_BASE}/auth/refresh`, {
+                        method: 'POST',
+                        credentials: 'include', // Include httpOnly cookies
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
+                    if (response.ok) {
+                        const data = await response.json();
 
-                    // Update CSRF token if provided
-                    if (data.csrfToken) {
-                        window.csrfToken = data.csrfToken;
-                        if (window.AdminAPI) {
-                            window.AdminAPI.csrfToken = data.csrfToken;
+                        // Update CSRF token if provided
+                        if (data.csrfToken) {
+                            window.csrfToken = data.csrfToken;
+                            if (window.AdminAPI) {
+                                window.AdminAPI.csrfToken = data.csrfToken;
+                            }
+                        }
+
+                        this.lastTokenRefresh = new Date();
+                        console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
+
+                        // CRITICAL: Wait for browser to process new cookies before making API calls
+                        // This prevents race condition where API calls use old (expired) cookie
+                        console.log('⏳ Waiting for cookie propagation...');
+                        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+                        console.log('✅ Cookie propagation complete');
+
+                        this.isRefreshingToken = false;
+                        return true;
+                    } else {
+                        console.warn(`⚠️ Token refresh failed with status ${response.status} (attempt ${attempt + 1}/${maxRetries})`);
+
+                        // If 401, session is invalid - don't retry
+                        if (response.status === 401) {
+                            console.error('🔒 Session invalid - logging out');
+                            this.logout();
+                            this.isRefreshingToken = false;
+                            return false;
                         }
                     }
-
-                    this.lastTokenRefresh = new Date();
-                    console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
-                    return;
-                } else {
-                    console.warn(`⚠️ Token refresh failed with status ${response.status} (attempt ${attempt + 1}/${maxRetries})`);
+                } catch (error) {
+                    console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
                 }
-            } catch (error) {
-                console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+
+                // Wait before retry (unless this was the last attempt)
+                if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+                }
             }
 
-            // Wait before retry (unless this was the last attempt)
-            if (attempt < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+            console.error('❌ All token refresh attempts failed - session may expire');
+            this.isRefreshingToken = false;
+            return false;
+        } catch (error) {
+            console.error('❌ Token refresh error:', error);
+            this.isRefreshingToken = false;
+            return false;
+        }
+    }
+
+    /**
+     * Handle tab visibility change - refresh token when tab becomes visible after being hidden
+     */
+    handleVisibilityChange() {
+        if (!document.hidden && this.isAuthenticated()) {
+            // Tab became visible - check if token needs refresh
+            const now = new Date();
+            const timeSinceLastRefresh = this.lastTokenRefresh
+                ? (now - this.lastTokenRefresh) / 1000 / 60 // minutes
+                : Infinity;
+
+            // If more than 10 minutes since last refresh, refresh immediately
+            if (timeSinceLastRefresh > 10) {
+                console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
+                this.refreshToken(true); // Force refresh
             }
         }
-
-        console.error('❌ All token refresh attempts failed - session may expire');
     }
 
     /**
@@ -409,6 +464,8 @@ class AdminAuth {
         if (loginForm) {
             loginForm.removeEventListener('submit', this.handleLogin);
         }
+
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
 }
 
