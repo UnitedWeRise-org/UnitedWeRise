@@ -22,12 +22,27 @@ const initializeWebSocket = (httpServer) => {
             methods: ["GET", "POST"]
         }
     });
-    // Authentication middleware
+    // Authentication middleware - reads JWT from httpOnly cookie (like REST API)
     io.use(async (socket, next) => {
         try {
-            const token = socket.handshake.auth.token;
+            // Parse cookies from socket handshake headers
+            const cookieHeader = socket.handshake.headers.cookie;
+            let token;
+            if (cookieHeader) {
+                // Parse cookie header to extract authToken
+                const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+                    const [key, value] = cookie.trim().split('=');
+                    acc[key] = value;
+                    return acc;
+                }, {});
+                token = cookies.authToken;
+            }
+            // Fallback: Check auth.token for manual token passing (backwards compatibility)
             if (!token) {
-                return next(new Error('Authentication token required'));
+                token = socket.handshake.auth.token;
+            }
+            if (!token) {
+                return next(new Error('No token provided'));
             }
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
             // SECURITY FIX: Check if token is blacklisted

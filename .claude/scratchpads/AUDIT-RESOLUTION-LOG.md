@@ -222,6 +222,124 @@ Updated `backend/src/middleware/csrf.ts` to exempt these paths:
 - [x] Bug identified during staging testing
 - [x] Root cause analyzed
 - [x] Solution implemented (exempt auth routes in csrf.ts)
-- [ ] Backend rebuilt with fix
-- [ ] Redeployed to staging
-- [ ] Re-tested login flow
+- [x] Backend rebuilt with fix (commit cbc1874)
+- [x] Redeployed to staging (SHA: cbc1874)
+- [x] Staging verified healthy
+- [ ] User testing of login flow - READY FOR TESTING
+
+---
+
+## Phase 2: COMPLETED ✅
+
+**All 4 CRITICAL security fixes deployed to staging**
+
+### Commits
+1. `877574b` - Initial CRITICAL security fixes (token blacklist, metrics protection)
+2. `5fdae71` - Build artifacts
+3. `881d39e` - Token refresh fixes
+4. `b8f50ed` - Gallery error handling (on main, redundant)
+5. `cbc1874` - CSRF auth route exemptions (BLOCKER FIX)
+
+### Deployed to Staging
+- **URL**: https://dev.unitedwerise.org
+- **API**: https://dev-api.unitedwerise.org
+- **SHA**: cbc1874
+- **Digest**: sha256:ecdf0030ea5edf6b6e84d3568a334056c128c78212214ae2fd1f3d8c489f3cda
+- **Revision**: unitedwerise-backend-staging--stg-cbc1874-140730
+- **Status**: ✅ Healthy, database connected
+
+### Testing Documentation
+- **Checklist**: `.claude/scratchpads/STAGING-TESTING-CHECKLIST.md`
+- **Test Cases**: 34 total (authentication, CSRF, gallery, metrics, regression)
+
+### Ready for User Testing
+All CRITICAL fixes deployed and ready for manual testing. Login should now work correctly.
+
+---
+
+## CRITICAL BLOCKER #2: Photo Upload CSRF Missing ⚠️
+
+**Discovered**: October 16, 2025 during staging testing
+**Issue**: Photo uploads failing with "CSRF token missing in request" error
+**Error**: `403 Forbidden` on `POST /api/photos/upload`
+**Contrast**: Text posts work correctly with CSRF tokens
+**Status**: INVESTIGATING
+
+### Problem Analysis
+
+User reports:
+- Login works ✅
+- Logout works ✅
+- Text posts work ✅
+- Photo uploads fail with CSRF error ❌
+
+This indicates CSRF token IS being set during login and IS working for text posts, but something is different about photo uploads.
+
+### Investigation Steps
+
+**Step 1: Identified photo upload code path**
+- Photo uploads use `window.uploadMediaFiles()` in `frontend/src/modules/features/feed/my-feed.js`
+- Function calls `apiClient.call('/photos/upload', { method: 'POST', body: formData })`
+- APIClient code correctly includes CSRF token in headers (client.js lines 104-109)
+
+**Step 2: Added diagnostic logging**
+- Commit d10360d: Added CSRF warnings in APIClient for missing tokens
+- Commit 2f47d52: Added CSRF diagnostic logging in uploadMediaFiles function
+- Logs will show:
+  - `window.csrfToken` value
+  - `apiClient.csrfToken` value
+  - Whether token exists when photo upload is called
+
+**Step 3: Deployed diagnostic logging to staging**
+- Pushed to development branch (2f47d52)
+- GitHub Actions auto-deploying frontend
+- Waiting for deployment to complete
+
+### Next Steps
+1. ✅ Wait for GitHub Actions deployment to complete (~2-3 minutes)
+2. ✅ User hard refresh dev.unitedwerise.org (Ctrl+Shift+R)
+3. ✅ User attempt photo upload
+4. ✅ Review console logs to see CSRF token values
+5. ✅ Implement fix based on diagnostic output
+
+### Diagnostic Results Received
+User provided console logs showing:
+```
+🔍 CSRF Diagnostic - window.csrfToken: undefined
+🔍 CSRF Diagnostic - apiClient.csrfToken: null
+🔍 CSRF Diagnostic - token exists: false
+⚠️ CSRF token missing for POST request to /api/photos/upload
+```
+
+**Root Cause Identified**: apiClient never reads from the `csrf-token` cookie that backend sets.
+
+### Solution Implemented - Commit cd5921f
+
+**Changes to `frontend/src/modules/core/api/client.js`:**
+
+1. **Added getCookie() helper function** (lines 375-387):
+   - Reads cookies from `document.cookie`
+   - Returns cookie value or null
+
+2. **Updated CSRF token retrieval** (line 104):
+   - FROM: `const csrfToken = this.csrfToken || window.csrfToken;`
+   - TO: `const csrfToken = this.csrfToken || window.csrfToken || getCookie('csrf-token');`
+   - Defense in depth: instance → global → cookie
+
+3. **Applied same fix to XHR upload** (line 362):
+   - Ensures file uploads also read from cookie
+
+4. **Enhanced diagnostic logging** (line 116):
+   - Added `getCookie('csrf-token')` to diagnostic output
+
+**Why This Works:**
+- Backend sets `csrf-token` cookie with `httpOnly: false` (readable by JS)
+- Backend returns `csrfToken` in login response
+- Frontend now reads from cookie as fallback
+- Implements proper double-submit cookie pattern:
+  - Cookie sent automatically by browser ✅
+  - Header sent manually by JavaScript ✅ (NOW FIXED)
+  - Server verifies both match ✅
+
+**Status**: Deployed to staging via commit cd5921f
+**Next**: User testing

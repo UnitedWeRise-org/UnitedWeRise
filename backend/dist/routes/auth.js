@@ -556,8 +556,17 @@ router.post('/forgot-password', async (req, res) => {
                 resetExpiry
             }
         });
-        // TODO: Send email with reset token
-        console.log(`Reset token for ${email}: ${resetToken}`);
+        // Send password reset email
+        const emailTemplate = emailService_1.emailService.generatePasswordResetTemplate(email, resetToken, user.firstName);
+        const emailSent = await emailService_1.emailService.sendEmail(emailTemplate);
+        if (!emailSent) {
+            // Log failure but don't expose to user (prevents email enumeration)
+            console.error('Failed to send password reset email to:', email);
+        }
+        else {
+            // Track successful email send
+            metricsService_1.metricsService.trackEmailSent('password_reset', email);
+        }
         res.json({ message: 'If the email exists, a reset link has been sent' });
     }
     catch (error) {
