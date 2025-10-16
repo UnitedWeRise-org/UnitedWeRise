@@ -31,13 +31,22 @@ class UnifiedAuthManager {
         this._isInitialized = false;
         this._isLoggingOut = false; // Prevent re-auth during logout
         this._tokenRefreshInterval = null; // Token refresh interval (14-min)
-        this._lastTokenRefresh = null;
+        this._lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
+        this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
+        this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._currentAuthState = {
             isAuthenticated: false,
             user: null,
             csrfToken: null,
             sessionValid: false
         };
+
+        // Bind methods to preserve context
+        this.refreshToken = this.refreshToken.bind(this);
+        this._handleVisibilityChange = this._handleVisibilityChange.bind(this);
+
+        // Listen for visibility changes to refresh token when tab becomes visible
+        document.addEventListener('visibilitychange', this._handleVisibilityChange);
 
         // Note: constructor cannot be async, so we don't await here
         adminDebugLog('UnifiedAuthManager', 'Unified Authentication Manager initialized');
@@ -65,63 +74,117 @@ class UnifiedAuthManager {
      * Refresh authentication token to prevent Azure 30-minute timeout
      * Called every 14 minutes to maintain session with dual redundancy (14, 28, 42...)
      */
-    async refreshToken() {
-        // Skip if tab is hidden (browser throttles background tabs)
-        if (document.hidden) {
+    async refreshToken(forceRefresh = false) {
+        // Prevent concurrent refresh attempts
+        if (this._isRefreshingToken) {
+            console.log('⏸️ Token refresh already in progress');
+            return false;
+        }
+
+        // Skip if tab is hidden (unless forced)
+        if (!forceRefresh && document.hidden) {
             console.log('⏸️ Token refresh skipped (tab hidden)');
-            return;
+            return false;
         }
 
         // Skip if not authenticated
         if (!this.isAuthenticated()) {
             console.log('⏸️ Token refresh skipped (not authenticated)');
-            return;
+            return false;
         }
 
         // Skip if logging out
         if (this._isLoggingOut) {
             console.log('⏸️ Token refresh skipped (logout in progress)');
-            return;
+            return false;
         }
 
+        this._isRefreshingToken = true;
         const maxRetries = 3;
         const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
+        try {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
 
-                const response = await window.apiClient.call('/auth/refresh', {
-                    method: 'POST'
-                });
+                    const response = await window.apiClient.call('/auth/refresh', {
+                        method: 'POST'
+                    });
 
-                if (response.success || response.csrfToken) {
-                    // Update CSRF token if provided
-                    if (response.csrfToken) {
-                        window.csrfToken = response.csrfToken;
-                        if (window.apiClient) {
-                            window.apiClient.csrfToken = response.csrfToken;
+                    if (response.success || response.csrfToken) {
+                        // Update CSRF token if provided
+                        if (response.csrfToken) {
+                            window.csrfToken = response.csrfToken;
+                            if (window.apiClient) {
+                                window.apiClient.csrfToken = response.csrfToken;
+                            }
+                            this._currentAuthState.csrfToken = response.csrfToken;
                         }
-                        this._currentAuthState.csrfToken = response.csrfToken;
+
+                        this._lastTokenRefresh = new Date();
+                        console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
+
+                        // CRITICAL: Wait for browser to process new cookies before making API calls
+                        console.log('⏳ Waiting for cookie propagation...');
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        console.log('✅ Cookie propagation complete');
+
+                        this._isRefreshingToken = false;
+                        return true;
+                    } else {
+                        console.warn(`⚠️ Token refresh failed with response (attempt ${attempt + 1}/${maxRetries}):`, response);
                     }
-
-                    this._lastTokenRefresh = new Date();
-                    console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
-                    return;
-                } else {
-                    console.warn(`⚠️ Token refresh failed with response (attempt ${attempt + 1}/${maxRetries}):`, response);
+                } catch (error) {
+                    console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
                 }
-            } catch (error) {
-                console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+
+                // Wait before retry (unless this was the last attempt)
+                if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+                }
             }
 
-            // Wait before retry (unless this was the last attempt)
-            if (attempt < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
-            }
+            console.error('❌ All token refresh attempts failed - session may expire');
+            this._isRefreshingToken = false;
+            return false;
+        } catch (error) {
+            console.error('❌ Token refresh error:', error);
+            this._isRefreshingToken = false;
+            return false;
+        }
+    }
+
+    /**
+     * Handle tab visibility change - refresh token when tab becomes visible after being hidden
+     * Debounced to prevent rapid-fire refreshes from multiple visibility events
+     */
+    _handleVisibilityChange() {
+        // Clear any pending debounce timer
+        if (this._visibilityChangeDebounceTimer) {
+            clearTimeout(this._visibilityChangeDebounceTimer);
         }
 
-        console.error('❌ All token refresh attempts failed - session may expire');
+        // Debounce visibility changes by 1 second to prevent rapid-fire refreshes
+        this._visibilityChangeDebounceTimer = setTimeout(() => {
+            if (!document.hidden && this.isAuthenticated()) {
+                // Prevent concurrent refreshes from visibility changes
+                if (this._isRefreshingToken) {
+                    console.log('⏸️ Visibility change refresh skipped (refresh already in progress)');
+                    return;
+                }
+
+                // Tab became visible - check if token needs refresh
+                const now = new Date();
+                const timeSinceLastRefresh = (now - this._lastTokenRefresh) / 1000 / 60; // minutes
+
+                // If more than 10 minutes since last refresh, refresh immediately
+                if (timeSinceLastRefresh > 10) {
+                    console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
+                    this.refreshToken(true); // Force refresh
+                }
+            }
+        }, 1000); // 1 second debounce
     }
 
     /**
@@ -492,6 +555,12 @@ class UnifiedAuthManager {
     _clearAllSystems() {
         // Stop token auto-refresh (safety measure in case called directly)
         this._stopTokenRefresh();
+
+        // Clear visibility change debounce timer
+        if (this._visibilityChangeDebounceTimer) {
+            clearTimeout(this._visibilityChangeDebounceTimer);
+            this._visibilityChangeDebounceTimer = null;
+        }
 
         // Clear user state module
         if (window.userState) {
