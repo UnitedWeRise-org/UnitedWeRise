@@ -53,11 +53,11 @@ class UnifiedMessagingClient {
             : getWebSocketUrl(); // Use centralized environment detection
         
         try {
-            // NEW: WebSocket auth needs special handling since it can't access httpOnly cookies
-            // Use authenticate-after-connect pattern
+            // WebSocket auth uses httpOnly cookie (like REST API)
+            // withCredentials: true automatically sends cookies for authentication
             this.socket = io(socketUrl, {
                 transports: ['websocket', 'polling'],
-                withCredentials: true, // Send cookies
+                withCredentials: true, // Send authToken cookie automatically
                 timeout: 20000,
                 forceNew: true
             });
@@ -74,47 +74,34 @@ class UnifiedMessagingClient {
         if (!this.socket) return;
 
         this.socket.on('connect', () => {
-            adminDebugLog('WebSocket', 'WebSocket connected, authenticating...');
-            
-            // Authenticate after connection using CSRF token or fallback
-            const authData = {};
-            if (window.csrfToken) {
-                authData.csrfToken = window.csrfToken;
-            }
-            
-            // Send authentication
-            this.socket.emit('authenticate', authData);
-        });
-        
-        this.socket.on('authenticated', () => {
-            adminDebugLog('WebSocket', '✅ WebSocket authenticated successfully');
+            adminDebugLog('WebSocket', '✅ WebSocket connected and authenticated via cookie');
             this.isConnected = true;
             this.reconnectAttempts = 0;
             this.connectionHandlers.forEach(handler => handler(true));
         });
-        
-        this.socket.on('authentication_error', (error) => {
-            adminDebugError('WebSocket', 'WebSocket authentication failed', error);
+
+        this.socket.on('connect_error', (error) => {
+            // Connection errors include authentication failures from middleware
+            const errorMessage = error?.message || error;
+            if (errorMessage.includes('token') || errorMessage.includes('auth')) {
+                adminDebugError('WebSocket', 'WebSocket authentication failed', errorMessage);
+            } else {
+                adminDebugError('WebSocket', 'WebSocket connection error', error);
+            }
             this.isConnected = false;
-            this.socket.disconnect();
+            this.scheduleReconnect();
         });
 
         this.socket.on('disconnect', (reason) => {
             adminDebugLog('WebSocket', 'WebSocket disconnected', reason);
             this.isConnected = false;
             this.connectionHandlers.forEach(handler => handler(false));
-            
+
             if (reason === 'io server disconnect') {
                 // Server initiated disconnect, don't reconnect
                 return;
             }
-            
-            this.scheduleReconnect();
-        });
 
-        this.socket.on('connect_error', (error) => {
-            adminDebugError('WebSocket', 'WebSocket connection error', error);
-            this.isConnected = false;
             this.scheduleReconnect();
         });
 
