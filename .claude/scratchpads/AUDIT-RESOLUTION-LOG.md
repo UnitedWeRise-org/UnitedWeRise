@@ -603,8 +603,78 @@ const SMTP_USER = 'noreply@unitedwerise.org';
 
 ---
 
-## Phase 4: Database & Schema (NEXT)
+## Phase 4: Database & Schema ✅
 
-**Pending Tasks**:
-1. Add 3 missing performance indexes to database schema
-2. Update DATABASE_SCHEMA.md documentation
+**Status**: COMPLETED
+**Started**: October 17, 2025
+**Completed**: October 17, 2025
+
+### Missing Performance Indexes Added
+
+**Indexes Implemented**:
+1. **TopicPost.postId** - Enables reverse lookups (find all topics for a post)
+2. **Notification.senderId** - Optimizes sender-focused queries
+3. **CandidateAdminMessage.senderId + createdAt** - Composite index for sender analytics and timeline queries
+
+### Files Modified
+
+**backend/prisma/schema.prisma**:
+- Line 599: Added `@@index([postId])` to TopicPost model
+- Line 379: Added `@@index([senderId])` to Notification model
+- Line 912: Added `@@index([senderId, createdAt])` to CandidateAdminMessage model
+
+**backend/prisma/migrations/20251017030000_add_missing_performance_indexes/migration.sql**:
+Created new migration with SQL for 3 index creations:
+```sql
+CREATE INDEX "TopicPost_postId_idx" ON "TopicPost"("postId");
+CREATE INDEX "Notification_senderId_idx" ON "Notification"("senderId");
+CREATE INDEX "CandidateAdminMessage_senderId_createdAt_idx" ON "CandidateAdminMessage"("senderId", "createdAt");
+```
+
+**docs/DATABASE_SCHEMA.md**:
+- Fixed model count: 94 → 86 (corrected inaccuracy)
+- Updated index count: 200+ → 285+ (including new indexes)
+- Updated enum count: 50+ → 74
+- Removed deprecated `User.politicalExperience` field reference
+- Updated last modified date: 2025-10-09 → 2025-10-17
+
+### Deployment to Staging
+
+**Commit**: 07458a2
+**Pushed**: October 17, 2025
+**Migration Applied**: ✅ Successfully applied to staging database (unitedwerise-db-dev)
+**Status**: All 12 migrations now applied
+
+**Migration Verification**:
+```bash
+npx prisma migrate status
+# Result: All migrations have been successfully applied ✅
+```
+
+**Database Connection**: ✅ Staging backend connected to database
+**Health Check**: ✅ https://dev-api.unitedwerise.org/health shows healthy status
+
+### Performance Impact
+
+These indexes will improve query performance for:
+- **TopicPost.postId**: Post detail pages showing all related topics
+- **Notification.senderId**: Admin dashboards showing sent notifications
+- **CandidateAdminMessage**: Candidate message analytics and timeline views
+
+No breaking changes - indexes are transparent to application code.
+
+---
+
+## Audit Resolution Summary
+
+**All Phases Complete** ✅
+
+- ✅ Phase 1: Documentation & Setup
+- ✅ Phase 2: CRITICAL Security Fixes (4 fixes + 2 blocker resolutions)
+- ✅ Phase 3: HIGH Priority Fixes (4 agent deployment)
+- ✅ Phase 4: Database & Schema (3 indexes + documentation)
+
+**Total Commits**: 13 commits across all phases
+**Credential Rotation**: ✅ SMTP password rotated after exposure discovery
+**Deployment**: ✅ All changes deployed to staging
+**Testing**: Ready for final staging verification before production
