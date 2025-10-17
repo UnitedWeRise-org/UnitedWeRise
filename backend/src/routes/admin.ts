@@ -35,6 +35,19 @@ const handleValidationErrors = (req: express.Request, res: express.Response, nex
 
 // Dashboard Overview
 router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  // Generate unique request ID for tracing
+  const crypto = require('crypto');
+  const requestId = crypto.randomBytes(4).toString('hex');
+
+  console.log(`[${requestId}] 🎯 ENDPOINT: /api/admin/dashboard REACHED`, {
+    timestamp: new Date().toISOString(),
+    userId: req.user?.id,
+    username: req.user?.username,
+    isAdmin: req.user?.isAdmin,
+    totpVerified: req.user?.totpVerified,
+    message: 'Dashboard endpoint handler executing - ALL MIDDLEWARE PASSED'
+  });
+
   try {
     const [
       totalUsers,
@@ -87,6 +100,12 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res
     // Get performance metrics
     const performanceData = getPerformanceMetrics();
 
+    console.log(`[${requestId}] ✅ ENDPOINT: /api/admin/dashboard - Sending 200 response`, {
+      userId: req.user?.id,
+      username: req.user?.username,
+      dataKeys: ['overview', 'growth', 'recentActivity', 'performance']
+    });
+
     res.json({
       overview: {
         totalUsers,
@@ -115,7 +134,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res
       }
     });
   } catch (error) {
-    console.error('Admin dashboard error:', error);
+    console.error(`[${requestId}] ❌ ENDPOINT: /api/admin/dashboard - Error:`, error);
     res.status(500).json({ error: 'Failed to load dashboard' });
   }
 });

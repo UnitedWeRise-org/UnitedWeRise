@@ -77,6 +77,56 @@ class AdminAPI {
             headers['X-CSRF-Token'] = window.csrfToken;
         }
 
+        // ========== 🔍 REQUEST LOGGING START ==========
+        const requestTimestamp = new Date().toISOString();
+        const method = options.method || 'GET';
+
+        console.group(`📤 API Request: ${method} ${url}`);
+        console.log('🕐 Request Timestamp:', requestTimestamp);
+        console.log('🔁 Retry Count:', retryCount);
+
+        // Log all available cookies
+        console.log('🍪 All Document Cookies:', document.cookie || '(empty)');
+
+        // Parse and log specific cookies
+        const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+            const [key, value] = cookie.trim().split('=');
+            if (key) acc[key] = value;
+            return acc;
+        }, {});
+        console.log('🍪 Parsed Cookies:', cookies);
+
+        // Highlight critical auth cookies
+        const authToken = cookies['authToken'];
+        const csrfToken = cookies['csrf-token'];
+        const totpSessionToken = cookies['totpSessionToken'];
+
+        console.group('🔑 Authentication Cookies:');
+        console.log('authToken:', authToken ? `✅ Present (${authToken.substring(0, 20)}...)` : '❌ Missing');
+        console.log('csrf-token:', csrfToken ? `✅ Present (${csrfToken.substring(0, 20)}...)` : '❌ Missing');
+        console.log('totpSessionToken:', totpSessionToken ? `✅ Present (${totpSessionToken.substring(0, 20)}...)` : '❌ Missing');
+        console.groupEnd();
+
+        // Log headers being sent
+        console.log('📋 Request Headers:', headers);
+        console.log('🔐 Window CSRF Token:', window.csrfToken ? `Present (${window.csrfToken.substring(0, 20)}...)` : 'Missing');
+        console.log('🔒 Credentials Mode:', 'include');
+
+        // Log request body (if present and not FormData)
+        if (options.body && !(options.body instanceof FormData)) {
+            try {
+                const bodyPreview = JSON.parse(options.body);
+                console.log('📦 Request Body:', bodyPreview);
+            } catch (e) {
+                console.log('📦 Request Body:', '(unable to parse)');
+            }
+        } else if (options.body instanceof FormData) {
+            console.log('📦 Request Body:', 'FormData (file upload)');
+        }
+
+        console.groupEnd();
+        // ========== 🔍 REQUEST LOGGING END ==========
+
         // Authentication handled by httpOnly cookies automatically
         try {
             const response = await fetch(url, {
@@ -84,6 +134,50 @@ class AdminAPI {
                 headers,
                 credentials: 'include' // Include cookies
             });
+
+            // ========== 🔍 RESPONSE LOGGING START ==========
+            const responseTimestamp = new Date().toISOString();
+            const is403 = response.status === 403;
+
+            if (is403) {
+                console.group(`🚨 403 FORBIDDEN DETECTED 🚨`);
+            } else {
+                console.group(`📥 API Response: ${method} ${url}`);
+            }
+
+            console.log('🕐 Response Timestamp:', responseTimestamp);
+            console.log('📊 Status Code:', response.status);
+            console.log('📊 Status Text:', response.statusText);
+            console.log('✅ Response OK:', response.ok);
+            console.log('🌐 Response Type:', response.type);
+            console.log('🔗 Response URL:', response.url);
+
+            // Log response headers (if available)
+            try {
+                const responseHeaders = {};
+                response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
+                });
+                console.log('📋 Response Headers:', responseHeaders);
+            } catch (e) {
+                console.log('📋 Response Headers:', '(unable to read)');
+            }
+
+            // For 403 responses, log additional context
+            if (is403) {
+                console.group('🔍 403 Diagnostic Context:');
+                console.log('🔑 Auth cookies at time of 403:', {
+                    authToken: authToken ? 'Present' : 'Missing',
+                    csrfToken: csrfToken ? 'Present' : 'Missing',
+                    totpSessionToken: totpSessionToken ? 'Present' : 'Missing'
+                });
+                console.log('🔄 Was this a retry?:', retryCount > 0);
+                console.log('⏰ Time since request:', new Date(responseTimestamp) - new Date(requestTimestamp), 'ms');
+                console.groupEnd();
+            }
+
+            console.groupEnd();
+            // ========== 🔍 RESPONSE LOGGING END ==========
 
             // Handle TOTP verification required
             if (response.status === 403) {

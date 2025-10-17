@@ -186,8 +186,9 @@ class AdminAuth {
                 const now = new Date();
                 const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
 
-                // If more than 10 minutes since last refresh, refresh immediately
-                if (timeSinceLastRefresh > 10) {
+                // If more than 5 minutes since last refresh, refresh immediately
+                // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
+                if (timeSinceLastRefresh > 5) {
                     console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
                     this.refreshToken(true); // Force refresh
                 }
@@ -444,8 +445,9 @@ class AdminAuth {
         const now = new Date();
         const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
 
-        // If more than 10 minutes since last refresh, refresh token first
-        if (timeSinceLastRefresh > 10) {
+        // If more than 5 minutes since last refresh, refresh token first
+        // BUGFIX: Align threshold with 5-minute auto-refresh interval (was 10, caused 403s)
+        if (timeSinceLastRefresh > 5) {
             console.log(`🔄 Auto-refresh: Token needs refresh (${Math.floor(timeSinceLastRefresh)} minutes since last refresh)`);
             const refreshed = await this.refreshToken(true);
             if (!refreshed) {
