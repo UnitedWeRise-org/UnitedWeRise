@@ -437,8 +437,23 @@ class AdminAuth {
 
     /**
      * Refresh all dashboard data (to be overridden by AdminState)
+     * CRITICAL: Refreshes token if needed BEFORE fetching data to prevent 401 errors
      */
-    refreshAllData() {
+    async refreshAllData() {
+        // Check if token needs refresh before fetching data
+        const now = new Date();
+        const timeSinceLastRefresh = (now - this.lastTokenRefresh) / 1000 / 60; // minutes
+
+        // If more than 10 minutes since last refresh, refresh token first
+        if (timeSinceLastRefresh > 10) {
+            console.log(`🔄 Auto-refresh: Token needs refresh (${Math.floor(timeSinceLastRefresh)} minutes since last refresh)`);
+            const refreshed = await this.refreshToken(true);
+            if (!refreshed) {
+                console.error('❌ Auto-refresh: Token refresh failed, skipping data refresh');
+                return;
+            }
+        }
+
         // This will be overridden by AdminState module
         if (window.AdminState && window.AdminState.refreshAllData) {
             window.AdminState.refreshAllData();
