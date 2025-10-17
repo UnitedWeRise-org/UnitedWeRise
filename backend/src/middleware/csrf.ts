@@ -22,6 +22,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   const exemptedPaths = [
     '/api/auth/login',
     '/api/auth/register',
+    '/api/auth/check-email',  // Email validation during registration (before session)
     '/api/auth/google',
     '/api/auth/google/callback',
     '/api/auth/refresh',
