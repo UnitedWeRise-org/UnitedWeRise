@@ -673,16 +673,34 @@ router.post('/refresh', async (req, res) => {
                 console.log(`🔄 Token refresh failed: Invalid token (IP: ${ipAddress})`);
                 return res.status(401).json({ error: 'Invalid token' });
             }
-            // Verify user still exists
+            // Verify user still exists and get admin status
             const user = await prisma_1.prisma.user.findUnique({
-                where: { id: decoded.userId }
+                where: { id: decoded.userId },
+                select: {
+                    id: true,
+                    email: true,
+                    username: true,
+                    isAdmin: true,
+                    isModerator: true,
+                    isSuperAdmin: true
+                }
             });
             if (!user) {
                 console.log(`🔄 Token refresh failed: User not found (userId: ${decoded.userId}, IP: ${ipAddress})`);
                 return res.status(401).json({ error: 'User not found' });
             }
+            // DIAGNOSTIC: Log token refresh details
+            const totpVerifiedStatus = decoded.totpVerified || false;
+            console.log(`🔄 Token refresh for ${user.username}:`, {
+                userId: user.id,
+                isAdmin: user.isAdmin,
+                isModerator: user.isModerator,
+                totpVerifiedInOldToken: decoded.totpVerified,
+                totpVerifiedInNewToken: totpVerifiedStatus,
+                ipAddress
+            });
             // Generate new token - preserve TOTP verification status from old token
-            const newToken = (0, auth_1.generateToken)(decoded.userId, decoded.totpVerified || false);
+            const newToken = (0, auth_1.generateToken)(decoded.userId, totpVerifiedStatus);
             // Set new httpOnly cookie
             res.cookie('authToken', newToken, {
                 httpOnly: true,
