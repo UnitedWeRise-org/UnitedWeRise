@@ -364,6 +364,7 @@ model Notification {
 
   @@index([receiverId, read])
   @@index([createdAt])
+  @@index([senderId])
 }
 
 model Election {
@@ -586,6 +587,7 @@ model TopicPost {
 
   @@unique([topicId, postId])
   @@index([topicId, relevanceScore])
+  @@index([postId])
 }
 
 model TopicComment {
@@ -880,6 +882,7 @@ model CandidateAdminMessage {
   @@index([threadId])
   @@index([isRead, priority])
   @@index([messageType, createdAt])
+  @@index([senderId, createdAt])
 }
 
 model ElectoralDistrict {
