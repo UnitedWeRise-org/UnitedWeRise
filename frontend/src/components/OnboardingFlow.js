@@ -733,12 +733,16 @@ class OnboardingFlow {
                 const data = await response.json();
                 this.steps = data.steps;
                 this.updateProgress();
-                
+
                 // Load interests for interests step
                 await this.loadInterests();
+            } else {
+                // Log the error details
+                const errorText = await response.text();
+                console.error(`[OnboardingFlow] Failed to load steps: ${response.status} ${response.statusText}`, errorText);
             }
         } catch (error) {
-            console.error('Failed to load onboarding steps:', error);
+            console.error('[OnboardingFlow] Load steps exception:', error);
         }
     }
 
