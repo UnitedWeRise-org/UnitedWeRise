@@ -193,6 +193,10 @@
     <!-- Performance & Optimization Utilities now loaded via ES6 modules in main.js (Batch 1 - Oct 11, 2025) -->
     <!-- ✅ performance.js, error-handler.js, advanced-caching.js, smart-loader.js removed - now ES6 modules -->
 
+    <!-- CRITICAL: Admin subdomain redirect (MUST be first module loaded) -->
+    <!-- This prevents flash of wrong content when accessing admin.unitedwerise.org or dev-admin.unitedwerise.org -->
+    <script type="module" src="src/utils/admin-redirect.js"></script>
+
     <!-- Core Application JavaScript - Modern ES6 Module System -->
     <script type="module" src="src/js/main.js"></script>
 

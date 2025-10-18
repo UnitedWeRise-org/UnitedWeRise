@@ -16981,6 +16981,58 @@ For complete session history and development notes, see `CHANGELOG.md`.
 - **🎯 Component Filtering**: Show/hide debug output by component name
 - **☁️ Remote Logging**: Send debug output to admin-only logging service
 
+#### **🏗️ Infrastructure & Deployment Systems - Admin Dashboard Isolation**
+
+**Current Implementation (October 2025):**
+- Admin dashboard uses client-side redirect from admin subdomain to `/admin-dashboard.html`
+- Session isolation achieved via separate origins (`admin.unitedwerise.org` vs `www.unitedwerise.org`)
+- Single Static Web App deployment per environment
+- Browser same-origin policy provides security isolation
+
+**Future Goal: Separate Admin Static Web Apps**
+
+**Why:**
+- True content isolation (admin code completely separate from main site)
+- Independent deployment of admin features
+- Clearer separation of concerns
+- Industry standard architecture (AWS, Google, Microsoft all use separate apps for admin)
+
+**Proposed Architecture:**
+```
+Production:
+- unitedwerise-frontend (main) → www.unitedwerise.org
+- unitedwerise-admin-frontend → admin.unitedwerise.org
+
+Staging:
+- unitedwerise-staging (main) → dev.unitedwerise.org
+- unitedwerise-admin-staging → dev-admin.unitedwerise.org
+```
+
+**Requirements before migration:**
+1. Dedicated DevOps resources OR automation for managing 4 frontend deployments
+2. Shared module build system (to avoid code duplication between main and admin)
+3. Clear deployment verification process for all 4 apps
+4. Rollback strategy for admin app failures
+5. Improved GitHub Actions monitoring/alerting
+
+**Benefits:**
+- Admin updates don't require main site redeployment
+- Admin can have different build/optimization settings
+- Better security isolation at infrastructure level
+- Simpler troubleshooting (admin issues isolated to admin app)
+- Independent scaling of admin vs main site
+
+**Estimated Effort:** 4-6 hours initial setup + ongoing operational overhead
+
+**Decision Date:** October 17, 2025
+**Decision Rationale:** Deferred due to operational complexity concerns. Current redirect solution achieves session isolation goal without adding deployment complexity. Revisit when team has dedicated DevOps resources or deployment automation is significantly improved.
+
+**Related:**
+- Session isolation implementation: `frontend/src/utils/admin-redirect.js`
+- Environment detection: `frontend/src/utils/environment.js`
+- Current architecture: Single Static Web App with multiple custom domains
+- Architecture Decision Record: `docs/adr/ADR-002-ADMIN-SUBDOMAIN-ROUTING.md`
+
 ---
 
 ## 📋 CURRENT SYSTEM STATUS SUMMARY (September 5, 2025) {#current-system-status}

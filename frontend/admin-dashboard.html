@@ -6,6 +6,38 @@
     <title>UnitedWeRise - Admin Dashboard (Modular)</title>
     <link rel="stylesheet" href="src/styles/main.css">
     <link rel="stylesheet" href="src/styles/admin-dashboard.css">
+
+    <!-- Reverse Redirect Prevention: Ensure admin dashboard only accessible via admin subdomain -->
+    <script type="module">
+        /**
+         * REVERSE REDIRECT PREVENTION
+         *
+         * If user accesses admin-dashboard.html from www.unitedwerise.org or dev.unitedwerise.org,
+         * redirect them to the proper admin subdomain.
+         *
+         * This ensures admin dashboard is ONLY accessible via admin subdomains, completing
+         * the bidirectional redirect system for session isolation.
+         */
+        (function preventNonAdminAccess() {
+            const hostname = window.location.hostname;
+            const isAdminSubdomain = hostname === 'admin.unitedwerise.org' ||
+                                     hostname === 'dev-admin.unitedwerise.org';
+
+            if (!isAdminSubdomain) {
+                // User accessed admin-dashboard.html from non-admin subdomain
+                // Redirect to proper admin subdomain
+                const isDev = hostname === 'dev.unitedwerise.org' ||
+                              hostname === 'localhost' ||
+                              hostname === '127.0.0.1';
+
+                const adminHostname = isDev ? 'dev-admin.unitedwerise.org' : 'admin.unitedwerise.org';
+                const newUrl = `https://${adminHostname}${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+                console.log('[Admin Dashboard] Redirecting to admin subdomain:', newUrl);
+                window.location.replace(newUrl);
+            }
+        })();
+    </script>
 </head>
 <body>
     <!-- Login Section -->
