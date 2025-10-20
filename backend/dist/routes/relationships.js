@@ -15,7 +15,42 @@ const router = express_1.default.Router();
 /**
  * FOLLOW ENDPOINTS
  */
-// Follow a user
+/**
+ * @swagger
+ * /api/relationships/follow/{userId}:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Follow a user
+ *     description: Creates a follow relationship. Updates follower/following counts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to follow
+ *     responses:
+ *       200:
+ *         description: User followed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Successfully followed user
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request - cannot follow self, already following, or user not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -33,7 +68,40 @@ router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Unfollow a user
+/**
+ * @swagger
+ * /api/relationships/follow/{userId}:
+ *   delete:
+ *     tags: [Relationship]
+ *     summary: Unfollow a user
+ *     description: Removes follow relationship. Updates follower/following counts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unfollowed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Not following user
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -51,7 +119,36 @@ router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get follow status
+/**
+ * @swagger
+ * /api/relationships/follow-status/{userId}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get follow status
+ *     description: Checks if current user follows the specified user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Follow status retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isFollowing:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -64,7 +161,44 @@ router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get followers list
+/**
+ * @swagger
+ * /api/relationships/{userId}/followers:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get followers list
+ *     description: Returns paginated list of users following the specified user
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Followers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 followers:
+ *                   type: array
+ *                 pagination:
+ *                   type: object
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/followers', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -82,7 +216,35 @@ router.get('/:userId/followers', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get following list
+/**
+ * @swagger
+ * /api/relationships/{userId}/following:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get following list
+ *     description: Returns paginated list of users that the specified user follows
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Following list retrieved successfully
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/following', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -103,7 +265,31 @@ router.get('/:userId/following', async (req, res) => {
 /**
  * SUBSCRIPTION ENDPOINTS
  */
-// Subscribe to a user
+/**
+ * @swagger
+ * /api/relationships/subscribe/{userId}:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Subscribe to a user
+ *     description: Creates subscription for enhanced notifications from user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscribed successfully
+ *       400:
+ *         description: Cannot subscribe (self, already subscribed, or not found)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/subscribe/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -191,7 +377,31 @@ router.get('/:userId/subscriptions', async (req, res) => {
 /**
  * FRIEND ENDPOINTS
  */
-// Send friend request
+/**
+ * @swagger
+ * /api/relationships/friend-request/{userId}:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Send friend request
+ *     description: Sends friendship request to user. Creates pending friendship.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Friend request sent
+ *       400:
+ *         description: Cannot send request (self, already friends, already pending)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/friend-request/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -209,7 +419,31 @@ router.post('/friend-request/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Accept friend request
+/**
+ * @swagger
+ * /api/relationships/friend-request/{userId}/accept:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Accept friend request
+ *     description: Accepts pending friend request from user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Friend request accepted
+ *       400:
+ *         description: No pending request found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/friend-request/:userId/accept', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -227,7 +461,30 @@ router.post('/friend-request/:userId/accept', auth_1.requireAuth, async (req, re
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Reject friend request
+/**
+ * @swagger
+ * /api/relationships/friend-request/{userId}/reject:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Reject friend request
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Request rejected
+ *       400:
+ *         description: No pending request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/friend-request/:userId/reject', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -245,7 +502,30 @@ router.post('/friend-request/:userId/reject', auth_1.requireAuth, async (req, re
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Remove friend
+/**
+ * @swagger
+ * /api/relationships/friend/{userId}:
+ *   delete:
+ *     tags: [Relationship]
+ *     summary: Remove friend
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Friend removed
+ *       400:
+ *         description: Not friends
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.delete('/friend/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -263,7 +543,28 @@ router.delete('/friend/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get friend status
+/**
+ * @swagger
+ * /api/relationships/friend-status/{userId}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get friend status
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Status retrieved
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/friend-status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -276,7 +577,34 @@ router.get('/friend-status/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get friends list
+/**
+ * @swagger
+ * /api/relationships/{userId}/friends:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get friends list
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Friends list retrieved
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/friends', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -294,7 +622,23 @@ router.get('/:userId/friends', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get pending friend requests (received by current user)
+/**
+ * @swagger
+ * /api/relationships/friend-requests/pending:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get pending friend requests
+ *     description: Returns friend requests received by current user
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending requests retrieved
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/friend-requests/pending', auth_1.requireAuth, async (req, res) => {
     try {
         const currentUserId = req.user.id;
@@ -314,7 +658,29 @@ router.get('/friend-requests/pending', auth_1.requireAuth, async (req, res) => {
 /**
  * COMBINED ENDPOINTS
  */
-// Get combined relationship status
+/**
+ * @swagger
+ * /api/relationships/status/{userId}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get combined relationship status
+ *     description: Returns follow, friend, and subscription status in single call
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Combined status retrieved
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -327,7 +693,37 @@ router.get('/status/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get suggestions (people to follow/friend)
+/**
+ * @swagger
+ * /api/relationships/suggestions/{type}:
+ *   get:
+ *     tags: [Relationship]
+ *     summary: Get suggestions
+ *     description: Returns suggested users to follow or friend
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [follow, friend]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Suggestions retrieved
+ *       400:
+ *         description: Invalid type (must be 'follow' or 'friend')
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/suggestions/:type', auth_1.requireAuth, async (req, res) => {
     try {
         const { type } = req.params; // 'follow' or 'friend'
@@ -352,7 +748,39 @@ router.get('/suggestions/:type', auth_1.requireAuth, async (req, res) => {
 /**
  * BULK OPERATIONS (for efficiency)
  */
-// Get bulk follow status for multiple users
+/**
+ * @swagger
+ * /api/relationships/bulk/follow-status:
+ *   post:
+ *     tags: [Relationship]
+ *     summary: Get bulk follow status
+ *     description: Returns follow status for multiple users (max 100)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userIds
+ *             properties:
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 maxItems: 100
+ *     responses:
+ *       200:
+ *         description: Bulk status retrieved (returns object mapping userId to boolean)
+ *       400:
+ *         description: Invalid request (empty array or >100 users)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/bulk/follow-status', auth_1.requireAuth, async (req, res) => {
     try {
         const { userIds } = req.body;

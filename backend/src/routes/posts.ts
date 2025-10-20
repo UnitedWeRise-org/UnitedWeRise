@@ -17,7 +17,56 @@ import { EngagementScoringService } from '../services/engagementScoringService';
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
-// Get posts with geographic data for map display
+/**
+ * @swagger
+ * /api/posts/map-data:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get posts with geographic data for map display
+ *     description: Returns posts filtered by geographic scope (national, state, or local) for map visualization
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [national, state, local]
+ *           default: national
+ *         description: Geographic scope for post filtering
+ *       - in: query
+ *         name: count
+ *         schema:
+ *           type: integer
+ *           default: 9
+ *         description: Maximum number of posts to return
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 scope:
+ *                   type: string
+ *                   example: national
+ *                 hasRealPosts:
+ *                   type: boolean
+ *                 fallbackNeeded:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/map-data', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { scope = 'national', count = 9 } = req.query;
@@ -57,7 +106,75 @@ router.get('/map-data', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Create a new post
+/**
+ * @swagger
+ * /api/posts:
+ *   post:
+ *     tags: [Post]
+ *     summary: Create a new post
+ *     description: Creates a new post with content moderation, geographic tagging, AI embedding, and reputation tracking. Automatically splits long content into main and extended sections.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: Post content (automatically split if >500 chars)
+ *                 example: "This is my post about civic engagement..."
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL of attached image (optional)
+ *               mediaId:
+ *                 type: string
+ *                 description: ID of single uploaded photo to attach
+ *               mediaIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of photo IDs to attach to post
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [Public Post, Official Post, Candidate Post, Volunteer Post]
+ *                 description: Post tags (default "Public Post"). "Official Post" requires ELECTED_OFFICIAL profile, "Candidate Post" requires CANDIDATE profile
+ *                 example: ["Public Post"]
+ *     responses:
+ *       201:
+ *         description: Post created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Post created successfully
+ *                 post:
+ *                   type: object
+ *                   description: Created post with engagement counts
+ *       400:
+ *         description: Validation error - missing content or invalid data
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - insufficient permissions for requested tag type or user is suspended
+ *       404:
+ *         description: User not found
+ *       429:
+ *         description: Rate limit exceeded - too many posts
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, validatePost, moderateContent('POST'), async (req: AuthRequest, res) => {
     try {
         const { content, imageUrl, mediaId, tags } = req.body;
@@ -316,8 +433,54 @@ router.post('/', requireAuth, checkUserSuspension, postLimiter, contentFilter, v
     }
 });
 
-
-// Get user's own posts (personal feed)
+/**
+ * @swagger
+ * /api/posts/me:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get current user's own posts
+ *     description: Returns authenticated user's posts with reaction and share data
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip for pagination
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     try {
         const userId = req.user!.id;
@@ -402,7 +565,36 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Get single post
+/**
+ * @swagger
+ * /api/posts/{postId}:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get single post by ID
+ *     description: Retrieves a specific post with user's reaction data if authenticated
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post unique identifier
+ *     responses:
+ *       200:
+ *         description: Post retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 post:
+ *                   type: object
+ *                   description: Post with engagement data and user reactions
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
@@ -478,7 +670,42 @@ router.get('/:postId', async (req, res) => {
     }
 });
 
-// Like/Unlike a post
+/**
+ * @swagger
+ * /api/posts/{postId}/like:
+ *   post:
+ *     tags: [Post]
+ *     summary: Like or unlike a post
+ *     description: Toggles like status on a post. Awards reputation to post author when reaching 5+ likes.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to like/unlike
+ *     responses:
+ *       200:
+ *         description: Like status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Post liked successfully
+ *                 liked:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -594,7 +821,64 @@ router.post('/:postId/like', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Enhanced reaction system (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+/**
+ * @swagger
+ * /api/posts/{postId}/reaction:
+ *   post:
+ *     tags: [Post]
+ *     summary: Add or update reaction to a post
+ *     description: Enhanced reaction system allowing sentiment (LIKE/DISLIKE) and stance (AGREE/DISAGREE) reactions. Pass reactionValue as null to remove reaction.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to react to
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reactionType
+ *               - reactionValue
+ *             properties:
+ *               reactionType:
+ *                 type: string
+ *                 enum: [sentiment, stance]
+ *                 description: Type of reaction
+ *               reactionValue:
+ *                 type: string
+ *                 enum: [LIKE, DISLIKE, AGREE, DISAGREE, null]
+ *                 nullable: true
+ *                 description: Reaction value (null to remove reaction)
+ *     responses:
+ *       200:
+ *         description: Reaction updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 reactionType:
+ *                   type: string
+ *                 reactionValue:
+ *                   type: string
+ *       400:
+ *         description: Invalid reaction type or value
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/reaction', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -791,7 +1075,62 @@ router.post('/:postId/reaction', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Share a post (simple share or quote share)
+/**
+ * @swagger
+ * /api/posts/{postId}/share:
+ *   post:
+ *     tags: [Post]
+ *     summary: Share a post
+ *     description: Share a post (simple share) or share with commentary (quote share). Cannot share own posts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to share
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - shareType
+ *             properties:
+ *               shareType:
+ *                 type: string
+ *                 enum: [SIMPLE, QUOTE]
+ *                 description: Share type
+ *               content:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Quote content (required for QUOTE shares)
+ *     responses:
+ *       200:
+ *         description: Post shared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 shareType:
+ *                   type: string
+ *                 hasContent:
+ *                   type: boolean
+ *       400:
+ *         description: Invalid share type, missing quote content, or attempting to share own post
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/share', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -903,7 +1242,62 @@ router.post('/:postId/share', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// React to a comment (sentiment: LIKE/DISLIKE, stance: AGREE/DISAGREE)
+/**
+ * @swagger
+ * /api/posts/comments/{commentId}/reaction:
+ *   post:
+ *     tags: [Post]
+ *     summary: Add or update reaction to a comment
+ *     description: React to a comment with sentiment (LIKE/DISLIKE) or stance (AGREE/DISAGREE). Pass reactionValue as null to remove reaction.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comment ID to react to
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reactionType
+ *               - reactionValue
+ *             properties:
+ *               reactionType:
+ *                 type: string
+ *                 enum: [sentiment, stance]
+ *               reactionValue:
+ *                 type: string
+ *                 enum: [LIKE, DISLIKE, AGREE, DISAGREE, null]
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Comment reaction updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 reactionType:
+ *                   type: string
+ *                 reactionValue:
+ *                   type: string
+ *       400:
+ *         description: Invalid reaction type or value
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/comments/:commentId/reaction', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { commentId } = req.params;
@@ -1102,7 +1496,65 @@ router.post('/comments/:commentId/reaction', requireAuth, async (req: AuthReques
     }
 });
 
-// Add comment to post
+/**
+ * @swagger
+ * /api/posts/{postId}/comments:
+ *   post:
+ *     tags: [Post]
+ *     summary: Add a comment to a post
+ *     description: Create a comment on a post with depth-based threading. Supports nested replies up to 3 visual layers. Author continuations (author commenting on own post) have higher character limits.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to comment on
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 5000
+ *                 description: Comment content (max 2000 chars for normal comments, 5000 for author continuations)
+ *               parentId:
+ *                 type: string
+ *                 description: Parent comment ID for nested replies (optional)
+ *     responses:
+ *       201:
+ *         description: Comment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 comment:
+ *                   type: object
+ *                   description: Created comment with user data
+ *       400:
+ *         description: Validation error - missing content or exceeds character limit
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: User is suspended
+ *       404:
+ *         description: Post or parent comment not found
+ *       429:
+ *         description: Rate limit exceeded
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter, validateComment, moderateContent('COMMENT'), async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -1246,7 +1698,52 @@ router.post('/:postId/comments', requireAuth, checkUserSuspension, contentFilter
     }
 });
 
-// Get comments for a post
+/**
+ * @swagger
+ * /api/posts/{postId}/comments:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get comments for a post
+ *     description: Retrieves all comments for a post in threaded tree structure with user reactions if authenticated
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Pagination limit (currently returns all comments)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Comments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                   description: Top-level comments with nested replies in tree structure
+ *                 pagination:
+ *                   type: object
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:postId/comments', addContentWarnings, async (req, res) => {
     try {
         const { postId } = req.params;
@@ -1357,7 +1854,51 @@ router.get('/:postId/comments', addContentWarnings, async (req, res) => {
     }
 });
 
-// Get posts by a specific user
+/**
+ * @swagger
+ * /api/posts/user/{userId}:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get posts by a specific user
+ *     description: Retrieves all posts created by a specific user with engagement data
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip for pagination
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -1454,7 +1995,49 @@ router.get('/user/:userId', async (req, res) => {
     }
 });
 
-// Comment summarization endpoint for Post Focus View
+/**
+ * @swagger
+ * /api/posts/{postId}/comments/summarize:
+ *   post:
+ *     tags: [Post]
+ *     summary: Generate AI summary of post comments
+ *     description: Uses Azure OpenAI to summarize comment threads when total character count exceeds 10,000. Returns null if below threshold.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Summary generated or threshold check completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 summary:
+ *                   type: string
+ *                   nullable: true
+ *                   description: AI-generated summary (null if below threshold or AI unavailable)
+ *                 totalCharacters:
+ *                   type: integer
+ *                 totalComments:
+ *                   type: integer
+ *                 belowThreshold:
+ *                   type: boolean
+ *                   description: True if below 10,000 character threshold
+ *                 aiError:
+ *                   type: string
+ *                   description: Error message if AI summarization failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/comments/summarize', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -1536,7 +2119,74 @@ router.post('/:postId/comments/summarize', requireAuth, async (req: AuthRequest,
 // ========================================
 
 /**
- * Edit a post with full history tracking
+ * @swagger
+ * /api/posts/{postId}:
+ *   put:
+ *     tags: [Post]
+ *     summary: Edit a post
+ *     description: Update post content with full history tracking. Only post author can edit. Tracks all edits with optional edit reasons.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to edit
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *                 description: Updated post content
+ *               extendedContent:
+ *                 type: string
+ *                 description: Extended content for longer posts
+ *               editReason:
+ *                 type: string
+ *                 description: Optional reason for edit (recommended)
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     post:
+ *                       type: object
+ *                     previousContent:
+ *                       type: string
+ *                     editReason:
+ *                       type: string
+ *                     version:
+ *                       type: integer
+ *       400:
+ *         description: Validation error - missing content or exceeds length
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not post owner
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
  */
 router.put('/:postId', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1619,7 +2269,52 @@ router.put('/:postId', requireAuth, async (req: AuthRequest, res) => {
 });
 
 /**
- * Delete a post with archival
+ * @swagger
+ * /api/posts/{postId}:
+ *   delete:
+ *     tags: [Post]
+ *     summary: Delete a post
+ *     description: Soft delete a post with archival. Only post author can delete. Post content is archived for recovery.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to delete
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               deleteReason:
+ *                 type: string
+ *                 description: Optional reason for deletion
+ *     responses:
+ *       200:
+ *         description: Post deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not post owner
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
  */
 router.delete('/:postId', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1678,7 +2373,44 @@ router.delete('/:postId', requireAuth, async (req: AuthRequest, res) => {
 });
 
 /**
- * Get post edit history
+ * @swagger
+ * /api/posts/{postId}/history:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get post edit history
+ *     description: Retrieve complete edit history for a post. Only post author can view history.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: History retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                   description: Array of edit history records
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not post owner
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
  */
 router.get('/:postId/history', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1718,7 +2450,44 @@ router.get('/:postId/history', requireAuth, async (req: AuthRequest, res) => {
 });
 
 /**
- * Get archived post content (for deleted posts)
+ * @swagger
+ * /api/posts/{postId}/archive:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get archived post content
+ *     description: Retrieve archived content for a deleted post. Only post author can view archives.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Deleted post ID
+ *     responses:
+ *       200:
+ *         description: Archive retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Archived post content
+ *       400:
+ *         description: Post is not deleted
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not post owner
+ *       404:
+ *         description: Post or archive not found
+ *       500:
+ *         description: Internal server error
  */
 router.get('/:postId/archive', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1764,7 +2533,52 @@ router.get('/:postId/archive', requireAuth, async (req: AuthRequest, res) => {
 });
 
 /**
- * Update Post Management Service configuration (admin only)
+ * @swagger
+ * /api/posts/config/management:
+ *   put:
+ *     tags: [Admin]
+ *     summary: Update post management configuration (admin only)
+ *     description: Configure post management service settings including edit history retention and soft delete behavior
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               maxEditHistoryVersions:
+ *                 type: integer
+ *                 description: Maximum number of edit history versions to retain
+ *               enableSoftDelete:
+ *                 type: boolean
+ *                 description: Enable soft delete (mark as deleted vs permanent deletion)
+ *               requireEditReasons:
+ *                 type: boolean
+ *                 description: Require users to provide edit reasons
+ *               archiveCommentsOnDelete:
+ *                 type: boolean
+ *                 description: Archive comments when post is deleted
+ *     responses:
+ *       200:
+ *         description: Configuration updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Internal server error
  */
 router.put('/config/management', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1814,7 +2628,32 @@ router.put('/config/management', requireAuth, async (req: AuthRequest, res) => {
 });
 
 /**
- * Get current Post Management Service configuration (admin only)
+ * @swagger
+ * /api/posts/config/management:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get post management configuration (admin only)
+ *     description: Retrieve current post management service configuration
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Configuration retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Internal server error
  */
 router.get('/config/management', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -1847,7 +2686,71 @@ router.get('/config/management', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Get trending comments for a post
+/**
+ * @swagger
+ * /api/posts/{postId}/trending-comments:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get trending comments for a post
+ *     description: Uses EngagementScoringService to identify trending comments based on engagement metrics, time decay, and author reputation
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
+ *           minimum: 1
+ *           maximum: 20
+ *         description: Maximum number of trending comments to return
+ *       - in: query
+ *         name: minScore
+ *         schema:
+ *           type: number
+ *           default: 1.0
+ *           minimum: 0
+ *         description: Minimum engagement score threshold
+ *       - in: query
+ *         name: timeWindow
+ *         schema:
+ *           type: integer
+ *           default: 24
+ *           minimum: 1
+ *           maximum: 168
+ *         description: Time window in hours for trending calculation
+ *     responses:
+ *       200:
+ *         description: Trending comments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     trendingComments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     stats:
+ *                       type: object
+ *                     postId:
+ *                       type: string
+ *                     algorithm:
+ *                       type: string
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:postId/trending-comments', async (req, res) => {
     try {
         const { postId } = req.params;
@@ -1957,7 +2860,47 @@ router.get('/:postId/trending-comments', async (req, res) => {
 
 // ==================== SAVED POSTS ENDPOINTS ====================
 
-// Save a post
+/**
+ * @swagger
+ * /api/posts/{postId}/save:
+ *   post:
+ *     tags: [Post]
+ *     summary: Save a post for later
+ *     description: Add a post to user's saved posts collection. Idempotent - updates timestamp if already saved.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to save
+ *     responses:
+ *       200:
+ *         description: Post saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     saved:
+ *                       type: boolean
+ *                     savedAt:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -2009,7 +2952,43 @@ router.post('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Unsave a post
+/**
+ * @swagger
+ * /api/posts/{postId}/save:
+ *   delete:
+ *     tags: [Post]
+ *     summary: Remove a post from saved posts
+ *     description: Remove a post from user's saved collection. Idempotent - no error if post wasn't saved.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID to unsave
+ *     responses:
+ *       200:
+ *         description: Post unsaved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     saved:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.delete('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { postId } = req.params;
@@ -2039,7 +3018,61 @@ router.delete('/:postId/save', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Get saved posts
+/**
+ * @swagger
+ * /api/posts/saved:
+ *   get:
+ *     tags: [Post]
+ *     summary: Get user's saved posts
+ *     description: Retrieve all posts saved by the authenticated user with pagination and sorting options
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip for pagination
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [recent, oldest, popular]
+ *           default: recent
+ *         description: Sort order (recent=most recently saved, oldest=first saved, popular=most likes)
+ *     responses:
+ *       200:
+ *         description: Saved posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     total:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/saved', requireAuth, async (req: AuthRequest, res) => {
     try {
         const userId = req.user!.id;
@@ -2115,7 +3148,54 @@ router.get('/saved', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
-// Batch check saved status
+/**
+ * @swagger
+ * /api/posts/saved/check:
+ *   post:
+ *     tags: [Post]
+ *     summary: Batch check saved status for multiple posts
+ *     description: Check which posts from a list are saved by the current user (useful for UI state management)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - postIds
+ *             properties:
+ *               postIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of post IDs to check
+ *     responses:
+ *       200:
+ *         description: Saved status checked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     saved:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: boolean
+ *                       description: Map of postId to boolean saved status
+ *       400:
+ *         description: Validation error - postIds must be an array
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/saved/check', requireAuth, async (req: AuthRequest, res) => {
     try {
         const userId = req.user!.id;

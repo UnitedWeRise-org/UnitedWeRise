@@ -1533,7 +1533,7 @@ Conversation
 
 **`20250809004127_initial`** - Initial schema
 - Complete database schema bootstrap
-- All 94 models, relationships, indexes
+- All models, relationships, indexes (current count: 86 models)
 
 ---
 

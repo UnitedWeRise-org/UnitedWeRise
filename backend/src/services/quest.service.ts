@@ -38,7 +38,24 @@ interface QuestCreateInput {
 }
 
 class QuestService {
-  // Generate daily quests for a user
+  /**
+   * Generates or retrieves daily quests for a user
+   *
+   * If user already has daily quests for today, returns existing quests.
+   * Otherwise generates 2-3 personalized quests based on user profile:
+   * - Daily habit quest (always included)
+   * - Daily civic quest based on interests
+   * - Social engagement quest (for new users <30 days old)
+   *
+   * @param userId - The unique identifier of the user
+   * @returns Promise<Quest[]> Array of daily quests (typically 2-3 quests)
+   * @throws {Error} When user is not found
+   *
+   * @example
+   * const quests = await questService.generateDailyQuests('user_123');
+   * console.log(quests.length); // 2 or 3
+   * console.log(quests[0].type); // 'DAILY_HABIT'
+   */
   async generateDailyQuests(userId: string): Promise<Quest[]> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -263,7 +280,32 @@ class QuestService {
     });
   }
 
-  // Update quest progress
+  /**
+   * Updates quest progress based on user actions
+   *
+   * Called by other services when users perform actions that contribute to quest completion.
+   * Checks all active quests for the user and increments progress if action matches quest requirements.
+   * Automatically handles quest completion and reward distribution.
+   *
+   * Supported action types:
+   * - USER_LOGIN: Daily login quests
+   * - POST_VIEWED: Reading posts quests
+   * - POST_CREATED, COMMENT_CREATED, PETITION_SIGNED: Civic action quests
+   * - FOLLOW_ADDED, FRIEND_REQUEST_SENT: Social interaction quests
+   *
+   * @param userId - The unique identifier of the user
+   * @param actionType - The type of action performed (e.g., 'POST_CREATED', 'PETITION_SIGNED')
+   * @param metadata - Optional additional data about the action (e.g., post ID, category)
+   * @returns Promise<void>
+   *
+   * @example
+   * // When user creates a post
+   * await questService.updateQuestProgress('user_123', 'POST_CREATED', { postId: 'post_456' });
+   *
+   * @example
+   * // When user views a post
+   * await questService.updateQuestProgress('user_123', 'POST_VIEWED');
+   */
   async updateQuestProgress(userId: string, actionType: string, metadata?: any): Promise<void> {
     // Get user's active quests
     const activeQuests = await prisma.userQuestProgress.findMany({
@@ -472,7 +514,26 @@ class QuestService {
     }
   }
 
-  // Get user's quest progress
+  /**
+   * Retrieves comprehensive quest progress data for a user
+   *
+   * Returns all quest progress entries organized by timeframe and completion status,
+   * plus streak statistics and summary data.
+   *
+   * @param userId - The unique identifier of the user
+   * @returns Promise<Object> Object containing:
+   *   - dailyQuests: Daily quest progress entries
+   *   - weeklyQuests: Weekly quest progress entries
+   *   - activeQuests: Currently incomplete quests
+   *   - completedQuests: All completed quests
+   *   - streak: UserQuestStreak record with current/longest streaks
+   *   - stats: Summary statistics (totalCompleted, dailyStreak, weeklyStreak, longestStreak)
+   *
+   * @example
+   * const progress = await questService.getUserQuestProgress('user_123');
+   * console.log(progress.stats.dailyStreak); // 7
+   * console.log(progress.activeQuests.length); // 2
+   */
   async getUserQuestProgress(userId: string): Promise<any> {
     const questProgress = await prisma.userQuestProgress.findMany({
       where: { userId },
@@ -509,7 +570,19 @@ class QuestService {
     };
   }
 
-  // Create weekly quest
+  /**
+   * Creates a standard weekly engagement quest
+   *
+   * Creates the "Weekly Civic Champion" quest that requires completing 5 daily quests
+   * within a week. Typically called by scheduled task at the start of each week.
+   *
+   * @returns Promise<Quest> The created weekly quest
+   *
+   * @example
+   * const weeklyQuest = await questService.createWeeklyQuest();
+   * console.log(weeklyQuest.title); // "Weekly Civic Champion"
+   * console.log(weeklyQuest.requirements.target); // 5
+   */
   async createWeeklyQuest(): Promise<Quest> {
     return await prisma.quest.create({
       data: {
@@ -537,7 +610,26 @@ class QuestService {
     });
   }
 
-  // Admin: Create custom quest
+  /**
+   * Creates a custom quest with specified parameters (admin function)
+   *
+   * @param data - Quest creation data including type, category, title, description,
+   *   requirements (JSON object), rewards (JSON object), timeframe, etc.
+   * @returns Promise<Quest> The created quest
+   * @throws {Error} When required fields are missing or invalid
+   *
+   * @example
+   * const quest = await questService.createQuest({
+   *   type: 'SPECIAL_EVENT',
+   *   category: 'ADVOCACY',
+   *   title: 'Climate Action Week',
+   *   description: 'Take climate action this week',
+   *   requirements: { type: 'CIVIC_ACTION', target: 3, timeframe: 'weekly' },
+   *   rewards: { reputationPoints: 15, badges: ['badge_climate'] },
+   *   timeframe: 'WEEKLY',
+   *   createdBy: 'admin_123'
+   * });
+   */
   async createQuest(data: QuestCreateInput): Promise<Quest> {
     return await prisma.quest.create({
       data: {
@@ -548,7 +640,18 @@ class QuestService {
     });
   }
 
-  // Admin: Get all quests
+  /**
+   * Retrieves all quests in the system (admin function)
+   *
+   * Returns all quests with user progress counts, sorted by active status,
+   * display order, and creation date.
+   *
+   * @returns Promise<Quest[]> Array of all quests with _count.userProgress included
+   *
+   * @example
+   * const allQuests = await questService.getAllQuests();
+   * console.log(allQuests[0]._count.userProgress); // 42 users working on this quest
+   */
   async getAllQuests(): Promise<Quest[]> {
     return await prisma.quest.findMany({
       include: {
@@ -566,7 +669,22 @@ class QuestService {
     });
   }
 
-  // Admin: Update quest
+  /**
+   * Updates an existing quest's properties (admin function)
+   *
+   * Only provided fields will be updated - all fields are optional.
+   *
+   * @param questId - The unique identifier of the quest to update
+   * @param updates - Partial quest data with fields to update
+   * @returns Promise<Quest> The updated quest
+   * @throws {Error} When quest is not found
+   *
+   * @example
+   * const updated = await questService.updateQuest('quest_123', {
+   *   isActive: false,
+   *   description: 'Updated description'
+   * });
+   */
   async updateQuest(questId: string, updates: Partial<QuestCreateInput>): Promise<Quest> {
     const data: any = {};
 
@@ -586,7 +704,27 @@ class QuestService {
     });
   }
 
-  // Admin: Get quest analytics
+  /**
+   * Retrieves quest system analytics (admin function)
+   *
+   * Returns aggregated statistics about quest system performance including:
+   * - Total/active quest counts
+   * - Progress data by quest and completion status
+   * - Streak statistics (averages and maximums)
+   * - Completion rates per quest
+   *
+   * @returns Promise<Object> Object containing:
+   *   - totalQuests: Total count of quests
+   *   - activeQuests: Count of active quests
+   *   - questProgress: Array of progress grouped by questId and completion status
+   *   - streakStats: Aggregate streak statistics (_avg and _max)
+   *   - completionRates: Array of completion data per quest
+   *
+   * @example
+   * const analytics = await questService.getQuestAnalytics();
+   * console.log(analytics.streakStats._avg.currentDailyStreak); // 5.3
+   * console.log(analytics.totalQuests); // 15
+   */
   async getQuestAnalytics(): Promise<any> {
     const totalQuests = await prisma.quest.count();
     const activeQuests = await prisma.quest.count({ where: { isActive: true } });

@@ -158,6 +158,62 @@ router.get('/', async (req, res) => {
  *       404:
  *         description: Candidate not found
  */
+/**
+ * @swagger
+ * /api/candidates/pricing:
+ *   get:
+ *     tags: [Candidate]
+ *     summary: Get candidate registration pricing
+ *     description: Returns pricing tiers, policies, and features for candidate registration
+ *     responses:
+ *       200:
+ *         description: Pricing information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 pricing:
+ *                   type: object
+ *                   properties:
+ *                     local:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                         price:
+ *                           type: number
+ *                         examples:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         description:
+ *                           type: string
+ *                     regional:
+ *                       type: object
+ *                     state:
+ *                       type: object
+ *                     federal:
+ *                       type: object
+ *                     presidential:
+ *                       type: object
+ *                 policies:
+ *                   type: object
+ *                   properties:
+ *                     refunds:
+ *                       type: object
+ *                     waivers:
+ *                       type: object
+ *                 features:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
 // GET /api/candidates/pricing - Get candidate registration pricing
 router.get('/pricing', (req, res) => {
   res.json({
@@ -1012,6 +1068,153 @@ router.get('/ai/health', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/register:
+ *   post:
+ *     tags: [Candidate]
+ *     summary: Register as a candidate
+ *     description: Initiates candidate registration process with ID verification and payment requirements
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - phone
+ *               - address
+ *               - position
+ *               - campaign
+ *               - officeLevel
+ *               - agreeToTerms
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 20
+ *               address:
+ *                 type: object
+ *                 required:
+ *                   - street
+ *                   - city
+ *                   - state
+ *                   - zipCode
+ *                 properties:
+ *                   street:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   state:
+ *                     type: string
+ *                   zipCode:
+ *                     type: string
+ *                   district:
+ *                     type: string
+ *               position:
+ *                 type: object
+ *                 required:
+ *                   - title
+ *                   - level
+ *                   - electionDate
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   level:
+ *                     type: string
+ *                     enum: [federal, state, county, city, local]
+ *                   district:
+ *                     type: string
+ *                   electionDate:
+ *                     type: string
+ *                     format: date
+ *               campaign:
+ *                 type: object
+ *                 required:
+ *                   - name
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   website:
+ *                     type: string
+ *                     format: uri
+ *                   slogan:
+ *                     type: string
+ *                     maxLength: 500
+ *                   description:
+ *                     type: string
+ *                     maxLength: 2000
+ *               officeLevel:
+ *                 type: string
+ *                 enum: [local, regional, state, federal, presidential]
+ *               hasFinancialHardship:
+ *                 type: boolean
+ *                 default: false
+ *               hardshipReason:
+ *                 type: string
+ *               communityEndorsements:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               agreeToTerms:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Candidate registration initiated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 registration:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     registrationId:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     officeLevel:
+ *                       type: string
+ *                     registrationFee:
+ *                       type: number
+ *                     originalFee:
+ *                       type: number
+ *                     feeWaiverStatus:
+ *                       type: string
+ *                     nextSteps:
+ *                       type: object
+ *                     policies:
+ *                       type: object
+ *       400:
+ *         description: Validation error or existing registration
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Failed to register candidate
+ */
 // POST /api/candidates/register - Register as a candidate
 router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1142,6 +1345,71 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/registration/{id}/verify-idme:
+ *   post:
+ *     tags: [Candidate]
+ *     summary: Process ID.me verification
+ *     description: Handles ID.me verification callback for candidate registration
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate registration ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - verified
+ *             properties:
+ *               verificationToken:
+ *                 type: string
+ *               idmeUserId:
+ *                 type: string
+ *               verified:
+ *                 type: boolean
+ *               userData:
+ *                 type: object
+ *                 properties:
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: ID.me verification successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 nextStep:
+ *                   type: string
+ *                   example: payment
+ *       400:
+ *         description: Verification failed
+ *       404:
+ *         description: Registration not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to process verification
+ */
 // POST /api/candidates/registration/:id/verify-idme - Handle ID.me verification
 router.post('/registration/:id/verify-idme', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1201,6 +1469,63 @@ router.post('/registration/:id/verify-idme', requireAuth, async (req: AuthReques
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/registration/{id}/payment:
+ *   post:
+ *     tags: [Candidate]
+ *     summary: Process registration payment
+ *     description: Processes candidate registration fee payment via Stripe
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate registration ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentMethod
+ *               - stripePaymentIntentId
+ *             properties:
+ *               paymentMethod:
+ *                 type: string
+ *                 description: Payment method identifier
+ *               stripePaymentIntentId:
+ *                 type: string
+ *                 description: Stripe payment intent ID
+ *     responses:
+ *       200:
+ *         description: Payment processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 nextStep:
+ *                   type: string
+ *                   example: admin_approval
+ *       400:
+ *         description: Payment processing failed or verification required first
+ *       404:
+ *         description: Registration not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to process payment
+ */
 // POST /api/candidates/registration/:id/payment - Process payment
 router.post('/registration/:id/payment', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1269,6 +1594,72 @@ router.post('/registration/:id/payment', requireAuth, async (req: AuthRequest, r
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/registration/{id}/withdraw:
+ *   post:
+ *     tags: [Candidate]
+ *     summary: Withdraw candidate registration
+ *     description: Withdraws candidate registration with potential refund (48-hour window) and 7-day re-registration lockout
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Candidate registration ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for withdrawal
+ *     responses:
+ *       200:
+ *         description: Registration withdrawn successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 refund:
+ *                   type: object
+ *                   properties:
+ *                     eligible:
+ *                       type: boolean
+ *                     amount:
+ *                       type: number
+ *                     processing_time:
+ *                       type: string
+ *                     message:
+ *                       type: string
+ *                 lockout:
+ *                   type: object
+ *                   properties:
+ *                     until:
+ *                       type: string
+ *                       format: date-time
+ *                     message:
+ *                       type: string
+ *       400:
+ *         description: Registration already closed
+ *       404:
+ *         description: Registration not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to process withdrawal
+ */
 // POST /api/candidates/registration/:id/withdraw - Withdraw registration with potential refund
 router.post('/registration/:id/withdraw', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1371,6 +1762,67 @@ router.post('/registration/:id/withdraw', requireAuth, async (req: AuthRequest, 
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/request-waiver:
+ *   post:
+ *     tags: [Candidate]
+ *     summary: Request registration fee waiver
+ *     description: Submits a request for candidate registration fee waiver based on financial hardship or community endorsement
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - registrationId
+ *               - waiverType
+ *               - reason
+ *             properties:
+ *               registrationId:
+ *                 type: string
+ *                 description: Candidate registration ID
+ *               waiverType:
+ *                 type: string
+ *                 enum: [hardship, community]
+ *                 description: Type of waiver request
+ *               reason:
+ *                 type: string
+ *                 description: Detailed reason for waiver request
+ *               documentation:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Supporting documentation file IDs
+ *     responses:
+ *       200:
+ *         description: Waiver request submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 estimatedReview:
+ *                   type: string
+ *                   example: 2-3 business days
+ *                 contact:
+ *                   type: string
+ *                   example: waivers@unitedwerise.org
+ *       404:
+ *         description: Registration not found or not eligible for waiver
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to submit waiver request
+ */
 // POST /api/candidates/request-waiver - Request fee waiver
 router.post('/request-waiver', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1420,6 +1872,47 @@ router.post('/request-waiver', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/candidates/my-registrations:
+ *   get:
+ *     tags: [Candidate]
+ *     summary: Get user's candidate registrations
+ *     description: Retrieves all candidate registrations for the authenticated user with lockout status
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User registrations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 registrations:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/CandidateRegistration'
+ *                 count:
+ *                   type: integer
+ *                 lockout:
+ *                   type: object
+ *                   properties:
+ *                     active:
+ *                       type: boolean
+ *                     until:
+ *                       type: string
+ *                       format: date-time
+ *                     message:
+ *                       type: string
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to fetch registrations
+ */
 // GET /api/candidates/my-registrations - Get user's candidate registrations
 router.get('/my-registrations', requireAuth, async (req: AuthRequest, res) => {
   try {

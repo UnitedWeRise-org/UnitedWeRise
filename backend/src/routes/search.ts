@@ -6,6 +6,201 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
+/**
+ * @swagger
+ * /api/search/unified:
+ *   get:
+ *     tags: [Search]
+ *     summary: Unified search endpoint (optimized)
+ *     description: Searches across multiple content types (users, posts, officials, topics) in a single API call. Replaces 4 separate API calls with one batched operation for improved performance.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *         example: healthcare
+ *       - in: query
+ *         name: types
+ *         schema:
+ *           type: string
+ *           default: all
+ *         description: Comma-separated list of content types to search (users,posts,officials,topics) or 'all'
+ *         example: users,posts
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results per content type
+ *     responses:
+ *       200:
+ *         description: Search completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 query:
+ *                   type: string
+ *                   description: Search query that was executed (lowercase)
+ *                 data:
+ *                   type: object
+ *                   description: Search results grouped by content type
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       description: Matching users (sorted by followers count)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                             nullable: true
+ *                           bio:
+ *                             type: string
+ *                             nullable: true
+ *                           verified:
+ *                             type: boolean
+ *                           followersCount:
+ *                             type: integer
+ *                           state:
+ *                             type: string
+ *                             nullable: true
+ *                           zipCode:
+ *                             type: string
+ *                             nullable: true
+ *                           city:
+ *                             type: string
+ *                             nullable: true
+ *                           office:
+ *                             type: string
+ *                             nullable: true
+ *                           politicalProfileType:
+ *                             type: string
+ *                             nullable: true
+ *                           isFollowing:
+ *                             type: boolean
+ *                             description: Whether current user follows this user
+ *                     posts:
+ *                       type: array
+ *                       description: Matching posts (sorted by recency)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           photos:
+ *                             type: array
+ *                           _count:
+ *                             type: object
+ *                             properties:
+ *                               comments:
+ *                                 type: integer
+ *                               likes:
+ *                                 type: integer
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                     officials:
+ *                       type: array
+ *                       description: Matching officials and candidates (combined from User model and Candidate model, deduplicated)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                             nullable: true
+ *                           bio:
+ *                             type: string
+ *                             nullable: true
+ *                           verified:
+ *                             type: boolean
+ *                           politicalProfileType:
+ *                             type: string
+ *                           office:
+ *                             type: string
+ *                             nullable: true
+ *                           officialTitle:
+ *                             type: string
+ *                             nullable: true
+ *                           state:
+ *                             type: string
+ *                             nullable: true
+ *                           city:
+ *                             type: string
+ *                             nullable: true
+ *                           followersCount:
+ *                             type: integer
+ *                           candidateId:
+ *                             type: string
+ *                             nullable: true
+ *                             description: Candidate ID if from Candidate model
+ *                           candidateStatus:
+ *                             type: string
+ *                             nullable: true
+ *                           isExternallySourced:
+ *                             type: boolean
+ *                             nullable: true
+ *                     topics:
+ *                       type: array
+ *                       description: Matching topics extracted from posts
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           postCount:
+ *                             type: integer
+ *                             description: Approximate post count (currently returns 1)
+ *                           id:
+ *                             type: string
+ *                             description: Topic identifier (lowercase with dashes)
+ *                 optimized:
+ *                   type: boolean
+ *                   description: Flag indicating this is the batched endpoint
+ *                   example: true
+ *       400:
+ *         description: Validation error - search query is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Search query is required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // 🎯 OPTIMIZED: Unified search endpoint (replaces 4 separate API calls)
 // Replaces: /search/users + /search/posts + /search/officials + /search/topics
 router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
@@ -404,6 +599,86 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/search/users:
+ *   get:
+ *     tags: [Search]
+ *     summary: Search users (legacy endpoint)
+ *     description: Searches for users by username, first name, or last name. Legacy endpoint - prefer using /unified for better performance.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *         example: john
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Users found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   description: Matching users sorted by followers count
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                         nullable: true
+ *                       bio:
+ *                         type: string
+ *                         nullable: true
+ *                       verified:
+ *                         type: boolean
+ *                       followersCount:
+ *                         type: integer
+ *                       state:
+ *                         type: string
+ *                         nullable: true
+ *                       zipCode:
+ *                         type: string
+ *                         nullable: true
+ *                       city:
+ *                         type: string
+ *                         nullable: true
+ *                       office:
+ *                         type: string
+ *                         nullable: true
+ *                       politicalProfileType:
+ *                         type: string
+ *                         nullable: true
+ *                       isFollowing:
+ *                         type: boolean
+ *                         description: Whether current user follows this user
+ *       400:
+ *         description: Validation error - search query is required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Legacy individual search endpoints for backward compatibility
 router.get('/users', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -479,6 +754,68 @@ router.get('/users', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/search/posts:
+ *   get:
+ *     tags: [Search]
+ *     summary: Search posts (legacy endpoint)
+ *     description: Searches for posts by content text. Legacy endpoint - prefer using /unified for better performance.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *         example: healthcare
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Posts found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   description: Matching posts sorted by recency
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       content:
+ *                         type: string
+ *                       author:
+ *                         type: object
+ *                       photos:
+ *                         type: array
+ *                       _count:
+ *                         type: object
+ *                         properties:
+ *                           comments:
+ *                             type: integer
+ *                           likes:
+ *                             type: integer
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       400:
+ *         description: Validation error - search query is required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { q, limit = 10 } = req.query;
@@ -531,6 +868,83 @@ router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/search/officials:
+ *   get:
+ *     tags: [Search]
+ *     summary: Search officials and candidates (legacy endpoint)
+ *     description: Searches for elected officials and candidates by name, username, office, or title. Legacy endpoint - prefer using /unified for better performance.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *         example: senator
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Officials found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 officials:
+ *                   type: array
+ *                   description: Matching officials and candidates sorted by followers count
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                         nullable: true
+ *                       bio:
+ *                         type: string
+ *                         nullable: true
+ *                       verified:
+ *                         type: boolean
+ *                       politicalProfileType:
+ *                         type: string
+ *                         enum: [ELECTED_OFFICIAL, CANDIDATE]
+ *                       office:
+ *                         type: string
+ *                         nullable: true
+ *                       officialTitle:
+ *                         type: string
+ *                         nullable: true
+ *                       state:
+ *                         type: string
+ *                         nullable: true
+ *                       city:
+ *                         type: string
+ *                         nullable: true
+ *                       followersCount:
+ *                         type: integer
+ *       400:
+ *         description: Validation error - search query is required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { q, limit = 10 } = req.query;
@@ -615,6 +1029,60 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/search/topics:
+ *   get:
+ *     tags: [Search]
+ *     summary: Search topics (legacy endpoint)
+ *     description: Searches for topics by extracting and filtering from post topics arrays. Legacy endpoint - prefer using /unified for better performance.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *         example: climate
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results to return
+ *     responses:
+ *       200:
+ *         description: Topics found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 topics:
+ *                   type: array
+ *                   description: Matching unique topics extracted from posts
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         description: Topic name
+ *                       postCount:
+ *                         type: integer
+ *                         description: Approximate post count (currently returns 1)
+ *                       id:
+ *                         type: string
+ *                         description: Topic identifier (lowercase with dashes)
+ *                         example: climate-change
+ *       400:
+ *         description: Validation error - search query is required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/topics', requireAuth, async (req: AuthRequest, res) => {
     try {
         const { q, limit = 10 } = req.query;

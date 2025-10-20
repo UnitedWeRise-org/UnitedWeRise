@@ -28,7 +28,72 @@ const requireAdmin = async (req: AuthRequest, res: express.Response, next: expre
 
 // User Reporting Routes
 
-// Submit a report
+/**
+ * @swagger
+ * /api/moderation/reports:
+ *   post:
+ *     tags: [Moderation]
+ *     summary: Submit content report
+ *     description: Report inappropriate content (post, comment, user, message, candidate). Prevents duplicate active reports. Candidate reports use AI urgency scoring and geographic weighting.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - targetType
+ *               - targetId
+ *               - reason
+ *             properties:
+ *               targetType:
+ *                 type: string
+ *                 enum: [POST, COMMENT, USER, MESSAGE, CANDIDATE]
+ *                 description: Type of content being reported
+ *               targetId:
+ *                 type: string
+ *                 description: ID of content being reported
+ *               reason:
+ *                 type: string
+ *                 description: Reason for report (SPAM, HARASSMENT, HATE_SPEECH, etc.)
+ *               description:
+ *                 type: string
+ *                 description: Additional details about the report
+ *     responses:
+ *       200:
+ *         description: Report submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Report submitted successfully"
+ *                 reportId:
+ *                   type: string
+ *                 estimatedReviewTime:
+ *                   type: string
+ *                   example: "24-48 hours"
+ *                 geographicWeight:
+ *                   type: number
+ *                   description: Geographic priority weight (only for CANDIDATE reports)
+ *                 aiUrgencyLevel:
+ *                   type: string
+ *                   description: AI-determined urgency (only for CANDIDATE reports)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Reported content not found
+ *       409:
+ *         description: Duplicate report - user already reported this content
+ *       500:
+ *         description: Server error
+ */
 router.post('/reports', requireAuth, apiLimiter, validateReport, async (req: AuthRequest, res) => {
   try {
     const { targetType, targetId, reason, description } = req.body;
@@ -111,7 +176,58 @@ router.post('/reports', requireAuth, apiLimiter, validateReport, async (req: Aut
   }
 });
 
-// Get user's reports
+/**
+ * @swagger
+ * /api/moderation/reports/my:
+ *   get:
+ *     tags: [Moderation]
+ *     summary: Get current user's submitted reports
+ *     description: Retrieves all reports submitted by authenticated user with pagination. Target details hidden for privacy.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *         description: Reports per page
+ *     responses:
+ *       200:
+ *         description: Reports retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reports:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     description: Report with status and moderator info (target details hidden for privacy)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 router.get('/reports/my', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
@@ -158,7 +274,65 @@ router.get('/reports/my', requireAuth, async (req: AuthRequest, res) => {
 
 // Moderator Routes (require moderator access)
 
-// Get reports queue
+/**
+ * @swagger
+ * /api/moderation/reports:
+ *   get:
+ *     tags: [Moderation]
+ *     summary: Get reports queue (moderator/admin only)
+ *     description: Retrieves pending/resolved reports for moderation review with full content details. Supports filtering by status, priority, and target type.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, IN_REVIEW, RESOLVED, all]
+ *           default: "PENDING"
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [LOW, MEDIUM, HIGH, URGENT, all]
+ *       - in: query
+ *         name: targetType
+ *         schema:
+ *           type: string
+ *           enum: [POST, COMMENT, USER, MESSAGE, CANDIDATE, all]
+ *     responses:
+ *       200:
+ *         description: Reports retrieved with target content details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reports:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     description: Report with full reporter, moderator, and target content details
+ *                 pagination:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - moderator/admin access required
+ *       500:
+ *         description: Server error
+ */
 router.get('/reports', requireAuth, requireModerator, async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -276,7 +450,62 @@ router.get('/reports', requireAuth, requireModerator, async (req: AuthRequest, r
   }
 });
 
-// Take action on a report
+/**
+ * @swagger
+ * /api/moderation/reports/{reportId}/action:
+ *   post:
+ *     tags: [Moderation]
+ *     summary: Take action on report (moderator/admin only)
+ *     description: Resolve report by taking moderation action (hide content, delete content, warn user, suspend user, ban user). Sends email notification to reporter.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [NO_ACTION, CONTENT_HIDDEN, CONTENT_DELETED, USER_WARNED, USER_SUSPENDED, USER_BANNED]
+ *                 description: Moderation action to take
+ *               notes:
+ *                 type: string
+ *                 description: Moderator notes explaining action
+ *     responses:
+ *       200:
+ *         description: Report resolved and action executed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 action:
+ *                   type: string
+ *                 reportId:
+ *                   type: string
+ *       400:
+ *         description: Report already resolved
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - moderator/admin access required
+ *       404:
+ *         description: Report not found
+ *       500:
+ *         description: Server error
+ */
 router.post('/reports/:reportId/action', requireAuth, requireModerator, validateModerationAction, async (req: AuthRequest, res) => {
   try {
     const { reportId } = req.params;
@@ -444,7 +673,45 @@ async function executeModeratorAction(
   }
 }
 
-// Get moderation statistics
+/**
+ * @swagger
+ * /api/moderation/stats:
+ *   get:
+ *     tags: [Moderation]
+ *     summary: Get moderation statistics (moderator/admin only)
+ *     description: Retrieves moderation queue statistics including pending reports, urgent reports, resolved today, active flags, suspended users.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pendingReports:
+ *                   type: integer
+ *                 urgentReports:
+ *                   type: integer
+ *                 resolvedToday:
+ *                   type: integer
+ *                 activeFlags:
+ *                   type: integer
+ *                 suspendedUsers:
+ *                   type: integer
+ *                 totalReports:
+ *                   type: integer
+ *                 averageResolutionTime:
+ *                   type: string
+ *                   example: "2.3 hours"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - moderator/admin access required
+ *       500:
+ *         description: Server error
+ */
 router.get('/stats', requireAuth, requireModerator, async (req: AuthRequest, res) => {
   try {
     const [
@@ -489,7 +756,45 @@ router.get('/stats', requireAuth, requireModerator, async (req: AuthRequest, res
 
 // Admin Routes (require admin access)
 
-// Promote user to moderator
+/**
+ * @swagger
+ * /api/moderation/users/{userId}/promote:
+ *   post:
+ *     tags: [Moderation]
+ *     summary: Promote user to moderator (admin only)
+ *     description: Grants moderator privileges to specified user. Admin access required.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User promoted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User promoted to moderator successfully"
+ *                 userId:
+ *                   type: string
+ *       400:
+ *         description: User is already a moderator
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
 router.post('/users/:userId/promote', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
@@ -518,7 +823,42 @@ router.post('/users/:userId/promote', requireAuth, requireAdmin, async (req: Aut
   }
 });
 
-// Get system health for moderation
+/**
+ * @swagger
+ * /api/moderation/health:
+ *   get:
+ *     tags: [Moderation]
+ *     summary: Get moderation system health (moderator/admin only)
+ *     description: Checks moderation system health and cleans up expired suspensions. Returns system status and queue information.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: System health OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "healthy"
+ *                 automatedModeration:
+ *                   type: string
+ *                   example: "active"
+ *                 lastCleanup:
+ *                   type: string
+ *                   format: date-time
+ *                 queueStatus:
+ *                   type: string
+ *                   example: "processing"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - moderator/admin access required
+ *       500:
+ *         description: System check failed
+ */
 router.get('/health', requireAuth, requireModerator, async (req: AuthRequest, res) => {
   try {
     // Cleanup expired suspensions

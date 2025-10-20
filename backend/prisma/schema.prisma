@@ -7,148 +7,295 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// User account and profile information
+/// @description Core user model storing account credentials, profile data, and civic engagement information.
+/// Supports multiple authentication methods (password, OAuth) and political profile types.
 model User {
+  /// Unique identifier for the user account
   id                          String                    @id @default(cuid())
+  /// User's email address (unique across platform, used for login and communication)
   email                       String                    @unique
+  /// Public username for display and mentions (unique, URL-safe)
   username                    String                    @unique
+  /// Hashed password (null for OAuth-only accounts using Google/Microsoft/Apple)
   password                    String?
+  /// User's first name (optional, for personalization)
   firstName                   String?
+  /// User's last name (optional, for personalization)
   lastName                    String?
+  /// Avatar image URL (stored in Azure Blob Storage)
   avatar                      String?
+  /// User biography/about text (displayed on profile)
   bio                         String?
+  /// Personal or campaign website URL
   website                     String?
+  /// General location description (not used for geospatial queries)
   location                    String?
+  /// Whether user has been verified by platform (blue checkmark)
   verified                    Boolean                   @default(false)
+  /// Vector embedding for user profile similarity matching (AI-generated)
   embedding                   Float[]                   @default([])
+  /// Account creation timestamp
   createdAt                   DateTime                  @default(now())
+  /// Last profile update timestamp (auto-updated by Prisma)
   updatedAt                   DateTime                  @updatedAt
+  /// Street address line 1 (used for electoral district mapping and privacy displacement)
   streetAddress               String?
+  /// Street address line 2 (apartment, suite, etc.)
   streetAddress2              String?
+  /// City name (used with state and zip for district mapping)
   city                        String?
+  /// State code (2-letter abbreviation, e.g., "CA", "NY")
   state                       String?
+  /// ZIP/postal code (used for electoral district lookup and geographic grouping)
   zipCode                     String?
+  /// H3 geospatial index at configured resolution for location-based content discovery
+  /// @description Used for feed proximity calculations and local content recommendations.
+  /// Privacy displacement may offset from actual address to protect user location.
   h3Index                     String?
+  /// Type of political profile (CITIZEN, CANDIDATE, ELECTED_OFFICIAL, POLITICAL_ORG)
   politicalProfileType        PoliticalProfileType      @default(CITIZEN)
+  /// Verification status for candidates and elected officials (PENDING, APPROVED, DENIED)
   verificationStatus          VerificationStatus        @default(PENDING)
+  /// Array of document URLs submitted for identity/position verification
   verificationDocuments       String[]                  @default([])
+  /// Office title for elected officials (e.g., "Mayor", "State Senator")
   office                      String?
+  /// Campaign website URL for candidates
   campaignWebsite             String?
+  /// Official title for elected officials or organizational representatives
   officialTitle               String?
+  /// Term start date for elected officials
   termStart                   DateTime?
+  /// Term end date for elected officials
   termEnd                     DateTime?
+  /// Whether user's email address has been verified via confirmation link
   emailVerified               Boolean                   @default(false)
+  /// Unique token sent in email verification link (expires after use or timeout)
   emailVerifyToken            String?                   @unique
+  /// Expiration timestamp for email verification token
   emailVerifyExpiry           DateTime?
+  /// User's phone number (optional, for 2FA and notifications)
   phoneNumber                 String?
+  /// Whether phone number has been verified via SMS code
   phoneVerified               Boolean                   @default(false)
+  /// 6-digit verification code sent via SMS (expires after 10 minutes)
   phoneVerifyCode             String?
+  /// Expiration timestamp for phone verification code
   phoneVerifyExpiry           DateTime?
+  /// User's marital status (optional profile field)
   maritalStatus               String?
+  /// JSON object defining privacy levels for each profile field
+  /// @description Structure: { fieldName: "public"|"followers"|"friends"|"private" }
+  /// Controls who can view each profile field (bio, city, state, phoneNumber, etc.)
   profilePrivacySettings      Json?                     @default("{\"bio\": \"public\", \"city\": \"followers\", \"state\": \"followers\", \"website\": \"public\", \"phoneNumber\": \"private\", \"maritalStatus\": \"friends\"}")
+  /// Password reset token (unique, single-use, expires after 1 hour)
   resetToken                  String?
+  /// Expiration timestamp for password reset token
   resetExpiry                 DateTime?
+  /// Real-time online status indicator (updated via WebSocket or periodic API calls)
   isOnline                    Boolean                   @default(false)
+  /// Last activity timestamp (updated on API requests, used for "last seen" display)
   lastSeenAt                  DateTime                  @default(now())
+  /// Whether user has content moderation permissions
   isModerator                 Boolean                   @default(false)
+  /// Whether user has admin dashboard access and elevated permissions
   isAdmin                     Boolean                   @default(false)
+  /// Whether user has super admin access (system configuration, user management)
   isSuperAdmin                Boolean                   @default(false)
+  /// Whether user account is currently suspended (blocks login and content visibility)
   isSuspended                 Boolean                   @default(false)
+  /// JSON data collected during onboarding flow (interests, location, preferences)
   onboardingData              Json?
+  /// Whether user has completed the onboarding process
   onboardingCompleted         Boolean                   @default(false)
+  /// Array of interest tags for content personalization (e.g., ["healthcare", "education"])
   interests                   String[]                  @default([])
+  /// JSON object configuring notification delivery preferences
+  /// @description Structure: { email: boolean, push: boolean, types: { likes: boolean, comments: boolean, ... } }
   notificationPreferences     Json?
+  /// User-chosen display name (may differ from username, used for formal contexts)
   displayName                 String?
+  /// Cached count of users this user follows (denormalized for performance)
   followingCount              Int                       @default(0)
+  /// Cached count of users following this user (denormalized for performance)
   followersCount              Int                       @default(0)
+  /// JSON object containing browser/device fingerprint data for security monitoring
+  /// @description Used to detect suspicious login patterns and account sharing
   deviceFingerprint           Json?
+  /// Timestamp of user's last successful login
   lastLoginAt                 DateTime?
+  /// IP address of user's last successful login (for security monitoring)
   lastLoginIp                 String?
+  /// Account lock expiration timestamp (prevents login during brute force protection)
   lockedUntil                 DateTime?
+  /// Failed login attempt counter (resets on successful login, triggers lock after threshold)
   loginAttempts               Int                       @default(0)
+  /// Timestamp of last password change (used for session invalidation and security checks)
   passwordChangedAt           DateTime?                 @default(now())
+  /// Calculated security risk score based on login patterns and behavior (0-100)
   riskScore                   Int                       @default(0)
+  /// Counter for suspicious activities (spam, reports, policy violations)
   suspiciousActivityCount     Int                       @default(0)
+  /// User's civic engagement reputation score (default 70, range 0-100)
+  /// @description Affects content visibility, moderation, and platform privileges
   reputationScore             Int?                      @default(70)
+  /// Timestamp of last reputation score recalculation
   reputationUpdatedAt         DateTime?
+  /// Whether to restrict photo tagging to friends only (privacy setting)
   allowTagsByFriendsOnly      Boolean                   @default(false)
+  /// Whether photo tagging is enabled at all (can disable completely)
   photoTaggingEnabled         Boolean                   @default(true)
+  /// Whether user must approve photo tags before they appear (privacy control)
   requireTagApproval          Boolean                   @default(true)
+  /// Profile background/banner image URL (stored in Azure Blob Storage)
   backgroundImage             String?
+  /// Array of one-time backup codes for 2FA recovery (hashed, 10 codes generated)
   totpBackupCodes             String[]                  @default([])
+  /// Whether Time-based One-Time Password (TOTP) 2FA is enabled
   totpEnabled                 Boolean                   @default(false)
+  /// Timestamp of last TOTP code usage (for rate limiting and security monitoring)
   totpLastUsedAt              DateTime?
+  /// Encrypted TOTP secret key (shared with authenticator app, base32 encoded)
   totpSecret                  String?
+  /// Timestamp when TOTP 2FA was first configured
   totpSetupAt                 DateTime?
+
+  // Relationships (CASCADE delete means deleting user deletes these)
+  /// Address-to-district mappings verified by this user (moderator/admin action)
   addressMappingVerifications AddressDistrictMapping[]  @relation("AddressMappingVerifications")
+  /// Suspension appeals reviewed by this user (moderator/admin role)
   reviewedAppeals             Appeal[]                  @relation("ReviewedAppeals")
+  /// Suspension appeals filed by this user (CASCADE: deletes appeals if user deleted)
   appeals                     Appeal[]                  @relation("UserAppeals")
+  /// Candidate profile for this user (1:1, optional, only for verified candidates)
   candidateProfile            Candidate?
+  /// Admin-candidate messages marked as read by this user
   readAdminMessages           CandidateAdminMessage[]   @relation("ReadAdminMessages")
+  /// Admin-candidate messages sent by this user (CASCADE: deletes messages if user deleted)
   sentAdminMessages           CandidateAdminMessage[]   @relation("SentAdminMessages")
+  /// Candidate registration applications submitted by this user (CASCADE)
   candidateRegistrations      CandidateRegistration[]
+  /// Campaign staff roles assigned to this user
   candidateStaffRoles         CandidateStaff[]
+  /// Civic events created by this user (CASCADE: deletes events if user deleted)
   eventsCreated               CivicEvent[]              @relation("EventCreator")
+  /// Comments authored by this user (CASCADE: deletes comments if user deleted)
   comments                    Comment[]
+  /// Content flags resolved by this moderator user
   resolvedFlags               ContentFlag[]             @relation("ResolvedFlags")
+  /// Conversation participations for this user (CASCADE: removes from conversations)
   conversations               ConversationParticipant[]
+  /// Votes cast on crowdsourced official data (CASCADE: deletes votes if user deleted)
   crowdsourceVotes            CrowdsourceVote[]         @relation("CrowdsourceVotes")
+  /// Crowdsourced official data submitted by this user
   officialSubmissions         CrowdsourcedOfficial[]    @relation("OfficialSubmissions")
+  /// Crowdsourced official data verified by this moderator user
   officialVerifications       CrowdsourcedOfficial[]    @relation("OfficialVerifications")
+  /// District boundary conflicts reported by this user
   conflictReports             DistrictConflict[]        @relation("ConflictReports")
+  /// District boundary conflicts resolved by this moderator user
   conflictResolutions         DistrictConflict[]        @relation("ConflictResolutions")
+  /// District office data submitted by this user
   officeSubmissions           DistrictOffice[]          @relation("OfficeSubmissions")
+  /// District office data verified by this moderator user
   officeVerifications         DistrictOffice[]          @relation("OfficeVerifications")
+  /// Electoral district data submitted by this user
   districtSubmissions         ElectoralDistrict[]       @relation("DistrictSubmissions")
+  /// Electoral district data verified by this moderator user
   districtVerifications       ElectoralDistrict[]       @relation("DistrictVerifications")
+  /// Candidate endorsements made by this user (CASCADE: deletes endorsements)
   endorsements                Endorsement[]
+  /// Event RSVPs by this user (CASCADE: deletes RSVPs if user deleted)
   eventRSVPs                  EventRSVP[]               @relation("EventRSVPs")
+  /// Users this user follows (CASCADE: deletes follow relationship)
   following                   Follow[]                  @relation("Follower")
+  /// Users following this user (CASCADE: deletes follow relationship)
   followers                   Follow[]                  @relation("Following")
+  /// Friend requests received by this user (CASCADE: deletes requests)
   receivedFriendRequests      Friendship[]              @relation("FriendshipRecipient")
+  /// Friend requests sent by this user (CASCADE: deletes requests)
   sentFriendRequests          Friendship[]              @relation("FriendshipRequester")
+  /// Post likes by this user (CASCADE: deletes likes if user deleted)
   likes                       Like[]
+  /// Message-of-the-day dismissals by this user
   dismissedMOTDs              MOTDDismissal[]           @relation("DismissedMOTDs")
+  /// MOTD admin actions performed by this user
   motdActions                 MOTDLog[]                 @relation("MOTDActions")
+  /// MOTD views by this user
   viewedMOTDs                 MOTDView[]                @relation("ViewedMOTDs")
+  /// Direct messages sent by this user (CASCADE: deletes messages)
   sentMessages                Message[]                 @relation("SentMessages")
+  /// MOTDs created by this admin user
   createdMOTDs                MessageOfTheDay[]         @relation("CreatedMOTDs")
+  /// Moderation actions performed by this moderator user (CASCADE)
   moderationLogs              ModerationLog[]           @relation("ModerationLogs")
+  /// Notifications received by this user (CASCADE: deletes notifications)
   receivedNotifications       Notification[]            @relation("NotificationReceiver")
+  /// Notifications sent by this user (system-generated or direct)
   sentNotifications           Notification[]            @relation("NotificationSender")
+  /// Payments made by this user (NOT cascaded - retained for financial records)
   payments                    Payment[]
+  /// Petitions created by this user (CASCADE: deletes petitions)
   petitionsCreated            Petition[]                @relation("PetitionCreator")
+  /// Petition signatures by this user (CASCADE: deletes signatures)
   petitionSignatures          PetitionSignature[]       @relation("PetitionSignatures")
+  /// Political inquiries submitted by this user (CASCADE: deletes inquiries)
   politicalInquiries          PoliticalInquiry[]        @relation("PoliticalInquiries")
+  /// Posts authored by this user (CASCADE: deletes posts and all related content)
   posts                       Post[]
+  /// Votes on public Q&A answers (CASCADE: deletes votes)
   publicQAVotes               PublicQAVote[]            @relation("PublicQAVotes")
+  /// Reactions (like/dislike/agree/disagree) on posts and comments (CASCADE)
   reactions                   Reaction[]
+  /// Reports moderated by this moderator user
   moderatedReports            Report[]                  @relation("ModeratedReports")
+  /// Reports filed by this user (CASCADE: deletes reports)
   reports                     Report[]                  @relation("UserReports")
+  /// Reputation events affecting this user (CASCADE: deletes history)
   reputationEvents            ReputationEvent[]
+  /// Security events logged for this user (NOT cascaded - retained for audit)
   securityEvents              SecurityEvent[]
+  /// Post shares by this user (CASCADE: deletes shares)
   shares                      Share[]
+  /// Stripe customer record for this user (1:1, NOT cascaded - financial data retained)
   stripeCustomer              StripeCustomer?
+  /// Users subscribed to this user's content
   subscribers                 Subscription[]            @relation("Subscribed")
+  /// Subscriptions by this user to other users (CASCADE: deletes subscriptions)
   subscriptions               Subscription[]            @relation("Subscriber")
+  /// Comments on discussion topics by this user (CASCADE: deletes comments)
   topicComments               TopicComment[]
+  /// Activity log entries for this user (CASCADE: deletes activity history)
   activities                  UserActivity[]
+  /// OAuth provider connections (Google, Microsoft, Apple) (CASCADE: deletes OAuth links)
   oauthProviders              UserOAuthProvider[]
+  /// Suspensions issued by this moderator user
   moderatorSuspensions        UserSuspension[]          @relation("ModeratorSuspensions")
+  /// Suspensions applied to this user (CASCADE: deletes suspension records)
   suspensions                 UserSuspension[]          @relation("UserSuspensions")
+  /// Warnings issued by this moderator user
   issuedWarnings              UserWarning[]             @relation("IssuedWarnings")
+  /// Warnings received by this user (CASCADE: deletes warning records)
   receivedWarnings            UserWarning[]             @relation("ReceivedWarnings")
+  /// Quest completion progress for this user (CASCADE: deletes progress)
   questProgress               UserQuestProgress[]
+  /// Quest streak tracking for this user (1:1, CASCADE: deletes streak data)
   questStreak                 UserQuestStreak?
+  /// Badges earned by this user (CASCADE: deletes badge awards)
   userBadges                  UserBadge[]
+  /// Photos uploaded by this user (CASCADE: deletes photos and Azure blobs)
   photos                      Photo[]
+  /// Posts saved by this user (CASCADE: deletes saved post records)
   savedPosts                  SavedPost[]
+  /// Custom feed filters created by this user (CASCADE: deletes filters)
   feedFilters                 FeedFilter[]
 
-  @@index([username])
-  @@index([createdAt])
-  @@index([h3Index])
-  @@index([politicalProfileType])
-  @@index([zipCode, state])
+  @@index([username]) /// Fast lookup for @username mentions and profile pages
+  @@index([createdAt]) /// Chronological sorting for admin user lists
+  @@index([h3Index]) /// Geospatial queries for local content discovery
+  @@index([politicalProfileType]) /// Filtering users by role (citizens vs candidates)
+  @@index([zipCode, state]) /// Electoral district lookup and local grouping
 }
 
 model UserActivity {
@@ -208,64 +355,120 @@ model Friendship {
   @@index([status])
 }
 
+/// Post content in the social feed
+/// @description User-generated content with engagement tracking, moderation, and AI analysis.
+/// Supports text, images, location tagging, and political/civic discussion.
 model Post {
+  /// Unique post identifier
   id                 String            @id @default(cuid())
+  /// Post text content (required, supports markdown-like formatting)
   content            String
+  /// Extended content for longer posts (optional, displayed with "Read more")
   extendedContent    String?
+  /// Image URL for post media (stored in Azure Blob Storage, optional)
   imageUrl           String?
+  /// Author's user ID (foreign key to User)
   authorId           String
+  /// Vector embedding for content similarity and AI recommendations
   embedding          Float[]           @default([])
+  /// Post creation timestamp
   createdAt          DateTime          @default(now())
+  /// Last modification timestamp (auto-updated by Prisma)
   updatedAt          DateTime          @updatedAt
+  /// Whether post contains political content (AI-detected or user-flagged)
   isPolitical        Boolean           @default(false)
+  /// Hashtags and topic tags (e.g., ["healthcare", "education"])
   tags               String[]          @default([])
+  /// Cached count of "like" reactions (denormalized for performance)
   likesCount         Int               @default(0)
+  /// Cached count of "dislike" reactions (denormalized)
   dislikesCount      Int               @default(0)
+  /// Cached count of "agree" stance reactions (denormalized)
   agreesCount        Int               @default(0)
+  /// Cached count of "disagree" stance reactions (denormalized)
   disagreesCount     Int               @default(0)
+  /// Cached count of comments (denormalized)
   commentsCount      Int               @default(0)
+  /// Cached count of shares (denormalized)
   sharesCount        Int               @default(0)
+  /// View/impression count
   viewsCount         Int               @default(0)
+  /// Whether post contains citizen feedback/issue report (AI-detected)
   containsFeedback   Boolean?          @default(false)
+  /// Category of feedback if detected (e.g., "infrastructure", "public safety")
   feedbackCategory   String?
+  /// AI confidence score for feedback detection (0.0-1.0)
   feedbackConfidence Float?
+  /// Priority level assigned to feedback ("low", "medium", "high", "urgent")
   feedbackPriority   String?
+  /// Feedback processing status ("new", "reviewed", "in_progress", "resolved")
   feedbackStatus     String?           @default("new")
+  /// AI-generated summary of the feedback issue
   feedbackSummary    String?
+  /// Type of feedback ("complaint", "suggestion", "question", "report")
   feedbackType       String?
+  /// Snapshot of author's reputation score at time of post creation
   authorReputation   Int?
+  /// Soft delete flag (post hidden but not removed from database)
   isDeleted          Boolean           @default(false)
+  /// Timestamp when post was soft-deleted
   deletedAt          DateTime?
+  /// Reason for deletion (moderation action, user request, policy violation)
   deletedReason      String?
+  /// Whether post appears in search results (can be disabled by moderators)
   searchable         Boolean           @default(true)
+  /// Whether post appears in public feeds (can be hidden by moderators)
   feedVisible        Boolean           @default(true)
+  /// Number of times post has been edited by author
   editCount          Int               @default(0)
+  /// Timestamp of most recent edit
   lastEditedAt       DateTime?
+  /// JSON array of previous content versions with timestamps
+  /// @description Structure: [{ content: string, editedAt: DateTime, reason?: string }]
   editHistory        Json?
+  /// Original post content before any edits (preserved for moderation)
   originalContent    String?
+  /// H3 geospatial index for post location (may be privacy-displaced)
+  /// @description Used for local feed discovery and proximity-based content
   h3Index            String?
+  /// Latitude coordinate (for precise location, may be privacy-displaced)
   latitude           Float?
+  /// Longitude coordinate (for precise location, may be privacy-displaced)
   longitude          Float?
+  /// Original H3 index before privacy displacement (stored for admin audit)
   originalH3Index    String?
+  /// Whether location has been offset for privacy protection
   privacyDisplaced   Boolean           @default(true)
+
+  // Relationships
+  /// Comments on this post (CASCADE: deleting post deletes all comments)
   comments           Comment[]
+  /// Legacy "like" records (CASCADE: deleting post deletes all likes)
+  /// @deprecated Replaced by reactions table, but kept for migration compatibility
   likes              Like[]
+  /// Post author relationship (CASCADE: deleting user soft-deletes their posts)
   author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  /// Photos attached to this post (CASCADE: deleting post deletes photos)
   photos             Photo[]
+  /// Reactions (like/dislike/agree/disagree) on this post (CASCADE)
   reactions          Reaction[]
+  /// Reputation events triggered by this post (CASCADE: deletes reputation history)
   reputationEvents   ReputationEvent[]
+  /// Shares of this post (CASCADE: deleting post deletes shares)
   shares             Share[]
+  /// Topic associations for this post (CASCADE: deletes topic links)
   topics             TopicPost[]
+  /// Users who saved this post (CASCADE: deletes saved post records)
   savedBy            SavedPost[]
 
-  @@index([authorId])
-  @@index([createdAt])
-  @@index([h3Index])
-  @@index([h3Index, createdAt])
-  @@index([originalH3Index, createdAt])
-  @@index([likesCount])
-  @@index([isPolitical])
-  @@index([containsFeedback, feedbackType, feedbackPriority])
+  @@index([authorId]) /// Fast lookup of all posts by a user
+  @@index([createdAt]) /// Chronological feed sorting
+  @@index([h3Index]) /// Geospatial queries for local content
+  @@index([h3Index, createdAt]) /// Combined index for location-based chronological feeds
+  @@index([originalH3Index, createdAt]) /// Admin audit queries with original location
+  @@index([likesCount]) /// Sorting by popularity
+  @@index([isPolitical]) /// Filtering political vs non-political content
+  @@index([containsFeedback, feedbackType, feedbackPriority]) /// Feedback management dashboard queries
 }
 
 model Like {
@@ -319,34 +522,63 @@ model Share {
   @@index([createdAt])
 }
 
+/// Comment on a post
+/// @description User-generated replies to posts, supporting nested threading and reactions.
+/// Comments can be replied to (nested comments) with depth tracking for UI rendering.
 model Comment {
+  /// Unique comment identifier
   id              String     @id @default(cuid())
+  /// Comment text content
   content         String
+  /// Comment author's user ID
   userId          String
+  /// Post this comment belongs to (foreign key to Post)
   postId          String
+  /// Parent comment ID for threaded replies (null for top-level comments)
   parentId        String?
+  /// Nesting depth level (0 = top-level, 1 = first reply, 2 = reply to reply, etc.)
+  /// @description Used to limit max nesting depth in UI (typically max 3-5 levels)
   depth           Int        @default(0)
+  /// Comment creation timestamp
   createdAt       DateTime   @default(now())
+  /// Last modification timestamp (auto-updated by Prisma)
   updatedAt       DateTime   @updatedAt
+  /// Soft delete flag (comment hidden but preserved for thread continuity)
   isDeleted       Boolean    @default(false)
+  /// Timestamp when comment was soft-deleted
   deletedAt       DateTime?
+  /// Whether to display commenter's username (false = anonymous comment)
   showUsername    Boolean    @default(true)
+  /// Number of times comment has been edited
   editCount       Int        @default(0)
+  /// Timestamp of most recent edit
   lastEditedAt    DateTime?
+  /// Original comment content before any edits (preserved for moderation)
   originalContent String?
+  /// Cached count of "like" reactions (denormalized for performance)
   likesCount      Int        @default(0)
+  /// Cached count of "dislike" reactions (denormalized)
   dislikesCount   Int        @default(0)
+  /// Cached count of "agree" stance reactions (denormalized)
   agreesCount     Int        @default(0)
+  /// Cached count of "disagree" stance reactions (denormalized)
   disagreesCount  Int        @default(0)
+
+  // Relationships
+  /// Parent comment for threaded replies (self-referential)
   parent          Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  /// Child comments (replies) to this comment (self-referential)
   replies         Comment[]  @relation("CommentReplies")
+  /// Post this comment belongs to (CASCADE: deleting post deletes all comments)
   post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// Comment author (CASCADE: deleting user deletes their comments)
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Reactions (like/dislike/agree/disagree) on this comment (CASCADE)
   reactions       Reaction[]
 
-  @@index([postId])
-  @@index([userId])
-  @@index([parentId])
+  @@index([postId]) /// Fast lookup of all comments on a post
+  @@index([userId]) /// Fast lookup of all comments by a user
+  @@index([parentId]) /// Fast lookup of replies to a comment
 }
 
 model Notification {
@@ -2502,101 +2734,195 @@ enum AgreementLevel {
   UNCLEAR
 }
 
-// Civic Engagement Quest System
+/// Civic engagement quest in gamification system
+/// @description Defines tasks users can complete to earn points, badges, and reputation.
+/// Quests encourage civic participation through daily habits, special events, and educational activities.
 model Quest {
+  /// Unique quest identifier
   id               String              @id @default(cuid())
+  /// Quest type (DAILY_HABIT, WEEKLY_ENGAGEMENT, SPECIAL_EVENT, etc.)
   type             QuestType
+  /// Quest category for organization (INFORMATION, PARTICIPATION, COMMUNITY, etc.)
   category         QuestCategory
+  /// Quest title shown to users (e.g., "Vote in your district", "Attend town hall")
   title            String
+  /// Full quest description with instructions and context
   description      String              @db.Text
-  shortDescription String? // For display in quest lists
-  requirements     Json // Flexible requirement definition
-  rewards          Json // Points, badges, reputation
+  /// Brief summary for quest list views (1-2 sentences)
+  shortDescription String?
+  /// JSON structure defining completion requirements
+  /// @description Example: {"action": "post_comment", "count": 3, "within": "24h"}
+  /// Common actions: "post_create", "comment_post", "attend_event", "contact_official", "vote_cast"
+  requirements     Json
+  /// JSON structure defining rewards on completion
+  /// @description Example: {"points": 100, "badge": "badge_id", "reputation": 10}
+  /// Always includes points; may include badge IDs and reputation boosts
+  rewards          Json
+  /// Quest time period (DAILY, WEEKLY, MONTHLY, ONGOING, LIMITED_TIME)
   timeframe        QuestTimeframe
+  /// Sort order for display in quest list (lower numbers appear first)
   displayOrder     Int                 @default(0)
+  /// Whether quest is currently available for users
   isActive         Boolean             @default(true)
-  startDate        DateTime? // For special events
-  endDate          DateTime? // For limited-time quests
+  /// Start date for special event or limited-time quests (null for ongoing quests)
+  startDate        DateTime?
+  /// End date for limited-time quests (null for ongoing quests)
+  endDate          DateTime?
+  /// Quest creation timestamp
   createdAt        DateTime            @default(now())
+  /// Last modification timestamp (auto-updated by Prisma)
   updatedAt        DateTime            @updatedAt
-  createdBy        String? // Admin who created it
+  /// Admin user ID who created this quest (null for system-generated)
+  createdBy        String?
+
+  // Relationships
+  /// User progress tracking records for this quest (CASCADE: deletes progress if quest deleted)
   userProgress     UserQuestProgress[]
 
-  @@index([type])
-  @@index([isActive])
-  @@index([startDate, endDate])
+  @@index([type]) /// Filter quests by type
+  @@index([isActive]) /// Show only active quests to users
+  @@index([startDate, endDate]) /// Query available quests by date range
 }
 
+/// User progress tracking for a specific quest
+/// @description Stores current completion state and tracks when quest was started/completed.
+/// One record per user per quest (unique constraint).
 model UserQuestProgress {
+  /// Unique progress record identifier
   id          String    @id @default(cuid())
+  /// User ID tracking this quest
   userId      String
+  /// Quest ID being tracked
   questId     String
-  progress    Json // Current progress state
+  /// JSON object storing current progress state
+  /// @description Example: {"comments_posted": 2, "target": 3, "last_action": "2025-10-20T10:30:00Z"}
+  /// Structure varies by quest requirements
+  progress    Json
+  /// Whether quest has been completed
   completed   Boolean   @default(false)
+  /// Timestamp when quest was completed (null if not completed)
   completedAt DateTime?
+  /// Timestamp when user started this quest
   startedAt   DateTime  @default(now())
+  /// Last progress update timestamp (auto-updated by Prisma)
   updatedAt   DateTime  @updatedAt
+
+  // Relationships
+  /// User tracking this quest (CASCADE: deletes progress if user deleted)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Quest being tracked (CASCADE: deletes progress if quest deleted)
   quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, questId])
-  @@index([userId])
-  @@index([questId])
-  @@index([completed])
+  @@unique([userId, questId]) /// One progress record per user per quest
+  @@index([userId]) /// Fast lookup of all quests a user is tracking
+  @@index([questId]) /// Fast lookup of all users tracking a quest (admin analytics)
+  @@index([completed]) /// Filter completed vs in-progress quests
 }
 
+/// User quest streak tracking
+/// @description Tracks user's consecutive quest completion streaks for gamification.
+/// Encourages daily/weekly engagement through streak maintenance.
 model UserQuestStreak {
+  /// Unique streak record identifier
   id                   String    @id @default(cuid())
+  /// User ID (1:1 relationship with User)
   userId               String    @unique
+  /// Current consecutive days with quest completion
   currentDailyStreak   Int       @default(0)
+  /// Longest consecutive daily streak ever achieved
   longestDailyStreak   Int       @default(0)
+  /// Current consecutive weeks with quest completion
   currentWeeklyStreak  Int       @default(0)
+  /// Longest consecutive weekly streak ever achieved
   longestWeeklyStreak  Int       @default(0)
+  /// Date of most recent quest completion (used to calculate streak breaks)
   lastCompletedDate    DateTime?
+  /// Total number of quests completed across all time
   totalQuestsCompleted Int       @default(0)
+  /// Streak tracking started timestamp
   createdAt            DateTime  @default(now())
+  /// Last streak update timestamp (auto-updated by Prisma)
   updatedAt            DateTime  @updatedAt
+
+  // Relationships
+  /// User owning this streak record (1:1, CASCADE: deletes streak if user deleted)
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId]) /// Redundant with unique constraint but explicit for queries
 }
 
-// Badge System
+/// Badge achievement in gamification system
+/// @description Defines badge types that users can earn through quest completion or admin award.
+/// Badges are displayed on profiles as achievement indicators.
 model Badge {
+  /// Unique badge identifier
   id                    String      @id @default(cuid())
+  /// Badge name (unique, e.g., "First Vote", "Community Leader", "Engagement Champion")
   name                  String      @unique
+  /// Badge description explaining how to earn it
   description           String      @db.Text
-  imageUrl              String // URL to badge image in Azure Storage
-  qualificationCriteria Json // Flexible criteria object
+  /// URL to badge image in Azure Blob Storage (PNG/SVG recommended)
+  imageUrl              String
+  /// JSON structure defining qualification criteria
+  /// @description Example: {"quests_completed": 10, "streak_days": 7, "reputation_min": 80}
+  /// For auto-awarded badges: system checks these criteria automatically
+  qualificationCriteria Json
+  /// Sort order for display in badge gallery (lower numbers appear first)
   displayOrder          Int         @default(0)
+  /// Whether badge is currently available for earning
   isActive              Boolean     @default(true)
-  isAutoAwarded         Boolean     @default(true) // Whether system auto-awards or admin manual only
-  maxAwards             Int? // Optional limit on how many can be awarded
+  /// Whether system automatically awards badge when criteria met
+  /// @description False means admin must manually award (for special recognition)
+  isAutoAwarded         Boolean     @default(true)
+  /// Optional limit on total number of users who can earn this badge (null = unlimited)
+  /// @description Used for exclusive badges (e.g., "First 100 Users", "Beta Tester")
+  maxAwards             Int?
+  /// Badge creation timestamp
   createdAt             DateTime    @default(now())
+  /// Last modification timestamp (auto-updated by Prisma)
   updatedAt             DateTime    @updatedAt
-  createdBy             String? // Admin who created it
+  /// Admin user ID who created this badge (null for system-generated)
+  createdBy             String?
+
+  // Relationships
+  /// User badge awards for this badge (CASCADE: deletes awards if badge deleted)
   userBadges            UserBadge[]
 
-  @@index([isActive])
-  @@index([name])
+  @@index([isActive]) /// Show only active badges in gallery
+  @@index([name]) /// Fast lookup by badge name
 }
 
+/// User badge award record
+/// @description Tracks badges earned by users, display preferences, and award context.
+/// One record per user per badge (unique constraint).
 model UserBadge {
+  /// Unique award record identifier
   id           String   @id @default(cuid())
+  /// User ID who earned the badge
   userId       String
+  /// Badge ID that was earned
   badgeId      String
+  /// Timestamp when badge was earned
   earnedAt     DateTime @default(now())
-  isDisplayed  Boolean  @default(false) // Whether user chose to display it
-  displayOrder Int? // User's personal ordering for displayed badges
-  awardedBy    String? // Admin ID if manually awarded
-  awardReason  String? // Optional reason for manual awards
+  /// Whether user chose to display this badge on their profile
+  isDisplayed  Boolean  @default(false)
+  /// User's custom ordering for displayed badges on profile (1 = first position)
+  displayOrder Int?
+  /// Admin user ID if badge was manually awarded (null for auto-awarded)
+  awardedBy    String?
+  /// Optional reason/note for manual awards (e.g., "Outstanding community leadership")
+  awardReason  String?
+
+  // Relationships
+  /// User who earned this badge (CASCADE: deletes award if user deleted)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Badge that was earned (CASCADE: deletes award if badge deleted)
   badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, badgeId])
-  @@index([userId])
-  @@index([badgeId])
-  @@index([isDisplayed])
+  @@unique([userId, badgeId]) /// One award per user per badge (no duplicates)
+  @@index([userId]) /// Fast lookup of all badges earned by user
+  @@index([badgeId]) /// Fast lookup of all users who earned a badge (admin analytics)
+  @@index([isDisplayed]) /// Query displayed badges for profile rendering
 }
 
 enum QuestType {
@@ -2627,54 +2953,93 @@ enum QuestTimeframe {
   LIMITED_TIME
 }
 
-// Photo Upload System
+/// Photo upload record
+/// @description Tracks uploaded images with Azure Blob Storage, AI moderation, and EXIF processing.
+/// Photos can be avatars, gallery images, or post attachments.
 model Photo {
+  /// Unique photo identifier (UUID format)
   id                String    @id @default(uuid())
+  /// User ID who uploaded the photo
   userId            String
-  postId            String?   // Optional - for post attachments
+  /// Optional post ID if photo attached to post (null for avatars/gallery)
+  postId            String?
+  /// Public URL to access the photo (Azure Blob Storage CDN)
   url               String
+  /// Blob storage identifier for file management and deletion
   blobName          String
+  /// Processed MIME type (e.g., "image/jpeg", "image/png", "image/webp")
   mimeType          String
+  /// Original uploaded MIME type before processing
   originalMimeType  String
+  /// Original file size in bytes before processing
   originalSize      Int
+  /// Processed file size in bytes after optimization
   processedSize     Int
+  /// Image width in pixels (null if processing failed)
   width             Int?
+  /// Image height in pixels (null if processing failed)
   height            Int?
-  moderationStatus  String    // 'APPROVE', 'WARN', 'BLOCK'
+  /// AI moderation decision ('APPROVE', 'WARN', 'BLOCK')
+  /// @description APPROVE = safe content, WARN = sensitive but allowed, BLOCK = prohibited
+  moderationStatus  String
+  /// Reason for moderation action (e.g., "adult content", "violence", "safe")
   moderationReason  String?
+  /// AI confidence score for moderation decision (0.0-1.0)
   moderationConfidence Float?
-  moderationType    String?   // Content type detected
+  /// Type of content detected by moderation AI (e.g., "racy", "adult", "violence")
+  moderationType    String?
+  /// Whether EXIF metadata was stripped for privacy (always true for user protection)
   exifStripped      Boolean   @default(true)
+  /// Photo upload timestamp
   uploadedAt        DateTime  @default(now())
+  /// Soft delete timestamp (null if active, set when photo deleted)
   deletedAt         DateTime?
-  photoType         String?   // 'AVATAR', 'GALLERY', 'POST_MEDIA'
-  gallery           String?   // Gallery name for organization
-  caption           String?   // Photo description
-  thumbnailUrl      String?   // Optimized thumbnail
+  /// Photo usage category ('AVATAR', 'GALLERY', 'POST_MEDIA')
+  photoType         String?
+  /// Optional gallery name for photo organization (user-defined collections)
+  gallery           String?
+  /// User-provided photo caption/description
+  caption           String?
+  /// URL to optimized thumbnail version (smaller size for previews)
+  thumbnailUrl      String?
+  /// Whether photo is active and visible (false if moderation blocked or user deleted)
   isActive          Boolean   @default(true)
 
+  // Relationships
+  /// User who uploaded this photo (CASCADE: deletes photo and blob if user deleted)
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Post this photo is attached to if applicable (CASCADE: deletes photo if post deleted)
   post              Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([postId])
-  @@index([uploadedAt])
-  @@index([moderationStatus])
+  @@index([userId]) /// Fast lookup of all photos by user
+  @@index([postId]) /// Fast lookup of photos attached to post
+  @@index([uploadedAt]) /// Chronological sorting of gallery
+  @@index([moderationStatus]) /// Admin moderation queue filtering
 }
 
+/// Saved post record (user bookmarks)
+/// @description Tracks posts users save for later viewing ("bookmark" or "save for later" feature).
+/// One record per user per post (unique constraint).
 model SavedPost {
+  /// Unique saved post record identifier (UUID format)
   id        String   @id @default(uuid())
+  /// User ID who saved the post
   userId    String
+  /// Post ID that was saved
   postId    String
+  /// Timestamp when post was saved
   savedAt   DateTime @default(now())
 
+  // Relationships
+  /// User who saved this post (CASCADE: deletes save record if user deleted)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Post that was saved (CASCADE: deletes save record if post deleted)
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, postId])
-  @@index([userId])
-  @@index([postId])
-  @@index([savedAt])
+  @@unique([userId, postId]) /// One save record per user per post (no duplicate saves)
+  @@index([userId]) /// Fast lookup of all posts saved by user
+  @@index([postId]) /// Fast lookup of all users who saved a post
+  @@index([savedAt]) /// Chronological sorting of saved posts
 }
 
 model FeedFilter {

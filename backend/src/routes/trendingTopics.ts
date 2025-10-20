@@ -7,8 +7,109 @@ const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
 /**
- * Get trending topics - simplified fallback implementation with mock data
+ * @swagger
+ * /api/trending/topics:
+ *   get:
+ *     tags: [Trending]
+ *     summary: Get trending topics (Mock Data)
+ *     description: Returns trending civic discussion topics with mock data for demonstration. This is a simplified fallback implementation showing the intended trending topic functionality with support/oppose percentages and prevailing positions.
+ *     parameters:
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           default: national
+ *           enum: [national, state, local]
+ *         description: Geographic scope for trending topics
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *           minimum: 1
+ *           maximum: 20
+ *         description: Maximum number of topics to return
+ *     responses:
+ *       200:
+ *         description: Trending topics retrieved successfully (demo data)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 scope:
+ *                   type: string
+ *                   example: national
+ *                 topics:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: topic-1
+ *                       title:
+ *                         type: string
+ *                         example: Infrastructure Investment
+ *                       description:
+ *                         type: string
+ *                         example: Discussion about federal infrastructure funding priorities
+ *                       postCount:
+ *                         type: integer
+ *                         example: 45
+ *                       support:
+ *                         type: object
+ *                         properties:
+ *                           percentage:
+ *                             type: integer
+ *                             example: 65
+ *                           count:
+ *                             type: integer
+ *                             example: 29
+ *                       oppose:
+ *                         type: object
+ *                         properties:
+ *                           percentage:
+ *                             type: integer
+ *                             example: 35
+ *                           count:
+ *                             type: integer
+ *                             example: 16
+ *                       prevailingPosition:
+ *                         type: string
+ *                         description: AI-generated summary of majority viewpoint
+ *                         example: Support for increased infrastructure spending with focus on green energy and broadband expansion
+ *                       leadingCritique:
+ *                         type: string
+ *                         description: AI-generated summary of main opposition arguments
+ *                         example: Concerns about fiscal responsibility and project efficiency oversight
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       scope:
+ *                         type: string
+ *                         example: national
+ *                 message:
+ *                   type: string
+ *                   example: Showing 3 trending topics (demo data)
+ *       500:
+ *         description: Failed to fetch trending topics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Failed to fetch trending topics
  */
+// Get trending topics - simplified fallback implementation with mock data
 router.get('/topics', async (req, res) => {
   try {
     const { scope = 'national', limit = 7 } = req.query;
@@ -72,8 +173,81 @@ router.get('/topics', async (req, res) => {
 });
 
 /**
- * Get topics for map display
+ * @swagger
+ * /api/trending/map-topics:
+ *   get:
+ *     tags: [Trending]
+ *     summary: Get topics for map visualization (Mock Data)
+ *     description: Returns trending topics with geographic coordinates for map display. Mock implementation demonstrating how topics would be distributed geographically across the United States for map-based visualization.
+ *     parameters:
+ *       - in: query
+ *         name: count
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *           minimum: 1
+ *           maximum: 10
+ *         description: Number of map topics to return
+ *     responses:
+ *       200:
+ *         description: Map topics retrieved successfully (demo data)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 topics:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: map-topic-1
+ *                       title:
+ *                         type: string
+ *                         example: Infrastructure Investment
+ *                       summary:
+ *                         type: string
+ *                         example: Federal infrastructure funding debate
+ *                       coordinates:
+ *                         type: array
+ *                         description: [longitude, latitude] for map marker
+ *                         items:
+ *                           type: number
+ *                         example: [-97.5, 39.0]
+ *                       postCount:
+ *                         type: integer
+ *                         example: 45
+ *                       support:
+ *                         type: integer
+ *                         description: Support percentage
+ *                         example: 65
+ *                       oppose:
+ *                         type: integer
+ *                         description: Opposition percentage
+ *                         example: 35
+ *                 message:
+ *                   type: string
+ *                   example: Showing 3 map topics (demo data)
+ *       500:
+ *         description: Failed to fetch map topics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Failed to fetch map topics
  */
+// Get topics for map display
 router.get('/map-topics', async (req, res) => {
   try {
     const { count = 3 } = req.query;

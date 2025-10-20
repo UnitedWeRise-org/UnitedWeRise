@@ -33,8 +33,54 @@ const handleValidationErrors = (req, res, next) => {
     }
     next();
 };
-// Dashboard Overview
+/**
+ * @swagger
+ * /api/admin/dashboard:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get admin dashboard overview (admin only)
+ *     description: Retrieves comprehensive dashboard statistics including user counts, content stats, moderation queue, and performance metrics.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 overview:
+ *                   type: object
+ *                   description: Core platform metrics
+ *                 growth:
+ *                   type: object
+ *                   description: 30-day growth statistics
+ *                 recentActivity:
+ *                   type: object
+ *                   description: High-priority reports and recent activity
+ *                 performance:
+ *                   type: object
+ *                   description: System performance metrics
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
 router.get('/dashboard', auth_1.requireAuth, requireAdmin, async (req, res) => {
+    // Generate unique request ID for tracing
+    const crypto = require('crypto');
+    const requestId = crypto.randomBytes(4).toString('hex');
+    console.log(`[${requestId}] 🎯 ENDPOINT: /api/admin/dashboard REACHED`, {
+        timestamp: new Date().toISOString(),
+        userId: req.user?.id,
+        username: req.user?.username,
+        isAdmin: req.user?.isAdmin,
+        totpVerified: req.user?.totpVerified,
+        message: 'Dashboard endpoint handler executing - ALL MIDDLEWARE PASSED'
+    });
     try {
         const [totalUsers, activeUsers, totalPosts, totalComments, pendingReports, resolvedReports, activeSuspensions, totalFlags, moderatorCount] = await Promise.all([
             prisma_1.prisma.user.count(),
@@ -73,6 +119,11 @@ router.get('/dashboard', auth_1.requireAuth, requireAdmin, async (req, res) => {
         });
         // Get performance metrics
         const performanceData = (0, performanceMonitor_1.getPerformanceMetrics)();
+        console.log(`[${requestId}] ✅ ENDPOINT: /api/admin/dashboard - Sending 200 response`, {
+            userId: req.user?.id,
+            username: req.user?.username,
+            dataKeys: ['overview', 'growth', 'recentActivity', 'performance']
+        });
         res.json({
             overview: {
                 totalUsers,
@@ -102,11 +153,47 @@ router.get('/dashboard', auth_1.requireAuth, requireAdmin, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Admin dashboard error:', error);
+        console.error(`[${requestId}] ❌ ENDPOINT: /api/admin/dashboard - Error:`, error);
         res.status(500).json({ error: 'Failed to load dashboard' });
     }
 });
-// Batch endpoint for dashboard initialization - combines all initial data in one request
+/**
+ * @swagger
+ * /api/admin/batch/dashboard-init:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Batch dashboard initialization (admin only)
+ *     description: Optimized endpoint that fetches all dashboard data in one request (stats, users, posts, reports) to reduce multiple API calls. Used for admin dashboard initial load.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: All dashboard data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     stats:
+ *                       type: object
+ *                     users:
+ *                       type: object
+ *                     posts:
+ *                       type: object
+ *                     reports:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
 router.get('/batch/dashboard-init', auth_1.requireAuth, requireAdmin, async (req, res) => {
     try {
         // Fetch all dashboard data in parallel for maximum performance

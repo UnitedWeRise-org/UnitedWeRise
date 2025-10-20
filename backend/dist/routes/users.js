@@ -13,7 +13,94 @@ const activityTracker_1 = require("../services/activityTracker");
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
-// Get current user's full profile
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     tags: [User]
+ *     summary: Get current user's full profile
+ *     description: Returns complete profile data for the authenticated user including private fields (email, address, preferences)
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     avatar:
+ *                       type: string
+ *                     bio:
+ *                       type: string
+ *                     website:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     verified:
+ *                       type: boolean
+ *                     isAdmin:
+ *                       type: boolean
+ *                     followersCount:
+ *                       type: integer
+ *                     followingCount:
+ *                       type: integer
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     backgroundImage:
+ *                       type: string
+ *                     streetAddress:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     politicalProfileType:
+ *                       type: string
+ *                     verificationStatus:
+ *                       type: string
+ *                     office:
+ *                       type: string
+ *                     officialTitle:
+ *                       type: string
+ *                     campaignWebsite:
+ *                       type: string
+ *                     notificationPreferences:
+ *                       type: object
+ *                     photoTaggingEnabled:
+ *                       type: boolean
+ *                     requireTagApproval:
+ *                       type: boolean
+ *                     allowTagsByFriendsOnly:
+ *                       type: boolean
+ *                     maritalStatus:
+ *                       type: string
+ *                     profilePrivacySettings:
+ *                       type: object
+ *                     candidateProfile:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/profile', auth_1.requireAuth, async (req, res) => {
     try {
         const user = await prisma_1.prisma.user.findUnique({
@@ -72,7 +159,57 @@ router.get('/profile', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Update current user's profile
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     tags: [User]
+ *     summary: Update current user's profile
+ *     description: Updates profile fields for the authenticated user (firstName, lastName, bio, website, location)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 maxLength: 50
+ *               lastName:
+ *                 type: string
+ *                 maxLength: 50
+ *               bio:
+ *                 type: string
+ *                 maxLength: 500
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *               location:
+ *                 type: string
+ *                 maxLength: 100
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Profile updated successfully
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Validation error - invalid input
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, async (req, res) => {
     try {
         const { firstName, lastName, bio, website, location } = req.body;
@@ -110,7 +247,44 @@ router.put('/profile', auth_1.requireAuth, validation_1.validateProfileUpdate, a
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get user profile with privacy filtering (authentication optional)
+/**
+ * @swagger
+ * /api/users/{userId}:
+ *   get:
+ *     tags: [User]
+ *     summary: Get user profile with privacy filtering
+ *     description: Returns public or filtered profile based on viewer's relationship to user. Authentication optional - returns more data if authenticated and following/friends.
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to retrieve
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   description: User profile data (filtered by privacy settings)
+ *                 relationshipContext:
+ *                   type: object
+ *                   properties:
+ *                     relationshipLevel:
+ *                       type: string
+ *                       enum: [public, followers, friends]
+ *                     isAuthenticated:
+ *                       type: boolean
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -268,7 +442,42 @@ router.get('/:userId', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Follow a user (using reusable service)
+/**
+ * @swagger
+ * /api/users/follow/{userId}:
+ *   post:
+ *     tags: [User]
+ *     summary: Follow a user
+ *     description: Creates a follow relationship between current user and target user. Updates follower/following counts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to follow
+ *     responses:
+ *       200:
+ *         description: User followed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Successfully followed user
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request - cannot follow self, already following, or user not found
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -286,7 +495,42 @@ router.post('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Unfollow a user (using reusable service)
+/**
+ * @swagger
+ * /api/users/follow/{userId}:
+ *   delete:
+ *     tags: [User]
+ *     summary: Unfollow a user
+ *     description: Removes follow relationship between current user and target user. Updates follower/following counts.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to unfollow
+ *     responses:
+ *       200:
+ *         description: User unfollowed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Successfully unfollowed user
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request - not following user
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -304,7 +548,82 @@ router.delete('/follow/:userId', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Search users
+/**
+ * @swagger
+ * /api/users/search:
+ *   get:
+ *     tags: [User]
+ *     summary: Search users by username or name
+ *     description: Searches users by username, firstName, or lastName (case-insensitive). Returns users with follow status for current user.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       username:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       avatar:
+ *                         type: string
+ *                       bio:
+ *                         type: string
+ *                       verified:
+ *                         type: boolean
+ *                       followersCount:
+ *                         type: integer
+ *                       isFollowing:
+ *                         type: boolean
+ *                         description: Whether current user follows this user
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *       400:
+ *         description: Bad request - search query required
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/search', auth_1.requireAuth, async (req, res) => {
     try {
         const { q, limit = 10, offset = 0 } = req.query;
@@ -383,8 +702,78 @@ router.get('/search', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// 🎯 OPTIMIZED: Get complete user profile (batches 5-6 API calls into 1)
-// Replaces: /users/:id + /posts/user/:id + /users/:id/followers + /users/:id/following + /users/follow-status/:id
+/**
+ * @swagger
+ * /api/users/{userId}/complete:
+ *   get:
+ *     tags: [User]
+ *     summary: Get complete user profile (optimized - batches 5-6 API calls into 1)
+ *     description: Returns complete profile data including user info, posts, follower/following counts, and relationship status with current user. Replaces multiple separate API calls for better performance.
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to retrieve complete profile for
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Post pagination offset
+ *     responses:
+ *       200:
+ *         description: Complete profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       description: User profile with counts
+ *                     posts:
+ *                       type: object
+ *                       properties:
+ *                         items:
+ *                           type: array
+ *                         pagination:
+ *                           type: object
+ *                     relationship:
+ *                       type: object
+ *                       properties:
+ *                         isFollowing:
+ *                           type: boolean
+ *                         isFollower:
+ *                           type: boolean
+ *                         friendshipStatus:
+ *                           type: string
+ *                           enum: [none, friends, request_sent, request_received]
+ *                         canMessage:
+ *                           type: boolean
+ *                       description: Null if not authenticated
+ *                     optimized:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Flag indicating this is the batched endpoint
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/complete', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -537,7 +926,35 @@ router.get('/:userId/complete', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get public profile by username
+/**
+ * @swagger
+ * /api/users/by-username/{username}:
+ *   get:
+ *     tags: [User]
+ *     summary: Get user profile by username
+ *     description: Retrieves public user profile using username instead of ID. Includes candidate profile if exists.
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Username to look up
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/by-username/:username', async (req, res) => {
     try {
         const { username } = req.params;
@@ -589,7 +1006,44 @@ router.get('/by-username/:username', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get followers list
+/**
+ * @swagger
+ * /api/users/{userId}/followers:
+ *   get:
+ *     tags: [User]
+ *     summary: Get user's followers list
+ *     description: Returns paginated list of users following the specified user
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Followers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 followers:
+ *                   type: array
+ *                 pagination:
+ *                   type: object
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/followers', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -629,7 +1083,44 @@ router.get('/:userId/followers', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Get following list
+/**
+ * @swagger
+ * /api/users/{userId}/following:
+ *   get:
+ *     tags: [User]
+ *     summary: Get user's following list
+ *     description: Returns paginated list of users that the specified user follows
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Following list retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 following:
+ *                   type: array
+ *                 pagination:
+ *                   type: object
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/:userId/following', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -669,7 +1160,36 @@ router.get('/:userId/following', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Check if current user is following another user (using reusable service)
+/**
+ * @swagger
+ * /api/users/follow-status/{userId}:
+ *   get:
+ *     tags: [User]
+ *     summary: Check follow status
+ *     description: Returns whether current user follows the specified user
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Follow status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isFollowing:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/follow-status/:userId', auth_1.requireAuth, async (req, res) => {
     try {
         const { userId } = req.params;
@@ -740,7 +1260,40 @@ router.post('/activity', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to track activity' });
     }
 });
-// Get user profile privacy settings
+/**
+ * @swagger
+ * /api/users/profile-privacy:
+ *   get:
+ *     tags: [User]
+ *     summary: Get profile privacy settings
+ *     description: Returns current user's profile privacy settings for each field (bio, website, city, state, maritalStatus, phoneNumber)
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Privacy settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     privacySettings:
+ *                       type: object
+ *                       description: Privacy level for each field (public, followers, friends, private)
+ *                     maritalStatus:
+ *                       type: string
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/profile-privacy', auth_1.requireAuth, async (req, res) => {
     try {
         const user = await prisma_1.prisma.user.findUnique({
@@ -785,7 +1338,64 @@ router.get('/profile-privacy', auth_1.requireAuth, async (req, res) => {
         });
     }
 });
-// Update user profile privacy settings
+/**
+ * @swagger
+ * /api/users/profile-privacy:
+ *   put:
+ *     tags: [User]
+ *     summary: Update profile privacy settings
+ *     description: Updates privacy levels for profile fields. Each field can be public, followers, friends, or private.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               privacySettings:
+ *                 type: object
+ *                 properties:
+ *                   bio:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *                   website:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *                   city:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *                   state:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *                   maritalStatus:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *                   phoneNumber:
+ *                     type: string
+ *                     enum: [public, followers, friends, private]
+ *               maritalStatus:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Privacy settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid field or privacy level
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.put('/profile-privacy', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -852,7 +1462,35 @@ router.put('/profile-privacy', auth_1.requireAuth, async (req, res) => {
         });
     }
 });
-// Get user notification preferences
+/**
+ * @swagger
+ * /api/users/notification-preferences:
+ *   get:
+ *     tags: [User]
+ *     summary: Get notification preferences
+ *     description: Returns current user's notification preferences for browser and email notifications
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Preferences retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Notification preference flags
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/notification-preferences', auth_1.requireAuth, async (req, res) => {
     try {
         const user = await prisma_1.prisma.user.findUnique({
@@ -897,7 +1535,61 @@ router.get('/notification-preferences', auth_1.requireAuth, async (req, res) => 
         });
     }
 });
-// Update user notification preferences
+/**
+ * @swagger
+ * /api/users/notification-preferences:
+ *   put:
+ *     tags: [User]
+ *     summary: Update notification preferences
+ *     description: Updates current user's notification preferences. Only updates provided fields.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               browserNotifications:
+ *                 type: boolean
+ *               browserNotifyNewMessages:
+ *                 type: boolean
+ *               browserNotifyLikes:
+ *                 type: boolean
+ *               browserNotifyComments:
+ *                 type: boolean
+ *               emailNotifications:
+ *                 type: boolean
+ *               emailNotifyImportantMessages:
+ *                 type: boolean
+ *               emailNotifyWeeklyDigest:
+ *                 type: boolean
+ *               emailNotifySecurityAlerts:
+ *                 type: boolean
+ *               candidateInboxNotifications:
+ *                 type: boolean
+ *               candidateElectionReminders:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Preferences updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid preference key
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.put('/notification-preferences', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -953,7 +1645,61 @@ router.put('/notification-preferences', auth_1.requireAuth, async (req, res) => 
         });
     }
 });
-// Get user activity log
+/**
+ * @swagger
+ * /api/users/activity/me:
+ *   get:
+ *     tags: [User]
+ *     summary: Get current user's activity log
+ *     description: Returns paginated activity history for authenticated user with optional filtering by type and search
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: types
+ *         schema:
+ *           type: string
+ *         description: Comma-separated activity types to filter
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for activity content
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 50
+ *     responses:
+ *       200:
+ *         description: Activity log retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     activities:
+ *                       type: array
+ *                     counts:
+ *                       type: object
+ *                     pagination:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -993,7 +1739,55 @@ router.get('/activity/me', auth_1.requireAuth, async (req, res) => {
         });
     }
 });
-// Get public user activity log (for public profiles - future)
+/**
+ * @swagger
+ * /api/users/activity/{userId}:
+ *   get:
+ *     tags: [User]
+ *     summary: Get public user activity log
+ *     description: Returns filtered public activity for specified user (only shows posts, comments, likes, follows - no deleted content)
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: types
+ *         schema:
+ *           type: string
+ *         description: Comma-separated activity types (limited to public types)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 20
+ *     responses:
+ *       200:
+ *         description: Public activity retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     activities:
+ *                       type: array
+ *                     pagination:
+ *                       type: object
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/activity/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
