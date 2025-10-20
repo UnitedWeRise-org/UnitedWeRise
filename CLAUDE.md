@@ -57,6 +57,35 @@ Current workflow:
 - Production: unitedwerise-db.postgres.database.azure.com
 - Development: unitedwerise-db-dev.postgres.database.azure.com
 
+**Inline documentation mandatory**
+ALL code requires inline docs. Code without docs is INCOMPLETE.
+
+**Required:**
+- **Backend Routes:** Swagger on every endpoint (read actual res.json/status before documenting)
+- **Backend Services:** JSDoc with @param, @returns, @throws, @example (verify throws match code)
+- **Backend Middleware:** JSDoc with purpose, security implications, ordering
+- **Prisma Schema:** `///` comments on all models, fields, enums (describe actual purpose)
+- **Frontend:** JSDoc with @param/@returns on public functions, @module on files
+
+**Process:**
+1. READ implementation first (never guess)
+2. FIND similar documented code (use backend/src/routes/auth.ts as template)
+3. VERIFY docs match actual behavior (check res.json, res.status, throw statements)
+4. CHECK pattern consistency (grep similar endpoints)
+
+**Modifying existing undocumented code:**
+- Document the entire modified function/endpoint before making changes
+- If urgent fix: Add `// TODO-DOCS: [date]` comment, log in .claude/scratchpads/DOCUMENTATION-DEBT.md
+
+**Verification (required before task complete):**
+- [ ] Read implementation before documenting
+- [ ] Response schemas match res.json() calls
+- [ ] Error codes match res.status() calls
+- [ ] Similar endpoints follow same pattern
+- [ ] No invented/guessed documentation
+
+**Templates:** .claude/guides/documentation-templates.md
+
 ---
 
 ## Environment Configuration
@@ -87,6 +116,125 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 ---
 
 ## Tier 2: Deployment & Migration Procedures
+
+<details>
+<summary><b>Inline Documentation Templates</b></summary>
+
+**Swagger (Backend Routes):**
+```typescript
+/**
+ * @swagger
+ * /api/resource:
+ *   post:
+ *     tags: [Category]
+ *     summary: Brief action description
+ *     description: Detailed explanation of what this endpoint does
+ *     security:
+ *       - cookieAuth: []  # Remove if public endpoint
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [field]
+ *             properties:
+ *               field:
+ *                 type: string
+ *                 description: Field purpose
+ *     responses:
+ *       200:
+ *         description: Success response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/resource', requireAuth, async (req: AuthRequest, res: Response) => {
+  // Implementation
+});
+```
+
+**JSDoc (Services/Functions):**
+```typescript
+/**
+ * Brief function description
+ *
+ * @param paramName - Description and constraints
+ * @param optionalParam - Optional parameter description
+ * @returns Promise<Type> Return value description
+ * @throws {ValidationError} When condition occurs
+ * @throws {NotFoundError} When resource not found
+ *
+ * @example
+ * const result = await func('value');
+ * console.log(result); // { id: '123', ... }
+ */
+export async function func(paramName: string, optionalParam?: number): Promise<Type> {
+  // Implementation
+}
+```
+
+**Prisma Schema:**
+```prisma
+/// Brief model description explaining business purpose
+/// @description Detailed explanation of model's role in system
+model ResourceName {
+  /// Unique identifier for the resource
+  id          String    @id @default(cuid())
+  /// User-facing display name
+  name        String
+  /// Optional description with constraints
+  description String?   @db.Text
+  /// Foreign key to User model
+  userId      String
+  /// Relationship with cascade delete
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])  /// Index for user-based queries
+}
+
+/// Status values for resource lifecycle
+enum ResourceStatus {
+  ACTIVE    /// Resource is currently active
+  INACTIVE  /// Resource has been deactivated
+  PENDING   /// Resource awaiting approval
+}
+```
+
+**Frontend JSDoc:**
+```javascript
+/**
+ * @module ModuleName
+ * @description What this module does and when to use it
+ */
+
+/**
+ * Brief function description
+ *
+ * @param {string} paramName - Parameter description
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.flag - What this flag controls
+ * @returns {Promise<Object>} Description of return value
+ *
+ * @example
+ * const result = await functionName('value', { flag: true });
+ */
+export async function functionName(paramName, options = {}) {
+  // Implementation
+}
+```
+
+</details>
 
 <details>
 <summary><b>Pre-deployment validation</b></summary>
