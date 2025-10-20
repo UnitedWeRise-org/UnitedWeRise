@@ -34,6 +34,94 @@ const civicBrowseLimit = rateLimit({
  * PETITION ENDPOINTS
  */
 
+/**
+ * @swagger
+ * /api/civic/petitions:
+ *   post:
+ *     tags: [Civic]
+ *     summary: Create a new petition
+ *     description: Creates a civic petition or referendum with validation and targeting
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - petitionType
+ *               - category
+ *               - geographicScope
+ *               - signatureGoal
+ *               - targetOfficials
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 200
+ *                 description: Petition title
+ *               description:
+ *                 type: string
+ *                 minLength: 50
+ *                 maxLength: 5000
+ *                 description: Detailed petition description
+ *               petitionType:
+ *                 type: string
+ *                 enum: [PETITION, REFERENDUM]
+ *                 description: Type of petition
+ *               category:
+ *                 type: string
+ *                 enum: [HEALTHCARE, EDUCATION, ENVIRONMENT, ECONOMY, INFRASTRUCTURE, PUBLIC_SAFETY, HOUSING, TRANSPORTATION, TECHNOLOGY, CIVIL_RIGHTS, IMMIGRATION, ENERGY, AGRICULTURE, VETERANS, SENIORS, YOUTH, LABOR, GOVERNMENT_REFORM, OTHER]
+ *                 description: Petition category
+ *               geographicScope:
+ *                 type: string
+ *                 enum: [LOCAL, COUNTY, STATE, NATIONAL, REGIONAL]
+ *                 description: Geographic scope of petition
+ *               signatureGoal:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 1000000
+ *                 description: Target number of signatures
+ *               targetOfficials:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of targeted officials
+ *               location:
+ *                 type: object
+ *                 description: Geographic location data
+ *               expiresAt:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Petition expiration date
+ *     responses:
+ *       201:
+ *         description: Petition created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Petition created successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Petition'
+ *       400:
+ *         description: Validation error - invalid input
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       429:
+ *         description: Too many civic actions
+ *       500:
+ *         description: Failed to create petition
+ */
 // Create petition
 router.post('/petitions', 
   requireAuth,
@@ -87,6 +175,97 @@ router.post('/petitions',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/petitions:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get filtered petitions
+ *     description: Retrieves petitions with optional filtering by category, scope, status, and proximity
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by petition category
+ *       - in: query
+ *         name: geographicScope
+ *         schema:
+ *           type: string
+ *         description: Filter by geographic scope
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, COMPLETED, EXPIRED, CLOSED, UNDER_REVIEW]
+ *         description: Filter by petition status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: Items per page
+ *       - in: query
+ *         name: proximity
+ *         schema:
+ *           type: number
+ *           minimum: 1
+ *           maximum: 500
+ *         description: Search radius in miles
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Latitude for proximity search
+ *       - in: query
+ *         name: lon
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Longitude for proximity search
+ *     responses:
+ *       200:
+ *         description: Petitions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     petitions:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Petition'
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *       400:
+ *         description: Validation error
+ *       429:
+ *         description: Too many requests
+ *       500:
+ *         description: Failed to fetch petitions
+ */
 // Get petitions with filtering
 router.get('/petitions',
   civicBrowseLimit,
@@ -140,6 +319,42 @@ router.get('/petitions',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/petitions/{id}:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get petition by ID
+ *     description: Retrieves a specific petition with complete details
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     responses:
+ *       200:
+ *         description: Petition retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Petition'
+ *       400:
+ *         description: Invalid petition ID
+ *       404:
+ *         description: Petition not found
+ *       429:
+ *         description: Too many requests
+ *       500:
+ *         description: Failed to fetch petition
+ */
 // Get petition by ID
 router.get('/petitions/:id',
   civicBrowseLimit,
@@ -173,6 +388,47 @@ router.get('/petitions/:id',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/petitions/{id}/sign:
+ *   post:
+ *     tags: [Civic]
+ *     summary: Sign a petition
+ *     description: Records user signature on a petition with IP tracking
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Petition ID
+ *     responses:
+ *       201:
+ *         description: Petition signed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Petition signed successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/PetitionSignature'
+ *       400:
+ *         description: Invalid petition ID or already signed
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       429:
+ *         description: Too many civic actions
+ *       500:
+ *         description: Failed to sign petition
+ */
 // Sign petition
 router.post('/petitions/:id/sign',
   requireAuth,
@@ -212,6 +468,119 @@ router.post('/petitions/:id/sign',
  * EVENT ENDPOINTS
  */
 
+/**
+ * @swagger
+ * /api/civic/events:
+ *   post:
+ *     tags: [Civic]
+ *     summary: Create a civic event
+ *     description: Creates a civic event such as town hall, rally, or community meeting
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - eventType
+ *               - category
+ *               - scheduledDate
+ *               - location
+ *               - organizerInfo
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 200
+ *                 description: Event title
+ *               description:
+ *                 type: string
+ *                 minLength: 50
+ *                 maxLength: 5000
+ *                 description: Detailed event description
+ *               eventType:
+ *                 type: string
+ *                 enum: [TOWN_HALL, CANDIDATE_FORUM, DEBATE, RALLY, PROTEST, MARCH, VOTER_REGISTRATION, ISSUE_FORUM, COMMUNITY_MEETING, WORKSHOP, EDUCATIONAL_SEMINAR, FUNDRAISER, VOLUNTEER_DRIVE, PETITION_DRIVE, PHONE_BANK, CANVASSING, OTHER]
+ *                 description: Type of civic event
+ *               category:
+ *                 type: string
+ *                 enum: [ELECTORAL, CIVIC_ENGAGEMENT, ORGANIZING_ACTIVITIES, EDUCATIONAL, ADVOCACY, FUNDRAISING]
+ *                 description: Event category
+ *               scheduledDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Event start date and time
+ *               endDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Event end date and time (optional)
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - address
+ *                   - city
+ *                   - state
+ *                 properties:
+ *                   address:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   state:
+ *                     type: string
+ *               organizerInfo:
+ *                 type: object
+ *                 required:
+ *                   - name
+ *                   - contact
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   contact:
+ *                     type: string
+ *               capacity:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 100000
+ *                 description: Maximum attendees
+ *               isVirtual:
+ *                 type: boolean
+ *                 description: Whether event is virtual
+ *               virtualLink:
+ *                 type: string
+ *                 format: uri
+ *                 description: Virtual meeting link
+ *               rsvpRequired:
+ *                 type: boolean
+ *                 description: Whether RSVP is required
+ *     responses:
+ *       201:
+ *         description: Event created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Event created successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/CivicEvent'
+ *       400:
+ *         description: Validation error or invalid date
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       429:
+ *         description: Too many civic actions
+ *       500:
+ *         description: Failed to create event
+ */
 // Create event
 router.post('/events',
   requireAuth,
@@ -284,6 +653,103 @@ router.post('/events',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/events:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get filtered civic events
+ *     description: Retrieves civic events with optional filtering by type, category, timeframe, status, and proximity
+ *     parameters:
+ *       - in: query
+ *         name: eventType
+ *         schema:
+ *           type: string
+ *         description: Filter by event type
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by event category
+ *       - in: query
+ *         name: timeframe
+ *         schema:
+ *           type: string
+ *           enum: [week, month, future]
+ *         description: Filter by timeframe
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, POSTPONED]
+ *         description: Filter by event status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: Items per page
+ *       - in: query
+ *         name: proximity
+ *         schema:
+ *           type: number
+ *           minimum: 1
+ *           maximum: 500
+ *         description: Search radius in miles
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Latitude for proximity search
+ *       - in: query
+ *         name: lon
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Longitude for proximity search
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/CivicEvent'
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *       400:
+ *         description: Validation error
+ *       429:
+ *         description: Too many requests
+ *       500:
+ *         description: Failed to fetch events
+ */
 // Get events with filtering
 router.get('/events',
   civicBrowseLimit,
@@ -339,6 +805,42 @@ router.get('/events',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/events/{id}:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get event by ID
+ *     description: Retrieves a specific civic event with complete details
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Event retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/CivicEvent'
+ *       400:
+ *         description: Invalid event ID
+ *       404:
+ *         description: Event not found
+ *       429:
+ *         description: Too many requests
+ *       500:
+ *         description: Failed to fetch event
+ */
 // Get event by ID
 router.get('/events/:id',
   civicBrowseLimit,
@@ -372,6 +874,58 @@ router.get('/events/:id',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/events/{id}/rsvp:
+ *   post:
+ *     tags: [Civic]
+ *     summary: RSVP to an event
+ *     description: Records user's RSVP status for a civic event
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ATTENDING, MAYBE, NOT_ATTENDING]
+ *                 default: ATTENDING
+ *                 description: RSVP status
+ *     responses:
+ *       201:
+ *         description: RSVP recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: RSVP recorded successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/EventRSVP'
+ *       400:
+ *         description: Invalid event ID or RSVP status
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       429:
+ *         description: Too many civic actions
+ *       500:
+ *         description: Failed to RSVP to event
+ */
 // RSVP to event
 router.post('/events/:id/rsvp',
   requireAuth,
@@ -412,6 +966,82 @@ router.post('/events/:id/rsvp',
  * SEARCH ENDPOINT
  */
 
+/**
+ * @swagger
+ * /api/civic/search:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Search civic content
+ *     description: Search across petitions and events with text query and filters
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: Search query text
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: eventType
+ *         schema:
+ *           type: string
+ *         description: Filter by event type
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Search results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     petitions:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Petition'
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/CivicEvent'
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *       400:
+ *         description: Validation error - invalid query
+ *       429:
+ *         description: Too many requests
+ *       500:
+ *         description: Failed to search civic content
+ */
 // Search across petitions and events
 router.get('/search',
   civicBrowseLimit,
@@ -457,6 +1087,35 @@ router.get('/search',
  * USER ACTIVITY ENDPOINTS
  */
 
+/**
+ * @swagger
+ * /api/civic/user/petitions:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get user's created petitions
+ *     description: Retrieves all petitions created by the authenticated user
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User petitions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Petition'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Failed to fetch user petitions
+ */
 // Get user's created petitions
 router.get('/user/petitions',
   requireAuth,
@@ -479,6 +1138,35 @@ router.get('/user/petitions',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/user/events:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get user's created events
+ *     description: Retrieves all events created by the authenticated user
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/CivicEvent'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Failed to fetch user events
+ */
 // Get user's created events
 router.get('/user/events',
   requireAuth,
@@ -501,6 +1189,35 @@ router.get('/user/events',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/user/signatures:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get user's signed petitions
+ *     description: Retrieves all petitions the authenticated user has signed
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User signatures retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/PetitionSignature'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Failed to fetch user signatures
+ */
 // Get user's signed petitions
 router.get('/user/signatures',
   requireAuth,
@@ -523,6 +1240,35 @@ router.get('/user/signatures',
   }
 );
 
+/**
+ * @swagger
+ * /api/civic/user/rsvps:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Get user's RSVP'd events
+ *     description: Retrieves all events the authenticated user has RSVP'd to
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User RSVPs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/EventRSVP'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Failed to fetch user RSVPs
+ */
 // Get user's RSVP'd events
 router.get('/user/rsvps',
   requireAuth,
@@ -549,6 +1295,36 @@ router.get('/user/rsvps',
  * HEALTH CHECK
  */
 
+/**
+ * @swagger
+ * /api/civic/health:
+ *   get:
+ *     tags: [Civic]
+ *     summary: Civic service health check
+ *     description: Returns operational status of the civic organizing service
+ *     responses:
+ *       200:
+ *         description: Service is operational
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 service:
+ *                   type: string
+ *                   example: civic-organizing
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 status:
+ *                   type: string
+ *                   example: operational
+ *       500:
+ *         description: Service health check failed
+ */
 router.get('/health', async (req, res) => {
   try {
     // Simple health check - could expand to check database connectivity

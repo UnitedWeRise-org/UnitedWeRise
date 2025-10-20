@@ -7,7 +7,88 @@ import { EngagementScoringService } from '../services/engagementScoringService';
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
-// Get personalized feed using probability cloud algorithm
+/**
+ * @swagger
+ * /api/feed:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get personalized feed using probability cloud algorithm
+ *     description: Generates a personalized feed using electron-cloud probability sampling based on user preferences, following relationships, and engagement patterns. Includes custom weight support for A/B testing.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip (pagination)
+ *       - in: query
+ *         name: weights
+ *         schema:
+ *           type: string
+ *         description: JSON string of custom algorithm weights for A/B testing (optional)
+ *     responses:
+ *       200:
+ *         description: Personalized feed generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       content:
+ *                         type: string
+ *                       author:
+ *                         type: object
+ *                       photos:
+ *                         type: array
+ *                       likesCount:
+ *                         type: integer
+ *                       commentsCount:
+ *                         type: integer
+ *                       isLiked:
+ *                         type: boolean
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 algorithm:
+ *                   type: string
+ *                   example: probability-cloud
+ *                 weights:
+ *                   type: object
+ *                   description: Weights used for feed generation
+ *                 stats:
+ *                   type: object
+ *                   description: Feed generation statistics
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
@@ -81,7 +162,89 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// Get posts from followed users only
+/**
+ * @swagger
+ * /api/feed/following:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get posts from followed users only
+ *     description: Returns chronological feed of posts only from users the current user follows. Returns empty feed if not following anyone.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip (pagination)
+ *     responses:
+ *       200:
+ *         description: Following feed retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       content:
+ *                         type: string
+ *                       author:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                           verified:
+ *                             type: boolean
+ *                           userBadges:
+ *                             type: array
+ *                       photos:
+ *                         type: array
+ *                       likesCount:
+ *                         type: integer
+ *                       commentsCount:
+ *                         type: integer
+ *                       isLiked:
+ *                         type: boolean
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/following', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
@@ -196,7 +359,81 @@ router.get('/following', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// Get trending posts (most liked in last 24 hours)
+/**
+ * @swagger
+ * /api/feed/trending:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get trending posts (most engaged in last 24 hours)
+ *     description: Returns posts with highest engagement scores from the last 24 hours. Uses engagement scoring algorithm combining likes, comments, shares, and time decay. Public endpoint (no auth required).
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of posts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of posts to skip (pagination)
+ *     responses:
+ *       200:
+ *         description: Trending posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       content:
+ *                         type: string
+ *                       author:
+ *                         type: object
+ *                       photos:
+ *                         type: array
+ *                       engagementScore:
+ *                         type: number
+ *                         description: Calculated engagement score
+ *                       likesCount:
+ *                         type: integer
+ *                       dislikesCount:
+ *                         type: integer
+ *                       agreesCount:
+ *                         type: integer
+ *                       disagreesCount:
+ *                         type: integer
+ *                       commentsCount:
+ *                         type: integer
+ *                       sharesCount:
+ *                         type: integer
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *                 algorithm:
+ *                   type: string
+ *                   example: engagement-scoring
+ *                 error:
+ *                   type: string
+ *                   description: Error message if fallback response (empty posts)
+ */
 router.get('/trending', async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query;
@@ -333,7 +570,39 @@ router.get('/trending', async (req, res) => {
   }
 });
 
-// PHASE 2 STUB: Get user's saved feed filters
+/**
+ * @swagger
+ * /api/feed/filters:
+ *   get:
+ *     tags: [Feed]
+ *     summary: Get user's saved feed filters (Phase 2 stub)
+ *     description: Returns user's custom feed filter configurations. Currently returns empty array - Phase 2 feature not yet implemented.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Feed filters retrieved successfully (empty for Phase 1)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 filters:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                   example: []
+ *                 message:
+ *                   type: string
+ *                   example: Filter system coming soon in Phase 2!
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.get('/filters', requireAuth, async (req: AuthRequest, res) => {
   try {
     // Phase 2 feature - return empty array for now
@@ -351,7 +620,41 @@ router.get('/filters', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// PHASE 2 STUB: Create new feed filter
+/**
+ * @swagger
+ * /api/feed/filters:
+ *   post:
+ *     tags: [Feed]
+ *     summary: Create new feed filter (Phase 2 stub)
+ *     description: Creates a custom feed filter configuration. Not yet implemented - returns 501 Not Implemented.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Filter configuration (schema not yet defined)
+ *     responses:
+ *       501:
+ *         description: Not implemented - Phase 2 feature
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Filter creation not yet available - Coming soon in Phase 2!
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/filters', requireAuth, async (req: AuthRequest, res) => {
   try {
     // Phase 2 feature - not yet implemented

@@ -8,6 +8,105 @@ import { messageLimiter } from '../middleware/rateLimiting';
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
 
+/**
+ * @swagger
+ * /api/messages/conversations:
+ *   get:
+ *     tags: [Message]
+ *     summary: Get user's conversations with pagination
+ *     description: Retrieves all conversations for the authenticated user, ordered by most recent message
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Maximum number of conversations to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of conversations to skip for pagination
+ *     responses:
+ *       200:
+ *         description: Conversations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 conversations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: Conversation unique identifier
+ *                       lastMessageAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         description: Timestamp of last message in conversation
+ *                       lastMessageContent:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Content preview of last message
+ *                       lastMessageSenderId:
+ *                         type: string
+ *                         nullable: true
+ *                         description: ID of user who sent last message
+ *                       lastReadAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         description: When current user last read this conversation
+ *                       participants:
+ *                         type: array
+ *                         description: Other participants in conversation (excludes current user)
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             username:
+ *                               type: string
+ *                             firstName:
+ *                               type: string
+ *                             lastName:
+ *                               type: string
+ *                             avatar:
+ *                               type: string
+ *                               nullable: true
+ *                             isOnline:
+ *                               type: boolean
+ *                               description: Whether participant is currently online
+ *                             lastSeenAt:
+ *                               type: string
+ *                               format: date-time
+ *                               nullable: true
+ *                               description: Last time participant was seen online
+ *                       unreadCount:
+ *                         type: integer
+ *                         description: Count of unread messages (currently returns 0)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *                       description: Number of conversations returned in this response
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Get user's conversations
 router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -77,6 +176,106 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/messages/conversations:
+ *   post:
+ *     tags: [Message]
+ *     summary: Start a new conversation
+ *     description: Creates a new conversation with another user. Returns existing conversation if one already exists between the two users.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - participantId
+ *             properties:
+ *               participantId:
+ *                 type: string
+ *                 description: ID of user to start conversation with
+ *                 example: user_456
+ *     responses:
+ *       201:
+ *         description: Conversation created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Conversation created successfully
+ *                 conversation:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Conversation unique identifier
+ *                     participants:
+ *                       type: array
+ *                       description: Other participants (excludes current user)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                             nullable: true
+ *                           isOnline:
+ *                             type: boolean
+ *                           lastSeenAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *       200:
+ *         description: Conversation already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Conversation already exists
+ *                 conversation:
+ *                   type: object
+ *                   description: Existing conversation object
+ *       400:
+ *         description: Validation error - missing participantId or attempting to message self
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Cannot start conversation with yourself
+ *       404:
+ *         description: Participant user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Start a new conversation
 router.post('/conversations', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -183,6 +382,114 @@ router.post('/conversations', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/messages/conversations/{conversationId}/messages:
+ *   get:
+ *     tags: [Message]
+ *     summary: Get messages in a conversation
+ *     description: Retrieves messages from a specific conversation with pagination. Automatically updates user's lastReadAt timestamp for the conversation.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Conversation unique identifier
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of messages to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of messages to skip for pagination
+ *       - in: query
+ *         name: before
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Return messages created before this timestamp (for infinite scroll)
+ *     responses:
+ *       200:
+ *         description: Messages retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messages:
+ *                   type: array
+ *                   description: Messages in chronological order (oldest first)
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: Message unique identifier
+ *                       content:
+ *                         type: string
+ *                         description: Message text content
+ *                       senderId:
+ *                         type: string
+ *                         description: ID of user who sent the message
+ *                       sender:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           avatar:
+ *                             type: string
+ *                             nullable: true
+ *                       conversationId:
+ *                         type: string
+ *                         description: Conversation this message belongs to
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Message creation timestamp
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     count:
+ *                       type: integer
+ *                       description: Number of messages returned in this response
+ *                     before:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       description: Timestamp of oldest message for next page
+ *       403:
+ *         description: Access denied - user is not a participant in this conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Access denied to this conversation
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Get messages in a conversation
 router.get('/conversations/:conversationId/messages', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -256,6 +563,105 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
   }
 });
 
+/**
+ * @swagger
+ * /api/messages/conversations/{conversationId}/messages:
+ *   post:
+ *     tags: [Message]
+ *     summary: Send a message via REST API (for testing)
+ *     description: Sends a new message to a conversation via REST endpoint. Note - in production, messages are typically sent via WebSocket for real-time delivery. This endpoint is rate-limited.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Conversation unique identifier
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: Message text content (will be trimmed)
+ *                 example: Hello, how are you?
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Message sent successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Message unique identifier
+ *                     content:
+ *                       type: string
+ *                       description: Message text content
+ *                     senderId:
+ *                       type: string
+ *                       description: ID of user who sent the message
+ *                     sender:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         firstName:
+ *                           type: string
+ *                         lastName:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                           nullable: true
+ *                     conversationId:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Validation error - message content is empty or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Message content is required
+ *       403:
+ *         description: Access denied - user is not a participant in this conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Access denied to this conversation
+ *       429:
+ *         description: Too many requests - rate limit exceeded
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Send message via REST API (for testing)
 router.post('/conversations/:conversationId/messages', requireAuth, messageLimiter, validateMessage, async (req: AuthRequest, res) => {
   try {

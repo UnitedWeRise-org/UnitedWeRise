@@ -41,7 +41,64 @@ const express_validator_1 = require("express-validator");
 const router = (0, express_1.Router)();
 // Using singleton prisma from lib/prisma.ts
 /**
- * Create a tax-deductible donation
+ * @swagger
+ * /api/payments/donation:
+ *   post:
+ *     tags: [Payment]
+ *     summary: Create tax-deductible donation
+ *     description: Creates a donation payment with Stripe integration. Supports one-time and recurring donations. All donations are tax-deductible (501c3 nonprofit).
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - donationType
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 100
+ *                 description: Donation amount in cents (minimum $1.00)
+ *                 example: 2500
+ *               donationType:
+ *                 type: string
+ *                 enum: [ONE_TIME, RECURRING, CAMPAIGN_SPECIFIC, GENERAL_SUPPORT, MEMORIAL, HONOR]
+ *                 description: Type of donation
+ *                 example: "ONE_TIME"
+ *               campaignId:
+ *                 type: string
+ *                 description: Campaign ID for campaign-specific donations
+ *               isRecurring:
+ *                 type: boolean
+ *                 description: Whether donation repeats automatically
+ *               recurringInterval:
+ *                 type: string
+ *                 enum: [WEEKLY, MONTHLY, QUARTERLY, YEARLY]
+ *                 description: Interval for recurring donations (required if isRecurring is true)
+ *     responses:
+ *       200:
+ *         description: Donation created successfully with Stripe Payment Link
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: Stripe payment details (Payment Link URL, payment ID, etc.)
+ *       400:
+ *         description: Validation error - invalid amount or donation type
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error - Stripe integration failure
  */
 router.post('/donation', auth_1.requireAuth, [
     (0, express_validator_1.body)('amount').isInt({ min: 100 }).withMessage('Minimum donation is $1.00'),
@@ -77,7 +134,60 @@ router.post('/donation', auth_1.requireAuth, [
     }
 });
 /**
- * Create a non-deductible fee payment
+ * @swagger
+ * /api/payments/fee:
+ *   post:
+ *     tags: [Payment]
+ *     summary: Create non-deductible fee payment
+ *     description: Creates a fee payment via Stripe (NOT tax-deductible). Used for candidate registration, premium features, event hosting, advertising, etc.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - feeType
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 100
+ *                 description: Fee amount in cents (minimum $1.00)
+ *                 example: 5000
+ *               feeType:
+ *                 type: string
+ *                 enum: [CANDIDATE_REGISTRATION, VERIFICATION_FEE, PREMIUM_FEATURES, EVENT_HOSTING, ADVERTISING, OTHER]
+ *                 description: Type of fee payment
+ *                 example: "CANDIDATE_REGISTRATION"
+ *               candidateRegistrationId:
+ *                 type: string
+ *                 description: Candidate registration ID (required for CANDIDATE_REGISTRATION fee type)
+ *               description:
+ *                 type: string
+ *                 description: Optional description of fee payment
+ *     responses:
+ *       200:
+ *         description: Fee payment created successfully with Stripe Checkout Session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: Stripe Checkout Session details (session URL, payment ID, etc.)
+ *       400:
+ *         description: Validation error - invalid amount or fee type
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error - Stripe integration failure
  */
 router.post('/fee', auth_1.requireAuth, [
     (0, express_validator_1.body)('amount').isInt({ min: 100 }).withMessage('Minimum fee is $1.00'),
@@ -111,7 +221,62 @@ router.post('/fee', auth_1.requireAuth, [
     }
 });
 /**
- * Get user's payment history
+ * @swagger
+ * /api/payments/history:
+ *   get:
+ *     tags: [Payment]
+ *     summary: Get user's payment history
+ *     description: Retrieves authenticated user's payment history (donations and fees) with pagination and filtering. Includes refund information.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [DONATION, FEE]
+ *         description: Filter by payment type
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of payments to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of payments to skip
+ *     responses:
+ *       200:
+ *         description: Payment history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     payments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         description: Payment record with refund details
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of payments matching filter
+ *                     hasMore:
+ *                       type: boolean
+ *                       description: Whether more payments exist beyond current page
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error - failed to fetch payment history
  */
 router.get('/history', auth_1.requireAuth, async (req, res) => {
     try {
@@ -149,7 +314,30 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
     }
 });
 /**
- * Get donation campaigns
+ * @swagger
+ * /api/payments/campaigns:
+ *   get:
+ *     tags: [Payment]
+ *     summary: Get active donation campaigns
+ *     description: Retrieves all active donation campaigns for public display. No authentication required. Returns featured campaigns first.
+ *     responses:
+ *       200:
+ *         description: Donation campaigns retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     description: Donation campaign details (title, goal, progress, featured status)
+ *       500:
+ *         description: Server error - failed to fetch campaigns
  */
 router.get('/campaigns', async (req, res) => {
     try {
@@ -180,7 +368,57 @@ router.get('/campaigns', async (req, res) => {
     }
 });
 /**
- * Get payment receipt
+ * @swagger
+ * /api/payments/receipt/{paymentId}:
+ *   get:
+ *     tags: [Payment]
+ *     summary: Get payment receipt
+ *     description: Retrieves payment receipt for authenticated user. Generates receipt if not already created. Only user's own receipts are accessible.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: paymentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment unique identifier
+ *     responses:
+ *       200:
+ *         description: Receipt retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     receiptUrl:
+ *                       type: string
+ *                       description: URL to PDF receipt
+ *                     receiptNumber:
+ *                       type: string
+ *                       description: Unique receipt number for tax purposes
+ *                     taxDeductible:
+ *                       type: boolean
+ *                       description: Whether payment is tax-deductible
+ *                     amount:
+ *                       type: integer
+ *                       description: Payment amount in cents
+ *                     date:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Payment processed date
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       404:
+ *         description: Payment not found or not owned by user
+ *       500:
+ *         description: Server error - failed to generate receipt
  */
 router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
     try {
@@ -236,7 +474,68 @@ router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
     }
 });
 /**
- * Get tax summary for user (for tax-deductible donations)
+ * @swagger
+ * /api/payments/tax-summary/{year}:
+ *   get:
+ *     tags: [Payment]
+ *     summary: Get annual tax summary
+ *     description: Generates tax summary for all tax-deductible donations in specified year. Includes EIN and IRS compliance message for tax filing.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: year
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Tax year (e.g., 2025)
+ *         example: 2025
+ *     responses:
+ *       200:
+ *         description: Tax summary generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     year:
+ *                       type: integer
+ *                       description: Tax year
+ *                     totalDonations:
+ *                       type: integer
+ *                       description: Total amount donated in cents
+ *                     donationCount:
+ *                       type: integer
+ *                       description: Number of donations made
+ *                     donations:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           amount:
+ *                             type: integer
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           receiptNumber:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                     taxMessage:
+ *                       type: string
+ *                       description: IRS tax-deductible message with EIN
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error - failed to generate tax summary
  */
 router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
     try {
@@ -284,7 +583,40 @@ router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
     }
 });
 /**
- * Stripe webhook endpoint
+ * @swagger
+ * /api/payments/webhook:
+ *   post:
+ *     tags: [Payment]
+ *     summary: Stripe webhook handler
+ *     description: Handles Stripe webhook events for payment processing. Verifies Stripe signature for security. NO AUTHENTICATION REQUIRED (uses Stripe signature instead).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Stripe event payload (raw body required for signature verification)
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 received:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Invalid signature or webhook processing failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message (signature verification failure or event processing error)
  */
 router.post('/webhook', 
 // Note: No auth middleware for webhooks

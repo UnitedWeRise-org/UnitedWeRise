@@ -12,6 +12,104 @@ const representativeService_1 = require("../services/representativeService");
 const validation_1 = require("../middleware/validation");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
+/**
+ * @swagger
+ * /api/political/profile:
+ *   put:
+ *     tags: [Political]
+ *     summary: Update political profile
+ *     description: Updates user's address and political profile information including office, title, and term dates
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               streetAddress:
+ *                 type: string
+ *                 description: Street address
+ *               city:
+ *                 type: string
+ *                 description: City (required if streetAddress provided)
+ *               state:
+ *                 type: string
+ *                 description: State (required if streetAddress provided)
+ *               zipCode:
+ *                 type: string
+ *                 description: ZIP code (required if streetAddress provided)
+ *               campaignWebsite:
+ *                 type: string
+ *                 format: uri
+ *                 description: Campaign or official website URL
+ *               politicalProfileType:
+ *                 type: string
+ *                 enum: [CITIZEN, CANDIDATE, ELECTED_OFFICIAL, GOVERNMENT_EMPLOYEE, POLITICAL_STAFF]
+ *                 description: Political profile type
+ *               office:
+ *                 type: string
+ *                 description: Office held or running for
+ *               officialTitle:
+ *                 type: string
+ *                 description: Official title
+ *               termStart:
+ *                 type: string
+ *                 format: date
+ *                 description: Term start date
+ *               termEnd:
+ *                 type: string
+ *                 format: date
+ *                 description: Term end date
+ *     responses:
+ *       200:
+ *         description: Political profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Political profile updated successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     streetAddress:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     politicalProfileType:
+ *                       type: string
+ *                     verificationStatus:
+ *                       type: string
+ *                     campaignWebsite:
+ *                       type: string
+ *                     office:
+ *                       type: string
+ *                     officialTitle:
+ *                       type: string
+ *                     termStart:
+ *                       type: string
+ *                       format: date
+ *                     termEnd:
+ *                       type: string
+ *                       format: date
+ *       400:
+ *         description: Validation error - missing required fields
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Update user's address and political info (existing route - enhanced)
 router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile, async (req, res) => {
     try {
@@ -100,6 +198,71 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+/**
+ * @swagger
+ * /api/political/officials:
+ *   get:
+ *     tags: [Political]
+ *     summary: Get user's elected officials
+ *     description: Retrieves elected officials based on authenticated user's location (federal, state, and local)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: forceRefresh
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Force refresh from external API instead of using cache
+ *     responses:
+ *       200:
+ *         description: Officials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 representatives:
+ *                   type: object
+ *                   properties:
+ *                     federal:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     state:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     local:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                 totalCount:
+ *                   type: integer
+ *                 location:
+ *                   type: object
+ *                   properties:
+ *                     zipCode:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                 source:
+ *                   type: string
+ *                   enum: [cache, api, none]
+ *                 lastUpdated:
+ *                   type: string
+ *                   format: date-time
+ *                 cached:
+ *                   type: boolean
+ *       400:
+ *         description: User address not set - must add address in profile settings
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Get elected officials for user's location
 router.get('/officials', auth_1.requireAuth, async (req, res) => {
     try {
@@ -165,6 +328,70 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+/**
+ * @swagger
+ * /api/political/representatives:
+ *   get:
+ *     tags: [Political]
+ *     summary: Get user's representatives (alias for /officials)
+ *     description: Retrieves elected representatives based on authenticated user's location - same as /officials endpoint
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: forceRefresh
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Force refresh from external API instead of using cache
+ *     responses:
+ *       200:
+ *         description: Representatives retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 representatives:
+ *                   type: object
+ *                   properties:
+ *                     federal:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     state:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     local:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                 totalCount:
+ *                   type: integer
+ *                 location:
+ *                   type: object
+ *                   properties:
+ *                     zipCode:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                 source:
+ *                   type: string
+ *                 lastUpdated:
+ *                   type: string
+ *                   format: date-time
+ *                 cached:
+ *                   type: boolean
+ *       400:
+ *         description: User address not set
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ */
 // Alias for /officials endpoint (for frontend compatibility)
 router.get('/representatives', auth_1.requireAuth, async (req, res) => {
     try {
@@ -230,6 +457,67 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+/**
+ * @swagger
+ * /api/political/representatives/lookup:
+ *   get:
+ *     tags: [Political]
+ *     summary: Look up representatives by address (public)
+ *     description: Retrieves elected representatives for any address - no authentication required
+ *     parameters:
+ *       - in: query
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Full address to look up representatives for
+ *       - in: query
+ *         name: forceRefresh
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Force refresh from external API
+ *     responses:
+ *       200:
+ *         description: Representatives retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 representatives:
+ *                   type: object
+ *                   properties:
+ *                     federal:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     state:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                     local:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Representative'
+ *                 totalCount:
+ *                   type: integer
+ *                 location:
+ *                   type: object
+ *                 source:
+ *                   type: string
+ *                 lastUpdated:
+ *                   type: string
+ *                   format: date-time
+ *                 cached:
+ *                   type: boolean
+ *       400:
+ *         description: Address parameter is required
+ *       404:
+ *         description: No representatives found for this address
+ *       500:
+ *         description: Internal server error
+ */
 // Get representatives by address (PUBLIC - no authentication required)
 router.get('/representatives/lookup', async (req, res) => {
     try {
@@ -281,6 +569,38 @@ router.get('/representatives/lookup', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+/**
+ * @swagger
+ * /api/political/officials/refresh:
+ *   post:
+ *     tags: [Political]
+ *     summary: Refresh officials data
+ *     description: Forces a refresh of elected officials data for the authenticated user's location
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Representatives data refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Representatives data refreshed successfully
+ *                 refreshed:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: User address not set - must add address to refresh data
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Internal server error
+ *       503:
+ *         description: Unable to refresh data - service unavailable
+ */
 // Refresh elected officials data
 router.post('/officials/refresh', auth_1.requireAuth, async (req, res) => {
     try {
@@ -313,6 +633,62 @@ router.post('/officials/refresh', auth_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+/**
+ * @swagger
+ * /api/political/officials/{zipCode}/{state}:
+ *   get:
+ *     tags: [Political]
+ *     summary: Get officials by ZIP code and state (public)
+ *     description: Retrieves elected officials for a specific ZIP code and state - no authentication required
+ *     parameters:
+ *       - in: path
+ *         name: zipCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^\d{5}$'
+ *         description: 5-digit ZIP code
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[A-Z]{2}$'
+ *         description: 2-letter state code (e.g., CA, NY)
+ *       - in: query
+ *         name: forceRefresh
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Force refresh from external API
+ *     responses:
+ *       200:
+ *         description: Officials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 representatives:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Representative'
+ *                 location:
+ *                   type: object
+ *                   properties:
+ *                     zipCode:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                 count:
+ *                   type: integer
+ *                 source:
+ *                   type: string
+ *       400:
+ *         description: Invalid zip code or state format
+ *       500:
+ *         description: Internal server error
+ */
 // Get officials by location (public endpoint for search)
 router.get('/officials/:zipCode/:state', async (req, res) => {
     try {

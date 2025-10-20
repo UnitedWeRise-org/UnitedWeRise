@@ -46,11 +46,148 @@ const MIN_FILE_SIZE = 100;
 const MAX_DIMENSION = 8000;
 const MIN_DIMENSION = 10;
 /**
- * POST /api/photos/upload
- *
- * Layer 6: Clean upload endpoint using PhotoPipeline service
- * - Flow: Auth → Multer → PhotoPipeline.process() → Return Result
- * - All validation, processing, moderation, upload, and database logic in PhotoPipeline
+ * @swagger
+ * /api/photos/upload:
+ *   post:
+ *     tags: [Photo]
+ *     summary: Upload a new photo with AI moderation
+ *     description: |
+ *       Uploads a photo through a multi-stage pipeline:
+ *       - File validation (size, format, dimensions)
+ *       - EXIF metadata stripping for privacy
+ *       - WebP conversion for optimization
+ *       - AI content moderation via Azure OpenAI
+ *       - Azure Blob Storage upload
+ *       - Database record creation
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, GIF, WebP; max 5MB)
+ *               photoType:
+ *                 type: string
+ *                 enum: [POST_MEDIA, PROFILE, GALLERY]
+ *                 default: POST_MEDIA
+ *                 description: Type of photo being uploaded
+ *               gallery:
+ *                 type: string
+ *                 description: Gallery name for organizing photos (optional)
+ *               caption:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Photo caption (optional)
+ *     responses:
+ *       201:
+ *         description: Photo uploaded successfully
+ *         headers:
+ *           X-Moderation-Decision:
+ *             schema:
+ *               type: string
+ *             description: AI moderation decision (APPROVED, REJECTED, etc.)
+ *           X-Moderation-Confidence:
+ *             schema:
+ *               type: number
+ *             description: Confidence score (0-1)
+ *           X-Request-ID:
+ *             schema:
+ *               type: string
+ *             description: Unique request identifier for debugging
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     photo:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         url:
+ *                           type: string
+ *                         thumbnailUrl:
+ *                           type: string
+ *                         width:
+ *                           type: integer
+ *                         height:
+ *                           type: integer
+ *                         fileSize:
+ *                           type: integer
+ *                         photoType:
+ *                           type: string
+ *                         gallery:
+ *                           type: string
+ *                         caption:
+ *                           type: string
+ *                         uploadedAt:
+ *                           type: string
+ *                           format: date-time
+ *                     moderation:
+ *                       type: object
+ *                       properties:
+ *                         decision:
+ *                           type: string
+ *                         approved:
+ *                           type: boolean
+ *                         confidence:
+ *                           type: number
+ *                         contentType:
+ *                           type: string
+ *       400:
+ *         description: Validation error - no file uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: No file uploaded
+ *                 requestId:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       422:
+ *         description: Content moderation failed - inappropriate content detected
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Content moderation failed
+ *                 details:
+ *                   type: string
+ *                   description: Reason for moderation failure
+ *                 category:
+ *                   type: string
+ *                   description: Category of inappropriate content
+ *                 requestId:
+ *                   type: string
+ *       500:
+ *         description: Internal server error during upload or processing
  */
 router.post('/upload', auth_1.requireAuth, upload.single('file'), async (req, res) => {
     const requestId = (0, uuid_1.v4)();
@@ -113,9 +250,85 @@ router.post('/upload', auth_1.requireAuth, upload.single('file'), async (req, re
     }
 });
 /**
- * GET /api/photos/health
- *
- * Health check endpoint
+ * @swagger
+ * /api/photos/health:
+ *   get:
+ *     tags: [Photo]
+ *     summary: Photo service health check
+ *     description: Returns health status of photo upload service including configuration and dependencies
+ *     responses:
+ *       200:
+ *         description: Service health information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 layer:
+ *                   type: integer
+ *                   example: 6
+ *                   description: Current architecture layer (6 = pipeline-based)
+ *                 description:
+ *                   type: string
+ *                   example: Pipeline-based photo upload with reusable architecture
+ *                 features:
+ *                   type: object
+ *                   properties:
+ *                     authentication:
+ *                       type: boolean
+ *                     validation:
+ *                       type: boolean
+ *                     exifStripping:
+ *                       type: boolean
+ *                     webpConversion:
+ *                       type: boolean
+ *                     moderation:
+ *                       type: boolean
+ *                     database:
+ *                       type: boolean
+ *                     pipelineArchitecture:
+ *                       type: boolean
+ *                 validation:
+ *                   type: object
+ *                   properties:
+ *                     allowedTypes:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     allowedExtensions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     maxSize:
+ *                       type: integer
+ *                       description: Maximum file size in bytes
+ *                     minSize:
+ *                       type: integer
+ *                       description: Minimum file size in bytes
+ *                     maxDimension:
+ *                       type: integer
+ *                       description: Maximum image dimension in pixels
+ *                     minDimension:
+ *                       type: integer
+ *                       description: Minimum image dimension in pixels
+ *                 environment:
+ *                   type: object
+ *                   properties:
+ *                     hasConnectionString:
+ *                       type: boolean
+ *                       description: Azure Storage connection string configured
+ *                     hasAccountName:
+ *                       type: boolean
+ *                       description: Azure Storage account name configured
+ *                     accountName:
+ *                       type: string
+ *                       description: Azure Storage account name
+ *                     hasAzureOpenAI:
+ *                       type: boolean
+ *                       description: Azure OpenAI credentials configured
  */
 router.get('/health', (req, res) => {
     const envCheck = {

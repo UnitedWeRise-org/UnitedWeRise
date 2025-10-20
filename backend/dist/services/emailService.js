@@ -6,11 +6,35 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailService = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const environment_1 = require("../utils/environment");
+/**
+ * Email service for sending transactional emails
+ *
+ * Supports:
+ * - SMTP configuration via environment variables
+ * - Email verification and password reset flows
+ * - Moderation notifications (warnings, suspensions)
+ * - Candidate registration workflows
+ * - Admin messaging to candidates
+ * - HTML templates with fallback to plain text
+ *
+ * Configuration:
+ * - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+ * - SMTP_FROM (optional, defaults to SMTP_USER)
+ * - FRONTEND_URL for link generation
+ */
 class EmailService {
     constructor() {
         this.transporter = null;
         this.initializeTransporter();
     }
+    /**
+     * Initialize SMTP transporter with environment configuration
+     *
+     * Attempts to create nodemailer transport using SMTP credentials.
+     * Logs warning if no credentials configured (emails won't send).
+     *
+     * @private
+     */
     initializeTransporter() {
         try {
             // Try SMTP configuration first
@@ -37,6 +61,24 @@ class EmailService {
             console.error('Failed to initialize email service:', error);
         }
     }
+    /**
+     * Send email using configured SMTP transport
+     *
+     * Sends HTML email with plain text fallback (auto-stripped from HTML if not provided).
+     * Returns boolean success/failure (logs errors but doesn't throw).
+     *
+     * @param template - Email template with to, subject, html, and optional text
+     * @returns Promise<boolean> True if sent successfully, false otherwise
+     *
+     * @example
+     * const sent = await emailService.sendEmail({
+     *   to: 'user@example.com',
+     *   subject: 'Welcome!',
+     *   html: '<h1>Welcome to our platform</h1>',
+     *   text: 'Welcome to our platform'
+     * });
+     * if (!sent) console.error('Email failed to send');
+     */
     async sendEmail(template) {
         if (!this.transporter) {
             console.error('Email service not configured');
@@ -59,7 +101,25 @@ class EmailService {
             return false;
         }
     }
-    // Email verification template
+    /**
+     * Generate email verification template for new user registration
+     *
+     * Creates branded email with verification link that expires in 24 hours.
+     * Link format: {FRONTEND_URL}/verify-email?token={verifyToken}
+     *
+     * @param email - Recipient email address
+     * @param verifyToken - Verification token to include in link
+     * @param firstName - Optional first name for personalization
+     * @returns EmailTemplate ready to send
+     *
+     * @example
+     * const template = emailService.generateEmailVerificationTemplate(
+     *   'user@example.com',
+     *   'verify_abc123',
+     *   'Jane'
+     * );
+     * await emailService.sendEmail(template);
+     */
     generateEmailVerificationTemplate(email, verifyToken, firstName) {
         const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`;
         const name = firstName || 'there';
@@ -129,7 +189,25 @@ class EmailService {
       `
         };
     }
-    // Password reset template
+    /**
+     * Generate password reset template for forgot password flow
+     *
+     * Creates email with password reset link that expires in 1 hour.
+     * Link format: {FRONTEND_URL}/reset-password?token={resetToken}
+     *
+     * @param email - Recipient email address
+     * @param resetToken - Password reset token to include in link
+     * @param firstName - Optional first name for personalization
+     * @returns EmailTemplate ready to send
+     *
+     * @example
+     * const template = emailService.generatePasswordResetTemplate(
+     *   'user@example.com',
+     *   'reset_xyz789',
+     *   'John'
+     * );
+     * await emailService.sendEmail(template);
+     */
     generatePasswordResetTemplate(email, resetToken, firstName) {
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
         const name = firstName || 'there';
@@ -909,7 +987,20 @@ The United We Rise Moderation Team`,
       `
         };
     }
-    // Test email service
+    /**
+     * Test SMTP connection
+     *
+     * Verifies SMTP transport configuration without sending email.
+     * Useful for health checks and configuration validation.
+     *
+     * @returns Promise<boolean> True if connection successful, false otherwise
+     *
+     * @example
+     * const isWorking = await emailService.testConnection();
+     * if (!isWorking) {
+     *   console.error('Email service misconfigured');
+     * }
+     */
     async testConnection() {
         if (!this.transporter) {
             console.error('Email service not configured');
