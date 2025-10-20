@@ -22,17 +22,42 @@ const initializeWebSocket = (httpServer) => {
             methods: ["GET", "POST"]
         }
     });
-    // Authentication middleware
+    // Authentication middleware - reads JWT from httpOnly cookie (like REST API)
     io.use(async (socket, next) => {
         try {
-            const token = socket.handshake.auth.token;
+            console.log('🔌 WebSocket connection attempt from:', socket.handshake.address);
+            // Parse cookies from socket handshake headers
+            const cookieHeader = socket.handshake.headers.cookie;
+            console.log('🍪 Cookie header present:', !!cookieHeader);
+            if (cookieHeader) {
+                console.log('🍪 Cookie header length:', cookieHeader.length);
+            }
+            let token;
+            if (cookieHeader) {
+                // Parse cookie header to extract authToken
+                const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+                    const [key, value] = cookie.trim().split('=');
+                    acc[key] = value;
+                    return acc;
+                }, {});
+                token = cookies.authToken;
+                console.log('🔑 authToken from cookie:', token ? `${token.substring(0, 20)}...` : 'not found');
+            }
+            // Fallback: Check auth.token for manual token passing (backwards compatibility)
             if (!token) {
-                return next(new Error('Authentication token required'));
+                token = socket.handshake.auth.token;
+                console.log('🔑 Token from auth.token:', token ? `${token.substring(0, 20)}...` : 'not found');
+            }
+            if (!token) {
+                console.error('❌ WebSocket auth failed: No token provided in cookies or auth.token');
+                return next(new Error('No token provided'));
             }
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            console.log('✅ JWT decoded successfully, userId:', decoded.userId);
             // SECURITY FIX: Check if token is blacklisted
             const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
             if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
+                console.error('❌ WebSocket auth failed: Token has been revoked');
                 return next(new Error('Token has been revoked'));
             }
             const user = await prisma_1.prisma.user.findUnique({
@@ -40,13 +65,16 @@ const initializeWebSocket = (httpServer) => {
                 select: { id: true, username: true }
             });
             if (!user) {
+                console.error('❌ WebSocket auth failed: User not found for userId:', decoded.userId);
                 return next(new Error('User not found'));
             }
             socket.userId = user.id;
             socket.user = user;
+            console.log('✅ WebSocket authentication successful for user:', user.username);
             next();
         }
         catch (error) {
+            console.error('❌ WebSocket auth error:', error instanceof Error ? error.message : error);
             next(new Error('Invalid authentication token'));
         }
     });

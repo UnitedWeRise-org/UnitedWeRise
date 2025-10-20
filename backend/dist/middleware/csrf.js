@@ -16,8 +16,29 @@ const verifyCsrf = (req, res, next) => {
     if (req.method === 'OPTIONS') {
         return next();
     }
+    // CRITICAL: Exempt authentication routes from CSRF protection
+    // These routes are accessed before users have CSRF tokens or during logout
+    const exemptedPaths = [
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/check-email', // Email validation during registration (before session)
+        '/api/auth/check-username', // Username availability check during registration (before session)
+        '/api/auth/google',
+        '/api/auth/google/callback',
+        '/api/auth/refresh',
+        '/api/auth/logout', // Logout must work even if CSRF token issues
+        '/api/auth/forgot-password',
+        '/api/auth/reset-password',
+        '/health',
+        '/api/health'
+    ];
+    // Check if current path is exempted
+    if (exemptedPaths.some(path => req.path === path || req.path.startsWith(path))) {
+        return next();
+    }
     // Get CSRF token from request header or body
-    const token = req.headers['x-csrf-token'] || req.body._csrf;
+    // Note: req.body might be undefined for multipart/form-data before body parsing
+    const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
     // Get CSRF token from cookie
     const cookie = req.cookies['csrf-token'];
     // Verify both tokens exist
@@ -57,7 +78,7 @@ const warnCsrf = (req, res, next) => {
     if (req.method === 'GET' || req.method === 'OPTIONS') {
         return next();
     }
-    const token = req.headers['x-csrf-token'] || req.body._csrf;
+    const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
     const cookie = req.cookies['csrf-token'];
     if (!token || !cookie || token !== cookie) {
         console.warn(`⚠️  CSRF Warning: ${req.method} ${req.path} - Missing or mismatched CSRF token`);

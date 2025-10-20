@@ -1,10 +1,10 @@
 # UnitedWeRise Database Schema Reference
 
 **Status**: ✅ Production Ready
-**Last Updated**: 2025-10-09
+**Last Updated**: 2025-10-17
 **Database**: PostgreSQL (Azure Flexible Server)
 **ORM**: Prisma
-**Total Models**: 94
+**Total Models**: 86
 
 ---
 
@@ -19,7 +19,7 @@
 - Any specific model name (User, Post, Quest, Badge, Photo, Candidate, etc.)
 
 **What this file contains:**
-- **Complete database schema**: All 94 Prisma models with fields, types, and relationships
+- **Complete database schema**: All 86 Prisma models with fields, types, and relationships
 - **Model organization**: Models grouped by functional area (User, Content, Civic, Electoral, etc.)
 - **Detailed model documentation**: Each model with field descriptions, relationships, indexes, and business logic
 - **Enum reference**: All 50+ enums used across the schema
@@ -70,7 +70,7 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 
 ## Database Statistics
 
-- **Total Models**: 94
+- **Total Models**: 86
 - **Core User & Authentication**: 9 models
 - **Social & Content**: 12 models
 - **Civic Engagement & Gamification**: 6 models
@@ -277,7 +277,6 @@ model User {
   onboardingData              Json?
   onboardingCompleted         Boolean                   @default(false)
   interests                   String[]                  @default([])
-  politicalExperience         String?
   notificationPreferences     Json?
 
   // Display & Social
@@ -1924,9 +1923,9 @@ The schema is designed for scalability, maintainability, and extensibility with:
 - Comprehensive enum types for type safety
 - Relationship integrity via foreign keys
 
-**Total Models**: 94
-**Total Indexes**: 200+
-**Total Enums**: 50+
+**Total Models**: 86
+**Total Indexes**: 285+ (including 3 new performance indexes added October 2025)
+**Total Enums**: 74
 
 For implementation details, see:
 - `backend/prisma/schema.prisma` - Complete schema definition

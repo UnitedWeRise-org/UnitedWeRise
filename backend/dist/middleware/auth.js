@@ -52,6 +52,20 @@ const requireAuth = async (req, res, next) => {
             totpVerified: decoded.totpVerified || false,
             totpVerifiedAt: decoded.totpVerifiedAt || null
         };
+        // 🔍 DIAGNOSTIC: Show admin status and TOTP verification
+        console.log('🔍 DIAGNOSTIC | req.user after assignment:', {
+            userId: user.id,
+            username: user.username,
+            isAdmin: req.user.isAdmin,
+            isModerator: req.user.isModerator,
+            isSuperAdmin: req.user.isSuperAdmin,
+            totpVerified: req.user.totpVerified,
+            rawDatabaseUser: {
+                isAdmin: user.isAdmin,
+                isModerator: user.isModerator,
+                isSuperAdmin: user.isSuperAdmin
+            }
+        });
         // 🔍 LAYER 5 DEBUG: Authentication successful
         console.log('🔍 LAYER 5 | Authentication | User authenticated:', {
             userId: user.id,
@@ -95,7 +109,24 @@ const requireAuth = async (req, res, next) => {
             '/api/candidate-verification/', '/api/appeals/'
         ];
         const requiresAdminAccess = adminOnlyRoutes.some(route => req.path.startsWith(route));
+        // 🔍 DIAGNOSTIC: Show admin access check
+        if (requiresAdminAccess) {
+            console.log('🔍 DIAGNOSTIC | Admin access check:', {
+                path: req.path,
+                requiresAdminAccess,
+                'req.user?.isAdmin': req.user?.isAdmin,
+                'user.isAdmin': user.isAdmin,
+                willReturn403: !req.user?.isAdmin
+            });
+        }
         if (requiresAdminAccess && !req.user?.isAdmin) {
+            console.error('❌ 403 FORBIDDEN | Admin access denied:', {
+                path: req.path,
+                userId: req.user?.id,
+                username: req.user?.username,
+                isAdmin: req.user?.isAdmin,
+                rawUserIsAdmin: user.isAdmin
+            });
             return res.status(403).json({
                 error: 'Admin access required for this endpoint.',
                 requiredRole: 'admin'

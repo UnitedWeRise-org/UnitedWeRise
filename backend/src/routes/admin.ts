@@ -35,6 +35,19 @@ const handleValidationErrors = (req: express.Request, res: express.Response, nex
 
 // Dashboard Overview
 router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  // Generate unique request ID for tracing
+  const crypto = require('crypto');
+  const requestId = crypto.randomBytes(4).toString('hex');
+
+  console.log(`[${requestId}] 🎯 ENDPOINT: /api/admin/dashboard REACHED`, {
+    timestamp: new Date().toISOString(),
+    userId: req.user?.id,
+    username: req.user?.username,
+    isAdmin: req.user?.isAdmin,
+    totpVerified: req.user?.totpVerified,
+    message: 'Dashboard endpoint handler executing - ALL MIDDLEWARE PASSED'
+  });
+
   try {
     const [
       totalUsers,
@@ -87,6 +100,12 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res
     // Get performance metrics
     const performanceData = getPerformanceMetrics();
 
+    console.log(`[${requestId}] ✅ ENDPOINT: /api/admin/dashboard - Sending 200 response`, {
+      userId: req.user?.id,
+      username: req.user?.username,
+      dataKeys: ['overview', 'growth', 'recentActivity', 'performance']
+    });
+
     res.json({
       overview: {
         totalUsers,
@@ -115,7 +134,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req: AuthRequest, res
       }
     });
   } catch (error) {
-    console.error('Admin dashboard error:', error);
+    console.error(`[${requestId}] ❌ ENDPOINT: /api/admin/dashboard - Error:`, error);
     res.status(500).json({ error: 'Failed to load dashboard' });
   }
 });
@@ -2082,14 +2101,39 @@ router.post('/candidates/:id/approve', requireAuth, requireAdmin, async (req: Au
       });
 
       console.log(`✅ Created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
-      
+
     } catch (profileError) {
       console.error('Error creating candidate profile:', profileError);
       // Don't fail the whole approval if profile creation fails
       // The registration is still approved, profile can be created manually later
     }
 
-    // TODO: Send approval email notification
+    // Send approval email notification
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: registration.userId },
+        select: { email: true, firstName: true }
+      });
+
+      if (user) {
+        const candidateName = `${registration.firstName} ${registration.lastName}`;
+        const officeLevelName = registration.positionLevel.charAt(0).toUpperCase() + registration.positionLevel.slice(1);
+
+        const emailTemplate = emailService.generateCandidateApprovalTemplate(
+          user.email,
+          candidateName,
+          registration.positionTitle,
+          officeLevelName,
+          user.firstName
+        );
+
+        await emailService.sendEmail(emailTemplate);
+        console.log(`Approval email sent to ${user.email} for candidate ${candidateName}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send approval email:', emailError);
+      // Don't fail the entire approval if email fails
+    }
 
     res.json({
       success: true,
@@ -2133,7 +2177,33 @@ router.post('/candidates/:id/reject', requireAuth, requireAdmin, async (req: Aut
       }
     });
 
-    // TODO: Send rejection email with reason
+    // Send rejection email with reason
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: registration.userId },
+        select: { email: true, firstName: true }
+      });
+
+      if (user) {
+        const candidateName = `${registration.firstName} ${registration.lastName}`;
+
+        const emailTemplate = emailService.generateCandidateRejectionTemplate(
+          user.email,
+          candidateName,
+          registration.positionTitle,
+          reason,
+          notes,
+          user.firstName
+        );
+
+        await emailService.sendEmail(emailTemplate);
+        console.log(`Rejection email sent to ${user.email} for candidate ${candidateName}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send rejection email:', emailError);
+      // Don't fail the entire rejection if email fails
+    }
+
     // TODO: Process refund if payment was made
 
     res.json({
@@ -2378,7 +2448,27 @@ router.put('/candidates/profiles/:id/status', requireAuth, requireAdmin, async (
 
     console.log(`✅ Updated candidate ${candidate.name} status to ${status} by admin ${req.user!.id}`);
 
-    // TODO: Send notification email to candidate about status change
+    // Send notification email to candidate about status change
+    try {
+      if (candidate.user) {
+        const emailTemplate = emailService.generateCandidateStatusChangeTemplate(
+          candidate.user.email,
+          candidate.name,
+          candidate.status,
+          status,
+          reason,
+          appealNotes,
+          candidate.user.firstName
+        );
+
+        await emailService.sendEmail(emailTemplate);
+        console.log(`Status change email sent to ${candidate.user.email} for candidate ${candidate.name} (${candidate.status} → ${status})`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send status change email:', emailError);
+      // Don't fail the entire status update if email fails
+    }
+
     // TODO: Log audit trail entry
 
     res.json({
@@ -2764,13 +2854,36 @@ router.post('/candidates/:candidateId/messages', requireAuth, requireAdmin, asyn
       },
       include: {
         sender: { select: { id: true, firstName: true, lastName: true, email: true } },
-        candidate: { select: { name: true, user: { select: { email: true } } } }
+        candidate: { select: { name: true, user: { select: { email: true, firstName: true } } } }
       }
     });
 
     console.log(`✅ Admin message sent from ${req.user!.firstName} to candidate ${candidate.name}`);
 
-    // TODO: Send email notification to candidate about new admin message
+    // Send email notification to candidate about new admin message
+    try {
+      if (message.candidate.user) {
+        // Create message preview (first 150 chars)
+        const messagePreview = content.length > 150 ? content.substring(0, 147) + '...' : content;
+
+        const emailTemplate = emailService.generateAdminMessageTemplate(
+          message.candidate.user.email,
+          message.candidate.name,
+          subject,
+          messagePreview,
+          messageType,
+          priority,
+          message.candidate.user.firstName
+        );
+
+        await emailService.sendEmail(emailTemplate);
+        console.log(`Admin message email sent to ${message.candidate.user.email} for candidate ${message.candidate.name}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send admin message email:', emailError);
+      // Don't fail the entire message send if email fails
+    }
+
     // TODO: Send push notification if implemented
 
     res.status(201).json({

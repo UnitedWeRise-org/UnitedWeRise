@@ -18,6 +18,10 @@ declare class EmailService {
     private stripHtml;
     generateWaiverApprovalTemplate(email: string, candidateName: string, officeLevel: string, finalFee: number, firstName?: string): EmailTemplate;
     generateWaiverDenialTemplate(email: string, candidateName: string, officeLevel: string, originalFee: number, denialReason?: string, firstName?: string): EmailTemplate;
+    generateCandidateApprovalTemplate(email: string, candidateName: string, officeTitle: string, officeLevelName: string, firstName?: string): EmailTemplate;
+    generateCandidateRejectionTemplate(email: string, candidateName: string, officeTitle: string, rejectionReason: string, notes?: string, firstName?: string): EmailTemplate;
+    generateCandidateStatusChangeTemplate(email: string, candidateName: string, oldStatus: string, newStatus: string, reason?: string, notes?: string, firstName?: string): EmailTemplate;
+    generateAdminMessageTemplate(email: string, candidateName: string, subject: string, messagePreview: string, messageType: string, priority: string, firstName?: string): EmailTemplate;
     testConnection(): Promise<boolean>;
 }
 export declare const emailService: EmailService;

@@ -29,49 +29,81 @@ export interface AuthRequest extends Request {
 }
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Generate unique request ID for tracing
+  const requestId = crypto.randomBytes(4).toString('hex');
+
   try {
     // 🔍 LAYER 5 DEBUG: Authentication middleware entry
-    console.log('🔍 LAYER 5 | Authentication | Starting auth check:', {
+    console.log(`[${requestId}] 🔍 AUTH Middleware Entry:`, {
       path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString(),
       hasCookie: !!req.cookies?.authToken,
-      hasAuthHeader: !!req.header('Authorization')
+      hasAuthHeader: !!req.header('Authorization'),
+      cookieValue: req.cookies?.authToken ? `${req.cookies.authToken.substring(0, 10)}...` : 'NONE'
     });
 
     // Get token from cookie first, fallback to header for transition period
     let token = req.cookies?.authToken;
-    
+
     // Fallback for migration period
     if (!token) {
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
-    
-    
+
+
     if (!token) {
+      console.log(`[${requestId}] ❌ AUTH 401: No token provided`, {
+        path: req.path,
+        method: req.method
+      });
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
+    console.log(`[${requestId}] 🔍 AUTH Token Verification: Verifying JWT token...`);
     const decoded = verifyToken(token);
     if (!decoded) {
+      console.log(`[${requestId}] ❌ AUTH 401: Token verification failed`);
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
       return res.status(401).json({ error: 'Invalid token.' });
     }
+
+    console.log(`[${requestId}] ✅ AUTH Token Decoded:`, {
+      userId: decoded.userId,
+      totpVerified: decoded.totpVerified || false
+    });
 
     // SECURITY FIX: Check if token is blacklisted using secure hash
     // Use SHA-256 hash of full token to prevent collisions and improve security
     const tokenId = crypto.createHash('sha256').update(token).digest('hex');
     if (await sessionManager.isTokenBlacklisted(tokenId)) {
+      console.log(`[${requestId}] ❌ AUTH 401: Token blacklisted`, {
+        userId: decoded.userId
+      });
       return res.status(401).json({ error: 'Token has been revoked.' });
     }
 
+    console.log(`[${requestId}] 🔍 AUTH Database Lookup: Querying user from database...`);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, email: true, username: true, firstName: true, lastName: true, isModerator: true, isAdmin: true, isSuperAdmin: true, lastSeenAt: true }
     });
 
     if (!user) {
+      console.log(`[${requestId}] ❌ AUTH 401: User not found in database`, {
+        userId: decoded.userId
+      });
       return res.status(401).json({ error: 'User not found.' });
     }
+
+    console.log(`[${requestId}] ✅ AUTH User Found:`, {
+      userId: user.id,
+      username: user.username,
+      dbIsAdmin: user.isAdmin,
+      dbIsModerator: user.isModerator,
+      dbIsSuperAdmin: user.isSuperAdmin
+    });
 
     // Add TOTP verification status from JWT to user object
     req.user = {
@@ -80,8 +112,23 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       totpVerifiedAt: decoded.totpVerifiedAt || null
     };
 
+    // 🔍 DIAGNOSTIC: Show admin status and TOTP verification
+    console.log(`[${requestId}] 🔍 AUTH req.user Assigned:`, {
+      userId: user.id,
+      username: user.username,
+      'req.user.isAdmin': req.user.isAdmin,
+      'req.user.isModerator': req.user.isModerator,
+      'req.user.isSuperAdmin': req.user.isSuperAdmin,
+      'req.user.totpVerified': req.user.totpVerified,
+      rawDatabaseUser: {
+        isAdmin: user.isAdmin,
+        isModerator: user.isModerator,
+        isSuperAdmin: user.isSuperAdmin
+      }
+    });
+
     // 🔍 LAYER 5 DEBUG: Authentication successful
-    console.log('🔍 LAYER 5 | Authentication | User authenticated:', {
+    console.log(`[${requestId}] ✅ AUTH Basic Auth Successful:`, {
       userId: user.id,
       username: user.username
     });
@@ -130,33 +177,108 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       req.path.startsWith(route)
     );
 
+    console.log(`[${requestId}] 🔍 AUTH Admin Route Check:`, {
+      path: req.path,
+      requiresAdminAccess,
+      adminOnlyRoutes,
+      matchedRoute: adminOnlyRoutes.find(route => req.path.startsWith(route)) || 'none'
+    });
+
+    // 🔍 DIAGNOSTIC: Show admin access check
+    if (requiresAdminAccess) {
+      console.log(`[${requestId}] 🔍 AUTH Admin Access Evaluation:`, {
+        path: req.path,
+        requiresAdminAccess,
+        'req.user?.isAdmin': req.user?.isAdmin,
+        'user.isAdmin': user.isAdmin,
+        'req.user?.isSuperAdmin': req.user?.isSuperAdmin,
+        'req.user?.totpVerified': req.user?.totpVerified,
+        willReturn403: !req.user?.isAdmin
+      });
+    }
+
     if (requiresAdminAccess && !req.user?.isAdmin) {
+      console.error(`[${requestId}] 🚨 AUTH 403: Admin access denied`, {
+        path: req.path,
+        method: req.method,
+        userId: req.user?.id,
+        username: req.user?.username,
+        'req.user.isAdmin': req.user?.isAdmin,
+        'req.user.isSuperAdmin': req.user?.isSuperAdmin,
+        'req.user.totpVerified': req.user?.totpVerified,
+        rawDatabaseUser: {
+          isAdmin: user.isAdmin,
+          isSuperAdmin: user.isSuperAdmin
+        },
+        reason: 'USER_NOT_ADMIN'
+      });
       return res.status(403).json({
         error: 'Admin access required for this endpoint.',
         requiredRole: 'admin'
       });
     }
 
+    console.log(`[${requestId}] ✅ AUTH Middleware Complete: Passing to next()`, {
+      path: req.path,
+      userId: user.id,
+      username: user.username,
+      isAdmin: req.user.isAdmin
+    });
+
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error(`[${requestId}] ❌ AUTH Error in middleware:`, error);
     res.status(401).json({ error: 'Invalid token.' });
   }
 };
 
 export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Generate unique request ID for tracing
+  const requestId = crypto.randomBytes(4).toString('hex');
+
+  console.log(`[${requestId}] 🔍 requireAdmin Middleware Entry:`, {
+    path: req.path,
+    method: req.method,
+    hasUser: !!req.user,
+    'req.user?.isAdmin': req.user?.isAdmin,
+    'req.user?.totpVerified': req.user?.totpVerified
+  });
+
   if (!req.user?.isAdmin) {
+    console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - User not admin`, {
+      path: req.path,
+      method: req.method,
+      userId: req.user?.id,
+      username: req.user?.username,
+      'req.user.isAdmin': req.user?.isAdmin,
+      reason: 'NOT_ADMIN'
+    });
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
   // Check TOTP verification for admin users
   // Admin users must have TOTP verified in their JWT token
   if (!req.user?.totpVerified) {
+    console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - TOTP not verified`, {
+      path: req.path,
+      method: req.method,
+      userId: req.user?.id,
+      username: req.user?.username,
+      'req.user.totpVerified': req.user?.totpVerified,
+      'req.user.totpVerifiedAt': req.user?.totpVerifiedAt,
+      reason: 'TOTP_NOT_VERIFIED'
+    });
     return res.status(403).json({
       error: 'TOTP_REQUIRED',
       message: 'Two-factor authentication required for admin access. Please log in with TOTP.'
     });
   }
+
+  console.log(`[${requestId}] ✅ requireAdmin Passed:`, {
+    path: req.path,
+    userId: req.user.id,
+    username: req.user.username
+  });
 
   next();
 };

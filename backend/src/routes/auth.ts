@@ -584,8 +584,21 @@ router.post('/forgot-password', async (req, res) => {
       }
     });
 
-    // TODO: Send email with reset token
-    console.log(`Reset token for ${email}: ${resetToken}`);
+    // Send password reset email
+    const emailTemplate = emailService.generatePasswordResetTemplate(
+      email,
+      resetToken,
+      user.firstName
+    );
+
+    const emailSent = await emailService.sendEmail(emailTemplate);
+    if (!emailSent) {
+      // Log failure but don't expose to user (prevents email enumeration)
+      console.error('Failed to send password reset email to:', email);
+    } else {
+      // Track successful email send
+      metricsService.trackEmailSent('password_reset', email);
+    }
 
     res.json({ message: 'If the email exists, a reset link has been sent' });
   } catch (error) {
@@ -650,8 +663,11 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
       if (decoded) {
         // Calculate token expiration time
         const tokenExp = decoded.exp ? decoded.exp * 1000 : Date.now() + (7 * 24 * 60 * 60 * 1000);
-        const tokenId = `${decoded.userId}_${token.slice(-10)}`;
-        
+
+        // SECURITY FIX: Use SHA-256 hash of token for blacklisting (matches authMiddleware.ts)
+        // This ensures logout properly blacklists tokens and prevents token reuse
+        const tokenId = crypto.createHash('sha256').update(token).digest('hex');
+
         // Blacklist the token
         await sessionManager.blacklistToken(tokenId, tokenExp);
       }
@@ -709,9 +725,17 @@ router.post('/refresh', async (req, res) => {
         return res.status(401).json({ error: 'Invalid token' });
       }
 
-      // Verify user still exists
+      // Verify user still exists and get admin status
       const user = await prisma.user.findUnique({
-        where: { id: decoded.userId }
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          isAdmin: true,
+          isModerator: true,
+          isSuperAdmin: true
+        }
       });
 
       if (!user) {
@@ -719,8 +743,19 @@ router.post('/refresh', async (req, res) => {
         return res.status(401).json({ error: 'User not found' });
       }
 
+      // DIAGNOSTIC: Log token refresh details
+      const totpVerifiedStatus = decoded.totpVerified || false;
+      console.log(`🔄 Token refresh for ${user.username}:`, {
+        userId: user.id,
+        isAdmin: user.isAdmin,
+        isModerator: user.isModerator,
+        totpVerifiedInOldToken: decoded.totpVerified,
+        totpVerifiedInNewToken: totpVerifiedStatus,
+        ipAddress
+      });
+
       // Generate new token - preserve TOTP verification status from old token
-      const newToken = generateToken(decoded.userId, decoded.totpVerified || false);
+      const newToken = generateToken(decoded.userId, totpVerifiedStatus);
 
       // Set new httpOnly cookie
       res.cookie('authToken', newToken, {

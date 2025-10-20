@@ -9,6 +9,8 @@
  * Created: October 11, 2025 (Batch 3 - extracted from critical-functions.js)
  */
 
+import { adminDebugLog } from '../../js/adminDebugger.js';
+
 // ============================================================================
 // HCAPTCHA CALLBACK
 // ============================================================================
@@ -18,8 +20,8 @@
  * Called by HCaptcha widget after user completes challenge
  * @param {string} token - Verification token from HCaptcha
  */
-function onHCaptchaCallback(token) {
-    console.log('✅ HCaptcha verification successful', {
+async function onHCaptchaCallback(token) {
+    await adminDebugLog('HCaptcha', 'HCaptcha verification successful', {
         tokenLength: token ? token.length : 0
     });
 

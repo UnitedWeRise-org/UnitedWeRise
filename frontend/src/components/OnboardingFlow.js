@@ -733,12 +733,16 @@ class OnboardingFlow {
                 const data = await response.json();
                 this.steps = data.steps;
                 this.updateProgress();
-                
+
                 // Load interests for interests step
                 await this.loadInterests();
+            } else {
+                // Log the error details
+                const errorText = await response.text();
+                console.error(`[OnboardingFlow] Failed to load steps: ${response.status} ${response.statusText}`, errorText);
             }
         } catch (error) {
-            console.error('Failed to load onboarding steps:', error);
+            console.error('[OnboardingFlow] Load steps exception:', error);
         }
     }
 
@@ -851,17 +855,30 @@ class OnboardingFlow {
         preview.style.display = 'block';
     }
 
-    show() {
+    async show() {
         if (this.isVisible) return;
-        
+
         this.isVisible = true;
         document.getElementById('onboardingModal').style.display = 'block';
         document.body.style.overflow = 'hidden';
-        
+
+        // Ensure steps are loaded before showing
+        if (this.steps.length === 0) {
+            await this.loadSteps();
+        }
+
+        // If still no steps after loading, close modal and show error
+        if (this.steps.length === 0) {
+            console.error('Failed to load onboarding steps');
+            this.showMessage('Failed to load onboarding. Please try again later.', 'error');
+            setTimeout(() => this.close(), 3000);
+            return;
+        }
+
         // Start from the first incomplete step
         this.currentStepIndex = this.steps.findIndex(step => !step.completed);
         if (this.currentStepIndex === -1) this.currentStepIndex = 0;
-        
+
         this.showCurrentStep();
         this.trackEvent('onboarding_opened');
     }
@@ -983,8 +1000,21 @@ class OnboardingFlow {
     }
 
     async nextStep() {
+        // Check if steps are loaded
+        if (this.steps.length === 0) {
+            this.showMessage('Onboarding data not loaded. Please refresh the page.', 'error');
+            return;
+        }
+
         const currentStep = this.steps[this.currentStepIndex];
-        
+
+        // Validate current step exists
+        if (!currentStep) {
+            console.error('Current step is undefined', { currentStepIndex: this.currentStepIndex, stepsLength: this.steps.length });
+            this.showMessage('Onboarding step error. Please refresh the page.', 'error');
+            return;
+        }
+
         // Validate current step
         if (!await this.validateCurrentStep(currentStep)) {
             return;
@@ -1047,6 +1077,12 @@ class OnboardingFlow {
     }
 
     async validateCurrentStep(step) {
+        // Check if step exists
+        if (!step || !step.id) {
+            console.error('validateCurrentStep called with invalid step:', step);
+            return false;
+        }
+
         switch (step.id) {
             case 'location':
                 const zipCode = document.getElementById('zipCode').value;

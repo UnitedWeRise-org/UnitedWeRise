@@ -15,6 +15,7 @@ export function getEnvironment() {
 
     // Development environments (staging domain + localhost)
     if (hostname === 'dev.unitedwerise.org' ||
+        hostname === 'dev-admin.unitedwerise.org' ||
         hostname === 'localhost' ||
         hostname === '127.0.0.1') {
         return 'development';
@@ -76,9 +77,9 @@ export function getAdminDashboardUrl() {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return '/admin-dashboard.html';
         }
-        return 'https://dev.unitedwerise.org/admin-dashboard.html';
+        return 'https://dev-admin.unitedwerise.org';
     }
-    return 'https://www.unitedwerise.org/admin-dashboard.html';
+    return 'https://admin.unitedwerise.org';
 }
 
 /**

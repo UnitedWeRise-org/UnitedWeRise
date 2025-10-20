@@ -57,6 +57,35 @@ Current workflow:
 - Production: unitedwerise-db.postgres.database.azure.com
 - Development: unitedwerise-db-dev.postgres.database.azure.com
 
+**Inline documentation mandatory**
+ALL code requires inline docs. Code without docs is INCOMPLETE.
+
+**Required:**
+- **Backend Routes:** Swagger on every endpoint (read actual res.json/status before documenting)
+- **Backend Services:** JSDoc with @param, @returns, @throws, @example (verify throws match code)
+- **Backend Middleware:** JSDoc with purpose, security implications, ordering
+- **Prisma Schema:** `///` comments on all models, fields, enums (describe actual purpose)
+- **Frontend:** JSDoc with @param/@returns on public functions, @module on files
+
+**Process:**
+1. READ implementation first (never guess)
+2. FIND similar documented code (use backend/src/routes/auth.ts as template)
+3. VERIFY docs match actual behavior (check res.json, res.status, throw statements)
+4. CHECK pattern consistency (grep similar endpoints)
+
+**Modifying existing undocumented code:**
+- Document the entire modified function/endpoint before making changes
+- If urgent fix: Add `// TODO-DOCS: [date]` comment, log in .claude/scratchpads/DOCUMENTATION-DEBT.md
+
+**Verification (required before task complete):**
+- [ ] Read implementation before documenting
+- [ ] Response schemas match res.json() calls
+- [ ] Error codes match res.status() calls
+- [ ] Similar endpoints follow same pattern
+- [ ] No invented/guessed documentation
+
+**Templates:** .claude/guides/documentation-templates.md
+
 ---
 
 ## Environment Configuration
@@ -64,12 +93,12 @@ Current workflow:
 **Production:**
 - Backend: https://api.unitedwerise.org
 - Frontend: https://www.unitedwerise.org
-- Admin: https://www.unitedwerise.org/admin-dashboard.html
+- Admin: https://admin.unitedwerise.org
 
 **Staging (admin-only):**
 - Backend: https://dev-api.unitedwerise.org
 - Frontend: https://dev.unitedwerise.org
-- Admin: https://dev.unitedwerise.org/admin-dashboard.html
+- Admin: https://dev-admin.unitedwerise.org
 
 **Azure Resources:**
 - Registry: uwracr2425
@@ -87,6 +116,125 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 ---
 
 ## Tier 2: Deployment & Migration Procedures
+
+<details>
+<summary><b>Inline Documentation Templates</b></summary>
+
+**Swagger (Backend Routes):**
+```typescript
+/**
+ * @swagger
+ * /api/resource:
+ *   post:
+ *     tags: [Category]
+ *     summary: Brief action description
+ *     description: Detailed explanation of what this endpoint does
+ *     security:
+ *       - cookieAuth: []  # Remove if public endpoint
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [field]
+ *             properties:
+ *               field:
+ *                 type: string
+ *                 description: Field purpose
+ *     responses:
+ *       200:
+ *         description: Success response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/resource', requireAuth, async (req: AuthRequest, res: Response) => {
+  // Implementation
+});
+```
+
+**JSDoc (Services/Functions):**
+```typescript
+/**
+ * Brief function description
+ *
+ * @param paramName - Description and constraints
+ * @param optionalParam - Optional parameter description
+ * @returns Promise<Type> Return value description
+ * @throws {ValidationError} When condition occurs
+ * @throws {NotFoundError} When resource not found
+ *
+ * @example
+ * const result = await func('value');
+ * console.log(result); // { id: '123', ... }
+ */
+export async function func(paramName: string, optionalParam?: number): Promise<Type> {
+  // Implementation
+}
+```
+
+**Prisma Schema:**
+```prisma
+/// Brief model description explaining business purpose
+/// @description Detailed explanation of model's role in system
+model ResourceName {
+  /// Unique identifier for the resource
+  id          String    @id @default(cuid())
+  /// User-facing display name
+  name        String
+  /// Optional description with constraints
+  description String?   @db.Text
+  /// Foreign key to User model
+  userId      String
+  /// Relationship with cascade delete
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])  /// Index for user-based queries
+}
+
+/// Status values for resource lifecycle
+enum ResourceStatus {
+  ACTIVE    /// Resource is currently active
+  INACTIVE  /// Resource has been deactivated
+  PENDING   /// Resource awaiting approval
+}
+```
+
+**Frontend JSDoc:**
+```javascript
+/**
+ * @module ModuleName
+ * @description What this module does and when to use it
+ */
+
+/**
+ * Brief function description
+ *
+ * @param {string} paramName - Parameter description
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.flag - What this flag controls
+ * @returns {Promise<Object>} Description of return value
+ *
+ * @example
+ * const result = await functionName('value', { flag: true });
+ */
+export async function functionName(paramName, options = {}) {
+  // Implementation
+}
+```
+
+</details>
 
 <details>
 <summary><b>Pre-deployment validation</b></summary>
@@ -488,6 +636,207 @@ az containerapp update \
 sleep 30
 curl -s "https://dev-api.unitedwerise.org/health"
 ```
+
+</details>
+
+<details>
+<summary><b>Admin subdomain routing troubleshooting</b></summary>
+
+**Symptoms:** Admin subdomain shows main site, redirect not working, session isolation broken, "wrong content" displayed.
+
+**Background:** Admin subdomains (admin.unitedwerise.org, dev-admin.unitedwerise.org) use client-side redirect to achieve session isolation. Azure Static Web Apps serves identical content for all custom domains, so JavaScript handles routing.
+
+**Execute steps in order - each verifies one component:**
+
+### Step 1: Verify DNS configuration
+```bash
+# Check CNAME records point to Azure Static Web Apps
+nslookup admin.unitedwerise.org
+nslookup dev-admin.unitedwerise.org
+
+# Expected output should show CNAME pointing to:
+# - admin.unitedwerise.org → *.azurestaticapps.net
+# - dev-admin.unitedwerise.org → *.azurestaticapps.net
+
+# If DNS not propagated (shows old IP or no record):
+# Wait 5-15 minutes for DNS propagation, then retry
+```
+
+### Step 2: Verify redirect script exists and loads
+```bash
+# Check redirect script is deployed
+curl -s https://admin.unitedwerise.org/src/utils/admin-redirect.js | head -5
+curl -s https://dev-admin.unitedwerise.org/src/utils/admin-redirect.js | head -5
+
+# Expected: JavaScript module with "admin-redirect" comment
+# If 404 or empty: Deployment issue - check GitHub Actions
+```
+
+### Step 3: Verify redirect script execution order
+```bash
+# Check index.html loads redirect script FIRST
+curl -s https://admin.unitedwerise.org/ | grep -A2 "admin-redirect.js"
+
+# Expected output:
+# <script type="module" src="src/utils/admin-redirect.js"></script>
+# (should appear BEFORE main.js)
+
+# If not present or wrong order:
+# Edit frontend/index.html lines 196-198
+# Redeploy frontend
+```
+
+### Step 4: Verify hostname detection in browser
+```bash
+# Open browser console on admin.unitedwerise.org or dev-admin.unitedwerise.org
+# Run: window.location.hostname
+
+# Expected:
+# - admin.unitedwerise.org → "admin.unitedwerise.org"
+# - dev-admin.unitedwerise.org → "dev-admin.unitedwerise.org"
+
+# If shows www.unitedwerise.org or dev.unitedwerise.org:
+# DNS issue - check Step 1
+```
+
+### Step 5: Check browser console for redirect logs
+```bash
+# Open browser console on admin subdomain
+# Look for: "[Admin Redirect] Redirecting to admin dashboard: /admin-dashboard.html"
+
+# If log missing:
+# 1. Redirect script not executing → Check Step 2 and Step 3
+# 2. isRootPath() check failing → Check current pathname
+# 3. isOnAdminDashboard() returned true → Already redirected
+
+# If redirect log shows error:
+# Check console for "[Admin Redirect] Redirect failed:" message
+# Debug error in browser DevTools
+```
+
+### Step 6: Verify redirect performance
+```bash
+# Open browser console on admin subdomain
+# Look for execution time warning
+
+# Expected: <10ms execution time
+# If >[10ms warning appears]:
+# Performance issue - check for slow DNS, network, or script conflicts
+```
+
+### Step 7: Check reverse redirect prevention
+```bash
+# Visit www.unitedwerise.org/admin-dashboard.html or dev.unitedwerise.org/admin-dashboard.html
+# Should redirect to admin.unitedwerise.org or dev-admin.unitedwerise.org
+
+# Check browser console for:
+# "[Admin Dashboard] Redirecting to admin subdomain: https://admin.unitedwerise.org/admin-dashboard.html"
+
+# If no redirect occurs:
+# Check admin-dashboard.html lines 10-40 for reverse redirect script
+```
+
+### Step 8: Verify session isolation
+```bash
+# Test cookie isolation:
+# 1. Login on www.unitedwerise.org
+# 2. Open admin.unitedwerise.org in NEW TAB (same browser)
+# 3. Check if logged out (should be - different origin)
+
+# Test localStorage isolation:
+# 1. Set: localStorage.setItem('test', 'main') on www.unitedwerise.org
+# 2. Check: localStorage.getItem('test') on admin.unitedwerise.org
+# 3. Expected: null (separate storage)
+
+# If session NOT isolated:
+# 1. Browser using same origin → DNS issue (check Step 1)
+# 2. Cookies set to domain=.unitedwerise.org → Backend cookie issue
+```
+
+### Common Issues and Fixes
+
+**Issue: "Redirect loop detected"**
+```bash
+# Symptom: Page keeps redirecting endlessly
+# Cause: Both redirect scripts fighting each other
+
+# Fix: Check browser console for loop detection
+# admin-redirect.js has safety check at line 78-81
+# If loop occurs, isOnAdminDashboard() may be broken
+
+# Debug:
+# console.log(window.location.pathname.includes('admin-dashboard.html'))
+# Should return true when on admin-dashboard.html
+```
+
+**Issue: "Flash of wrong content before redirect"**
+```bash
+# Symptom: Briefly see main site before admin dashboard
+# Cause: Redirect script loading too late
+
+# Fix: Ensure admin-redirect.js loaded BEFORE main.js
+# Check index.html line 198 - admin-redirect.js must be first module
+# Execution is synchronous and immediate (IIFE)
+```
+
+**Issue: "Bookmark to admin.unitedwerise.org/profile doesn't work"**
+```bash
+# Symptom: Bookmarked pages show 404 or redirect to dashboard
+# Cause: By design - only root path (/) redirects
+
+# Check console for warning:
+# "[Admin Redirect] Non-root path on admin subdomain: /profile"
+
+# This is intentional behavior to avoid breaking deep links
+# Admin dashboard is single-page app - all routes handled by /admin-dashboard.html
+```
+
+**Issue: "Environment detection wrong on admin subdomain"**
+```bash
+# Symptom: dev-admin.unitedwerise.org detected as production
+
+# Fix: Update frontend/src/utils/environment.js
+# Ensure admin subdomains included in environment detection:
+# hostname === 'dev-admin.unitedwerise.org' → development
+# hostname === 'admin.unitedwerise.org' → production (default)
+
+# Verify:
+# import { getEnvironment } from './src/utils/environment.js';
+# console.log(getEnvironment()); // Should show 'development' or 'production'
+```
+
+### Emergency Rollback
+
+```bash
+# If admin subdomain routing completely broken:
+
+# Step 1: Remove redirect scripts temporarily
+git revert <commit-hash>  # Revert admin subdomain changes
+git push origin <current-branch>
+
+# Step 2: Wait for deployment (2-3 minutes)
+
+# Step 3: Verify fallback works
+curl -I https://admin.unitedwerise.org/admin-dashboard.html
+# Admin dashboard still accessible via path
+
+# Step 4: Debug and reapply fix
+# Fix issue locally, test thoroughly, then redeploy
+```
+
+### Testing Checklist
+
+Before marking as fixed, verify ALL of these:
+- [ ] admin.unitedwerise.org redirects to /admin-dashboard.html
+- [ ] dev-admin.unitedwerise.org redirects to /admin-dashboard.html
+- [ ] www.unitedwerise.org/admin-dashboard.html redirects to admin.unitedwerise.org
+- [ ] dev.unitedwerise.org/admin-dashboard.html redirects to dev-admin.unitedwerise.org
+- [ ] No redirect loop occurs
+- [ ] Redirect execution time <10ms
+- [ ] Session isolation works (separate cookies/localStorage)
+- [ ] Environment detection correct on admin subdomains
+- [ ] No flash of wrong content before redirect
+- [ ] Browser console shows no errors
 
 </details>
 
