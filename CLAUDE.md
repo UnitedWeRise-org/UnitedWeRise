@@ -299,7 +299,13 @@ curl -s "https://dev-api.unitedwerise.org/health" | grep releaseSha
 <details>
 <summary><b>Production deployment procedure</b></summary>
 
-**CRITICAL: Only execute when user explicitly approves production deployment.**
+**When user says "deploy/merge/push to production": Execute ALL 5 steps.**
+
+1.Merge→main  2.Build image  3.Get digest  4.Deploy  5.Verify
+
+**Step 1 alone ≠ deployed.**
+
+---
 
 ### Pre-Deployment Validation
 
