@@ -8,12 +8,12 @@
 
 ---
 
-## 2025-10-17 - ADMIN SUBDOMAIN SESSION ISOLATION 🔒
+## 2025-10-17 - ADMIN SUBDOMAIN INFRASTRUCTURE SETUP 🏗️
 
-### 🎯 FEATURE: Admin Dashboard Subdomain Routing
-- **Status**: ✅ **IMPLEMENTED** - Client-side redirect solution deployed
-- **Impact**: Solves login conflict between main site and admin dashboard via session isolation
-- **Architecture**: Browser same-origin policy provides separate cookie/localStorage namespaces
+### 🎯 FEATURE: Admin Dashboard Subdomain Routing (Infrastructure Prep)
+- **Status**: ✅ **IMPLEMENTED** - Subdomain routing and infrastructure ready
+- **Impact**: Convenience feature - admin subdomains now redirect to admin dashboard
+- **Session Isolation**: ⚠️ **NOT ACHIEVED** - Cookies shared via `domain: .unitedwerise.org` (requires separate Static Web Apps)
 - **Deployment**: Staged rollout - testing on staging first, production after validation
 
 ### 🌐 NEW ADMIN URLs
@@ -66,18 +66,19 @@
 - Decision Rationale: Deferred due to operational complexity concerns
 
 **Why This Approach:**
-1. Solves immediate problem: Login conflicts eliminated
-2. Operational simplicity: No new deployment infrastructure needed
-3. Industry standard: AWS Console, Google Workspace, Microsoft 365 all use subdomain isolation
-4. Browser security: Same-origin policy provides robust isolation
-5. Reversible: Can migrate to separate apps later without breaking changes
+1. Infrastructure preparation: DNS and routing ready for future separate Static Web Apps
+2. Operational simplicity: No new deployment infrastructure needed immediately
+3. Convenience feature: Admin subdomain URLs work now, session isolation comes later
+4. Reversible: Can migrate to separate apps later without breaking changes
+5. **Reality Check**: Session isolation NOT achieved - authentication cookies still shared across all subdomains via `domain: .unitedwerise.org` backend configuration
 
 ### 📋 TESTING CHECKLIST
 
 **Session Isolation:**
-- [x] Separate cookies: Login on www → still logged out on admin subdomain
-- [x] Separate localStorage: Data stored on www not accessible from admin
-- [x] Separate sessionStorage: Session data isolated by origin
+- [ ] ❌ Separate cookies: NOT WORKING - Cookies shared via `domain: .unitedwerise.org` (tested and confirmed)
+- [x] Separate localStorage: Data stored on www not accessible from admin (browser same-origin policy works)
+- [x] Separate sessionStorage: Session data isolated by origin (browser same-origin policy works)
+- **Conclusion**: Login conflicts NOT resolved - requires separate Static Web Apps + separate backend authentication
 
 **Redirect Behavior:**
 - [x] admin.unitedwerise.org → redirects to /admin-dashboard.html
@@ -142,11 +143,12 @@
 
 ### 🎓 KEY LEARNINGS
 
-1. **Azure Static Web Apps Limitation**: Only supports path-based routing, not hostname-based
-2. **Client-Side Routing**: Effective solution when platform doesn't support server-side routing
-3. **Same-Origin Policy**: Browser security model provides robust session isolation
-4. **Performance Matters**: <10ms redirect execution prevents user-visible delay
-5. **Backward Compatibility**: Admin dashboard still accessible via /admin-dashboard.html path
+1. **Azure Static Web Apps Limitation**: Only supports path-based routing, not hostname-based - serves identical content for all custom domains
+2. **Client-Side Routing**: Can provide subdomain redirects but CANNOT achieve session isolation
+3. **Cookie Domain Configuration**: Backend setting `domain: .unitedwerise.org` shares cookies across ALL subdomains - no client-side workaround exists
+4. **Session Isolation Reality**: Requires separate Static Web Apps + separate backend authentication endpoints (different cookie domains)
+5. **Infrastructure Prep**: DNS and redirect code ready for future migration to separate Static Web Apps
+6. **Testing is Critical**: Manual verification revealed session isolation doesn't work despite browser's same-origin policy (cookies override it)
 
 ### 🔗 RELATED COMMITS
 

@@ -23,7 +23,9 @@
 
 ### What is Admin Subdomain Routing?
 
-Admin subdomain routing is a client-side redirect system that achieves **session isolation** between the main UnitedWeRise site and the admin dashboard by using separate subdomains.
+Admin subdomain routing is a client-side redirect system and infrastructure preparation for future **session isolation** between the main UnitedWeRise site and the admin dashboard.
+
+**⚠️ IMPORTANT**: Session isolation is NOT currently working. Cookies are shared across all subdomains via backend configuration (`domain: .unitedwerise.org`). This infrastructure prepares for future migration to separate Static Web Apps.
 
 **Key URLs:**
 
@@ -34,18 +36,20 @@ Admin subdomain routing is a client-side redirect system that achieves **session
 
 ### Why Separate Subdomains?
 
-**Problem Solved**: Login conflicts between main site and admin dashboard
+**Problem To Be Solved** (Future Goal): Login conflicts between main site and admin dashboard
 
-Before this implementation, logging into the main site would overwrite admin session, and vice versa. This was caused by both sites sharing the same browser storage (cookies, localStorage).
+Login conflicts occur because both sites share the same browser storage (cookies, localStorage, sessionStorage).
 
-**Solution**: Browser same-origin policy treats different subdomains as separate origins, providing isolated storage namespaces.
+**Current Implementation**: Convenience feature - admin subdomains redirect to admin dashboard
+**Future Solution**: Separate Static Web Apps will use different cookie domains, achieving true session isolation via browser same-origin policy
 
-### How It Works
+### How It Works (Current Implementation)
 
 1. **DNS Configuration**: CNAME records point admin subdomains to Azure Static Web Apps
 2. **Azure Limitation**: Azure Static Web Apps serves identical content for all custom domains (no hostname-based routing)
 3. **Client-Side Redirect**: JavaScript detects admin subdomain and redirects from `/` to `/admin-dashboard.html`
-4. **Session Isolation**: Browser automatically isolates cookies/localStorage between different origins
+4. **Session Isolation**: ❌ NOT WORKING - Backend sets cookies with `domain: .unitedwerise.org`, which shares cookies across all subdomains
+5. **Future Fix**: Separate Static Web Apps → separate backend auth endpoints → different cookie domains → true session isolation
 
 ---
 
@@ -280,15 +284,17 @@ Navigate to:
 
 ---
 
-### Step 8: Verify Session Isolation
+### Step 8: Verify Session Isolation (KNOWN TO FAIL)
+
+⚠️ **EXPECTED RESULT**: Session isolation does NOT work with current implementation.
 
 **Test Cookie Isolation:**
 
 1. Login on www.unitedwerise.org
 2. Open admin.unitedwerise.org in NEW TAB (same browser)
-3. Check if logged out (should be - different origin)
+3. Check if logged out
 
-**Expected:** Logged out on admin subdomain
+**Expected:** ❌ Still logged in (cookies shared across subdomains)
 
 **Test localStorage Isolation:**
 
@@ -297,20 +303,14 @@ Navigate to:
 localStorage.setItem('test', 'main')
 
 // On admin.unitedwerise.org (browser console):
-localStorage.getItem('test')  // Should return: null
+localStorage.getItem('test')  // Returns: null (localStorage DOES work correctly)
 ```
 
-**If session NOT isolated:**
+**Why Session Isolation Doesn't Work:**
 
-**Scenario A: Browser using same origin**
-- DNS issue - hostname not resolving correctly
-- Clear browser cache and retry
-- Check Step 1 and Step 4
+Backend authentication cookies are set with `domain: .unitedwerise.org` (see `backend/src/routes/auth.ts` lines 252, 461, 504). This tells the browser to share the cookie with ALL `*.unitedwerise.org` subdomains.
 
-**Scenario B: Cookies set to domain=.unitedwerise.org**
-- Backend issue - cookies should be domain-specific
-- Check backend cookie configuration
-- Verify Set-Cookie headers in network tab
+**Fix:** Requires separate Static Web Apps pointing to separate backend auth endpoints that use different cookie domains.
 
 ---
 
@@ -518,9 +518,9 @@ Before deploying admin subdomain routing changes, verify all items:
 After deploying to staging or production, verify all items:
 
 **Session Isolation:**
-- [ ] Login on www → still logged out on admin subdomain
-- [ ] localStorage.setItem on www → localStorage.getItem on admin returns null
-- [ ] Cookies isolated (check DevTools Application tab)
+- [ ] ❌ **KNOWN FAIL**: Login on www → also logged in on admin subdomain (cookies shared)
+- [x] localStorage.setItem on www → localStorage.getItem on admin returns null (works correctly)
+- [ ] ❌ **KNOWN FAIL**: Cookies NOT isolated - shared via `domain: .unitedwerise.org` (check DevTools Application tab)
 
 **Redirect Behavior:**
 - [ ] admin.unitedwerise.org → redirects to /admin-dashboard.html
