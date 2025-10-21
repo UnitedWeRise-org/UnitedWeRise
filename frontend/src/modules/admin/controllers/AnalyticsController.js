@@ -1334,7 +1334,7 @@ class AnalyticsController {
                 this.createVisitorTrendChart(data.daily.daily);
             }
 
-            await adminDebugLog('AnalyticsController', 'Visitor analytics displayed successfully');
+            adminDebugLog('AnalyticsController', 'Visitor analytics displayed successfully');
 
         } catch (error) {
             adminDebugError('AnalyticsController', 'Error displaying visitor analytics', error);
