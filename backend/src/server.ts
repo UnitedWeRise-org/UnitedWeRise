@@ -46,6 +46,7 @@ import badgeRoutes from './routes/badges';
 import questRoutes from './routes/quests';
 import photosRoutes from './routes/photos';
 import WebSocketService from './services/WebSocketService';
+import analyticsCleanupJob from './jobs/analyticsCleanup';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -54,6 +55,7 @@ import { performanceMiddleware } from './middleware/performanceMonitor';
 import { enableRequestLogging, enableApiDocs, getEnvironment } from './utils/environment';
 import { verifyCsrf } from './middleware/csrf';
 import { requireAuth, requireAdmin } from './middleware/auth';
+import visitTrackingMiddleware from './middleware/visitTracking';
 
 dotenv.config();
 
@@ -276,6 +278,9 @@ app.use(metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMiddleware);
 
+// Visitor analytics tracking (must be early to track all pageviews)
+app.use(visitTrackingMiddleware);
+
 // CSRF Protection - Apply to all state-changing requests (POST, PUT, DELETE, PATCH)
 // Must be after cookie-parser to read CSRF tokens from cookies
 // Must be before routes to protect all endpoints
@@ -483,6 +488,9 @@ app.use(errorHandler);
 const gracefulShutdown = async () => {
   console.log('Received shutdown signal, closing server gracefully...');
 
+  // Stop cron jobs
+  analyticsCleanupJob.stop();
+
   // Close HTTP server
   httpServer.close(() => {
     console.log('HTTP server closed');
@@ -507,6 +515,9 @@ process.on('SIGINT', gracefulShutdown);
 async function startServer() {
   try {
     console.log('🚀 Initializing services...');
+
+    // Start cron jobs
+    analyticsCleanupJob.start();
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {
