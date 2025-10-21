@@ -187,9 +187,43 @@ class AnalyticsController {
             // Setup event delegation for dynamic content
             this.setupEventDelegation();
 
+            // Set up visitor analytics tab listener
+            this.setupVisitorTabListener();
+
             await adminDebugLog('AnalyticsController', 'Event listeners set up successfully');
         } catch (error) {
             await adminDebugError('AnalyticsController', 'Error setting up event listeners', error);
+        }
+    }
+
+    /**
+     * Set up listener for visitor analytics tab activation
+     */
+    setupVisitorTabListener() {
+        // Listen for clicks on visitor analytics tab button
+        const visitorTabButtons = document.querySelectorAll('[data-tab="visitors"]');
+        visitorTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                console.log('Visitor tab clicked, loading analytics...');
+                this.loadVisitorAnalytics();
+            });
+        });
+
+        // Also observe when the visitors tab panel becomes active
+        const visitorsTab = document.getElementById('visitorsTab');
+        if (visitorsTab) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (visitorsTab.classList.contains('active')) {
+                            console.log('Visitors tab became active, loading analytics...');
+                            this.loadVisitorAnalytics();
+                        }
+                    }
+                });
+            });
+
+            observer.observe(visitorsTab, { attributes: true });
         }
     }
 
