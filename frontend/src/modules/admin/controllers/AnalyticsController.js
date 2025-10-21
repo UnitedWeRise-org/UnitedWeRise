@@ -1277,10 +1277,13 @@ class AnalyticsController {
         try {
             await adminDebugLog('AnalyticsController', 'Loading visitor analytics data');
 
-            // Fetch overview data
-            const overviewResponse = await window.AdminAPI.get('/admin/analytics/visitors/overview');
+            // Get backend URL from AdminAPI
+            const backendUrl = window.AdminAPI.BACKEND_URL;
 
-            if (!overviewResponse.ok || !overviewResponse.data) {
+            // Fetch overview data
+            const overviewResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/overview`);
+
+            if (!overviewResponse.success || !overviewResponse.data) {
                 throw new Error('Failed to load visitor analytics overview');
             }
 
@@ -1288,13 +1291,13 @@ class AnalyticsController {
             const endDate = new Date().toISOString().split('T')[0];
             const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-            const dailyResponse = await window.AdminAPI.get(`/admin/analytics/visitors/daily?startDate=${startDate}&endDate=${endDate}`);
+            const dailyResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/daily?startDate=${startDate}&endDate=${endDate}`);
 
             // Fetch suspicious activity
-            const suspiciousResponse = await window.AdminAPI.get('/admin/analytics/visitors/suspicious?days=7');
+            const suspiciousResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/suspicious?days=7`);
 
             // Fetch config
-            const configResponse = await window.AdminAPI.get('/admin/analytics/visitors/config');
+            const configResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/config`);
 
             const visitorData = {
                 overview: overviewResponse.data,
