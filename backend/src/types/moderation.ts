@@ -5,6 +5,8 @@
  * Used throughout the photo upload and content analysis pipeline
  */
 
+import { isProduction } from '../utils/environment';
+
 export enum ModerationCategory {
   APPROVE = 'APPROVE',
   WARN = 'WARN',
@@ -178,8 +180,8 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   allowMedicalContent: true,
   medicalThreshold: 0.6,
   enableTextAnalysis: true,
-  isProduction: process.env.NODE_ENV === 'production',
-  strictMode: process.env.NODE_ENV === 'production'
+  isProduction: isProduction(),
+  strictMode: isProduction()
 };
 
 /**

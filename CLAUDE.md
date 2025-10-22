@@ -522,6 +522,43 @@ az postgres flexible-server restore \
 
 **Execute steps in order - each verifies one pipeline component:**
 
+### Step 0: Check Backend Environment Validation
+If backend fails to start or health endpoint unreachable, check startup logs for environment validation errors:
+
+```bash
+# Check container startup logs
+az containerapp logs show \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --tail 50 | grep -E "CRITICAL|ERROR|Environment"
+```
+
+**Common validation errors:**
+- `"CRITICAL: Production environment pointing to development database"` - NODE_ENV=production with unitedwerise-db-dev
+- `"CRITICAL: Staging environment pointing to production database"` - NODE_ENV=staging with unitedwerise-db
+- `"ERROR: Invalid DATABASE_URL format"` - Malformed connection string
+
+**Fix environment mismatch:**
+```bash
+# For staging (must use dev database):
+az containerapp update \
+  --name unitedwerise-backend-staging \
+  --resource-group unitedwerise-rg \
+  --set-env-vars NODE_ENV=staging DATABASE_URL="<dev-database-url>"
+
+# For production (must use production database):
+az containerapp update \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --set-env-vars NODE_ENV=production DATABASE_URL="<production-database-url>"
+```
+
+**Verify fix:**
+```bash
+curl -s "https://dev-api.unitedwerise.org/health" | jq '.databaseHost, .environment, .nodeEnv'
+# Should show: unitedwerise-db-dev, development, staging
+```
+
 ### Step 1: Verify Commits Pushed
 ```bash
 git status  # Should be clean

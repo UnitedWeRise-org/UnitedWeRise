@@ -103,12 +103,12 @@
         async checkBackend() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.backend, {
-                    headers: { 
+                    headers: {
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     const status = {
@@ -117,13 +117,16 @@
                         lastRestart: data.uptime ? new Date(Date.now() - (data.uptime * 1000)) : 'Unknown',
                         version: data.version || 'Unknown',
                         environment: data.environment || 'Unknown',
-                        dockerImage: data.dockerImage || 'Unknown',
-                        dockerTag: data.dockerTag || 'Unknown',
-                        buildCommit: data.buildCommit || 'Unknown',
+                        nodeEnv: data.nodeEnv || 'Unknown',
+                        databaseHost: data.databaseHost || 'Unknown',
+                        releaseSha: data.releaseSha || 'Unknown',
                         githubBranch: data.githubBranch || 'Unknown',
                         responseTime: this.measureResponseTime(response)
                     };
-                    
+
+                    // Run environment validation
+                    this.performEnvironmentHealthCheck(data);
+
                     this.logComponentStatus(status);
                     this.lastStatus.backend = status;
                 } else {
@@ -195,32 +198,96 @@
         async checkReputationSystem() {
             try {
                 const response = await fetch(DEPLOYMENT_CONFIG.ENDPOINTS.reputation, {
-                    headers: { 
+                    headers: {
                         'Accept': 'application/json'
                     },
                     mode: 'cors'
                 });
-                
+
                 const status = {
                     component: 'Reputation System',
                     available: response.ok,
                     status: response.ok ? 'Deployed' : `HTTP ${response.status}`,
                     responseTime: this.measureResponseTime(response)
                 };
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     status.lastUpdate = data.timestamp || 'Unknown';
                     status.features = data.features || 'Unknown';
                 }
-                
+
                 this.logComponentStatus(status);
                 this.lastStatus.reputation = status;
             } catch (error) {
                 this.logComponentError('Reputation System', error);
             }
         }
-        
+
+        /**
+         * Performs comprehensive environment health check
+         * Validates consistency between frontend, backend, and database environments
+         *
+         * @param {Object} healthData - Backend health endpoint response
+         */
+        performEnvironmentHealthCheck(healthData) {
+            if (typeof adminDebugLog === 'undefined') return;
+
+            try {
+                // Get frontend environment details
+                const frontendEnv = window.getEnvironment ? window.getEnvironment() : 'unknown';
+                const frontendHostname = window.location.hostname;
+                const frontendApiUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'unknown';
+
+                // Extract backend environment details
+                const backendEnv = healthData.environment || 'unknown';
+                const nodeEnv = healthData.nodeEnv || 'unknown';
+                const dbHost = healthData.databaseHost || 'unknown';
+                const githubBranch = healthData.githubBranch || 'unknown';
+                const releaseSha = healthData.releaseSha || 'unknown';
+                const databaseStatus = healthData.database || 'unknown';
+
+                // Start grouped output
+                console.group('🏥 ENVIRONMENT HEALTH CHECK');
+
+                adminDebugLog('DeploymentStatus', '=== Frontend Environment ===');
+                adminDebugLog('DeploymentStatus', `Environment: ${frontendEnv}`);
+                adminDebugLog('DeploymentStatus', `Hostname: ${frontendHostname}`);
+                adminDebugLog('DeploymentStatus', `API Target: ${frontendApiUrl}`);
+
+                adminDebugLog('DeploymentStatus', '\n=== Backend Environment ===');
+                adminDebugLog('DeploymentStatus', `Environment: ${backendEnv}`);
+                adminDebugLog('DeploymentStatus', `NODE_ENV: ${nodeEnv}`);
+                adminDebugLog('DeploymentStatus', `GitHub Branch: ${githubBranch}`);
+                adminDebugLog('DeploymentStatus', `Release SHA: ${releaseSha}`);
+                adminDebugLog('DeploymentStatus', `Uptime: ${healthData.uptime ? Math.floor(healthData.uptime / 60) + ' minutes' : 'unknown'}`);
+
+                adminDebugLog('DeploymentStatus', '\n=== Database Environment ===');
+                adminDebugLog('DeploymentStatus', `Host: ${dbHost}`);
+                adminDebugLog('DeploymentStatus', `Status: ${databaseStatus}`);
+
+                // Run validation using exported function
+                if (typeof window.validateEnvironmentConsistency === 'function') {
+                    const issues = window.validateEnvironmentConsistency(healthData);
+
+                    if (issues.length > 0) {
+                        adminDebugError('DeploymentStatus', '\n🚨 ISSUES DETECTED:');
+                        issues.forEach(issue => {
+                            const icon = issue.severity === 'critical' ? '🔴' : issue.severity === 'error' ? '🟠' : '🟡';
+                            adminDebugError('DeploymentStatus', `${icon} ${issue.message}`);
+                        });
+                    } else {
+                        adminDebugLog('DeploymentStatus', '\n✅ ENVIRONMENT CONSISTENCY: PASS');
+                    }
+                }
+
+                console.groupEnd();
+            } catch (error) {
+                adminDebugError('DeploymentStatus', 'Error during health check:', error);
+                console.groupEnd();
+            }
+        }
+
         logComponentStatus(status) {
             const emoji = this.getStatusEmoji(status);
             
@@ -393,9 +460,111 @@
 })();
 
 // ============================================
-// ES6 MODULE EXPORTS (outside IIFE)
+// VALIDATION FUNCTION
+// ============================================
+
+/**
+ * Validate environment consistency between frontend and backend
+ * Detects mismatches that indicate deployment issues
+ *
+ * @param {Object} healthData - Backend health data from /health endpoint
+ * @returns {Array} Array of issue objects with severity and message
+ */
+function validateEnvironmentConsistency(healthData) {
+    const issues = [];
+
+    // Get frontend environment
+    const frontendEnv = window.getEnvironment ? window.getEnvironment() : 'unknown';
+    const frontendHostname = window.location.hostname;
+
+    // Extract backend environment info
+    const backendEnv = healthData.environment?.toLowerCase() || 'unknown';
+    const backendNodeEnv = healthData.nodeEnv?.toLowerCase() || 'unknown';
+    const backendBranch = healthData.githubBranch?.toLowerCase() || 'unknown';
+
+    // Critical: Environment-branch mismatch (violates protected rule)
+    if (frontendEnv === 'development') {
+        if (backendBranch !== 'development' && backendBranch !== 'unknown') {
+            issues.push({
+                severity: 'critical',
+                message: `CRITICAL: Staging environment running ${backendBranch} branch (must be development)`
+            });
+        }
+        if (backendNodeEnv !== 'staging' && backendNodeEnv !== 'unknown') {
+            issues.push({
+                severity: 'critical',
+                message: `CRITICAL: Staging backend NODE_ENV is ${backendNodeEnv} (should be staging)`
+            });
+        }
+    }
+
+    if (frontendEnv === 'production') {
+        if (backendBranch !== 'main' && backendBranch !== 'unknown') {
+            issues.push({
+                severity: 'critical',
+                message: `CRITICAL: Production environment running ${backendBranch} branch (must be main)`
+            });
+        }
+        if (backendNodeEnv !== 'production' && backendNodeEnv !== 'unknown') {
+            issues.push({
+                severity: 'critical',
+                message: `CRITICAL: Production backend NODE_ENV is ${backendNodeEnv} (should be production)`
+            });
+        }
+    }
+
+    // Error: Frontend-backend environment mismatch
+    if (frontendEnv === 'development' && backendEnv === 'production') {
+        issues.push({
+            severity: 'error',
+            message: `Frontend on staging but backend reports production environment`
+        });
+    }
+
+    if (frontendEnv === 'production' && backendEnv === 'development') {
+        issues.push({
+            severity: 'error',
+            message: `Frontend on production but backend reports development environment`
+        });
+    }
+
+    // Warning: Database host mismatch
+    const databaseHost = healthData.databaseHost || '';
+    if (frontendEnv === 'development' && !databaseHost.includes('unitedwerise-db-dev')) {
+        issues.push({
+            severity: 'error',
+            message: `Staging should use unitedwerise-db-dev, currently: ${databaseHost}`
+        });
+    }
+
+    if (frontendEnv === 'production' && !databaseHost.includes('unitedwerise-db.postgres')) {
+        issues.push({
+            severity: 'error',
+            message: `Production should use unitedwerise-db, currently: ${databaseHost}`
+        });
+    }
+
+    // Warning: Database connection issues
+    if (healthData.database !== 'connected') {
+        issues.push({
+            severity: 'error',
+            message: `Database status: ${healthData.database || 'disconnected'}`
+        });
+    }
+
+    return issues;
+}
+
+// Expose validation function to window for use by IIFE code
+if (typeof window !== 'undefined') {
+    window.validateEnvironmentConsistency = validateEnvironmentConsistency;
+}
+
+// ============================================
+// ES6 MODULE EXPORTS
 // ============================================
 
 // Export window-attached objects for ES6 module consumers
+export { validateEnvironmentConsistency };
 export const DeploymentStatusChecker = typeof window !== 'undefined' ? window.DeploymentStatusChecker : null;
 export const deploymentStatus = typeof window !== 'undefined' ? window.deploymentStatus : null;
