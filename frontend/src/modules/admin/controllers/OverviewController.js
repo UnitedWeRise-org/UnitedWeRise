@@ -276,7 +276,8 @@ class OverviewController {
     async loadEnvironmentHealth() {
         try {
             // Get API base URL (without /api suffix for health endpoint)
-            const apiBase = window.API_CONFIG?.BASE_URL?.replace('/api', '') || 'https://api.unitedwerise.org';
+            // Use regex to match only trailing /api, not /api in subdomain (e.g., dev-api)
+            const apiBase = window.API_CONFIG?.BASE_URL?.replace(/\/api$/, '') || 'https://api.unitedwerise.org';
             const healthUrl = `${apiBase}/health`;
 
             console.log('🏥 Loading environment health from:', healthUrl);
