@@ -277,18 +277,40 @@ class OverviewController {
         try {
             // Get API base URL (without /api suffix for health endpoint)
             const apiBase = window.API_CONFIG?.BASE_URL?.replace('/api', '') || 'https://api.unitedwerise.org';
+            const healthUrl = `${apiBase}/health`;
+
+            console.log('🏥 Loading environment health from:', healthUrl);
+            console.log('   API_CONFIG.BASE_URL:', window.API_CONFIG?.BASE_URL);
+            console.log('   Computed apiBase:', apiBase);
 
             // Fetch health data from backend
-            const response = await fetch(`${apiBase}/health`, {
+            const response = await fetch(healthUrl, {
                 headers: { 'Accept': 'application/json' },
                 mode: 'cors'
+            });
+
+            console.log('   Response status:', response.status);
+            console.log('   Response headers:', {
+                contentType: response.headers.get('content-type'),
+                cacheControl: response.headers.get('cache-control')
             });
 
             if (!response.ok) {
                 throw new Error(`Health check failed: HTTP ${response.status}`);
             }
 
-            const healthData = await response.json();
+            // Get response text first to debug what we're actually receiving
+            const responseText = await response.text();
+            console.log('   Response text (first 200 chars):', responseText.substring(0, 200));
+
+            let healthData;
+            try {
+                healthData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('   Failed to parse response as JSON:', parseError);
+                console.error('   Full response:', responseText);
+                throw new Error(`Health endpoint returned invalid JSON: ${parseError.message}`);
+            }
 
             // Get frontend environment
             const frontendEnv = getEnvironment();
