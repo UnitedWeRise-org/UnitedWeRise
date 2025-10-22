@@ -36,6 +36,8 @@ class AnalyticsController {
         this.setupCharts = this.setupCharts.bind(this);
         this.updateChart = this.updateChart.bind(this);
         this.destroyChart = this.destroyChart.bind(this);
+        this.loadVisitorAnalytics = this.loadVisitorAnalytics.bind(this);
+        this.displayVisitorAnalytics = this.displayVisitorAnalytics.bind(this);
     }
 
     /**
@@ -185,9 +187,43 @@ class AnalyticsController {
             // Setup event delegation for dynamic content
             this.setupEventDelegation();
 
+            // Set up visitor analytics tab listener
+            this.setupVisitorTabListener();
+
             await adminDebugLog('AnalyticsController', 'Event listeners set up successfully');
         } catch (error) {
             await adminDebugError('AnalyticsController', 'Error setting up event listeners', error);
+        }
+    }
+
+    /**
+     * Set up listener for visitor analytics tab activation
+     */
+    setupVisitorTabListener() {
+        // Listen for clicks on visitor analytics tab button
+        const visitorTabButtons = document.querySelectorAll('[data-tab="visitors"]');
+        visitorTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                console.log('Visitor tab clicked, loading analytics...');
+                this.loadVisitorAnalytics();
+            });
+        });
+
+        // Also observe when the visitors tab panel becomes active
+        const visitorsTab = document.getElementById('visitorsTab');
+        if (visitorsTab) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (visitorsTab.classList.contains('active')) {
+                            console.log('Visitors tab became active, loading analytics...');
+                            this.loadVisitorAnalytics();
+                        }
+                    }
+                });
+            });
+
+            observer.observe(visitorsTab, { attributes: true });
         }
     }
 
@@ -1226,6 +1262,243 @@ class AnalyticsController {
             case 'retry-load-data':
                 this.loadData(false);
                 break;
+        }
+
+        // Handle visitor analytics tab switching
+        if (target.classList.contains('analytics-tab') && target.dataset.tab === 'visitors') {
+            this.loadVisitorAnalytics();
+        }
+    }
+
+    /**
+     * Load visitor analytics data
+     */
+    async loadVisitorAnalytics() {
+        try {
+            await adminDebugLog('AnalyticsController', 'Loading visitor analytics data');
+
+            // Get backend URL from AdminAPI
+            const backendUrl = window.AdminAPI.BACKEND_URL;
+
+            // Fetch overview data
+            const overviewResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/overview`);
+
+            if (!overviewResponse.success || !overviewResponse.data) {
+                throw new Error('Failed to load visitor analytics overview');
+            }
+
+            // Fetch daily data for chart (last 30 days)
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+            const dailyResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/daily?startDate=${startDate}&endDate=${endDate}`);
+
+            // Fetch suspicious activity
+            const suspiciousResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/suspicious?days=7`);
+
+            // Fetch config
+            const configResponse = await window.AdminAPI.get(`${backendUrl}/api/admin/analytics/visitors/config`);
+
+            const visitorData = {
+                overview: overviewResponse.data,
+                daily: dailyResponse.ok ? dailyResponse.data : null,
+                suspicious: suspiciousResponse.ok ? suspiciousResponse.data : null,
+                config: configResponse.ok ? configResponse.data : null
+            };
+
+            this.displayVisitorAnalytics(visitorData);
+
+        } catch (error) {
+            await adminDebugError('AnalyticsController', 'Error loading visitor analytics', error);
+            this.displayVisitorError('Failed to load visitor analytics data');
+        }
+    }
+
+    /**
+     * Display visitor analytics data
+     */
+    displayVisitorAnalytics(data) {
+        try {
+            if (!data || !data.overview) {
+                this.displayVisitorError('No visitor analytics data available');
+                return;
+            }
+
+            const overview = data.overview;
+
+            // Update today's stats
+            this.updateElement('todayVisitors', overview.today?.uniqueVisitors || 0);
+            this.updateElement('todayPageviews', overview.today?.pageViews || 0);
+            this.updateElement('todaySignups', overview.today?.signups || 0);
+            this.updateElement('todayConversion', (overview.conversionRates?.today || 0).toFixed(2) + '%');
+
+            // Update week stats
+            this.updateElement('weekVisitors', (overview.week?.uniqueVisitors || 0).toLocaleString());
+            this.updateElement('weekPageviews', (overview.week?.totalPageviews || 0).toLocaleString());
+            this.updateElement('weekSignups', (overview.week?.signupsCount || 0).toLocaleString());
+            this.updateElement('weekConversion', (overview.conversionRates?.week || 0).toFixed(2) + '%');
+
+            // Update month stats
+            this.updateElement('monthVisitors', (overview.month?.uniqueVisitors || 0).toLocaleString());
+            this.updateElement('monthPageviews', (overview.month?.totalPageviews || 0).toLocaleString());
+            this.updateElement('monthSignups', (overview.month?.signupsCount || 0).toLocaleString());
+            this.updateElement('monthConversion', (overview.conversionRates?.month || 0).toFixed(2) + '%');
+
+            // Update traffic breakdown
+            const totalVisits = overview.week?.totalPageviews || 1; // Avoid division by zero
+            this.updateElement('authenticatedVisits', (overview.week?.authenticatedVisits || 0).toLocaleString());
+            this.updateElement('authenticatedPercent', `(${((overview.week?.authenticatedVisits || 0) / totalVisits * 100).toFixed(1)}%)`);
+            this.updateElement('anonymousVisits', (overview.week?.anonymousVisits || 0).toLocaleString());
+            this.updateElement('anonymousPercent', `(${((overview.week?.anonymousVisits || 0) / totalVisits * 100).toFixed(1)}%)`);
+            this.updateElement('botVisits', (overview.week?.botVisits || 0).toLocaleString());
+            this.updateElement('botPercent', `(${((overview.week?.botVisits || 0) / totalVisits * 100).toFixed(1)}%)`);
+
+            // Update config
+            if (data.config) {
+                this.updateElement('rateLimit', `${data.config.rateLimitPerHour} req/hour`);
+                this.updateElement('dataRetention', `${data.config.dataRetentionDays} days`);
+                this.updateElement('suspiciousThreshold', `${data.config.suspiciousThreshold} views/day`);
+                this.updateElement('trackingStatus', data.config.trackingEnabled ? 'Enabled ✓' : 'Disabled ✗');
+            }
+
+            // Display suspicious activity if any
+            if (data.suspicious && data.suspicious.suspiciousIPs && data.suspicious.suspiciousIPs.length > 0) {
+                this.displaySuspiciousActivity(data.suspicious.suspiciousIPs);
+            }
+
+            // Create daily trend chart
+            if (data.daily && data.daily.daily) {
+                this.createVisitorTrendChart(data.daily.daily);
+            }
+
+            adminDebugLog('AnalyticsController', 'Visitor analytics displayed successfully');
+
+        } catch (error) {
+            adminDebugError('AnalyticsController', 'Error displaying visitor analytics', error);
+            this.displayVisitorError('Error displaying visitor analytics data');
+        }
+    }
+
+    /**
+     * Helper method to update element text content
+     */
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    /**
+     * Display suspicious activity alerts
+     */
+    displaySuspiciousActivity(suspiciousIPs) {
+        const container = document.querySelector('.suspicious-activity');
+        const listContainer = document.getElementById('suspiciousActivityList');
+
+        if (!container || !listContainer) return;
+
+        container.style.display = 'block';
+
+        let html = '<div class="suspicious-ips-list">';
+        suspiciousIPs.forEach((ip, index) => {
+            html += `
+                <div class="suspicious-ip-item">
+                    <span class="ip-rank">#${index + 1}</span>
+                    <span class="ip-hash">${ip.ipHash.substring(0, 16)}...</span>
+                    <span class="ip-count">${ip.count} suspicious views</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        listContainer.innerHTML = html;
+    }
+
+    /**
+     * Create visitor trend chart
+     */
+    createVisitorTrendChart(dailyData) {
+        try {
+            const canvas = document.getElementById('visitorTrendChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+
+            // Destroy existing chart if present
+            if (this.visitorTrendChart) {
+                this.visitorTrendChart.destroy();
+            }
+
+            const labels = dailyData.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const visitors = dailyData.map(d => d.uniqueVisitors);
+            const signups = dailyData.map(d => d.signupsCount);
+
+            this.visitorTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Unique Visitors',
+                            data: visitors,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Signups',
+                            data: signups,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+        } catch (error) {
+            adminDebugError('AnalyticsController', 'Error creating visitor trend chart', error);
+        }
+    }
+
+    /**
+     * Display visitor analytics error
+     */
+    displayVisitorError(message) {
+        const container = document.getElementById('visitorsTab');
+        if (container) {
+            container.innerHTML = `
+                <div class="error-message">
+                    <h3>Visitor Analytics Unavailable</h3>
+                    <p>${message}</p>
+                    <button data-action="retry-visitor-analytics" class="btn btn-primary">
+                        Retry
+                    </button>
+                </div>
+            `;
         }
     }
 }

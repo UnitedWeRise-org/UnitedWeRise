@@ -22,6 +22,7 @@ import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
 import { imageContentModerationService } from './imageContentModerationService';
 import { prisma } from '../lib/prisma.js';
 import logger from '../utils/logger';
+import { getEnvironment } from '../utils/environment';
 
 // ========================================
 // Type Definitions
@@ -430,7 +431,7 @@ export class PhotoPipeline {
         userId,
         error: moderationError.message,
         stack: moderationError.stack,
-        environment: process.env.NODE_ENV,
+        environment: getEnvironment(),
         timestamp: new Date().toISOString(),
         photoId: requestId
       });

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Status Validation Test</title>
+</head>
+<body>
+    <h1>Deployment Status Validation Test</h1>
+    <p>Open the browser console to see test results</p>
+
+    <script type="module">
+        // Import environment utilities and validation function
+        import { getEnvironment, getApiBaseUrl } from './src/utils/environment.js';
+        import { validateEnvironmentConsistency } from './src/js/deployment-status.js';
+
+        console.log('=== DEPLOYMENT STATUS VALIDATION TEST ===\n');
+
+        // Test 1: Valid staging environment
+        console.group('Test 1: Valid Staging Environment');
+        const stagingHealth = {
+            environment: 'development',
+            nodeEnv: 'staging',
+            databaseHost: 'unitedwerise-db-dev.postgres.database.azure.com',
+            githubBranch: 'development',
+            database: 'connected'
+        };
+
+        // Simulate staging environment
+        Object.defineProperty(window.location, 'hostname', {
+            writable: true,
+            value: 'dev.unitedwerise.org'
+        });
+
+        const stagingIssues = validateEnvironmentConsistency(stagingHealth);
+        console.log('Issues found:', stagingIssues.length);
+        if (stagingIssues.length === 0) {
+            console.log('✅ PASS: No issues detected');
+        } else {
+            console.error('❌ FAIL: Unexpected issues:', stagingIssues);
+        }
+        console.groupEnd();
+
+        // Test 2: Production running wrong branch (critical error)
+        console.group('\nTest 2: Production Running Development Branch (CRITICAL)');
+        const prodWrongBranch = {
+            environment: 'production',
+            nodeEnv: 'production',
+            databaseHost: 'unitedwerise-db.postgres.database.azure.com',
+            githubBranch: 'development',
+            database: 'connected'
+        };
+
+        Object.defineProperty(window.location, 'hostname', {
+            writable: true,
+            value: 'www.unitedwerise.org'
+        });
+
+        const prodBranchIssues = validateEnvironmentConsistency(prodWrongBranch);
+        console.log('Issues found:', prodBranchIssues.length);
+        if (prodBranchIssues.length > 0 && prodBranchIssues[0].severity === 'critical') {
+            console.log('✅ PASS: Critical issue detected:', prodBranchIssues[0].message);
+        } else {
+            console.error('❌ FAIL: Should have detected critical branch mismatch');
+        }
+        console.groupEnd();
+
+        // Test 3: Staging using production database (critical error)
+        console.group('\nTest 3: Staging Using Production Database (CRITICAL)');
+        const stagingWrongDb = {
+            environment: 'development',
+            nodeEnv: 'staging',
+            databaseHost: 'unitedwerise-db.postgres.database.azure.com',
+            githubBranch: 'development',
+            database: 'connected'
+        };
+
+        Object.defineProperty(window.location, 'hostname', {
+            writable: true,
+            value: 'dev.unitedwerise.org'
+        });
+
+        const stagingDbIssues = validateEnvironmentConsistency(stagingWrongDb);
+        console.log('Issues found:', stagingDbIssues.length);
+        const hasDbError = stagingDbIssues.some(issue =>
+            issue.severity === 'error' && issue.message.includes('unitedwerise-db-dev')
+        );
+        if (hasDbError) {
+            console.log('✅ PASS: Database mismatch detected');
+        } else {
+            console.error('❌ FAIL: Should have detected database mismatch');
+            console.log('Issues:', stagingDbIssues);
+        }
+        console.groupEnd();
+
+        // Test 4: Frontend-backend environment mismatch
+        console.group('\nTest 4: Frontend-Backend Environment Mismatch');
+        const envMismatch = {
+            environment: 'production',
+            nodeEnv: 'production',
+            databaseHost: 'unitedwerise-db.postgres.database.azure.com',
+            githubBranch: 'main',
+            database: 'connected'
+        };
+
+        Object.defineProperty(window.location, 'hostname', {
+            writable: true,
+            value: 'dev.unitedwerise.org'
+        });
+
+        const mismatchIssues = validateEnvironmentConsistency(envMismatch);
+        console.log('Issues found:', mismatchIssues.length);
+        const hasEnvError = mismatchIssues.some(issue =>
+            issue.severity === 'error' && issue.message.includes('backend reports production')
+        );
+        if (hasEnvError) {
+            console.log('✅ PASS: Environment mismatch detected');
+        } else {
+            console.error('❌ FAIL: Should have detected environment mismatch');
+            console.log('Issues:', mismatchIssues);
+        }
+        console.groupEnd();
+
+        // Test 5: Valid production environment
+        console.group('\nTest 5: Valid Production Environment');
+        const prodHealth = {
+            environment: 'production',
+            nodeEnv: 'production',
+            databaseHost: 'unitedwerise-db.postgres.database.azure.com',
+            githubBranch: 'main',
+            database: 'connected'
+        };
+
+        Object.defineProperty(window.location, 'hostname', {
+            writable: true,
+            value: 'www.unitedwerise.org'
+        });
+
+        const prodIssues = validateEnvironmentConsistency(prodHealth);
+        console.log('Issues found:', prodIssues.length);
+        if (prodIssues.length === 0) {
+            console.log('✅ PASS: No issues detected');
+        } else {
+            console.error('❌ FAIL: Unexpected issues:', prodIssues);
+        }
+        console.groupEnd();
+
+        console.log('\n=== TEST COMPLETE ===');
+    </script>
+</body>
+</html>

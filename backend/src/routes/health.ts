@@ -10,7 +10,7 @@ import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import logger from '../utils/logger';
-import { getEnvironment } from '../utils/environment';
+import { getEnvironment, isProduction } from '../utils/environment';
 
 const router = Router();
 // Using singleton prisma from lib/prisma.ts
@@ -133,6 +133,21 @@ async function getMigrationInfo() {
   };
 }
 
+/**
+ * Extract database hostname from DATABASE_URL
+ *
+ * @returns {string} Database hostname or 'unknown' if unable to parse
+ */
+function extractDatabaseHost(): string {
+  const dbUrl = process.env.DATABASE_URL || '';
+  try {
+    const url = new URL(dbUrl);
+    return url.hostname;
+  } catch {
+    return 'unknown';
+  }
+}
+
 // Basic health endpoint (existing) - enhanced with deployment info
 router.get('/', async (req, res) => {
   try {
@@ -150,12 +165,15 @@ router.get('/', async (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: 'connected',
+      databaseHost: extractDatabaseHost(),
+      environment: getEnvironment(),
+      nodeEnv: process.env.NODE_ENV || 'unknown',
       // Runtime release info (not misleading build-time metadata)
       releaseSha: process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown',
       releaseDigest: process.env.RELEASE_DIGEST || 'unknown',
       revision: process.env.CONTAINER_APP_REVISION || 'unknown',
       deployedTag: process.env.DOCKER_TAG || 'unknown',
-      githubBranch: process.env.GITHUB_REF_NAME || 'main'
+      githubBranch: isProduction() ? 'main' : 'development'
     });
   } catch (error) {
     res.status(500).json({

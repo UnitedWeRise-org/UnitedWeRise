@@ -290,6 +290,8 @@ model User {
   savedPosts                  SavedPost[]
   /// Custom feed filters created by this user (CASCADE: deletes filters)
   feedFilters                 FeedFilter[]
+  /// Page views by this user (CASCADE: deletes pageview records)
+  pageViews                   PageView[]
 
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
@@ -3103,4 +3105,129 @@ model FeedFilter {
   @@index([userId, isPinned])
   @@index([userId, isDefault])
   @@index([userId, lastUsedAt])
+}
+
+// ============================================================================
+// VISITOR ANALYTICS MODELS
+// ============================================================================
+// Models for tracking site visitors, pageviews, and conversion metrics.
+// Privacy-conscious: IP addresses are hashed with rotating salts, raw IPs never stored.
+// Auto-cleanup: PageView records deleted after 30 days, aggregated into DailyVisitStats.
+// ============================================================================
+
+/// Individual page view tracking record
+/// @description Logs each page view with privacy-preserving IP hash and bot detection.
+/// Auto-deleted after DATA_RETENTION_DAYS (default 30) to minimize storage and comply with GDPR.
+model PageView {
+  /// Unique identifier for this page view
+  id                String    @id @default(cuid())
+  /// Page path visited (e.g., "/", "/profile", "/post/123")
+  path              String
+  /// SHA256 hash of IP address + daily rotating salt (prevents cross-day tracking)
+  ipHash            String
+  /// Browser User-Agent string for bot detection and device analytics
+  userAgent         String
+  /// Referrer URL (where visitor came from)
+  referrer          String?
+  /// Associated user ID if visitor is authenticated (null for anonymous)
+  userId            String?
+  /// Whether this pageview was identified as bot traffic
+  isBot             Boolean   @default(false)
+  /// Whether this visit shows suspicious activity patterns (>500 views/day, rapid requests)
+  isSuspicious      Boolean   @default(false)
+  /// Timestamp of page view
+  createdAt         DateTime  @default(now())
+  /// Session duration in seconds (calculated on next pageview or session end)
+  sessionDuration   Int?
+
+  /// Relation to User model (null for anonymous visitors)
+  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ipHash, createdAt])
+  @@index([path, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([isBot])
+  @@index([isSuspicious])
+}
+
+/// Daily aggregated visitor statistics
+/// @description Permanent rollup of daily analytics. PageView records are deleted after retention period,
+/// but this table preserves historical trends indefinitely without storing PII.
+model DailyVisitStats {
+  /// Unique identifier for this daily stat record
+  id                      String   @id @default(cuid())
+  /// Date for this stat record (YYYY-MM-DD)
+  date                    DateTime @unique
+  /// Count of unique visitors (distinct IP hashes)
+  uniqueVisitors          Int      @default(0)
+  /// Total pageviews for the day
+  totalPageviews          Int      @default(0)
+  /// Pageviews from authenticated users
+  authenticatedVisits     Int      @default(0)
+  /// Pageviews from anonymous visitors
+  anonymousVisits         Int      @default(0)
+  /// Pageviews identified as bot traffic
+  botVisits               Int      @default(0)
+  /// Number of new user signups on this day
+  signupsCount            Int      @default(0)
+  /// Number of unique IPs flagged as suspicious
+  suspiciousActivityCount Int      @default(0)
+  /// JSON object storing popular pages with view counts
+  /// Format: { "/": 1234, "/profile": 567, ... }
+  popularPages            Json?
+  /// Average session duration in seconds
+  avgSessionDuration      Float?
+  /// Timestamp when this record was created/updated
+  updatedAt               DateTime @updatedAt
+
+  @@index([date])
+}
+
+/// IP-based rate limiting tracker
+/// @description Tracks request counts per IP hash to enforce rate limits and detect abuse.
+/// Records auto-expire after 24 hours or when block expires.
+model IPRateLimit {
+  /// Unique identifier for this rate limit record
+  id             String    @id @default(cuid())
+  /// SHA256 hash of IP address + daily rotating salt
+  ipHash         String
+  /// Number of requests in current time window
+  requestCount   Int       @default(0)
+  /// Timestamp of most recent request
+  lastRequest    DateTime  @default(now())
+  /// If blocked, timestamp when block expires (null if not blocked)
+  blockedUntil   DateTime?
+  /// Reason for block if applicable
+  blockReason    String?
+  /// Timestamp when this record was created
+  createdAt      DateTime  @default(now())
+
+  @@unique([ipHash])
+  @@index([ipHash, lastRequest])
+  @@index([blockedUntil])
+}
+
+/// Analytics system configuration
+/// @description Stores configurable thresholds and settings for analytics system.
+/// Single-row table (id always "default") for easy access.
+model AnalyticsConfig {
+  /// Fixed ID for singleton pattern
+  id                    String   @id @default("default")
+  /// Maximum requests per hour per IP before rate limiting
+  rateLimitPerHour      Int      @default(100)
+  /// Number of days to retain PageView records before auto-deletion
+  dataRetentionDays     Int      @default(30)
+  /// Number of pageviews per day to flag as suspicious
+  suspiciousThreshold   Int      @default(500)
+  /// Duration in hours to block IPs that violate rate limits
+  blockDurationHours    Int      @default(24)
+  /// Current daily salt for IP hashing (rotates at midnight UTC)
+  currentDailySalt      String   @default(cuid())
+  /// Timestamp of last salt rotation
+  lastSaltRotation      DateTime @default(now())
+  /// Whether visitor tracking is enabled
+  trackingEnabled       Boolean  @default(true)
+  /// Last configuration update timestamp
+  updatedAt             DateTime @updatedAt
 }

@@ -895,6 +895,7 @@
                     <button class="analytics-tab active" data-tab="engagement">User Engagement</button>
                     <button class="analytics-tab" data-tab="content">Content Performance</button>
                     <button class="analytics-tab" data-tab="growth">Growth Metrics</button>
+                    <button class="analytics-tab" data-tab="visitors">Visitor Analytics</button>
                 </div>
 
                 <div class="analytics-tab-content">
@@ -919,6 +920,119 @@
                         <h3>Growth Metrics Analytics</h3>
                         <div id="growthMetricsContainer">
                             <!-- Populated by AnalyticsController -->
+                        </div>
+                    </div>
+
+                    <!-- Visitor Analytics Tab -->
+                    <div id="visitorsTab" class="tab-panel">
+                        <h3>Visitor Analytics</h3>
+
+                        <!-- Overview Stats -->
+                        <div class="visitor-stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Today's Unique Visitors</div>
+                                <div class="stat-value" id="todayVisitors">-</div>
+                                <div class="stat-change" id="todayVisitorsChange"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Today's Pageviews</div>
+                                <div class="stat-value" id="todayPageviews">-</div>
+                                <div class="stat-change" id="todayPageviewsChange"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Today's Signups</div>
+                                <div class="stat-value" id="todaySignups">-</div>
+                                <div class="stat-change" id="todaySignupsChange"></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Conversion Rate (Today)</div>
+                                <div class="stat-value" id="todayConversion">-</div>
+                                <div class="stat-change" id="todayConversionChange"></div>
+                            </div>
+                        </div>
+
+                        <!-- Period Comparison -->
+                        <div class="visitor-comparison">
+                            <h4>Period Comparison</h4>
+                            <div class="comparison-grid">
+                                <div class="comparison-card">
+                                    <h5>Last 7 Days</h5>
+                                    <div class="comparison-stats">
+                                        <div><strong>Unique Visitors:</strong> <span id="weekVisitors">-</span></div>
+                                        <div><strong>Total Pageviews:</strong> <span id="weekPageviews">-</span></div>
+                                        <div><strong>Signups:</strong> <span id="weekSignups">-</span></div>
+                                        <div><strong>Conversion Rate:</strong> <span id="weekConversion">-</span></div>
+                                    </div>
+                                </div>
+                                <div class="comparison-card">
+                                    <h5>Last 30 Days</h5>
+                                    <div class="comparison-stats">
+                                        <div><strong>Unique Visitors:</strong> <span id="monthVisitors">-</span></div>
+                                        <div><strong>Total Pageviews:</strong> <span id="monthPageviews">-</span></div>
+                                        <div><strong>Signups:</strong> <span id="monthSignups">-</span></div>
+                                        <div><strong>Conversion Rate:</strong> <span id="monthConversion">-</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Traffic Breakdown -->
+                        <div class="traffic-breakdown">
+                            <h4>Traffic Breakdown (Last 7 Days)</h4>
+                            <div class="breakdown-stats">
+                                <div class="breakdown-item">
+                                    <span class="breakdown-label">Authenticated Visits:</span>
+                                    <span class="breakdown-value" id="authenticatedVisits">-</span>
+                                    <span class="breakdown-percent" id="authenticatedPercent"></span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="breakdown-label">Anonymous Visits:</span>
+                                    <span class="breakdown-value" id="anonymousVisits">-</span>
+                                    <span class="breakdown-percent" id="anonymousPercent"></span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="breakdown-label">Bot Traffic (Filtered):</span>
+                                    <span class="breakdown-value" id="botVisits">-</span>
+                                    <span class="breakdown-percent" id="botPercent"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suspicious Activity Alert -->
+                        <div class="suspicious-activity" style="display: none;">
+                            <h4>⚠️ Suspicious Activity Detected</h4>
+                            <div id="suspiciousActivityList">
+                                <!-- Populated by controller -->
+                            </div>
+                        </div>
+
+                        <!-- Daily Trend Chart -->
+                        <div class="visitor-chart-container">
+                            <h4>Daily Visitor Trends (Last 30 Days)</h4>
+                            <canvas id="visitorTrendChart"></canvas>
+                        </div>
+
+                        <!-- System Configuration -->
+                        <div class="visitor-config">
+                            <h4>System Configuration</h4>
+                            <div class="config-grid">
+                                <div class="config-item">
+                                    <span class="config-label">Rate Limit:</span>
+                                    <span class="config-value" id="rateLimit">-</span>
+                                </div>
+                                <div class="config-item">
+                                    <span class="config-label">Data Retention:</span>
+                                    <span class="config-value" id="dataRetention">-</span>
+                                </div>
+                                <div class="config-item">
+                                    <span class="config-label">Suspicious Threshold:</span>
+                                    <span class="config-value" id="suspiciousThreshold">-</span>
+                                </div>
+                                <div class="config-item">
+                                    <span class="config-label">Tracking Status:</span>
+                                    <span class="config-value" id="trackingStatus">-</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

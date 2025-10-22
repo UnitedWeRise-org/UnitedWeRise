@@ -46,6 +46,7 @@ import badgeRoutes from './routes/badges';
 import questRoutes from './routes/quests';
 import photosRoutes from './routes/photos';
 import WebSocketService from './services/WebSocketService';
+import analyticsCleanupJob from './jobs/analyticsCleanup';
 import { apiLimiter, burstLimiter } from './middleware/rateLimiting';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/errorHandler';
 import { setupSwagger } from './swagger';
@@ -54,6 +55,8 @@ import { performanceMiddleware } from './middleware/performanceMonitor';
 import { enableRequestLogging, enableApiDocs, getEnvironment } from './utils/environment';
 import { verifyCsrf } from './middleware/csrf';
 import { requireAuth, requireAdmin } from './middleware/auth';
+import visitTrackingMiddleware from './middleware/visitTracking';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -276,6 +279,9 @@ app.use(metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMiddleware);
 
+// Visitor analytics tracking (must be early to track all pageviews)
+app.use(visitTrackingMiddleware);
+
 // CSRF Protection - Apply to all state-changing requests (POST, PUT, DELETE, PATCH)
 // Must be after cookie-parser to read CSRF tokens from cookies
 // Must be before routes to protect all endpoints
@@ -483,6 +489,9 @@ app.use(errorHandler);
 const gracefulShutdown = async () => {
   console.log('Received shutdown signal, closing server gracefully...');
 
+  // Stop cron jobs
+  analyticsCleanupJob.stop();
+
   // Close HTTP server
   httpServer.close(() => {
     console.log('HTTP server closed');
@@ -503,10 +512,62 @@ const gracefulShutdown = async () => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
+/**
+ * Validates that environment configuration is consistent
+ * Prevents misconfigured deployments from starting
+ * @throws {Error} If environment validation fails
+ */
+function validateEnvironmentConsistency(): void {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const dbUrl = process.env.DATABASE_URL || '';
+
+  logger.info('🔍 Validating environment consistency...');
+
+  // Extract database hostname
+  let dbHost = '';
+  try {
+    const url = new URL(dbUrl);
+    dbHost = url.hostname;
+  } catch (error) {
+    logger.error('❌ Invalid DATABASE_URL format');
+    throw new Error('DATABASE_URL must be a valid PostgreSQL connection string');
+  }
+
+  // Validate production environment
+  if (nodeEnv === 'production') {
+    if (dbHost.includes('-dev')) {
+      logger.error('❌ CRITICAL: Production environment pointing to development database!');
+      logger.error(`   NODE_ENV: ${nodeEnv}`);
+      logger.error(`   Database: ${dbHost}`);
+      throw new Error('Production NODE_ENV cannot use development database');
+    }
+  }
+
+  // Validate staging environment
+  if (nodeEnv === 'staging') {
+    if (!dbHost.includes('-dev')) {
+      logger.error('❌ CRITICAL: Staging environment pointing to production database!');
+      logger.error(`   NODE_ENV: ${nodeEnv}`);
+      logger.error(`   Database: ${dbHost}`);
+      throw new Error('Staging NODE_ENV must use development database');
+    }
+  }
+
+  logger.info('✅ Environment consistency validated');
+  logger.info(`   Environment: ${nodeEnv}`);
+  logger.info(`   Database: ${dbHost}`);
+}
+
 // Initialize services and start server
 async function startServer() {
   try {
     console.log('🚀 Initializing services...');
+
+    // Validate environment consistency BEFORE starting services
+    validateEnvironmentConsistency();
+
+    // Start cron jobs
+    analyticsCleanupJob.start();
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {

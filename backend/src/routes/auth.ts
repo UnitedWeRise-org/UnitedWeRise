@@ -11,7 +11,7 @@ import { emailService } from '../services/emailService';
 import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
-import { requiresCaptcha, requireSecureCookies, enableRequestLogging } from '../utils/environment';
+import { requiresCaptcha, requireSecureCookies, enableRequestLogging, isDevelopment } from '../utils/environment';
 import { normalizeEmail } from '../utils/emailNormalization';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -24,8 +24,6 @@ const router = express.Router();
  * Debug logging helper - only logs in development/staging environments
  * Prevents verbose debugging logs in production
  */
-const isDevelopment = () => process.env.NODE_ENV === 'development' || process.env.STAGING_ENVIRONMENT === 'true';
-
 const debugLog = (...args: any[]) => {
     if (isDevelopment()) {
         console.log(...args);

@@ -52,6 +52,7 @@ const badges_1 = __importDefault(require("./routes/badges"));
 const quests_1 = __importDefault(require("./routes/quests"));
 const photos_1 = __importDefault(require("./routes/photos"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
+const analyticsCleanup_1 = __importDefault(require("./jobs/analyticsCleanup"));
 const rateLimiting_1 = require("./middleware/rateLimiting");
 const errorHandler_1 = require("./middleware/errorHandler");
 const swagger_1 = require("./swagger");
@@ -60,6 +61,7 @@ const performanceMonitor_1 = require("./middleware/performanceMonitor");
 const environment_1 = require("./utils/environment");
 const csrf_1 = require("./middleware/csrf");
 const auth_2 = require("./middleware/auth");
+const visitTracking_1 = __importDefault(require("./middleware/visitTracking"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
@@ -256,6 +258,8 @@ if ((0, environment_1.enableRequestLogging)()) {
 app.use(metricsService_1.metricsService.requestMetricsMiddleware());
 // Performance monitoring middleware
 app.use(performanceMonitor_1.performanceMiddleware);
+// Visitor analytics tracking (must be early to track all pageviews)
+app.use(visitTracking_1.default);
 // CSRF Protection - Apply to all state-changing requests (POST, PUT, DELETE, PATCH)
 // Must be after cookie-parser to read CSRF tokens from cookies
 // Must be before routes to protect all endpoints
@@ -446,6 +450,8 @@ app.use(errorHandler_1.errorHandler);
 // Graceful shutdown handler for proper database connection cleanup
 const gracefulShutdown = async () => {
     console.log('Received shutdown signal, closing server gracefully...');
+    // Stop cron jobs
+    analyticsCleanup_1.default.stop();
     // Close HTTP server
     httpServer.close(() => {
         console.log('HTTP server closed');
@@ -467,6 +473,8 @@ process.on('SIGINT', gracefulShutdown);
 async function startServer() {
     try {
         console.log('🚀 Initializing services...');
+        // Start cron jobs
+        analyticsCleanup_1.default.start();
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
             console.log(`✅ Server running on port ${PORT}`);

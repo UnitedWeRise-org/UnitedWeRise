@@ -6,16 +6,21 @@
  * Phase 2.4 of comprehensive modularization project
  */
 
+import { getEnvironment } from '../../../utils/environment.js';
+import { validateEnvironmentConsistency } from '../../../js/deployment-status.js';
+
 class OverviewController {
     constructor() {
         this.sectionId = 'overview';
         this.isInitialized = false;
+        this.healthCheckInterval = null;
 
         // Bind methods to preserve context
         this.init = this.init.bind(this);
         this.render = this.render.bind(this);
         this.displayPerformanceMetrics = this.displayPerformanceMetrics.bind(this);
         this.displayHealthStatus = this.displayHealthStatus.bind(this);
+        this.loadEnvironmentHealth = this.loadEnvironmentHealth.bind(this);
     }
 
     /**
@@ -37,6 +42,14 @@ class OverviewController {
 
             // Load initial data
             await this.loadData();
+
+            // Load environment health
+            await this.loadEnvironmentHealth();
+
+            // Set up auto-refresh for environment health (every 30 seconds)
+            this.healthCheckInterval = setInterval(() => {
+                this.loadEnvironmentHealth();
+            }, 30000);
 
             this.isInitialized = true;
 
@@ -258,9 +271,51 @@ class OverviewController {
     }
 
     /**
-     * Display health status
+     * Load comprehensive environment health information
      */
-    async displayHealthStatus(health) {
+    async loadEnvironmentHealth() {
+        try {
+            // Get API base URL (without /api suffix for health endpoint)
+            const apiBase = window.API_CONFIG?.BASE_URL?.replace('/api', '') || 'https://api.unitedwerise.org';
+
+            // Fetch health data from backend
+            const response = await fetch(`${apiBase}/health`, {
+                headers: { 'Accept': 'application/json' },
+                mode: 'cors'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Health check failed: HTTP ${response.status}`);
+            }
+
+            const healthData = await response.json();
+
+            // Get frontend environment
+            const frontendEnv = getEnvironment();
+
+            // Validate consistency
+            const issues = validateEnvironmentConsistency(healthData);
+
+            // Update UI
+            this.updateHealthStatusDisplay(frontendEnv, healthData, issues);
+
+            await adminDebugLog('OverviewController', 'Environment health loaded', {
+                frontendEnv,
+                backendEnv: healthData.environment,
+                issuesCount: issues.length
+            });
+
+        } catch (error) {
+            console.error('Error loading environment health:', error);
+            await adminDebugError('OverviewController', 'Failed to load environment health', error);
+            this.displayHealthError(error);
+        }
+    }
+
+    /**
+     * Update health status display with comprehensive environment info
+     */
+    updateHealthStatusDisplay(frontendEnv, healthData, issues) {
         try {
             const healthContainer = document.getElementById('healthStatus');
             if (!healthContainer) {
@@ -268,44 +323,123 @@ class OverviewController {
                 return;
             }
 
-            const statusClass = health.status === 'healthy' ? 'status-healthy' : 'status-unhealthy';
-            const uptimeFormatted = this.formatUptime(health.uptime || 0);
+            const uptimeFormatted = this.formatUptime(healthData.uptime || 0);
+            const apiBase = window.API_CONFIG?.BASE_URL || 'Unknown';
 
-            const healthHtml = `
-                <div class="health-status ${statusClass}">
-                    <div class="health-indicator">
-                        <div class="health-dot"></div>
-                        <span class="health-text">${health.status || 'Unknown'}</span>
+            let html = `
+                <div class="environment-health">
+                    <div class="env-section">
+                        <h4>Frontend Environment</h4>
+                        <div class="env-detail">
+                            <span class="env-label">Environment:</span>
+                            <span class="env-value"><strong>${frontendEnv}</strong></span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Hostname:</span>
+                            <span class="env-value">${window.location.hostname}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">API Base:</span>
+                            <span class="env-value">${apiBase}</span>
+                        </div>
                     </div>
-                    <div class="health-details">
-                        <div class="health-item">
-                            <span class="health-label">Uptime:</span>
-                            <span class="health-value">${uptimeFormatted}</span>
+
+                    <div class="env-section">
+                        <h4>Backend Environment</h4>
+                        <div class="env-detail">
+                            <span class="env-label">Environment:</span>
+                            <span class="env-value"><strong>${healthData.environment || 'Unknown'}</strong></span>
                         </div>
-                        <div class="health-item">
-                            <span class="health-label">Version:</span>
-                            <span class="health-value">${health.version || 'Unknown'}</span>
+                        <div class="env-detail">
+                            <span class="env-label">NODE_ENV:</span>
+                            <span class="env-value">${healthData.nodeEnv || 'Unknown'}</span>
                         </div>
-                        <div class="health-item">
-                            <span class="health-label">Environment:</span>
-                            <span class="health-value">${health.environment || 'Unknown'}</span>
+                        <div class="env-detail">
+                            <span class="env-label">Status:</span>
+                            <span class="env-value status-${healthData.status}">${healthData.status || 'Unknown'}</span>
                         </div>
+                        <div class="env-detail">
+                            <span class="env-label">Uptime:</span>
+                            <span class="env-value">${uptimeFormatted}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Branch:</span>
+                            <span class="env-value">${healthData.githubBranch || 'Unknown'}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">SHA:</span>
+                            <span class="env-value" style="font-family: monospace; font-size: 0.9em;">${healthData.releaseSha || 'Unknown'}</span>
+                        </div>
+                    </div>
+
+                    <div class="env-section">
+                        <h4>Database</h4>
+                        <div class="env-detail">
+                            <span class="env-label">Host:</span>
+                            <span class="env-value" style="font-size: 0.85em;">${healthData.databaseHost || 'Unknown'}</span>
+                        </div>
+                        <div class="env-detail">
+                            <span class="env-label">Status:</span>
+                            <span class="env-value status-${healthData.database}">${healthData.database || 'Unknown'}</span>
+                        </div>
+                    </div>
+            `;
+
+            if (issues.length > 0) {
+                html += `
+                    <div class="env-issues">
+                        <h4>⚠️ Issues Detected</h4>
+                        <ul class="issues-list">
+                `;
+                issues.forEach(issue => {
+                    const icon = issue.severity === 'critical' ? '🔴' : '🟠';
+                    html += `<li class="issue-${issue.severity}">${icon} ${issue.message}</li>`;
+                });
+                html += `</ul></div>`;
+            } else {
+                html += `<div class="env-success">✅ All environment checks passed</div>`;
+            }
+
+            html += `
+                    <div class="env-footer">
+                        <small>Last checked: ${new Date().toLocaleTimeString()} • Auto-refresh every 30s</small>
                     </div>
                 </div>
             `;
 
-            healthContainer.innerHTML = healthHtml;
-
-            await adminDebugLog('OverviewController', 'Health status displayed', {
-                status: health.status,
-                uptime: health.uptime,
-                version: health.version
-            });
+            healthContainer.innerHTML = html;
 
         } catch (error) {
-            console.error('Error displaying health status:', error);
-            await adminDebugError('OverviewController', 'Failed to display health status', error);
+            console.error('Error updating health status display:', error);
+            adminDebugError('OverviewController', 'Failed to update health display', error);
         }
+    }
+
+    /**
+     * Display error in health status section
+     */
+    displayHealthError(error) {
+        const healthContainer = document.getElementById('healthStatus');
+        if (!healthContainer) return;
+
+        healthContainer.innerHTML = `
+            <div class="environment-health">
+                <div class="env-error">
+                    <h4>❌ Health Check Failed</h4>
+                    <p>${error.message || 'Unknown error'}</p>
+                    <p><small>The backend health endpoint may be unavailable.</small></p>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Display health status (legacy compatibility)
+     */
+    async displayHealthStatus(health) {
+        // This method is kept for backward compatibility
+        // New code should use loadEnvironmentHealth instead
+        await this.loadEnvironmentHealth();
     }
 
     /**
@@ -371,8 +505,11 @@ class OverviewController {
             refreshBtn.removeEventListener('click', this.loadData);
         }
 
-        // Clear any intervals or timeouts
-        // (None in this controller currently)
+        // Clear health check interval
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
 
         this.isInitialized = false;
 

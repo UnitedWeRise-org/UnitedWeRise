@@ -321,6 +321,7 @@
             font-size: 2.5rem;
             font-weight: bold;
             margin-bottom: 0.5rem;
+            color: #333;
         }
 
         .stat-label {
@@ -4477,4 +4478,141 @@
 
 .btn-small.btn-primary:hover {
     background-color: #3a4607;
+}
+
+/* Environment Health Display */
+.environment-health {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.env-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #4b5c09;
+}
+
+.env-section h4 {
+    margin: 0 0 0.75rem 0;
+    color: #4b5c09;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.env-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.env-detail:last-child {
+    border-bottom: none;
+}
+
+.env-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.env-value {
+    color: #212529;
+    font-weight: 500;
+    text-align: right;
+    max-width: 60%;
+    word-break: break-word;
+}
+
+.env-value.status-healthy,
+.env-value.status-connected {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.env-value.status-unhealthy,
+.env-value.status-disconnected {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.env-issues {
+    background: #fff3cd;
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 4px solid #ffc107;
+    margin-bottom: 1rem;
+}
+
+.env-issues h4 {
+    margin: 0 0 0.75rem 0;
+    color: #856404;
+    font-size: 1rem;
+}
+
+.issues-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.issues-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #ffeeba;
+}
+
+.issues-list li:last-child {
+    border-bottom: none;
+}
+
+.issue-critical {
+    color: #721c24;
+    background: #f8d7da;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 0.25rem 0;
+    font-weight: 600;
+}
+
+.issue-error {
+    color: #856404;
+    background: #fff3cd;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 0.25rem 0;
+}
+
+.env-success {
+    background: #d4edda;
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 4px solid #28a745;
+    color: #155724;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.env-error {
+    background: #f8d7da;
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+.env-error h4 {
+    margin: 0 0 0.75rem 0;
+    color: #721c24;
+}
+
+.env-footer {
+    text-align: center;
+    padding-top: 0.75rem;
+    margin-top: 1rem;
+    border-top: 1px solid #dee2e6;
+    color: #6c757d;
 }

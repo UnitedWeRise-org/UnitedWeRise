@@ -1,10 +1,38 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: October 17, 2025
+**Last Updated**: October 22, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [Unreleased] - 2025-10-22
+
+### Added
+- **Environment health validation on backend startup** - Server now fails to start if NODE_ENV and DATABASE_URL are misconfigured (fail-fast pattern)
+- **Enhanced health endpoint** with new fields:
+  - `databaseHost`: Database server hostname for environment validation
+  - `environment`: Derived environment ('development' or 'production')
+  - `nodeEnv`: Raw NODE_ENV value for debugging
+- **Cross-environment validation** in deployment-status.js console tool
+- **Comprehensive environment health display** in Admin Dashboard Overview tab
+- **Auto-refresh environment health monitoring** (30-second interval) with manual refresh option
+- **New documentation**: `docs/ENVIRONMENT-HEALTH-MONITORING.md` - Complete guide to environment validation and health monitoring system
+
+### Fixed
+- **Health endpoint `githubBranch` metadata** - Now correctly derives from NODE_ENV instead of always defaulting to 'main'
+  - `NODE_ENV=staging` → `githubBranch="development"`
+  - `NODE_ENV=production` → `githubBranch="main"`
+
+### Changed
+- **Standardized environment detection** - All backend code now uses centralized `utils/environment.ts` utility functions
+- **Backend startup behavior** - Server fails to start immediately if environment misconfiguration detected (prevents runtime errors)
+- **Admin Dashboard Overview** - Added environment health section with color-coded status indicators
+
+### Security
+- **Environment isolation enforcement** - Prevents production from accidentally using development database and vice versa
 
 ---
 

@@ -9,6 +9,7 @@ import { apiLimiter } from '../middleware/rateLimiting';
 import { SecurityService } from '../services/securityService';
 import { metricsService } from '../services/metricsService';
 import { getPerformanceMetrics } from '../middleware/performanceMonitor';
+import visitorAnalytics from '../services/visitorAnalytics';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -3318,6 +3319,155 @@ router.post('/users/:userId/resend-verification', requireAuth, requireAdmin, asy
   } catch (error) {
     console.error('Admin resend verification error:', error);
     res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
+// ============================================================================
+// VISITOR ANALYTICS ENDPOINTS
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/overview:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get visitor analytics overview (admin only)
+ *     description: Returns current visitor statistics including today/week/month metrics and conversion rates
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Visitor analytics overview
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/visitors/overview', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const overview = await visitorAnalytics.getOverview();
+    res.json(overview);
+  } catch (error) {
+    console.error('Visitor analytics overview error:', error);
+    res.status(500).json({ error: 'Failed to retrieve visitor analytics overview' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/daily:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get daily visitor statistics (admin only)
+ *     description: Returns aggregated daily stats for specified date range
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Daily visitor statistics
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/visitors/daily', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    // Default to last 30 days if not specified
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate as string)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const stats = await visitorAnalytics.getStats(startDate, endDate);
+    res.json(stats);
+  } catch (error) {
+    console.error('Visitor analytics daily stats error:', error);
+    res.status(500).json({ error: 'Failed to retrieve daily visitor statistics' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/suspicious:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get suspicious visitor IPs (admin only)
+ *     description: Returns list of IP hashes flagged for suspicious activity
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *         description: Number of days to look back
+ *     responses:
+ *       200:
+ *         description: Suspicious visitor IPs
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/visitors/suspicious', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const days = req.query.days ? parseInt(req.query.days as string) : 7;
+    const suspiciousIPs = await visitorAnalytics.getSuspiciousIPs(days);
+    res.json({ suspiciousIPs, days });
+  } catch (error) {
+    console.error('Visitor analytics suspicious IPs error:', error);
+    res.status(500).json({ error: 'Failed to retrieve suspicious IPs' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/analytics/visitors/config:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get visitor analytics configuration (admin only)
+ *     description: Returns current analytics configuration settings
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics configuration
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/visitors/config', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const config = await visitorAnalytics.getConfig();
+    // Don't expose sensitive salt value
+    const { currentDailySalt, ...safeConfig } = config;
+    res.json(safeConfig);
+  } catch (error) {
+    console.error('Visitor analytics config error:', error);
+    res.status(500).json({ error: 'Failed to retrieve analytics configuration' });
   }
 });
 
