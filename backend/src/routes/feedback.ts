@@ -8,7 +8,7 @@ import { prisma } from '../lib/prisma';
 
 import express from 'express';
 ;
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { feedbackAnalysisService } from '../services/feedbackAnalysisService';
 import logger from '../utils/logger';
 
@@ -19,7 +19,7 @@ const router = express.Router();
  * Get all feedback posts for admin dashboard
  * GET /api/feedback
  */
-router.get('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { 
             type, 
@@ -109,7 +109,7 @@ router.get('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
  * Get feedback statistics for dashboard
  * GET /api/feedback/stats
  */
-router.get('/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/stats', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { timeframe = 'week' } = req.query;
         
@@ -248,7 +248,7 @@ router.get('/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) =>
  * Update feedback status (acknowledge, in progress, resolved, etc.)
  * PUT /api/feedback/:id/status
  */
-router.put('/:id/status', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.put('/:id/status', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const { status, assignedTo, adminNotes } = req.body;
@@ -301,7 +301,7 @@ router.put('/:id/status', requireAuth, requireAdmin, async (req: AuthRequest, re
  * Manually analyze a post for feedback (for testing/verification)
  * POST /api/feedback/analyze
  */
-router.post('/analyze', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/analyze', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { content, postId } = req.body;
 
@@ -343,7 +343,7 @@ router.post('/analyze', requireAuth, requireAdmin, async (req: AuthRequest, res)
  * Batch re-analyze existing posts for feedback (admin utility)
  * POST /api/feedback/batch-analyze
  */
-router.post('/batch-analyze', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/batch-analyze', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { limit = 100, offset = 0 } = req.body;
 

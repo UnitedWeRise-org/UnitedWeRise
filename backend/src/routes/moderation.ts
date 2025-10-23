@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
 import { moderationService } from '../services/moderationService';
 import { emailService } from '../services/emailService';
 import { validateReport, validateModerationAction } from '../middleware/validation';
@@ -795,7 +795,7 @@ router.get('/stats', requireAuth, requireModerator, async (req: AuthRequest, res
  *       500:
  *         description: Server error
  */
-router.post('/users/:userId/promote', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/users/:userId/promote', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
 

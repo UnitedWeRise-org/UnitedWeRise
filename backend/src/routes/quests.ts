@@ -335,7 +335,7 @@ router.post('/update-progress', requireAuth, async (req: AuthRequest, res: Respo
  *       500:
  *         description: Server error while creating quest
  */
-router.post('/create', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.post('/create', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const quest = await questService.createQuest({
       ...req.body,
@@ -387,7 +387,7 @@ router.post('/create', requireAdmin, async (req: AuthRequest, res: Response) => 
  *       500:
  *         description: Server error while retrieving quests
  */
-router.get('/all', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/all', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const quests = await questService.getAllQuests();
     res.json({ success: true, data: quests });
@@ -472,7 +472,7 @@ router.get('/all', requireAdmin, async (req: AuthRequest, res: Response) => {
  *       500:
  *         description: Server error while updating quest
  */
-router.put('/:questId', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.put('/:questId', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { questId } = req.params;
     const quest = await questService.updateQuest(questId, req.body);
@@ -564,7 +564,7 @@ router.put('/:questId', requireAdmin, async (req: AuthRequest, res: Response) =>
  *       500:
  *         description: Server error while retrieving analytics
  */
-router.get('/analytics', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/analytics', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const analytics = await questService.getQuestAnalytics();
     res.json({ success: true, data: analytics });
@@ -602,7 +602,7 @@ router.get('/analytics', requireAdmin, async (req: AuthRequest, res: Response) =
  *       500:
  *         description: Server error while creating weekly quest
  */
-router.post('/create-weekly', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.post('/create-weekly', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const quest = await questService.createWeeklyQuest();
     res.json({ success: true, data: quest });

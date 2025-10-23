@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -108,7 +108,7 @@ router.post('/dismiss/:id', async (req, res) => {
 // Admin routes - require authentication and admin privileges
 
 // Get all MOTDs for admin management
-router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/admin/list', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const motds = await prisma.messageOfTheDay.findMany({
             include: {
@@ -133,7 +133,7 @@ router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, re
 });
 
 // Create new MOTD
-router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/create', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const { title, content, isActive = false, startDate, endDate, showToNewUsers = true } = req.body;
         const userId = req.user.id;
@@ -185,7 +185,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
 });
 
 // Update MOTD
-router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.put('/admin/update/:id', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const motdId = req.params.id;
         const { title, content, isActive, startDate, endDate, showToNewUsers } = req.body;
@@ -249,7 +249,7 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
 });
 
 // Activate/Deactivate MOTD
-router.post('/admin/toggle/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/toggle/:id', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
@@ -295,7 +295,7 @@ router.post('/admin/toggle/:id', requireAuth, requireAdmin, async (req: AuthRequ
 });
 
 // Delete MOTD
-router.delete('/admin/delete/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.delete('/admin/delete/:id', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
@@ -323,7 +323,7 @@ router.delete('/admin/delete/:id', requireAuth, requireAdmin, async (req: AuthRe
 });
 
 // Get MOTD analytics and logs
-router.get('/admin/analytics/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/admin/analytics/:id', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
         const motdId = req.params.id;
 

@@ -7,7 +7,7 @@ import { prisma } from '../lib/prisma';
 
 import express from 'express';
 ;
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { reputationService } from '../services/reputationService';
 import logger from '../utils/logger';
 
@@ -204,7 +204,7 @@ router.post('/appeal', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Award reputation manually (admin only)
-router.post('/award', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/award', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId, reason, postId } = req.body;
     
@@ -234,7 +234,7 @@ router.post('/award', requireAuth, requireAdmin, async (req: AuthRequest, res) =
 });
 
 // Get reputation statistics (admin only)
-router.get('/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/stats', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { timeframe = 'week' } = req.query;
     
@@ -312,7 +312,7 @@ router.get('/stats', requireAuth, requireAdmin, async (req: AuthRequest, res) =>
 });
 
 // Get low reputation users for admin review (admin only)
-router.get('/low-reputation', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.get('/low-reputation', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { threshold = 30, limit = 20 } = req.query;
     

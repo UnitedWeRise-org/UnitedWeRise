@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../lib/prisma';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
 import { CandidateReportService } from '../services/candidateReportService';
 import { BlobServiceClient } from '@azure/storage-blob';
 import multer from 'multer';
@@ -197,7 +197,7 @@ const requireAdmin = async (req: AuthRequest, res: express.Response, next: expre
 };
 
 // Get candidates due for monthly verification
-router.get('/admin/due-verification', requireAuth, requireAdmin, async (req, res) => {
+router.get('/admin/due-verification', requireStagingAuth, requireAdmin, async (req, res) => {
   try {
     const candidates = await CandidateReportService.getCandidatesDueForVerification();
     
@@ -231,7 +231,7 @@ router.get('/admin/due-verification', requireAuth, requireAdmin, async (req, res
 });
 
 // Request documents from a candidate
-router.post('/admin/request-documents', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/request-documents', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { candidateId, documentTypes } = req.body;
     
@@ -256,7 +256,7 @@ router.post('/admin/request-documents', requireAuth, requireAdmin, async (req: A
 });
 
 // Verify a submitted document
-router.post('/admin/verify-document', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/admin/verify-document', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { documentId, isValid, notes } = req.body;
     

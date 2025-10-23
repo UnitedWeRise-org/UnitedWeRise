@@ -353,7 +353,7 @@ router.put('/display', requireAuth, async (req: AuthRequest, res: Response) => {
  *       500:
  *         description: Server error while creating badge
  */
-router.post('/create', requireAdmin, upload.single('image'), async (req: AuthRequest, res: Response) => {
+router.post('/create', requireAuth, requireAdmin, upload.single('image'), async (req: AuthRequest, res: Response) => {
   try {
     const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
 
@@ -448,7 +448,7 @@ router.post('/create', requireAdmin, upload.single('image'), async (req: AuthReq
  *       500:
  *         description: Server error while updating badge
  */
-router.put('/:badgeId', requireAdmin, upload.single('image'), async (req: AuthRequest, res: Response) => {
+router.put('/:badgeId', requireAuth, requireAdmin, upload.single('image'), async (req: AuthRequest, res: Response) => {
   try {
     const { badgeId } = req.params;
     const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
@@ -526,7 +526,7 @@ router.put('/:badgeId', requireAdmin, upload.single('image'), async (req: AuthRe
  *       500:
  *         description: Server error while awarding badge
  */
-router.post('/award', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.post('/award', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { userId, badgeId, reason } = req.body;
 
@@ -582,7 +582,7 @@ router.post('/award', requireAdmin, async (req: AuthRequest, res: Response) => {
  *       500:
  *         description: Server error while deleting badge
  */
-router.delete('/:badgeId', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.delete('/:badgeId', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { badgeId } = req.params;
     await badgeService.deleteBadge(badgeId);
@@ -629,7 +629,7 @@ router.delete('/:badgeId', requireAdmin, async (req: AuthRequest, res: Response)
  *       500:
  *         description: Server error while checking qualifications
  */
-router.post('/check-qualifications', requireAdmin, async (req: AuthRequest, res: Response) => {
+router.post('/check-qualifications', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const badgesAwarded = await badgeService.runBadgeQualificationChecks();
     res.json({

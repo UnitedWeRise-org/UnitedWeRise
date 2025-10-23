@@ -133,6 +133,97 @@ GOOGLE_CLIENT_ID=496604941751-663p6eiqo34iumaet9tme4g19msa1bf0.apps.googleuserco
 
 ---
 
+## Environment-Aware Authentication
+
+### Overview
+
+The backend implements environment-aware authentication to enforce different access policies based on deployment environment:
+
+- **Production** (`NODE_ENV=production`): Regular authenticated users can access features
+- **Staging** (`NODE_ENV=staging`): Admin-only access to protect unstable/unreleased code
+- **Local Dev** (`NODE_ENV=development` or undefined): Admin-only access during active development
+
+### Middleware Options
+
+**`requireAuth`** - Basic authentication (all environments allow authenticated users)
+```typescript
+router.get('/endpoint', requireAuth, async (req: AuthRequest, res) => {
+  // Any authenticated user can access in all environments
+});
+```
+
+**`requireStagingAuth`** - Environment-aware authentication (recommended for admin features)
+```typescript
+router.get('/admin-endpoint', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  // Production: Regular authenticated users allowed
+  // Staging/Dev: Admin-only
+});
+```
+
+**`requireAuth + requireAdmin`** - Always admin-only (all environments)
+```typescript
+router.post('/critical-admin-only', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  // Admin-only in ALL environments (production, staging, dev)
+});
+```
+
+### Implementation Details
+
+`requireStagingAuth` middleware (auth.ts:287-309):
+```typescript
+export const requireStagingAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Production: proceed with normal auth (regular users allowed)
+  if (!isDevelopment()) {
+    return requireAuth(req, res, next);
+  }
+
+  // Staging/Dev: require admin access
+  await requireAuth(req, res, async (authError?: any) => {
+    if (authError) return next(authError);
+
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({
+        error: 'This is a staging environment - admin access required.',
+        environment: 'staging'
+      });
+    }
+    next();
+  });
+};
+```
+
+### Usage Guidelines
+
+**Use `requireStagingAuth, requireAdmin` for:**
+- Admin dashboard endpoints
+- Content moderation features
+- Analytics and statistics endpoints
+- Badge/quest management
+- MOTD management
+- User management features
+
+**Use `requireAuth, requireAdmin` for:**
+- Security-critical operations (always admin-only)
+- User promotion/demotion
+- System configuration changes
+- Database migrations (if exposed via API)
+
+**Use `requireAuth` only for:**
+- User-facing features (posts, comments, profiles)
+- Personal data access (own profile, own notifications)
+- Public content browsing
+
+### Testing Checklist
+
+When implementing new admin endpoints:
+- [ ] Choose correct middleware pattern based on guidelines above
+- [ ] Import `requireStagingAuth` if using environment-aware pattern
+- [ ] Test in staging: Non-admin users get 403
+- [ ] Test in production: Appropriate users have access
+- [ ] Document endpoint behavior in Swagger/JSDoc
+
+---
+
 ## 🔒 Deployment Procedures
 
 <details>
