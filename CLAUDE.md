@@ -40,12 +40,41 @@ If backend health endpoint or any monitoring shows a mismatch (e.g., staging sho
 ### Admin Debugging
 Use admin debug functions only: `adminDebugLog()`, `adminDebugError()`, `adminDebugWarn()`, `adminDebugTable()`, `adminDebugSensitive()`
 
-### Database Migration Safety
-- NEVER use `prisma db push` for production or permanent changes
-- ALWAYS use `prisma migrate dev` for schema changes
-- ALWAYS verify database before migrations: `echo $DATABASE_URL | grep -o '@[^.]*'` (must show @unitedwerise-db-dev)
+### 🔒 Database Migration Safety (ZERO TOLERANCE)
+
+**CRITICAL:** See `docs/DEPLOYMENT-MIGRATION-POLICY.md` for complete policy.
+
+**Core Rule:** Database migrations MUST be applied BEFORE code deployment. No exceptions.
+
+**Why This Matters:**
+- Oct 22, 2025: Visitor analytics broken (4 pending migrations)
+- Oct 3, 2025: Quest/badge system broken (missing tables)
+- Multiple other production incidents
+
+**Automated in GitHub Actions:**
+- Staging workflow: Runs `prisma migrate deploy` before deploying container
+- Production workflow: Runs `prisma migrate deploy` before deploying container
+- Deployment ABORTS if migrations fail
+
+**Manual Deployments (Emergency Only):**
+```bash
+# ALWAYS run migrations FIRST
+cd backend
+DATABASE_URL="<db-url>" npx prisma migrate deploy
+DATABASE_URL="<db-url>" npx prisma migrate status  # Verify
+
+# THEN deploy code
+```
+
+**NEVER:**
+- Use `prisma db push` for production or permanent changes
+- Skip migrations "because it's just a frontend change"
+- Deploy code before running migrations
+- Assume "no schema changes" without verifying
+
+**Database URLs:**
 - Production: unitedwerise-db.postgres.database.azure.com
-- Development: unitedwerise-db-dev.postgres.database.azure.com
+- Development/Staging: unitedwerise-db-dev.postgres.database.azure.com
 
 ### Inline Documentation Requirements
 
