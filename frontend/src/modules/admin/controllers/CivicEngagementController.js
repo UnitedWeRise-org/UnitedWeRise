@@ -31,15 +31,15 @@ class CivicEngagementController {
     async loadEngagementStatistics() {
         try {
             // Load quest statistics
-            const questResponse = await AdminAPI.get('/api/quests/all');
+            const questResponse = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/quests/all`);
             const quests = questResponse.data || [];
 
             // Load badge statistics
-            const badgeResponse = await AdminAPI.get('/api/badges/all');
+            const badgeResponse = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/badges/all`);
             const badges = badgeResponse.data || [];
 
             // Load quest analytics
-            const analyticsResponse = await AdminAPI.get('/api/quests/analytics');
+            const analyticsResponse = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/quests/analytics`);
             const analytics = analyticsResponse.data || {};
 
             // Update stats cards
@@ -63,7 +63,7 @@ class CivicEngagementController {
 
     async loadQuests() {
         try {
-            const response = await AdminAPI.get('/api/quests/all');
+            const response = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/quests/all`);
             this.questData = response.data || [];
             this.renderQuestTable();
         } catch (error) {
@@ -108,7 +108,7 @@ class CivicEngagementController {
 
     async loadBadges() {
         try {
-            const response = await AdminAPI.get('/api/badges/all');
+            const response = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/badges/all`);
             this.badgeData = response.data || [];
             this.renderBadgeGrid();
         } catch (error) {
@@ -366,7 +366,7 @@ class CivicEngagementController {
                 if (endDate) questData.endDate = new Date(endDate);
             }
 
-            const response = await AdminAPI.post('/api/quests/create', questData);
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/quests/create`, questData);
 
             if (response.success) {
                 this.closeQuestModal();
@@ -583,7 +583,7 @@ class CivicEngagementController {
             formData.append('qualificationCriteria', JSON.stringify(qualificationCriteria));
             formData.append('isAutoAwarded', document.getElementById('auto-awarded').checked);
 
-            const response = await AdminAPI.postFormData('/api/badges/create', formData);
+            const response = await AdminAPI.postFormData(`${window.API_CONFIG.BASE_URL}/badges/create`, formData);
 
             if (response.success) {
                 this.closeBadgeModal();
@@ -914,7 +914,7 @@ class CivicEngagementController {
                 return;
             }
 
-            const response = await AdminAPI.post('/api/admin/badges/award', {
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/admin/badges/award`, {
                 badgeId: badgeId,
                 userId: userId
             });
@@ -951,7 +951,7 @@ class CivicEngagementController {
             // Show loading state
             this.showSuccessMessage('Running qualification checks... This may take a moment.');
 
-            const response = await AdminAPI.post('/api/admin/badges/run-qualifications', {});
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/admin/badges/run-qualifications`, {});
 
             if (response.success) {
                 const results = response.data || {};
