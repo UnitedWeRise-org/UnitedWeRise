@@ -129,13 +129,6 @@ jobs:
               RELEASE_SHA=$GIT_SHA \
               RELEASE_DIGEST=$DIGEST
 
-          # Force single revision mode
-          echo "🔧 Setting single revision mode..."
-          az containerapp update \
-            --name $AZURE_CONTAINER_APP \
-            --resource-group $AZURE_RESOURCE_GROUP \
-            --revision-mode Single
-
           echo "⏳ Waiting 30 seconds for container to start..."
           sleep 30
 
