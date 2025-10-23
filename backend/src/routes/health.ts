@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
  * Health and Deployment Status Endpoints
  *
  * Provides detailed information about component deployment status
- * Updated: 2025-10-23 - Testing automated migration deployment
+ * Updated: 2025-10-23 - Testing automated deployment workflow
  */
 
 import { Router } from 'express';

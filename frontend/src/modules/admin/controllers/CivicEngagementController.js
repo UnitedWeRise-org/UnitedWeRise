@@ -973,6 +973,9 @@ class CivicEngagementController {
     }
 }
 
+// Make available globally for AdminModuleLoader
+window.CivicEngagementController = CivicEngagementController;
+
 // Initialize and export
 const civicEngagementController = new CivicEngagementController();
 
