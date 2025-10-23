@@ -320,11 +320,11 @@ curl -s "https://dev-api.unitedwerise.org/health" | grep releaseSha
 <details>
 <summary>🔒 <b>Production Deployment Procedure</b></summary>
 
-**When user says "deploy/merge/push to production": Execute ALL 5 steps.**
+**When user says "deploy/merge/push to production": Use PRIMARY METHOD (automated).**
 
-1.Merge→main  2.Build image  3.Get digest  4.Deploy  5.Verify
+**PRIMARY METHOD: Automated Deployment (Default)**
 
-**Step 1 alone ≠ deployed.**
+Use for ALL normal deployments. GitHub Actions handles everything automatically.
 
 ---
 
@@ -337,14 +337,63 @@ git log origin/development..HEAD  # Should be empty
 curl -s "https://dev-api.unitedwerise.org/health"  # Verify staging works
 ```
 
-### Step 1: Merge to Main
+### Step 1: Merge to Main and Push
 
 ```bash
 git checkout main && git pull origin main
 git merge development && git push origin main
 ```
 
-### Step 2: Build Docker Image
+**GitHub Actions will automatically execute:**
+- Build Docker image in Azure Container Registry
+- Run database migrations (`prisma migrate deploy`)
+- Deploy container to production
+- Verify deployment health
+
+See: `docs/DEPLOYMENT-MIGRATION-POLICY.md` for full workflow details.
+
+### Step 2: Monitor GitHub Actions Workflow
+
+```bash
+# Watch workflow at: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+# Workflow: "Backend Auto-Deploy to Production"
+# Should complete in ~5 minutes
+```
+
+### Step 3: Verify Production Deployment
+
+```bash
+sleep 300  # Wait for workflow to complete
+
+GIT_SHA=$(git rev-parse --short HEAD)
+curl -s "https://api.unitedwerise.org/health"  # Check status, database, releaseSha
+
+DEPLOYED_SHA=$(curl -s "https://api.unitedwerise.org/health" | grep -o '"releaseSha":"[^"]*"' | cut -d'"' -f4)
+echo "Local: $GIT_SHA | Deployed: $DEPLOYED_SHA"  # Must match
+```
+
+**Deployment complete when:**
+- Workflow shows green checkmark
+- Health endpoint returns correct releaseSha
+- Uptime < 5 minutes (fresh restart)
+
+---
+
+## FALLBACK METHOD: Manual Deployment
+
+**Use ONLY when:**
+- GitHub Actions workflow unavailable or failing
+- Emergency requiring immediate deployment bypass
+- Testing deployment pipeline changes
+
+### Manual Step 1: Merge to Main (if not already done)
+
+```bash
+git checkout main && git pull origin main
+git merge development && git push origin main
+```
+
+### Manual Step 2: Build Docker Image
 
 ```bash
 GIT_SHA=$(git rev-parse --short HEAD)
@@ -359,7 +408,7 @@ sleep 180
 az acr task list-runs --registry uwracr2425 --output table | head -3
 ```
 
-### Step 3: Get Image Digest
+### Manual Step 3: Get Image Digest
 
 ```bash
 DIGEST=$(az acr repository show --name uwracr2425 \
@@ -367,7 +416,7 @@ DIGEST=$(az acr repository show --name uwracr2425 \
   --query "digest" -o tsv)
 ```
 
-### Step 4: Deploy to Production
+### Manual Step 4: Deploy to Production
 
 ```bash
 az containerapp update \
@@ -383,7 +432,7 @@ az containerapp update \
   --revision-mode Single
 ```
 
-### Step 5: Verify Deployment
+### Manual Step 5: Verify Deployment
 
 ```bash
 sleep 30
@@ -400,6 +449,8 @@ az containerapp logs show \
 
 ---
 
+## Rollback and Emergency Procedures
+
 ### Rollback Procedure (if deployment fails)
 
 ```bash
@@ -415,9 +466,9 @@ az containerapp revision activate \
   --resource-group unitedwerise-rg \
   --revision <previous-revision-name>
 
-# Or revert git commit
+# Or revert git commit and let automated workflow redeploy
 git checkout main && git revert HEAD && git push origin main
-# Then redeploy with Steps 2-5
+# Monitor GitHub Actions workflow OR use manual deployment if urgent
 ```
 
 ### Emergency Hotfix
@@ -430,7 +481,8 @@ cd backend && npm run build
 git add . && git commit -m "hotfix: description"
 git push origin hotfix/critical-issue
 git checkout main && git merge hotfix/critical-issue && git push origin main
-# Deploy with Steps 2-5
+# Automated workflow will deploy automatically (PRIMARY METHOD)
+# OR use Manual Steps 2-5 above if emergency requires immediate deployment
 git checkout development && git merge hotfix/critical-issue && git push origin development
 ```
 
