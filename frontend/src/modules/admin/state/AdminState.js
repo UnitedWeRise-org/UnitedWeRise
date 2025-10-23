@@ -415,6 +415,9 @@ class AdminState {
                 case 'reports':
                     await this.loadReportsData({}, false);
                     break;
+                case 'civic-engagement':
+                    // CivicEngagementController handles its own data loading via init()
+                    break;
                 default:
                     console.warn(`Unknown section: ${sectionId}`);
             }

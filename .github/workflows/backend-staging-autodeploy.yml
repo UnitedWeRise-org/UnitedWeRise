@@ -29,11 +29,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and Deploy Backend to Staging
+      - name: Build Docker Image in ACR
         env:
           AZURE_REGISTRY: uwracr2425
-          AZURE_RESOURCE_GROUP: unitedwerise-rg
-          AZURE_CONTAINER_APP: unitedwerise-backend-staging
         run: |
           set -e
 
@@ -70,12 +68,60 @@ jobs:
 
           echo "✅ Image digest: $DIGEST"
 
-          # Deploy to Container App
+          # Save variables for next steps
+          echo "GIT_SHA=$GIT_SHA" >> $GITHUB_ENV
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+          echo "DIGEST=$DIGEST" >> $GITHUB_ENV
+
+      - name: Setup Node.js for Database Migrations
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Prisma CLI
+        run: |
+          cd backend
+          npm install prisma@latest --no-save
+
+      - name: Run Database Migrations (Staging)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+        run: |
+          cd backend
+
+          echo "📊 Checking migration status on STAGING database..."
+          npx prisma migrate status || true
+
+          echo ""
+          echo "🔄 Applying pending migrations to STAGING..."
+          npx prisma migrate deploy
+
+          echo ""
+          echo "✅ Verifying migrations applied..."
+          npx prisma migrate status
+
+          if npx prisma migrate status | grep -q "Database schema is up to date"; then
+            echo "✅ All migrations successfully applied to STAGING!"
+          else
+            echo "❌ Migration verification failed!"
+            echo "⚠️  Aborting deployment - database schema mismatch"
+            exit 1
+          fi
+
+      - name: Deploy to Container App (Staging)
+        env:
+          AZURE_REGISTRY: uwracr2425
+          AZURE_RESOURCE_GROUP: unitedwerise-rg
+          AZURE_CONTAINER_APP: unitedwerise-backend-staging
+        run: |
+          # Deploy to Container App using saved environment variables
           echo "🚀 Deploying to Azure Container App (staging)..."
+          echo "Image: ${AZURE_REGISTRY}.azurecr.io/unitedwerise-backend@${DIGEST}"
+
           az containerapp update \
             --name $AZURE_CONTAINER_APP \
             --resource-group $AZURE_RESOURCE_GROUP \
-            --image "${AZURE_REGISTRY}.azurecr.io/unitedwerise-backend@$DIGEST" \
+            --image "${AZURE_REGISTRY}.azurecr.io/unitedwerise-backend@${DIGEST}" \
             --revision-suffix "stg-${GIT_SHA}-$(date +%H%M%S)" \
             --set-env-vars \
               NODE_ENV=staging \

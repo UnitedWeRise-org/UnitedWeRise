@@ -1641,7 +1641,10 @@ class MOTDController {
     }
 }
 
-// Initialize and export - following CivicEngagementController pattern
+// Make available globally for AdminModuleLoader
+window.MOTDController = MOTDController;
+
+// Initialize and export
 const motdController = new MOTDController();
 
 // Legacy global functions removed - now using event delegation with data-action attributes
