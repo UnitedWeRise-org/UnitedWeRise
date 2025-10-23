@@ -200,6 +200,86 @@ class AdminGlobalUtils {
     }
 
     /**
+     * Show toast notification
+     * @param {string} message - Message to display
+     * @param {string} type - Toast type: 'success', 'error', 'warning', 'info'
+     * @param {number} duration - Duration in ms (default: 3000)
+     */
+    showToast(message, type = 'info', duration = 3000) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        // Icon based on type
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        // Style the toast
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6'
+        };
+
+        toast.style.cssText = `
+            background: white;
+            color: #1f2937;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 400px;
+            border-left: 4px solid ${colors[type] || colors.info};
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        // Add to container
+        toastContainer.appendChild(toast);
+
+        // Auto-remove after duration
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                toast.remove();
+                // Remove container if empty
+                if (toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+
+    /**
      * Cleanup method
      */
     destroy() {
@@ -209,6 +289,12 @@ class AdminGlobalUtils {
 
         // Clear error handlers
         this.errorHandlers.clear();
+
+        // Remove toast container
+        const toastContainer = document.getElementById('toast-container');
+        if (toastContainer) {
+            toastContainer.remove();
+        }
 
         this.isInitialized = false;
         console.log('AdminGlobalUtils destroyed');
@@ -221,8 +307,8 @@ const adminGlobalUtils = new AdminGlobalUtils();
 // Export as ES6 module
 export { AdminGlobalUtils, adminGlobalUtils };
 
-// Global compatibility
-window.AdminGlobalUtils = AdminGlobalUtils;
+// Global compatibility - expose instance methods
+window.AdminGlobalUtils = adminGlobalUtils;
 
 // Auto-initialize
 adminGlobalUtils.init();
