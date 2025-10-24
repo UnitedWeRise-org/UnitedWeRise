@@ -1481,6 +1481,262 @@ All critical queries are indexed:
 
 ---
 
+## Badge Distribution Methods
+
+The UnitedWeRise badge system supports multiple distribution methods to accommodate different use cases, from automatic rewards for platform activity to special recognition awards.
+
+### Method 1: Manual Direct Award
+
+**When to use**: Special recognition, one-off awards, moderator discretion, exceptional contributions
+
+**How it works**: Admins manually award badges to specific users through the admin interface or API
+
+**API Endpoint**: `POST /api/badges/award`
+
+**Request Example**:
+```json
+{
+  "userId": "user_clxxxxxxxxxxxxxx",
+  "badgeId": "badge_clxxxxxxxxxxxxxx",
+  "reason": "Outstanding civic participation during election season"
+}
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "clxxxxxxxxxxxxxx",
+    "userId": "user_clxxxxxxxxxxxxxx",
+    "badgeId": "badge_clxxxxxxxxxxxxxx",
+    "earnedAt": "2025-10-23T16:00:00Z",
+    "awardedBy": "admin_user_id",
+    "awardReason": "Outstanding civic participation during election season"
+  }
+}
+```
+
+**Use Cases**:
+- Recognizing beta testers or early adopters
+- Awarding "Bug Reporter" badges to users who report critical issues
+- Special event participation (attended community call, livestream guest)
+- Community moderation contributions
+- Kickstarter backers or campaign supporters
+
+**Error Handling**:
+- `400 Bad Request`: User already has this badge
+- `404 Not Found`: User or badge doesn't exist
+- `400 Bad Request`: Badge award limit reached (if maxAwards set)
+
+---
+
+### Method 2: Automatic Criteria-Based Awards
+
+**When to use**: Badges earned through measurable platform activity (quest completion, reputation milestones, activity counts)
+
+**How it works**: System automatically checks qualification criteria on a schedule (typically daily) and awards badges to qualifying users
+
+**API Endpoint**: `POST /api/badges/check-qualifications`
+
+**Qualification Types**:
+
+#### QUEST_COMPLETION
+Award based on quest completion count or streaks.
+
+```json
+{
+  "type": "QUEST",
+  "requirements": {
+    "questCompletionCount": 50,
+    "questTypes": ["DAILY_CIVIC", "WEEKLY_ENGAGEMENT"]
+  }
+}
+```
+
+**Example**: "Complete 50 civic quests" badge
+
+#### ACTIVITY_COUNT
+Award based on specific user activities within a timeframe.
+
+```json
+{
+  "type": "ACTIVITY",
+  "requirements": {
+    "activityTypes": ["CREATE_POST", "CREATE_COMMENT"],
+    "activityCount": 100,
+    "timeframe": "30d"
+  }
+}
+```
+
+**Example**: "Created 100 posts in the last 30 days" badge
+
+#### CIVIC_ACTION
+Award based on civic engagement actions.
+
+```json
+{
+  "type": "CIVIC",
+  "requirements": {
+    "petitionsSigned": 10,
+    "eventsAttended": 5,
+    "postsCreated": 20
+  }
+}
+```
+
+**Example**: "Civic Champion: Signed 10 petitions and attended 5 events" badge
+
+#### SOCIAL_METRIC
+Award based on social standing and reputation.
+
+```json
+{
+  "type": "SOCIAL",
+  "requirements": {
+    "reputationScore": 1000,
+    "followersCount": 100,
+    "friendsCount": 50
+  }
+}
+```
+
+**Example**: "Influential Voice: 1000 reputation and 100 followers" badge
+
+#### CUSTOM_ENDPOINT
+Award based on custom logic or user properties.
+
+```json
+{
+  "type": "CUSTOM_ENDPOINT",
+  "requirements": {
+    "userProperty": "isSuperAdmin",
+    "expectedValue": true
+  }
+}
+```
+
+**Example**: Check if user has `isSuperAdmin` flag for admin-only badges
+
+**Note**: CUSTOM_ENDPOINT currently supports checking user properties. External API integration is planned for future implementation.
+
+**Running Qualification Checks**:
+
+```javascript
+// Typically run via scheduled task (daily cron job)
+const response = await apiCall('/badges/check-qualifications', 'POST');
+console.log(`${response.data.data.badgesAwarded} badges awarded`);
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "badgesAwarded": 47
+  },
+  "message": "47 badges awarded based on qualification criteria"
+}
+```
+
+**Best Practices**:
+1. Set `isAutoAwarded: true` when creating the badge
+2. Run checks during off-peak hours (e.g., 2 AM server time)
+3. Monitor award counts to detect criteria that are too easy/hard
+4. Start with generous criteria - easier to add "Gold" tier than fix over-restricted badges
+5. Test criteria on staging environment first
+
+**Performance Considerations**:
+- Checks only active users (seen within last 30 days)
+- Skips users who already have each badge
+- Runs sequentially to avoid database overload
+- Average runtime: ~5-10 minutes for 10,000 active users and 50 badges
+
+---
+
+### Method 3: Claim Code System
+
+**Status**: 🚧 PLANNED FEATURE (Not Yet Implemented)
+
+**Planned functionality**:
+- Generate shareable codes for badge distribution
+- Support for SHARED codes (one code, multiple claims, e.g., "CONFERENCE2025")
+- Support for INDIVIDUAL codes (unique one-time use codes for each recipient)
+- Expiration dates and max claim limits
+- Public `/claim` page for users to redeem codes
+
+**Planned use cases**:
+- Event attendees: Generate "SUMMIT2025" code, share at conference
+- Kickstarter backers: Generate individual codes, email to each backer
+- Email campaigns: Create limited-time codes for engagement
+- Partner rewards: Distribute codes to partner organizations
+
+---
+
+### Method 4: Bulk Email Award
+
+**Status**: 🚧 PLANNED FEATURE (Not Yet Implemented)
+
+**Planned functionality**:
+- Award badges to multiple users by providing email list
+- Paste or upload CSV of email addresses
+- Match emails to registered accounts
+- Detailed success/failure report
+- Handle non-existent users and duplicate badges gracefully
+
+**Planned use cases**:
+- Kickstarter backer rewards: Export backer emails from campaign platform
+- Beta tester badges: Award to email list from testing program
+- Event attendee rewards: Import attendance list CSV
+- Alumni programs: Recognize previous campaign supporters
+
+---
+
+### Distribution Method Comparison
+
+| Method | Best For | Admin Effort | Scalability | Automation |
+|--------|----------|--------------|-------------|------------|
+| **Manual Direct Award** | Special cases, individual recognition | High | Low | None |
+| **Auto Criteria-Based** | Activity-based rewards | Low (setup only) | High | Full |
+| **Claim Codes** (planned) | Events, external campaigns | Medium | High | Partial |
+| **Bulk Email Award** (planned) | External lists, backers | Medium | Medium | Partial |
+
+---
+
+### Badge Creation Best Practices
+
+**Image Guidelines**:
+- Format: PNG with transparent background (preferred) or JPG
+- Size: 512x512 pixels recommended
+- File size: Max 1MB
+- Design: Recognizable at small sizes (64x64 display)
+- Style: Consistent visual language across badge family
+
+**Descriptions**:
+- Clear: Explicitly state what the badge represents
+- Concise: 1-2 sentences maximum
+- Actionable: If criteria-based, explain how to earn it
+- Engaging: Use language that motivates participation
+
+**Qualification Criteria**:
+- Start generous: Easier to add "Gold" tier later than fix overly restrictive criteria
+- Test thoroughly: Verify criteria match on staging before production
+- Use combined criteria: Require multiple achievements for higher-tier badges
+- Monitor analytics: Check completion rates after launch
+
+**Max Awards Settings**:
+- Use sparingly: Only for truly exclusive badges
+- Examples: "First 100 Users", "Beta Tester 2024", "Founding Member"
+- Consider: Once limit reached, badge becomes "legacy" status
+
+**Display Order**:
+- Lower numbers appear first in badge selection UI
+- Group by category/theme for intuitive browsing
+- Highlight flagship or most impressive badges with lower display orders
+
+---
+
 ## Support & Troubleshooting
 
 ### Common Issues

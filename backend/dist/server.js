@@ -49,6 +49,7 @@ const candidateVerification_1 = __importDefault(require("./routes/candidateVerif
 const externalCandidates_1 = __importDefault(require("./routes/externalCandidates"));
 const motd_1 = __importDefault(require("./routes/motd"));
 const badges_1 = __importDefault(require("./routes/badges"));
+const badgeClaimCodes_1 = __importDefault(require("./routes/badgeClaimCodes"));
 const quests_1 = __importDefault(require("./routes/quests"));
 const photos_1 = __importDefault(require("./routes/photos"));
 const WebSocketService_1 = __importDefault(require("./services/WebSocketService"));
@@ -62,6 +63,7 @@ const environment_1 = require("./utils/environment");
 const csrf_1 = require("./middleware/csrf");
 const auth_2 = require("./middleware/auth");
 const visitTracking_1 = __importDefault(require("./middleware/visitTracking"));
+const logger_1 = __importDefault(require("./utils/logger"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
@@ -321,6 +323,7 @@ app.use('/api/candidate-verification', candidateVerification_1.default);
 app.use('/api/external-candidates', externalCandidates_1.default);
 app.use('/api/motd', motd_1.default);
 app.use('/api/badges', badges_1.default);
+app.use('/api/badges', badgeClaimCodes_1.default);
 app.use('/api/quests', quests_1.default);
 app.use('/health', health_1.default);
 // Serve uploaded photos statically
@@ -469,10 +472,53 @@ const gracefulShutdown = async () => {
 // Listen for shutdown signals
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
+/**
+ * Validates that environment configuration is consistent
+ * Prevents misconfigured deployments from starting
+ * @throws {Error} If environment validation fails
+ */
+function validateEnvironmentConsistency() {
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    const dbUrl = process.env.DATABASE_URL || '';
+    logger_1.default.info('🔍 Validating environment consistency...');
+    // Extract database hostname
+    let dbHost = '';
+    try {
+        const url = new URL(dbUrl);
+        dbHost = url.hostname;
+    }
+    catch (error) {
+        logger_1.default.error('❌ Invalid DATABASE_URL format');
+        throw new Error('DATABASE_URL must be a valid PostgreSQL connection string');
+    }
+    // Validate production environment
+    if (nodeEnv === 'production') {
+        if (dbHost.includes('-dev')) {
+            logger_1.default.error('❌ CRITICAL: Production environment pointing to development database!');
+            logger_1.default.error(`   NODE_ENV: ${nodeEnv}`);
+            logger_1.default.error(`   Database: ${dbHost}`);
+            throw new Error('Production NODE_ENV cannot use development database');
+        }
+    }
+    // Validate staging environment
+    if (nodeEnv === 'staging') {
+        if (!dbHost.includes('-dev')) {
+            logger_1.default.error('❌ CRITICAL: Staging environment pointing to production database!');
+            logger_1.default.error(`   NODE_ENV: ${nodeEnv}`);
+            logger_1.default.error(`   Database: ${dbHost}`);
+            throw new Error('Staging NODE_ENV must use development database');
+        }
+    }
+    logger_1.default.info('✅ Environment consistency validated');
+    logger_1.default.info(`   Environment: ${nodeEnv}`);
+    logger_1.default.info(`   Database: ${dbHost}`);
+}
 // Initialize services and start server
 async function startServer() {
     try {
         console.log('🚀 Initializing services...');
+        // Validate environment consistency BEFORE starting services
+        validateEnvironmentConsistency();
         // Start cron jobs
         analyticsCleanup_1.default.start();
         // Start server only after all services are ready

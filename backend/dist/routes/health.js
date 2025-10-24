@@ -8,6 +8,7 @@ const prisma_1 = require("../lib/prisma");
  * Health and Deployment Status Endpoints
  *
  * Provides detailed information about component deployment status
+ * Updated: 2025-10-23 - Testing automated workflow with API URL fixes
  */
 const express_1 = require("express");
 ;
@@ -128,6 +129,21 @@ async function getMigrationInfo() {
         lastMigration: 'unknown'
     };
 }
+/**
+ * Extract database hostname from DATABASE_URL
+ *
+ * @returns {string} Database hostname or 'unknown' if unable to parse
+ */
+function extractDatabaseHost() {
+    const dbUrl = process.env.DATABASE_URL || '';
+    try {
+        const url = new URL(dbUrl);
+        return url.hostname;
+    }
+    catch {
+        return 'unknown';
+    }
+}
 // Basic health endpoint (existing) - enhanced with deployment info
 router.get('/', async (req, res) => {
     try {
@@ -143,12 +159,15 @@ router.get('/', async (req, res) => {
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             database: 'connected',
+            databaseHost: extractDatabaseHost(),
+            environment: (0, environment_1.getEnvironment)(),
+            nodeEnv: process.env.NODE_ENV || 'unknown',
             // Runtime release info (not misleading build-time metadata)
             releaseSha: process.env.RELEASE_SHA || process.env.GITHUB_SHA || 'unknown',
             releaseDigest: process.env.RELEASE_DIGEST || 'unknown',
             revision: process.env.CONTAINER_APP_REVISION || 'unknown',
             deployedTag: process.env.DOCKER_TAG || 'unknown',
-            githubBranch: process.env.GITHUB_REF_NAME || 'main'
+            githubBranch: (0, environment_1.isProduction)() ? 'main' : 'development'
         });
     }
     catch (error) {

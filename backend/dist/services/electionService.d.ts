@@ -72,6 +72,7 @@ export declare class ElectionService {
                 officeId: string;
                 dataSource: string | null;
                 isVerified: boolean;
+                claimedAt: Date | null;
                 isIncumbent: boolean;
                 campaignEmail: string | null;
                 campaignPhone: string | null;
@@ -94,7 +95,6 @@ export declare class ElectionService {
                 externalDataConfidence: number | null;
                 isClaimed: boolean;
                 claimedBy: string | null;
-                claimedAt: Date | null;
                 googleCivicId: string | null;
                 fecCandidateId: string | null;
                 ballotpediaId: string | null;
@@ -211,6 +211,7 @@ export declare class ElectionService {
                 officeId: string;
                 dataSource: string | null;
                 isVerified: boolean;
+                claimedAt: Date | null;
                 isIncumbent: boolean;
                 campaignEmail: string | null;
                 campaignPhone: string | null;
@@ -233,7 +234,6 @@ export declare class ElectionService {
                 externalDataConfidence: number | null;
                 isClaimed: boolean;
                 claimedBy: string | null;
-                claimedAt: Date | null;
                 googleCivicId: string | null;
                 fecCandidateId: string | null;
                 ballotpediaId: string | null;
@@ -364,6 +364,7 @@ export declare class ElectionService {
         officeId: string;
         dataSource: string | null;
         isVerified: boolean;
+        claimedAt: Date | null;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -386,7 +387,6 @@ export declare class ElectionService {
         externalDataConfidence: number | null;
         isClaimed: boolean;
         claimedBy: string | null;
-        claimedAt: Date | null;
         googleCivicId: string | null;
         fecCandidateId: string | null;
         ballotpediaId: string | null;
@@ -460,6 +460,7 @@ export declare class ElectionService {
         officeId: string;
         dataSource: string | null;
         isVerified: boolean;
+        claimedAt: Date | null;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -482,7 +483,6 @@ export declare class ElectionService {
         externalDataConfidence: number | null;
         isClaimed: boolean;
         claimedBy: string | null;
-        claimedAt: Date | null;
         googleCivicId: string | null;
         fecCandidateId: string | null;
         ballotpediaId: string | null;
@@ -553,6 +553,7 @@ export declare class ElectionService {
         officeId: string;
         dataSource: string | null;
         isVerified: boolean;
+        claimedAt: Date | null;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -575,7 +576,6 @@ export declare class ElectionService {
         externalDataConfidence: number | null;
         isClaimed: boolean;
         claimedBy: string | null;
-        claimedAt: Date | null;
         googleCivicId: string | null;
         fecCandidateId: string | null;
         ballotpediaId: string | null;
@@ -601,6 +601,7 @@ export declare class ElectionService {
         officeId: string;
         dataSource: string | null;
         isVerified: boolean;
+        claimedAt: Date | null;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -623,7 +624,6 @@ export declare class ElectionService {
         externalDataConfidence: number | null;
         isClaimed: boolean;
         claimedBy: string | null;
-        claimedAt: Date | null;
         googleCivicId: string | null;
         fecCandidateId: string | null;
         ballotpediaId: string | null;
@@ -683,6 +683,7 @@ export declare class ElectionService {
             officeId: string;
             dataSource: string | null;
             isVerified: boolean;
+            claimedAt: Date | null;
             isIncumbent: boolean;
             campaignEmail: string | null;
             campaignPhone: string | null;
@@ -705,7 +706,6 @@ export declare class ElectionService {
             externalDataConfidence: number | null;
             isClaimed: boolean;
             claimedBy: string | null;
-            claimedAt: Date | null;
             googleCivicId: string | null;
             fecCandidateId: string | null;
             ballotpediaId: string | null;
@@ -826,6 +826,7 @@ export declare class ElectionService {
         officeId: string;
         dataSource: string | null;
         isVerified: boolean;
+        claimedAt: Date | null;
         isIncumbent: boolean;
         campaignEmail: string | null;
         campaignPhone: string | null;
@@ -848,7 +849,6 @@ export declare class ElectionService {
         externalDataConfidence: number | null;
         isClaimed: boolean;
         claimedBy: string | null;
-        claimedAt: Date | null;
         googleCivicId: string | null;
         fecCandidateId: string | null;
         ballotpediaId: string | null;

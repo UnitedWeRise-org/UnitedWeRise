@@ -103,7 +103,7 @@ router.post('/dismiss/:id', async (req, res) => {
 });
 // Admin routes - require authentication and admin privileges
 // Get all MOTDs for admin management
-router.get('/admin/list', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/admin/list', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motds = await prisma_1.prisma.messageOfTheDay.findMany({
             include: {
@@ -127,7 +127,7 @@ router.get('/admin/list', auth_1.requireAuth, auth_1.requireAdmin, async (req, r
     }
 });
 // Create new MOTD
-router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.post('/admin/create', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { title, content, isActive = false, startDate, endDate, showToNewUsers = true } = req.body;
         const userId = req.user.id;
@@ -174,7 +174,7 @@ router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req
     }
 });
 // Update MOTD
-router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.put('/admin/update/:id', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const { title, content, isActive, startDate, endDate, showToNewUsers } = req.body;
@@ -234,7 +234,7 @@ router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (
     }
 });
 // Activate/Deactivate MOTD
-router.post('/admin/toggle/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.post('/admin/toggle/:id', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
@@ -273,7 +273,7 @@ router.post('/admin/toggle/:id', auth_1.requireAuth, auth_1.requireAdmin, async 
     }
 });
 // Delete MOTD
-router.delete('/admin/delete/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.delete('/admin/delete/:id', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const userId = req.user.id;
@@ -296,7 +296,7 @@ router.delete('/admin/delete/:id', auth_1.requireAuth, auth_1.requireAdmin, asyn
     }
 });
 // Get MOTD analytics and logs
-router.get('/admin/analytics/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/admin/analytics/:id', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
         const analytics = await prisma_1.prisma.messageOfTheDay.findUnique({

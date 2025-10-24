@@ -175,7 +175,7 @@ router.post('/appeal', auth_1.requireAuth, async (req, res) => {
     }
 });
 // Award reputation manually (admin only)
-router.post('/award', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.post('/award', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId, reason, postId } = req.body;
         if (!userId || !reason) {
@@ -201,7 +201,7 @@ router.post('/award', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) 
     }
 });
 // Get reputation statistics (admin only)
-router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/stats', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { timeframe = 'week' } = req.query;
         const now = new Date();
@@ -272,7 +272,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
     }
 });
 // Get low reputation users for admin review (admin only)
-router.get('/low-reputation', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/low-reputation', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { threshold = 30, limit = 20 } = req.query;
         const thresholdNum = parseInt(threshold.toString());

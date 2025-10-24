@@ -729,7 +729,7 @@ router.get('/stats', auth_1.requireAuth, requireModerator, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/users/:userId/promote', auth_1.requireAuth, requireAdmin, async (req, res) => {
+router.post('/users/:userId/promote', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });

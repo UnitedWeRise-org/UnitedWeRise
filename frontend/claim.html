@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claim Your Badge - UnitedWeRise</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <style>
+        .claim-container {
+            max-width: 600px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .claim-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .claim-header h1 {
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .claim-header p {
+            color: #666;
+        }
+
+        .claim-form {
+            margin-bottom: 2rem;
+        }
+
+        .claim-form input {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        .claim-form input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .claim-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background: #4CAF50;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .claim-btn:hover {
+            background: #45a049;
+        }
+
+        .claim-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .badge-display {
+            text-align: center;
+            padding: 2rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .badge-display.active {
+            display: block;
+        }
+
+        .badge-image {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 1.5rem;
+            display: block;
+        }
+
+        .badge-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .success-message {
+            color: #4CAF50;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .error-display {
+            background: #ffebee;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .error-display.active {
+            display: block;
+        }
+
+        .error-title {
+            font-weight: bold;
+            color: #c62828;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .view-profile-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .view-profile-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="claim-container">
+        <div class="claim-header">
+            <h1>Claim Your Badge</h1>
+            <p>Enter your claim code to unlock your badge</p>
+        </div>
+
+        <div id="error-display" class="error-display">
+            <div class="error-title" id="error-title">Error</div>
+            <div class="error-message" id="error-message"></div>
+        </div>
+
+        <div id="claim-form" class="claim-form">
+            <input
+                type="text"
+                id="claim-code-input"
+                placeholder="Enter your claim code"
+                autocomplete="off"
+                spellcheck="false"
+            />
+            <button id="claim-btn" class="claim-btn">Claim Badge</button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Claiming your badge...</p>
+        </div>
+
+        <div id="badge-result" class="badge-display">
+            <img id="badge-image" class="badge-image" src="" alt="Badge">
+            <div class="badge-name" id="badge-name"></div>
+            <div class="badge-description" id="badge-description"></div>
+            <div class="success-message">Congratulations! You've earned this badge!</div>
+            <a href="/profile.html" class="view-profile-btn">View Your Profile</a>
+        </div>
+    </div>
+
+    <script type="module" src="src/js/claim.js"></script>
+</body>
+</html>

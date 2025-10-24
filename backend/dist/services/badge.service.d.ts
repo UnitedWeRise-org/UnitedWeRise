@@ -220,6 +220,176 @@ declare class BadgeService {
      * // Badge is now inactive but still exists in database
      */
     deleteBadge(badgeId: string): Promise<void>;
+    /**
+     * Generates claim codes for a badge
+     *
+     * Creates claim codes that users can redeem to receive a badge.
+     * Supports two types:
+     * - SHARED: One readable code (e.g., "KICKSTARTER2025") that multiple users can claim
+     * - INDIVIDUAL: Multiple unique codes (e.g., "XJ3K-9PL2-QW8R") for one-time use
+     *
+     * @param params - Code generation parameters
+     * @param params.badgeId - ID of badge these codes will award
+     * @param params.type - Code type: 'SHARED' or 'INDIVIDUAL'
+     * @param params.count - Number of codes to generate (required for INDIVIDUAL, ignored for SHARED)
+     * @param params.maxClaims - Maximum number of claims allowed per code (null = unlimited)
+     * @param params.expiresAt - Optional expiration date for codes
+     * @param params.createdBy - Admin user ID who created these codes
+     * @returns Promise<BadgeClaimCode[]> Array of created claim code records
+     * @throws {Error} When badge not found or count not provided for INDIVIDUAL type
+     *
+     * @example
+     * // Shared code for convention attendees
+     * const codes = await badgeService.generateClaimCodes({
+     *   badgeId: 'badge_123',
+     *   type: 'SHARED',
+     *   maxClaims: null, // unlimited
+     *   createdBy: 'admin_456'
+     * });
+     * console.log(codes[0].code); // "KICKSTARTER2025"
+     *
+     * @example
+     * // Individual codes for 100 backers
+     * const codes = await badgeService.generateClaimCodes({
+     *   badgeId: 'badge_123',
+     *   type: 'INDIVIDUAL',
+     *   count: 100,
+     *   expiresAt: new Date('2025-12-31'),
+     *   createdBy: 'admin_456'
+     * });
+     * console.log(codes[0].code); // "XJ3K-9PL2-QW8R"
+     */
+    generateClaimCodes(params: {
+        badgeId: string;
+        type: 'SHARED' | 'INDIVIDUAL';
+        count?: number;
+        maxClaims?: number | null;
+        expiresAt?: Date | null;
+        createdBy: string;
+    }): Promise<any[]>;
+    /**
+     * Generates a readable shared code based on badge name
+     *
+     * @param badgeName - Name of badge to base code on
+     * @returns String in format "BADGENAME2025"
+     * @private
+     */
+    private generateReadableCode;
+    /**
+     * Generates a unique random code in format "XXXX-XXXX-XXXX"
+     *
+     * @returns String unique code
+     * @private
+     */
+    private generateUniqueCode;
+    /**
+     * Claims a badge using a claim code
+     *
+     * Validates the code and awards the badge to the user.
+     * Checks:
+     * - Code exists and is active
+     * - Code has not expired
+     * - User hasn't already claimed this code
+     * - Max claims limit not reached (for SHARED codes)
+     *
+     * @param params - Claim parameters
+     * @param params.userId - ID of user claiming the badge
+     * @param params.code - Claim code to redeem
+     * @returns Promise<Object> Object containing:
+     *   - success: true
+     *   - userBadge: The awarded UserBadge record
+     *   - claimRecord: The BadgeClaim record
+     * @throws {Error} When code invalid, expired, already claimed, or limit reached
+     *
+     * @example
+     * const result = await badgeService.claimBadgeWithCode({
+     *   userId: 'user_123',
+     *   code: 'KICKSTARTER2025'
+     * });
+     * console.log(result.userBadge.badge.name); // "Kickstarter Backer"
+     */
+    claimBadgeWithCode(params: {
+        userId: string;
+        code: string;
+    }): Promise<{
+        success: boolean;
+        userBadge: any;
+        claimRecord: any;
+    }>;
+    /**
+     * Awards a badge to multiple users by email address
+     *
+     * Looks up users by email (case-insensitive) and awards badge to each.
+     * Continues processing all emails even if some fail.
+     *
+     * @param params - Bulk award parameters
+     * @param params.badgeId - ID of badge to award
+     * @param params.emails - Array of user email addresses
+     * @param params.awardedBy - Admin user ID awarding the badges
+     * @param params.reason - Optional reason for award (shown to users)
+     * @returns Promise<Object> Object containing:
+     *   - awarded: Number of successful awards
+     *   - failed: Number of failed awards
+     *   - details: Array of {email, status, error?} for each email
+     *
+     * @example
+     * const result = await badgeService.awardBadgeBulk({
+     *   badgeId: 'badge_123',
+     *   emails: ['user1@example.com', 'user2@example.com'],
+     *   awardedBy: 'admin_456',
+     *   reason: 'Early supporter'
+     * });
+     * console.log(result.awarded); // 2
+     * console.log(result.failed); // 0
+     */
+    awardBadgeBulk(params: {
+        badgeId: string;
+        emails: string[];
+        awardedBy: string;
+        reason?: string;
+    }): Promise<{
+        awarded: number;
+        failed: number;
+        details: Array<{
+            email: string;
+            status: string;
+            error?: string;
+        }>;
+    }>;
+    /**
+     * Retrieves all claim codes for a badge
+     *
+     * Returns claim codes with usage statistics.
+     *
+     * @param params - Query parameters
+     * @param params.badgeId - ID of badge to get codes for
+     * @returns Promise<BadgeClaimCode[]> Array of claim codes with usage data
+     *
+     * @example
+     * const codes = await badgeService.getClaimCodesByBadge({ badgeId: 'badge_123' });
+     * console.log(codes[0].claimsUsed); // 42
+     * console.log(codes[0].maxClaims); // 100
+     */
+    getClaimCodesByBadge(params: {
+        badgeId: string;
+    }): Promise<any[]>;
+    /**
+     * Deactivates a claim code
+     *
+     * Sets isActive to false, preventing further claims.
+     * Existing claims remain valid.
+     *
+     * @param params - Deactivation parameters
+     * @param params.claimCodeId - ID of claim code to deactivate
+     * @returns Promise<void>
+     * @throws {Error} When claim code not found
+     *
+     * @example
+     * await badgeService.deactivateClaimCode({ claimCodeId: 'code_123' });
+     */
+    deactivateClaimCode(params: {
+        claimCodeId: string;
+    }): Promise<void>;
 }
 declare const _default: BadgeService;
 export default _default;

@@ -349,7 +349,7 @@ router.put('/display', auth_1.requireAuth, async (req, res) => {
  *       500:
  *         description: Server error while creating badge
  */
-router.post('/create', admin_1.requireAdmin, upload.single('image'), async (req, res) => {
+router.post('/create', auth_1.requireAuth, admin_1.requireAdmin, upload.single('image'), async (req, res) => {
     try {
         const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
         const criteria = typeof qualificationCriteria === 'string'
@@ -441,7 +441,7 @@ router.post('/create', admin_1.requireAdmin, upload.single('image'), async (req,
  *       500:
  *         description: Server error while updating badge
  */
-router.put('/:badgeId', admin_1.requireAdmin, upload.single('image'), async (req, res) => {
+router.put('/:badgeId', auth_1.requireAuth, admin_1.requireAdmin, upload.single('image'), async (req, res) => {
     try {
         const { badgeId } = req.params;
         const { name, description, qualificationCriteria, isAutoAwarded, maxAwards, displayOrder } = req.body;
@@ -523,7 +523,7 @@ router.put('/:badgeId', admin_1.requireAdmin, upload.single('image'), async (req
  *       500:
  *         description: Server error while awarding badge
  */
-router.post('/award', admin_1.requireAdmin, async (req, res) => {
+router.post('/award', auth_1.requireAuth, admin_1.requireAdmin, async (req, res) => {
     try {
         const { userId, badgeId, reason } = req.body;
         const userBadge = await badge_service_1.default.awardBadge(userId, badgeId, req.user.id, reason);
@@ -572,7 +572,7 @@ router.post('/award', admin_1.requireAdmin, async (req, res) => {
  *       500:
  *         description: Server error while deleting badge
  */
-router.delete('/:badgeId', admin_1.requireAdmin, async (req, res) => {
+router.delete('/:badgeId', auth_1.requireAuth, admin_1.requireAdmin, async (req, res) => {
     try {
         const { badgeId } = req.params;
         await badge_service_1.default.deleteBadge(badgeId);
@@ -619,7 +619,7 @@ router.delete('/:badgeId', admin_1.requireAdmin, async (req, res) => {
  *       500:
  *         description: Server error while checking qualifications
  */
-router.post('/check-qualifications', admin_1.requireAdmin, async (req, res) => {
+router.post('/check-qualifications', auth_1.requireAuth, admin_1.requireAdmin, async (req, res) => {
     try {
         const badgesAwarded = await badge_service_1.default.runBadgeQualificationChecks();
         res.json({
@@ -629,6 +629,115 @@ router.post('/check-qualifications', admin_1.requireAdmin, async (req, res) => {
         });
     }
     catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+/**
+ * @swagger
+ * /api/badges/award-bulk:
+ *   post:
+ *     tags: [Badge]
+ *     summary: Award badge to multiple users by email (Admin Only)
+ *     description: Awards a badge to multiple users identified by email addresses. Looks up users by email (case-insensitive) and awards badge to each. Continues processing all emails even if some fail. Production allows regular authenticated users, staging/dev requires admin.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - badgeId
+ *               - emails
+ *             properties:
+ *               badgeId:
+ *                 type: string
+ *                 description: ID of badge to award
+ *                 example: "clxyz123abc"
+ *               emails:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: email
+ *                 description: Array of user email addresses
+ *                 example: ["user1@example.com", "user2@example.com"]
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for award (shown to users)
+ *                 example: "Early supporter"
+ *     responses:
+ *       200:
+ *         description: Bulk award completed (may include some failures)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     awarded:
+ *                       type: integer
+ *                       description: Number of successful awards
+ *                       example: 48
+ *                     failed:
+ *                       type: integer
+ *                       description: Number of failed awards
+ *                       example: 2
+ *                     details:
+ *                       type: array
+ *                       description: Detailed results for each email
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           email:
+ *                             type: string
+ *                             format: email
+ *                           status:
+ *                             type: string
+ *                             enum: [awarded, failed]
+ *                           error:
+ *                             type: string
+ *                             description: Error message if status is 'failed'
+ *       400:
+ *         description: Invalid request - missing required fields
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - admin access required (staging/dev only)
+ *       404:
+ *         description: Badge not found
+ *       500:
+ *         description: Server error while processing bulk award
+ */
+router.post('/award-bulk', auth_1.requireStagingAuth, admin_1.requireAdmin, async (req, res) => {
+    try {
+        const { badgeId, emails, reason } = req.body;
+        if (!badgeId || !emails || !Array.isArray(emails)) {
+            return res.status(400).json({
+                success: false,
+                error: 'badgeId and emails (array) are required'
+            });
+        }
+        const result = await badge_service_1.default.awardBadgeBulk({
+            badgeId,
+            emails,
+            awardedBy: req.user.id,
+            reason
+        });
+        res.json({
+            success: true,
+            data: result
+        });
+    }
+    catch (error) {
+        if (error.message === 'Badge not found') {
+            return res.status(404).json({ success: false, error: error.message });
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 });

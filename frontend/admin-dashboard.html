@@ -2013,6 +2013,7 @@ Auto-refresh enabled every 60 seconds
             <div class="engagement-tabs">
                 <button class="tab-button active" data-action="switchEngagementTab" data-tab="quests">Quest Management</button>
                 <button class="tab-button" data-action="switchEngagementTab" data-tab="badges">Badge Management</button>
+                <button class="tab-button" data-action="switchEngagementTab" data-tab="claim-codes">Claim Codes</button>
                 <button class="tab-button" data-action="switchEngagementTab" data-tab="analytics">Engagement Analytics</button>
             </div>
 
@@ -2057,6 +2058,41 @@ Auto-refresh enabled every 60 seconds
                 <!-- Badge Grid -->
                 <div class="badge-grid" id="badge-grid">
                     <div class="loading-badge">Loading badges...</div>
+                </div>
+            </div>
+
+            <!-- Claim Codes Tab -->
+            <div id="claim-codes-tab" class="engagement-tab">
+                <div class="section-header">
+                    <h3>Badge Claim Codes</h3>
+                    <div style="display: flex; gap: 1rem;">
+                        <select id="claim-codes-badge-filter" data-action="filterClaimCodesByBadge" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="all">All Badges</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="civicEngagementController.loadClaimCodes()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Claim Codes Table -->
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Badge</th>
+                                <th>Type</th>
+                                <th>Claims Used</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claim-codes-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center">Click "Claim Codes" on a badge to generate codes, or Refresh to load existing codes</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -2312,6 +2348,150 @@ Auto-refresh enabled every 60 seconds
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-action="closeAwardBadgeModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claim Code Generation Modal -->
+    <div id="claim-code-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="claim-code-modal-title">Generate Claim Codes</h3>
+                <span class="close" data-action="closeClaimCodeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="claim-code-badge-id">
+                <input type="hidden" id="claim-code-badge-name">
+
+                <div class="form-group">
+                    <label for="code-type">Code Type *</label>
+                    <select id="code-type" data-action="toggleClaimCodeOptions">
+                        <option value="SHARED">Shared Code (one code, many users)</option>
+                        <option value="INDIVIDUAL">Individual Codes (unique per person)</option>
+                    </select>
+                    <small>Shared codes can be claimed by multiple users. Individual codes are single-use.</small>
+                </div>
+
+                <!-- Individual Code Options -->
+                <div id="individual-options" style="display: none;">
+                    <div class="form-group">
+                        <label for="code-count">Number of Codes *</label>
+                        <input type="number" id="code-count" min="1" max="1000" value="10">
+                        <small>Generate up to 1000 individual codes</small>
+                    </div>
+                </div>
+
+                <!-- Shared Code Options -->
+                <div id="shared-options">
+                    <div class="form-group">
+                        <label for="max-claims">Maximum Claims (optional)</label>
+                        <input type="number" id="max-claims" min="1" placeholder="Unlimited">
+                        <small>Leave empty for unlimited claims</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="expires-at">Expiration Date (optional)</label>
+                    <input type="datetime-local" id="expires-at">
+                    <small>Leave empty for no expiration</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="closeClaimCodeModal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="generateClaimCodes">Generate Codes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claim Code Results Modal -->
+    <div id="claim-code-results-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="claim-code-results-title">Claim Codes Generated</h3>
+                <span class="close" data-action="closeClaimCodeResultsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="claim-code-results-content">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="closeClaimCodeResultsModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claim Details Modal -->
+    <div id="claim-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="claim-details-title">Claim Code Details</h3>
+                <span class="close" data-action="closeClaimDetailsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="claim-details-content">
+                    <!-- Details will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="closeClaimDetailsModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Award Modal -->
+    <div id="bulk-award-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Bulk Award Badge by Email</h3>
+                <span class="close" data-action="closeBulkAwardModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bulk-award-badge-id">Select Badge *</label>
+                    <select id="bulk-award-badge-id">
+                        <option value="">Select a badge...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="email-list">Email List (one per line) *</label>
+                    <textarea id="email-list" rows="10" placeholder="user@example.com&#10;another@example.com&#10;third@example.com" style="font-family: monospace;"></textarea>
+                    <small>Enter one email address per line</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="bulk-award-reason">Reason (optional)</label>
+                    <input type="text" id="bulk-award-reason" placeholder="e.g., Kickstarter backer, Early adopter">
+                    <small>This will be recorded in the award history</small>
+                </div>
+
+                <div id="email-preview">
+                    <!-- Email preview will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="closeBulkAwardModal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-action="previewEmails">Preview</button>
+                <button type="button" class="btn btn-primary" id="bulk-award-btn" data-action="executeBulkAward" disabled>Award Badges</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Award Results Modal -->
+    <div id="bulk-award-results-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="bulk-award-results-title">Bulk Award Results</h3>
+                <span class="close" data-action="closeBulkAwardResultsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="bulk-award-results-content">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="closeBulkAwardResultsModal">Close</button>
             </div>
         </div>
     </div>

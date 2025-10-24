@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import badgeService from '../services/badge.service';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, requireStagingAuth, AuthRequest } from '../middleware/auth';
 import { requireAdmin } from '../middleware/admin';
 
 const router = Router();
@@ -638,6 +638,118 @@ router.post('/check-qualifications', requireAuth, requireAdmin, async (req: Auth
       message: `${badgesAwarded} badges awarded based on qualification criteria`
     });
   } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/badges/award-bulk:
+ *   post:
+ *     tags: [Badge]
+ *     summary: Award badge to multiple users by email (Admin Only)
+ *     description: Awards a badge to multiple users identified by email addresses. Looks up users by email (case-insensitive) and awards badge to each. Continues processing all emails even if some fail. Production allows regular authenticated users, staging/dev requires admin.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - badgeId
+ *               - emails
+ *             properties:
+ *               badgeId:
+ *                 type: string
+ *                 description: ID of badge to award
+ *                 example: "clxyz123abc"
+ *               emails:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: email
+ *                 description: Array of user email addresses
+ *                 example: ["user1@example.com", "user2@example.com"]
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for award (shown to users)
+ *                 example: "Early supporter"
+ *     responses:
+ *       200:
+ *         description: Bulk award completed (may include some failures)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     awarded:
+ *                       type: integer
+ *                       description: Number of successful awards
+ *                       example: 48
+ *                     failed:
+ *                       type: integer
+ *                       description: Number of failed awards
+ *                       example: 2
+ *                     details:
+ *                       type: array
+ *                       description: Detailed results for each email
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           email:
+ *                             type: string
+ *                             format: email
+ *                           status:
+ *                             type: string
+ *                             enum: [awarded, failed]
+ *                           error:
+ *                             type: string
+ *                             description: Error message if status is 'failed'
+ *       400:
+ *         description: Invalid request - missing required fields
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - admin access required (staging/dev only)
+ *       404:
+ *         description: Badge not found
+ *       500:
+ *         description: Server error while processing bulk award
+ */
+router.post('/award-bulk', requireStagingAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { badgeId, emails, reason } = req.body;
+
+    if (!badgeId || !emails || !Array.isArray(emails)) {
+      return res.status(400).json({
+        success: false,
+        error: 'badgeId and emails (array) are required'
+      });
+    }
+
+    const result = await badgeService.awardBadgeBulk({
+      badgeId,
+      emails,
+      awardedBy: req.user!.id,
+      reason
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    if (error.message === 'Badge not found') {
+      return res.status(404).json({ success: false, error: error.message });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });

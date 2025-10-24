@@ -12674,6 +12674,48 @@ class QuestProgressTracker {
 }
 ```
 
+### Badge Distribution Methods
+
+**📖 Complete Admin Guide**: See `docs/BADGE_ADMIN_GUIDE.md` for step-by-step instructions
+**📖 API Details**: See `docs/API_QUESTS_BADGES.md` for technical endpoint documentation
+
+The badge system supports multiple distribution methods to accommodate different use cases:
+
+#### 1. Manual Direct Award
+- **Use Case**: Special recognition, one-off awards, moderator discretion
+- **API Endpoint**: `POST /api/badges/award`
+- **Admin Interface**: User Management → Search User → Award Badge
+- **Examples**: Beta testers, bug reporters, event attendance, Kickstarter backers
+
+#### 2. Automatic Criteria-Based Awards
+- **Use Case**: Activity-based rewards, measurable achievements
+- **API Endpoint**: `POST /api/badges/check-qualifications`
+- **Qualification Types**:
+  - **QUEST**: Quest completion count, streak achievements
+  - **ACTIVITY**: Platform activity counts (posts, comments, etc.)
+  - **CIVIC**: Civic engagement actions (petitions, events, etc.)
+  - **SOCIAL**: Reputation score, followers, friends count
+  - **CUSTOM_ENDPOINT**: User property checks (e.g., isSuperAdmin)
+- **Automation**: Runs daily via scheduled task (2 AM server time)
+- **Examples**: "Complete 50 quests", "Reach 1000 reputation", "7-day streak"
+
+#### 3. Claim Code System (Planned)
+- **Status**: 🚧 Planned Feature
+- **Use Case**: Events, email campaigns, external partnerships
+- **Types**: Shared codes (one code, many users) and Individual codes (unique one-time use)
+- **Examples**: Conference codes, Kickstarter rewards, partner distributions
+
+#### 4. Bulk Email Award (Planned)
+- **Status**: 🚧 Planned Feature
+- **Use Case**: Award badges to multiple users via email list
+- **Examples**: Kickstarter backers, beta testers, event attendees, alumni programs
+
+**Distribution Method Comparison**:
+- **Manual Award**: High admin effort, low scalability, no automation
+- **Auto Criteria**: Low admin effort (setup only), high scalability, full automation
+- **Claim Codes** (planned): Medium admin effort, high scalability, partial automation
+- **Bulk Email** (planned): Medium admin effort, medium scalability, partial automation
+
 ### Badge System Architecture
 
 #### Asset-Based Badge Management

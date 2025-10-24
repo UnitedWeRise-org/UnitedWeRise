@@ -294,8 +294,43 @@ class BadgeService {
         return true;
     }
     async checkCustomEndpoint(userId, requirements) {
-        // This would call a custom API endpoint to check special criteria
-        // For now, return false as placeholder
+        // Support user property checking
+        if (requirements.userProperty) {
+            // Whitelist of allowed user properties for safety
+            const allowedProperties = [
+                'isAdmin',
+                'isSuperAdmin',
+                'verificationStatus',
+                'isEmailVerified',
+                'isPhoneVerified',
+                'accountType'
+            ];
+            // Validate property is in whitelist
+            if (!allowedProperties.includes(requirements.userProperty)) {
+                console.error(`Invalid user property in badge criteria: ${requirements.userProperty}`);
+                return false;
+            }
+            try {
+                const user = await prisma_1.prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { [requirements.userProperty]: true }
+                });
+                if (!user)
+                    return false;
+                const actualValue = user[requirements.userProperty];
+                return actualValue === requirements.expectedValue;
+            }
+            catch (error) {
+                console.error(`Error checking user property ${requirements.userProperty}:`, error);
+                return false;
+            }
+        }
+        // Support external HTTP endpoint (future enhancement)
+        if (requirements.customEndpoint) {
+            // TODO: Implement HTTP call to external endpoint
+            // For now, return false
+            return false;
+        }
         return false;
     }
     /**
@@ -509,6 +544,334 @@ class BadgeService {
         // Soft delete by deactivating
         await prisma_1.prisma.badge.update({
             where: { id: badgeId },
+            data: { isActive: false }
+        });
+    }
+    /**
+     * Generates claim codes for a badge
+     *
+     * Creates claim codes that users can redeem to receive a badge.
+     * Supports two types:
+     * - SHARED: One readable code (e.g., "KICKSTARTER2025") that multiple users can claim
+     * - INDIVIDUAL: Multiple unique codes (e.g., "XJ3K-9PL2-QW8R") for one-time use
+     *
+     * @param params - Code generation parameters
+     * @param params.badgeId - ID of badge these codes will award
+     * @param params.type - Code type: 'SHARED' or 'INDIVIDUAL'
+     * @param params.count - Number of codes to generate (required for INDIVIDUAL, ignored for SHARED)
+     * @param params.maxClaims - Maximum number of claims allowed per code (null = unlimited)
+     * @param params.expiresAt - Optional expiration date for codes
+     * @param params.createdBy - Admin user ID who created these codes
+     * @returns Promise<BadgeClaimCode[]> Array of created claim code records
+     * @throws {Error} When badge not found or count not provided for INDIVIDUAL type
+     *
+     * @example
+     * // Shared code for convention attendees
+     * const codes = await badgeService.generateClaimCodes({
+     *   badgeId: 'badge_123',
+     *   type: 'SHARED',
+     *   maxClaims: null, // unlimited
+     *   createdBy: 'admin_456'
+     * });
+     * console.log(codes[0].code); // "KICKSTARTER2025"
+     *
+     * @example
+     * // Individual codes for 100 backers
+     * const codes = await badgeService.generateClaimCodes({
+     *   badgeId: 'badge_123',
+     *   type: 'INDIVIDUAL',
+     *   count: 100,
+     *   expiresAt: new Date('2025-12-31'),
+     *   createdBy: 'admin_456'
+     * });
+     * console.log(codes[0].code); // "XJ3K-9PL2-QW8R"
+     */
+    async generateClaimCodes(params) {
+        // Verify badge exists
+        const badge = await prisma_1.prisma.badge.findUnique({
+            where: { id: params.badgeId }
+        });
+        if (!badge) {
+            throw new Error('Badge not found');
+        }
+        const codes = [];
+        if (params.type === 'SHARED') {
+            // Generate one readable shared code
+            const code = this.generateReadableCode(badge.name);
+            const claimCode = await prisma_1.prisma.badgeClaimCode.create({
+                data: {
+                    code,
+                    badgeId: params.badgeId,
+                    type: params.type,
+                    maxClaims: params.maxClaims,
+                    expiresAt: params.expiresAt,
+                    createdBy: params.createdBy
+                }
+            });
+            codes.push(claimCode);
+        }
+        else if (params.type === 'INDIVIDUAL') {
+            // Generate multiple unique codes
+            if (!params.count || params.count < 1) {
+                throw new Error('Count is required for INDIVIDUAL codes');
+            }
+            for (let i = 0; i < params.count; i++) {
+                const code = this.generateUniqueCode();
+                const claimCode = await prisma_1.prisma.badgeClaimCode.create({
+                    data: {
+                        code,
+                        badgeId: params.badgeId,
+                        type: params.type,
+                        maxClaims: 1, // Individual codes are always single-use
+                        expiresAt: params.expiresAt,
+                        createdBy: params.createdBy
+                    }
+                });
+                codes.push(claimCode);
+            }
+        }
+        return codes;
+    }
+    /**
+     * Generates a readable shared code based on badge name
+     *
+     * @param badgeName - Name of badge to base code on
+     * @returns String in format "BADGENAME2025"
+     * @private
+     */
+    generateReadableCode(badgeName) {
+        const sanitized = badgeName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const year = new Date().getFullYear();
+        return `${sanitized}${year}`;
+    }
+    /**
+     * Generates a unique random code in format "XXXX-XXXX-XXXX"
+     *
+     * @returns String unique code
+     * @private
+     */
+    generateUniqueCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding ambiguous chars
+        const segments = 3;
+        const segmentLength = 4;
+        const code = [];
+        for (let i = 0; i < segments; i++) {
+            let segment = '';
+            for (let j = 0; j < segmentLength; j++) {
+                segment += chars[Math.floor(Math.random() * chars.length)];
+            }
+            code.push(segment);
+        }
+        return code.join('-');
+    }
+    /**
+     * Claims a badge using a claim code
+     *
+     * Validates the code and awards the badge to the user.
+     * Checks:
+     * - Code exists and is active
+     * - Code has not expired
+     * - User hasn't already claimed this code
+     * - Max claims limit not reached (for SHARED codes)
+     *
+     * @param params - Claim parameters
+     * @param params.userId - ID of user claiming the badge
+     * @param params.code - Claim code to redeem
+     * @returns Promise<Object> Object containing:
+     *   - success: true
+     *   - userBadge: The awarded UserBadge record
+     *   - claimRecord: The BadgeClaim record
+     * @throws {Error} When code invalid, expired, already claimed, or limit reached
+     *
+     * @example
+     * const result = await badgeService.claimBadgeWithCode({
+     *   userId: 'user_123',
+     *   code: 'KICKSTARTER2025'
+     * });
+     * console.log(result.userBadge.badge.name); // "Kickstarter Backer"
+     */
+    async claimBadgeWithCode(params) {
+        // Find claim code
+        const claimCode = await prisma_1.prisma.badgeClaimCode.findUnique({
+            where: { code: params.code },
+            include: { badge: true }
+        });
+        if (!claimCode) {
+            throw new Error('Invalid claim code');
+        }
+        if (!claimCode.isActive) {
+            throw new Error('This claim code has been deactivated');
+        }
+        if (claimCode.expiresAt && new Date() > claimCode.expiresAt) {
+            throw new Error('This claim code has expired');
+        }
+        // Check if user already claimed this code
+        const existingClaim = await prisma_1.prisma.badgeClaim.findUnique({
+            where: {
+                claimCodeId_userId: {
+                    claimCodeId: claimCode.id,
+                    userId: params.userId
+                }
+            }
+        });
+        if (existingClaim) {
+            throw new Error('You have already claimed this code');
+        }
+        // Check max claims limit
+        if (claimCode.maxClaims !== null && claimCode.claimsUsed >= claimCode.maxClaims) {
+            throw new Error('This claim code has reached its maximum usage limit');
+        }
+        // Award badge (will throw if user already has badge from another source)
+        let userBadge;
+        try {
+            userBadge = await this.awardBadge(params.userId, claimCode.badgeId, undefined, `Claimed with code: ${params.code}`);
+        }
+        catch (error) {
+            if (error.message === 'User already has this badge') {
+                // User has badge from another source, still record the claim
+                userBadge = await prisma_1.prisma.userBadge.findUnique({
+                    where: {
+                        userId_badgeId: {
+                            userId: params.userId,
+                            badgeId: claimCode.badgeId
+                        }
+                    },
+                    include: { badge: true }
+                });
+            }
+            else {
+                throw error;
+            }
+        }
+        // Create claim record
+        const claimRecord = await prisma_1.prisma.badgeClaim.create({
+            data: {
+                claimCodeId: claimCode.id,
+                userId: params.userId
+            }
+        });
+        // Increment claims used count
+        await prisma_1.prisma.badgeClaimCode.update({
+            where: { id: claimCode.id },
+            data: { claimsUsed: { increment: 1 } }
+        });
+        return {
+            success: true,
+            userBadge,
+            claimRecord
+        };
+    }
+    /**
+     * Awards a badge to multiple users by email address
+     *
+     * Looks up users by email (case-insensitive) and awards badge to each.
+     * Continues processing all emails even if some fail.
+     *
+     * @param params - Bulk award parameters
+     * @param params.badgeId - ID of badge to award
+     * @param params.emails - Array of user email addresses
+     * @param params.awardedBy - Admin user ID awarding the badges
+     * @param params.reason - Optional reason for award (shown to users)
+     * @returns Promise<Object> Object containing:
+     *   - awarded: Number of successful awards
+     *   - failed: Number of failed awards
+     *   - details: Array of {email, status, error?} for each email
+     *
+     * @example
+     * const result = await badgeService.awardBadgeBulk({
+     *   badgeId: 'badge_123',
+     *   emails: ['user1@example.com', 'user2@example.com'],
+     *   awardedBy: 'admin_456',
+     *   reason: 'Early supporter'
+     * });
+     * console.log(result.awarded); // 2
+     * console.log(result.failed); // 0
+     */
+    async awardBadgeBulk(params) {
+        const badge = await prisma_1.prisma.badge.findUnique({
+            where: { id: params.badgeId }
+        });
+        if (!badge) {
+            throw new Error('Badge not found');
+        }
+        const details = [];
+        let awarded = 0;
+        let failed = 0;
+        for (const email of params.emails) {
+            try {
+                // Find user by email (case-insensitive)
+                const user = await prisma_1.prisma.user.findFirst({
+                    where: {
+                        email: {
+                            equals: email,
+                            mode: 'insensitive'
+                        }
+                    }
+                });
+                if (!user) {
+                    details.push({ email, status: 'failed', error: 'User not found' });
+                    failed++;
+                    continue;
+                }
+                // Award badge
+                await this.awardBadge(user.id, params.badgeId, params.awardedBy, params.reason);
+                details.push({ email, status: 'awarded' });
+                awarded++;
+            }
+            catch (error) {
+                details.push({
+                    email,
+                    status: 'failed',
+                    error: error.message || 'Unknown error'
+                });
+                failed++;
+            }
+        }
+        return { awarded, failed, details };
+    }
+    /**
+     * Retrieves all claim codes for a badge
+     *
+     * Returns claim codes with usage statistics.
+     *
+     * @param params - Query parameters
+     * @param params.badgeId - ID of badge to get codes for
+     * @returns Promise<BadgeClaimCode[]> Array of claim codes with usage data
+     *
+     * @example
+     * const codes = await badgeService.getClaimCodesByBadge({ badgeId: 'badge_123' });
+     * console.log(codes[0].claimsUsed); // 42
+     * console.log(codes[0].maxClaims); // 100
+     */
+    async getClaimCodesByBadge(params) {
+        return await prisma_1.prisma.badgeClaimCode.findMany({
+            where: { badgeId: params.badgeId },
+            include: {
+                badge: true,
+                _count: {
+                    select: { claims: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+    /**
+     * Deactivates a claim code
+     *
+     * Sets isActive to false, preventing further claims.
+     * Existing claims remain valid.
+     *
+     * @param params - Deactivation parameters
+     * @param params.claimCodeId - ID of claim code to deactivate
+     * @returns Promise<void>
+     * @throws {Error} When claim code not found
+     *
+     * @example
+     * await badgeService.deactivateClaimCode({ claimCodeId: 'code_123' });
+     */
+    async deactivateClaimCode(params) {
+        await prisma_1.prisma.badgeClaimCode.update({
+            where: { id: params.claimCodeId },
             data: { isActive: false }
         });
     }

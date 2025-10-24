@@ -43,6 +43,7 @@ import candidateVerificationRoutes from './routes/candidateVerification';
 import externalCandidatesRoutes from './routes/externalCandidates';
 import motdRoutes from './routes/motd';
 import badgeRoutes from './routes/badges';
+import badgeClaimCodesRoutes from './routes/badgeClaimCodes';
 import questRoutes from './routes/quests';
 import photosRoutes from './routes/photos';
 import WebSocketService from './services/WebSocketService';
@@ -346,6 +347,7 @@ app.use('/api/candidate-verification', candidateVerificationRoutes);
 app.use('/api/external-candidates', externalCandidatesRoutes);
 app.use('/api/motd', motdRoutes);
 app.use('/api/badges', badgeRoutes);
+app.use('/api/badges', badgeClaimCodesRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/health', healthRoutes);
 

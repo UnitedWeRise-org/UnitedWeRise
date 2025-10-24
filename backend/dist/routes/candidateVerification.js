@@ -179,7 +179,7 @@ const requireAdmin = async (req, res, next) => {
     next();
 };
 // Get candidates due for monthly verification
-router.get('/admin/due-verification', auth_1.requireAuth, requireAdmin, async (req, res) => {
+router.get('/admin/due-verification', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
     try {
         const candidates = await candidateReportService_1.CandidateReportService.getCandidatesDueForVerification();
         const firstMonday = getFirstMondayOfMonth();
@@ -204,7 +204,7 @@ router.get('/admin/due-verification', auth_1.requireAuth, requireAdmin, async (r
     }
 });
 // Request documents from a candidate
-router.post('/admin/request-documents', auth_1.requireAuth, requireAdmin, async (req, res) => {
+router.post('/admin/request-documents', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
     try {
         const { candidateId, documentTypes } = req.body;
         if (!candidateId || !documentTypes || !Array.isArray(documentTypes)) {
@@ -222,7 +222,7 @@ router.post('/admin/request-documents', auth_1.requireAuth, requireAdmin, async 
     }
 });
 // Verify a submitted document
-router.post('/admin/verify-document', auth_1.requireAuth, requireAdmin, async (req, res) => {
+router.post('/admin/verify-document', auth_1.requireStagingAuth, requireAdmin, async (req, res) => {
     try {
         const { documentId, isValid, notes } = req.body;
         const document = await prisma_1.prisma.candidateVerificationDocument.update({

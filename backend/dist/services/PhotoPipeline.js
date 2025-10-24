@@ -27,6 +27,7 @@ const storage_blob_1 = require("@azure/storage-blob");
 const imageContentModerationService_1 = require("./imageContentModerationService");
 const prisma_js_1 = require("../lib/prisma.js");
 const logger_1 = __importDefault(require("../utils/logger"));
+const environment_1 = require("../utils/environment");
 // ========================================
 // Constants
 // ========================================
@@ -331,7 +332,7 @@ class PhotoPipeline {
                 userId,
                 error: moderationError.message,
                 stack: moderationError.stack,
-                environment: process.env.NODE_ENV,
+                environment: (0, environment_1.getEnvironment)(),
                 timestamp: new Date().toISOString(),
                 photoId: requestId
             });

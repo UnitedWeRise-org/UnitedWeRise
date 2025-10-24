@@ -21,7 +21,7 @@ const router = express_1.default.Router();
  * Get all feedback posts for admin dashboard
  * GET /api/feedback
  */
-router.get('/', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { type, category, priority, status = 'new', page = 1, limit = 20 } = req.query;
         const where = {
@@ -101,7 +101,7 @@ router.get('/', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
  * Get feedback statistics for dashboard
  * GET /api/feedback/stats
  */
-router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.get('/stats', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { timeframe = 'week' } = req.query;
         // Calculate date range
@@ -219,7 +219,7 @@ router.get('/stats', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) =
  * Update feedback status (acknowledge, in progress, resolved, etc.)
  * PUT /api/feedback/:id/status
  */
-router.put('/:id/status', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.put('/:id/status', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, assignedTo, adminNotes } = req.body;
@@ -266,7 +266,7 @@ router.put('/:id/status', auth_1.requireAuth, auth_1.requireAdmin, async (req, r
  * Manually analyze a post for feedback (for testing/verification)
  * POST /api/feedback/analyze
  */
-router.post('/analyze', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.post('/analyze', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { content, postId } = req.body;
         if (!content && !postId) {
@@ -300,7 +300,7 @@ router.post('/analyze', auth_1.requireAuth, auth_1.requireAdmin, async (req, res
  * Batch re-analyze existing posts for feedback (admin utility)
  * POST /api/feedback/batch-analyze
  */
-router.post('/batch-analyze', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+router.post('/batch-analyze', auth_1.requireStagingAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const { limit = 100, offset = 0 } = req.body;
         // Get posts that haven't been analyzed for feedback yet

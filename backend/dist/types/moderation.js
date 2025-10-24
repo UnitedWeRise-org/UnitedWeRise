@@ -7,6 +7,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BLOCKED_CONTENT_TYPES = exports.MEDICAL_CONTENT_TYPES = exports.NEWSWORTHY_CONTENT_TYPES = exports.VIOLENT_CONTENT_TYPES = exports.ADULT_CONTENT_TYPES = exports.DEFAULT_MODERATION_CONFIG = exports.ContentType = exports.ModerationCategory = void 0;
+const environment_1 = require("../utils/environment");
 var ModerationCategory;
 (function (ModerationCategory) {
     ModerationCategory["APPROVE"] = "APPROVE";
@@ -38,8 +39,8 @@ exports.DEFAULT_MODERATION_CONFIG = {
     allowMedicalContent: true,
     medicalThreshold: 0.6,
     enableTextAnalysis: true,
-    isProduction: process.env.NODE_ENV === 'production',
-    strictMode: process.env.NODE_ENV === 'production'
+    isProduction: (0, environment_1.isProduction)(),
+    strictMode: (0, environment_1.isProduction)()
 };
 /**
  * Content type classification helpers

@@ -4,12 +4,23 @@
  */
 
 import { AdminAPI } from '../api/AdminAPI.js';
+import {
+    getClaimUrl,
+    parseEmailList,
+    downloadCodesAsCSV,
+    copyToClipboard,
+    formatClaimStats,
+    isClaimCodeValid,
+    formatExpiration
+} from '../../../utils/badge-claim-utils.js';
 
 class CivicEngagementController {
     constructor() {
         this.currentTab = 'quests';
         this.questData = [];
         this.badgeData = [];
+        this.claimCodesData = [];
+        this.currentBadgeFilter = 'all'; // For claim codes filter
     }
 
     // Standard init() method expected by AdminModuleLoader
@@ -127,14 +138,17 @@ class CivicEngagementController {
             return;
         }
 
-        // Add qualification check button at the top
+        // Add qualification check and bulk award buttons at the top
         const headerHTML = `
-            <div class="badge-grid-header" style="grid-column: 1 / -1; margin-bottom: 1rem;">
+            <div class="badge-grid-header" style="grid-column: 1 / -1; margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                 <button data-action="runQualificationChecks" class="btn btn-primary">
                     🔄 Run Auto-Award Qualification Checks
                 </button>
-                <span style="margin-left: 1rem; color: #666;">
-                    Check all users against badge criteria and auto-award qualifying badges
+                <button data-action="showBulkAwardModal" class="btn btn-primary">
+                    📧 Bulk Award by Email
+                </button>
+                <span style="color: #666; flex: 1;">
+                    Distribute badges automatically or manually to multiple users
                 </span>
             </div>
         `;
@@ -151,6 +165,7 @@ class CivicEngagementController {
                 <div class="badge-actions">
                     <button data-action="editBadge" data-badge-id="${badge.id}" class="btn-small">Edit</button>
                     <button data-action="awardBadgeManually" data-badge-id="${badge.id}" data-badge-name="${badge.name}" class="btn-small">Award</button>
+                    <button data-action="showGenerateClaimCodesModal" data-badge-id="${badge.id}" data-badge-name="${badge.name}" class="btn-small">Claim Codes</button>
                 </div>
             </div>
         `).join('');
@@ -172,6 +187,14 @@ class CivicEngagementController {
             this.loadQuests();
         } else if (tabName === 'badges' && this.badgeData.length === 0) {
             this.loadBadges();
+        } else if (tabName === 'claim-codes') {
+            this.loadClaimCodes();
+            // Also populate the badge filter dropdown
+            const filterSelect = document.getElementById('claim-codes-badge-filter');
+            if (filterSelect && this.badgeData.length > 0) {
+                filterSelect.innerHTML = '<option value="all">All Badges</option>' +
+                    this.badgeData.map(badge => `<option value="${badge.id}">${badge.name}</option>`).join('');
+            }
         }
     }
 
@@ -406,6 +429,7 @@ class CivicEngagementController {
         const dynamicFields = document.getElementById('dynamic-criteria-fields');
 
         let fieldsHTML = '';
+        let exampleHTML = '';
 
         switch (criteriaType) {
             case 'QUEST_COMPLETION':
@@ -419,6 +443,12 @@ class CivicEngagementController {
                             <label for="streak-days">Streak Days (optional)</label>
                             <input type="number" id="streak-days" min="1">
                         </div>
+                    </div>
+                `;
+                exampleHTML = `
+                    <div class="criteria-example" style="background: #e3f2fd; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                        <strong>Example JSON Output:</strong>
+                        <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{"type": "QUEST_COMPLETION", "requirements": {"questCompletionCount": 10}}</pre>
                     </div>
                 `;
                 break;
@@ -444,6 +474,12 @@ class CivicEngagementController {
                         <input type="text" id="activity-types" placeholder="POST_CREATED,COMMENT_CREATED">
                     </div>
                 `;
+                exampleHTML = `
+                    <div class="criteria-example" style="background: #e3f2fd; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                        <strong>Example JSON Output:</strong>
+                        <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{"type": "USER_ACTIVITY", "requirements": {"activityTypes": ["POST_CREATED", "COMMENT_ADDED"], "activityCount": 20, "timeframe": "30d"}}</pre>
+                    </div>
+                `;
                 break;
 
             case 'CIVIC_ACTION':
@@ -461,6 +497,12 @@ class CivicEngagementController {
                             <label for="posts-created">Posts Created</label>
                             <input type="number" id="posts-created" min="0">
                         </div>
+                    </div>
+                `;
+                exampleHTML = `
+                    <div class="criteria-example" style="background: #e3f2fd; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                        <strong>Example JSON Output:</strong>
+                        <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{"type": "CIVIC_ACTION", "requirements": {"petitionsSigned": 5, "eventsAttended": 2}}</pre>
                     </div>
                 `;
                 break;
@@ -482,6 +524,12 @@ class CivicEngagementController {
                         </div>
                     </div>
                 `;
+                exampleHTML = `
+                    <div class="criteria-example" style="background: #e3f2fd; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                        <strong>Example JSON Output:</strong>
+                        <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{"type": "SOCIAL_METRIC", "requirements": {"reputationScore": 100, "followersCount": 50}}</pre>
+                    </div>
+                `;
                 break;
 
             case 'CUSTOM_ENDPOINT':
@@ -495,10 +543,16 @@ class CivicEngagementController {
                         <textarea id="custom-params" placeholder='{"minimumPledge": 100}'></textarea>
                     </div>
                 `;
+                exampleHTML = `
+                    <div class="criteria-example" style="background: #e3f2fd; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                        <strong>Example JSON Output (User Property Badge):</strong>
+                        <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{"type": "CUSTOM_ENDPOINT", "requirements": {"userProperty": "isSuperAdmin", "expectedValue": true}}</pre>
+                    </div>
+                `;
                 break;
         }
 
-        dynamicFields.innerHTML = fieldsHTML;
+        dynamicFields.innerHTML = fieldsHTML + exampleHTML;
     }
 
     handleBadgeImageUpload() {
@@ -701,6 +755,87 @@ class CivicEngagementController {
                         }
                         break;
 
+                    // Claim Code Actions
+                    case 'showGenerateClaimCodesModal':
+                        const claimBadgeId = e.target.getAttribute('data-badge-id');
+                        const claimBadgeName = e.target.getAttribute('data-badge-name');
+                        if (claimBadgeId && claimBadgeName) {
+                            this.showGenerateClaimCodesModal(claimBadgeId, claimBadgeName);
+                        }
+                        break;
+
+                    case 'closeClaimCodeModal':
+                        this.closeClaimCodeModal();
+                        break;
+
+                    case 'generateClaimCodes':
+                        this.generateClaimCodes();
+                        break;
+
+                    case 'closeClaimCodeResultsModal':
+                        this.closeClaimCodeResultsModal();
+                        break;
+
+                    case 'copyCode':
+                        const codeValue = e.target.getAttribute('data-code');
+                        if (codeValue) {
+                            this.handleCopyCode(codeValue);
+                        }
+                        break;
+
+                    case 'copyUrl':
+                        const urlValue = e.target.getAttribute('data-url');
+                        if (urlValue) {
+                            this.handleCopyUrl(urlValue);
+                        }
+                        break;
+
+                    case 'downloadCodes':
+                        const downloadBadgeName = e.target.getAttribute('data-badge-name');
+                        if (downloadBadgeName) {
+                            this.handleDownloadCodes(downloadBadgeName);
+                        }
+                        break;
+
+                    case 'viewClaimDetails':
+                        const codeId = e.target.getAttribute('data-code-id');
+                        if (codeId) {
+                            this.viewClaimDetails(codeId);
+                        }
+                        break;
+
+                    case 'closeClaimDetailsModal':
+                        this.closeClaimDetailsModal();
+                        break;
+
+                    case 'deactivateClaimCode':
+                        const deactivateCodeId = e.target.getAttribute('data-code-id');
+                        if (deactivateCodeId) {
+                            this.deactivateClaimCode(deactivateCodeId);
+                        }
+                        break;
+
+                    // Bulk Award Actions
+                    case 'showBulkAwardModal':
+                        this.showBulkAwardModal();
+                        break;
+
+                    case 'closeBulkAwardModal':
+                        this.closeBulkAwardModal();
+                        break;
+
+                    case 'previewEmails':
+                        this.previewEmails();
+                        break;
+
+                    case 'executeBulkAward':
+                        this.executeBulkAward();
+                        break;
+
+                    case 'closeBulkAwardResultsModal':
+                        this.closeBulkAwardResultsModal();
+                        break;
+
                     default:
                         console.warn(`Unhandled data-action: ${action}`);
                 }
@@ -729,6 +864,15 @@ class CivicEngagementController {
 
                     case 'updateCriteriaFields':
                         this.updateCriteriaFields();
+                        break;
+
+                    case 'toggleClaimCodeOptions':
+                        this.toggleClaimCodeOptions();
+                        break;
+
+                    case 'filterClaimCodesByBadge':
+                        const filterBadgeId = e.target.value;
+                        this.filterClaimCodesByBadge(filterBadgeId);
                         break;
 
                     default:
@@ -969,6 +1113,626 @@ class CivicEngagementController {
         } catch (error) {
             console.error('Error running qualification checks:', error);
             this.showErrorMessage('Error running qualification checks: ' + error.message);
+        }
+    }
+
+    // ========================================
+    // CLAIM CODE MANAGEMENT
+    // ========================================
+
+    /**
+     * Show modal to generate claim codes for a badge
+     */
+    showGenerateClaimCodesModal(badgeId, badgeName) {
+        try {
+            const modal = document.getElementById('claim-code-modal');
+            if (!modal) {
+                this.showErrorMessage('Claim code modal not found in HTML');
+                return;
+            }
+
+            // Set modal title and badge ID
+            document.getElementById('claim-code-modal-title').textContent = `Generate Claim Codes: ${badgeName}`;
+            document.getElementById('claim-code-badge-id').value = badgeId;
+            document.getElementById('claim-code-badge-name').value = badgeName;
+
+            // Reset form
+            document.getElementById('code-type').value = 'SHARED';
+            document.getElementById('code-count').value = '10';
+            document.getElementById('max-claims').value = '';
+            document.getElementById('expires-at').value = '';
+
+            // Show/hide options based on type
+            this.toggleClaimCodeOptions();
+
+            modal.style.display = 'block';
+        } catch (error) {
+            console.error('Error showing claim code modal:', error);
+            this.showErrorMessage('Error showing modal: ' + error.message);
+        }
+    }
+
+    /**
+     * Close claim code generation modal
+     */
+    closeClaimCodeModal() {
+        const modal = document.getElementById('claim-code-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Toggle visibility of claim code options based on type
+     */
+    toggleClaimCodeOptions() {
+        const codeType = document.getElementById('code-type').value;
+        const individualOptions = document.getElementById('individual-options');
+        const sharedOptions = document.getElementById('shared-options');
+
+        if (codeType === 'INDIVIDUAL') {
+            individualOptions.style.display = 'block';
+            sharedOptions.style.display = 'none';
+        } else {
+            individualOptions.style.display = 'none';
+            sharedOptions.style.display = 'block';
+        }
+    }
+
+    /**
+     * Generate claim codes via API
+     */
+    async generateClaimCodes() {
+        try {
+            const badgeId = document.getElementById('claim-code-badge-id').value;
+            const badgeName = document.getElementById('claim-code-badge-name').value;
+            const codeType = document.getElementById('code-type').value;
+            const count = codeType === 'INDIVIDUAL' ? parseInt(document.getElementById('code-count').value) : undefined;
+            const maxClaims = codeType === 'SHARED' ? (document.getElementById('max-claims').value ? parseInt(document.getElementById('max-claims').value) : undefined) : undefined;
+            const expiresAt = document.getElementById('expires-at').value || undefined;
+
+            // Validation
+            if (codeType === 'INDIVIDUAL' && (!count || count < 1 || count > 1000)) {
+                this.showErrorMessage('Please enter a valid code count (1-1000)');
+                return;
+            }
+
+            // Build request payload
+            const payload = {
+                badgeId,
+                type: codeType
+            };
+
+            if (count) payload.count = count;
+            if (maxClaims) payload.maxClaims = maxClaims;
+            if (expiresAt) payload.expiresAt = new Date(expiresAt).toISOString();
+
+            this.showSuccessMessage('Generating claim codes...');
+
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/badges/claim-codes/generate`, payload);
+
+            if (response.success && response.data && response.data.codes) {
+                this.closeClaimCodeModal();
+                this.showClaimCodeResults(response.data.codes, badgeName, codeType);
+                await this.loadClaimCodes(); // Refresh claim codes list
+            } else {
+                throw new Error(response.error || 'Failed to generate claim codes');
+            }
+        } catch (error) {
+            console.error('Error generating claim codes:', error);
+            this.showErrorMessage('Error generating claim codes: ' + error.message);
+        }
+    }
+
+    /**
+     * Show results modal with generated claim codes
+     */
+    showClaimCodeResults(codes, badgeName, codeType) {
+        try {
+            const modal = document.getElementById('claim-code-results-modal');
+            if (!modal) {
+                this.showErrorMessage('Results modal not found');
+                return;
+            }
+
+            document.getElementById('claim-code-results-title').textContent = `Claim Codes Generated: ${badgeName}`;
+
+            const resultsContainer = document.getElementById('claim-code-results-content');
+
+            if (codeType === 'SHARED') {
+                // Single shared code - show large with copy button
+                const code = codes[0];
+                const claimUrl = getClaimUrl(code.code);
+
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Shared Claim Code</h3>
+                        <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <div style="font-size: 2rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 1rem;">
+                                ${code.code}
+                            </div>
+                            <button data-action="copyCode" data-code="${code.code}" class="btn btn-primary">
+                                📋 Copy Code
+                            </button>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong>Share URL:</strong>
+                            <div style="font-size: 0.9rem; margin-top: 0.5rem; word-break: break-all;">
+                                ${claimUrl}
+                            </div>
+                            <button data-action="copyUrl" data-url="${claimUrl}" class="btn btn-small" style="margin-top: 0.5rem;">
+                                📋 Copy URL
+                            </button>
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            <strong>Max Claims:</strong> ${code.maxClaims || 'Unlimited'}<br>
+                            <strong>Expires:</strong> ${formatExpiration(code.expiresAt)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Individual codes - show table with download option
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem;">
+                        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                            <h3>${codes.length} Individual Codes Generated</h3>
+                            <button data-action="downloadCodes" data-badge-name="${badgeName}" class="btn btn-primary">
+                                💾 Download CSV
+                            </button>
+                        </div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                        <th style="padding: 0.5rem; text-align: left;">Code</th>
+                                        <th style="padding: 0.5rem; text-align: left;">Expires</th>
+                                        <th style="padding: 0.5rem; text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${codes.map(code => `
+                                        <tr style="border-bottom: 1px solid #eee;">
+                                            <td style="padding: 0.5rem; font-family: monospace;">${code.code}</td>
+                                            <td style="padding: 0.5rem;">${formatExpiration(code.expiresAt)}</td>
+                                            <td style="padding: 0.5rem; text-align: center;">
+                                                <button data-action="copyCode" data-code="${code.code}" class="btn-small">Copy</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                // Store codes for CSV download
+                this.lastGeneratedCodes = codes;
+            }
+
+            modal.style.display = 'block';
+        } catch (error) {
+            console.error('Error showing claim code results:', error);
+            this.showErrorMessage('Error displaying results: ' + error.message);
+        }
+    }
+
+    /**
+     * Close claim code results modal
+     */
+    closeClaimCodeResultsModal() {
+        const modal = document.getElementById('claim-code-results-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Copy code to clipboard
+     */
+    async handleCopyCode(code) {
+        const success = await copyToClipboard(code);
+        if (success) {
+            this.showSuccessMessage('Code copied to clipboard!');
+        } else {
+            this.showErrorMessage('Failed to copy code');
+        }
+    }
+
+    /**
+     * Copy URL to clipboard
+     */
+    async handleCopyUrl(url) {
+        const success = await copyToClipboard(url);
+        if (success) {
+            this.showSuccessMessage('URL copied to clipboard!');
+        } else {
+            this.showErrorMessage('Failed to copy URL');
+        }
+    }
+
+    /**
+     * Download codes as CSV
+     */
+    handleDownloadCodes(badgeName) {
+        if (this.lastGeneratedCodes && this.lastGeneratedCodes.length > 0) {
+            downloadCodesAsCSV(this.lastGeneratedCodes, badgeName);
+            this.showSuccessMessage('CSV download started');
+        } else {
+            this.showErrorMessage('No codes to download');
+        }
+    }
+
+    /**
+     * Load all claim codes for display
+     */
+    async loadClaimCodes(badgeId = null) {
+        try {
+            const url = badgeId
+                ? `${window.API_CONFIG.BASE_URL}/badges/claim-codes?badgeId=${badgeId}`
+                : `${window.API_CONFIG.BASE_URL}/badges/claim-codes`;
+
+            const response = await AdminAPI.get(url);
+
+            if (response.success && response.data) {
+                this.claimCodesData = response.data;
+                this.renderClaimCodesTable();
+            } else {
+                throw new Error(response.error || 'Failed to load claim codes');
+            }
+        } catch (error) {
+            console.error('Error loading claim codes:', error);
+            const tbody = document.getElementById('claim-codes-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error loading claim codes</td></tr>';
+            }
+        }
+    }
+
+    /**
+     * Render claim codes table
+     */
+    renderClaimCodesTable() {
+        const tbody = document.getElementById('claim-codes-table-body');
+        if (!tbody) return;
+
+        // Filter by badge if needed
+        let filteredCodes = this.claimCodesData;
+        if (this.currentBadgeFilter !== 'all') {
+            filteredCodes = this.claimCodesData.filter(code => code.badgeId === this.currentBadgeFilter);
+        }
+
+        if (filteredCodes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No claim codes found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filteredCodes.map(code => {
+            const validity = isClaimCodeValid(code);
+            const statusClass = validity.valid ? 'active' : 'inactive';
+
+            return `
+                <tr>
+                    <td style="font-family: monospace; font-weight: bold;">${code.code}</td>
+                    <td>${code.badge?.name || 'Unknown Badge'}</td>
+                    <td><span class="badge">${code.type}</span></td>
+                    <td>${formatClaimStats(code)}</td>
+                    <td>${formatExpiration(code.expiresAt)}</td>
+                    <td><span class="status-badge ${statusClass}">${validity.reason}</span></td>
+                    <td>
+                        <button data-action="viewClaimDetails" data-code-id="${code.id}" class="btn-small">View</button>
+                        ${code.isActive ? `<button data-action="deactivateClaimCode" data-code-id="${code.id}" class="btn-small">Deactivate</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Filter claim codes by badge
+     */
+    filterClaimCodesByBadge(badgeId) {
+        this.currentBadgeFilter = badgeId;
+        this.renderClaimCodesTable();
+    }
+
+    /**
+     * View claim code details
+     */
+    async viewClaimDetails(codeId) {
+        try {
+            const response = await AdminAPI.get(`${window.API_CONFIG.BASE_URL}/badges/claim-codes/${codeId}/claims`);
+
+            if (response.success && response.data) {
+                this.showClaimDetailsModal(response.data);
+            } else {
+                throw new Error(response.error || 'Failed to load claim details');
+            }
+        } catch (error) {
+            console.error('Error loading claim details:', error);
+            this.showErrorMessage('Error loading claim details: ' + error.message);
+        }
+    }
+
+    /**
+     * Show modal with claim details
+     */
+    showClaimDetailsModal(data) {
+        const modal = document.getElementById('claim-details-modal');
+        if (!modal) {
+            this.showErrorMessage('Claim details modal not found');
+            return;
+        }
+
+        const { code, claims } = data;
+
+        document.getElementById('claim-details-title').textContent = `Claim Code: ${code.code}`;
+
+        const content = document.getElementById('claim-details-content');
+        content.innerHTML = `
+            <div style="margin-bottom: 1.5rem;">
+                <h4>Code Information</h4>
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                    <p><strong>Badge:</strong> ${code.badge?.name || 'Unknown'}</p>
+                    <p><strong>Type:</strong> ${code.type}</p>
+                    <p><strong>Claims Used:</strong> ${formatClaimStats(code)}</p>
+                    <p><strong>Expires:</strong> ${formatExpiration(code.expiresAt)}</p>
+                    <p><strong>Status:</strong> ${isClaimCodeValid(code).reason}</p>
+                </div>
+            </div>
+            <div>
+                <h4>Claim History (${claims.length} claims)</h4>
+                ${claims.length === 0 ? '<p style="color: #666;">No claims yet</p>' : `
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                <th style="padding: 0.5rem; text-align: left;">User</th>
+                                <th style="padding: 0.5rem; text-align: left;">Claimed At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${claims.map(claim => `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 0.5rem;">${claim.user?.username || claim.user?.email || 'Unknown'}</td>
+                                    <td style="padding: 0.5rem;">${new Date(claim.claimedAt).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    /**
+     * Close claim details modal
+     */
+    closeClaimDetailsModal() {
+        const modal = document.getElementById('claim-details-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Deactivate claim code
+     */
+    async deactivateClaimCode(codeId) {
+        try {
+            if (!confirm('Deactivate this claim code? It will no longer be usable.')) {
+                return;
+            }
+
+            const response = await AdminAPI.delete(`${window.API_CONFIG.BASE_URL}/badges/claim-codes/${codeId}`);
+
+            if (response.success) {
+                this.showSuccessMessage('Claim code deactivated successfully');
+                await this.loadClaimCodes();
+            } else {
+                throw new Error(response.error || 'Failed to deactivate claim code');
+            }
+        } catch (error) {
+            console.error('Error deactivating claim code:', error);
+            this.showErrorMessage('Error deactivating claim code: ' + error.message);
+        }
+    }
+
+    // ========================================
+    // BULK AWARD MANAGEMENT
+    // ========================================
+
+    /**
+     * Show bulk award modal
+     */
+    showBulkAwardModal() {
+        try {
+            const modal = document.getElementById('bulk-award-modal');
+            if (!modal) {
+                this.showErrorMessage('Bulk award modal not found');
+                return;
+            }
+
+            // Populate badge dropdown
+            const badgeSelect = document.getElementById('bulk-award-badge-id');
+            badgeSelect.innerHTML = '<option value="">Select a badge...</option>' +
+                this.badgeData.map(badge => `
+                    <option value="${badge.id}">${badge.name}</option>
+                `).join('');
+
+            // Reset form
+            document.getElementById('email-list').value = '';
+            document.getElementById('bulk-award-reason').value = '';
+            document.getElementById('email-preview').innerHTML = '';
+            document.getElementById('bulk-award-btn').disabled = true;
+
+            modal.style.display = 'block';
+        } catch (error) {
+            console.error('Error showing bulk award modal:', error);
+            this.showErrorMessage('Error showing modal: ' + error.message);
+        }
+    }
+
+    /**
+     * Close bulk award modal
+     */
+    closeBulkAwardModal() {
+        const modal = document.getElementById('bulk-award-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Preview email list before bulk award
+     */
+    previewEmails() {
+        try {
+            const emailText = document.getElementById('email-list').value;
+            const result = parseEmailList(emailText);
+
+            const preview = document.getElementById('email-preview');
+            preview.innerHTML = `
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <h4 style="margin-top: 0;">Preview</h4>
+                    <p><strong>Valid emails found:</strong> ${result.emails.length}</p>
+                    ${result.duplicates > 0 ? `<p style="color: #f59e0b;"><strong>Duplicates removed:</strong> ${result.duplicates}</p>` : ''}
+                    ${result.invalid > 0 ? `<p style="color: #ef4444;"><strong>Invalid emails skipped:</strong> ${result.invalid}</p>` : ''}
+                    ${result.emails.length > 0 ? `
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; font-weight: bold;">View email list</summary>
+                            <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
+                                ${result.emails.map(email => `<div>${email}</div>`).join('')}
+                            </div>
+                        </details>
+                    ` : ''}
+                </div>
+            `;
+
+            // Enable award button if we have valid emails
+            document.getElementById('bulk-award-btn').disabled = result.emails.length === 0;
+
+            // Store parsed emails for later use
+            this.parsedEmails = result.emails;
+        } catch (error) {
+            console.error('Error previewing emails:', error);
+            this.showErrorMessage('Error parsing email list: ' + error.message);
+        }
+    }
+
+    /**
+     * Execute bulk badge award
+     */
+    async executeBulkAward() {
+        try {
+            const badgeId = document.getElementById('bulk-award-badge-id').value;
+            const reason = document.getElementById('bulk-award-reason').value || undefined;
+
+            if (!badgeId) {
+                this.showErrorMessage('Please select a badge');
+                return;
+            }
+
+            if (!this.parsedEmails || this.parsedEmails.length === 0) {
+                this.showErrorMessage('Please preview the email list first');
+                return;
+            }
+
+            if (!confirm(`Award badge to ${this.parsedEmails.length} users?`)) {
+                return;
+            }
+
+            this.showSuccessMessage('Processing bulk award...');
+
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/badges/award-bulk`, {
+                badgeId,
+                emails: this.parsedEmails,
+                reason
+            });
+
+            if (response.success && response.data) {
+                this.closeBulkAwardModal();
+                this.showBulkAwardResults(response.data);
+                await this.loadBadges();
+                await this.loadEngagementStatistics();
+            } else {
+                throw new Error(response.error || 'Failed to execute bulk award');
+            }
+        } catch (error) {
+            console.error('Error executing bulk award:', error);
+            this.showErrorMessage('Error executing bulk award: ' + error.message);
+        }
+    }
+
+    /**
+     * Show bulk award results modal
+     */
+    showBulkAwardResults(results) {
+        try {
+            const modal = document.getElementById('bulk-award-results-modal');
+            if (!modal) {
+                this.showErrorMessage('Results modal not found');
+                return;
+            }
+
+            const { awarded, failed, details } = results;
+
+            document.getElementById('bulk-award-results-title').textContent = 'Bulk Award Results';
+
+            const content = document.getElementById('bulk-award-results-content');
+            content.innerHTML = `
+                <div style="padding: 1rem;">
+                    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4 style="margin-top: 0;">Summary</h4>
+                        <p><strong style="color: #10b981;">Successfully Awarded:</strong> ${awarded}</p>
+                        <p><strong style="color: #ef4444;">Failed:</strong> ${failed}</p>
+                    </div>
+                    ${details && details.length > 0 ? `
+                        <h4>Detailed Results</h4>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                        <th style="padding: 0.5rem; text-align: left;">Email</th>
+                                        <th style="padding: 0.5rem; text-align: left;">Status</th>
+                                        <th style="padding: 0.5rem; text-align: left;">Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${details.map(detail => `
+                                        <tr style="border-bottom: 1px solid #eee;">
+                                            <td style="padding: 0.5rem;">${detail.email}</td>
+                                            <td style="padding: 0.5rem;">
+                                                <span style="color: ${detail.status === 'success' ? '#10b981' : '#ef4444'};">
+                                                    ${detail.status === 'success' ? '✓' : '✗'} ${detail.status}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 0.5rem; font-size: 0.9rem; color: #666;">
+                                                ${detail.error || detail.message || '-'}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        } catch (error) {
+            console.error('Error showing bulk award results:', error);
+            this.showErrorMessage('Error displaying results: ' + error.message);
+        }
+    }
+
+    /**
+     * Close bulk award results modal
+     */
+    closeBulkAwardResultsModal() {
+        const modal = document.getElementById('bulk-award-results-modal');
+        if (modal) {
+            modal.style.display = 'none';
         }
     }
 }

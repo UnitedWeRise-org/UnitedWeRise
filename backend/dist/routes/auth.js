@@ -60,9 +60,8 @@ const router = express_1.default.Router();
  * Debug logging helper - only logs in development/staging environments
  * Prevents verbose debugging logs in production
  */
-const isDevelopment = () => process.env.NODE_ENV === 'development' || process.env.STAGING_ENVIRONMENT === 'true';
 const debugLog = (...args) => {
-    if (isDevelopment()) {
+    if ((0, environment_1.isDevelopment)()) {
         console.log(...args);
     }
 };

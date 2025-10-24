@@ -284,6 +284,8 @@ model User {
   questStreak                 UserQuestStreak?
   /// Badges earned by this user (CASCADE: deletes badge awards)
   userBadges                  UserBadge[]
+  /// Badge claim codes redeemed by this user (CASCADE: deletes claims)
+  badgeClaims                 BadgeClaim[]
   /// Photos uploaded by this user (CASCADE: deletes photos and Azure blobs)
   photos                      Photo[]
   /// Posts saved by this user (CASCADE: deletes saved post records)
@@ -2889,6 +2891,8 @@ model Badge {
   // Relationships
   /// User badge awards for this badge (CASCADE: deletes awards if badge deleted)
   userBadges            UserBadge[]
+  /// Claim codes for this badge (CASCADE: deletes codes if badge deleted)
+  claimCodes            BadgeClaimCode[]
 
   @@index([isActive]) /// Show only active badges in gallery
   @@index([name]) /// Fast lookup by badge name
@@ -2925,6 +2929,72 @@ model UserBadge {
   @@index([userId]) /// Fast lookup of all badges earned by user
   @@index([badgeId]) /// Fast lookup of all users who earned a badge (admin analytics)
   @@index([isDisplayed]) /// Query displayed badges for profile rendering
+}
+
+/// Badge claim code for claimable badge distribution
+/// @description Supports both shared codes (one code, many users) and individual unique codes
+model BadgeClaimCode {
+  /// Unique claim code record identifier
+  id            String    @id @default(cuid())
+  /// Claim code string (e.g., "KICKSTARTER2025" or "XJ3K-9PL2-QW8R")
+  code          String    @unique
+  /// Badge ID this code awards
+  badgeId       String
+  /// Code type: SHARED (one code, multiple claims) or INDIVIDUAL (one-time use)
+  type          ClaimCodeType
+
+  /// Maximum number of claims allowed (null = unlimited, typically used with SHARED codes)
+  maxClaims     Int?
+  /// Optional expiration timestamp (null = never expires)
+  expiresAt     DateTime?
+
+  /// Number of times this code has been claimed
+  claimsUsed    Int       @default(0)
+  /// Whether code is currently active (false = deactivated by admin)
+  isActive      Boolean   @default(true)
+  /// Admin user ID who created this code
+  createdBy     String
+  /// Code creation timestamp
+  createdAt     DateTime  @default(now())
+
+  // Relationships
+  /// Badge awarded by this code (CASCADE: deletes codes if badge deleted)
+  badge         Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  /// Individual claims made with this code
+  claims        BadgeClaim[]
+
+  @@index([code]) /// Fast lookup by claim code
+  @@index([badgeId]) /// Admin analytics: all codes for a badge
+  @@index([isActive]) /// Query only active codes
+}
+
+/// Individual claim record when user redeems a badge code
+/// @description Tracks who claimed what code and when, prevents duplicate claims
+model BadgeClaim {
+  /// Unique claim record identifier
+  id          String    @id @default(cuid())
+  /// Claim code ID that was used
+  claimCodeId String
+  /// User ID who claimed the code
+  userId      String
+  /// Timestamp when code was claimed
+  claimedAt   DateTime  @default(now())
+
+  // Relationships
+  /// Claim code that was used (CASCADE: deletes claims if code deleted)
+  claimCode   BadgeClaimCode @relation(fields: [claimCodeId], references: [id], onDelete: Cascade)
+  /// User who claimed the code (CASCADE: deletes claim if user deleted)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([claimCodeId, userId]) /// User can't claim same code twice
+  @@index([userId]) /// Fast lookup of all codes claimed by user
+  @@index([claimCodeId]) /// Analytics: all claims for a code
+}
+
+/// Claim code type enum
+enum ClaimCodeType {
+  SHARED      /// One code, multiple users can claim (e.g., "CONVENTION2025" for all attendees)
+  INDIVIDUAL  /// Unique code, single-use only (e.g., individual backer codes)
 }
 
 enum QuestType {
