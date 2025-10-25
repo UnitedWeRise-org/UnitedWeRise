@@ -935,7 +935,7 @@ class UsersController {
             }
 
             const data = await response.json();
-            const activities = data.activities || [];
+            const activities = data.data?.activities || [];
 
             // Update pagination state
             this.hasMoreActivity = activities.length === this.activityLimit;
