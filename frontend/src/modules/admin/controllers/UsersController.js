@@ -13,6 +13,15 @@ class UsersController {
         this.currentUsers = [];
         this.searchQuery = '';
 
+        // Activity management state
+        this.activityOffset = 0;
+        this.activityLimit = 20;
+        this.hasMoreActivity = true;
+        this.loadingActivity = false;
+        this.selectedActivities = new Set();
+        this.activityScrollHandler = null;
+        this.currentUserId = null;
+
         // Bind methods to preserve context
         this.init = this.init.bind(this);
         this.loadData = this.loadData.bind(this);
@@ -23,6 +32,14 @@ class UsersController {
         this.displayUsersTable = this.displayUsersTable.bind(this);
         this.showUserProfile = this.showUserProfile.bind(this);
         this.closeUserProfile = this.closeUserProfile.bind(this);
+        this.loadUserActivity = this.loadUserActivity.bind(this);
+        this.renderActivityItem = this.renderActivityItem.bind(this);
+        this.setupActivityInfiniteScroll = this.setupActivityInfiniteScroll.bind(this);
+        this.toggleActivitySelection = this.toggleActivitySelection.bind(this);
+        this.updateBatchDeleteButton = this.updateBatchDeleteButton.bind(this);
+        this.deleteSelectedActivity = this.deleteSelectedActivity.bind(this);
+        this.getActivityLabel = this.getActivityLabel.bind(this);
+        this.formatTimeAgo = this.formatTimeAgo.bind(this);
     }
 
     /**
@@ -127,8 +144,10 @@ class UsersController {
         const targetUsername = actionElement.dataset.username;
         const targetRole = actionElement.dataset.role;
 
-        // Prevent default action
-        event.preventDefault();
+        // Prevent default action for buttons, but allow checkboxes to work
+        if (actionElement.tagName !== 'INPUT' || actionElement.type !== 'checkbox') {
+            event.preventDefault();
+        }
 
         // Stop propagation for nested actions
         if (action !== 'show-user-profile-row') {
@@ -184,6 +203,21 @@ class UsersController {
                     };
                     this.deleteUser(targetId, targetUsername, impact);
                 }
+                break;
+
+            case 'toggle-activity-selection':
+                // Handle activity checkbox selection
+                const activityId = actionElement.dataset.activityId;
+                const activityType = actionElement.dataset.activityType;
+                const activityTargetId = actionElement.dataset.targetId;
+                if (activityId) {
+                    this.toggleActivitySelection(activityId, activityType, activityTargetId);
+                }
+                break;
+
+            case 'delete-selected-activity':
+                // Handle batch delete button
+                this.deleteSelectedActivity();
                 break;
 
             default:
@@ -732,20 +766,28 @@ class UsersController {
                             </div>
                         ` : ''}
 
-                        <!-- Recent Activity -->
-                        ${activity.recentPosts && activity.recentPosts.length > 0 ? `
-                            <div style="margin-top: 2rem;">
-                                <h3 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem;">📝 Recent Posts</h3>
-                                <div style="max-height: 200px; overflow-y: auto;">
-                                    ${activity.recentPosts.map(post => `
-                                        <div style="border-left: 3px solid #3498db; padding: 0.75rem; margin-bottom: 1rem; background: #f8f9fa;">
-                                            <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</div>
-                                            <div style="font-size: 0.8rem; color: #7f8c8d;">${new Date(post.createdAt).toLocaleString()} • ${post.likesCount} likes • ${post.commentsCount} comments</div>
-                                        </div>
-                                    `).join('')}
+                        <!-- All Activity Log -->
+                        <div style="margin-top: 2rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem; flex: 1;">
+                                    📊 All Activity
+                                </h3>
+                                <button
+                                    id="batch-delete-activity-btn"
+                                    data-action="delete-selected-activity"
+                                    class="nav-button"
+                                    style="background: #e74c3c; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-left: 1rem;"
+                                    disabled>
+                                    🗑️ Delete Selected (<span id="selected-activity-count">0</span>)
+                                </button>
+                            </div>
+
+                            <div id="user-activity-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; background: white;">
+                                <div style="padding: 2rem; text-align: center; color: #666;">
+                                    Loading activity...
                                 </div>
                             </div>
-                        ` : ''}
+                        </div>
 
                         <!-- Moderation History -->
                         ${(moderation.warnings && moderation.warnings.length > 0) || (moderation.suspensions && moderation.suspensions.length > 0) ? `
@@ -829,6 +871,18 @@ class UsersController {
             modal.className = 'modal';
             document.body.appendChild(modal);
 
+            // Reset activity state for this user
+            this.activityOffset = 0;
+            this.hasMoreActivity = true;
+            this.selectedActivities.clear();
+            this.currentUserId = userId;
+
+            // Load initial activity
+            await this.loadUserActivity(userId, true);
+
+            // Setup infinite scroll
+            this.setupActivityInfiniteScroll(userId, modal);
+
         } catch (error) {
             console.error('Error viewing user:', error);
             await adminDebugError('UsersController', 'Failed to load user details', error);
@@ -842,8 +896,354 @@ class UsersController {
     closeUserProfile() {
         const modal = document.querySelector('.modal');
         if (modal) {
+            // Cleanup scroll listener
+            if (this.activityScrollHandler) {
+                const container = modal.querySelector('#user-activity-container');
+                if (container) {
+                    container.removeEventListener('scroll', this.activityScrollHandler);
+                }
+                this.activityScrollHandler = null;
+            }
             modal.remove();
         }
+    }
+
+    /**
+     * Load user activity with pagination
+     * @param {string} userId - User ID to load activity for
+     * @param {boolean} reset - Whether to reset pagination (start from beginning)
+     */
+    async loadUserActivity(userId, reset = false) {
+        if (this.loadingActivity || (!this.hasMoreActivity && !reset)) return;
+
+        try {
+            this.loadingActivity = true;
+
+            if (reset) {
+                this.activityOffset = 0;
+                this.hasMoreActivity = true;
+            }
+
+            // Fetch activity from API
+            const response = await window.AdminAPI.call(
+                `${window.AdminAPI.BACKEND_URL}/api/users/activity/${userId}?offset=${this.activityOffset}&limit=${this.activityLimit}`,
+                { method: 'GET' }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load user activity');
+            }
+
+            const data = await response.json();
+            const activities = data.activities || [];
+
+            // Update pagination state
+            this.hasMoreActivity = activities.length === this.activityLimit;
+            this.activityOffset += activities.length;
+
+            // Get container
+            const container = document.getElementById('user-activity-container');
+            if (!container) return;
+
+            // Clear container if reset
+            if (reset) {
+                container.innerHTML = '';
+            }
+
+            // Render activities
+            if (activities.length === 0 && reset) {
+                container.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #666;">
+                        No activity found for this user.
+                    </div>
+                `;
+                return;
+            }
+
+            // Append activity items
+            const fragment = document.createDocumentFragment();
+            activities.forEach(activity => {
+                const activityElement = this.renderActivityItem(activity);
+                fragment.appendChild(activityElement);
+            });
+            container.appendChild(fragment);
+
+            await adminDebugLog('UsersController', 'Activity loaded', {
+                userId,
+                count: activities.length,
+                offset: this.activityOffset,
+                hasMore: this.hasMoreActivity
+            });
+
+        } catch (error) {
+            console.error('Error loading user activity:', error);
+            await adminDebugError('UsersController', 'Failed to load activity', error);
+
+            const container = document.getElementById('user-activity-container');
+            if (container && this.activityOffset === 0) {
+                container.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #e74c3c;">
+                        Failed to load activity. Please try again.
+                    </div>
+                `;
+            }
+        } finally {
+            this.loadingActivity = false;
+        }
+    }
+
+    /**
+     * Render individual activity item with checkbox
+     * @param {Object} activity - Activity object from API
+     * @returns {HTMLElement} Activity item element
+     */
+    renderActivityItem(activity) {
+        const div = document.createElement('div');
+        div.style.cssText = 'border-bottom: 1px solid #e0e0e0; padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.75rem; transition: background 0.2s;';
+        div.dataset.activityId = activity.id;
+
+        // Add hover effect
+        div.addEventListener('mouseenter', () => {
+            div.style.background = '#f8f9fa';
+        });
+        div.addEventListener('mouseleave', () => {
+            div.style.background = 'white';
+        });
+
+        // Checkbox
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.cssText = 'margin-top: 0.25rem; cursor: pointer;';
+        checkbox.dataset.action = 'toggle-activity-selection';
+        checkbox.dataset.activityId = activity.id;
+        checkbox.dataset.activityType = activity.activityType;
+        checkbox.dataset.targetId = activity.targetId;
+        checkbox.checked = this.selectedActivities.has(activity.id);
+
+        // Content
+        const content = document.createElement('div');
+        content.style.cssText = 'flex: 1;';
+
+        const label = this.getActivityLabel(activity);
+        const timeAgo = this.formatTimeAgo(activity.createdAt);
+
+        content.innerHTML = `
+            <div style="font-size: 0.95rem; color: #2c3e50; margin-bottom: 0.25rem;">
+                <strong>${label.icon}</strong> ${label.text}
+            </div>
+            <div style="font-size: 0.8rem; color: #7f8c8d;">
+                ${timeAgo}
+            </div>
+        `;
+
+        div.appendChild(checkbox);
+        div.appendChild(content);
+
+        return div;
+    }
+
+    /**
+     * Setup infinite scroll for activity container
+     * @param {string} userId - User ID
+     * @param {HTMLElement} modalElement - Modal element containing the container
+     */
+    setupActivityInfiniteScroll(userId, modalElement) {
+        const container = modalElement.querySelector('#user-activity-container');
+        if (!container) return;
+
+        // Remove existing handler if any
+        if (this.activityScrollHandler) {
+            container.removeEventListener('scroll', this.activityScrollHandler);
+        }
+
+        // Create throttled scroll handler
+        let scrollTimeout;
+        this.activityScrollHandler = () => {
+            if (scrollTimeout) return;
+
+            scrollTimeout = setTimeout(() => {
+                scrollTimeout = null;
+
+                const { scrollTop, scrollHeight, clientHeight } = container;
+                const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+                // Load more when scrolled to 80%
+                if (scrollPercentage > 0.8 && this.hasMoreActivity && !this.loadingActivity) {
+                    this.loadUserActivity(userId, false);
+                }
+            }, 150);
+        };
+
+        container.addEventListener('scroll', this.activityScrollHandler);
+    }
+
+    /**
+     * Toggle activity selection
+     * @param {string} activityId - Activity ID
+     * @param {string} activityType - Activity type
+     * @param {string} targetId - Target ID
+     */
+    toggleActivitySelection(activityId, activityType, targetId) {
+        const key = activityId;
+
+        if (this.selectedActivities.has(key)) {
+            this.selectedActivities.delete(key);
+        } else {
+            this.selectedActivities.add(key);
+        }
+
+        this.updateBatchDeleteButton();
+    }
+
+    /**
+     * Update batch delete button state
+     */
+    updateBatchDeleteButton() {
+        const btn = document.getElementById('batch-delete-activity-btn');
+        const count = document.getElementById('selected-activity-count');
+
+        if (btn && count) {
+            const selectedCount = this.selectedActivities.size;
+            count.textContent = selectedCount;
+            btn.disabled = selectedCount === 0;
+
+            if (selectedCount > 0) {
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+    }
+
+    /**
+     * Delete selected activity with TOTP verification
+     */
+    async deleteSelectedActivity() {
+        if (this.selectedActivities.size === 0) {
+            alert('No activity selected.');
+            return;
+        }
+
+        try {
+            const selectedCount = this.selectedActivities.size;
+            const selectedArray = Array.from(this.selectedActivities);
+
+            // Show confirmation
+            if (!confirm(`⚠️ DELETE ACTIVITY\n\nYou are about to permanently delete ${selectedCount} activity item(s).\n\nThis will remove the actual content (posts, comments, etc.) from everywhere, not just the activity log.\n\nThis action requires TOTP verification. Continue?`)) {
+                return;
+            }
+
+            // Request TOTP confirmation
+            const { totpToken } = await requestTOTPConfirmation(
+                `Delete ${selectedCount} activity item(s)`,
+                { additionalInfo: `User: ${this.currentUserId}` }
+            );
+
+            // Get deletion reason
+            const reason = prompt('Enter reason for deletion (required, 10-500 characters):');
+            if (!reason || reason.trim().length < 10) {
+                alert('Deletion reason is required and must be at least 10 characters.');
+                return;
+            }
+
+            // Prepare request payload
+            const activities = selectedArray.map(activityId => {
+                // Find activity element to get metadata
+                const activityElement = document.querySelector(`[data-activity-id="${activityId}"]`);
+                const checkbox = activityElement?.querySelector('[data-action="toggle-activity-selection"]');
+
+                return {
+                    activityId,
+                    activityType: checkbox?.dataset.activityType,
+                    targetId: checkbox?.dataset.targetId
+                };
+            });
+
+            // Make API call
+            const response = await window.AdminAPI.call(
+                `${window.AdminAPI.BACKEND_URL}/api/admin/activity/batch-delete`,
+                {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        activities,
+                        totpToken,
+                        reason: reason.trim()
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete activity');
+            }
+
+            const data = await response.json();
+
+            alert(`✅ Successfully deleted ${data.deleted} activity item(s).\n\nAudit ID: ${data.auditId}\n\nSummary:\n${data.summary.map(s => `• ${s.activityType}: ${s.cascadeDeleted.join(', ')}`).join('\n')}`);
+
+            // Clear selection
+            this.selectedActivities.clear();
+            this.updateBatchDeleteButton();
+
+            // Reload activity
+            await this.loadUserActivity(this.currentUserId, true);
+
+            await adminDebugLog('UsersController', 'Activity batch deleted', {
+                userId: this.currentUserId,
+                deleted: data.deleted,
+                auditId: data.auditId
+            });
+
+        } catch (error) {
+            console.error('Error deleting activity:', error);
+            alert(`❌ Failed to delete activity: ${error.message}`);
+            await adminDebugError('UsersController', 'Activity deletion failed', error);
+        }
+    }
+
+    /**
+     * Get human-readable label for activity
+     * @param {Object} activity - Activity object
+     * @returns {Object} Label with icon and text
+     */
+    getActivityLabel(activity) {
+        const labels = {
+            POST_CREATED: { icon: '📝', text: 'Created a post' },
+            POST_EDITED: { icon: '✏️', text: 'Edited a post' },
+            POST_DELETED: { icon: '🗑️', text: 'Deleted a post' },
+            COMMENT_CREATED: { icon: '💬', text: 'Posted a comment' },
+            COMMENT_EDITED: { icon: '✏️', text: 'Edited a comment' },
+            COMMENT_DELETED: { icon: '🗑️', text: 'Deleted a comment' },
+            LIKE_ADDED: { icon: '❤️', text: 'Liked content' },
+            LIKE_REMOVED: { icon: '💔', text: 'Unliked content' },
+            FOLLOW_ADDED: { icon: '👥', text: 'Followed a user' },
+            FOLLOW_REMOVED: { icon: '👋', text: 'Unfollowed a user' },
+            PROFILE_UPDATED: { icon: '👤', text: 'Updated profile' },
+            ACHIEVEMENT_EARNED: { icon: '🏆', text: 'Earned an achievement' }
+        };
+
+        return labels[activity.activityType] || { icon: '📌', text: activity.activityType };
+    }
+
+    /**
+     * Format timestamp as human-readable "time ago"
+     * @param {string} dateString - ISO date string
+     * @returns {string} Formatted time ago string
+     */
+    formatTimeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+        if (seconds < 2592000) return `${Math.floor(seconds / 604800)} weeks ago`;
+
+        return date.toLocaleDateString();
     }
 
     /**

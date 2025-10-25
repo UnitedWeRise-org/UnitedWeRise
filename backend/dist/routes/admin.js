@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,6 +50,7 @@ const visitorAnalytics_1 = __importDefault(require("../services/visitorAnalytics
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
+const speakeasy = __importStar(require("speakeasy"));
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Admin-only middleware
@@ -3108,6 +3142,307 @@ router.get('/analytics/visitors/config', auth_1.requireStagingAuth, requireAdmin
     catch (error) {
         console.error('Visitor analytics config error:', error);
         res.status(500).json({ error: 'Failed to retrieve analytics configuration' });
+    }
+});
+/**
+ * @swagger
+ * /api/admin/activity/batch-delete:
+ *   delete:
+ *     tags: [Admin]
+ *     summary: Batch delete user activity and associated content (admin only)
+ *     description: Permanently delete multiple activity items and their associated content (posts, comments, etc.). Requires admin authentication and TOTP verification.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - activities
+ *               - totpToken
+ *               - reason
+ *             properties:
+ *               activities:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     activityType:
+ *                       type: string
+ *                       enum: [POST_CREATED, POST_EDITED, POST_DELETED, COMMENT_CREATED, COMMENT_EDITED, COMMENT_DELETED, LIKE_ADDED, FOLLOW_ADDED]
+ *                     targetId:
+ *                       type: string
+ *                 description: Array of activity items to delete
+ *                 example: [{"activityType": "POST_CREATED", "targetId": "post123"}, {"activityType": "COMMENT_CREATED", "targetId": "comment456"}]
+ *               totpToken:
+ *                 type: string
+ *                 description: TOTP token for verification
+ *                 example: "123456"
+ *               reason:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: Reason for deletion (10-500 characters)
+ *                 example: "Test data cleanup"
+ *     responses:
+ *       200:
+ *         description: Batch deletion completed (may include partial failures)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Batch deletion completed"
+ *                 deleted:
+ *                   type: number
+ *                   example: 5
+ *                 failed:
+ *                   type: number
+ *                   example: 1
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       activityType:
+ *                         type: string
+ *                       targetId:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [deleted, failed]
+ *                       cascadeDeleted:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       error:
+ *                         type: string
+ *       400:
+ *         description: Invalid request (missing fields, invalid TOTP, etc.)
+ *       401:
+ *         description: Unauthorized - user not authenticated
+ *       403:
+ *         description: Forbidden - user is not admin
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { activities, totpToken, reason } = req.body;
+        const adminUser = req.user;
+        // Validation
+        if (!activities || !Array.isArray(activities) || activities.length === 0) {
+            return res.status(400).json({ error: 'Activities array is required and must not be empty' });
+        }
+        if (!totpToken) {
+            return res.status(400).json({ error: 'TOTP token is required' });
+        }
+        if (!reason || reason.trim().length < 10 || reason.trim().length > 500) {
+            return res.status(400).json({ error: 'Deletion reason must be 10-500 characters' });
+        }
+        // Get user's TOTP secret from database
+        const userWithTOTP = await prisma_1.prisma.user.findUnique({
+            where: { id: adminUser.id },
+            select: { totpSecret: true, totpEnabled: true }
+        });
+        if (!userWithTOTP?.totpEnabled || !userWithTOTP?.totpSecret) {
+            console.warn(`[ADMIN] User ${adminUser.username} attempting batch activity delete without TOTP configured`);
+            return res.status(400).json({ error: 'TOTP not configured for this account' });
+        }
+        // Verify TOTP
+        const validTOTP = speakeasy.totp.verify({
+            secret: userWithTOTP.totpSecret,
+            encoding: 'base32',
+            token: totpToken,
+            window: 2
+        });
+        if (!validTOTP) {
+            console.log(`[ADMIN] Invalid TOTP for batch activity deletion by ${adminUser.username}`);
+            return res.status(400).json({ error: 'Invalid TOTP token' });
+        }
+        // Process batch deletion
+        const results = [];
+        let deletedCount = 0;
+        let failedCount = 0;
+        for (const activity of activities) {
+            const { activityType, targetId } = activity;
+            if (!activityType || !targetId) {
+                results.push({
+                    activityType: activityType || 'unknown',
+                    targetId: targetId || 'unknown',
+                    status: 'failed',
+                    error: 'Missing activityType or targetId'
+                });
+                failedCount++;
+                continue;
+            }
+            try {
+                const cascadeDeleted = [];
+                // Smart deletion based on activity type
+                switch (activityType) {
+                    case 'POST_CREATED':
+                        // Delete the actual post (will cascade to comments, reactions, etc.)
+                        const post = await prisma_1.prisma.post.findUnique({
+                            where: { id: targetId },
+                            select: { id: true, content: true, authorId: true, author: { select: { username: true } } }
+                        });
+                        if (post) {
+                            await prisma_1.prisma.post.delete({ where: { id: targetId } });
+                            cascadeDeleted.push('post', 'comments', 'reactions', 'notifications', 'activity_log');
+                            console.log(`[ADMIN] Post permanently deleted by admin:`, {
+                                adminId: adminUser.id,
+                                adminUsername: adminUser.username,
+                                postId: post.id,
+                                postAuthor: post.author.username,
+                                reason: reason.trim(),
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                        else {
+                            results.push({ activityType, targetId, status: 'failed', error: 'Post not found' });
+                            failedCount++;
+                            continue;
+                        }
+                        break;
+                    case 'COMMENT_CREATED':
+                        // Delete the actual comment (will cascade to reactions, etc.)
+                        const comment = await prisma_1.prisma.comment.findUnique({
+                            where: { id: targetId },
+                            select: { id: true, content: true, userId: true, user: { select: { username: true } } }
+                        });
+                        if (comment) {
+                            await prisma_1.prisma.comment.delete({ where: { id: targetId } });
+                            cascadeDeleted.push('comment', 'reactions', 'notifications', 'activity_log');
+                            console.log(`[ADMIN] Comment permanently deleted by admin:`, {
+                                adminId: adminUser.id,
+                                adminUsername: adminUser.username,
+                                commentId: comment.id,
+                                commentAuthor: comment.user.username,
+                                reason: reason.trim(),
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                        else {
+                            results.push({ activityType, targetId, status: 'failed', error: 'Comment not found' });
+                            failedCount++;
+                            continue;
+                        }
+                        break;
+                    case 'LIKE_ADDED':
+                        // Delete the reaction/like
+                        const reaction = await prisma_1.prisma.reaction.findUnique({
+                            where: { id: targetId }
+                        });
+                        if (reaction) {
+                            await prisma_1.prisma.reaction.delete({ where: { id: targetId } });
+                            cascadeDeleted.push('reaction', 'activity_log');
+                            console.log(`[ADMIN] Reaction permanently deleted by admin:`, {
+                                adminId: adminUser.id,
+                                adminUsername: adminUser.username,
+                                reactionId: targetId,
+                                reason: reason.trim(),
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                        else {
+                            results.push({ activityType, targetId, status: 'failed', error: 'Reaction not found' });
+                            failedCount++;
+                            continue;
+                        }
+                        break;
+                    case 'FOLLOW_ADDED':
+                        // Delete the follow relationship
+                        const follow = await prisma_1.prisma.follow.findUnique({
+                            where: { id: targetId }
+                        });
+                        if (follow) {
+                            await prisma_1.prisma.follow.delete({ where: { id: targetId } });
+                            cascadeDeleted.push('follow', 'activity_log');
+                            console.log(`[ADMIN] Follow relationship permanently deleted by admin:`, {
+                                adminId: adminUser.id,
+                                adminUsername: adminUser.username,
+                                followId: targetId,
+                                reason: reason.trim(),
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                        else {
+                            results.push({ activityType, targetId, status: 'failed', error: 'Follow not found' });
+                            failedCount++;
+                            continue;
+                        }
+                        break;
+                    case 'POST_EDITED':
+                    case 'POST_DELETED':
+                    case 'COMMENT_EDITED':
+                    case 'COMMENT_DELETED':
+                        // For edit/delete activity types, just remove the activity log entry
+                        const deletedActivity = await prisma_1.prisma.userActivity.deleteMany({
+                            where: {
+                                activityType: activityType,
+                                targetId: targetId
+                            }
+                        });
+                        if (deletedActivity.count > 0) {
+                            cascadeDeleted.push('activity_log');
+                            console.log(`[ADMIN] Activity log entry deleted:`, {
+                                adminId: adminUser.id,
+                                adminUsername: adminUser.username,
+                                activityType,
+                                targetId,
+                                reason: reason.trim(),
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                        else {
+                            results.push({ activityType, targetId, status: 'failed', error: 'Activity log entry not found' });
+                            failedCount++;
+                            continue;
+                        }
+                        break;
+                    default:
+                        results.push({ activityType, targetId, status: 'failed', error: `Unsupported activity type: ${activityType}` });
+                        failedCount++;
+                        continue;
+                }
+                results.push({ activityType, targetId, status: 'deleted', cascadeDeleted });
+                deletedCount++;
+            }
+            catch (activityError) {
+                console.error(`[ADMIN] Failed to delete activity ${activityType}:${targetId}:`, activityError);
+                results.push({
+                    activityType,
+                    targetId,
+                    status: 'failed',
+                    error: activityError instanceof Error ? activityError.message : 'Unknown error'
+                });
+                failedCount++;
+            }
+        }
+        // Log batch operation summary
+        console.log(`[ADMIN] Batch activity deletion completed:`, {
+            adminId: adminUser.id,
+            adminUsername: adminUser.username,
+            totalRequested: activities.length,
+            deleted: deletedCount,
+            failed: failedCount,
+            reason: reason.trim(),
+            timestamp: new Date().toISOString()
+        });
+        return res.status(200).json({
+            message: 'Batch deletion completed',
+            deleted: deletedCount,
+            failed: failedCount,
+            results
+        });
+    }
+    catch (error) {
+        console.error('Batch activity deletion error:', error);
+        res.status(500).json({ error: 'Failed to process batch activity deletion' });
     }
 });
 exports.default = router;

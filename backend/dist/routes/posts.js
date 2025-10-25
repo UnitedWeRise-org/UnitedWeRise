@@ -1913,6 +1913,114 @@ router.post('/:postId/comments/summarize', auth_1.requireAuth, async (req, res) 
         res.status(500).json({ error: 'Failed to summarize comments' });
     }
 });
+/**
+ * @swagger
+ * /api/posts/{postId}/comments/{commentId}/permanent:
+ *   delete:
+ *     tags: [Post]
+ *     summary: Permanently delete a comment (admin only)
+ *     description: Permanently removes a comment from the database. Unlike soft delete, this is irreversible. All related reactions and notifications are automatically cascade-deleted by Prisma. Admin-only endpoint.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID containing the comment
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comment ID to permanently delete
+ *     responses:
+ *       200:
+ *         description: Comment permanently deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Comment permanently deleted successfully
+ *                 deletedComment:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     content:
+ *                       type: string
+ *                     userId:
+ *                       type: string
+ *                     postId:
+ *                       type: string
+ *       400:
+ *         description: Validation error - comment does not belong to specified post
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - admin access required
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:postId/comments/:commentId/permanent', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
+    try {
+        const { postId, commentId } = req.params;
+        const userId = req.user.id;
+        // Verify comment exists and belongs to the specified post
+        const comment = await prisma_1.prisma.comment.findUnique({
+            where: { id: commentId },
+            select: {
+                id: true,
+                postId: true,
+                userId: true,
+                content: true,
+                parentId: true
+            }
+        });
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+        if (comment.postId !== postId) {
+            return res.status(400).json({
+                error: 'Comment does not belong to the specified post'
+            });
+        }
+        // Perform permanent deletion
+        // Note: Prisma CASCADE will automatically delete:
+        // - Related reactions (Reaction.commentId with onDelete: Cascade)
+        // - Child comments (Comment.parentId self-referential relation)
+        // - Related notifications (if commentId foreign key has CASCADE)
+        const deletedComment = await prisma_1.prisma.comment.delete({
+            where: { id: commentId }
+        });
+        console.log(`[ADMIN] Comment permanently deleted by ${req.user.username}:`, {
+            commentId,
+            postId,
+            originalAuthor: comment.userId,
+            adminUser: userId,
+            timestamp: new Date().toISOString()
+        });
+        res.json({
+            message: 'Comment permanently deleted successfully',
+            deletedComment: {
+                id: deletedComment.id,
+                content: deletedComment.content,
+                userId: deletedComment.userId,
+                postId: deletedComment.postId
+            }
+        });
+    }
+    catch (error) {
+        console.error('Permanent comment deletion error:', error);
+        res.status(500).json({ error: 'Failed to permanently delete comment' });
+    }
+});
 // ========================================
 // POST MANAGEMENT ENDPOINTS
 // ========================================
