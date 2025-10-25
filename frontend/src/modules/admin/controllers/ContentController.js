@@ -13,7 +13,6 @@ class ContentController {
         this.currentReports = [];
         this.currentFlags = [];
         this.activeTab = 'userReports';
-        this.selectedComments = new Set(); // Track selected comment IDs for batch deletion
 
         // Bind methods to preserve context
         this.init = this.init.bind(this);
@@ -28,10 +27,6 @@ class ContentController {
         this.showReportDetailsModal = this.showReportDetailsModal.bind(this);
         this.processReportAction = this.processReportAction.bind(this);
         this.resolveFlag = this.resolveFlag.bind(this);
-        this.toggleCommentSelection = this.toggleCommentSelection.bind(this);
-        this.toggleAllComments = this.toggleAllComments.bind(this);
-        this.deleteSelectedComments = this.deleteSelectedComments.bind(this);
-        this.updateBatchDeleteButton = this.updateBatchDeleteButton.bind(this);
     }
 
     /**
@@ -186,20 +181,6 @@ class ContentController {
                 }
                 break;
 
-            case 'toggle-comment-selection':
-                if (targetId) {
-                    this.toggleCommentSelection(targetId);
-                }
-                break;
-
-            case 'toggle-all-comments':
-                this.toggleAllComments();
-                break;
-
-            case 'delete-selected-comments':
-                this.deleteSelectedComments();
-                break;
-
             default:
                 console.warn('Unknown content action:', action);
         }
@@ -346,42 +327,10 @@ class ContentController {
                 return;
             }
 
-            // Check if there are any comment reports
-            const hasCommentReports = reports.some(r => r.targetType === 'COMMENT');
-
-            let html = '';
-
-            // Add batch delete button if there are comment reports
-            if (hasCommentReports) {
-                html += `
-                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
-                        <button
-                            id="batch-delete-comments-btn"
-                            data-action="delete-selected-comments"
-                            class="nav-button"
-                            style="background: #e74c3c; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; border: none;"
-                            disabled>
-                            🗑️ Delete Selected Comments
-                        </button>
-                        <span style="color: #666; font-size: 0.9rem;">
-                            <strong id="selected-comments-count">0</strong> comment(s) selected
-                        </span>
-                    </div>
-                `;
-            }
-
-            html += `
+            let html = `
                 <table class="data-table">
                     <thead>
                         <tr>
-                            ${hasCommentReports ? `<th style="width: 40px;">
-                                <input
-                                    type="checkbox"
-                                    id="select-all-comments"
-                                    data-action="toggle-all-comments"
-                                    title="Select all comments"
-                                    style="cursor: pointer;">
-                            </th>` : ''}
                             <th>Target</th>
                             <th>Reporter</th>
                             <th>Reason</th>
@@ -395,7 +344,7 @@ class ContentController {
             `;
 
             reports.forEach(report => {
-                html += this.renderUserReportRow(report, hasCommentReports);
+                html += this.renderUserReportRow(report);
             });
 
             html += '</tbody></table>';
@@ -410,7 +359,7 @@ class ContentController {
     /**
      * Render individual user report row
      */
-    renderUserReportRow(report, hasCommentReports = false) {
+    renderUserReportRow(report) {
         const priorityColors = {
             'URGENT': '#dc3545',
             'HIGH': '#fd7e14',
@@ -428,21 +377,8 @@ class ContentController {
             (report.targetContent.name || report.targetContent.username || report.targetContent.content?.substring(0, 50) || 'Content')
             : report.targetId;
 
-        const isComment = report.targetType === 'COMMENT';
-
         return `
             <tr>
-                ${hasCommentReports ? `<td style="text-align: center;">
-                    ${isComment ? `
-                        <input
-                            type="checkbox"
-                            data-action="toggle-comment-selection"
-                            data-target="${report.targetId}"
-                            data-comment-id="${report.targetId}"
-                            title="Select for deletion"
-                            style="cursor: pointer;">
-                    ` : ''}
-                </td>` : ''}
                 <td>
                     <strong>${report.targetType}</strong><br>
                     <small>${targetInfo}</small>
@@ -801,150 +737,6 @@ class ContentController {
 
         if (container) {
             container.innerHTML = `<div class="error">${message}</div>`;
-        }
-    }
-
-    /**
-     * Toggle comment selection for batch deletion
-     */
-    toggleCommentSelection(commentId) {
-        if (this.selectedComments.has(commentId)) {
-            this.selectedComments.delete(commentId);
-        } else {
-            this.selectedComments.add(commentId);
-        }
-
-        // Update checkbox visual state
-        const checkbox = document.querySelector(`[data-comment-id="${commentId}"]`);
-        if (checkbox) {
-            checkbox.checked = this.selectedComments.has(commentId);
-        }
-
-        // Update batch delete button state
-        this.updateBatchDeleteButton();
-    }
-
-    /**
-     * Toggle all comment checkboxes
-     */
-    toggleAllComments() {
-        const selectAllCheckbox = document.getElementById('select-all-comments');
-        const commentReports = this.currentReports.filter(r => r.targetType === 'COMMENT');
-
-        if (selectAllCheckbox?.checked) {
-            // Select all
-            commentReports.forEach(report => {
-                this.selectedComments.add(report.targetId);
-                const checkbox = document.querySelector(`[data-comment-id="${report.targetId}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-        } else {
-            // Deselect all
-            this.selectedComments.clear();
-            document.querySelectorAll('[data-comment-id]').forEach(checkbox => {
-                checkbox.checked = false;
-            });
-        }
-
-        this.updateBatchDeleteButton();
-    }
-
-    /**
-     * Update batch delete button state
-     */
-    updateBatchDeleteButton() {
-        const button = document.getElementById('batch-delete-comments-btn');
-        const counter = document.getElementById('selected-comments-count');
-
-        if (button) {
-            button.disabled = this.selectedComments.size === 0;
-        }
-
-        if (counter) {
-            counter.textContent = this.selectedComments.size;
-        }
-    }
-
-    /**
-     * Delete selected comments with TOTP confirmation
-     */
-    async deleteSelectedComments() {
-        try {
-            const commentIds = Array.from(this.selectedComments);
-
-            if (commentIds.length === 0) {
-                alert('Please select at least one comment to delete');
-                return;
-            }
-
-            // Confirmation
-            if (!confirm(`⚠️ PERMANENT DELETION\n\nDelete ${commentIds.length} comment(s) permanently?\n\nThis action cannot be undone and requires TOTP verification.`)) {
-                return;
-            }
-
-            // Request TOTP confirmation (using global function)
-            const { totpToken } = await requestTOTPConfirmation(
-                `Delete ${commentIds.length} comment(s) permanently`,
-                { additionalInfo: `${commentIds.length} comments will be permanently removed from the database` }
-            );
-
-            // Get deletion reason
-            const reason = prompt('Enter reason for deletion (required, 10-500 characters):');
-            if (!reason || reason.trim().length < 10) {
-                alert('Deletion reason is required and must be at least 10 characters.');
-                return;
-            }
-
-            if (reason.trim().length > 500) {
-                alert('Deletion reason must be no more than 500 characters.');
-                return;
-            }
-
-            // Perform batch deletion
-            const response = await window.AdminAPI.call(`${window.AdminAPI?.BACKEND_URL || '/api'}/api/admin/comments/batch-delete`, {
-                method: 'DELETE',
-                body: JSON.stringify({
-                    commentIds,
-                    totpToken,
-                    reason: reason.trim()
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-
-                const successMessage = `✅ Batch Deletion Complete!\n\nDeleted: ${data.deleted}\nFailed: ${data.failed}\n\nTotal requested: ${commentIds.length}`;
-
-                if (data.failed > 0) {
-                    const failedDetails = data.results
-                        .filter(r => r.status === 'failed')
-                        .map(r => `• ${r.id}: ${r.error}`)
-                        .join('\n');
-                    alert(`${successMessage}\n\nFailed deletions:\n${failedDetails}`);
-                } else {
-                    alert(successMessage);
-                }
-
-                // Clear selections
-                this.selectedComments.clear();
-
-                // Refresh reports
-                await this.loadUserReports();
-
-                await adminDebugLog('ContentController', 'Batch comment deletion completed', {
-                    deleted: data.deleted,
-                    failed: data.failed,
-                    total: commentIds.length
-                });
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete comments');
-            }
-
-        } catch (error) {
-            console.error('Error deleting selected comments:', error);
-            alert(`❌ Failed to delete comments: ${error.message}`);
-            await adminDebugError('ContentController', 'Batch comment deletion failed', error);
         }
     }
 
