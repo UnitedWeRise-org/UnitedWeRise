@@ -1010,10 +1010,10 @@ class UsersController {
             div.style.background = 'white';
         });
 
-        // Checkbox - with explicit sizing for visibility
+        // Checkbox - with explicit sizing and display for visibility
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.style.cssText = 'width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer; flex-shrink: 0;';
+        checkbox.style.cssText = 'display: inline-block; width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin-top: 0.25rem; cursor: pointer; flex-shrink: 0; opacity: 1; visibility: visible; appearance: auto; -webkit-appearance: checkbox; -moz-appearance: checkbox;';
         checkbox.dataset.action = 'toggle-activity-selection';
         checkbox.dataset.activityId = activity.id;
         checkbox.dataset.activityType = activity.activityType;
@@ -1194,7 +1194,13 @@ class UsersController {
 
             const data = await response.json();
 
-            alert(`✅ Successfully deleted ${data.deleted} activity item(s).\n\nAudit ID: ${data.auditId}\n\nSummary:\n${data.summary.map(s => `• ${s.activityType}: ${s.cascadeDeleted.join(', ')}`).join('\n')}`);
+            // Build summary message
+            let summaryText = '';
+            if (data.summary && Array.isArray(data.summary)) {
+                summaryText = '\n\nSummary:\n' + data.summary.map(s => `• ${s.activityType}: ${s.cascadeDeleted.join(', ')}`).join('\n');
+            }
+
+            alert(`✅ Successfully deleted ${data.deleted} activity item(s).\n\nAudit ID: ${data.auditId}${summaryText}`);
 
             // Clear selection
             this.selectedActivities.clear();
