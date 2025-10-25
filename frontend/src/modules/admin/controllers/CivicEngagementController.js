@@ -1017,16 +1017,16 @@ class CivicEngagementController {
             document.getElementById('user-search-results').innerHTML =
                 '<p style="color: #666; text-align: center; padding: 1rem;">Searching...</p>';
 
-            const response = await AdminAPI.get(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`);
+            const response = await AdminAPI.get(`/api/admin/users?search=${encodeURIComponent(searchTerm)}&limit=20`);
 
-            if (!response.success || !response.data || response.data.length === 0) {
+            if (!response.users || response.users.length === 0) {
                 document.getElementById('user-search-results').innerHTML =
                     '<p style="color: #666; text-align: center; padding: 1rem;">No users found</p>';
                 return;
             }
 
             // Render user results
-            const resultsHTML = response.data.map(user => `
+            const resultsHTML = response.users.map(user => `
                 <div class="user-search-result" data-user-id="${user.id}">
                     <div class="user-result-info">
                         <strong>${user.username}</strong>
@@ -1058,7 +1058,7 @@ class CivicEngagementController {
                 return;
             }
 
-            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/admin/badges/award`, {
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/badges/award`, {
                 badgeId: badgeId,
                 userId: userId
             });
@@ -1095,7 +1095,7 @@ class CivicEngagementController {
             // Show loading state
             this.showSuccessMessage('Running qualification checks... This may take a moment.');
 
-            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/admin/badges/run-qualifications`, {});
+            const response = await AdminAPI.post(`${window.API_CONFIG.BASE_URL}/badges/check-qualifications`, {});
 
             if (response.success) {
                 const results = response.data || {};
