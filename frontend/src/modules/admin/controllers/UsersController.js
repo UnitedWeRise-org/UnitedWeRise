@@ -1194,13 +1194,34 @@ class UsersController {
 
             const data = await response.json();
 
-            // Build summary message
+            // Build summary message from results
             let summaryText = '';
-            if (data.summary && Array.isArray(data.summary)) {
-                summaryText = '\n\nSummary:\n' + data.summary.map(s => `• ${s.activityType}: ${s.cascadeDeleted.join(', ')}`).join('\n');
+            if (data.results && Array.isArray(data.results)) {
+                const successfulDeletions = data.results.filter(r => r.status === 'deleted');
+                const failedDeletions = data.results.filter(r => r.status === 'failed');
+
+                if (successfulDeletions.length > 0) {
+                    summaryText += '\n\nSuccessfully deleted:\n' + successfulDeletions.map(s =>
+                        `• ${s.activityType}: ${s.cascadeDeleted?.join(', ') || 'activity log'}`
+                    ).join('\n');
+                }
+
+                if (failedDeletions.length > 0) {
+                    summaryText += '\n\nFailed to delete:\n' + failedDeletions.map(f =>
+                        `• ${f.activityType} (${f.targetId}): ${f.error}`
+                    ).join('\n');
+                }
             }
 
-            alert(`✅ Successfully deleted ${data.deleted} activity item(s).\n\nAudit ID: ${data.auditId}${summaryText}`);
+            const statusMessage = data.deleted > 0
+                ? `✅ Successfully deleted ${data.deleted} activity item(s).`
+                : `⚠️ No items were deleted.`;
+
+            if (data.failed > 0) {
+                alert(`${statusMessage}\n\n${data.failed} item(s) failed to delete.${summaryText}`);
+            } else {
+                alert(`${statusMessage}${summaryText}`)
+            }
 
             // Clear selection
             this.selectedActivities.clear();
