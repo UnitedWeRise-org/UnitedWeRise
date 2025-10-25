@@ -1010,10 +1010,10 @@ class UsersController {
             div.style.background = 'white';
         });
 
-        // Checkbox
+        // Checkbox - with explicit sizing for visibility
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.style.cssText = 'margin-top: 0.25rem; cursor: pointer;';
+        checkbox.style.cssText = 'width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer; flex-shrink: 0;';
         checkbox.dataset.action = 'toggle-activity-selection';
         checkbox.dataset.activityId = activity.id;
         checkbox.dataset.activityType = activity.activityType;
@@ -1022,16 +1022,29 @@ class UsersController {
 
         // Content
         const content = document.createElement('div');
-        content.style.cssText = 'flex: 1;';
+        content.style.cssText = 'flex: 1; min-width: 0;';
 
         const label = this.getActivityLabel(activity);
         const timeAgo = this.formatTimeAgo(activity.createdAt);
+
+        // Extract content preview from metadata
+        const metadata = activity.metadata || {};
+        let contentPreview = '';
+
+        if (metadata.contentPreview) {
+            contentPreview = `<div style="font-size: 0.85rem; color: #555; margin-top: 0.25rem; padding-left: 1.5rem; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">"${metadata.contentPreview}"</div>`;
+        } else if (metadata.postTitle) {
+            contentPreview = `<div style="font-size: 0.85rem; color: #555; margin-top: 0.25rem; padding-left: 1.5rem;">Post: "${metadata.postTitle}"</div>`;
+        } else if (metadata.targetUsername) {
+            contentPreview = `<div style="font-size: 0.85rem; color: #555; margin-top: 0.25rem; padding-left: 1.5rem;">@${metadata.targetUsername}</div>`;
+        }
 
         content.innerHTML = `
             <div style="font-size: 0.95rem; color: #2c3e50; margin-bottom: 0.25rem;">
                 <strong>${label.icon}</strong> ${label.text}
             </div>
-            <div style="font-size: 0.8rem; color: #7f8c8d;">
+            ${contentPreview}
+            <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 0.25rem;">
                 ${timeAgo}
             </div>
         `;
