@@ -998,27 +998,45 @@ class UsersController {
      * @returns {HTMLElement} Activity item element
      */
     renderActivityItem(activity) {
+        const isSelected = this.selectedActivities.has(activity.id);
+
         const div = document.createElement('div');
-        div.style.cssText = 'border-bottom: 1px solid #e0e0e0; padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.75rem; transition: background 0.2s;';
+        div.style.cssText = `border-bottom: 1px solid #e0e0e0; padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.75rem; transition: all 0.2s; ${isSelected ? 'background: #e3f2fd; border-left: 3px solid #2196f3;' : ''}`;
         div.dataset.activityId = activity.id;
 
         // Add hover effect
         div.addEventListener('mouseenter', () => {
-            div.style.background = '#f8f9fa';
+            if (!isSelected) {
+                div.style.background = '#f8f9fa';
+            }
         });
         div.addEventListener('mouseleave', () => {
-            div.style.background = 'white';
+            if (!isSelected) {
+                div.style.background = 'white';
+            }
         });
 
-        // Checkbox - with explicit sizing and display for visibility
+        // Selection indicator wrapper (visible checkbox alternative)
+        const selectorWrapper = document.createElement('div');
+        selectorWrapper.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer;';
+        selectorWrapper.dataset.action = 'toggle-activity-selection';
+        selectorWrapper.dataset.activityId = activity.id;
+        selectorWrapper.dataset.activityType = activity.activityType;
+        selectorWrapper.dataset.targetId = activity.targetId;
+
+        // Visual indicator box
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `width: 20px; height: 20px; border: 2px solid ${isSelected ? '#2196f3' : '#ccc'}; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: ${isSelected ? '#2196f3' : 'white'}; color: white; font-weight: bold; transition: all 0.2s;`;
+        indicator.textContent = isSelected ? '✓' : '';
+
+        selectorWrapper.appendChild(indicator);
+
+        // Hidden checkbox for form compatibility (but not relied upon for display)
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.style.cssText = 'display: inline-block; width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin-top: 0.25rem; cursor: pointer; flex-shrink: 0; opacity: 1; visibility: visible; appearance: auto; -webkit-appearance: checkbox; -moz-appearance: checkbox;';
-        checkbox.dataset.action = 'toggle-activity-selection';
-        checkbox.dataset.activityId = activity.id;
-        checkbox.dataset.activityType = activity.activityType;
-        checkbox.dataset.targetId = activity.targetId;
-        checkbox.checked = this.selectedActivities.has(activity.id);
+        checkbox.style.cssText = 'position: absolute; opacity: 0; pointer-events: none;';
+        checkbox.checked = isSelected;
+        selectorWrapper.appendChild(checkbox);
 
         // Content
         const content = document.createElement('div');
@@ -1049,7 +1067,7 @@ class UsersController {
             </div>
         `;
 
-        div.appendChild(checkbox);
+        div.appendChild(selectorWrapper);
         div.appendChild(content);
 
         return div;
@@ -1103,6 +1121,29 @@ class UsersController {
             this.selectedActivities.delete(key);
         } else {
             this.selectedActivities.add(key);
+        }
+
+        // Update visual state of the item
+        const activityElement = document.querySelector(`[data-activity-id="${activityId}"]`);
+        if (activityElement) {
+            const isSelected = this.selectedActivities.has(key);
+
+            // Update row background and border
+            if (isSelected) {
+                activityElement.style.background = '#e3f2fd';
+                activityElement.style.borderLeft = '3px solid #2196f3';
+            } else {
+                activityElement.style.background = 'white';
+                activityElement.style.borderLeft = '';
+            }
+
+            // Update checkbox indicator
+            const indicator = activityElement.querySelector('div[style*="border-radius: 3px"]');
+            if (indicator) {
+                indicator.style.border = `2px solid ${isSelected ? '#2196f3' : '#ccc'}`;
+                indicator.style.background = isSelected ? '#2196f3' : 'white';
+                indicator.textContent = isSelected ? '✓' : '';
+            }
         }
 
         this.updateBatchDeleteButton();
