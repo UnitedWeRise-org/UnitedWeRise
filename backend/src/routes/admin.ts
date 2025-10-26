@@ -3638,6 +3638,22 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
             });
 
             if (post) {
+              // Delete all activity records referencing this post
+              await prisma.userActivity.deleteMany({
+                where: {
+                  OR: [
+                    { targetType: 'post', targetId: targetId },
+                    {
+                      metadata: {
+                        path: ['postId'],
+                        equals: targetId
+                      }
+                    }
+                  ]
+                }
+              });
+
+              // Delete the post itself (cascades to comments, reactions, notifications)
               await prisma.post.delete({ where: { id: targetId } });
               cascadeDeleted.push('post', 'comments', 'reactions', 'notifications', 'activity_log');
 
@@ -3664,6 +3680,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
             });
 
             if (comment) {
+              // Delete all activity records referencing this comment
+              await prisma.userActivity.deleteMany({
+                where: {
+                  targetType: 'comment',
+                  targetId: targetId
+                }
+              });
+
+              // Delete the comment itself (cascades to reactions, notifications)
               await prisma.comment.delete({ where: { id: targetId } });
               cascadeDeleted.push('comment', 'reactions', 'notifications', 'activity_log');
 
@@ -3689,6 +3714,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
             });
 
             if (reaction) {
+              // Delete activity records for this reaction
+              await prisma.userActivity.deleteMany({
+                where: {
+                  targetType: 'reaction',
+                  targetId: targetId
+                }
+              });
+
+              // Delete the reaction itself
               await prisma.reaction.delete({ where: { id: targetId } });
               cascadeDeleted.push('reaction', 'activity_log');
 
@@ -3713,6 +3747,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
             });
 
             if (follow) {
+              // Delete activity records for this follow
+              await prisma.userActivity.deleteMany({
+                where: {
+                  targetType: 'user',
+                  targetId: targetId
+                }
+              });
+
+              // Delete the follow relationship itself
               await prisma.follow.delete({ where: { id: targetId } });
               cascadeDeleted.push('follow', 'activity_log');
 

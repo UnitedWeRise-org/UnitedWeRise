@@ -3291,6 +3291,21 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                             select: { id: true, content: true, authorId: true, author: { select: { username: true } } }
                         });
                         if (post) {
+                            // Delete all activity records referencing this post
+                            await prisma_1.prisma.userActivity.deleteMany({
+                                where: {
+                                    OR: [
+                                        { targetType: 'post', targetId: targetId },
+                                        {
+                                            metadata: {
+                                                path: ['postId'],
+                                                equals: targetId
+                                            }
+                                        }
+                                    ]
+                                }
+                            });
+                            // Delete the post itself (cascades to comments, reactions, notifications)
                             await prisma_1.prisma.post.delete({ where: { id: targetId } });
                             cascadeDeleted.push('post', 'comments', 'reactions', 'notifications', 'activity_log');
                             console.log(`[ADMIN] Post permanently deleted by admin:`, {
@@ -3315,6 +3330,14 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                             select: { id: true, content: true, userId: true, user: { select: { username: true } } }
                         });
                         if (comment) {
+                            // Delete all activity records referencing this comment
+                            await prisma_1.prisma.userActivity.deleteMany({
+                                where: {
+                                    targetType: 'comment',
+                                    targetId: targetId
+                                }
+                            });
+                            // Delete the comment itself (cascades to reactions, notifications)
                             await prisma_1.prisma.comment.delete({ where: { id: targetId } });
                             cascadeDeleted.push('comment', 'reactions', 'notifications', 'activity_log');
                             console.log(`[ADMIN] Comment permanently deleted by admin:`, {
@@ -3338,6 +3361,14 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                             where: { id: targetId }
                         });
                         if (reaction) {
+                            // Delete activity records for this reaction
+                            await prisma_1.prisma.userActivity.deleteMany({
+                                where: {
+                                    targetType: 'reaction',
+                                    targetId: targetId
+                                }
+                            });
+                            // Delete the reaction itself
                             await prisma_1.prisma.reaction.delete({ where: { id: targetId } });
                             cascadeDeleted.push('reaction', 'activity_log');
                             console.log(`[ADMIN] Reaction permanently deleted by admin:`, {
@@ -3360,6 +3391,14 @@ router.delete('/activity/batch-delete', auth_1.requireAuth, requireAdmin, async 
                             where: { id: targetId }
                         });
                         if (follow) {
+                            // Delete activity records for this follow
+                            await prisma_1.prisma.userActivity.deleteMany({
+                                where: {
+                                    targetType: 'user',
+                                    targetId: targetId
+                                }
+                            });
+                            // Delete the follow relationship itself
                             await prisma_1.prisma.follow.delete({ where: { id: targetId } });
                             cascadeDeleted.push('follow', 'activity_log');
                             console.log(`[ADMIN] Follow relationship permanently deleted by admin:`, {
