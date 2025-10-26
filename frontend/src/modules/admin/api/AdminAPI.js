@@ -73,8 +73,10 @@ class AdminAPI {
         Object.assign(headers, options.headers);
 
         // Add CSRF token for state-changing requests
-        if (window.csrfToken && options.method && options.method !== 'GET') {
-            headers['X-CSRF-Token'] = window.csrfToken;
+        // Fallback to reading from cookie if window.csrfToken not set
+        const csrfToken = window.csrfToken || getCookie('csrf-token');
+        if (csrfToken && options.method && options.method !== 'GET') {
+            headers['X-CSRF-Token'] = csrfToken;
         }
 
         // ========== 🔍 REQUEST LOGGING START ==========
@@ -714,6 +716,20 @@ class AdminAPI {
             };
         }
     }
+}
+
+/**
+ * Helper function to get cookie value by name
+ * @param {string} name - Cookie name
+ * @returns {string|null} Cookie value or null if not found
+ */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return null;
 }
 
 // Create singleton instance

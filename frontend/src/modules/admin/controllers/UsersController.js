@@ -150,8 +150,9 @@ class UsersController {
         }
 
         // Stop propagation for nested actions
+        // Use stopImmediatePropagation to prevent other controllers from seeing these events
         if (action !== 'show-user-profile-row') {
-            event.stopPropagation();
+            event.stopImmediatePropagation();
         }
 
         // Route to appropriate handler based on action
