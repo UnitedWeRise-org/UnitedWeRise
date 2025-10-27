@@ -100,7 +100,7 @@ class AdminAPI {
 
         // Highlight critical auth cookies
         const authToken = cookies['authToken'];
-        const csrfToken = cookies['csrf-token'];
+        // csrfToken already declared above at line 77
         const totpSessionToken = cookies['totpSessionToken'];
 
         console.group('🔑 Authentication Cookies:');
