@@ -16,6 +16,8 @@ import {
 
 class CivicEngagementController {
     constructor() {
+        this.sectionId = 'civic-engagement';
+        this.section = null;
         this.currentTab = 'quests';
         this.questData = [];
         this.badgeData = [];
@@ -30,6 +32,13 @@ class CivicEngagementController {
 
     async initializeCivicEngagement() {
         try {
+            // Cache the civic-engagement section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error('[CivicEngagementController] Section #civic-engagement not found - cannot initialize');
+                return;
+            }
+
             await this.loadEngagementStatistics();
             await this.loadQuests();
             await this.loadBadges();
@@ -655,8 +664,9 @@ class CivicEngagementController {
     }
 
     setupEventListeners() {
-        // Comprehensive event delegation for all data-action attributes
-        document.addEventListener('click', (e) => {
+        // Scoped event delegation for civic-engagement section only
+        // Prevents cross-controller interference by limiting scope to #civic-engagement
+        this.section.addEventListener('click', (e) => {
             const action = e.target.getAttribute('data-action');
             if (!action) return;
 
@@ -847,8 +857,8 @@ class CivicEngagementController {
             }
         });
 
-        // Event delegation for change events (select dropdowns)
-        document.addEventListener('change', (e) => {
+        // Scoped event delegation for change events (select dropdowns) within civic-engagement section
+        this.section.addEventListener('change', (e) => {
             const action = e.target.getAttribute('data-action');
             if (!action) return;
 

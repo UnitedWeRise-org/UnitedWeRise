@@ -49,6 +49,13 @@ class UsersController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the users section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error('[UsersController] Section #users not found - cannot initialize');
+                return;
+            }
+
             // Override AdminState display methods for users
             if (window.AdminState) {
                 window.AdminState.displayUsersData = this.displayUsersData.bind(this);
@@ -108,19 +115,22 @@ class UsersController {
 
     /**
      * Set up sophisticated event delegation for dynamic users content actions
+     * Uses scoped delegation to #users section to prevent cross-controller interference
      */
     setupUsersEventDelegation() {
-        // Remove any existing delegation listeners
-        document.removeEventListener('click', this.handleUsersActions);
+        // Remove any existing delegation listeners (cleanup on re-init)
+        if (this.section) {
+            this.section.removeEventListener('click', this.handleUsersActions);
+        }
 
         // Bind the handler to preserve context
         this.handleUsersActions = this.handleUsersActions.bind(this);
 
-        // Set up unified event delegation for all users actions
-        document.addEventListener('click', this.handleUsersActions);
+        // Set up scoped event delegation - listen only to #users section
+        this.section.addEventListener('click', this.handleUsersActions);
 
-        // Handle modal close events specifically
-        document.addEventListener('click', (event) => {
+        // Handle modal close events within users section
+        this.section.addEventListener('click', (event) => {
             const modalCloseBtn = event.target.closest('[data-action="close-modal"]');
             if (modalCloseBtn) {
                 event.preventDefault();
@@ -149,11 +159,8 @@ class UsersController {
             event.preventDefault();
         }
 
-        // Stop propagation for nested actions
-        // Use stopImmediatePropagation to prevent other controllers from seeing these events
-        if (action !== 'show-user-profile-row') {
-            event.stopImmediatePropagation();
-        }
+        // No propagation stopping needed - scoped delegation ensures
+        // other controllers never see events from #users section
 
         // Route to appropriate handler based on action
         switch (action) {
