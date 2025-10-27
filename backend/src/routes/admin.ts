@@ -3631,28 +3631,28 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
         // Smart deletion based on activity type
         switch (activityType) {
           case 'POST_CREATED':
-            // Delete the actual post (will cascade to comments, reactions, etc.)
+            // Idempotent deletion: Always delete activity records first
+            await prisma.userActivity.deleteMany({
+              where: {
+                OR: [
+                  { targetType: 'post', targetId: targetId },
+                  {
+                    metadata: {
+                      path: ['postId'],
+                      equals: targetId
+                    }
+                  }
+                ]
+              }
+            });
+
+            // Try to delete the actual post (will cascade to comments, reactions, etc.)
             const post = await prisma.post.findUnique({
               where: { id: targetId },
               select: { id: true, content: true, authorId: true, author: { select: { username: true } } }
             });
 
             if (post) {
-              // Delete all activity records referencing this post
-              await prisma.userActivity.deleteMany({
-                where: {
-                  OR: [
-                    { targetType: 'post', targetId: targetId },
-                    {
-                      metadata: {
-                        path: ['postId'],
-                        equals: targetId
-                      }
-                    }
-                  ]
-                }
-              });
-
               // Delete the post itself (cascades to comments, reactions, notifications)
               await prisma.post.delete({ where: { id: targetId } });
               cascadeDeleted.push('post', 'comments', 'reactions', 'notifications', 'activity_log');
@@ -3666,28 +3666,34 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
                 timestamp: new Date().toISOString()
               });
             } else {
-              results.push({ activityType, targetId, status: 'failed', error: 'Post not found' });
-              failedCount++;
-              continue;
+              // Post already deleted, but activity records cleaned up successfully
+              cascadeDeleted.push('activity_log');
+              console.log(`[ADMIN] Post already deleted, cleaned up orphaned activity records:`, {
+                adminId: adminUser.id,
+                adminUsername: adminUser.username,
+                postId: targetId,
+                reason: reason.trim(),
+                timestamp: new Date().toISOString()
+              });
             }
             break;
 
           case 'COMMENT_CREATED':
-            // Delete the actual comment (will cascade to reactions, etc.)
+            // Idempotent deletion: Always delete activity records first
+            await prisma.userActivity.deleteMany({
+              where: {
+                targetType: 'comment',
+                targetId: targetId
+              }
+            });
+
+            // Try to delete the actual comment (will cascade to reactions, etc.)
             const comment = await prisma.comment.findUnique({
               where: { id: targetId },
               select: { id: true, content: true, userId: true, user: { select: { username: true } } }
             });
 
             if (comment) {
-              // Delete all activity records referencing this comment
-              await prisma.userActivity.deleteMany({
-                where: {
-                  targetType: 'comment',
-                  targetId: targetId
-                }
-              });
-
               // Delete the comment itself (cascades to reactions, notifications)
               await prisma.comment.delete({ where: { id: targetId } });
               cascadeDeleted.push('comment', 'reactions', 'notifications', 'activity_log');
@@ -3701,27 +3707,33 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
                 timestamp: new Date().toISOString()
               });
             } else {
-              results.push({ activityType, targetId, status: 'failed', error: 'Comment not found' });
-              failedCount++;
-              continue;
+              // Comment already deleted, but activity records cleaned up successfully
+              cascadeDeleted.push('activity_log');
+              console.log(`[ADMIN] Comment already deleted, cleaned up orphaned activity records:`, {
+                adminId: adminUser.id,
+                adminUsername: adminUser.username,
+                commentId: targetId,
+                reason: reason.trim(),
+                timestamp: new Date().toISOString()
+              });
             }
             break;
 
           case 'LIKE_ADDED':
-            // Delete the reaction/like
+            // Idempotent deletion: Always delete activity records first
+            await prisma.userActivity.deleteMany({
+              where: {
+                targetType: 'reaction',
+                targetId: targetId
+              }
+            });
+
+            // Try to delete the reaction/like
             const reaction = await prisma.reaction.findUnique({
               where: { id: targetId }
             });
 
             if (reaction) {
-              // Delete activity records for this reaction
-              await prisma.userActivity.deleteMany({
-                where: {
-                  targetType: 'reaction',
-                  targetId: targetId
-                }
-              });
-
               // Delete the reaction itself
               await prisma.reaction.delete({ where: { id: targetId } });
               cascadeDeleted.push('reaction', 'activity_log');
@@ -3734,27 +3746,33 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
                 timestamp: new Date().toISOString()
               });
             } else {
-              results.push({ activityType, targetId, status: 'failed', error: 'Reaction not found' });
-              failedCount++;
-              continue;
+              // Reaction already deleted, but activity records cleaned up successfully
+              cascadeDeleted.push('activity_log');
+              console.log(`[ADMIN] Reaction already deleted, cleaned up orphaned activity records:`, {
+                adminId: adminUser.id,
+                adminUsername: adminUser.username,
+                reactionId: targetId,
+                reason: reason.trim(),
+                timestamp: new Date().toISOString()
+              });
             }
             break;
 
           case 'FOLLOW_ADDED':
-            // Delete the follow relationship
+            // Idempotent deletion: Always delete activity records first
+            await prisma.userActivity.deleteMany({
+              where: {
+                targetType: 'user',
+                targetId: targetId
+              }
+            });
+
+            // Try to delete the follow relationship
             const follow = await prisma.follow.findUnique({
               where: { id: targetId }
             });
 
             if (follow) {
-              // Delete activity records for this follow
-              await prisma.userActivity.deleteMany({
-                where: {
-                  targetType: 'user',
-                  targetId: targetId
-                }
-              });
-
               // Delete the follow relationship itself
               await prisma.follow.delete({ where: { id: targetId } });
               cascadeDeleted.push('follow', 'activity_log');
@@ -3767,9 +3785,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
                 timestamp: new Date().toISOString()
               });
             } else {
-              results.push({ activityType, targetId, status: 'failed', error: 'Follow not found' });
-              failedCount++;
-              continue;
+              // Follow already deleted, but activity records cleaned up successfully
+              cascadeDeleted.push('activity_log');
+              console.log(`[ADMIN] Follow already deleted, cleaned up orphaned activity records:`, {
+                adminId: adminUser.id,
+                adminUsername: adminUser.username,
+                followId: targetId,
+                reason: reason.trim(),
+                timestamp: new Date().toISOString()
+              });
             }
             break;
 
