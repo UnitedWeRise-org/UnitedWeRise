@@ -129,13 +129,19 @@ class AdminAPI {
         console.groupEnd();
         // ========== 🔍 REQUEST LOGGING END ==========
 
+        // Retry configuration for network errors
+        const maxNetworkRetries = 3;
+        const networkRetryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
+        let lastError = null;
+
         // Authentication handled by httpOnly cookies automatically
-        try {
-            const response = await fetch(url, {
-                ...options,
-                headers,
-                credentials: 'include' // Include cookies
-            });
+        for (let networkAttempt = 0; networkAttempt < maxNetworkRetries; networkAttempt++) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers,
+                    credentials: 'include' // Include cookies
+                });
 
             // ========== 🔍 RESPONSE LOGGING START ==========
             const responseTimestamp = new Date().toISOString();
@@ -285,31 +291,73 @@ class AdminAPI {
                 }
             }
 
-            // Log successful admin API calls for debugging
-            if (response.ok) {
-                await adminDebugLog('AdminAPI', `Successful API call: ${options.method || 'GET'} ${url}`, {
-                    status: response.status,
-                    url: url
+                // Log successful admin API calls for debugging
+                if (response.ok) {
+                    await adminDebugLog('AdminAPI', `Successful API call: ${options.method || 'GET'} ${url}`, {
+                        status: response.status,
+                        url: url
+                    });
+                    return response; // Success - exit retry loop
+                } else {
+                    await adminDebugWarn('AdminAPI', `API call failed: ${options.method || 'GET'} ${url}`, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: url
+                    });
+                }
+
+                // Check if we should retry based on status code
+                // Don't retry 4xx client errors (except 401 which is already handled above)
+                if (response.status >= 400 && response.status < 500) {
+                    return response; // Client error - don't retry
+                }
+
+                // Retry 5xx server errors
+                if (response.status >= 500) {
+                    lastError = new Error(`Server error: ${response.status} ${response.statusText}`);
+                    lastError.response = response;
+                    lastError.status = response.status;
+
+                    if (networkAttempt < maxNetworkRetries - 1) {
+                        console.warn(`⚠️ Server error ${response.status} - retrying (${networkAttempt + 1}/${maxNetworkRetries})...`);
+                        await new Promise(resolve => setTimeout(resolve, networkRetryDelays[networkAttempt]));
+                        continue; // Retry
+                    }
+                }
+
+                return response;
+
+            } catch (error) {
+                // Network error (ERR_INTERNET_DISCONNECTED, Failed to fetch, etc.)
+                lastError = error;
+
+                console.warn(`⚠️ Network error on attempt ${networkAttempt + 1}/${maxNetworkRetries}:`, error.message);
+
+                await adminDebugWarn('AdminAPI', `Network error (attempt ${networkAttempt + 1}/${maxNetworkRetries}): ${options.method || 'GET'} ${url}`, {
+                    error: error.message,
+                    attempt: networkAttempt + 1,
+                    maxRetries: maxNetworkRetries
                 });
-            } else {
-                await adminDebugWarn('AdminAPI', `API call failed: ${options.method || 'GET'} ${url}`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: url
-                });
+
+                // If this was the last attempt, exit loop and throw
+                if (networkAttempt >= maxNetworkRetries - 1) {
+                    break;
+                }
+
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, networkRetryDelays[networkAttempt]));
+                // Continue to next retry attempt
             }
-
-            return response;
-        } catch (error) {
-            console.error('Admin API call failed:', error);
-
-            await adminDebugError('AdminAPI', `Network error: ${options.method || 'GET'} ${url}`, {
-                error: error.message,
-                url: url
-            });
-
-            throw error;
         }
+
+        // All retries exhausted - throw the last error
+        console.error('❌ All retry attempts exhausted');
+        await adminDebugError('AdminAPI', `All retry attempts failed: ${options.method || 'GET'} ${url}`, {
+            error: lastError?.message || 'Unknown error',
+            url: url,
+            attempts: maxNetworkRetries
+        });
+        throw lastError;
     }
 
     /**

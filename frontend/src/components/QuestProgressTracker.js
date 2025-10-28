@@ -13,28 +13,82 @@ class QuestProgressTracker {
         this.isLoading = false;
         this.lastRefresh = null;
         this.refreshInterval = null;
+        this._isAuthenticated = false; // Cache auth state to avoid stale checks
 
         // Initialize on load
         this.init();
     }
 
     async init() {
-        // Only initialize if user is authenticated
-        if (!window.currentUser) {
-            console.log('QuestProgressTracker: Waiting for authentication...');
-            // Listen for auth and initialize when user logs in
+        // Subscribe to unified auth manager (gold standard pattern)
+        if (window.unifiedAuthManager?.subscribe) {
+            console.log('QuestProgressTracker: Subscribing to unified auth manager');
+            window.unifiedAuthManager.subscribe(async (authState) => {
+                const wasAuthenticated = this._isAuthenticated;
+                this._isAuthenticated = authState.isAuthenticated;
+
+                if (authState.isAuthenticated && authState.user) {
+                    // User just logged in or auth state refreshed
+                    if (!wasAuthenticated) {
+                        console.log('QuestProgressTracker: User authenticated, starting tracking');
+                        await this.startTracking();
+                    }
+                } else {
+                    // User logged out or auth lost
+                    if (wasAuthenticated) {
+                        console.log('QuestProgressTracker: User logged out, stopping tracking');
+                        this.stopTracking();
+                    }
+                }
+            });
+        } else {
+            // Fallback to userLoggedIn event (legacy pattern)
+            console.log('QuestProgressTracker: Using fallback userLoggedIn event');
             window.addEventListener('userLoggedIn', () => {
-                this.init();
-            }, { once: true });
-            return;
+                this._isAuthenticated = true;
+                this.startTracking();
+            });
+
+            // Also listen for logout
+            window.addEventListener('logout', () => {
+                this._isAuthenticated = false;
+                this.stopTracking();
+            });
         }
 
-        // Auto-load quest data on component initialization
+        // If already authenticated, start tracking immediately
+        if (window.currentUser) {
+            console.log('QuestProgressTracker: User already authenticated, starting tracking');
+            this._isAuthenticated = true;
+            await this.startTracking();
+        }
+    }
+
+    /**
+     * Start quest tracking - sets up interval and loads initial data
+     */
+    async startTracking() {
+        console.log('QuestProgressTracker: Starting quest tracking');
+
+        // Clear any existing interval first
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
+
+        // Load initial quest data
         await this.loadQuestData();
 
-        // Set up periodic refresh (every 5 minutes)
+        // Set up periodic refresh (every 5 minutes) with auth check
         this.refreshInterval = setInterval(() => {
-            this.loadQuestData();
+            // Re-check auth state on every interval to avoid stale state
+            if (this._isAuthenticated && window.currentUser) {
+                this.loadQuestData();
+            } else {
+                // Auth lost during interval - stop tracking
+                console.log('QuestProgressTracker: Auth lost during interval, stopping tracking');
+                this.stopTracking();
+            }
         }, 5 * 60 * 1000);
 
         // Listen for activity events to update progress
@@ -42,11 +96,34 @@ class QuestProgressTracker {
     }
 
     /**
+     * Stop quest tracking - clears interval and resets state
+     */
+    stopTracking() {
+        console.log('QuestProgressTracker: Stopping quest tracking');
+
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
+
+        this._isAuthenticated = false;
+        this.userQuests = [];
+        this.userStreaks = {};
+        this.lastRefresh = null;
+
+        // Clear the UI
+        const container = document.getElementById('questProgressTracker');
+        if (container) {
+            container.innerHTML = '';
+        }
+    }
+
+    /**
      * Load all quest data from API
      */
     async loadQuestData() {
-        // Check if user is still authenticated before making API calls
-        if (!window.currentUser) {
+        // Check cached auth state before making API calls
+        if (!this._isAuthenticated || !window.currentUser) {
             console.log('QuestProgressTracker: User not authenticated, skipping quest data load');
             return;
         }
@@ -75,8 +152,16 @@ class QuestProgressTracker {
 
         } catch (error) {
             console.error('Failed to load quest data:', error);
-            // Don't show error UI if user is no longer authenticated
-            if (window.currentUser) {
+
+            // Check if error is auth-related (401/403)
+            if (error.status === 401 || error.status === 403) {
+                console.log('QuestProgressTracker: Auth error detected, stopping tracking');
+                this.stopTracking();
+                return;
+            }
+
+            // Only show error UI if still authenticated (not network/auth issue)
+            if (this._isAuthenticated && window.currentUser) {
                 this.renderError('Failed to load quest progress');
             }
         } finally {
@@ -449,10 +534,10 @@ class QuestProgressTracker {
      * Cleanup when component is destroyed
      */
     destroy() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-        }
+        // Stop tracking (clears interval and resets state)
+        this.stopTracking();
 
+        // Remove event listeners
         document.removeEventListener('userActivity', this.handleUserActivity);
         document.removeEventListener('questCompleted', this.handleQuestCompletion);
     }

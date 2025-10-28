@@ -8,6 +8,29 @@
 
 ---
 
+## [Unreleased] - 2025-10-28
+
+### Fixed - Sleep/Wake Authentication & Network Handling
+- **Admin Dashboard Network Retry Logic**: Fixed error popups appearing after sleep/wake cycles
+  - Added automatic retry logic to `AdminAPI.call()` with exponential backoff (3 attempts: 1s, 2s, 4s)
+  - Detects and silently retries network errors (`ERR_INTERNET_DISCONNECTED`, `Failed to fetch`)
+  - Retries 5xx server errors but not 4xx client errors (preserves existing auth handling)
+  - Error popups only appear if network is down for >7 seconds (after all retries exhausted)
+  - Location: `frontend/src/modules/admin/api/AdminAPI.js`
+
+- **QuestProgressTracker Auth State Management**: Fixed "User not authenticated" messages after sleep/wake
+  - Subscribed to `unifiedAuthManager` for real-time auth state updates
+  - Added `startTracking()` / `stopTracking()` lifecycle methods for proper cleanup
+  - Cached auth state (`_isAuthenticated`) to avoid stale `window.currentUser` checks
+  - Interval now re-checks auth state on every tick to detect auth loss
+  - Handles 401/403 errors by automatically stopping tracking
+  - Falls back to legacy `userLoggedIn` event if unified manager unavailable
+  - Location: `frontend/src/components/QuestProgressTracker.js`
+
+**Impact**: Both admin and user-side applications now gracefully handle network disconnections during computer sleep/wake cycles without showing error popups or losing authentication state.
+
+---
+
 ## [Unreleased] - 2025-10-23
 
 ### Added - Badge System Documentation Enhancement
