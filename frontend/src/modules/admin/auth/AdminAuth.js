@@ -98,14 +98,9 @@ class AdminAuth {
         const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
         try {
-            // Verify authToken cookie exists before attempting refresh
-            const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('authToken='));
-            if (!hasCookie) {
-                console.error('🔒 No authToken cookie found - session expired');
-                this.logout();
-                this.isRefreshingToken = false;
-                return false;
-            }
+            // NOTE: Cannot check document.cookie for httpOnly cookies (security feature)
+            // The authToken cookie is httpOnly and sent automatically by the browser
+            // The refresh endpoint will return 401 if cookie is missing/invalid
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
@@ -364,11 +359,11 @@ class AdminAuth {
             this.refreshAllData();
         }, 300000);
 
-        // Set up token refresh every 14 minutes to prevent Azure 30-minute timeout
-        // Dual redundancy: refreshes at 14, 28, 42... minutes
+        // Set up token refresh every 4 minutes to prevent Azure Container Apps 5-minute idle timeout
+        // Refreshes at 4, 8, 12... minutes (before Azure scales down/times out)
         this.tokenRefreshInterval = setInterval(() => {
             this.refreshToken();
-        }, 14 * 60 * 1000); // 14 minutes in milliseconds
+        }, 4 * 60 * 1000); // 4 minutes in milliseconds
     }
 
     /**

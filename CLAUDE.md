@@ -864,6 +864,37 @@ curl -s "https://dev-api.unitedwerise.org/health"
 
 ---
 
+## 🔒 Investigation-Action-Verification Protocol
+
+**Never assume, always verify. Changes aren't done until tested.**
+
+### Investigation Phase
+
+Before any code changes:
+- Read actual implementation, never guess/assume
+- **Integrations** (API, auth, webhooks): Read BOTH sides of interface
+- **System features**: Read specs/docs before using
+- **Infrastructure**: Check limits/constraints before setting values
+
+### Verification Phase
+
+After code changes:
+1. `git diff` - verify changes saved to files
+2. Deploy to staging
+3. Test EXACT symptom user reported (not just "it compiles")
+4. Only claim "fixed" when symptom is GONE
+
+**If symptom persists → wrong diagnosis, return to Investigation**
+
+### Quick Reference - Common Gotchas
+
+- **API paths**: Check backend route registration in `backend/src/server.ts` before changing endpoint paths
+- **HttpOnly cookies**: Backend sets them, browser sends automatically. Never check `document.cookie` for auth tokens (security hides them from JS). Verify auth by calling `/auth/me`, not by checking cookies.
+- **Azure timeout**: Container Apps idle = 5 min (refresh intervals must be < 5 min)
+- **Auth verification**: Call `/auth/me` endpoint, don't check cookies directly
+
+---
+
 ## AI Documentation Reference Protocol
 
 **CRITICAL**: Before implementing features, Claude MUST read relevant documentation files.

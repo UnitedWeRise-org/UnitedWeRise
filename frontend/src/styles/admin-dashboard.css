@@ -4213,12 +4213,16 @@
         }
 
         .checkbox-label input[type="checkbox"] {
+            /* Use native checkbox with enhanced styling */
             margin-right: 0.75rem;
-            transform: scale(1.2);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 
-        .checkmark {
-            margin-left: 0.5rem;
+        .checkbox-label .checkmark {
+            /* Hide custom checkmark when using native checkbox */
+            display: none;
         }
 
         /* Filter controls */

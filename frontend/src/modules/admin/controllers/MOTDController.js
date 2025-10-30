@@ -420,7 +420,7 @@ class MOTDController {
      */
     async loadDataFallback() {
         try {
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/motd`, {
+            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/motd/admin/list`, {
                 method: 'GET'
             });
 
@@ -769,8 +769,8 @@ class MOTDController {
 
             const isUpdate = this.isEditing && formData.id;
             const url = isUpdate
-                ? `${window.AdminAPI.BACKEND_URL}/api/admin/motd/${formData.id}`
-                : `${window.AdminAPI.BACKEND_URL}/api/admin/motd`;
+                ? `${window.AdminAPI.BACKEND_URL}/api/motd/admin/update/${formData.id}`
+                : `${window.AdminAPI.BACKEND_URL}/api/motd/admin/create`;
 
             const method = isUpdate ? 'PUT' : 'POST';
 
@@ -870,7 +870,7 @@ class MOTDController {
                 return;
             }
 
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/motd/${scheduleData.motdId}/schedule`, {
+            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/motd/admin/update/${scheduleData.motdId}`, {
                 method: 'PUT',
                 body: JSON.stringify(scheduleData)
             });
@@ -934,7 +934,7 @@ class MOTDController {
                 return;
             }
 
-            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/admin/motd/${motdId}`, {
+            const response = await window.AdminAPI.call(`${window.AdminAPI.BACKEND_URL}/api/motd/admin/delete/${motdId}`, {
                 method: 'DELETE',
                 body: JSON.stringify({
                     totpToken,
@@ -1077,6 +1077,37 @@ class MOTDController {
 
                 // Add paste handling
                 contentArea.addEventListener('paste', this.handlePaste.bind(this));
+            }
+
+            // Initialize date pickers with flatpickr
+            if (typeof flatpickr !== 'undefined') {
+                // MOTD editor date pickers
+                flatpickr("#motdStartDate", {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true,
+                    defaultDate: new Date()
+                });
+
+                flatpickr("#motdEndDate", {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true
+                });
+
+                // Schedule modal date pickers
+                flatpickr("#scheduleStartDate", {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true,
+                    defaultDate: new Date()
+                });
+
+                flatpickr("#scheduleEndDate", {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true
+                });
             }
 
             await adminDebugLog('MOTDController', 'Rich text editor initialized');
