@@ -1372,8 +1372,8 @@ ${item.notes ? `Notes: ${item.notes}` : ''}
         }
 
         // Remove data-action event delegation
-        if (this.handleDataActionClick) {
-            document.removeEventListener('click', this.handleDataActionClick);
+        if (this.handleDataActionClick && this.section) {
+            this.section.removeEventListener('click', this.handleDataActionClick);
         }
 
         // Clear data

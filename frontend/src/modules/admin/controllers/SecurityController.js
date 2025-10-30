@@ -120,6 +120,7 @@ class SecurityController {
 
     /**
      * Set up enterprise-grade event delegation for security-critical actions
+     * Uses scoped event delegation to #security section
      */
     /**
      * Set up security event delegation
@@ -1012,8 +1013,8 @@ Request Headers: ${login.suspiciousHeaders ? 'Suspicious detected' : 'Normal'}
         }
 
         // Remove event delegation listeners
-        if (this.handleSecurityActions) {
-            document.removeEventListener('click', this.handleSecurityActions);
+        if (this.handleSecurityActions && this.section) {
+            this.section.removeEventListener('click', this.handleSecurityActions);
         }
 
         // Clear data

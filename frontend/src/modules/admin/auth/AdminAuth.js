@@ -98,6 +98,15 @@ class AdminAuth {
         const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
         try {
+            // Verify authToken cookie exists before attempting refresh
+            const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('authToken='));
+            if (!hasCookie) {
+                console.error('🔒 No authToken cookie found - session expired');
+                this.logout();
+                this.isRefreshingToken = false;
+                return false;
+            }
+
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
                     console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);

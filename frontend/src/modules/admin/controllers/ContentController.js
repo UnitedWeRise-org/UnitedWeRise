@@ -766,8 +766,8 @@ class ContentController {
         }
 
         // Remove event delegation listeners
-        if (this.handleContentActions) {
-            document.removeEventListener('click', this.handleContentActions);
+        if (this.handleContentActions && this.section) {
+            this.section.removeEventListener('click', this.handleContentActions);
         }
 
         // Clear data
