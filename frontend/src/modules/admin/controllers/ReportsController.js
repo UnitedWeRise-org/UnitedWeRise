@@ -9,6 +9,7 @@
 class ReportsController {
     constructor() {
         this.sectionId = 'reports';
+        this.section = null; // Cached section element for scoped event delegation
         this.isInitialized = false;
         this.currentReports = [];
         this.currentAnalytics = {};
@@ -42,6 +43,13 @@ class ReportsController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error(`[ReportsController] Section #${this.sectionId} not found - cannot initialize`);
+                return;
+            }
+
             // Override AdminState display methods for reports
             if (window.AdminState) {
                 window.AdminState.displayReportsData = this.displayReportsData.bind(this);
@@ -163,19 +171,19 @@ class ReportsController {
 
     /**
      * Set up comprehensive data-action event delegation system
-     * Professional architecture - centralized event handling
+     * Uses scoped event delegation to #reports section (follows commit a190b4d pattern)
      */
     async setupDataActionDelegation() {
         // Remove any existing delegation to prevent duplicates
-        document.removeEventListener('click', this.handleDataActionClick);
+        this.section.removeEventListener('click', this.handleDataActionClick);
 
         // Bind the handler to preserve context
         this.handleDataActionClick = this.handleDataActionClick.bind(this);
 
-        // Set up global delegation for all data-action elements
-        document.addEventListener('click', this.handleDataActionClick);
+        // Set up scoped event delegation - listen only to #reports section
+        this.section.addEventListener('click', this.handleDataActionClick);
 
-        await adminDebugLog('ReportsController', 'Data-action event delegation established successfully');
+        await adminDebugLog('ReportsController', 'Data-action event delegation established successfully (scoped to #reports)');
     }
 
     /**

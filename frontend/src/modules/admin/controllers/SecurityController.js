@@ -9,6 +9,7 @@
 class SecurityController {
     constructor() {
         this.sectionId = 'security';
+        this.section = null; // Cached section element for scoped event delegation
         this.isInitialized = false;
         this.currentFailedLogins = [];
         this.currentSuspiciousActivity = [];
@@ -33,6 +34,13 @@ class SecurityController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error(`[SecurityController] Section #${this.sectionId} not found - cannot initialize`);
+                return;
+            }
+
             // Override AdminState display methods for security
             if (window.AdminState) {
                 window.AdminState.displaySecurityData = this.displaySecurityData.bind(this);
@@ -113,15 +121,19 @@ class SecurityController {
     /**
      * Set up enterprise-grade event delegation for security-critical actions
      */
+    /**
+     * Set up security event delegation
+     * Uses scoped event delegation to #security section (follows commit a190b4d pattern)
+     */
     setupSecurityEventDelegation() {
         // Remove any existing delegation listeners
-        document.removeEventListener('click', this.handleSecurityActions);
+        this.section.removeEventListener('click', this.handleSecurityActions);
 
         // Bind the handler to preserve context
         this.handleSecurityActions = this.handleSecurityActions.bind(this);
 
-        // Set up unified event delegation for all security actions
-        document.addEventListener('click', this.handleSecurityActions);
+        // Set up scoped event delegation - listen only to #security section
+        this.section.addEventListener('click', this.handleSecurityActions);
     }
 
     /**

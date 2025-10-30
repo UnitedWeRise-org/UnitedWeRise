@@ -9,6 +9,7 @@
 class CandidatesController {
     constructor() {
         this.sectionId = 'candidates';
+        this.section = null; // Cached section element for scoped event delegation
         this.isInitialized = false;
         this.currentTab = 'registrations';
         this.currentCandidates = {
@@ -53,6 +54,13 @@ class CandidatesController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error(`[CandidatesController] Section #${this.sectionId} not found - cannot initialize`);
+                return;
+            }
+
             // Override AdminState display methods for candidates
             if (window.AdminState) {
                 window.AdminState.displayCandidatesData = this.displayCandidatesData.bind(this);
@@ -199,10 +207,11 @@ class CandidatesController {
 
     /**
      * Set up enterprise-grade event delegation for all candidate operations
+     * Uses scoped event delegation to #candidates section (follows commit a190b4d pattern)
      */
     async setupCandidateEventDelegation() {
-        // Delegate all candidate action events to document body
-        document.body.addEventListener('click', async (e) => {
+        // Scoped event delegation - listen only to #candidates section for candidate actions
+        this.section.addEventListener('click', async (e) => {
             const target = e.target;
             const action = target.dataset.candidateAction;
             const id = target.dataset.candidateId || target.dataset.itemId;
@@ -220,7 +229,7 @@ class CandidatesController {
             }
         });
 
-        // Delegate modal and document viewer events
+        // Keep global delegation for modal overlays (modals are appended to body, not section)
         document.body.addEventListener('click', async (e) => {
             const target = e.target;
 

@@ -9,6 +9,7 @@
 class MOTDController {
     constructor() {
         this.sectionId = 'motd';
+        this.section = null; // Cached section element for scoped event delegation
         this.isInitialized = false;
         this.currentMOTDs = [];
         this.templates = [];
@@ -52,6 +53,13 @@ class MOTDController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error(`[MOTDController] Section #${this.sectionId} not found - cannot initialize`);
+                return;
+            }
+
             // Override AdminState display methods for MOTD
             if (window.AdminState) {
                 window.AdminState.displayMOTDData = this.displayMOTDData.bind(this);
@@ -327,12 +335,12 @@ class MOTDController {
 
     /**
      * Setup comprehensive event delegation for dynamic MOTD buttons
-     * Follows same pattern as CivicEngagementController for consistency
+     * Uses scoped event delegation to #motd section (follows commit a190b4d pattern)
      */
     setupDynamicEventDelegation() {
         try {
-            // Comprehensive event delegation for all data-action attributes
-            document.addEventListener('click', (e) => {
+            // Scoped event delegation - listen only to #motd section
+            this.section.addEventListener('click', (e) => {
                 const action = e.target.getAttribute('data-action');
                 if (!action) return;
 
@@ -980,6 +988,11 @@ class MOTDController {
             document.getElementById('motdTargetAudience').value = motd.targetAudience || 'all';
             document.getElementById('motdStartDate').value = this.formatDateForInput(motd.startDate);
             document.getElementById('motdEndDate').value = this.formatDateForInput(motd.endDate);
+
+            // Set checkbox states
+            document.getElementById('motdIsActive').checked = motd.isActive !== false; // default true
+            document.getElementById('motdIsDismissible').checked = motd.isDismissible !== false; // default true
+            document.getElementById('motdShowOnce').checked = motd.showOnce || false; // default false
 
             // Store the ID for updating
             document.getElementById('motdEditor').dataset.motdId = motdId;

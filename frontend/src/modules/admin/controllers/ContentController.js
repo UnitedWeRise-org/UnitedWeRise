@@ -9,6 +9,7 @@
 class ContentController {
     constructor() {
         this.sectionId = 'content';
+        this.section = null; // Cached section element for scoped event delegation
         this.isInitialized = false;
         this.currentReports = [];
         this.currentFlags = [];
@@ -36,6 +37,13 @@ class ContentController {
         if (this.isInitialized) return;
 
         try {
+            // Cache the section element for scoped event delegation
+            this.section = document.getElementById(this.sectionId);
+            if (!this.section) {
+                console.error(`[ContentController] Section #${this.sectionId} not found - cannot initialize`);
+                return;
+            }
+
             // Override AdminState display methods for content
             if (window.AdminState) {
                 window.AdminState.displayContentData = this.displayContentData.bind(this);
@@ -118,18 +126,19 @@ class ContentController {
 
     /**
      * Set up sophisticated event delegation for dynamic content actions
+     * Uses scoped event delegation to #content section (follows commit a190b4d pattern)
      */
     setupContentEventDelegation() {
         // Remove any existing delegation listeners
-        document.removeEventListener('click', this.handleContentActions);
+        this.section.removeEventListener('click', this.handleContentActions);
 
         // Bind the handler to preserve context
         this.handleContentActions = this.handleContentActions.bind(this);
 
-        // Set up unified event delegation for all content actions
-        document.addEventListener('click', this.handleContentActions);
+        // Set up scoped event delegation - listen only to #content section
+        this.section.addEventListener('click', this.handleContentActions);
 
-        // Handle modal close events specifically
+        // Handle modal close events - keep global for modal overlays
         document.addEventListener('click', (event) => {
             const modalCloseBtn = event.target.closest('[data-action="close-modal"]');
             if (modalCloseBtn) {
