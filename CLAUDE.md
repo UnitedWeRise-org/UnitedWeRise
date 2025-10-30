@@ -40,6 +40,9 @@ If backend health endpoint or any monitoring shows a mismatch (e.g., staging sho
 ### Admin Debugging
 Use admin debug functions only: `adminDebugLog()`, `adminDebugError()`, `adminDebugWarn()`, `adminDebugTable()`, `adminDebugSensitive()`
 
+### Branch Selection Protocol
+If on `main` for hotfixes or at user direction, stay on main. Otherwise prompt to switch to `development`.
+
 ### 🔒 Database Migration Safety (ZERO TOLERANCE)
 
 **CRITICAL:** See `docs/DEPLOYMENT-MIGRATION-POLICY.md` for complete policy.
