@@ -1,10 +1,74 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: October 22, 2025
+**Last Updated**: October 31, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [Unreleased] - 2025-10-31
+
+### Fixed - Admin Dashboard MOTD System Integration
+- **Complete MOTD Admin Dashboard Backend Integration**
+  - **Database Schema**: Added missing fields to MessageOfTheDay model
+    - `priority` enum (LOW, MEDIUM, HIGH) with default MEDIUM - Controls display prominence
+    - `targetAudience` enum (ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES) with default ALL - Target specific user groups
+    - `isDismissible` boolean with default true - Control whether users can dismiss
+    - `showOnce` boolean with default false - Show only once per user
+  - Created Prisma migration: `add_motd_advanced_fields`
+  - Location: `backend/prisma/schema.prisma` (lines 2056-2073)
+
+- **Backend Security & Functionality Fixes**
+  - **CRITICAL SECURITY FIX**: Changed admin endpoint authentication from `requireStagingAuth` to `requireAuth, requireAdmin`
+    - Previous: `requireStagingAuth, requireAdmin` - Allowed non-admin access in production (security vulnerability)
+    - Fixed: `requireAuth, requireAdmin` - Admin-only access in ALL environments (production, staging, dev)
+    - Affected endpoints: `/admin/list`, `/admin/create`, `/admin/update/:id`, `/admin/toggle/:id`, `/admin/delete/:id`, `/admin/analytics/:id`
+  - **DELETE Endpoint Enhancement**: Now requires TOTP verification and audit logging
+    - Validates TOTP token using speakeasy library
+    - Requires deletion reason (10-500 chars)
+    - Creates comprehensive audit log BEFORE deletion (prevents cascade loss)
+    - Returns `auditId` in response for frontend tracking
+    - Logs: title, view count, dismissal count, active state, and deletion reason
+  - Location: `backend/src/routes/motd.ts`
+
+- **Backend API Enhancements**
+  - **Comprehensive Swagger Documentation**: Added 100% documentation coverage (previously 0%)
+    - All 8 endpoints now have complete Swagger/JSDoc documentation
+    - Request/response schemas with examples
+    - Authentication requirements clearly documented
+    - Error response documentation
+  - **Input Validation**: Added validation to all endpoints
+    - Title: 3-100 characters (optional)
+    - Content: 10-2000 characters (required, HTML allowed)
+    - Date validation: endDate must be >= startDate
+    - Enum validation: priority and targetAudience values
+    - Validates MOTD existence before dismiss operation
+  - **CREATE/UPDATE Endpoints**: Now accept and save all new fields
+    - priority, targetAudience, isDismissible, showOnce fully supported
+    - Change tracking in MOTDLog includes all new fields
+    - Proper defaults applied (MEDIUM priority, ALL audience, etc.)
+
+- **Documentation Updates**
+  - Added comprehensive MOTD System section to `docs/DATABASE_SCHEMA.md`
+    - Complete Prisma schema definitions for all 4 MOTD models
+    - Enum definitions (MOTDPriority, MOTDTargetAudience)
+    - System features overview (admin dashboard, backend API, user display)
+    - Security features documentation
+    - Implementation timeline (October 31, 2025 additions)
+  - Location: `docs/DATABASE_SCHEMA.md` (lines 1907-2059)
+
+**Impact**: Admin dashboard MOTD module now fully functional with complete database integration. Admins can:
+- Create MOTDs with priority levels (high priority announcements vs. low priority tips)
+- Target specific user groups (new users, candidates, admins, etc.)
+- Control dismissal behavior (force-display critical announcements)
+- Control display frequency (show-once for one-time announcements)
+- View real-time analytics (views, dismissals, engagement rates)
+- All actions logged with comprehensive audit trails
+- TOTP-protected deletion prevents accidental/unauthorized removals
+
+**Security**: Fixed critical authentication bug that could have allowed non-admin users to manage MOTDs in production.
 
 ---
 

@@ -1904,6 +1904,161 @@ echo $DATABASE_URL | grep -o '@[^.]*'
 
 ---
 
+## Message of the Day (MOTD) System
+
+### MessageOfTheDay Model
+
+Platform-wide announcements and notifications managed by administrators.
+
+```prisma
+model MessageOfTheDay {
+  id             String              @id @default(cuid())
+  title          String?             // Optional title (3-100 chars)
+  content        String              // Required HTML/text content (10-2000 chars)
+  isActive       Boolean             @default(false)
+  priority       MOTDPriority        @default(MEDIUM)  // Display prominence
+  targetAudience MOTDTargetAudience  @default(ALL)     // Target user group
+  isDismissible  Boolean             @default(true)    // Can users dismiss?
+  showOnce       Boolean             @default(false)   // Show only once per user?
+  startDate      DateTime?           // When to start displaying (null = immediately)
+  endDate        DateTime?           // When to stop displaying (null = no end)
+  showToNewUsers Boolean             @default(true)    // Show to newly registered users
+  createdById    String              // Admin who created this MOTD
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  dismissals     MOTDDismissal[]     // Users who dismissed this MOTD
+  views          MOTDView[]          // View analytics
+  createdBy      User                @relation("CreatedMOTDs", fields: [createdById], references: [id])
+
+  @@index([isActive, startDate, endDate])  // Optimizes active MOTD queries
+  @@index([createdAt])                      // Optimizes ordering
+}
+
+enum MOTDPriority {
+  LOW      // Low priority - standard display
+  MEDIUM   // Medium priority - normal emphasis
+  HIGH     // High priority - prominent display
+}
+
+enum MOTDTargetAudience {
+  ALL          // All users
+  NEW          // Newly registered users
+  ACTIVE       // Active users
+  INACTIVE     // Inactive users
+  ADMINS       // Admin users only
+  MODERATORS   // Moderators only
+  CANDIDATES   // Political candidates
+}
+```
+
+### MOTDDismissal Model
+
+Tracks which users have dismissed which MOTDs to prevent re-showing.
+
+```prisma
+model MOTDDismissal {
+  id             String          @id @default(cuid())
+  motdId         String          // MOTD that was dismissed
+  userId         String?         // User who dismissed (null for anonymous)
+  dismissalToken String?         // Anonymous token for non-logged-in users
+  dismissedAt    DateTime        @default(now())
+
+  motd           MessageOfTheDay @relation(fields: [motdId], references: [id], onDelete: Cascade)
+  user           User?           @relation("DismissedMOTDs", fields: [userId], references: [id])
+
+  @@unique([motdId, userId])          // One dismissal per user per MOTD
+  @@unique([motdId, dismissalToken])  // One dismissal per token per MOTD
+  @@index([userId])
+  @@index([dismissalToken])
+}
+```
+
+### MOTDView Model
+
+Analytics tracking for MOTD views.
+
+```prisma
+model MOTDView {
+  id        String          @id @default(cuid())
+  motdId    String
+  userId    String?         // User who viewed (null for anonymous)
+  viewedAt  DateTime        @default(now())
+  ipAddress String?         // IP address for analytics
+  userAgent String?         // Browser/device info
+
+  motd      MessageOfTheDay @relation(fields: [motdId], references: [id], onDelete: Cascade)
+  user      User?           @relation("ViewedMOTDs", fields: [userId], references: [id])
+
+  @@index([motdId, viewedAt])  // Get views of specific MOTD by time
+  @@index([userId, viewedAt])  // Get all views by user by time
+}
+```
+
+### MOTDLog Model
+
+Audit trail of all administrative actions on MOTDs.
+
+```prisma
+model MOTDLog {
+  id            String   @id @default(cuid())
+  motdId        String   // MOTD affected by this action
+  action        String   // 'created', 'updated', 'activated', 'deactivated', 'deleted'
+  changes       Json?    // Structured object of what changed
+  performedById String   // Admin who performed the action
+  performedAt   DateTime @default(now())
+  notes         String?  // Human-readable notes about the action
+
+  performedBy   User     @relation("MOTDActions", fields: [performedById], references: [id])
+
+  @@index([motdId, performedAt])   // Get action history for an MOTD
+  @@index([performedById])          // Get all actions by an admin user
+}
+```
+
+### MOTD System Features
+
+**Admin Dashboard** (`frontend/src/modules/admin/controllers/MOTDController.js`):
+- Create/edit/delete MOTDs with rich text editor
+- Schedule MOTDs with start/end dates
+- Set priority levels and target audiences
+- View analytics (views, dismissals, engagement rates)
+- Audit trail of all changes
+- TOTP-protected deletion
+
+**Backend API** (`backend/src/routes/motd.ts`):
+- Public endpoints: `/api/motd/current`, `/api/motd/dismiss/:id`
+- Admin endpoints: `/admin/list`, `/admin/create`, `/admin/update/:id`, `/admin/toggle/:id`, `/admin/delete/:id`, `/admin/analytics/:id`
+- Comprehensive Swagger documentation
+- Input validation (title/content length, dates, enums)
+- TOTP verification for deletions
+
+**User Display** (`frontend/src/handlers/content-handlers.js`):
+- Automatic display on page load
+- Respects dismissals via localStorage and database
+- HTML content support with XSS protection
+- Slide-in/out animations
+- Analytics tracking
+
+**Security Features**:
+- TOTP verification required for MOTD deletion
+- Comprehensive audit logging (MOTDLog)
+- Admin-only access to management endpoints
+- Deletion reason required (10-500 chars)
+- Content sanitization for XSS prevention
+
+**Added October 31, 2025**:
+- Added `priority` field (enum: LOW, MEDIUM, HIGH)
+- Added `targetAudience` field (enum: ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES)
+- Added `isDismissible` field (boolean, default true)
+- Added `showOnce` field (boolean, default false)
+- Fixed authentication middleware (security bug)
+- Added TOTP verification to DELETE endpoint
+- Added comprehensive Swagger/JSDoc documentation
+- Added input validation to all endpoints
+
+---
+
 ## Conclusion
 
 This database schema supports a comprehensive civic engagement platform with:
