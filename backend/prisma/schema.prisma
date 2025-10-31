@@ -2053,20 +2053,43 @@ model PolicyComparison {
   @@index([similarityScore])
 }
 
+/// MOTD Priority levels for display prominence
+enum MOTDPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// Target audience for MOTD display
+enum MOTDTargetAudience {
+  ALL
+  NEW
+  ACTIVE
+  INACTIVE
+  ADMINS
+  MODERATORS
+  CANDIDATES
+}
+
+/// Message of the Day model for platform-wide announcements
 model MessageOfTheDay {
-  id             String          @id @default(cuid())
+  id             String              @id @default(cuid())
   title          String?
   content        String
-  isActive       Boolean         @default(false)
+  isActive       Boolean             @default(false)
+  priority       MOTDPriority        @default(MEDIUM)
+  targetAudience MOTDTargetAudience  @default(ALL)
+  isDismissible  Boolean             @default(true)
+  showOnce       Boolean             @default(false)
   startDate      DateTime?
   endDate        DateTime?
-  showToNewUsers Boolean         @default(true)
+  showToNewUsers Boolean             @default(true)
   createdById    String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   dismissals     MOTDDismissal[]
   views          MOTDView[]
-  createdBy      User            @relation("CreatedMOTDs", fields: [createdById], references: [id])
+  createdBy      User                @relation("CreatedMOTDs", fields: [createdById], references: [id])
 
   @@index([isActive, startDate, endDate])
   @@index([createdAt])
