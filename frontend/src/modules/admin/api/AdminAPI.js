@@ -698,24 +698,46 @@ class AdminAPI {
     }
 
     /**
-     * Get Message of the Day settings
-     * @stub Backend endpoint not yet implemented
-     * @todo Implement backend endpoint: GET /api/admin/motd
-     * @returns {Promise<Object>} Mock MOTD data until backend ready
+     * Get all MOTDs with analytics
+     * @returns {Promise<Object>} MOTD list with engagement metrics: { motds: [...], analytics: {...} }
      */
     async getMOTDSettings() {
-        await adminDebugLog('AdminAPI', 'STUB: getMOTDSettings - awaiting backend implementation');
+        await adminDebugLog('AdminAPI', 'Loading MOTD data from backend');
 
-        // Return mock data for missing endpoint to prevent 404 network logs
-        return {
-            id: 'default',
-            title: 'Welcome to Admin Dashboard',
-            content: 'System ready for administration.',
-            isActive: false,
-            priority: 'low',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        try {
+            const response = await this.call(
+                `${this.BACKEND_URL}/api/motd/admin/list`,
+                { method: 'GET' }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch MOTDs: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Backend returns: { success: true, data: { motds: [...] } }
+            // Extract the data object which contains the motds array
+            if (result.success && result.data) {
+                return result.data;  // Returns { motds: [...] }
+            }
+
+            throw new Error('Invalid response format from MOTD endpoint');
+
+        } catch (error) {
+            await adminDebugError('AdminAPI', 'Failed to load MOTDs', error);
+
+            // Return empty data structure on error (not mock data)
+            return {
+                motds: [],
+                analytics: {
+                    totalMOTDs: 0,
+                    activeMOTDs: 0,
+                    totalViews: 0,
+                    avgEngagement: 0
+                }
+            };
+        }
     }
 
     async updateMOTDSettings(settings) {
