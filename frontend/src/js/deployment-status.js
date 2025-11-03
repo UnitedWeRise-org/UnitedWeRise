@@ -14,19 +14,32 @@
     'use strict';
     
     // Component deployment tracking
+    // Note: window.API_CONFIG.BASE_URL is environment-aware:
+    //   - Production: https://api.unitedwerise.org/api
+    //   - Staging: https://dev-api.unitedwerise.org/api
+    const getApiBase = () => {
+        if (window.API_CONFIG && window.API_CONFIG.BASE_URL) {
+            // Remove trailing /api to get base backend URL
+            return window.API_CONFIG.BASE_URL.replace(/\/api$/, '');
+        }
+        // Fallback to production if API_CONFIG not loaded yet
+        console.warn('[DeploymentStatus] window.API_CONFIG not available, using production URLs');
+        return 'https://api.unitedwerise.org';
+    };
+
     const DEPLOYMENT_CONFIG = {
         // Check intervals (in milliseconds)
         CHECK_INTERVAL: 300000, // 5 minutes
         STARTUP_DELAY: 2000,    // 2 seconds after page load
-        
-        // Component endpoints (using full backend URLs)
+
+        // Component endpoints (environment-aware via window.API_CONFIG)
         ENDPOINTS: {
-            backend: 'https://api.unitedwerise.org/health',
-            database: 'https://api.unitedwerise.org/health/database',
-            batch: 'https://api.unitedwerise.org/api/batch/health-check',
-            reputation: 'https://api.unitedwerise.org/api/reputation/health'
+            get backend() { return `${getApiBase()}/health`; },
+            get database() { return `${getApiBase()}/health/database`; },
+            get batch() { return `${getApiBase()}/api/batch/health-check`; },
+            get reputation() { return `${getApiBase()}/api/reputation/health`; }
         },
-        
+
         // Local component info
         FRONTEND_BUILD_TIME: new Date().toISOString(), // Current deployment time
         SCHEMA_VERSION: 'v1.0.0-1755133483176' // Will be replaced during build
