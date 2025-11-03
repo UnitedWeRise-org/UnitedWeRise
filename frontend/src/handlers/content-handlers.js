@@ -214,12 +214,28 @@ export class ContentHandlers {
         if (panel) panel.style.display = 'none';
 
         // Record dismissal on backend for persistence
+        // Wait for CSRF token to be available (may load before auth completes)
+        const maxWaitTime = 5000; // 5 seconds maximum wait
+        const checkInterval = 100; // Check every 100ms
+        const startTime = Date.now();
+
+        // Wait loop for CSRF token
+        while (!window.csrfToken && (Date.now() - startTime) < maxWaitTime) {
+            console.log('⏳ MOTD dismiss waiting for CSRF token...');
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+
+        // If CSRF token still not available, log warning and skip server update
+        if (!window.csrfToken) {
+            console.warn('⚠️ CSRF token not available after 5s wait. MOTD dismissed locally but not recorded on server.');
+            console.warn('  This may happen if page loaded and MOTD was dismissed before authentication completed.');
+            console.warn('  Local dismissal still works - MOTD will not show again on this device.');
+            return; // Exit early, local dismissal already complete
+        }
+
+        // CSRF token is now available, proceed with server update
         try {
-            // DIAGNOSTIC LOGGING - Check CSRF token availability
-            console.log('🔍 MOTD Dismiss CSRF Diagnostic:');
-            console.log('  - window.csrfToken:', window.csrfToken || 'MISSING');
-            console.log('  - document.cookie (csrf-token):', document.cookie.includes('csrf-token') ? 'PRESENT' : 'MISSING');
-            console.log('  - window.currentUser:', window.currentUser ? window.currentUser.username : 'NULL');
+            console.log('✅ CSRF token available, recording MOTD dismissal on server...');
 
             const response = await apiCall(`/motd/dismiss/${motdId}`, {
                 method: 'POST'
@@ -227,8 +243,10 @@ export class ContentHandlers {
 
             if (!response.ok) {
                 console.error('❌ Failed to record MOTD dismissal on server:', response);
+                console.error('   Status:', response.status);
+                console.error('   Error:', response.error);
             } else {
-                console.log('✅ MOTD dismissal recorded on server');
+                console.log('✅ MOTD dismissal successfully recorded on server');
             }
         } catch (error) {
             console.error('❌ Error recording MOTD dismissal:', error);

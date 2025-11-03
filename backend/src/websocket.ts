@@ -13,9 +13,32 @@ if (!JWT_SECRET) {
 }
 
 export const initializeWebSocket = (httpServer: HTTPServer) => {
+  // Environment-aware CORS configuration for WebSocket
+  // Must match Express CORS to allow cookie transmission
+  const allowedOrigins = [
+    'https://www.unitedwerise.org',        // Production frontend
+    'https://admin.unitedwerise.org',      // Production admin
+    'https://dev.unitedwerise.org',        // Staging frontend
+    'https://dev-admin.unitedwerise.org',  // Staging admin
+    'http://localhost:3000',               // Local development
+    'http://localhost:5173'                // Vite dev server
+  ];
+
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*",
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, server-to-server, etc.)
+        if (!origin) return callback(null, true);
+
+        // Check if origin is in allowed list
+        if (allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed))) {
+          callback(null, true);
+        } else {
+          console.warn(`🚫 WebSocket CORS rejected origin: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,  // CRITICAL: Allow cookies (httpOnly authToken)
       methods: ["GET", "POST"]
     }
   });
