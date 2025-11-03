@@ -192,7 +192,7 @@ export class ContentHandlers {
         panel.style.display = 'block';
 
         // Ensure dismiss button functionality
-        const dismissBtn = document.getElementById('motd-dismiss');
+        const dismissBtn = document.getElementById('motd-close-btn');
         if (dismissBtn) {
             dismissBtn.onclick = () => this.dismissMOTD(motd.id);
         }
@@ -201,15 +201,31 @@ export class ContentHandlers {
     /**
      * Dismiss MOTD (helper function)
      */
-    dismissMOTD(motdId) {
+    async dismissMOTD(motdId) {
+        // Store locally first for immediate UI feedback
         const dismissedMOTDs = JSON.parse(localStorage.getItem('dismissed-motds') || '[]');
         if (!dismissedMOTDs.includes(motdId)) {
             dismissedMOTDs.push(motdId);
             localStorage.setItem('dismissed-motds', JSON.stringify(dismissedMOTDs));
         }
 
+        // Hide panel immediately
         const panel = document.getElementById('motd-panel');
         if (panel) panel.style.display = 'none';
+
+        // Record dismissal on backend for persistence
+        try {
+            const response = await apiCall(`/motd/dismiss/${motdId}`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                console.warn('Failed to record MOTD dismissal on server:', response);
+            }
+        } catch (error) {
+            console.warn('Error recording MOTD dismissal:', error);
+            // Non-critical error - dismissal still works locally
+        }
     }
 
     /**

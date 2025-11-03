@@ -1,5 +1,20 @@
 // Unified WebSocket messaging client for both USER_USER and ADMIN_CANDIDATE messaging
 import { getWebSocketUrl } from '../utils/environment.js';
+
+/**
+ * Extract cookie value by name
+ * Note: This cannot access httpOnly cookies (authToken is httpOnly for security)
+ * However, we can attempt to read it in case browser allows it in specific contexts
+ */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return null;
+}
+
 class UnifiedMessagingClient {
     constructor() {
         this.socket = null;
@@ -54,13 +69,60 @@ class UnifiedMessagingClient {
         
         try {
             // WebSocket auth uses httpOnly cookie (like REST API)
-            // withCredentials: true automatically sends cookies for authentication
-            this.socket = io(socketUrl, {
+            // Note: authToken is httpOnly and cannot be read by JavaScript (security feature)
+            // However, legacy localStorage token may be available for backward compatibility
+
+            // Try multiple token sources in priority order:
+            // 1. httpOnly cookie (won't work, but withCredentials will try)
+            // 2. Legacy localStorage token (deprecated but still set by some flows)
+            // 3. Direct cookie access (last resort, won't work for httpOnly)
+            let authToken = null;
+
+            // Check localStorage for legacy token (deprecated but still used)
+            const legacyToken = localStorage.getItem('authToken');
+            if (legacyToken && legacyToken !== 'null' && legacyToken !== 'None') {
+                authToken = legacyToken;
+                console.log('WebSocket: Using legacy localStorage token for auth');
+            }
+
+            // Fallback: try to read from cookie (won't work for httpOnly, but try anyway)
+            if (!authToken) {
+                authToken = getCookie('authToken');
+                if (authToken) {
+                    console.log('WebSocket: Using cookie token for auth');
+                }
+            }
+
+            const socketConfig = {
                 transports: ['websocket', 'polling'],
-                withCredentials: true, // Send authToken cookie automatically
+                withCredentials: true, // Enable credential sharing for httpOnly cookies
                 timeout: 20000,
-                forceNew: true
-            });
+                forceNew: true,
+                // Explicitly configure transports to send cookies
+                transportOptions: {
+                    polling: {
+                        extraHeaders: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    },
+                    websocket: {
+                        extraHeaders: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }
+                }
+            };
+
+            // If we have a token, pass it explicitly via auth object
+            // Backend has fallback to check socket.handshake.auth.token
+            if (authToken) {
+                socketConfig.auth = { token: authToken };
+                console.log('WebSocket: Passing explicit auth token to backend');
+            } else {
+                console.warn('WebSocket: No token available, relying on httpOnly cookie only');
+            }
+
+            this.socket = io(socketUrl, socketConfig);
 
             this.setupEventHandlers();
         } catch (error) {
