@@ -31,6 +31,12 @@ const initializeWebSocket = (httpServer) => {
             console.log('🍪 Cookie header present:', !!cookieHeader);
             if (cookieHeader) {
                 console.log('🍪 Cookie header length:', cookieHeader.length);
+                console.log('🍪 Cookie header value:', cookieHeader.substring(0, 200) + '...'); // Show first 200 chars
+                console.log('🍪 All cookies:', cookieHeader.split(';').map(c => c.trim().split('=')[0]));
+            }
+            else {
+                console.log('🍪 No cookie header in handshake - Socket.IO withCredentials not working');
+                console.log('🔍 Handshake headers:', JSON.stringify(socket.handshake.headers, null, 2));
             }
             let token;
             if (cookieHeader) {

@@ -1,1 +1,1 @@
-{"version":3,"file":"websocket.d.ts","sourceRoot":"","sources":["../src/websocket.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,MAAM,IAAI,cAAc,EAAE,MAAM,WAAW,CAAC;AACrD,OAAO,EAAE,MAAM,IAAI,UAAU,EAAE,MAAM,MAAM,CAAC;AAY5C,eAAO,MAAM,mBAAmB,GAAI,YAAY,UAAU,gMAgLzD,CAAC"}
+{"version":3,"file":"websocket.d.ts","sourceRoot":"","sources":["../src/websocket.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,MAAM,IAAI,cAAc,EAAE,MAAM,WAAW,CAAC;AACrD,OAAO,EAAE,MAAM,IAAI,UAAU,EAAE,MAAM,MAAM,CAAC;AAY5C,eAAO,MAAM,mBAAmB,GAAI,YAAY,UAAU,gMAqLzD,CAAC"}

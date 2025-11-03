@@ -215,15 +215,23 @@ export class ContentHandlers {
 
         // Record dismissal on backend for persistence
         try {
+            // DIAGNOSTIC LOGGING - Check CSRF token availability
+            console.log('🔍 MOTD Dismiss CSRF Diagnostic:');
+            console.log('  - window.csrfToken:', window.csrfToken || 'MISSING');
+            console.log('  - document.cookie (csrf-token):', document.cookie.includes('csrf-token') ? 'PRESENT' : 'MISSING');
+            console.log('  - window.currentUser:', window.currentUser ? window.currentUser.username : 'NULL');
+
             const response = await apiCall(`/motd/dismiss/${motdId}`, {
                 method: 'POST'
             });
 
             if (!response.ok) {
-                console.warn('Failed to record MOTD dismissal on server:', response);
+                console.error('❌ Failed to record MOTD dismissal on server:', response);
+            } else {
+                console.log('✅ MOTD dismissal recorded on server');
             }
         } catch (error) {
-            console.warn('Error recording MOTD dismissal:', error);
+            console.error('❌ Error recording MOTD dismissal:', error);
             // Non-critical error - dismissal still works locally
         }
     }

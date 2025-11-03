@@ -68,44 +68,46 @@ class UnifiedMessagingClient {
             : getWebSocketUrl(); // Use centralized environment detection
         
         try {
-            // WebSocket auth uses httpOnly cookie (like REST API)
-            // Note: authToken is httpOnly and cannot be read by JavaScript (security feature)
-            // However, legacy localStorage token may be available for backward compatibility
+            // DIAGNOSTIC LOGGING - Understanding auth token availability
+            console.log('🔍 WebSocket Auth Diagnostic:');
+            console.log('  - localStorage.authToken:', localStorage.getItem('authToken'));
+            console.log('  - document.cookie:', document.cookie);
+            console.log('  - window.currentUser:', window.currentUser ? 'EXISTS' : 'NULL');
+            console.log('  - window.csrfToken:', window.csrfToken ? 'EXISTS' : 'NULL');
 
-            // Try multiple token sources in priority order:
-            // 1. httpOnly cookie (won't work, but withCredentials will try)
-            // 2. Legacy localStorage token (deprecated but still set by some flows)
-            // 3. Direct cookie access (last resort, won't work for httpOnly)
+            // WebSocket auth challenge: authToken is httpOnly cookie (can't access from JS)
+            // Socket.IO withCredentials SHOULD send it automatically, but if that fails,
+            // we need the actual JWT token value to pass explicitly.
+
+            // The system stores authToken ONLY in httpOnly cookie (no localStorage since migration)
+            // But Socket.IO withCredentials may not work reliably across all browsers/configs
+
             let authToken = null;
 
-            // Check localStorage for legacy token (deprecated but still used)
+            // Check if legacy localStorage token exists (rare, only from email verification flow)
             const legacyToken = localStorage.getItem('authToken');
             if (legacyToken && legacyToken !== 'null' && legacyToken !== 'None') {
                 authToken = legacyToken;
-                console.log('WebSocket: Using legacy localStorage token for auth');
+                console.log('✅ WebSocket: Found legacy localStorage token');
             }
 
-            // Fallback: try to read from cookie (won't work for httpOnly, but try anyway)
+            // Try to read auth cookie directly (won't work for httpOnly, but check)
             if (!authToken) {
                 authToken = getCookie('authToken');
                 if (authToken) {
-                    console.log('WebSocket: Using cookie token for auth');
+                    console.log('✅ WebSocket: Read authToken from non-httpOnly cookie');
                 }
             }
 
+            // CRITICAL: Socket.IO config must allow credential/cookie transmission
             const socketConfig = {
-                transports: ['websocket', 'polling'],
-                withCredentials: true, // Enable credential sharing for httpOnly cookies
+                transports: ['polling', 'websocket'], // Try polling first (better for cookies)
+                withCredentials: true, // Send cookies with requests
                 timeout: 20000,
-                forceNew: true,
-                // Explicitly configure transports to send cookies
+                forceNew: false, // Allow connection reuse
+                // Force cookie transmission in transport headers
                 transportOptions: {
                     polling: {
-                        extraHeaders: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    },
-                    websocket: {
                         extraHeaders: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
@@ -113,13 +115,13 @@ class UnifiedMessagingClient {
                 }
             };
 
-            // If we have a token, pass it explicitly via auth object
-            // Backend has fallback to check socket.handshake.auth.token
+            // If we have explicit token, pass it (backend checks socket.handshake.auth.token)
             if (authToken) {
                 socketConfig.auth = { token: authToken };
-                console.log('WebSocket: Passing explicit auth token to backend');
+                console.log('✅ WebSocket: Passing explicit auth token');
             } else {
-                console.warn('WebSocket: No token available, relying on httpOnly cookie only');
+                console.warn('⚠️ WebSocket: No explicit token - relying on httpOnly cookie transmission via withCredentials');
+                console.warn('⚠️ If auth fails, httpOnly cookie is not being sent by Socket.IO');
             }
 
             this.socket = io(socketUrl, socketConfig);
