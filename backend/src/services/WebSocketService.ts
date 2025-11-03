@@ -2,8 +2,10 @@ import { Server } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { isProduction } from '../utils/environment';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/messaging';
+import { sessionManager } from './sessionManager';
 
 const prisma = new PrismaClient();
 
@@ -12,13 +14,27 @@ export class WebSocketService {
   private userSockets: Map<string, Set<string>> = new Map();
 
   constructor(httpServer: HTTPServer) {
+    // Environment-aware CORS configuration
+    // Explicit origins required (cannot use wildcard with credentials: true)
+    const allowedOrigins = [
+      'https://www.unitedwerise.org',        // Production frontend
+      'https://admin.unitedwerise.org',      // Production admin dashboard
+      'https://dev.unitedwerise.org',        // Staging frontend
+      'https://dev-admin.unitedwerise.org',  // Staging admin dashboard
+      'https://yellow-mud-043d1ca0f.2.azurestaticapps.net',  // Azure Static Web Apps (backward compatibility)
+      'http://localhost:3000',               // Local development
+      'http://localhost:5173',               // Vite dev server
+      'http://localhost:8080'                // Alternative local port
+    ];
+
+    console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
+    console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+
     this.io = new Server(httpServer, {
       cors: {
-        origin: isProduction()
-          ? ['https://www.unitedwerise.org', 'https://yellow-mud-043d1ca0f.2.azurestaticapps.net']
-          : ['http://localhost:3000', 'http://localhost:8080'],
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
-        credentials: true
+        credentials: true  // CRITICAL: Allows httpOnly cookies
       },
       transports: ['websocket', 'polling']
     });
@@ -29,7 +45,7 @@ export class WebSocketService {
   private setupEventHandlers() {
     this.io.use(this.authenticateSocket.bind(this));
 
-    this.io.on('connection', (socket) => {
+    this.io.on('connection', async (socket) => {
       const userId = socket.data.userId;
       console.log(`User ${userId} connected via WebSocket`);
 
@@ -38,6 +54,15 @@ export class WebSocketService {
         this.userSockets.set(userId, new Set());
       }
       this.userSockets.get(userId)!.add(socket.id);
+
+      // Update user online status in database
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isOnline: true,
+          lastSeenAt: new Date()
+        }
+      });
 
       // Join user to their personal room for targeted messages
       socket.join(`user:${userId}`);
@@ -58,13 +83,22 @@ export class WebSocketService {
       socket.on('mark_read', this.handleMarkRead.bind(this, socket));
 
       // Handle disconnection
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         console.log(`User ${userId} disconnected`);
         const userSocketSet = this.userSockets.get(userId);
         if (userSocketSet) {
           userSocketSet.delete(socket.id);
           if (userSocketSet.size === 0) {
             this.userSockets.delete(userId);
+
+            // Update user offline status in database (only when last socket disconnects)
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                isOnline: false,
+                lastSeenAt: new Date()
+              }
+            });
           }
         }
       });
@@ -73,14 +107,53 @@ export class WebSocketService {
 
   private async authenticateSocket(socket: any, next: any) {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-      
+      console.log('🔌 WebSocket connection attempt from:', socket.handshake.address);
+
+      let token: string | undefined;
+
+      // PRIMARY AUTHENTICATION METHOD: httpOnly cookies (most secure)
+      const cookieHeader = socket.handshake.headers.cookie;
+      console.log('🍪 Cookie header present:', !!cookieHeader);
+
+      if (cookieHeader) {
+        console.log('🍪 Cookie header length:', cookieHeader.length);
+        console.log('🍪 All cookies:', cookieHeader.split(';').map((c: string) => c.trim().split('=')[0]));
+
+        // Parse cookie header to extract authToken
+        const cookies = cookieHeader.split(';').reduce((acc: any, cookie: string) => {
+          const [key, value] = cookie.trim().split('=');
+          acc[key] = value;
+          return acc;
+        }, {});
+
+        token = cookies.authToken;
+        console.log('🔑 authToken from cookie:', token ? `${token.substring(0, 20)}...` : 'not found');
+      } else {
+        console.log('🍪 No cookie header in handshake - checking fallback auth methods');
+      }
+
+      // FALLBACK AUTHENTICATION: Explicit token (for cases where cookies unavailable)
       if (!token) {
+        token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+        console.log('🔑 Token from auth.token or Bearer header:', token ? `${token.substring(0, 20)}...` : 'not found');
+      }
+
+      if (!token) {
+        console.error('❌ WebSocket auth failed: No token provided in cookies or auth methods');
         return next(new Error('Authentication error: No token provided'));
       }
 
+      // Verify JWT token
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       const userId = decoded.userId;
+      console.log('✅ JWT decoded successfully, userId:', userId);
+
+      // SECURITY: Check if token has been blacklisted (revoked during logout)
+      const tokenId = crypto.createHash('sha256').update(token).digest('hex');
+      if (await sessionManager.isTokenBlacklisted(tokenId)) {
+        console.error('❌ WebSocket auth failed: Token has been revoked');
+        return next(new Error('Authentication error: Token has been revoked'));
+      }
 
       // Get user details from database
       const user = await prisma.user.findUnique({
@@ -88,17 +161,24 @@ export class WebSocketService {
         select: { id: true, username: true, isAdmin: true, isSuspended: true }
       });
 
-      if (!user || user.isSuspended) {
-        return next(new Error('Authentication error: Invalid or suspended user'));
+      if (!user) {
+        console.error('❌ WebSocket auth failed: User not found for userId:', userId);
+        return next(new Error('Authentication error: User not found'));
+      }
+
+      if (user.isSuspended) {
+        console.error('❌ WebSocket auth failed: User is suspended:', userId);
+        return next(new Error('Authentication error: User account is suspended'));
       }
 
       socket.data.userId = user.id;
       socket.data.username = user.username;
       socket.data.isAdmin = user.isAdmin;
-      
+
+      console.log('✅ WebSocket authentication successful for user:', user.username);
       next();
     } catch (error) {
-      console.error('Socket authentication error:', error);
+      console.error('❌ WebSocket authentication error:', error instanceof Error ? error.message : error);
       next(new Error('Authentication error: Invalid token'));
     }
   }
