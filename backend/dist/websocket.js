@@ -28,19 +28,7 @@ const initializeWebSocket = (httpServer) => {
     ];
     const io = new socket_io_1.Server(httpServer, {
         cors: {
-            origin: (origin, callback) => {
-                // Allow requests with no origin (mobile apps, server-to-server, etc.)
-                if (!origin)
-                    return callback(null, true);
-                // Check if origin is in allowed list
-                if (allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed))) {
-                    callback(null, true);
-                }
-                else {
-                    console.warn(`🚫 WebSocket CORS rejected origin: ${origin}`);
-                    callback(new Error('Not allowed by CORS'));
-                }
-            },
+            origin: allowedOrigins, // Direct array - Socket.IO sets Access-Control-Allow-Origin header
             credentials: true, // CRITICAL: Allow cookies (httpOnly authToken)
             methods: ["GET", "POST"]
         }

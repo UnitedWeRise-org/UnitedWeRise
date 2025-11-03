@@ -1,0 +1,658 @@
+# Systematic Development Protocol
+
+**Protection Status**: Standard
+**Created**: 2025-10-31
+**Last Updated**: 2025-10-31
+
+---
+
+## 🎯 When to Use This Protocol
+
+**USE THIS PROTOCOL when**:
+- Fixing bugs (unless cause and solution are trivially obvious)
+- Implementing new features of any complexity
+- Making architectural changes or refactoring
+- Investigating production issues or performance problems
+- Working across multiple systems (frontend + backend + database)
+- Uncertain about current state of code or system behavior
+- Previous attempts to fix/implement have failed
+- Changes could impact multiple user flows or components
+
+**SKIP THIS PROTOCOL if**:
+- Trivial change (typo fix, CSS-only change, comment update)
+- Single-file change with zero dependencies
+- Exact solution is obvious and verified
+- Following exact established pattern with no variations
+
+**UNCERTAIN?** Ask yourself:
+- Do I fully understand how the current code works?
+- Could this change impact other parts of the system?
+- Have I investigated frontend AND backend AND database?
+- Could this create new issues while fixing the old one?
+
+**If any answer is "no" or "uncertain" → USE THIS PROTOCOL.**
+
+---
+
+## Overview
+
+**Core Principle**: Understand before changing. Taking time to research and plan prevents "2 steps forward, 3 steps back" cycles.
+
+This protocol provides a systematic approach to ALL complex development work by requiring complete system understanding before making changes. It ensures changes are made with full context of:
+- **Data layer**: Database schema, relationships, constraints, indexes, migrations
+- **API contracts**: Endpoints, request/response formats, validation, status codes
+- **Business logic**: Where rules live, data transformations, service layer
+- **Auth/permissions**: Authentication flow, authorization checks, role-based access, middleware
+- **Client state**: What's stored where (memory, localStorage, sessionStorage, cookies, URL params)
+- **External dependencies**: Azure Blob Storage, OpenAI API, Google OAuth, third-party services
+- **Error flows**: How errors are caught, logged, transformed, and displayed to users
+- **Async behavior**: Promises, race conditions, loading states, polling, timeouts
+- **Environment config**: What differs between dev/staging/production (URLs, keys, behavior)
+
+**Universal Process**: Audit → Plan → Execute → Test → Document
+
+**Why this matters**: Without full system understanding, changes often introduce new bugs, create duplicate functionality, or break edge cases. Systematic approach prevents this.
+
+---
+
+## Prerequisites
+
+- Access to relevant codebases (frontend, backend, database)
+- Time to conduct proper research (don't rush)
+- Willingness to use multi-agent coordination for complex work
+- Commitment to not skip phases even when time-pressured
+
+---
+
+## Procedure
+
+### Phase 1: Comprehensive Audit
+
+**CRITICAL**: Never start coding until you understand the current state completely.
+
+#### What to Audit
+
+**Frontend Investigation**:
+```bash
+# Find relevant UI components
+rg -l "keyword" frontend/src/
+
+# Check event handlers and user interactions
+rg "addEventListener|onclick|data-action" frontend/src/
+
+# Identify API calls
+rg "fetch|apiCall|axios" frontend/src/
+
+# Check for existing functionality
+rg "function.*FeatureName" frontend/src/
+```
+
+**Backend Investigation**:
+```bash
+# Find API endpoints
+rg -l "router\.(get|post|put|delete)" backend/src/routes/
+
+# Check business logic
+rg "class.*Service|export.*function" backend/src/
+
+# Identify middleware and auth
+rg "requireAuth|middleware" backend/src/
+
+# Check error handling
+rg "try.*catch|\.catch\(" backend/src/
+```
+
+**Database Investigation**:
+```bash
+# Check schema
+cat backend/prisma/schema.prisma | grep -A 20 "model FeatureName"
+
+# Check migrations
+ls backend/prisma/migrations/
+
+# Identify relationships
+rg "@relation" backend/prisma/schema.prisma
+```
+
+**Complete System Analysis**:
+
+1. **Data Layer**:
+   - What tables/models are involved?
+   - What relationships exist (foreign keys, cascades)?
+   - What indexes exist (performance implications)?
+   - Are migrations needed?
+
+2. **API Contracts**:
+   - What endpoints are called?
+   - What are exact request/response shapes?
+   - What validation rules apply?
+   - What status codes are returned?
+
+3. **Business Logic**:
+   - Where are business rules enforced?
+   - What transformations happen to data?
+   - Is logic in controller, service, or model layer?
+
+4. **Auth/Permissions**:
+   - What authentication is required?
+   - What middleware processes the request?
+   - Role-based access checks?
+   - Environment-aware auth (staging vs production)?
+
+5. **Client State**:
+   - What's cached in memory vs localStorage?
+   - What's in session vs cookies?
+   - URL state management?
+   - When does state get cleared/refreshed?
+
+6. **External Dependencies**:
+   - Azure Blob Storage uploads/downloads?
+   - OpenAI API calls?
+   - Google OAuth flow?
+   - Third-party service reliability?
+
+7. **Error Flows**:
+   - How are errors caught (try/catch, .catch())?
+   - Where are errors logged?
+   - How are errors shown to users?
+   - Different error handling for different environments?
+
+8. **Async Behavior**:
+   - Promise chains and error propagation?
+   - Race conditions between API calls?
+   - Loading state management?
+   - Timeout handling?
+
+9. **Environment Config**:
+   - What URLs differ (dev vs staging vs production)?
+   - What keys/secrets are environment-specific?
+   - Behavior differences (admin-only in staging)?
+
+10. **Cross-System Impact**:
+    - Does this affect both user-side AND admin-dashboard?
+    - How do changes ripple through the stack?
+
+#### Audit Deliverables
+
+Create audit document in `.claude/scratchpads/[FEATURE]-AUDIT.md`:
+
+```markdown
+## Current State Analysis
+
+### Frontend Components
+- Files: [list all relevant files]
+- Functions: [list all relevant functions]
+- Event Handlers: [list all user interaction points]
+- API Calls: [list all backend calls]
+
+### Backend Implementation
+- Routes: [list all endpoints]
+- Services: [list all business logic]
+- Middleware: [list all middleware in flow]
+- Database Queries: [list all data access]
+
+### Database Schema
+- Models: [list relevant models]
+- Relationships: [describe connections]
+- Indexes: [note any performance optimizations]
+
+### Identified Issues
+- Problem: [describe what's wrong or what's needed]
+- Root Cause: [explain why issue exists]
+- Impact: [who/what is affected]
+
+### Dependencies
+- Frontend Dependencies: [what depends on this]
+- Backend Dependencies: [what this depends on]
+- Cross-System Impacts: [how changes ripple]
+
+### Risk Assessment
+- High Risk: [changes that could break multiple things]
+- Medium Risk: [changes that could cause edge case issues]
+- Low Risk: [isolated changes]
+```
+
+**For Bug Fixes**: Reproduce the bug and document exact steps. Understand WHY it happens, not just THAT it happens.
+
+**For New Features**: Identify if similar functionality already exists. Never create duplicate implementations.
+
+---
+
+### Phase 2: Strategic Planning
+
+Based on audit findings, create detailed implementation plan.
+
+#### Planning Requirements
+
+1. **Define Approach**: What exactly needs to change and why
+2. **Sequence Changes**: What order to make changes (usually: database → backend → frontend)
+3. **Identify Risks**: What could go wrong
+4. **Plan Testing**: How to verify each change works
+5. **Design Rollback**: How to undo if something breaks
+
+#### Planning Deliverables
+
+Create plan document in `.claude/scratchpads/[FEATURE]-PLAN.md`:
+
+```markdown
+## Implementation Strategy
+
+### Approach
+[Describe the solution approach]
+
+### Change Sequence
+1. **Database Changes** (if needed)
+   - Schema modifications
+   - Migration creation
+   - Risk: [describe]
+
+2. **Backend Changes**
+   - Endpoint modifications
+   - Service layer updates
+   - Middleware adjustments
+   - Risk: [describe]
+
+3. **Frontend Changes**
+   - UI updates
+   - API integration
+   - Event handling
+   - Risk: [describe]
+
+### Testing Strategy
+- Unit tests: [what to test]
+- Integration tests: [what to test]
+- Manual tests: [what to verify]
+
+### Rollback Plan
+- If database changes fail: [steps]
+- If backend changes fail: [steps]
+- If frontend changes fail: [steps]
+
+### Success Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] No regressions in existing functionality
+```
+
+**Get user approval** if approach involves:
+- Database schema changes
+- Breaking changes to APIs
+- Architectural modifications
+- High-risk changes
+
+---
+
+### Phase 3: Systematic Execution
+
+Execute plan following proper sequence and testing incrementally.
+
+#### Execution Standards
+
+**Always**:
+- Make smallest possible change first
+- Test each change before proceeding
+- Check for existing solutions before creating new code
+- Follow established patterns in codebase
+- Document rationale for each change
+
+**Never**:
+- Skip testing between changes
+- Make changes in wrong order (frontend before backend exists)
+- Create duplicate functionality
+- Assume change worked without verification
+- Rush through steps to save time
+
+#### Use TodoWrite for Tracking
+
+```javascript
+// Break work into specific tasks
+TodoWrite([
+  {
+    content: "Create database migration for [feature]",
+    status: "in_progress",
+    activeForm: "Creating database migration"
+  },
+  {
+    content: "Implement backend endpoint [route]",
+    status: "pending",
+    activeForm: "Implementing backend endpoint"
+  },
+  // ... etc
+]);
+```
+
+**Rule**: Exactly ONE task in_progress at any time. Mark completed immediately after finishing.
+
+#### Multi-Agent Coordination
+
+For complex work, use specialized agents:
+
+```
+Agent 1 (Backend Specialist): Focus on API implementation
+Agent 2 (Frontend Specialist): Focus on UI implementation
+Agent 3 (Testing Specialist): Comprehensive validation
+Agent 4 (Documentation): Update docs and capture knowledge
+
+Coordination: .claude/scratchpads/[FEATURE]-COORDINATION.md
+```
+
+---
+
+### Phase 4: Comprehensive Testing
+
+**Don't report complete until testing is done.**
+
+#### Testing Checklist
+
+**Build Verification**:
+- [ ] Backend compiles (`npm run build`)
+- [ ] TypeScript passes (`npx tsc --noEmit`)
+- [ ] No console errors in browser
+
+**Functional Testing**:
+- [ ] Happy path works (typical user flow)
+- [ ] Edge cases handled (empty data, invalid input, etc.)
+- [ ] Error cases handled (network failure, auth failure, etc.)
+- [ ] Original reported issue is FIXED (for bug fixes)
+
+**Regression Testing**:
+- [ ] Existing features still work
+- [ ] No new console errors
+- [ ] No broken user flows
+- [ ] Performance not degraded
+
+**Cross-System Testing**:
+- [ ] User-side functionality works
+- [ ] Admin-dashboard functionality works (if applicable)
+- [ ] Frontend + Backend integration works
+- [ ] Database queries work efficiently
+
+**Environment Testing**:
+- [ ] Works locally
+- [ ] Deploy to staging
+- [ ] Test on staging (real environment)
+- [ ] Monitor staging for 5-10 minutes
+
+#### Testing Documentation
+
+Document test results in `.claude/scratchpads/[FEATURE]-TESTING.md`:
+
+```markdown
+## Test Results
+
+### Build Verification
+✅ Backend compiles
+✅ TypeScript passes
+✅ No console errors
+
+### Functional Testing
+✅ Happy path: [describe what was tested]
+✅ Edge case 1: [describe]
+✅ Error handling: [describe]
+
+### Regression Testing
+✅ Feature X still works
+✅ User flow Y completes
+❌ ISSUE FOUND: [describe issue]
+   - Root cause: [explain]
+   - Fix: [describe fix applied]
+   - Retest: ✅ Fixed
+
+### Staging Verification
+✅ Deployed to staging
+✅ Health endpoint correct
+✅ Manual test passed
+✅ No errors in logs
+```
+
+---
+
+### Phase 5: Documentation
+
+Update all relevant documentation before task completion.
+
+#### Documentation Requirements
+
+**Always Update**:
+- **Code Comments**: Add/update JSDoc, Swagger, Prisma comments
+- **CHANGELOG.md**: Record what changed
+- **Inline Documentation**: Document WHY decisions were made
+
+**Update If Applicable**:
+- **API Documentation**: If endpoints changed
+- **README.md**: If setup/usage changed
+- **Architecture Docs**: If system design changed
+- **MASTER_DOCUMENTATION.md**: If major feature added
+
+**Create If Needed**:
+- **Lessons Learned**: Document for future reference in `.claude/scratchpads/[FEATURE]-LESSONS.md`
+- **Prevention Guidelines**: How to prevent this issue recurring
+
+#### Documentation Standards
+
+See `.claude/protocols/documentation-templates.md` for templates.
+
+**Key principle**: Document WHAT the code does and WHY decisions were made, not just HOW it works.
+
+---
+
+## Multi-Agent Coordination Framework
+
+For complex work, use specialized agents with clear roles.
+
+### Agent Roles
+
+**Audit Agent**:
+- Mission: Comprehensive analysis of current state
+- Deliverable: Complete audit document
+- Focus: Understanding ALL parts of the system
+
+**Planning Agent**:
+- Mission: Create detailed implementation strategy
+- Deliverable: Phase-by-phase plan with risks
+- Focus: Sequencing and risk mitigation
+
+**Execution Agent(s)**:
+- Mission: Implement specific portions
+- Deliverable: Working, tested code
+- Focus: Following plan systematically
+
+**Testing Agent**:
+- Mission: Comprehensive validation
+- Deliverable: Test results document
+- Focus: Zero-regression verification
+
+**Documentation Agent**:
+- Mission: Update all documentation
+- Deliverable: Updated docs across codebase
+- Focus: Knowledge capture and future prevention
+
+### Coordination Method
+
+Create coordination document: `.claude/scratchpads/[FEATURE]-COORDINATION.md`
+
+```markdown
+## Agent Coordination Log
+
+### Agent 1: Audit Specialist
+Status: Completed
+Deliverable: [FEATURE]-AUDIT.md
+Key Findings: [summary]
+
+### Agent 2: Backend Implementation
+Status: In Progress
+Current Task: Implementing endpoint /api/feature
+Blockers: None
+
+### Agent 3: Frontend Implementation
+Status: Pending
+Waiting For: Backend endpoint completion
+Next Steps: [list]
+
+### Agent 4: Testing
+Status: Pending
+Waiting For: All implementation complete
+Test Plan: [FEATURE]-TESTING.md prepared
+```
+
+**Coordination Rules**:
+- Each agent documents their progress
+- Agents read coordination log before starting
+- Blockers reported immediately
+- No agent proceeds if dependent work incomplete
+
+---
+
+## Verification
+
+### Before Starting Development
+
+- [ ] Audit completed with full system understanding
+- [ ] Plan created with clear sequence
+- [ ] Risks identified and mitigated
+- [ ] User approval obtained (if needed)
+- [ ] TodoWrite tracking established
+
+### During Development
+
+- [ ] Following plan systematically
+- [ ] Testing each change before proceeding
+- [ ] Checking for existing solutions first
+- [ ] Documenting rationale for changes
+- [ ] Updating TodoWrite status in real-time
+
+### Before Reporting Complete
+
+- [ ] All functional tests pass
+- [ ] All regression tests pass
+- [ ] Staged to environment and verified
+- [ ] Documentation updated
+- [ ] Original issue confirmed fixed
+- [ ] No new issues introduced
+
+---
+
+## Troubleshooting
+
+**Issue**: Audit phase taking too long
+**Solution**: It's supposed to. Rushing audit causes problems later. Take the time to understand completely.
+
+**Issue**: Found duplicate functionality during audit
+**Solution**: Consolidate instead of creating new. Update existing code.
+
+**Issue**: Change broke something unexpected
+**Solution**: Didn't audit dependencies thoroughly. Return to audit phase and map all dependencies.
+
+**Issue**: User wants faster results
+**Solution**: Explain that systematic approach prevents "2 steps forward, 3 steps back." Slower now = faster overall.
+
+---
+
+## Examples
+
+### Example 1: Bug Fix Using Systematic Protocol
+
+**Initial Report**: "Users can't save posts"
+
+**Phase 1: Audit**
+```bash
+# Frontend investigation
+rg "save.*post" frontend/src/
+# Found: SavePostHandler.js handles save button clicks
+
+# Backend investigation
+rg "router.post.*save" backend/src/routes/
+# Found: POST /api/posts/:id/save endpoint exists
+
+# Test the endpoint directly
+curl -X POST https://dev-api.unitedwerise.org/api/posts/abc123/save
+# Result: 500 error - "userId is undefined"
+
+# Check backend code
+# Found: req.user.id should be req.user!.id (TypeScript assertion missing)
+```
+
+**Phase 2: Plan**
+- Root cause: TypeScript error when req.user undefined
+- Solution: Add proper null check in middleware
+- Risk: Low (isolated fix)
+- Test: Verify both authenticated and unauthenticated cases
+
+**Phase 3: Execute**
+- Fix middleware to ensure req.user always populated
+- Add error handling for unauthenticated requests
+- Test locally
+
+**Phase 4: Test**
+✅ Authenticated users can save posts
+✅ Unauthenticated users get proper 401 error
+✅ No regressions in other endpoints
+
+**Phase 5: Document**
+- Updated middleware JSDoc
+- Added comment explaining null check
+- Updated CHANGELOG.md
+
+---
+
+### Example 2: New Feature Using Systematic Protocol
+
+**Request**: "Add ability to filter feed by topic"
+
+**Phase 1: Audit**
+- Frontend: Feed currently loads all posts via GET /api/feed
+- Backend: /api/feed endpoint doesn't accept filter params
+- Database: Post model has topicId field (already exists)
+- Finding: Topic filtering logic already exists in /api/posts/search but not exposed in feed
+
+**Phase 2: Plan**
+- Approach: Extend existing /api/feed endpoint with optional ?topic= param
+- Changes:
+  1. Backend: Modify feed service to accept topic filter
+  2. Frontend: Add topic filter UI to feed page
+  3. Frontend: Update apiCall to include topic param
+- Risk: Medium (changes main feed flow)
+- Test: Verify filtered and unfiltered feed both work
+
+**Phase 3: Execute**
+- Backend: Add topic parameter to feed endpoint
+- Backend: Update Prisma query to filter by topic when provided
+- Frontend: Add topic selector dropdown
+- Frontend: Update feed loading to include selected topic
+- Test each change incrementally
+
+**Phase 4: Test**
+✅ Feed without filter shows all posts (existing functionality preserved)
+✅ Feed with topic filter shows only matching posts
+✅ Topic selector dropdown works correctly
+✅ URL updates to reflect selected topic
+✅ No console errors
+
+**Phase 5: Document**
+- Added Swagger docs for new query parameter
+- Updated MASTER_DOCUMENTATION.md with feed filtering section
+- Added JSDoc to frontend filter component
+- Updated CHANGELOG.md
+
+---
+
+## Related Resources
+
+- `.claude/protocols/decision-frameworks.md` - Complexity scoring to determine when to use this protocol
+- `.claude/protocols/verification-checklists.md` - Detailed testing checklists
+- `.claude/protocols/documentation-templates.md` - Documentation standards
+- `.claude/protocols/deployment-procedures.md` - Deployment after implementation complete
+- `CLAUDE.md` - Core principles including "Industry excellence only" and "Minimal scope"
+
+---
+
+## Success Principles
+
+**Remember**:
+- Understanding takes time, but prevents larger problems
+- "2 steps forward, 3 steps back" comes from skipping research
+- Full system understanding (frontend + backend + database + middleware + timing) is required
+- Systematic approach is ALWAYS faster than repeated failed attempts
+- Taking shortcuts now creates technical debt later
+
+**This protocol exists because**: Rushing to code without understanding creates more work. Systematic approach feels slower initially but achieves reliable results and prevents regression cycles.
