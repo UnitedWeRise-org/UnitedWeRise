@@ -101,7 +101,7 @@ class UnifiedMessagingClient {
 
             // CRITICAL: Socket.IO config must allow credential/cookie transmission
             const socketConfig = {
-                transports: ['polling', 'websocket'], // Try polling first (better for cookies)
+                transports: ['websocket', 'polling'], // Try WebSocket first (more reliable with httpOnly cookies)
                 withCredentials: true, // Send cookies with requests
                 timeout: 20000,
                 forceNew: false, // Allow connection reuse

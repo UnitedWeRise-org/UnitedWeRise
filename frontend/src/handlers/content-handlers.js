@@ -238,7 +238,10 @@ export class ContentHandlers {
             console.log('✅ CSRF token available, recording MOTD dismissal on server...');
 
             const response = await apiCall(`/motd/dismiss/${motdId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'X-Dismissal-Token': this.dismissalToken
+                }
             });
 
             if (!response.ok) {
