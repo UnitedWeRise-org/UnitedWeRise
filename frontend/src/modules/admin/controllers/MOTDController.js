@@ -717,7 +717,7 @@ class MOTDController {
             // Set default values
             document.getElementById('motdTitle').value = '';
             document.getElementById('motdContent').value = '';
-            document.getElementById('motdTargetAudience').value = 'all';
+            document.getElementById('motdTargetAudience').value = 'ALL';
 
             // Set default schedule (start now, end in 7 days)
             const now = new Date();
@@ -965,7 +965,7 @@ class MOTDController {
             // Populate form with existing data
             document.getElementById('motdTitle').value = motd.title || '';
             document.getElementById('motdContent').value = motd.content || '';
-            document.getElementById('motdTargetAudience').value = motd.targetAudience || 'all';
+            document.getElementById('motdTargetAudience').value = motd.targetAudience || 'ALL';
             document.getElementById('motdStartDate').value = this.formatDateForInput(motd.startDate);
             document.getElementById('motdEndDate').value = this.formatDateForInput(motd.endDate);
 
@@ -1023,7 +1023,7 @@ class MOTDController {
             // Populate form with existing data but modify title
             document.getElementById('motdTitle').value = `Copy of ${motd.title}`;
             document.getElementById('motdContent').value = motd.content || '';
-            document.getElementById('motdTargetAudience').value = motd.targetAudience || 'all';
+            document.getElementById('motdTargetAudience').value = motd.targetAudience || 'ALL';
 
             // Set new dates (start now, end in 7 days)
             const now = new Date();
@@ -1419,7 +1419,7 @@ class MOTDController {
             id: editor?.dataset.motdId || null,
             title: document.getElementById('motdTitle')?.value?.trim() || '',
             content: document.getElementById('motdContent')?.value?.trim() || '',
-            targetAudience: document.getElementById('motdTargetAudience')?.value || 'all',
+            targetAudience: document.getElementById('motdTargetAudience')?.value || 'ALL',
             startDate: document.getElementById('motdStartDate')?.value || null,
             endDate: document.getElementById('motdEndDate')?.value || null,
             isActive: document.getElementById('motdIsActive')?.checked || false,
