@@ -2117,11 +2117,15 @@ model MOTDView {
   viewedAt  DateTime        @default(now())
   ipAddress String?
   userAgent String?
+  viewToken String?
   motd      MessageOfTheDay @relation(fields: [motdId], references: [id], onDelete: Cascade)
   user      User?           @relation("ViewedMOTDs", fields: [userId], references: [id])
 
+  @@unique([motdId, userId])
+  @@unique([motdId, viewToken])
   @@index([motdId, viewedAt])
   @@index([userId, viewedAt])
+  @@index([viewToken])
 }
 
 model MOTDLog {

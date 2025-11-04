@@ -96,15 +96,26 @@ router.get('/current', async (req, res) => {
             return res.json({ success: true, data: { motd: null } });
         }
 
-        // Record view
-        await prisma.mOTDView.create({
-            data: {
-                motdId: currentMOTD.id,
-                userId: userId || null,
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent') || null
+        // Record view (with duplicate prevention)
+        try {
+            await prisma.mOTDView.create({
+                data: {
+                    motdId: currentMOTD.id,
+                    userId: userId || null,
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent') || null,
+                    viewToken: dismissalToken || null
+                }
+            });
+        } catch (viewError: any) {
+            if (viewError.code === 'P2002') {
+                // View already recorded for this token - not an error
+                console.log('Duplicate view attempt ignored for token:', dismissalToken);
+            } else {
+                // Log other errors but don't fail the request
+                console.error('View recording error:', viewError);
             }
-        });
+        }
 
         res.json({
             success: true,

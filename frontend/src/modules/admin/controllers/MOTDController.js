@@ -563,9 +563,8 @@ class MOTDController {
                         <span>${targetIcon} ${motd.targetAudience || 'All Users'}</span>
                     </div>
                     <div class="motd-stats">
-                        <span>👁️ ${motd.views || 0} views</span>
-                        <span>👆 ${motd.clicks || 0} clicks</span>
-                        <span>❌ ${motd.dismissals || 0} dismissals</span>
+                        <span>👁️ ${motd._count?.views || 0} views</span>
+                        <span>❌ ${motd._count?.dismissals || 0} dismissals</span>
                     </div>
                 </div>
             </div>
@@ -647,9 +646,8 @@ class MOTDController {
                 </td>
                 <td>
                     <div class="performance-stats">
-                        <span>👁️ ${motd.views || 0}</span>
-                        <span>👆 ${motd.clicks || 0}</span>
-                        <span>❌ ${motd.dismissals || 0}</span>
+                        <span>👁️ ${motd._count?.views || 0}</span>
+                        <span>❌ ${motd._count?.dismissals || 0}</span>
                     </div>
                 </td>
                 <td class="actions">
@@ -912,8 +910,7 @@ class MOTDController {
             }
 
             const impactDetails = `This will affect:
-• ${motd.views || 0} total views
-• ${motd.clicks || 0} total clicks
+• ${motd._count?.views || 0} total views
 • Currently active: ${motd.isActive ? 'YES' : 'NO'}
 • Target audience: ${motd.targetAudience || 'All users'}`;
 
@@ -1636,7 +1633,7 @@ class MOTDController {
 
     showMOTDDetails(motd) {
         // Implementation for showing MOTD details modal
-        alert(`MOTD Details:\n\nTitle: ${motd.title}\nStatus: ${motd.isActive ? 'Active' : 'Inactive'}\nPriority: ${motd.priority}\nViews: ${motd.views || 0}\nClicks: ${motd.clicks || 0}\nDismissals: ${motd.dismissals || 0}`);
+        alert(`MOTD Details:\n\nTitle: ${motd.title}\nStatus: ${motd.isActive ? 'Active' : 'Inactive'}\nPriority: ${motd.priority}\nViews: ${motd._count?.views || 0}\nDismissals: ${motd._count?.dismissals || 0}`);
     }
 
     updatePerformanceCharts(analytics) {
