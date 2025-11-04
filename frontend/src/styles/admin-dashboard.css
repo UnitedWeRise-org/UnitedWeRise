@@ -3925,14 +3925,6 @@
             font-size: 1.1rem;
         }
 
-        .motd-priority {
-            margin-left: 0.5rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
         .motd-actions {
             display: flex;
             gap: 0.5rem;
@@ -4048,22 +4040,6 @@
             padding: 1rem;
             border-radius: 4px;
             min-height: 100px;
-        }
-
-        /* Priority badges */
-        .priority-badge.high {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .priority-badge.medium {
-            background: #fff8e1;
-            color: #f57c00;
-        }
-
-        .priority-badge.low {
-            background: #e8f5e8;
-            color: #2e7d32;
         }
 
         /* Target audience badges */

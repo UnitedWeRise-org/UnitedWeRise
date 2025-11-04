@@ -533,7 +533,6 @@ class MOTDController {
      * Render active MOTD card
      */
     renderActiveMOTDCard(motd) {
-        const priorityIcon = { high: '🔴', medium: '🟡', low: '🟢' }[motd.priority] || '🟢';
         const targetIcon = this.getTargetAudienceIcon(motd.targetAudience);
 
         return `
@@ -541,7 +540,6 @@ class MOTDController {
                 <div class="motd-header">
                     <div class="motd-title">
                         <h4>${motd.title}</h4>
-                        <span class="motd-priority">${priorityIcon} ${motd.priority || 'low'}</span>
                     </div>
                     <div class="motd-actions">
                         <button data-action="editMOTD" data-motd-id="${motd.id}"
@@ -615,7 +613,6 @@ class MOTDController {
     renderMOTDHistoryRow(motd) {
         const statusIcon = motd.isActive ? '🟢' : motd.endDate && new Date(motd.endDate) < new Date() ? '🔴' : '🟡';
         const statusText = motd.isActive ? 'Active' : motd.endDate && new Date(motd.endDate) < new Date() ? 'Expired' : 'Scheduled';
-        const priorityIcon = { high: '🔴', medium: '🟡', low: '🟢' }[motd.priority] || '🟢';
         const targetIcon = this.getTargetAudienceIcon(motd.targetAudience);
 
         return `
@@ -629,11 +626,6 @@ class MOTDController {
                 <td>
                     <span class="status-badge ${statusText.toLowerCase()}">
                         ${statusIcon} ${statusText}
-                    </span>
-                </td>
-                <td>
-                    <span class="priority-badge ${motd.priority || 'low'}">
-                        ${priorityIcon} ${motd.priority || 'low'}
                     </span>
                 </td>
                 <td>
@@ -725,7 +717,6 @@ class MOTDController {
             // Set default values
             document.getElementById('motdTitle').value = '';
             document.getElementById('motdContent').value = '';
-            document.getElementById('motdPriority').value = 'medium';
             document.getElementById('motdTargetAudience').value = 'all';
 
             // Set default schedule (start now, end in 7 days)
@@ -756,13 +747,6 @@ class MOTDController {
             if (!validation.isValid) {
                 alert(`❌ Validation Error:\n${validation.errors.join('\n')}`);
                 return;
-            }
-
-            // Show confirmation for high-priority MOTDs
-            if (formData.priority === 'high') {
-                if (!confirm('⚠️ HIGH PRIORITY MOTD\n\nThis MOTD will be prominently displayed to all targeted users.\n\nContinue?')) {
-                    return;
-                }
             }
 
             const isUpdate = this.isEditing && formData.id;
@@ -981,7 +965,6 @@ class MOTDController {
             // Populate form with existing data
             document.getElementById('motdTitle').value = motd.title || '';
             document.getElementById('motdContent').value = motd.content || '';
-            document.getElementById('motdPriority').value = motd.priority || 'medium';
             document.getElementById('motdTargetAudience').value = motd.targetAudience || 'all';
             document.getElementById('motdStartDate').value = this.formatDateForInput(motd.startDate);
             document.getElementById('motdEndDate').value = this.formatDateForInput(motd.endDate);
@@ -1040,7 +1023,6 @@ class MOTDController {
             // Populate form with existing data but modify title
             document.getElementById('motdTitle').value = `Copy of ${motd.title}`;
             document.getElementById('motdContent').value = motd.content || '';
-            document.getElementById('motdPriority').value = motd.priority || 'medium';
             document.getElementById('motdTargetAudience').value = motd.targetAudience || 'all';
 
             // Set new dates (start now, end in 7 days)
@@ -1437,7 +1419,6 @@ class MOTDController {
             id: editor?.dataset.motdId || null,
             title: document.getElementById('motdTitle')?.value?.trim() || '',
             content: document.getElementById('motdContent')?.value?.trim() || '',
-            priority: document.getElementById('motdPriority')?.value || 'medium',
             targetAudience: document.getElementById('motdTargetAudience')?.value || 'all',
             startDate: document.getElementById('motdStartDate')?.value || null,
             endDate: document.getElementById('motdEndDate')?.value || null,
@@ -1633,7 +1614,7 @@ class MOTDController {
 
     showMOTDDetails(motd) {
         // Implementation for showing MOTD details modal
-        alert(`MOTD Details:\n\nTitle: ${motd.title}\nStatus: ${motd.isActive ? 'Active' : 'Inactive'}\nPriority: ${motd.priority}\nViews: ${motd._count?.views || 0}\nDismissals: ${motd._count?.dismissals || 0}`);
+        alert(`MOTD Details:\n\nTitle: ${motd.title}\nStatus: ${motd.isActive ? 'Active' : 'Inactive'}\nViews: ${motd._count?.views || 0}\nDismissals: ${motd._count?.dismissals || 0}`);
     }
 
     updatePerformanceCharts(analytics) {

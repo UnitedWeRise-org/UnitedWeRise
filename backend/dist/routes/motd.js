@@ -274,9 +274,6 @@ router.post('/dismiss/:id', async (req, res) => {
  *                             type: string
  *                           isActive:
  *                             type: boolean
- *                           priority:
- *                             type: string
- *                             enum: [LOW, MEDIUM, HIGH]
  *                           targetAudience:
  *                             type: string
  *                             enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -363,11 +360,6 @@ router.get('/admin/list', auth_1.requireAuth, auth_1.requireAdmin, async (req, r
  *                 type: boolean
  *                 default: false
  *                 description: Whether to activate immediately
- *               priority:
- *                 type: string
- *                 enum: [LOW, MEDIUM, HIGH]
- *                 default: MEDIUM
- *                 description: Display priority level
  *               targetAudience:
  *                 type: string
  *                 enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -420,7 +412,7 @@ router.get('/admin/list', auth_1.requireAuth, auth_1.requireAdmin, async (req, r
  */
 router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
-        const { title, content, isActive = false, priority = 'MEDIUM', targetAudience = 'ALL', isDismissible = true, showOnce = false, startDate, endDate, showToNewUsers = true } = req.body;
+        const { title, content, isActive = false, targetAudience = 'ALL', isDismissible = true, showOnce = false, startDate, endDate, showToNewUsers = true } = req.body;
         const userId = req.user.id;
         // Validation
         if (!content) {
@@ -431,9 +423,6 @@ router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req
         }
         if (title && (title.length < 3 || title.length > 100)) {
             return res.status(400).json({ success: false, error: 'Title must be between 3 and 100 characters' });
-        }
-        if (priority && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
-            return res.status(400).json({ success: false, error: 'Invalid priority value' });
         }
         if (targetAudience && !['ALL', 'NEW', 'ACTIVE', 'INACTIVE', 'ADMINS', 'MODERATORS', 'CANDIDATES'].includes(targetAudience)) {
             return res.status(400).json({ success: false, error: 'Invalid targetAudience value' });
@@ -454,7 +443,6 @@ router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req
                 title,
                 content,
                 isActive,
-                priority: priority,
                 targetAudience: targetAudience,
                 isDismissible,
                 showOnce,
@@ -514,9 +502,6 @@ router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req
  *                 type: string
  *               isActive:
  *                 type: boolean
- *               priority:
- *                 type: string
- *                 enum: [LOW, MEDIUM, HIGH]
  *               targetAudience:
  *                 type: string
  *                 enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -551,7 +536,7 @@ router.post('/admin/create', auth_1.requireAuth, auth_1.requireAdmin, async (req
 router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (req, res) => {
     try {
         const motdId = req.params.id;
-        const { title, content, isActive, priority, targetAudience, isDismissible, showOnce, startDate, endDate, showToNewUsers } = req.body;
+        const { title, content, isActive, targetAudience, isDismissible, showOnce, startDate, endDate, showToNewUsers } = req.body;
         const userId = req.user.id;
         // Get current MOTD for comparison
         const currentMOTD = await prisma_1.prisma.messageOfTheDay.findUnique({
@@ -566,9 +551,6 @@ router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (
         }
         if (title !== undefined && title && (title.length < 3 || title.length > 100)) {
             return res.status(400).json({ success: false, error: 'Title must be between 3 and 100 characters' });
-        }
-        if (priority && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
-            return res.status(400).json({ success: false, error: 'Invalid priority value' });
         }
         if (targetAudience && !['ALL', 'NEW', 'ACTIVE', 'INACTIVE', 'ADMINS', 'MODERATORS', 'CANDIDATES'].includes(targetAudience)) {
             return res.status(400).json({ success: false, error: 'Invalid targetAudience value' });
@@ -592,7 +574,6 @@ router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (
                 ...(title !== undefined && { title }),
                 ...(content !== undefined && { content }),
                 ...(isActive !== undefined && { isActive }),
-                ...(priority !== undefined && { priority: priority }),
                 ...(targetAudience !== undefined && { targetAudience: targetAudience }),
                 ...(isDismissible !== undefined && { isDismissible }),
                 ...(showOnce !== undefined && { showOnce }),
@@ -614,8 +595,6 @@ router.put('/admin/update/:id', auth_1.requireAuth, auth_1.requireAdmin, async (
             changes.content = { changed: true };
         if (isActive !== undefined && isActive !== currentMOTD.isActive)
             changes.isActive = { from: currentMOTD.isActive, to: isActive };
-        if (priority !== undefined && priority !== currentMOTD.priority)
-            changes.priority = { from: currentMOTD.priority, to: priority };
         if (targetAudience !== undefined && targetAudience !== currentMOTD.targetAudience)
             changes.targetAudience = { from: currentMOTD.targetAudience, to: targetAudience };
         if (isDismissible !== undefined && isDismissible !== currentMOTD.isDismissible)

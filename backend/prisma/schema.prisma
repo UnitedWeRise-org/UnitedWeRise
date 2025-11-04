@@ -2053,13 +2053,6 @@ model PolicyComparison {
   @@index([similarityScore])
 }
 
-/// MOTD Priority levels for display prominence
-enum MOTDPriority {
-  LOW
-  MEDIUM
-  HIGH
-}
-
 /// Target audience for MOTD display
 enum MOTDTargetAudience {
   ALL
@@ -2077,7 +2070,6 @@ model MessageOfTheDay {
   title          String?
   content        String
   isActive       Boolean             @default(false)
-  priority       MOTDPriority        @default(MEDIUM)
   targetAudience MOTDTargetAudience  @default(ALL)
   isDismissible  Boolean             @default(true)
   showOnce       Boolean             @default(false)

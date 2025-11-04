@@ -246,9 +246,6 @@ router.post('/dismiss/:id', async (req, res) => {
  *                             type: string
  *                           isActive:
  *                             type: boolean
- *                           priority:
- *                             type: string
- *                             enum: [LOW, MEDIUM, HIGH]
  *                           targetAudience:
  *                             type: string
  *                             enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -336,11 +333,6 @@ router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, re
  *                 type: boolean
  *                 default: false
  *                 description: Whether to activate immediately
- *               priority:
- *                 type: string
- *                 enum: [LOW, MEDIUM, HIGH]
- *                 default: MEDIUM
- *                 description: Display priority level
  *               targetAudience:
  *                 type: string
  *                 enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -397,7 +389,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
             title,
             content,
             isActive = false,
-            priority = 'MEDIUM',
             targetAudience = 'ALL',
             isDismissible = true,
             showOnce = false,
@@ -418,10 +409,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
 
         if (title && (title.length < 3 || title.length > 100)) {
             return res.status(400).json({ success: false, error: 'Title must be between 3 and 100 characters' });
-        }
-
-        if (priority && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
-            return res.status(400).json({ success: false, error: 'Invalid priority value' });
         }
 
         if (targetAudience && !['ALL', 'NEW', 'ACTIVE', 'INACTIVE', 'ADMINS', 'MODERATORS', 'CANDIDATES'].includes(targetAudience)) {
@@ -446,7 +433,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
                 title,
                 content,
                 isActive,
-                priority: priority as any,
                 targetAudience: targetAudience as any,
                 isDismissible,
                 showOnce,
@@ -508,9 +494,6 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
  *                 type: string
  *               isActive:
  *                 type: boolean
- *               priority:
- *                 type: string
- *                 enum: [LOW, MEDIUM, HIGH]
  *               targetAudience:
  *                 type: string
  *                 enum: [ALL, NEW, ACTIVE, INACTIVE, ADMINS, MODERATORS, CANDIDATES]
@@ -549,7 +532,6 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
             title,
             content,
             isActive,
-            priority,
             targetAudience,
             isDismissible,
             showOnce,
@@ -577,10 +559,6 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
             return res.status(400).json({ success: false, error: 'Title must be between 3 and 100 characters' });
         }
 
-        if (priority && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
-            return res.status(400).json({ success: false, error: 'Invalid priority value' });
-        }
-
         if (targetAudience && !['ALL', 'NEW', 'ACTIVE', 'INACTIVE', 'ADMINS', 'MODERATORS', 'CANDIDATES'].includes(targetAudience)) {
             return res.status(400).json({ success: false, error: 'Invalid targetAudience value' });
         }
@@ -606,7 +584,6 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
                 ...(title !== undefined && { title }),
                 ...(content !== undefined && { content }),
                 ...(isActive !== undefined && { isActive }),
-                ...(priority !== undefined && { priority: priority as any }),
                 ...(targetAudience !== undefined && { targetAudience: targetAudience as any }),
                 ...(isDismissible !== undefined && { isDismissible }),
                 ...(showOnce !== undefined && { showOnce }),
@@ -626,7 +603,6 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
         if (title !== undefined && title !== currentMOTD.title) changes.title = { from: currentMOTD.title, to: title };
         if (content !== undefined && content !== currentMOTD.content) changes.content = { changed: true };
         if (isActive !== undefined && isActive !== currentMOTD.isActive) changes.isActive = { from: currentMOTD.isActive, to: isActive };
-        if (priority !== undefined && priority !== currentMOTD.priority) changes.priority = { from: currentMOTD.priority, to: priority };
         if (targetAudience !== undefined && targetAudience !== currentMOTD.targetAudience) changes.targetAudience = { from: currentMOTD.targetAudience, to: targetAudience };
         if (isDismissible !== undefined && isDismissible !== currentMOTD.isDismissible) changes.isDismissible = { from: currentMOTD.isDismissible, to: isDismissible };
         if (showOnce !== undefined && showOnce !== currentMOTD.showOnce) changes.showOnce = { from: currentMOTD.showOnce, to: showOnce };
