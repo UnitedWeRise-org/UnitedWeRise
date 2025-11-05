@@ -294,12 +294,48 @@ model User {
   feedFilters                 FeedFilter[]
   /// Page views by this user (CASCADE: deletes pageview records)
   pageViews                   PageView[]
+  /// Refresh tokens for this user (CASCADE: deletes tokens when user deleted)
+  refreshTokens               RefreshToken[]            @relation("RefreshTokens")
 
   @@index([username]) /// Fast lookup for @username mentions and profile pages
   @@index([createdAt]) /// Chronological sorting for admin user lists
   @@index([h3Index]) /// Geospatial queries for local content discovery
   @@index([politicalProfileType]) /// Filtering users by role (citizens vs candidates)
   @@index([zipCode, state]) /// Electoral district lookup and local grouping
+}
+
+/// Refresh token for authentication persistence
+/// @description Industry-standard refresh token pattern for secure, long-lived sessions.
+/// Access tokens expire in 30 minutes, refresh tokens allow obtaining new access tokens without re-login.
+/// Implements token rotation (each refresh invalidates old token), device tracking, and "Remember Me" support.
+model RefreshToken {
+  /// Unique identifier for the refresh token record
+  id           String    @id @default(cuid())
+  /// User ID this refresh token belongs to (foreign key to User)
+  userId       String
+  /// SHA-256 hash of the refresh token (64-char hex, never store plaintext tokens)
+  tokenHash    String    @unique
+  /// Expiration timestamp (30 days standard, 90 days with "Remember Me")
+  expiresAt    DateTime
+  /// Token creation timestamp
+  createdAt    DateTime  @default(now())
+  /// Last time this token was used to refresh access token
+  lastUsedAt   DateTime  @default(now())
+  /// Revocation timestamp (null if active, set on logout or security events)
+  revokedAt    DateTime?
+  /// Device information for security and session management
+  /// @description JSON structure: { userAgent: string, ipAddress: string, deviceFingerprint?: object }
+  /// Used to detect suspicious token usage from different devices/locations
+  deviceInfo   Json?
+  /// Whether this token was issued with "Remember Me" option (extends expiration to 90 days)
+  rememberMe   Boolean   @default(false)
+
+  /// Relationship to User (CASCADE: deleting user deletes all their refresh tokens)
+  user User @relation("RefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) /// Fast lookup of all tokens for a user (logout all devices, device management)
+  @@index([tokenHash]) /// Fast validation of incoming refresh token
+  @@index([expiresAt]) /// Cleanup job to delete expired tokens periodically
 }
 
 model UserActivity {

@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/messaging';
 import { sessionManager } from './sessionManager';
+import { verifyToken } from '../utils/auth';
 
 const prisma = new PrismaClient();
 
@@ -109,50 +110,76 @@ export class WebSocketService {
     try {
       console.log('🔌 WebSocket connection attempt from:', socket.handshake.address);
 
-      let token: string | undefined;
+      let userId: string | undefined;
+      let authMethod: string = 'none';
 
-      // PRIMARY AUTHENTICATION METHOD: httpOnly cookies (most secure)
+      // Parse cookies once for both access and refresh tokens
       const cookieHeader = socket.handshake.headers.cookie;
       console.log('🍪 Cookie header present:', !!cookieHeader);
 
+      let cookies: any = {};
       if (cookieHeader) {
         console.log('🍪 Cookie header length:', cookieHeader.length);
         console.log('🍪 All cookies:', cookieHeader.split(';').map((c: string) => c.trim().split('=')[0]));
 
-        // Parse cookie header to extract authToken
-        const cookies = cookieHeader.split(';').reduce((acc: any, cookie: string) => {
+        // Parse cookie header to extract tokens
+        cookies = cookieHeader.split(';').reduce((acc: any, cookie: string) => {
           const [key, value] = cookie.trim().split('=');
           acc[key] = value;
           return acc;
         }, {});
+      }
 
-        token = cookies.authToken;
-        console.log('🔑 authToken from cookie:', token ? `${token.substring(0, 20)}...` : 'not found');
+      // PRIMARY AUTHENTICATION: Try access token first (short-lived, 30 min)
+      let accessToken = cookies.authToken;
+
+      // Fallback for explicit token in auth or header
+      if (!accessToken) {
+        accessToken = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+        console.log('🔑 Token from auth.token or Bearer header:', accessToken ? `${accessToken.substring(0, 20)}...` : 'not found');
       } else {
-        console.log('🍪 No cookie header in handshake - checking fallback auth methods');
+        console.log('🔑 authToken from cookie:', accessToken ? `${accessToken.substring(0, 20)}...` : 'not found');
       }
 
-      // FALLBACK AUTHENTICATION: Explicit token (for cases where cookies unavailable)
-      if (!token) {
-        token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-        console.log('🔑 Token from auth.token or Bearer header:', token ? `${token.substring(0, 20)}...` : 'not found');
+      // Try to verify access token
+      if (accessToken) {
+        const decoded = verifyToken(accessToken);
+        if (decoded) {
+          // Check if access token is blacklisted
+          const tokenId = crypto.createHash('sha256').update(accessToken).digest('hex');
+          if (await sessionManager.isTokenBlacklisted(tokenId)) {
+            console.log('⚠️ Access token blacklisted, will try refresh token');
+          } else {
+            userId = decoded.userId;
+            authMethod = 'access_token';
+            console.log('✅ Access token valid, userId:', userId);
+          }
+        } else {
+          console.log('⚠️ Access token invalid or expired, will try refresh token');
+        }
       }
 
-      if (!token) {
-        console.error('❌ WebSocket auth failed: No token provided in cookies or auth methods');
-        return next(new Error('Authentication error: No token provided'));
+      // FALLBACK AUTHENTICATION: Try refresh token for long-lived connections (30-90 days)
+      if (!userId) {
+        const refreshToken = cookies.refreshToken;
+        console.log('🔑 refreshToken from cookie:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'not found');
+
+        if (refreshToken) {
+          const tokenData = await sessionManager.validateRefreshToken(refreshToken);
+          if (tokenData) {
+            userId = tokenData.userId;
+            authMethod = 'refresh_token';
+            console.log('✅ Refresh token valid, userId:', userId);
+          } else {
+            console.log('❌ Refresh token invalid or expired');
+          }
+        }
       }
 
-      // Verify JWT token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      const userId = decoded.userId;
-      console.log('✅ JWT decoded successfully, userId:', userId);
-
-      // SECURITY: Check if token has been blacklisted (revoked during logout)
-      const tokenId = crypto.createHash('sha256').update(token).digest('hex');
-      if (await sessionManager.isTokenBlacklisted(tokenId)) {
-        console.error('❌ WebSocket auth failed: Token has been revoked');
-        return next(new Error('Authentication error: Token has been revoked'));
+      // If no valid token found, reject connection
+      if (!userId) {
+        console.error('❌ WebSocket auth failed: No valid access or refresh token provided');
+        return next(new Error('Authentication error: No valid token provided'));
       }
 
       // Get user details from database
@@ -175,7 +202,7 @@ export class WebSocketService {
       socket.data.username = user.username;
       socket.data.isAdmin = user.isAdmin;
 
-      console.log('✅ WebSocket authentication successful for user:', user.username);
+      console.log('✅ WebSocket authentication successful for user:', user.username, 'via', authMethod);
       next();
     } catch (error) {
       console.error('❌ WebSocket authentication error:', error instanceof Error ? error.message : error);

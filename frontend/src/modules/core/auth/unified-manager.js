@@ -30,8 +30,6 @@ class UnifiedAuthManager {
         this._subscribers = new Set();
         this._isInitialized = false;
         this._isLoggingOut = false; // Prevent re-auth during logout
-        this._tokenRefreshInterval = null; // Token refresh interval (14-min)
-        this._lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this._isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this._visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
         this._currentAuthState = {
@@ -42,7 +40,6 @@ class UnifiedAuthManager {
         };
 
         // Bind methods to preserve context
-        this.refreshToken = this.refreshToken.bind(this);
         this._handleVisibilityChange = this._handleVisibilityChange.bind(this);
 
         // Listen for visibility changes to refresh token when tab becomes visible
@@ -71,19 +68,12 @@ class UnifiedAuthManager {
     }
 
     /**
-     * Refresh authentication token to prevent Azure 30-minute timeout
-     * Called every 14 minutes to maintain session with dual redundancy (14, 28, 42...)
+     * Refresh authentication token (called on visibility change or 401 error)
      */
     async refreshToken(forceRefresh = false) {
         // Prevent concurrent refresh attempts
         if (this._isRefreshingToken) {
             console.log('⏸️ Token refresh already in progress');
-            return false;
-        }
-
-        // Skip if tab is hidden (unless forced)
-        if (!forceRefresh && document.hidden) {
-            console.log('⏸️ Token refresh skipped (tab hidden)');
             return false;
         }
 
@@ -100,54 +90,38 @@ class UnifiedAuthManager {
         }
 
         this._isRefreshingToken = true;
-        const maxRetries = 3;
-        const retryDelays = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
 
         try {
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 Attempting token refresh (${attempt + 1}/${maxRetries})...`);
+            console.log('🔄 Attempting token refresh...');
 
-                    const response = await window.apiClient.call('/auth/refresh', {
-                        method: 'POST'
-                    });
+            const response = await fetch(`${window.API_CONFIG?.BASE_URL || 'https://api.unitedwerise.org/api'}/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include'
+            });
 
-                    if (response.success || response.csrfToken) {
-                        // Update CSRF token if provided
-                        if (response.csrfToken) {
-                            window.csrfToken = response.csrfToken;
-                            if (window.apiClient) {
-                                window.apiClient.csrfToken = response.csrfToken;
-                            }
-                            this._currentAuthState.csrfToken = response.csrfToken;
-                        }
+            if (response.ok) {
+                const data = await response.json();
 
-                        this._lastTokenRefresh = new Date();
-                        console.log(`✅ Token refreshed successfully (attempt ${attempt + 1})`);
-
-                        // CRITICAL: Wait for browser to process new cookies before making API calls
-                        console.log('⏳ Waiting for cookie propagation...');
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        console.log('✅ Cookie propagation complete');
-
-                        this._isRefreshingToken = false;
-                        return true;
-                    } else {
-                        console.warn(`⚠️ Token refresh failed with response (attempt ${attempt + 1}/${maxRetries}):`, response);
+                // Update CSRF token if provided
+                if (data.csrfToken) {
+                    window.csrfToken = data.csrfToken;
+                    if (window.apiClient) {
+                        window.apiClient.csrfToken = data.csrfToken;
                     }
-                } catch (error) {
-                    console.warn(`⚠️ Token refresh failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+                    this._currentAuthState.csrfToken = data.csrfToken;
                 }
 
-                // Wait before retry (unless this was the last attempt)
-                if (attempt < maxRetries - 1) {
-                    await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
-                }
+                console.log('✅ Token refreshed successfully');
+                this._isRefreshingToken = false;
+                return true;
+            } else {
+                console.warn('⚠️ Token refresh failed - refresh token expired');
+                this._isRefreshingToken = false;
+
+                // Refresh token expired - force logout
+                await this.logout();
+                return false;
             }
-
-            console.error('❌ All token refresh attempts failed - session may expire');
-            this._isRefreshingToken = false;
-            return false;
         } catch (error) {
             console.error('❌ Token refresh error:', error);
             this._isRefreshingToken = false;
@@ -174,57 +148,25 @@ class UnifiedAuthManager {
                     return;
                 }
 
-                // Tab became visible - check if token needs refresh
-                const now = new Date();
-                const timeSinceLastRefresh = (now - this._lastTokenRefresh) / 1000 / 60; // minutes
-
-                // If more than 10 minutes since last refresh, refresh immediately
-                if (timeSinceLastRefresh > 10) {
-                    console.log(`🔄 Tab visible after ${Math.floor(timeSinceLastRefresh)} minutes - refreshing token`);
-                    this.refreshToken(true); // Force refresh
-                }
+                // Tab became visible - refresh token to ensure it's still valid
+                console.log('🔄 Tab visible - refreshing token');
+                this.refreshToken(true); // Force refresh
             }
         }, 1000); // 1 second debounce
     }
 
-    /**
-     * Start token refresh interval (called when user becomes authenticated)
-     */
-    _startTokenRefresh() {
-        // Clear any existing interval first
-        if (this._tokenRefreshInterval) {
-            clearInterval(this._tokenRefreshInterval);
-        }
-
-        // Set up token refresh every 14 minutes
-        this._tokenRefreshInterval = setInterval(() => {
-            this.refreshToken();
-        }, 14 * 60 * 1000); // 14 minutes in milliseconds
-
-        console.log('✅ Token auto-refresh started (14-minute interval)');
-    }
-
-    /**
-     * Stop token refresh interval (called when user logs out)
-     */
-    _stopTokenRefresh() {
-        if (this._tokenRefreshInterval) {
-            clearInterval(this._tokenRefreshInterval);
-            this._tokenRefreshInterval = null;
-            console.log('⏹️ Token auto-refresh stopped');
-        }
-    }
 
     /**
      * Perform login with COMPLETE system synchronization
      */
-    async login(email, password, totpToken = null) {
+    async login(email, password, totpToken = null, rememberMe = false) {
         await adminDebugLog('UnifiedAuthManager', 'Unified login starting...');
 
         try {
             // Use the existing API client for consistency
             const loginData = { email, password };
             if (totpToken) loginData.totpToken = totpToken;
+            if (rememberMe) loginData.rememberMe = rememberMe;
 
             const response = await window.apiClient.call('/auth/login', {
                 method: 'POST',
@@ -275,9 +217,6 @@ class UnifiedAuthManager {
 
         // SYNCHRONIZE ALL SYSTEMS
         await this._syncAllSystems(user, csrfToken);
-
-        // Start token auto-refresh to prevent 30-minute timeout
-        this._startTokenRefresh();
 
         // Notify all subscribers
         this._notifySubscribers();
@@ -474,9 +413,6 @@ class UnifiedAuthManager {
         // Set logout flag to prevent re-authentication
         this._isLoggingOut = true;
 
-        // Stop token auto-refresh
-        this._stopTokenRefresh();
-
         // Call backend logout endpoint to clear httpOnly cookies
         try {
             await window.apiClient.call('/auth/logout', {
@@ -553,9 +489,6 @@ class UnifiedAuthManager {
      * Clear authentication from ALL systems
      */
     _clearAllSystems() {
-        // Stop token auto-refresh (safety measure in case called directly)
-        this._stopTokenRefresh();
-
         // Clear visibility change debounce timer
         if (this._visibilityChangeDebounceTimer) {
             clearTimeout(this._visibilityChangeDebounceTimer);
@@ -654,9 +587,6 @@ class UnifiedAuthManager {
             // Note: Can't await here since _syncFromExistingSystems is not async
             // But we need to sync immediately to prevent race conditions
             this._syncAllSystemsSync(existingUser, existingToken);
-
-            // Start token auto-refresh for existing sessions
-            this._startTokenRefresh();
         }
     }
 

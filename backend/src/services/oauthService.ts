@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma';
 ;
-import { generateToken, hashPassword } from '../utils/auth';
+import { generateToken, hashPassword, generateRefreshToken } from '../utils/auth';
 import { normalizeEmail } from '../utils/emailNormalization';
+import { sessionManager } from './sessionManager';
 import crypto from 'crypto';
 
 // Using singleton prisma from lib/prisma.ts
@@ -30,6 +31,7 @@ export interface OAuthLoginResult {
     isNewUser?: boolean;
   };
   token: string;
+  refreshToken: string;
 }
 
 export class OAuthService {
@@ -67,7 +69,17 @@ export class OAuthService {
         });
 
         const token = generateToken(existingOAuthProvider.user.id);
-        
+
+        // Generate and store refresh token (30 days for OAuth logins)
+        const refreshToken = generateRefreshToken();
+        await sessionManager.storeRefreshToken(
+          existingOAuthProvider.user.id,
+          refreshToken,
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          undefined, // deviceInfo not available in OAuth flow
+          false // rememberMe defaults to false
+        );
+
         return {
           user: {
             id: existingOAuthProvider.user.id,
@@ -78,7 +90,8 @@ export class OAuthService {
             avatar: existingOAuthProvider.user.avatar || profile.picture || undefined,
             isNewUser: false
           },
-          token
+          token,
+          refreshToken
         };
       }
 
@@ -132,7 +145,17 @@ export class OAuthService {
         }
 
         const token = generateToken(existingUser.id);
-        
+
+        // Generate and store refresh token (30 days for OAuth logins)
+        const refreshToken = generateRefreshToken();
+        await sessionManager.storeRefreshToken(
+          existingUser.id,
+          refreshToken,
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          undefined, // deviceInfo not available in OAuth flow
+          false // rememberMe defaults to false
+        );
+
         return {
           user: {
             id: existingUser.id,
@@ -143,7 +166,8 @@ export class OAuthService {
             avatar: existingUser.avatar || profile.picture || undefined,
             isNewUser: false
           },
-          token
+          token,
+          refreshToken
         };
       }
 
@@ -181,6 +205,16 @@ export class OAuthService {
 
       const token = generateToken(newUser.id);
 
+      // Generate and store refresh token (30 days for OAuth logins)
+      const refreshToken = generateRefreshToken();
+      await sessionManager.storeRefreshToken(
+        newUser.id,
+        refreshToken,
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        undefined, // deviceInfo not available in OAuth flow
+        false // rememberMe defaults to false
+      );
+
       return {
         user: {
           id: newUser.id,
@@ -191,7 +225,8 @@ export class OAuthService {
           avatar: newUser.avatar || undefined,
           isNewUser: true
         },
-        token
+        token,
+        refreshToken
       };
 
     } catch (error) {

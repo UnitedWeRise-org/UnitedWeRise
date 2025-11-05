@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
 
 // SECURITY: JWT_SECRET must be set via environment variable
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -7,9 +8,9 @@ if (!JWT_SECRET) {
   throw new Error('FATAL: JWT_SECRET environment variable must be set');
 }
 
-// Reduced from 7d to 24h for better security while maintaining UX
-// TODO: Implement refresh tokens for even better security with long-lived sessions
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+// Access token: Short-lived (30 min) for security, refreshed using refresh tokens
+// Refresh token: Long-lived (30-90 days) stored in database for session persistence
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m'; // Changed from 24h to 30m
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12');
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -40,6 +41,29 @@ export const verifyToken = (token: string): (JwtPayload & { userId: string; totp
 
 export const generateResetToken = (): string => {
   // SECURITY: Use cryptographically secure random bytes instead of Math.random()
-  const crypto = require('crypto');
   return crypto.randomBytes(32).toString('hex'); // 256 bits of cryptographic randomness
+};
+
+/**
+ * Generate a cryptographically secure refresh token
+ * @returns 64-character hex string (256 bits of randomness)
+ * @description Used for long-lived session persistence. Token is hashed before storage in database.
+ */
+export const generateRefreshToken = (): string => {
+  // SECURITY: 256 bits of cryptographic randomness (same as password reset tokens)
+  // Returns 64-character hex string
+  return crypto.randomBytes(32).toString('hex');
+};
+
+/**
+ * Hash refresh token for secure database storage
+ * @param token - Plaintext refresh token (64-char hex)
+ * @returns SHA-256 hash of token (64-char hex)
+ * @description Never store plaintext tokens in database. Only store hashed version.
+ * Validation: Hash incoming token and compare with stored hash.
+ */
+export const hashRefreshToken = (token: string): string => {
+  // SECURITY: Use SHA-256 for fast, secure one-way hashing
+  // SHA-256 is appropriate for tokens (not passwords - those use bcrypt)
+  return crypto.createHash('sha256').update(token).digest('hex');
 };

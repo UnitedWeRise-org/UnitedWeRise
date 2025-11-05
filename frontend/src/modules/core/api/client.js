@@ -149,9 +149,55 @@ class APIClient {
             // Handle response
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Unauthorized - trigger re-authentication
-                    this._handleUnauthorized();
-                    throw new Error('Unauthorized');
+                    // Try to parse error response to check for ACCESS_TOKEN_EXPIRED
+                    try {
+                        const errorData = await response.json();
+
+                        // If access token expired and this is not a retry, try to refresh
+                        if (errorData.code === 'ACCESS_TOKEN_EXPIRED' && !options._retry) {
+                            console.log('🔄 Access token expired, attempting refresh...');
+
+                            try {
+                                // Call refresh endpoint
+                                const refreshResponse = await fetch(`${API_CONFIG.BASE_URL}/auth/refresh`, {
+                                    method: 'POST',
+                                    credentials: 'include'
+                                });
+
+                                if (refreshResponse.ok) {
+                                    const refreshData = await refreshResponse.json();
+
+                                    // Update CSRF token
+                                    if (refreshData.csrfToken) {
+                                        window.csrfToken = refreshData.csrfToken;
+                                        this.csrfToken = refreshData.csrfToken;
+                                    }
+
+                                    console.log('✅ Token refreshed, retrying original request');
+
+                                    // Retry original request with _retry flag to prevent infinite loops
+                                    return this._makeRequest(url, { ...options, _retry: true }, 1);
+                                } else {
+                                    // Refresh token also expired - force logout
+                                    console.warn('⚠️ Refresh token expired - forcing logout');
+                                    this._handleUnauthorized();
+                                    throw new Error('Session expired');
+                                }
+                            } catch (refreshError) {
+                                console.error('❌ Token refresh failed:', refreshError);
+                                this._handleUnauthorized();
+                                throw new Error('Session expired');
+                            }
+                        } else {
+                            // Not an access token expiration or already retried - handle as normal 401
+                            this._handleUnauthorized();
+                            throw new Error(errorData.error || errorData.message || 'Unauthorized');
+                        }
+                    } catch (parseError) {
+                        // Could not parse response - handle as normal 401
+                        this._handleUnauthorized();
+                        throw new Error('Unauthorized');
+                    }
                 }
 
                 // Retry on 5xx errors

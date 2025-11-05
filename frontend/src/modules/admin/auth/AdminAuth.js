@@ -13,7 +13,6 @@ class AdminAuth {
         this.currentUser = null;
         this.totpVerified = false;
         this.autoRefreshInterval = null;
-        this.tokenRefreshInterval = null; // Separate interval for token refresh (14-min)
         this.lastTokenRefresh = new Date(); // Initialize to current time to prevent "Infinity minutes" bug
         this.isRefreshingToken = false; // Flag to prevent concurrent refreshes
         this.visibilityChangeDebounceTimer = null; // Debounce timer for visibility changes
@@ -358,12 +357,6 @@ class AdminAuth {
         this.autoRefreshInterval = setInterval(() => {
             this.refreshAllData();
         }, 300000);
-
-        // Set up token refresh every 4 minutes to prevent Azure Container Apps 5-minute idle timeout
-        // Refreshes at 4, 8, 12... minutes (before Azure scales down/times out)
-        this.tokenRefreshInterval = setInterval(() => {
-            this.refreshToken();
-        }, 4 * 60 * 1000); // 4 minutes in milliseconds
     }
 
     /**
@@ -375,10 +368,6 @@ class AdminAuth {
 
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
-        }
-
-        if (this.tokenRefreshInterval) {
-            clearInterval(this.tokenRefreshInterval);
         }
 
         this.currentUser = null;
@@ -488,10 +477,6 @@ class AdminAuth {
     destroy() {
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
-        }
-
-        if (this.tokenRefreshInterval) {
-            clearInterval(this.tokenRefreshInterval);
         }
 
         if (this.visibilityChangeDebounceTimer) {

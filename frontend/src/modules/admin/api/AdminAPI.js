@@ -216,10 +216,9 @@ class AdminAPI {
                 }
             }
 
-            // Handle authentication errors - but verify session first
-            // (401 can be from connection timeout, not just JWT expiration)
+            // Handle authentication errors with automatic token refresh
             if (response.status === 401) {
-                console.warn('⚠️ Admin API: Received 401 - verifying session...');
+                console.warn('⚠️ Admin API: Received 401 - checking for token expiration...');
 
                 // If this is a retry, don't retry again
                 if (retryCount > 0) {
@@ -241,49 +240,110 @@ class AdminAPI {
                     return response;
                 }
 
-                // Attempt to verify session before logging out
+                // Check if this is an access token expiration error
                 try {
-                    const verifyResponse = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
+                    const errorData = await response.clone().json().catch(() => ({}));
 
-                    if (verifyResponse.ok) {
-                        // Session is still valid - 401 was likely timing issue after token refresh
-                        console.log('✅ Session verified valid - 401 was likely timing issue, retrying...');
-                        await adminDebugLog('AdminAPI', '401 error but session valid - retrying request', {
+                    if (errorData.code === 'ACCESS_TOKEN_EXPIRED') {
+                        console.log('🔄 Access token expired - attempting refresh...');
+                        await adminDebugLog('AdminAPI', 'Access token expired - refreshing', {
                             originalUrl: url,
-                            method: options.method || 'GET',
-                            retryCount: retryCount
+                            method: options.method || 'GET'
                         });
 
-                        // Wait a moment for cookies to propagate, then retry
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                        console.log('🔄 Retrying API call after 401...');
-                        return this.call(url, options, retryCount + 1);
-                    } else {
-                        // Session is truly invalid - log out
-                        console.error('🔒 Session verification failed - logging out');
-                        await adminDebugError('AdminAPI', 'Authentication failed - session invalid', {
-                            verifyStatus: verifyResponse.status
-                        });
+                        // Attempt to refresh token
+                        try {
+                            const refreshResponse = await fetch(`${this.BACKEND_URL}/api/auth/refresh`, {
+                                method: 'POST',
+                                credentials: 'include'
+                            });
 
-                        // Clear auth data and redirect to login
-                        localStorage.removeItem('currentUser');
+                            if (refreshResponse.ok) {
+                                const refreshData = await refreshResponse.json();
 
-                        if (window.adminAuth) {
-                            window.adminAuth.showLogin();
-                        } else {
-                            window.location.href = '/admin-dashboard.html';
+                                // Update CSRF token if provided
+                                if (refreshData.csrfToken) {
+                                    window.csrfToken = refreshData.csrfToken;
+                                }
+
+                                console.log('✅ Token refreshed successfully - retrying request');
+                                await adminDebugLog('AdminAPI', 'Token refresh successful - retrying original request');
+
+                                // Wait for cookie propagation
+                                await new Promise(resolve => setTimeout(resolve, 300));
+
+                                // Retry original request with incremented retry count
+                                return this.call(url, options, retryCount + 1);
+                            } else {
+                                console.error('🔒 Token refresh failed - logging out');
+                                await adminDebugError('AdminAPI', 'Token refresh failed', {
+                                    refreshStatus: refreshResponse.status
+                                });
+
+                                // Clear auth data and redirect to login
+                                localStorage.removeItem('currentUser');
+
+                                if (window.adminAuth) {
+                                    window.adminAuth.showLogin();
+                                } else {
+                                    window.location.href = '/admin-dashboard.html';
+                                }
+
+                                return response;
+                            }
+                        } catch (refreshError) {
+                            console.error('🔒 Token refresh error:', refreshError);
+                            await adminDebugError('AdminAPI', 'Token refresh exception', {
+                                error: refreshError.message
+                            });
+
+                            // Network error during refresh - keep user logged in
+                            return response;
                         }
+                    } else {
+                        // Not a token expiration - verify session to check if it's a network issue
+                        console.warn('⚠️ 401 without ACCESS_TOKEN_EXPIRED code - verifying session...');
 
-                        return response;
+                        const verifyResponse = await fetch(`${this.BACKEND_URL}/api/auth/me`, {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (verifyResponse.ok) {
+                            // Session is still valid - 401 was likely timing issue
+                            console.log('✅ Session verified valid - 401 was likely timing issue, retrying...');
+                            await adminDebugLog('AdminAPI', '401 error but session valid - retrying request', {
+                                originalUrl: url,
+                                method: options.method || 'GET'
+                            });
+
+                            // Wait a moment for cookies to propagate, then retry
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                            return this.call(url, options, retryCount + 1);
+                        } else {
+                            // Session is truly invalid - log out
+                            console.error('🔒 Session verification failed - logging out');
+                            await adminDebugError('AdminAPI', 'Authentication failed - session invalid', {
+                                verifyStatus: verifyResponse.status
+                            });
+
+                            // Clear auth data and redirect to login
+                            localStorage.removeItem('currentUser');
+
+                            if (window.adminAuth) {
+                                window.adminAuth.showLogin();
+                            } else {
+                                window.location.href = '/admin-dashboard.html';
+                            }
+
+                            return response;
+                        }
                     }
                 } catch (verifyError) {
                     // Network error during verification - don't log out
-                    console.warn('⚠️ Could not verify session due to network error - keeping user logged in');
-                    await adminDebugWarn('AdminAPI', 'Session verification failed due to network error', {
+                    console.warn('⚠️ Could not handle 401 due to error - keeping user logged in');
+                    await adminDebugWarn('AdminAPI', '401 handling error', {
                         error: verifyError.message
                     });
 

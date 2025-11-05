@@ -412,3 +412,31 @@
     margin: 0;
     letter-spacing: 0.3px;
 }
+
+/* ========================================
+   REMEMBER ME CHECKBOX
+======================================== */
+
+.remember-me-group {
+    margin: 15px 0;
+}
+
+.remember-me-label {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: normal;
+    cursor: pointer;
+    user-select: none;
+}
+
+.remember-me-label input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+}
+
+.remember-me-label span {
+    color: #666;
+}

@@ -3,6 +3,7 @@ import { OAuthService, OAuthProfile } from '../services/oauthService';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiting';
 import { metricsService } from '../services/metricsService';
+import { requireSecureCookies } from '../utils/environment';
 
 const router = express.Router();
 
@@ -87,16 +88,49 @@ router.post('/google', authLimiter, async (req, res) => {
     const result = await OAuthService.handleOAuthLogin(profile);
 
     // Track metrics
-    metricsService.incrementCounter('oauth_logins_total', { 
+    metricsService.incrementCounter('oauth_logins_total', {
       provider: 'google',
       is_new_user: result.user.isNewUser ? 'true' : 'false'
+    });
+
+    // Set authToken cookie (30 minutes)
+    res.cookie('authToken', result.token, {
+      httpOnly: true,
+      secure: requireSecureCookies(),
+      sameSite: 'none',
+      maxAge: 30 * 60 * 1000, // 30 minutes
+      path: '/',
+      domain: '.unitedwerise.org'
+    });
+
+    // Set refreshToken cookie (30 days for OAuth logins)
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: requireSecureCookies(),
+      sameSite: 'none',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/',
+      domain: '.unitedwerise.org'
+    });
+
+    // Generate and set CSRF token
+    const crypto = require('crypto');
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrf-token', csrfToken, {
+      httpOnly: false,
+      secure: requireSecureCookies(),
+      sameSite: 'none',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/',
+      domain: '.unitedwerise.org'
     });
 
     res.json({
       message: result.user.isNewUser ? 'Account created successfully' : 'Login successful',
       user: result.user,
-      token: result.token,
+      csrfToken,
       isNewUser: result.user.isNewUser
+      // Token is in httpOnly cookie only (not exposed to JavaScript)
     });
 
   } catch (error) {

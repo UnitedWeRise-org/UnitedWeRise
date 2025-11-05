@@ -66,7 +66,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     if (!decoded) {
       console.log(`[${requestId}] ❌ AUTH 401: Token verification failed`);
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
-      return res.status(401).json({ error: 'Invalid token.' });
+      return res.status(401).json({ error: 'Invalid token.', code: 'ACCESS_TOKEN_EXPIRED' });
     }
 
     console.log(`[${requestId}] ✅ AUTH Token Decoded:`, {

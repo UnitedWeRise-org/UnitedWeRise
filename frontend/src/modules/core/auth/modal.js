@@ -141,9 +141,10 @@ export async function handleLogin() {
     console.log('🔍 Modular handleLogin called - using unified auth manager');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
+    const rememberMe = document.getElementById('rememberMe')?.checked || false;
     const loginButton = document.getElementById('loginButton');
 
-    console.log('🔍 Login inputs:', {email: email ? 'present' : 'missing', password: password ? 'present' : 'missing'});
+    console.log('🔍 Login inputs:', {email: email ? 'present' : 'missing', password: password ? 'present' : 'missing', rememberMe});
 
     if (!email || !password) {
         showAuthMessage('Please fill in all fields', 'error', 'login');
@@ -159,10 +160,10 @@ export async function handleLogin() {
     try {
         showAuthMessage('Logging in...', 'info', 'login');
         console.log('🔍 Using unified auth manager for login');
-        
+
         // Use the unified auth manager for login
-        const result = await unifiedAuthManager.login(email, password);
-        
+        const result = await unifiedAuthManager.login(email, password, null, rememberMe);
+
         console.log('🔍 Unified login result:', result);
         
         if (result.success) {
