@@ -21,6 +21,7 @@ export interface OAuthLoginResult {
         isNewUser?: boolean;
     };
     token: string;
+    refreshToken: string;
 }
 export declare class OAuthService {
     /**

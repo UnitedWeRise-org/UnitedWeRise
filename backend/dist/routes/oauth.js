@@ -8,6 +8,7 @@ const oauthService_1 = require("../services/oauthService");
 const auth_1 = require("../middleware/auth");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
+const environment_1 = require("../utils/environment");
 const router = express_1.default.Router();
 // OAuth Configuration endpoint
 router.get('/config', async (req, res) => {
@@ -89,11 +90,41 @@ router.post('/google', rateLimiting_1.authLimiter, async (req, res) => {
             provider: 'google',
             is_new_user: result.user.isNewUser ? 'true' : 'false'
         });
+        // Set authToken cookie (30 minutes)
+        res.cookie('authToken', result.token, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: 30 * 60 * 1000, // 30 minutes
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
+        // Set refreshToken cookie (30 days for OAuth logins)
+        res.cookie('refreshToken', result.refreshToken, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
+        // Generate and set CSRF token
+        const crypto = require('crypto');
+        const csrfToken = crypto.randomBytes(32).toString('hex');
+        res.cookie('csrf-token', csrfToken, {
+            httpOnly: false,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
         res.json({
             message: result.user.isNewUser ? 'Account created successfully' : 'Login successful',
             user: result.user,
-            token: result.token,
+            csrfToken,
             isNewUser: result.user.isNewUser
+            // Token is in httpOnly cookie only (not exposed to JavaScript)
         });
     }
     catch (error) {

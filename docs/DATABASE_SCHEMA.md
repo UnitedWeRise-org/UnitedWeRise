@@ -1,10 +1,10 @@
 # UnitedWeRise Database Schema Reference
 
 **Status**: ✅ Production Ready
-**Last Updated**: 2025-10-17
+**Last Updated**: 2025-11-05
 **Database**: PostgreSQL (Azure Flexible Server)
 **ORM**: Prisma
-**Total Models**: 86
+**Total Models**: 87
 
 ---
 
@@ -70,8 +70,8 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 
 ## Database Statistics
 
-- **Total Models**: 86
-- **Core User & Authentication**: 9 models
+- **Total Models**: 87
+- **Core User & Authentication**: 10 models
 - **Social & Content**: 12 models
 - **Civic Engagement & Gamification**: 6 models
 - **Electoral & Political**: 28 models
@@ -88,6 +88,7 @@ UnitedWeRise uses PostgreSQL with Prisma ORM for data management. The schema is 
 
 ### Core User & Authentication Models
 - `User` - Central user account and profile management
+- `RefreshToken` - Long-lived session tokens for authentication (30-90 days)
 - `UserActivity` - User action tracking and analytics
 - `UserOAuthProvider` - OAuth authentication providers (Google, Microsoft, Apple)
 - `SecurityEvent` - Security event logging and risk tracking
@@ -375,6 +376,83 @@ model User {
 - H3 geospatial indexing enables privacy-preserving location features
 - TOTP provides optional 2FA security
 - Soft delete not implemented (hard delete via CASCADE)
+
+---
+
+### RefreshToken Model
+
+```prisma
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  deviceInfo   Json?
+  rememberMe   Boolean   @default(false)
+
+  user User @relation("RefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+```
+
+**Purpose:**
+Long-lived session tokens that enable automatic token refresh without requiring users to re-login. Implements industry-standard OAuth 2.0 refresh token pattern with token rotation security.
+
+**Fields:**
+- `id`: Unique identifier for the refresh token record
+- `userId`: Foreign key to User table (CASCADE delete when user deleted)
+- `tokenHash`: SHA-256 hash of refresh token (64-char hex, never store plaintext)
+- `expiresAt`: Expiration timestamp (30 days standard, 90 days with "Remember Me")
+- `createdAt`: Token creation timestamp
+- `lastUsedAt`: Last time token was used to refresh access token
+- `revokedAt`: Revocation timestamp (null if active, set on logout/password change/security events)
+- `deviceInfo`: JSON object with device/session info `{ userAgent, ipAddress, deviceFingerprint? }`
+- `rememberMe`: Whether token was issued with "Remember Me" option (extends expiration to 90 days)
+
+**Relationships:**
+- `user`: Many-to-one relationship with User (CASCADE: deleting user deletes all refresh tokens)
+- Users can have up to 10 concurrent active refresh tokens (multi-device support)
+
+**Indexes:**
+- `userId`: Fast lookup of all tokens for a user (logout all devices, device management)
+- `tokenHash`: Fast validation of incoming refresh token (unique constraint)
+- `expiresAt`: Cleanup job to delete expired tokens periodically
+
+**Security Features:**
+- **Token Hashing**: Tokens hashed with SHA-256 before storage (never store plaintext)
+- **Token Rotation**: Each refresh generates new token and invalidates old one (30-second grace period for concurrent requests)
+- **Device Tracking**: Store userAgent, ipAddress to detect suspicious usage from different devices/locations
+- **Device Limits**: Maximum 10 active tokens per user, oldest auto-revoked when limit reached
+- **Revocation**: All tokens revoked on password change, logout all devices, or security events
+- **Expiration**: Automatic expiration (30 days standard, 90 days with Remember Me)
+
+**Lifecycle:**
+1. **Creation**: Generated on login/register, stored with hashed value
+2. **Usage**: Frontend sends refresh token in httpOnly cookie when access token expires (every 30 minutes)
+3. **Rotation**: Backend validates token, generates new access + refresh tokens, revokes old refresh token
+4. **Revocation**: Manual logout, password change, or detected on security event
+5. **Cleanup**: Periodic cron job deletes tokens expired >7 days ago
+
+**Access Patterns:**
+- **Validate Token**: `findUnique({ where: { tokenHash } })` - O(1) lookup via unique index
+- **User Tokens**: `findMany({ where: { userId, revokedAt: null } })` - Fast via userId index
+- **Revoke Single**: `update({ where: { tokenHash }, data: { revokedAt: now() } })`
+- **Revoke All**: `updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: now() } })`
+- **Cleanup**: `deleteMany({ where: { expiresAt: { lt: sevenDaysAgo } } })` - Fast via expiresAt index
+
+**Business Logic:**
+- Access tokens expire after 30 minutes (reduced from 24 hours for security)
+- Refresh tokens enable automatic "silent" token refresh without user interaction
+- "Remember Me" extends refresh token lifetime from 30 to 90 days
+- Password changes revoke all refresh tokens (forces re-login on all devices)
+- Token rotation prevents replay attacks (old tokens invalidated immediately)
+- Device limit prevents token accumulation and enables multi-device session management
 
 ---
 

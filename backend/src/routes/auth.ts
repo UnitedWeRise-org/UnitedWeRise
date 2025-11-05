@@ -782,6 +782,34 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/logout-all:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Logout from all devices (requires authentication)
+ *     description: |
+ *       Revokes all refresh tokens for the authenticated user, effectively logging them out
+ *       from all devices. Also blacklists the current access token and clears cookies.
+ *       Useful for security when user suspects account compromise or wants to end all sessions.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully logged out from all devices
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out from all devices successfully"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         description: Server error during logout
+ */
 // Logout all devices (revoke all refresh tokens)
 router.post('/logout-all', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -1009,6 +1037,66 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Refresh access token using refresh token
+ *     description: |
+ *       Exchanges a valid refresh token (from cookie) for new access token and refresh token.
+ *       Implements token rotation: old refresh token is invalidated with 30-second grace period.
+ *
+ *       **Token Rotation Security**: Each refresh generates new tokens and invalidates old ones,
+ *       preventing token reuse attacks. Grace period handles concurrent requests.
+ *
+ *       **Automatic Refresh**: Frontend automatically calls this when access token expires (30min).
+ *       Users see seamless experience - no re-login required for up to 30 days (or 90 with Remember Me).
+ *
+ *       **TOTP Persistence**: TOTP verification status preserved across token refreshes.
+ *     requestBody:
+ *       description: No body required - refresh token sent via httpOnly cookie
+ *       required: false
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully - new tokens sent as httpOnly cookies
+ *         headers:
+ *           Set-Cookie:
+ *             description: |
+ *               Sets three cookies:
+ *               - authToken (httpOnly, 30min, new access token)
+ *               - refreshToken (httpOnly, 30-90 days, new refresh token)
+ *               - csrf-token (readable by JS, for subsequent requests)
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 csrfToken:
+ *                   type: string
+ *                   description: CSRF token for subsequent authenticated requests
+ *       401:
+ *         description: Invalid, expired, or revoked refresh token - user must log in again
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid refresh token"
+ *                 code:
+ *                   type: string
+ *                   enum: [REFRESH_TOKEN_INVALID]
+ *                   description: Error code for frontend to trigger re-login
+ *       500:
+ *         description: Server error during token rotation
+ */
 // Token refresh endpoint - uses refresh tokens for security
 router.post('/refresh', async (req, res) => {
   const startTime = Date.now();

@@ -1,10 +1,113 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: October 31, 2025
+**Last Updated**: November 5, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [Unreleased] - 2025-11-05
+
+### Added - Industry-Standard Refresh Token Architecture
+
+**🔐 ENTERPRISE SECURITY ENHANCEMENT**: Complete migration from single long-lived tokens to OAuth 2.0 refresh token pattern with automatic token rotation.
+
+**Problem Solved:**
+- Random logouts requiring TOTP re-verification dozens of times daily
+- Security concerns with 30-day access tokens (long-lived = higher risk if compromised)
+- No multi-device session management or device tracking
+- Timer-based token refresh failures causing unpredictable logouts
+
+**Implementation:**
+
+- **Two-Token System**
+  - **Access Tokens**: 30 minutes (reduced from 30 days)
+    - Short-lived for improved security
+    - Stored in httpOnly cookies (XSS protection)
+    - Auto-refreshed on expiration
+  - **Refresh Tokens**: 30 days (90 with "Remember Me")
+    - Long-lived session persistence
+    - Stored in httpOnly cookies + database (SHA-256 hashed)
+    - Token rotation on each refresh (prevents replay attacks)
+
+- **Automatic Token Refresh**
+  - Frontend detects tab visibility changes → auto-refresh when user returns
+  - 401 error handling → auto-refresh and retry failed request
+  - Proactive refresh → checks every minute, refreshes 5 minutes before expiration
+  - TOTP status preserved → no re-verification needed during session
+
+- **Multi-Device Session Management**
+  - Up to 10 concurrent active sessions per user
+  - Device tracking (userAgent, ipAddress, deviceFingerprint)
+  - Logout single device: `POST /api/auth/logout`
+  - Logout all devices: `POST /api/auth/logout-all`
+  - Oldest session auto-revoked when device limit reached
+
+- **Security Features**
+  - **Token Hashing**: SHA-256 before database storage (never plaintext)
+  - **Token Rotation**: Each refresh generates new tokens, invalidates old ones
+  - **Grace Period**: 30-second window for concurrent requests (prevents race conditions)
+  - **Revocation Events**: All tokens revoked on password change, security events
+  - **Password Change Security**: New endpoint `/api/auth/change-password` revokes all sessions
+
+- **Database Schema**
+  - New `RefreshToken` table with CASCADE delete on user deletion
+  - Indexes: userId, tokenHash (unique), expiresAt (for cleanup)
+  - Fields: id, userId, tokenHash, expiresAt, createdAt, lastUsedAt, revokedAt, deviceInfo, rememberMe
+
+**API Endpoints Added/Updated:**
+- `POST /api/auth/login` - Now issues both access + refresh tokens
+- `POST /api/auth/register` - Now issues both access + refresh tokens
+- `POST /api/auth/refresh` - NEW: Exchange refresh token for new tokens (with rotation)
+- `POST /api/auth/logout` - Updated: Revokes refresh token, blacklists access token
+- `POST /api/auth/logout-all` - NEW: Revokes all refresh tokens (logout all devices)
+- `POST /api/auth/change-password` - NEW: Change password, revoke all sessions
+- `POST /api/oauth/google` - Updated: Issues both access + refresh tokens
+
+**Files Modified:**
+- Backend (11 files):
+  - `backend/src/routes/auth.ts` - Login, logout, refresh, change-password endpoints
+  - `backend/src/routes/oauth.ts` - OAuth refresh token integration
+  - `backend/src/services/oauthService.ts` - Refresh token generation in OAuth flow
+  - `backend/src/services/sessionManager.ts` - Refresh token storage, validation, rotation
+  - `backend/src/utils/auth.ts` - Token generation and hashing utilities
+  - `backend/prisma/schema.prisma` - RefreshToken model
+  - Migration: `20250201234500_add_refresh_token_table`
+- Frontend (4 files):
+  - `frontend/src/handlers/auth-handlers.js` - Automatic token refresh logic
+  - `frontend/admin-dashboard/js/modules/auth-handlers.js` - Admin dashboard auth
+
+**Documentation Updated:**
+- `MASTER_DOCUMENTATION.md` § 7 (Security & Authentication) - Comprehensive refresh token architecture section
+- `docs/DATABASE_SCHEMA.md` - RefreshToken model documentation with security features
+- `CHANGELOG.md` - This entry
+- Inline documentation: Swagger, JSDoc, Prisma comments for all new/modified code
+
+**Testing Results:**
+- ✅ Cross-subdomain authentication working (admin ↔ user sites)
+- ✅ Visibility-based refresh working (seamless tab switching)
+- ✅ No random logouts observed in initial testing
+- ✅ TOTP status preserved across token refreshes
+- ⏳ Long-term testing in progress (30+ minute idle sessions)
+
+**User Impact:**
+- **Seamless Experience**: Users don't notice shorter access token lifetime due to automatic refresh
+- **No More Random Logouts**: Robust refresh logic eliminates timer-based failures
+- **TOTP Persistence**: No re-verification needed during active 30-day session
+- **Multi-Device Support**: Login on phone, tablet, computer simultaneously (up to 10 devices)
+- **Enhanced Security**: Short-lived access tokens reduce compromise risk window
+
+**Migration Impact:**
+- Breaking Change: Access tokens now expire after 30 minutes (was 30 days)
+- User Impact: Transparent - automatic refresh makes change invisible
+- Security Impact: Significantly improved - short-lived tokens + rotation
+- Database Impact: New RefreshToken table added (auto-migrated)
+
+**Related Documentation:**
+- See: MASTER_DOCUMENTATION.md § 7 "REFRESH TOKEN ARCHITECTURE (November 5, 2025)"
+- See: docs/DATABASE_SCHEMA.md "RefreshToken Model"
 
 ---
 

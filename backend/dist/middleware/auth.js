@@ -42,7 +42,7 @@ const requireAuth = async (req, res, next) => {
         if (!decoded) {
             console.log(`[${requestId}] ❌ AUTH 401: Token verification failed`);
             metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
-            return res.status(401).json({ error: 'Invalid token.' });
+            return res.status(401).json({ error: 'Invalid token.', code: 'ACCESS_TOKEN_EXPIRED' });
         }
         console.log(`[${requestId}] ✅ AUTH Token Decoded:`, {
             userId: decoded.userId,

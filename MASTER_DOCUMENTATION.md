@@ -8000,6 +8000,192 @@ credentials: 'include' // All API calls include this
 // ✅ CSRF protection: Double-submit pattern required
 ```
 
+#### **🚀 REFRESH TOKEN ARCHITECTURE (November 5, 2025)**
+
+**INDUSTRY-STANDARD SECURITY**: Complete migration from single long-lived tokens to OAuth 2.0 refresh token pattern with automatic token rotation, resolving random logout issues and implementing enterprise security best practices.
+
+**Problem Solved:**
+- ❌ **OLD**: 30-day access tokens caused security concerns (long-lived tokens = higher risk if compromised)
+- ❌ **OLD**: Random logouts every 30 minutes due to timer-based token refresh failures
+- ❌ **OLD**: TOTP re-verification required dozens of times daily on token expiration
+- ❌ **OLD**: No multi-device session management or device tracking
+
+**Solution Implemented:**
+- ✅ **NEW**: 30-minute access tokens (short-lived, reduced security risk)
+- ✅ **NEW**: 30-day refresh tokens (90 days with "Remember Me")
+- ✅ **NEW**: Automatic token refresh on tab visibility changes and API 401 errors
+- ✅ **NEW**: TOTP status preserved across token refreshes (no re-verification needed)
+- ✅ **NEW**: Multi-device support with device tracking and session management (up to 10 devices)
+- ✅ **NEW**: Token rotation security (old tokens invalidated with 30-second grace period)
+
+**Architecture Overview:**
+```javascript
+// Two-token system
+Access Token (JWT):
+  - Lifetime: 30 minutes
+  - Stored in: httpOnly cookie (authToken)
+  - Used for: API authentication
+  - Contains: userId, totpVerified, totpVerifiedAt, exp
+  - Auto-refreshed: On expiration via /api/auth/refresh
+
+Refresh Token (Random):
+  - Lifetime: 30 days (90 with "Remember Me")
+  - Stored in: httpOnly cookie (refreshToken) + database (hashed with SHA-256)
+  - Used for: Generating new access tokens + new refresh tokens
+  - Contains: userId, deviceInfo, rememberMe, expiresAt, revokedAt
+  - Rotation: Each refresh generates new tokens, old token invalidated
+```
+
+**Frontend Automatic Refresh:**
+```javascript
+// Visibility-based refresh (when user returns to tab)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    await refreshTokenIfNeeded(); // Calls /api/auth/refresh
+  }
+});
+
+// 401 Error auto-refresh (when access token expires during API call)
+if (response.status === 401 && data.code === 'ACCESS_TOKEN_EXPIRED') {
+  const refreshed = await refreshAuthToken(); // Calls /api/auth/refresh
+  if (refreshed) {
+    return await fetch(url, options); // Retry original request
+  }
+}
+
+// Proactive refresh (5 minutes before expiration)
+setInterval(async () => {
+  if (isTokenExpiringWithin(5 * 60 * 1000)) { // 5 minutes
+    await refreshAuthToken();
+  }
+}, 60 * 1000); // Check every minute
+```
+
+**Backend Token Rotation:**
+```javascript
+// POST /api/auth/refresh - Token rotation endpoint
+1. Validate refresh token from cookie
+2. Generate NEW access token (preserve TOTP status)
+3. Generate NEW refresh token
+4. Revoke OLD refresh token (with 30-second grace period)
+5. Store NEW refresh token in database (hashed)
+6. Return new tokens in httpOnly cookies
+
+// Security: Token rotation prevents replay attacks
+// Grace period: Handles concurrent requests (e.g., multiple tabs)
+```
+
+**Database Schema:**
+```prisma
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String    // Foreign key to User
+  tokenHash    String    @unique // SHA-256 hash (never store plaintext)
+  expiresAt    DateTime  // 30 or 90 days
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
+  revokedAt    DateTime? // Logout, password change, security events
+  deviceInfo   Json?     // { userAgent, ipAddress, deviceFingerprint? }
+  rememberMe   Boolean   @default(false) // Extends expiration to 90 days
+
+  user User @relation("RefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])     // Fast lookup for logout all devices
+  @@index([tokenHash])  // Fast validation
+  @@index([expiresAt])  // Cleanup job
+}
+```
+
+**Multi-Device Session Management:**
+```javascript
+// Device limit: Maximum 10 active refresh tokens per user
+// Oldest token auto-revoked when limit reached
+// User can view/revoke devices via "Active Sessions" page (future feature)
+
+// Revoke single device (logout this device)
+POST /api/auth/logout
+  → Revokes current refresh token
+  → Blacklists current access token
+  → Clears cookies
+
+// Revoke all devices (logout everywhere)
+POST /api/auth/logout-all
+  → Revokes all refresh tokens for user
+  → Blacklists current access token
+  → Clears cookies
+```
+
+**Security Features:**
+- **Token Hashing**: Refresh tokens hashed with SHA-256 before database storage (never plaintext)
+- **Token Rotation**: Each refresh generates new tokens, old token invalidated (prevents replay attacks)
+- **Grace Period**: 30-second window for concurrent requests (prevents race conditions)
+- **Device Tracking**: Store userAgent, ipAddress, deviceFingerprint for security monitoring
+- **Device Limits**: Maximum 10 concurrent sessions, oldest auto-revoked
+- **Revocation Events**: All tokens revoked on password change, logout all, security events
+- **Automatic Cleanup**: Cron job deletes tokens expired >7 days ago
+
+**Password Change Security:**
+```javascript
+// POST /api/auth/change-password
+1. Validate current password
+2. Hash new password with bcrypt
+3. Update password in database (passwordChangedAt timestamp)
+4. Revoke ALL refresh tokens (forces re-login on all devices)
+5. Blacklist current access token
+6. Clear all cookies
+7. Log security event
+
+// Security: Password changes require re-authentication everywhere
+```
+
+**TOTP Persistence:**
+```javascript
+// TOTP status embedded in JWT access token
+{
+  userId: string,
+  totpVerified: boolean,      // Whether user passed TOTP verification
+  totpVerifiedAt: number,      // Timestamp of TOTP verification
+  iat: number,
+  exp: number
+}
+
+// On token refresh:
+// ✅ TOTP status preserved from old access token
+// ✅ No re-verification required unless session ends
+// ✅ TOTP only re-prompted on full re-login (refresh token expired/revoked)
+```
+
+**API Endpoints:**
+- `POST /api/auth/login` - Login, issues access + refresh tokens
+- `POST /api/auth/register` - Register, issues access + refresh tokens
+- `POST /api/auth/refresh` - Exchange refresh token for new access + refresh tokens
+- `POST /api/auth/logout` - Logout single device, revokes refresh token
+- `POST /api/auth/logout-all` - Logout all devices, revokes all refresh tokens
+- `POST /api/auth/change-password` - Change password, revokes all refresh tokens
+- `POST /api/oauth/google` - OAuth login, issues access + refresh tokens
+
+**Testing Results:**
+- ✅ Cross-subdomain authentication working (admin.unitedwerise.org ↔ www.unitedwerise.org)
+- ✅ Visibility-based refresh working (token refreshes when returning to tab)
+- ✅ No random logouts observed in initial testing
+- ✅ TOTP status preserved across token refreshes
+- ⏳ Long-term testing in progress (30+ minute idle sessions)
+
+**Related Files:**
+- **Backend**: `backend/src/routes/auth.ts` - Login, register, logout, refresh, change-password endpoints
+- **Backend**: `backend/src/routes/oauth.ts` - OAuth login with refresh tokens
+- **Backend**: `backend/src/services/sessionManager.ts` - Refresh token storage, validation, rotation
+- **Backend**: `backend/src/utils/auth.ts` - Token generation and hashing utilities
+- **Backend**: `backend/prisma/schema.prisma` - RefreshToken model definition
+- **Frontend**: `frontend/src/handlers/auth-handlers.js` - Token refresh logic
+- **Frontend**: `frontend/admin-dashboard/js/modules/auth-handlers.js` - Admin dashboard auth
+
+**Migration Impact:**
+- **Breaking Change**: Access tokens now expire after 30 minutes instead of 30 days
+- **User Impact**: Seamless - automatic refresh means users don't notice shorter token lifetime
+- **Security Impact**: Significantly improved - short-lived access tokens + token rotation
+- **Database Impact**: New RefreshToken table added (auto-migrated via Prisma)
+
 ### **Related Security Systems:**
 - 🔗 **API Authentication**: See {#api-reference} for cookie-based endpoint documentation
 - 🔗 **Admin Security**: See {#monitoring-admin} for admin dashboard TOTP integration
@@ -8109,9 +8295,12 @@ if (window.authUtils.getCurrentUser()?.isSuperAdmin) {
 - **Reset Flow**: Email-based token system
 
 #### Session Management
-- **Token Lifetime**: 30 days (extended from 7)
-- **Refresh Strategy**: New token on login
-- **Logout**: Clear localStorage and window.authToken
+- **Access Token Lifetime**: 30 minutes (reduced from 30 days for security)
+- **Refresh Token Lifetime**: 30 days (90 days with "Remember Me")
+- **Refresh Strategy**: Automatic token rotation on /api/auth/refresh
+- **Multi-Device Support**: Up to 10 concurrent sessions per user
+- **Logout**: Revoke refresh tokens, blacklist access token, clear cookies
+- **See**: [Refresh Token Architecture](#refresh-token-architecture) for complete details
 
 ### Security Measures
 

@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionManager = void 0;
 const ioredis_1 = require("ioredis");
+const prisma_1 = require("../lib/prisma");
+const auth_1 = require("../utils/auth");
 // In-memory fallback if Redis isn't available
 class MemoryStore {
     constructor() {
@@ -177,6 +179,148 @@ class SessionManager {
             memStore.clear(); // Simple cleanup - remove all expired items
             console.log('SessionManager: Memory store cleaned up');
         }
+    }
+    // ========================================
+    // REFRESH TOKEN MANAGEMENT (DATABASE-BACKED)
+    // ========================================
+    /**
+     * Store a new refresh token in the database
+     * @param userId - User ID this token belongs to
+     * @param token - Plaintext refresh token (will be hashed before storage)
+     * @param expiresAt - Expiration date (30 days or 90 days with "Remember Me")
+     * @param deviceInfo - Device/browser information for security tracking
+     * @param rememberMe - Whether this is a "Remember Me" session
+     * @returns Created refresh token record
+     */
+    async storeRefreshToken(userId, token, expiresAt, deviceInfo, rememberMe = false) {
+        const tokenHash = (0, auth_1.hashRefreshToken)(token);
+        // Enforce device limit: Maximum 10 active refresh tokens per user
+        const activeTokens = await prisma_1.prisma.refreshToken.count({
+            where: {
+                userId,
+                revokedAt: null,
+                expiresAt: { gt: new Date() }
+            }
+        });
+        if (activeTokens >= 10) {
+            // Revoke oldest token to make room
+            const oldestToken = await prisma_1.prisma.refreshToken.findFirst({
+                where: {
+                    userId,
+                    revokedAt: null,
+                    expiresAt: { gt: new Date() }
+                },
+                orderBy: { createdAt: 'asc' }
+            });
+            if (oldestToken) {
+                await prisma_1.prisma.refreshToken.update({
+                    where: { id: oldestToken.id },
+                    data: { revokedAt: new Date() }
+                });
+            }
+        }
+        return await prisma_1.prisma.refreshToken.create({
+            data: {
+                userId,
+                tokenHash,
+                expiresAt,
+                deviceInfo: deviceInfo || {},
+                rememberMe
+            }
+        });
+    }
+    /**
+     * Validate refresh token and return user data
+     * @param token - Plaintext refresh token from cookie
+     * @returns User data and token record, or null if invalid
+     */
+    async validateRefreshToken(token) {
+        const tokenHash = (0, auth_1.hashRefreshToken)(token);
+        const refreshToken = await prisma_1.prisma.refreshToken.findUnique({
+            where: { tokenHash },
+            include: { user: true }
+        });
+        // Token doesn't exist, is revoked, or expired
+        if (!refreshToken || refreshToken.revokedAt || refreshToken.expiresAt < new Date()) {
+            return null;
+        }
+        // Update lastUsedAt timestamp
+        await prisma_1.prisma.refreshToken.update({
+            where: { id: refreshToken.id },
+            data: { lastUsedAt: new Date() }
+        });
+        return refreshToken;
+    }
+    /**
+     * Rotate refresh token (invalidate old, create new) - SECURITY BEST PRACTICE
+     * @param oldToken - Current refresh token to invalidate
+     * @param newToken - New refresh token to store
+     * @param gracePeriodSeconds - Keep old token valid for N seconds (handles concurrent refresh)
+     * @returns New token record
+     */
+    async rotateRefreshToken(oldToken, newToken, gracePeriodSeconds = 30) {
+        const oldTokenHash = (0, auth_1.hashRefreshToken)(oldToken);
+        const newTokenHash = (0, auth_1.hashRefreshToken)(newToken);
+        const oldRefreshToken = await prisma_1.prisma.refreshToken.findUnique({
+            where: { tokenHash: oldTokenHash },
+            include: { user: true }
+        });
+        if (!oldRefreshToken) {
+            throw new Error('Refresh token not found');
+        }
+        // Revoke old token (with grace period for concurrent requests)
+        const revokeAt = new Date(Date.now() + gracePeriodSeconds * 1000);
+        await prisma_1.prisma.refreshToken.update({
+            where: { id: oldRefreshToken.id },
+            data: { revokedAt: revokeAt }
+        });
+        // Create new token with same settings
+        return await this.storeRefreshToken(oldRefreshToken.userId, newToken, oldRefreshToken.rememberMe
+            ? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        oldRefreshToken.deviceInfo, oldRefreshToken.rememberMe);
+    }
+    /**
+     * Revoke a specific refresh token (logout single device)
+     * @param token - Plaintext refresh token to revoke
+     */
+    async revokeRefreshToken(token) {
+        const tokenHash = (0, auth_1.hashRefreshToken)(token);
+        await prisma_1.prisma.refreshToken.updateMany({
+            where: { tokenHash },
+            data: { revokedAt: new Date() }
+        });
+    }
+    /**
+     * Revoke all refresh tokens for a user (logout all devices)
+     * @param userId - User ID to revoke tokens for
+     */
+    async revokeAllUserRefreshTokens(userId) {
+        await prisma_1.prisma.refreshToken.updateMany({
+            where: {
+                userId,
+                revokedAt: null
+            },
+            data: { revokedAt: new Date() }
+        });
+    }
+    /**
+     * Clean up expired refresh tokens from database
+     * Run this periodically (e.g., daily cron job)
+     */
+    async cleanupExpiredRefreshTokens() {
+        // Delete tokens that expired more than 7 days ago
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const result = await prisma_1.prisma.refreshToken.deleteMany({
+            where: {
+                OR: [
+                    { expiresAt: { lt: sevenDaysAgo } },
+                    { revokedAt: { lt: sevenDaysAgo } }
+                ]
+            }
+        });
+        console.log(`SessionManager: Cleaned up ${result.count} expired refresh tokens`);
+        return result.count;
     }
 }
 exports.sessionManager = new SessionManager();

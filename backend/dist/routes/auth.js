@@ -254,14 +254,30 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
             // Don't fail registration if email fails, but log it
         }
         const token = (0, auth_1.generateToken)(user.id);
-        // Set httpOnly authentication cookie (matching login pattern)
+        // Generate and store refresh token (30 days, no "Remember Me" on registration)
+        const refreshToken = (0, auth_1.generateRefreshToken)();
+        const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        const userAgent = req.get('User-Agent') || 'unknown';
+        const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+        await sessionManager_1.sessionManager.storeRefreshToken(user.id, refreshToken, refreshExpiresAt, { userAgent, ipAddress }, false // rememberMe = false for registration
+        );
+        // Set httpOnly authentication cookie (30 minutes)
         res.cookie('authToken', token, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            maxAge: 30 * 60 * 1000, // 30 minutes
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
+        });
+        // Set httpOnly refresh token cookie (30 days)
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            path: '/',
+            domain: '.unitedwerise.org'
         });
         // Generate and set CSRF token
         const csrfToken = require('crypto').randomBytes(32).toString('hex');
@@ -296,7 +312,7 @@ router.post('/register', rateLimiting_1.authLimiter, validation_1.validateRegist
 // Login
 router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
         const userAgent = req.get('User-Agent') || 'unknown';
         if (!email || !password) {
@@ -437,14 +453,29 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
             const token = (0, auth_1.generateToken)(user.id, true); // TOTP verified
             metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success', totp: 'verified' });
             metricsService_1.metricsService.incrementCounter('cookie_auth_success_total', { method: 'totp_verified' });
-            // Set httpOnly cookie for auth token
+            // Generate and store refresh token
+            const refreshToken = (0, auth_1.generateRefreshToken)();
+            const refreshExpiresAt = rememberMe
+                ? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+            await sessionManager_1.sessionManager.storeRefreshToken(user.id, refreshToken, refreshExpiresAt, { userAgent, ipAddress }, rememberMe || false);
+            // Set httpOnly cookie for auth token (30 minutes)
             res.cookie('authToken', token, {
                 httpOnly: true,
                 secure: (0, environment_1.requireSecureCookies)(),
                 sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                maxAge: 30 * 60 * 1000, // 30 minutes
                 path: '/',
                 domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
+            });
+            // Set httpOnly refresh token cookie
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: (0, environment_1.requireSecureCookies)(),
+                sameSite: 'none',
+                maxAge: rememberMe ? 90 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000, // 90 or 30 days
+                path: '/',
+                domain: '.unitedwerise.org'
             });
             // Generate and set CSRF token
             const csrfToken = require('crypto').randomBytes(32).toString('hex');
@@ -476,14 +507,29 @@ router.post('/login', rateLimiting_1.authLimiter, async (req, res) => {
         const token = (0, auth_1.generateToken)(user.id);
         metricsService_1.metricsService.incrementCounter('auth_attempts_total', { status: 'success' });
         metricsService_1.metricsService.incrementCounter('cookie_auth_success_total', { method: 'regular' });
-        // Set httpOnly cookie for auth token
+        // Generate and store refresh token
+        const refreshToken = (0, auth_1.generateRefreshToken)();
+        const refreshExpiresAt = rememberMe
+            ? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        await sessionManager_1.sessionManager.storeRefreshToken(user.id, refreshToken, refreshExpiresAt, { userAgent, ipAddress }, rememberMe || false);
+        // Set httpOnly cookie for auth token (30 minutes)
         res.cookie('authToken', token, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+            maxAge: 30 * 60 * 1000, // 30 minutes
             path: '/',
             domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
+        });
+        // Set httpOnly refresh token cookie
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: rememberMe ? 90 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000, // 90 or 30 days
+            path: '/',
+            domain: '.unitedwerise.org'
         });
         // Generate and set CSRF token
         const csrfToken = require('crypto').randomBytes(32).toString('hex');
@@ -607,7 +653,7 @@ router.post('/reset-password', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Logout user (blacklist token)
+// Logout user (blacklist token and revoke refresh token)
 router.post('/logout', auth_2.requireAuth, async (req, res) => {
     try {
         // Get token from cookie first, fallback to header for transition period
@@ -616,6 +662,7 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
             token = req.header('Authorization')?.replace('Bearer ', '');
         }
         const sessionId = req.header('X-Session-ID');
+        const refreshToken = req.cookies?.refreshToken;
         if (token) {
             const decoded = (0, auth_3.verifyToken)(token);
             if (decoded) {
@@ -628,13 +675,17 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
                 await sessionManager_1.sessionManager.blacklistToken(tokenId, tokenExp);
             }
         }
+        // Revoke refresh token if provided
+        if (refreshToken) {
+            await sessionManager_1.sessionManager.revokeRefreshToken(refreshToken);
+        }
         // Revoke session if provided
         if (sessionId) {
             await sessionManager_1.sessionManager.revokeUserSession(sessionId);
         }
         // Clear all authentication cookies with the same options they were set with
         const httpOnlyCookieOptions = {
-            httpOnly: true, // MUST match login cookie settings for authToken
+            httpOnly: true, // MUST match login cookie settings for authToken and refreshToken
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none', // MUST match login cookie settings
             path: '/',
@@ -648,6 +699,7 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
             domain: '.unitedwerise.org'
         };
         res.clearCookie('authToken', httpOnlyCookieOptions);
+        res.clearCookie('refreshToken', httpOnlyCookieOptions);
         res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
         res.json({ message: 'Logged out successfully' });
     }
@@ -656,83 +708,315 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Logout failed' });
     }
 });
-// Token refresh endpoint
+// Logout all devices (revoke all refresh tokens)
+router.post('/logout-all', auth_2.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        // Get current auth token for blacklisting
+        let token = req.cookies?.authToken;
+        if (!token) {
+            token = req.header('Authorization')?.replace('Bearer ', '');
+        }
+        if (token) {
+            const decoded = (0, auth_3.verifyToken)(token);
+            if (decoded) {
+                // Calculate token expiration time
+                const tokenExp = decoded.exp ? decoded.exp * 1000 : Date.now() + (7 * 24 * 60 * 60 * 1000);
+                // Blacklist the current token
+                const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
+                await sessionManager_1.sessionManager.blacklistToken(tokenId, tokenExp);
+            }
+        }
+        // Revoke all refresh tokens for this user
+        await sessionManager_1.sessionManager.revokeAllUserRefreshTokens(userId);
+        // Clear all authentication cookies
+        const httpOnlyCookieOptions = {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            path: '/',
+            domain: '.unitedwerise.org'
+        };
+        const nonHttpOnlyCookieOptions = {
+            httpOnly: false,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            path: '/',
+            domain: '.unitedwerise.org'
+        };
+        res.clearCookie('authToken', httpOnlyCookieOptions);
+        res.clearCookie('refreshToken', httpOnlyCookieOptions);
+        res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+        res.json({ message: 'Logged out from all devices successfully' });
+    }
+    catch (error) {
+        console.error('Logout all error:', error);
+        res.status(500).json({ error: 'Logout from all devices failed' });
+    }
+});
+/**
+ * @swagger
+ * /api/auth/change-password:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Change user password (requires authentication)
+ *     description: Allows authenticated user to change their password. Revokes all refresh tokens for security, forcing re-login on all devices.
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: User's current password
+ *               newPassword:
+ *                 type: string
+ *                 description: New password (min 8 characters)
+ *     responses:
+ *       200:
+ *         description: Password changed successfully, all sessions invalidated
+ *       400:
+ *         description: Invalid request (missing fields, weak password)
+ *       401:
+ *         description: Current password incorrect or not authenticated
+ *       500:
+ *         description: Server error
+ */
+router.post('/change-password', auth_2.requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user?.id;
+        const ipAddress = req.ip || 'unknown';
+        const userAgent = req.get('User-Agent') || 'unknown';
+        if (!userId) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current password and new password are required' });
+        }
+        // Validate new password strength (min 8 characters)
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'New password must be at least 8 characters long' });
+        }
+        // Get user from database
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, username: true, password: true }
+        });
+        if (!user || !user.password) {
+            return res.status(400).json({
+                error: 'Password change not available for OAuth-only accounts',
+                oauthOnly: true
+            });
+        }
+        // Verify current password
+        const isValidPassword = await (0, auth_1.comparePassword)(currentPassword, user.password);
+        if (!isValidPassword) {
+            // Log failed password change attempt
+            await securityService_1.SecurityService.logEvent({
+                userId: user.id,
+                eventType: 'PASSWORD_CHANGE_FAILED',
+                ipAddress,
+                userAgent,
+                details: {
+                    reason: 'Incorrect current password',
+                    timestamp: new Date().toISOString()
+                },
+                riskScore: 40
+            });
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+        // Hash new password
+        const hashedPassword = await (0, auth_1.hashPassword)(newPassword);
+        // Update password in database
+        await prisma_1.prisma.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedPassword,
+                passwordChangedAt: new Date()
+            }
+        });
+        // SECURITY: Revoke all refresh tokens to force re-login on all devices
+        await sessionManager_1.sessionManager.revokeAllUserRefreshTokens(userId);
+        // Blacklist current access token
+        const token = req.cookies?.authToken;
+        if (token) {
+            const decoded = (0, auth_3.verifyToken)(token);
+            if (decoded) {
+                const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
+                const expirationTime = (decoded.exp || 0) * 1000;
+                await sessionManager_1.sessionManager.blacklistToken(tokenId, expirationTime);
+            }
+        }
+        // Clear all auth cookies
+        const cookieOptions = {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            path: '/',
+            domain: '.unitedwerise.org'
+        };
+        const nonHttpOnlyCookieOptions = {
+            httpOnly: false,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            path: '/',
+            domain: '.unitedwerise.org'
+        };
+        res.clearCookie('authToken', cookieOptions);
+        res.clearCookie('refreshToken', cookieOptions);
+        res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+        // Log successful password change
+        await securityService_1.SecurityService.logEvent({
+            userId: user.id,
+            eventType: 'PASSWORD_CHANGED',
+            ipAddress,
+            userAgent,
+            details: {
+                timestamp: new Date().toISOString(),
+                allSessionsRevoked: true
+            },
+            riskScore: 0
+        });
+        console.log(`✅ Password changed successfully for user ${user.username || user.email} (userId: ${userId}). All sessions revoked.`);
+        res.json({
+            message: 'Password changed successfully. Please log in again.',
+            requiresReLogin: true
+        });
+    }
+    catch (error) {
+        console.error('Change password error:', error);
+        await securityService_1.SecurityService.logEvent({
+            userId: req.user?.id,
+            eventType: 'SYSTEM_ERROR',
+            ipAddress: req.ip || 'unknown',
+            userAgent: req.get('User-Agent') || 'unknown',
+            details: {
+                error: error.message,
+                endpoint: '/api/auth/change-password',
+                timestamp: new Date().toISOString()
+            },
+            riskScore: 30
+        });
+        res.status(500).json({ error: 'Failed to change password' });
+    }
+});
+// Token refresh endpoint - uses refresh tokens for security
 router.post('/refresh', async (req, res) => {
     const startTime = Date.now();
     const ipAddress = req.ip || 'unknown';
     try {
-        const token = req.cookies?.authToken;
-        if (!token) {
-            console.log(`🔄 Token refresh failed: No token provided (IP: ${ipAddress})`);
-            return res.status(401).json({ error: 'No token provided' });
+        // Get refreshToken from cookies (not authToken)
+        const refreshToken = req.cookies?.refreshToken;
+        if (!refreshToken) {
+            console.log(`🔄 Token refresh failed: No refresh token provided (IP: ${ipAddress})`);
+            return res.status(401).json({
+                error: 'Invalid refresh token',
+                code: 'REFRESH_TOKEN_INVALID'
+            });
         }
+        // Validate refresh token and get user data
+        const tokenData = await sessionManager_1.sessionManager.validateRefreshToken(refreshToken);
+        if (!tokenData) {
+            console.log(`🔄 Token refresh failed: Invalid or expired refresh token (IP: ${ipAddress})`);
+            await securityService_1.SecurityService.logEvent({
+                eventType: 'REFRESH_TOKEN_FAILED',
+                ipAddress,
+                userAgent: req.get('User-Agent') || 'unknown',
+                details: {
+                    reason: 'Invalid or expired refresh token',
+                    timestamp: new Date().toISOString()
+                },
+                riskScore: 20
+            });
+            return res.status(401).json({
+                error: 'Invalid refresh token',
+                code: 'REFRESH_TOKEN_INVALID'
+            });
+        }
+        // Generate new access token (preserve TOTP status if present)
+        const newAccessToken = (0, auth_1.generateToken)(tokenData.user.id, tokenData.user.totpEnabled);
+        // Generate new refresh token
+        const newRefreshToken = (0, auth_1.generateRefreshToken)();
+        // Rotate refresh tokens with 30-second grace period
         try {
-            const decoded = (0, auth_3.verifyToken)(token);
-            if (!decoded || !decoded.userId) {
-                console.log(`🔄 Token refresh failed: Invalid token (IP: ${ipAddress})`);
-                return res.status(401).json({ error: 'Invalid token' });
-            }
-            // Verify user still exists and get admin status
-            const user = await prisma_1.prisma.user.findUnique({
-                where: { id: decoded.userId },
-                select: {
-                    id: true,
-                    email: true,
-                    username: true,
-                    isAdmin: true,
-                    isModerator: true,
-                    isSuperAdmin: true
-                }
-            });
-            if (!user) {
-                console.log(`🔄 Token refresh failed: User not found (userId: ${decoded.userId}, IP: ${ipAddress})`);
-                return res.status(401).json({ error: 'User not found' });
-            }
-            // DIAGNOSTIC: Log token refresh details
-            const totpVerifiedStatus = decoded.totpVerified || false;
-            console.log(`🔄 Token refresh for ${user.username}:`, {
-                userId: user.id,
-                isAdmin: user.isAdmin,
-                isModerator: user.isModerator,
-                totpVerifiedInOldToken: decoded.totpVerified,
-                totpVerifiedInNewToken: totpVerifiedStatus,
-                ipAddress
-            });
-            // Generate new token - preserve TOTP verification status from old token
-            const newToken = (0, auth_1.generateToken)(decoded.userId, totpVerifiedStatus);
-            // Set new httpOnly cookie
-            res.cookie('authToken', newToken, {
-                httpOnly: true,
-                secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                path: '/',
-                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
-            });
-            // Generate new CSRF token
-            const csrfToken = require('crypto').randomBytes(32).toString('hex');
-            res.cookie('csrf-token', csrfToken, {
-                httpOnly: false,
-                secure: (0, environment_1.requireSecureCookies)(),
-                sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
-                maxAge: 30 * 24 * 60 * 60 * 1000,
-                path: '/',
-                domain: '.unitedwerise.org' // Allow sharing between www and api subdomains
-            });
-            const duration = Date.now() - startTime;
-            console.log(`✅ Token refreshed successfully for user ${user.username || user.email} (userId: ${user.id}, IP: ${ipAddress}, duration: ${duration}ms)`);
-            res.json({
-                success: true,
-                csrfToken
-            });
+            await sessionManager_1.sessionManager.rotateRefreshToken(refreshToken, newRefreshToken, 30);
         }
-        catch (tokenError) {
-            console.log(`🔄 Token refresh failed: Token verification error (IP: ${ipAddress})`, tokenError);
-            return res.status(401).json({ error: 'Invalid token' });
+        catch (rotationError) {
+            console.error(`🔄 Token rotation failed for user ${tokenData.user.id}:`, rotationError);
+            return res.status(500).json({ error: 'Internal server error' });
         }
+        // Set new authToken cookie (30 minute expiration)
+        res.cookie('authToken', newAccessToken, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: 30 * 60 * 1000, // 30 minutes (access token lifetime)
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
+        // Set new refreshToken cookie (preserve original expiration from tokenData.rememberMe)
+        const refreshTokenMaxAge = tokenData.rememberMe
+            ? 90 * 24 * 60 * 60 * 1000 // 90 days
+            : 30 * 24 * 60 * 60 * 1000; // 30 days
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: refreshTokenMaxAge,
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
+        // Generate and set new CSRF token
+        const csrfToken = crypto_1.default.randomBytes(32).toString('hex');
+        res.cookie('csrf-token', csrfToken, {
+            httpOnly: false,
+            secure: (0, environment_1.requireSecureCookies)(),
+            sameSite: 'none',
+            maxAge: refreshTokenMaxAge,
+            path: '/',
+            domain: '.unitedwerise.org'
+        });
+        const duration = Date.now() - startTime;
+        console.log(`✅ Token refreshed successfully for user ${tokenData.user.username || tokenData.user.email} (userId: ${tokenData.user.id}, IP: ${ipAddress}, duration: ${duration}ms)`);
+        // Log successful refresh for security monitoring
+        await securityService_1.SecurityService.logEvent({
+            userId: tokenData.user.id,
+            eventType: 'REFRESH_TOKEN_SUCCESS',
+            ipAddress,
+            userAgent: req.get('User-Agent') || 'unknown',
+            details: {
+                rememberMe: tokenData.rememberMe,
+                timestamp: new Date().toISOString()
+            },
+            riskScore: 0
+        });
+        res.json({
+            success: true,
+            csrfToken
+        });
     }
     catch (error) {
         console.error(`❌ Token refresh error (IP: ${ipAddress}):`, error);
+        // Log system error
+        await securityService_1.SecurityService.logEvent({
+            eventType: 'SYSTEM_ERROR',
+            ipAddress,
+            userAgent: req.get('User-Agent') || 'unknown',
+            details: {
+                error: error.message,
+                endpoint: '/api/auth/refresh',
+                timestamp: new Date().toISOString()
+            },
+            riskScore: 40
+        });
         res.status(500).json({ error: 'Internal server error' });
     }
 });

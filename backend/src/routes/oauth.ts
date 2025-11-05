@@ -28,7 +28,9 @@ router.get('/config', async (req, res) => {
  *   post:
  *     tags: [OAuth]
  *     summary: Authenticate with Google OAuth
- *     description: Sign in or register using Google OAuth credentials
+ *     description: |
+ *       Sign in or register using Google OAuth credentials. Issues both access token (30min)
+ *       and refresh token (30 days) as httpOnly cookies. Returns CSRF token for subsequent requests.
  *     requestBody:
  *       required: true
  *       content:
@@ -46,7 +48,16 @@ router.get('/config', async (req, res) => {
  *                 description: Google access token (optional)
  *     responses:
  *       200:
- *         description: Authentication successful
+ *         description: Authentication successful - tokens sent as httpOnly cookies
+ *         headers:
+ *           Set-Cookie:
+ *             description: |
+ *               Sets three cookies:
+ *               - authToken (httpOnly, 30min, access token)
+ *               - refreshToken (httpOnly, 30 days)
+ *               - csrf-token (readable by JS, 30 days)
+ *             schema:
+ *               type: string
  *         content:
  *           application/json:
  *             schema:
@@ -54,13 +65,15 @@ router.get('/config', async (req, res) => {
  *               properties:
  *                 message:
  *                   type: string
+ *                   example: "Login successful"
  *                 user:
  *                   $ref: '#/components/schemas/User'
- *                 token:
+ *                 csrfToken:
  *                   type: string
- *                   description: JWT authentication token
+ *                   description: CSRF token for subsequent authenticated requests
  *                 isNewUser:
  *                   type: boolean
+ *                   description: True if account was just created, false if existing user
  *       400:
  *         $ref: '#/components/responses/ValidationError'
  *       429:

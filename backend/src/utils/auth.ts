@@ -46,8 +46,21 @@ export const generateResetToken = (): string => {
 
 /**
  * Generate a cryptographically secure refresh token
- * @returns 64-character hex string (256 bits of randomness)
- * @description Used for long-lived session persistence. Token is hashed before storage in database.
+ *
+ * Creates a random token for long-lived session persistence. Token must be
+ * hashed with hashRefreshToken() before database storage. Never store plaintext.
+ *
+ * @returns {string} 64-character hex string (256 bits of cryptographic randomness)
+ *
+ * @example
+ * // Generate new refresh token for user login
+ * const refreshToken = generateRefreshToken();
+ * const tokenHash = hashRefreshToken(refreshToken);
+ * await prisma.refreshToken.create({
+ *   data: { userId, tokenHash, expiresAt }
+ * });
+ * // Send refreshToken to client in httpOnly cookie
+ * res.cookie('refreshToken', refreshToken, { httpOnly: true, ... });
  */
 export const generateRefreshToken = (): string => {
   // SECURITY: 256 bits of cryptographic randomness (same as password reset tokens)

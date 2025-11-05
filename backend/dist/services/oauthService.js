@@ -8,6 +8,7 @@ const prisma_1 = require("../lib/prisma");
 ;
 const auth_1 = require("../utils/auth");
 const emailNormalization_1 = require("../utils/emailNormalization");
+const sessionManager_1 = require("./sessionManager");
 const crypto_1 = __importDefault(require("crypto"));
 class OAuthService {
     /**
@@ -40,6 +41,12 @@ class OAuthService {
                     }
                 });
                 const token = (0, auth_1.generateToken)(existingOAuthProvider.user.id);
+                // Generate and store refresh token (30 days for OAuth logins)
+                const refreshToken = (0, auth_1.generateRefreshToken)();
+                await sessionManager_1.sessionManager.storeRefreshToken(existingOAuthProvider.user.id, refreshToken, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                undefined, // deviceInfo not available in OAuth flow
+                false // rememberMe defaults to false
+                );
                 return {
                     user: {
                         id: existingOAuthProvider.user.id,
@@ -50,7 +57,8 @@ class OAuthService {
                         avatar: existingOAuthProvider.user.avatar || profile.picture || undefined,
                         isNewUser: false
                     },
-                    token
+                    token,
+                    refreshToken
                 };
             }
             // Check if user exists with this email (using normalized email for Gmail)
@@ -99,6 +107,12 @@ class OAuthService {
                     });
                 }
                 const token = (0, auth_1.generateToken)(existingUser.id);
+                // Generate and store refresh token (30 days for OAuth logins)
+                const refreshToken = (0, auth_1.generateRefreshToken)();
+                await sessionManager_1.sessionManager.storeRefreshToken(existingUser.id, refreshToken, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                undefined, // deviceInfo not available in OAuth flow
+                false // rememberMe defaults to false
+                );
                 return {
                     user: {
                         id: existingUser.id,
@@ -109,7 +123,8 @@ class OAuthService {
                         avatar: existingUser.avatar || profile.picture || undefined,
                         isNewUser: false
                     },
-                    token
+                    token,
+                    refreshToken
                 };
             }
             // Create new user account
@@ -142,6 +157,12 @@ class OAuthService {
                 }
             });
             const token = (0, auth_1.generateToken)(newUser.id);
+            // Generate and store refresh token (30 days for OAuth logins)
+            const refreshToken = (0, auth_1.generateRefreshToken)();
+            await sessionManager_1.sessionManager.storeRefreshToken(newUser.id, refreshToken, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            undefined, // deviceInfo not available in OAuth flow
+            false // rememberMe defaults to false
+            );
             return {
                 user: {
                     id: newUser.id,
@@ -152,7 +173,8 @@ class OAuthService {
                     avatar: newUser.avatar || undefined,
                     isNewUser: true
                 },
-                token
+                token,
+                refreshToken
             };
         }
         catch (error) {
