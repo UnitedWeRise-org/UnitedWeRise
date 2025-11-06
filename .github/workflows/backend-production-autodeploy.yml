@@ -90,23 +90,54 @@ jobs:
         run: |
           cd backend
 
-          echo "📊 Checking migration status on PRODUCTION database..."
+          echo "================================================"
+          echo "   DATABASE MIGRATION & VALIDATION (PRODUCTION)"
+          echo "================================================"
+          echo ""
+
+          echo "1️⃣ Validating schema.prisma syntax..."
+          npx prisma validate --schema=prisma/schema.prisma
+          echo "   ✅ Schema syntax is valid"
+          echo ""
+
+          echo "2️⃣ Checking migration status on PRODUCTION database..."
           npx prisma migrate status || true
+          echo ""
+
+          echo "3️⃣ Detecting schema drift..."
+          MIGRATE_STATUS=$(npx prisma migrate status 2>&1)
+          echo "$MIGRATE_STATUS"
+
+          if echo "$MIGRATE_STATUS" | grep -qi "drift"; then
+            echo ""
+            echo "⚠️  WARNING: Schema drift detected!"
+            echo "   Database has been manually modified outside of Prisma migrations."
+            echo "   This may cause deployment issues."
+            echo ""
+          fi
 
           echo ""
-          echo "🔄 Applying pending migrations to PRODUCTION..."
+          echo "4️⃣ Applying pending migrations to PRODUCTION..."
           echo "⚠️  WARNING: Modifying production database schema"
           npx prisma migrate deploy
 
           echo ""
-          echo "✅ Verifying migrations applied..."
+          echo "5️⃣ Verifying migrations applied successfully..."
           npx prisma migrate status
 
           if npx prisma migrate status | grep -q "Database schema is up to date"; then
-            echo "✅ All migrations successfully applied to PRODUCTION!"
+            echo ""
+            echo "================================================"
+            echo "   ✅ MIGRATIONS SUCCESSFUL (PRODUCTION)"
+            echo "   Database schema is consistent and up to date"
+            echo "================================================"
           else
-            echo "❌ Migration verification failed!"
-            echo "⚠️  Aborting deployment - database schema mismatch"
+            echo ""
+            echo "================================================"
+            echo "   ❌ MIGRATION VERIFICATION FAILED"
+            echo "   Database schema mismatch detected"
+            echo "   Aborting deployment to prevent production issues"
+            echo "================================================"
             exit 1
           fi
 
