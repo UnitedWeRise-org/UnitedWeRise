@@ -10,6 +10,13 @@ import { getApiBaseUrl } from '../../../utils/environment.js';
 
 class AdminAuth {
     constructor() {
+        // Singleton pattern - prevent duplicate instances
+        if (AdminAuth.instance) {
+            console.log('⚠️ AdminAuth singleton already exists, returning existing instance');
+            return AdminAuth.instance;
+        }
+        AdminAuth.instance = this;
+
         this.currentUser = null;
         this.totpVerified = false;
         this.autoRefreshInterval = null;
@@ -132,6 +139,11 @@ class AdminAuth {
                         console.log('⏳ Waiting for cookie propagation...');
                         await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
                         console.log('✅ Cookie propagation complete');
+
+                        // Notify WebSocket and other components that tokens have been refreshed
+                        window.dispatchEvent(new CustomEvent('authTokenRefreshed', {
+                            detail: { timestamp: new Date().toISOString() }
+                        }));
 
                         this.isRefreshingToken = false;
                         return true;
@@ -490,6 +502,9 @@ class AdminAuth {
         }
 
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+
+        // Clear singleton instance to allow fresh initialization if needed
+        AdminAuth.instance = null;
     }
 }
 

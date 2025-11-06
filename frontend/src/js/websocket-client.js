@@ -26,6 +26,9 @@ class UnifiedMessagingClient {
         this.connectionHandlers = [];
         this.disabled = false; // Circuit breaker
 
+        // Listen for token refresh events to reconnect with fresh auth
+        this.setupTokenRefreshListener();
+
         // Only connect after user authentication completes
         this.initializeWhenAuthenticated();
     }
@@ -47,6 +50,37 @@ class UnifiedMessagingClient {
                 }, 500);
             }, { once: true });
         }
+    }
+
+    /**
+     * Listen for token refresh events and reconnect WebSocket with fresh auth
+     * Token refresh occurs every 30 minutes, but WebSocket connections cache auth state
+     * from initial handshake - must create new connection to pick up new httpOnly cookies
+     */
+    setupTokenRefreshListener() {
+        window.addEventListener('authTokenRefreshed', () => {
+            if (this.socket && this.isConnected) {
+                adminDebugLog('WebSocket', '🔄 Auth token refreshed - reconnecting WebSocket with new credentials');
+
+                // Disconnect old socket (preserves old token in handshake)
+                this.socket.disconnect();
+                this.socket.removeAllListeners();
+                this.socket = null;
+
+                // Reset connection state
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+
+                // Re-enable if it was disabled due to auth failures
+                this.disabled = false;
+
+                // Create NEW socket instance (will pick up new httpOnly cookies)
+                setTimeout(() => {
+                    adminDebugLog('WebSocket', 'Reconnecting with fresh authentication...');
+                    this.connect();
+                }, 500); // Small delay to ensure cookies are fully propagated
+            }
+        });
     }
 
     // Connect to WebSocket server
