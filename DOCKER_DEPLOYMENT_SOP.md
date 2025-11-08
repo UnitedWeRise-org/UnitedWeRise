@@ -1,43 +1,121 @@
 # Docker Deployment SOP - UnitedWeRise Backend
 
+## 🎉 **UPDATE: AUTOMATED DEPLOYMENT (October 2025)**
+
+**Backend deployment is now FULLY AUTOMATED via GitHub Actions!**
+
+**What this means:**
+- Push to `development` → Staging auto-deploys in 5-7 minutes
+- Push to `main` → Production auto-deploys in 5-7 minutes
+- Database migrations automatically applied BEFORE code deployment
+- Manual deployment only needed for emergencies
+
+**Primary Documentation:**
+- `docs/DEPLOYMENT-MIGRATION-POLICY.md` - Complete automated deployment policy
+- `.claude/protocols/deployment-procedures.md` - Deployment procedures with automated workflow
+- MASTER_DOCUMENTATION.md § 15 - Deployment & Infrastructure
+
+**Manual deployment methods below are for EMERGENCY USE ONLY when GitHub Actions unavailable.**
+
+---
+
 ## 🚨 **CRITICAL: Docker Build Failures (September 2025)**
 
 ### **Root Cause:**
 - Azure packages now require Node.js ≥20.0.0
-- Current Dockerfile uses Node 18-alpine
-- Results in engine compatibility errors during TypeScript compilation
+- ~~Current Dockerfile uses Node 18-alpine~~ **FIXED**: Now uses Node 20-alpine
+- Results in engine compatibility errors during TypeScript compilation (historical issue)
 
-### **IMMEDIATE FIX:**
-Update `backend/Dockerfile` line 1:
-```dockerfile
-# OLD (causes failures):
-FROM node:18-alpine AS builder
-
-# NEW (works):
-FROM node:20-alpine AS builder
-```
+### **CURRENT STATUS:**
+✅ **FIXED** - Dockerfile updated to Node 20-alpine
 
 ---
 
-## **PROVEN DEPLOYMENT METHODS**
+## **DEPLOYMENT METHODS**
 
-### **Method 1: Full Docker Build (PREFERRED)**
+### **Method 1: Automated via GitHub Actions (PRIMARY - October 2025)**
 ```bash
+# Developer workflow - GitHub Actions handles everything automatically:
+
+# 1. Make changes and create migration if needed
+cd backend
+npx prisma migrate dev --name "description"  # If schema changed
+
+# 2. Commit migration + schema together
+git add prisma/migrations/ prisma/schema.prisma
+git commit -m "feat: Add migration for [description]"
+
+# 3. Push to GitHub - automation handles the rest!
+git push origin development  # Staging auto-deploys
+# OR
+git push origin main          # Production auto-deploys
+
+# GitHub Actions automatically:
+# - Builds Docker image
+# - Validates schema
+# - Applies migrations
+# - Deploys container
+# - Verifies health
+
+# Monitor at: https://github.com/UnitedWeRise-org/UnitedWeRise/actions
+# Time: 5-7 minutes
+```
+
+**Workflows:**
+- `.github/workflows/backend-staging-autodeploy.yml` - Staging (development branch)
+- `.github/workflows/backend-production-autodeploy.yml` - Production (main branch)
+
+---
+
+### **Method 2: Manual Docker Build (EMERGENCY FALLBACK)**
+
+**⚠️ USE ONLY WHEN:**
+- GitHub Actions unavailable or failing
+- Emergency requiring immediate manual intervention
+- Testing deployment pipeline changes
+
+```bash
+# ⚠️ CRITICAL: Apply migrations FIRST (migration-first principle)
+cd backend
+DATABASE_URL="<production-url>" npx prisma migrate deploy
+DATABASE_URL="<production-url>" npx prisma migrate status  # Verify
+
 # Step 1: ALWAYS commit first
 git add . && git commit -m "Description" && git push origin main
 
 # Step 2: Build new image from GitHub
-az acr build --registry uwracr2425 --image unitedwerise-backend:$(date +%Y%m%d-%H%M) https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
 # Step 3: Deploy the new image
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:$(date +%Y%m%d-%H%M)
+az containerapp update --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --image "uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG" \
+  --set-env-vars NODE_ENV=production RELEASE_SHA=$GIT_SHA
+
+# Step 4: Verify deployment
+sleep 30
+curl "https://api.unitedwerise.org/health" | grep uptime
 ```
 
-### **Method 2: Emergency Deployment (FALLBACK)**
-When Docker builds fail, use environment variable restart with existing working image:
+---
+
+### **Method 3: Emergency Rollback (LAST RESORT)**
+When recent deployment breaks production:
 ```bash
-# Use last known working image with forced restart
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:totp-working-20250904-1333 --set-env-vars FORCE_RESTART=$(date +%s)
+# List recent revisions
+az containerapp revision list \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --output table
+
+# Activate previous working revision
+az containerapp revision activate \
+  --name unitedwerise-backend \
+  --resource-group unitedwerise-rg \
+  --revision <previous-revision-name>
 ```
 
 ---
@@ -92,13 +170,19 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 
 ## **DECISION MATRIX**
 
-| Change Type | Method | Database Migration | Docker Build Required |
-|-------------|--------|-------------------|---------------------|
-| Frontend only | GitHub Actions auto-deploy | No | No |
-| Backend code only | Method 1 (Docker build) | No | Yes |
-| Database schema + Backend | Method 1 + Migration first | Yes | Yes |
-| Emergency fix | Method 2 (Fallback) | No | No |
-| Full stack | Method 1 + GitHub Actions | If schema changed | Yes |
+| Change Type | Method | Database Migration | Deployment Time |
+|-------------|--------|-------------------|----------------|
+| Frontend only | GitHub Actions auto-deploy | No | 3-5 minutes |
+| Backend code only | GitHub Actions auto-deploy (Method 1) | No | 5-7 minutes |
+| Database schema + Backend | GitHub Actions auto-deploy (Method 1) | Yes (automatic) | 5-7 minutes |
+| Emergency manual deploy | Manual Docker build (Method 2) | Yes (manual) | 10-15 minutes |
+| Emergency rollback | Container revision rollback (Method 3) | No | 2-3 minutes |
+| Full stack | GitHub Actions auto-deploy | If schema changed | 5-7 minutes |
+
+**Migration Handling:**
+- **Automated (Method 1)**: GitHub Actions runs `prisma migrate deploy` automatically before deploying code
+- **Manual (Method 2)**: Must run `DATABASE_URL="..." npx prisma migrate deploy` before deploying container
+- **Rollback (Method 3)**: Does NOT rollback database - only reverts code
 
 ---
 
@@ -112,5 +196,6 @@ curl "https://unitedwerise-backend.wonderfulpond-f8a8271f.eastus.azurecontainera
 
 ---
 
-**Last Updated**: September 5, 2025  
-**Next Review**: When Azure package dependencies change
+**Last Updated**: November 7, 2025 - Updated for automated GitHub Actions deployment (October 2025)
+**Previous Update**: September 5, 2025 - Node 20 migration
+**Next Review**: When Azure package dependencies change or deployment automation changes

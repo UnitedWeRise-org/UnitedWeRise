@@ -5,16 +5,15 @@
 
 ---
 
+## 🔒 Environment-Branch Mapping (NEVER VIOLATE)
+
+**THIS RULE IS ABSOLUTE AND INVIOLABLE:**
+
 ## Terminology
 
 **Main** = main branch = production = www site/server
 **Dev** = development branch = staging = dev site/server
-
----
-
-## 🔒 Environment-Branch Mapping (NEVER VIOLATE)
-
-**THIS RULE IS ABSOLUTE AND INVIOLABLE:**
+- "Merge to main/dev" or "Deploy to main/dev" = initialize & use `.claude/protocols/deployment-procedures.md`
 
 - **Development branch** === **Staging environment** (dev.unitedwerise.org / dev-api.unitedwerise.org)
   - Staging ONLY EVER runs development branch code
@@ -111,7 +110,7 @@ Backend implements environment-aware auth: Production allows regular users, Stag
 
 ## 📚 Protocol Reference System
 
-**Before starting complex/specialized tasks**: Check if relevant protocol exists.
+**Before starting ANY tasks**: Check if relevant protocol exists.
 
 ### Protocol Check Workflow:
 1. **Identify keywords/situation** from list below
@@ -125,7 +124,7 @@ Backend implements environment-aware auth: Production allows regular users, Stag
 - **Protocol**: `.claude/protocols/deployment-procedures.md` (🔒 PROTECTED)
 - **Use when**: Deploying to staging or production environments
 
-**Deployment Issues**
+**Deployment Problems/Issues**
 - **Keywords**: deployment stuck, wrong SHA, changes not visible, health check fails
 - **Protocol**: `.claude/protocols/deployment-troubleshooting.md`
 - **Use when**: Deployment completed but something is wrong
@@ -300,7 +299,7 @@ See `.claude/guides/multi-agent-patterns.md` for detailed workflows.
 
 ## Protected Documentation
 
-Never archive or mark obsolete:
+ALWAYS consult when conducting research (Never archive or mark obsolete):
 - MASTER_DOCUMENTATION.md
 - CHANGELOG.md
 - README.md
@@ -330,9 +329,6 @@ az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
   --revision-suffix emergency-$(date +%m%d-%H%M)
-
-# Rollback
-git revert HEAD && git push origin <current-branch>
 
 # Database restore
 az postgres flexible-server restore \

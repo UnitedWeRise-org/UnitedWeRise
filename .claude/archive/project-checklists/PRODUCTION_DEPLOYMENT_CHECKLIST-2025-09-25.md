@@ -1,4 +1,20 @@
 # 🚀 PRODUCTION DEPLOYMENT CHECKLIST
+
+**📦 ARCHIVED**: This is a one-time project checklist, not a general deployment guide.
+
+**Archived Date**: November 7, 2025
+**Original Purpose**: Admin Dashboard ES6 Modularization deployment (September 25, 2025)
+**Reason for Archiving**: Context-specific checklist for a completed project
+
+**For current deployment procedures**, see:
+- `docs/DEPLOYMENT-MIGRATION-POLICY.md` - Automated deployment policy (October 2025)
+- `.claude/protocols/deployment-procedures.md` - Complete deployment procedures
+- MASTER_DOCUMENTATION.md Section 15 - Deployment & Infrastructure
+
+---
+
+## Original Checklist (September 25, 2025)
+
 **Admin Dashboard ES6 Modularization - Ready for Production**
 **Date**: September 25, 2025
 **Branch**: development → main

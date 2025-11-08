@@ -39,6 +39,57 @@ Do NOT create separate documentation files. This consolidation was created after
 
 ---
 
+## 🚀 DEPLOYMENT & MIGRATION DOCUMENTATION
+
+**⚠️ IMPORTANT - AUTOMATED DEPLOYMENT (October 2025)**:
+
+Backend deployment is now **fully automated via GitHub Actions** with migration-first safety! Manual deployment is for emergencies only.
+
+**Primary Documentation (Read These First)**:
+- **`docs/DEPLOYMENT-MIGRATION-POLICY.md`** - ⭐ Zero-tolerance migration-first policy (MANDATORY reading)
+- **`.claude/protocols/deployment-procedures.md`** - Complete deployment procedures (🔒 PROTECTED)
+- **`.claude/protocols/deployment-troubleshooting.md`** - Systematic troubleshooting guide
+
+**GitHub Actions Workflows** (Automated Deployment):
+- **`.github/workflows/backend-staging-autodeploy.yml`** - Staging auto-deploy (development branch)
+- **`.github/workflows/backend-production-autodeploy.yml`** - Production auto-deploy (main branch)
+
+**Key Principles**:
+1. **Migration-First**: Database migrations MUST be applied BEFORE code deployment
+2. **Automated Safety**: GitHub Actions automatically runs `prisma migrate deploy` before deploying code
+3. **Fail-Fast**: Deployment aborts if migration verification fails (prevents production incidents)
+4. **Zero Human Error**: Automation prevents forgetting migrations (Oct 22 & Oct 3 2025 incidents)
+
+**Historical Context**:
+- **November 6, 2025**: RefreshToken table missing → Production login 500 errors
+- **October 22, 2025**: Analytics Config table missing → Complete feature outage
+- **October 3, 2025**: Quest/Badge tables missing → Feature unavailable
+- **August 25, 2025**: Original schema-first incident → 45+ minutes debugging
+
+**Quick Reference**:
+- **Section 15**: [Deployment & Infrastructure](#deployment-infrastructure) - Updated for automated workflow
+- **Section 16.227**: [Migration-First Process](#development-practices) - Complete developer workflow
+
+**Developer Workflow**:
+```bash
+# 1. Make schema changes
+cd backend && npx prisma migrate dev --name "descriptive_name"
+
+# 2. Commit migration + schema together
+git add prisma/migrations/ prisma/schema.prisma
+git commit -m "feat: Add migration for [description]"
+
+# 3. Push to GitHub - automation handles the rest!
+git push origin development  # Staging auto-deploys
+git push origin main          # Production auto-deploys
+```
+
+**Manual Deployment** (Emergencies Only):
+- See `.claude/protocols/deployment-procedures.md` Phase 3 (Fallback Method)
+- Must still follow migration-first principle manually
+
+---
+
 ## 📑 TABLE OF CONTENTS
 
 > **📋 Development History**: [CHANGELOG.md](CHANGELOG.md) - Complete timeline of features, fixes, and deployments
@@ -9157,60 +9208,92 @@ window.apiClient.call('/onboarding/progress').then(console.log);
 | Component | Technology | Production Target | Staging Target | Automation |
 |-----------|------------|-------------------|----------------|------------|
 | **Frontend** | HTML/CSS/JS | Azure Static Web Apps (main) | Azure Static Web Apps (dev) | ✅ **Auto via GitHub** |
-| **Backend** | Node.js/Express | Container App (production) | Container App (staging) | ⚠️ **Manual via Azure CLI** |
-| **Database** | PostgreSQL | unitedwerise-db (Production) | unitedwerise-db-dev (Isolated Development) | Manual migrations + Enterprise cleanup tools |
+| **Backend** | Node.js/Express | Container App (production) | Container App (staging) | ✅ **Auto via GitHub Actions** (Oct 2025) |
+| **Database** | PostgreSQL | unitedwerise-db (Production) | unitedwerise-db-dev (Isolated Development) | ✅ **Auto migrations in GitHub Actions** |
 | **Storage** | Azure Blob | Always available | **Shared with Production** | N/A |
 
 #### GitHub Workflows & Automation
-##### Frontend Deployment (Fully Automated) 
+
+**🎉 COMPLETE AUTOMATION** (October 2025): Both frontend and backend now deploy automatically via GitHub Actions with migration-first safety!
+
+##### Frontend Deployment (Fully Automated)
 - **🏭 Production Branch**: `azure-static-web-apps-yellow-mud-043d1ca0f.yml`
   - **Triggers**: Every push to `main` branch
   - **Deploys To**: https://www.unitedwerise.org
   - **Time to Live**: 3-5 minutes
   - **Includes**: admin-dashboard.html, all frontend assets
   - **CNAME**: `www.unitedwerise.org` → Azure Static Web App
-  
-- **🧪 Staging Branch**: `azure-static-web-apps-staging.yml`  
-  - **Triggers**: Every push to `development` branch  
+
+- **🧪 Staging Branch**: `azure-static-web-apps-staging.yml`
+  - **Triggers**: Every push to `development` branch
   - **Deploys To**: https://dev.unitedwerise.org
   - **Time to Live**: 3-5 minutes
   - **CNAME**: `dev.unitedwerise.org` → `delightful-smoke-097b2fa0f.3.azurestaticapps.net`
-  
-##### Backend Deployment (Manual, Dual-Container)
+
+##### Backend Deployment (Fully Automated, Dual-Container)
+
+**🚀 AUTOMATED WORKFLOW** (Established October 22, 2025):
+
 - **🏭 Production Container**: `unitedwerise-backend`
+  - **Workflow**: `.github/workflows/backend-production-autodeploy.yml`
+  - **Triggers**: Every push to `main` branch
   - **URL**: https://api.unitedwerise.org
   - **Environment**: `NODE_ENV=production`
   - **Access**: Open to all registered users
-  - **Deployment**: Manual via Azure CLI from `main` branch
-  
+  - **Deployment Steps**:
+    1. Build Docker image in Azure Container Registry
+    2. **Run database migrations** (`prisma migrate deploy`) ⭐ CRITICAL
+    3. Deploy container with new image
+    4. Verify health endpoint
+  - **Time to Live**: 5-7 minutes
+  - **Abort on Failure**: Deployment aborts if migrations fail (fail-fast pattern)
+
 - **🧪 Staging Container**: `unitedwerise-backend-staging`
+  - **Workflow**: `.github/workflows/backend-staging-autodeploy.yml`
+  - **Triggers**: Every push to `development` branch
   - **URL**: https://dev-api.unitedwerise.org
   - **Environment**: `NODE_ENV=staging` (detected as development environment)
   - **Access**: **Admin-only for all protected routes**
-  - **Deployment**: Manual via Azure CLI from `development` branch
+  - **Deployment Steps**: Identical to production (migration-first pattern)
+  - **Time to Live**: 5-7 minutes
   - **Note**: Uses centralized environment detection - no STAGING_ENVIRONMENT variable needed
 
-#### Critical Deployment Gap
-**⚠️ IMPORTANT**: Backend changes (like admin routes) do NOT auto-deploy!
-- GitHub workflows only handle frontend deployment
-- Backend requires manual Azure CLI commands for production deployment
-- This is why admin console restoration needed manual deployment trigger
+**📋 Migration-First Policy** (Zero Tolerance - Established October 22, 2025):
+- Database migrations MUST be applied BEFORE code deployment
+- GitHub Actions automatically runs `prisma migrate deploy` before container update
+- Deployment aborts if migration verification fails
+- See `docs/DEPLOYMENT-MIGRATION-POLICY.md` for complete policy
+- Historical Context: Oct 22 & Oct 3 2025 incidents (missing migrations caused production 500 errors)
+
+**⚠️ FALLBACK: Manual Deployment** (Emergencies Only):
+- Use manual Azure CLI commands only when GitHub Actions unavailable or failing
+- See `.claude/protocols/deployment-procedures.md` for complete manual procedure
+- Still MUST follow migration-first principle manually
 
 #### Deployment Timing & Process
 | Action | Component Affected | Time to Live | Method |
 |--------|-------------------|-------------|---------|
-| Push to `main` | Frontend only | 3-5 minutes | GitHub Actions |
-| Push to `development` | Frontend only | 3-5 minutes | GitHub Actions |
-| Backend code changes | None automatically | N/A | Manual deployment required |
-| Azure CLI backend update | Backend API server | 2-5 minutes | Manual trigger |
-| Prisma migration | Database schema | ~30 seconds | Manual via npm scripts |
+| Push to `main` | Frontend + Backend | 5-7 minutes | GitHub Actions (automated) |
+| Push to `development` | Frontend + Backend | 5-7 minutes | GitHub Actions (automated) |
+| Database migrations | Auto-applied during deploy | ~30 seconds | GitHub Actions (prisma migrate deploy) |
+| Manual backend update (fallback) | Backend API server | 5-7 minutes | Azure CLI (emergencies only) |
+| Manual migration (fallback) | Database schema | ~30 seconds | Azure CLI + prisma migrate deploy |
 
-### 🚀 **GOLD STANDARD: Dual-Container Backend Deployment**
+### 🚀 **FALLBACK: Manual Dual-Container Backend Deployment**
 
-**🎯 NEW ARCHITECTURE**: Two separate backend containers with environment-aware behavior
+**⚠️ USE ONLY WHEN GITHUB ACTIONS UNAVAILABLE OR FAILING**
 
-#### Staging Deployment (Development Branch)
+**🎯 ARCHITECTURE**: Two separate backend containers with environment-aware behavior
+
+**PRIMARY METHOD**: GitHub Actions automatically handles these steps. Use manual commands below ONLY for emergencies.
+
+#### Manual Staging Deployment (Development Branch - Emergency Only)
 ```bash
+# ⚠️ CRITICAL: Run migrations FIRST (migration-first principle)
+cd backend
+DATABASE_URL="<staging-database-url>" npx prisma migrate deploy
+DATABASE_URL="<staging-database-url>" npx prisma migrate status  # Verify
+
 # STEP 1: Build from development branch
 GIT_SHA=$(git rev-parse --short HEAD)
 DOCKER_TAG="backend-staging-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
@@ -9225,8 +9308,13 @@ az containerapp update --name unitedwerise-backend-staging \
 # Note: STAGING_ENVIRONMENT variable no longer needed with centralized environment detection
 ```
 
-#### Production Deployment (Main Branch - USER APPROVAL REQUIRED)
-```bash  
+#### Manual Production Deployment (Main Branch - Emergency Only)
+```bash
+# ⚠️ CRITICAL: Run migrations FIRST (migration-first principle)
+cd backend
+DATABASE_URL="<production-database-url>" npx prisma migrate deploy
+DATABASE_URL="<production-database-url>" npx prisma migrate status  # Verify
+
 # STEP 1: Build from main branch (ONLY after staging approval)
 GIT_SHA=$(git rev-parse --short HEAD)
 DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
@@ -9245,6 +9333,7 @@ az containerapp update --name unitedwerise-backend \
 - **Same Codebase**: No code duplication, just different environment variables
 - **Safe Testing**: Admin-only staging environment for secure development testing
 - **Professional URLs**: `dev.unitedwerise.org` and `dev-api.unitedwerise.org`
+- **Automated Deployment**: GitHub Actions handles everything (October 2025)
 
 ### Azure Infrastructure
 
@@ -9277,30 +9366,40 @@ unitedwerise-rg/
 
 #### Backend Deployment (Container Apps)
 
-**Docker Configuration**:
+**🚀 PRIMARY METHOD**: GitHub Actions Automated Deployment (October 2025)
+- Triggers automatically on push to `main` (production) or `development` (staging)
+- Workflow files: `.github/workflows/backend-production-autodeploy.yml` and `backend-staging-autodeploy.yml`
+- Includes migration-first safety: applies database migrations before deploying code
+- See `docs/DEPLOYMENT-MIGRATION-POLICY.md` for complete workflow documentation
+
+**Docker Configuration** (used by GitHub Actions):
 ```dockerfile
-FROM node:18-alpine
+FROM node:20-alpine  # Updated to Node 20 (September 2025)
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
 RUN npx prisma generate
 EXPOSE 3001
-CMD ["npm", "start"]
+CMD ["npm", "start"]  # Runs: npx prisma migrate deploy && node dist/server.js
 ```
 
-**Deployment Commands**:
+**Manual Deployment Commands** (Emergency Fallback Only):
 ```bash
-# Build and push Docker image
-docker build -t unitedwerise-backend .
-docker tag unitedwerise-backend unitedweriseregistry.azurecr.io/unitedwerise-backend:latest
-docker push unitedweriseregistry.azurecr.io/unitedwerise-backend:latest
+# ⚠️ ONLY USE WHEN GITHUB ACTIONS UNAVAILABLE
+# See FALLBACK section above for complete migration-first procedure
+
+# Build and push Docker image in Azure Container Registry (preferred)
+GIT_SHA=$(git rev-parse --short HEAD)
+DOCKER_TAG="backend-prod-$GIT_SHA-$(date +%Y%m%d-%H%M%S)"
+az acr build --registry uwracr2425 --image "unitedwerise-backend:$DOCKER_TAG" \
+  https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
 
 # Update Container App
 az containerapp update \
   --name unitedwerise-backend \
   --resource-group unitedwerise-rg \
-  --image unitedweriseregistry.azurecr.io/unitedwerise-backend:latest
+  --image uwracr2425.azurecr.io/unitedwerise-backend:$DOCKER_TAG
 ```
 
 **Environment Variables**:
@@ -16224,40 +16323,85 @@ See FUTURE ROADMAP for trending system consolidation plans
 **Purpose**: Mandatory development workflows, deployment procedures, and coding standards
 **Related Systems**: [Deployment & Infrastructure](#deployment-infrastructure), [Database Schema](#database-schema), [Security & Authentication](#security-authentication)
 
-### 🚨 MANDATORY Schema-First Deployment Process (CRITICAL)
+### 🚨 MANDATORY Migration-First Deployment Process (CRITICAL)
 
-**Established August 25, 2025** after critical deployment failure that caused 45+ minutes of debugging time.
+**Updated October 22, 2025** - Now fully automated via GitHub Actions with zero-tolerance policy!
 
-**SCHEMA DEPENDENCY CHECK (FIRST STEP)**:
+**Original Incident**: August 25, 2025 - Critical deployment failure caused 45+ minutes debugging
+**Automation Implemented**: October 22, 2025 - After Analytics Config & Quest/Badge incidents
+
+**🚀 AUTOMATED WORKFLOW** (PRIMARY - October 2025):
+
+GitHub Actions now automatically handles migration-first deployment:
+
 ```bash
-# Before ANY backend deployment, ask:
-# "Does this change add/modify Prisma models or enums?"
+# Developer workflow (local development):
+cd backend
 
-# If YES → Run database migration FIRST:
-cd backend && npx prisma db execute --file scripts/migration-name.sql --schema prisma/schema.prisma
+# 1. Edit backend/prisma/schema.prisma (add/modify models or enums)
 
-# If NO → Proceed with normal deployment
+# 2. Create migration file
+npx prisma migrate dev --name "descriptive_migration_name"
+# Examples: "add_refresh_token_table", "add_user_profile_fields"
+
+# 3. Review generated SQL
+cat prisma/migrations/YYYYMMDDHHMMSS_*/migration.sql
+
+# 4. Regenerate Prisma client and build
+npx prisma generate
+npm run build
+
+# 5. Commit migration files AND schema changes together
+git add backend/prisma/migrations/ backend/prisma/schema.prisma
+git commit -m "feat: Add migration for [description]"
+
+# 6. Push to GitHub
+git push origin development  # Staging auto-deploys with migrations
+# OR
+git push origin main  # Production auto-deploys with migrations
+
+# GitHub Actions automatically:
+# - Validates schema syntax
+# - Checks for schema drift
+# - Runs: npx prisma migrate deploy
+# - Verifies migrations applied
+# - ABORTS deployment if migration fails
+# - Deploys container only after successful migration
 ```
 
-**COMPLETE DEPLOYMENT SEQUENCE**:
+**📋 ZERO-TOLERANCE POLICY**:
+- ❌ **NEVER** use `npx prisma db push` for production/staging (bypasses migration system)
+- ❌ **NEVER** commit schema.prisma changes without creating migration
+- ❌ **NEVER** use `npx prisma db execute` (deprecated pattern, use migrate system)
+- ✅ **ALWAYS** use `npx prisma migrate dev` for local development
+- ✅ **ALWAYS** commit migration files with schema changes
+- ✅ **ALWAYS** let GitHub Actions handle `prisma migrate deploy`
+
+**⚠️ MANUAL FALLBACK** (Emergencies Only):
 ```bash
-# 1. SCHEMA (if new models/enums)
-npx prisma db execute --file scripts/migration.sql --schema prisma/schema.prisma
+# If GitHub Actions unavailable, follow migration-first manually:
 
-# 2. BACKEND
-az acr build --registry uwracr2425 --image unitedwerise-backend:latest https://github.com/UnitedWeRise-org/UnitedWeRise.git#main:backend
-az containerapp update --name unitedwerise-backend --resource-group unitedwerise-rg --image uwracr2425.azurecr.io/unitedwerise-backend:latest
+# 1. Apply migration FIRST
+cd backend
+DATABASE_URL="<production-url>" npx prisma migrate deploy
+DATABASE_URL="<production-url>" npx prisma migrate status  # Verify
 
-# 3. VERIFICATION  
-curl -s backend-url/api/endpoint # Check 401 (auth) not 404 (missing route)
+# 2. Then deploy code
+# See .claude/protocols/deployment-procedures.md Phase 5
 ```
 
 **WHY THIS IS CRITICAL**:
-- **Failure Pattern**: Backend code referencing missing database models causes entire route files to fail at runtime
-- **Symptom**: All endpoints in affected route file return 404 errors while other routes work fine  
-- **Root Cause**: Prisma models import non-existent database tables/enums
-- **Solution**: Create database schema BEFORE deploying code that depends on it
-- **Never Skip**: This check prevents all schema dependency failures
+- **Historical Failures**:
+  - November 6, 2025: RefreshToken table missing → Production login 500 errors
+  - October 22, 2025: Analytics Config table missing → Analytics completely broken
+  - October 3, 2025: Quest/Badge tables missing → Feature unavailable
+  - August 25, 2025: Original schema-first incident → 45+ minutes debugging
+- **Failure Pattern**: Backend code referencing missing database models causes 500 errors
+- **Symptom**: API endpoints return 500 errors, entire features fail
+- **Root Cause**: Code deployed expecting schema changes that don't exist in database
+- **Solution**: Migration-first automated in GitHub Actions (zero human error)
+- **Policy**: See `docs/DEPLOYMENT-MIGRATION-POLICY.md` for complete zero-tolerance policy
+- **Never Skip**: Automated workflow prevents this entire class of incidents
 
 ### 🔐 Authentication Development Standards (September 22, 2025)
 

@@ -125,7 +125,7 @@ curl -s "https://dev-api.unitedwerise.org/health" | grep releaseSha
 
 ### Phase 3: Production Deployment
 
-🔒 **CRITICAL**: When user says "deploy/merge/push to production" → Use PRIMARY METHOD (automated).
+🔒 **CRITICAL**: When user says "deploy/merge/push to main/production" → Use PRIMARY METHOD (automated).
 
 **Production Environment**:
 - Branch: `main`
