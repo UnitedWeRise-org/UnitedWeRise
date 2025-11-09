@@ -11,6 +11,7 @@ on:
 jobs:
   deploy-backend-production:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     name: Deploy Backend to Production Environment
     permissions:
       id-token: write
@@ -142,6 +143,7 @@ jobs:
           fi
 
       - name: Deploy to Container App (Production)
+        timeout-minutes: 10
         env:
           AZURE_REGISTRY: uwracr2425
           AZURE_RESOURCE_GROUP: unitedwerise-rg
@@ -150,6 +152,7 @@ jobs:
           # Deploy to Container App using saved environment variables
           echo "🚀 Deploying to Azure Container App (PRODUCTION)..."
           echo "Image: ${AZURE_REGISTRY}.azurecr.io/unitedwerise-backend@${DIGEST}"
+
           az containerapp update \
             --name $AZURE_CONTAINER_APP \
             --resource-group $AZURE_RESOURCE_GROUP \
@@ -158,10 +161,28 @@ jobs:
             --set-env-vars \
               NODE_ENV=production \
               RELEASE_SHA=$GIT_SHA \
-              RELEASE_DIGEST=$DIGEST
+              RELEASE_DIGEST=$DIGEST \
+            --no-wait
 
-          echo "⏳ Waiting 30 seconds for container to start..."
-          sleep 30
+          echo "🔄 Setting revision mode to Single..."
+          az containerapp update \
+            --name $AZURE_CONTAINER_APP \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --revision-mode Single
+
+          echo "⏳ Waiting for container to fully provision..."
+          sleep 60
+
+          echo "🔍 Polling for container readiness (max 2 minutes)..."
+          for i in {1..12}; do
+            HEALTH_RESPONSE=$(curl -s "https://api.unitedwerise.org/health" || echo "")
+            if [ -n "$HEALTH_RESPONSE" ] && echo "$HEALTH_RESPONSE" | grep -q "releaseSha"; then
+              echo "✅ Container is ready!"
+              break
+            fi
+            echo "Attempt $i/12: Container not ready yet, waiting 10 seconds..."
+            sleep 10
+          done
 
           # Verify deployment
           echo "✅ Verifying production deployment..."
