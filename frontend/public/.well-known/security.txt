@@ -1,0 +1,76 @@
+# Our security policy
+# https://securitytxt.org/
+
+Contact: mailto:security@unitedwerise.org
+Expires: 2026-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://www.unitedwerise.org/.well-known/security.txt
+
+# Security Vulnerability Disclosure Policy
+
+Thank you for helping to keep UnitedWeRise and our users safe!
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability, please report it by emailing:
+security@unitedwerise.org
+
+Please include the following information in your report:
+- Type of vulnerability (e.g., XSS, SQL injection, authentication bypass)
+- Full paths of affected source files (if known)
+- Location of the affected code (URL or file path)
+- Step-by-step instructions to reproduce the issue
+- Proof-of-concept or exploit code (if possible)
+- Impact of the vulnerability and how it might be exploited
+
+## Our Commitment
+
+- We will acknowledge your email within 48 hours
+- We will provide a detailed response within 7 days
+- We will work with you to understand and validate the vulnerability
+- We will keep you informed as we work on a fix
+- We will credit you in our security acknowledgments (unless you prefer to remain anonymous)
+
+## Scope
+
+In-scope vulnerabilities include:
+- Authentication and authorization bypass
+- SQL injection, XSS, CSRF
+- Remote code execution
+- Sensitive data exposure
+- Server-side request forgery (SSRF)
+- Insecure cryptographic storage or transmission
+- Security misconfigurations with demonstrable impact
+
+Out-of-scope:
+- Denial of Service (DoS) attacks
+- Social engineering attacks against staff or users
+- Physical attacks against our infrastructure
+- Issues affecting outdated/unsupported browsers
+- Theoretical vulnerabilities without proof-of-concept
+
+## Safe Harbor
+
+We consider security research conducted under this policy to be:
+- Authorized under the Computer Fraud and Abuse Act (CFAA)
+- Authorized under the Digital Millennium Copyright Act (DMCA)
+- Exempt from restrictions in our Terms of Service that would interfere with security research
+- Lawful and helpful to the security of the internet
+
+We will not pursue legal action against researchers who:
+- Follow this disclosure policy
+- Avoid violating privacy or destroying data
+- Report vulnerabilities promptly
+- Do not exploit vulnerabilities beyond demonstrating them
+- Act in good faith
+
+## Recognition
+
+We maintain a Security Hall of Fame on our website to recognize researchers who have
+helped us improve security. Please let us know if you would like to be included.
+
+## Policy Updates
+
+This policy was last updated: 2025-11-10
+We may update this policy periodically. The canonical version is always available at:
+https://www.unitedwerise.org/.well-known/security.txt

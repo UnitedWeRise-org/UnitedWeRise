@@ -65,8 +65,8 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   const cookie = req.cookies['csrf-token'];
 
   console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
-    headerToken: token ? `${token.substring(0, 8)}...` : 'MISSING',
-    cookieToken: cookie ? `${cookie.substring(0, 8)}...` : 'MISSING',
+    hasHeaderToken: !!token,
+    hasCookieToken: !!cookie,
     tokensMatch: token && cookie ? (token === cookie) : false
   });
 
@@ -102,8 +102,6 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     console.log(`[${requestId}] 🚨 CSRF 403: Token mismatch`, {
       path: req.path,
       method: req.method,
-      headerToken: `${token.substring(0, 8)}...`,
-      cookieToken: `${cookie.substring(0, 8)}...`,
       reason: 'CSRF_TOKEN_MISMATCH'
     });
     metricsService.incrementCounter('csrf_failures_total', { reason: 'token_mismatch' });
