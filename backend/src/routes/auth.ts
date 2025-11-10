@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
-import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken } from '../utils/auth';
+import { hashPassword, comparePassword, generateToken, generateResetToken, generateRefreshToken, hashResetToken } from '../utils/auth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateRegistration, validateLogin } from '../middleware/validation';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
@@ -643,21 +643,23 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'If the email exists, a reset link has been sent' });
     }
 
+    // SECURITY FIX: Generate plaintext token for email, hash for database storage
     const resetToken = generateResetToken();
+    const hashedResetToken = hashResetToken(resetToken);
     const resetExpiry = new Date(Date.now() + 3600000); // 1 hour
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken,
+        resetToken: hashedResetToken, // Store hash, not plaintext
         resetExpiry
       }
     });
 
-    // Send password reset email
+    // Send password reset email with plaintext token (user needs actual token)
     const emailTemplate = emailService.generatePasswordResetTemplate(
       email,
-      resetToken,
+      resetToken, // Email contains plaintext token
       user.firstName
     );
 
@@ -686,9 +688,12 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
+    // SECURITY FIX: Hash incoming token to compare with stored hash
+    const hashedToken = hashResetToken(token);
+
     const user = await prisma.user.findFirst({
       where: {
-        resetToken: token,
+        resetToken: hashedToken, // Compare hashed token
         resetExpiry: {
           gt: new Date()
         }

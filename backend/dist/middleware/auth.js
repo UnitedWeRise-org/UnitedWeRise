@@ -20,8 +20,7 @@ const requireAuth = async (req, res, next) => {
             method: req.method,
             timestamp: new Date().toISOString(),
             hasCookie: !!req.cookies?.authToken,
-            hasAuthHeader: !!req.header('Authorization'),
-            cookieValue: req.cookies?.authToken ? `${req.cookies.authToken.substring(0, 10)}...` : 'NONE'
+            hasAuthHeader: !!req.header('Authorization')
         });
         // Get token from cookie first, fallback to header for transition period
         let token = req.cookies?.authToken;

@@ -114,10 +114,10 @@ class WebSocketService {
             // Fallback for explicit token in auth or header
             if (!accessToken) {
                 accessToken = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-                console.log('🔑 Token from auth.token or Bearer header:', accessToken ? `${accessToken.substring(0, 20)}...` : 'not found');
+                console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
             }
             else {
-                console.log('🔑 authToken from cookie:', accessToken ? `${accessToken.substring(0, 20)}...` : 'not found');
+                console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
             }
             // Try to verify access token
             if (accessToken) {
@@ -141,7 +141,7 @@ class WebSocketService {
             // FALLBACK AUTHENTICATION: Try refresh token for long-lived connections (30-90 days)
             if (!userId) {
                 const refreshToken = cookies.refreshToken;
-                console.log('🔑 refreshToken from cookie:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'not found');
+                console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
                 if (refreshToken) {
                     const tokenData = await sessionManager_1.sessionManager.validateRefreshToken(refreshToken);
                     if (tokenData) {

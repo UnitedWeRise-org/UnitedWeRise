@@ -65,25 +65,29 @@
 
 ---
 
-### ⏳ 3. Password Reset Tokens Stored as Plaintext
+### ✅ 3. Password Reset Tokens Stored as Plaintext
 **Severity:** CRITICAL
 **Risk:** Database breach exposes valid reset tokens
-**Status:** ⏳ Planned (Future sprint)
+**Status:** ✅ Completed (2025-11-10)
 
-**Current Implementation:**
-- `backend/src/utils/auth.ts` - `generateResetToken()` uses crypto.randomBytes (✅ secure generation)
-- `backend/src/routes/auth.ts` (lines 646-655) - Stores plaintext in database (❌ insecure storage)
-- `backend/src/routes/auth.ts` (lines 689-696) - Plaintext comparison (❌ vulnerable)
+**Implementation:**
+- `backend/src/utils/auth.ts` - Added `hashResetToken()` function (SHA-256 hashing)
+- `backend/src/routes/auth.ts` (lines 646-664) - Hash token before database storage
+- `backend/src/routes/auth.ts` (lines 691-700) - Hash incoming token for comparison
 
-**Required Changes:**
-1. Hash reset token before storage (SHA-256, like refresh tokens)
-2. Update validation to compare hashes
-3. Ensure one-time use (already implemented via token clearing)
+**Changes Made:**
+1. ✅ Created `hashResetToken()` function using SHA-256 (same pattern as refresh tokens)
+2. ✅ Updated `/forgot-password` to hash token before storage
+3. ✅ Updated `/reset-password` to hash incoming token for validation
+4. ✅ Email still contains plaintext token (user needs actual token to reset)
+5. ✅ One-time use maintained via token clearing after successful reset
 
-**Reference Implementation:** See `sessionManager.ts` - refresh token hashing pattern
+**Security Benefit:**
+- Database breach no longer exposes valid reset links
+- Tokens must be intercepted from email to be used
+- Follows same secure pattern as refresh tokens
 
-**Effort Estimate:** 1 hour
-**Testing:** Unit tests for hash generation/validation, integration test for reset flow
+**Testing:** TypeScript compilation successful, ready for integration testing
 
 ---
 

@@ -141,7 +141,7 @@ app.use((0, helmet_1.default)({
                 "wss://dev-api.unitedwerise.org", // Staging WebSocket
                 "https://js.stripe.com", // Stripe API
                 "*.azurecontainerapps.io", // Azure backend
-                "https://*.blob.core.windows.net", // Azure Blob Storage for direct uploads
+                "https://uwrstorage2425.blob.core.windows.net", // SECURITY: Specific Azure Blob Storage (was wildcard)
                 "https://hcaptcha.com", // hCaptcha API
                 "https://api.hcaptcha.com",
                 "https://www.google-analytics.com", // Google Analytics
@@ -196,16 +196,20 @@ app.use((0, cors_1.default)({
             callback(null, true);
             return;
         }
-        // Allow any Azure Static Web Apps origin or unitedwerise.org domain
+        // SECURITY: Strict origin validation using regex to prevent subdomain hijacking
+        // Allow: www.unitedwerise.org, dev.unitedwerise.org, admin.unitedwerise.org, etc.
+        // Block: evil.unitedwerise.org.attacker.com, unitedwerise.org-phishing.com
+        const isUnitedWeRiseOrigin = origin && /^https?:\/\/([a-z0-9-]+\.)?unitedwerise\.org$/.test(origin);
+        const isAzureStaticApp = origin && /^https:\/\/[a-z0-9-]+\.azurestaticapps\.net$/.test(origin);
         if (!origin ||
             allowedOrigins.includes(origin) ||
-            origin.includes('azurestaticapps.net') ||
-            origin.includes('unitedwerise.org')) {
+            isAzureStaticApp ||
+            isUnitedWeRiseOrigin) {
             console.log('✅ CORS - Origin allowed');
             callback(null, true);
         }
         else {
-            // SECURITY FIX: Properly block unauthorized origins (removed temporary bypass)
+            // SECURITY FIX: Properly block unauthorized origins
             console.log('❌ CORS - Origin blocked:', origin);
             callback(new Error('Not allowed by CORS'));
         }

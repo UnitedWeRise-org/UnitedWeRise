@@ -592,17 +592,20 @@ router.post('/forgot-password', async (req, res) => {
             // Don't reveal if email exists or not
             return res.json({ message: 'If the email exists, a reset link has been sent' });
         }
+        // SECURITY FIX: Generate plaintext token for email, hash for database storage
         const resetToken = (0, auth_1.generateResetToken)();
+        const hashedResetToken = (0, auth_1.hashResetToken)(resetToken);
         const resetExpiry = new Date(Date.now() + 3600000); // 1 hour
         await prisma_1.prisma.user.update({
             where: { id: user.id },
             data: {
-                resetToken,
+                resetToken: hashedResetToken, // Store hash, not plaintext
                 resetExpiry
             }
         });
-        // Send password reset email
-        const emailTemplate = emailService_1.emailService.generatePasswordResetTemplate(email, resetToken, user.firstName);
+        // Send password reset email with plaintext token (user needs actual token)
+        const emailTemplate = emailService_1.emailService.generatePasswordResetTemplate(email, resetToken, // Email contains plaintext token
+        user.firstName);
         const emailSent = await emailService_1.emailService.sendEmail(emailTemplate);
         if (!emailSent) {
             // Log failure but don't expose to user (prevents email enumeration)
@@ -626,9 +629,11 @@ router.post('/reset-password', async (req, res) => {
         if (!token || !newPassword) {
             return res.status(400).json({ error: 'Token and new password are required' });
         }
+        // SECURITY FIX: Hash incoming token to compare with stored hash
+        const hashedToken = (0, auth_1.hashResetToken)(token);
         const user = await prisma_1.prisma.user.findFirst({
             where: {
-                resetToken: token,
+                resetToken: hashedToken, // Compare hashed token
                 resetExpiry: {
                     gt: new Date()
                 }
@@ -708,6 +713,34 @@ router.post('/logout', auth_2.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Logout failed' });
     }
 });
+/**
+ * @swagger
+ * /api/auth/logout-all:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Logout from all devices (requires authentication)
+ *     description: |
+ *       Revokes all refresh tokens for the authenticated user, effectively logging them out
+ *       from all devices. Also blacklists the current access token and clears cookies.
+ *       Useful for security when user suspects account compromise or wants to end all sessions.
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully logged out from all devices
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out from all devices successfully"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         description: Server error during logout
+ */
 // Logout all devices (revoke all refresh tokens)
 router.post('/logout-all', auth_2.requireAuth, async (req, res) => {
     try {
@@ -908,6 +941,66 @@ router.post('/change-password', auth_2.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to change password' });
     }
 });
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Refresh access token using refresh token
+ *     description: |
+ *       Exchanges a valid refresh token (from cookie) for new access token and refresh token.
+ *       Implements token rotation: old refresh token is invalidated with 30-second grace period.
+ *
+ *       **Token Rotation Security**: Each refresh generates new tokens and invalidates old ones,
+ *       preventing token reuse attacks. Grace period handles concurrent requests.
+ *
+ *       **Automatic Refresh**: Frontend automatically calls this when access token expires (30min).
+ *       Users see seamless experience - no re-login required for up to 30 days (or 90 with Remember Me).
+ *
+ *       **TOTP Persistence**: TOTP verification status preserved across token refreshes.
+ *     requestBody:
+ *       description: No body required - refresh token sent via httpOnly cookie
+ *       required: false
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully - new tokens sent as httpOnly cookies
+ *         headers:
+ *           Set-Cookie:
+ *             description: |
+ *               Sets three cookies:
+ *               - authToken (httpOnly, 30min, new access token)
+ *               - refreshToken (httpOnly, 30-90 days, new refresh token)
+ *               - csrf-token (readable by JS, for subsequent requests)
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 csrfToken:
+ *                   type: string
+ *                   description: CSRF token for subsequent authenticated requests
+ *       401:
+ *         description: Invalid, expired, or revoked refresh token - user must log in again
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid refresh token"
+ *                 code:
+ *                   type: string
+ *                   enum: [REFRESH_TOKEN_INVALID]
+ *                   description: Error code for frontend to trigger re-login
+ *       500:
+ *         description: Server error during token rotation
+ */
 // Token refresh endpoint - uses refresh tokens for security
 router.post('/refresh', async (req, res) => {
     const startTime = Date.now();
