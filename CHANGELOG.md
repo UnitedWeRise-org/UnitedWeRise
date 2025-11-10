@@ -1,10 +1,127 @@
 # 📋 CHANGELOG - United We Rise Platform
 
-**Last Updated**: November 5, 2025
+**Last Updated**: November 7, 2025
 **Purpose**: Historical record of all major changes, deployments, and achievements
 **Maintained**: Per Documentation Protocol in CLAUDE.md
 
 > **Note**: This file contains historical development timeline. For current system details, see MASTER_DOCUMENTATION.md
+
+---
+
+## [Unreleased] - 2025-11-07
+
+### Fixed - 🚀 GitHub Actions Deployment Workflows Now Complete Successfully
+
+**🎯 INFRASTRUCTURE FIX**: Backend auto-deployment workflows no longer hang indefinitely.
+
+**Problem Solved:**
+- Workflows appeared to run indefinitely without completing (since October 22, 2025 automation launch)
+- Staging and production deployments required manual intervention despite automation in place
+- `az containerapp update` commands blocked waiting for Azure provisioning (5-10+ minutes)
+- Default 6-hour timeout masked hanging issue, creating false "workflow running" impression
+- Insufficient container provisioning wait time (30s) caused verification to run before container ready
+
+**Root Cause Analysis:**
+1. **Missing `--no-wait` flag**: First `az containerapp update` command waited synchronously for Azure provisioning
+2. **Missing revision mode command**: Second `az containerapp update --revision-mode Single` command not present
+3. **No timeout configuration**: Job-level and step-level timeouts not set (defaulted to 6 hours)
+4. **Inadequate polling**: 30-second sleep insufficient for container startup, no retry logic
+
+**Implementation:**
+
+**Workflow Changes** (both staging and production):
+```yaml
+jobs:
+  deploy-backend-*:
+    timeout-minutes: 15  # ADDED - Job-level timeout
+
+    steps:
+      - name: Deploy to Container App
+        timeout-minutes: 10  # ADDED - Step-level timeout
+        run: |
+          # First update: Deploy image with --no-wait
+          az containerapp update \
+            --image "uwracr2425.azurecr.io/unitedwerise-backend@${DIGEST}" \
+            --no-wait  # ADDED - Prevents blocking
+
+          # Second update: Set revision mode (ADDED - was missing)
+          az containerapp update \
+            --revision-mode Single
+
+          # Wait for container provisioning (CHANGED from 30s to 60s)
+          sleep 60
+
+          # Poll for readiness with retry logic (ADDED)
+          for i in {1..12}; do
+            HEALTH_RESPONSE=$(curl -s "https://[env]-api.unitedwerise.org/health" || echo "")
+            if [ -n "$HEALTH_RESPONSE" ] && echo "$HEALTH_RESPONSE" | grep -q "releaseSha"; then
+              echo "✅ Container is ready!"
+              break
+            fi
+            echo "Attempt $i/12: Container not ready yet, waiting 10 seconds..."
+            sleep 10
+          done
+```
+
+**Files Modified:**
+- `.github/workflows/backend-staging-autodeploy.yml`
+- `.github/workflows/backend-production-autodeploy.yml`
+
+**Verification:**
+- Staging deployment completed successfully (releaseSha: ebe3fa2)
+- Workflow execution time: ~10-12 minutes (down from indefinite)
+- Health endpoint verification confirms correct code deployed
+
+**Impact:**
+- ✅ First successful automated backend deployment since October 2025 automation launch
+- ✅ Staging workflow now completes in ~10-12 minutes (previously indefinite)
+- ✅ Production workflow ready for testing
+- ✅ Migration-first automation now fully operational
+
+**Historical Context:**
+This fix completes the automated deployment pipeline initiated on October 22, 2025. The workflows were committed without testing in actual GitHub Actions environment, where Azure CLI behavior differs from interactive shells.
+
+---
+
+### Fixed - 📚 Deployment Documentation Consolidation
+
+**🎯 DOCUMENTATION IMPROVEMENT**: All deployment documentation now consistent and reflects GitHub Actions automation.
+
+**Problem Solved:**
+- MASTER_DOCUMENTATION.md showed manual deployment as primary method (outdated since October 2025)
+- CHANGELOG.md missing comprehensive entry for October 22, 2025 automation implementation
+- DOCKER_DEPLOYMENT_SOP.md showed manual deployment as "preferred"
+- Context-specific checklist could be confused for general deployment guide
+
+**Files Updated:**
+1. **MASTER_DOCUMENTATION.md**
+   - Section 15 (Deployment Infrastructure): Updated Component Deployment Matrix to show "Auto via GitHub Actions (Oct 2025)"
+   - Section 16.227 (Migration-First Process): Rewrote from old `db execute` pattern to modern `migrate dev/deploy` workflow
+   - Added cross-reference section (Lines 42-90) pointing to primary deployment documentation
+
+2. **CHANGELOG.md**
+   - Added comprehensive October 22, 2025 entry documenting automated deployment pipeline (130 lines)
+   - Documented migration-first safety pattern (8 steps)
+   - Developer workflow changes (old: 15+ minutes, new: 5-7 minutes)
+
+3. **DOCKER_DEPLOYMENT_SOP.md**
+   - Updated header to show GitHub Actions as PRIMARY method
+   - Marked manual deployment as "EMERGENCY FALLBACK"
+   - Added migration-first warnings
+
+4. **PRODUCTION_DEPLOYMENT_CHECKLIST.md**
+   - Archived to `.claude/archive/project-checklists/` with context note
+   - Clarified as one-time project checklist for September 25, 2025 deployment
+
+5. **CLAUDE.md** (minor updates)
+   - Enhanced protocol cross-references
+   - Added deployment trigger keywords
+
+**Impact:**
+- ✅ All deployment documentation now shows GitHub Actions as primary method
+- ✅ Manual deployment clearly marked as emergency fallback
+- ✅ Migration-first policy consistently documented across all files
+- ✅ Cross-referencing prevents outdated procedures from being followed
 
 ---
 
