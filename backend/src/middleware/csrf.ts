@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { metricsService } from '../services/metricsService';
 import crypto from 'crypto';
+import { enableRequestLogging } from '../utils/environment';
 
 /**
  * CSRF Protection Middleware
@@ -11,25 +12,30 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   // Generate unique request ID for tracing
   const requestId = crypto.randomBytes(4).toString('hex');
 
-  // 🔍 LAYER 4 DEBUG: CSRF Middleware Entry
-  console.log(`[${requestId}] 🔍 CSRF Middleware Entry:`, {
-    method: req.method,
-    path: req.path,
-    timestamp: new Date().toISOString(),
-    hasHeaderToken: !!req.headers['x-csrf-token'],
-    hasBodyToken: !!(req.body && req.body._csrf),
-    hasCookie: !!req.cookies['csrf-token']
-  });
+  if (enableRequestLogging()) {
+    console.log(`[${requestId}] 🔍 CSRF Middleware Entry:`, {
+      method: req.method,
+      path: req.path,
+      timestamp: new Date().toISOString(),
+      hasHeaderToken: !!req.headers['x-csrf-token'],
+      hasBodyToken: !!(req.body && req.body._csrf),
+      hasCookie: !!req.cookies['csrf-token']
+    });
+  }
 
   // Skip CSRF verification for GET requests (they should be safe by design)
   if (req.method === 'GET') {
-    console.log(`[${requestId}] ✅ CSRF Skip: GET request`);
+    if (enableRequestLogging()) {
+      console.log(`[${requestId}] ✅ CSRF Skip: GET request`);
+    }
     return next();
   }
 
   // Skip CSRF verification for OPTIONS requests (CORS preflight)
   if (req.method === 'OPTIONS') {
-    console.log(`[${requestId}] ✅ CSRF Skip: OPTIONS request`);
+    if (enableRequestLogging()) {
+      console.log(`[${requestId}] ✅ CSRF Skip: OPTIONS request`);
+    }
     return next();
   }
 
@@ -53,7 +59,9 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   // Check if current path is exempted
   const isExempted = exemptedPaths.some(path => req.path === path || req.path.startsWith(path));
   if (isExempted) {
-    console.log(`[${requestId}] ✅ CSRF Skip: Exempted path - ${req.path}`);
+    if (enableRequestLogging()) {
+      console.log(`[${requestId}] ✅ CSRF Skip: Exempted path - ${req.path}`);
+    }
     return next();
   }
 
@@ -64,14 +72,17 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   // Get CSRF token from cookie
   const cookie = req.cookies['csrf-token'];
 
-  console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
-    hasHeaderToken: !!token,
-    hasCookieToken: !!cookie,
-    tokensMatch: token && cookie ? (token === cookie) : false
-  });
+  if (enableRequestLogging()) {
+    console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
+      hasHeaderToken: !!token,
+      hasCookieToken: !!cookie,
+      tokensMatch: token && cookie ? (token === cookie) : false
+    });
+  }
 
   // Verify both tokens exist
   if (!token) {
+    // SECURITY EVENT: Always log CSRF failures
     console.log(`[${requestId}] 🚨 CSRF 403: Missing token in request`, {
       path: req.path,
       method: req.method,
@@ -85,6 +96,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
 
   if (!cookie) {
+    // SECURITY EVENT: Always log CSRF failures
     console.log(`[${requestId}] 🚨 CSRF 403: Missing cookie`, {
       path: req.path,
       method: req.method,
@@ -99,6 +111,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
 
   // Verify tokens match (double-submit cookie pattern)
   if (token !== cookie) {
+    // SECURITY EVENT: Always log CSRF failures
     console.log(`[${requestId}] 🚨 CSRF 403: Token mismatch`, {
       path: req.path,
       method: req.method,
@@ -111,11 +124,12 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  // CSRF validation passed
-  console.log(`[${requestId}] ✅ CSRF Validation Passed:`, {
-    path: req.path,
-    method: req.method
-  });
+  if (enableRequestLogging()) {
+    console.log(`[${requestId}] ✅ CSRF Validation Passed:`, {
+      path: req.path,
+      method: req.method
+    });
+  }
   metricsService.incrementCounter('csrf_validations_total', { status: 'success' });
   next();
 };

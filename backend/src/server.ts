@@ -86,22 +86,6 @@ const webSocketService = new WebSocketService(httpServer);
 // Export webSocketService for global access (notifications, etc.)
 export { webSocketService };
 
-// 🚨 ABSOLUTE FIRST MIDDLEWARE - LOGS EVERY REQUEST BEFORE ANYTHING ELSE
-// This MUST be before helmet, rate limiters, CORS, body parsers - EVERYTHING
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log('🆘🆘🆘 FAILSAFE: Request received before all middleware');
-  console.log(`🆘 Time: ${timestamp}`);
-  console.log(`🆘 Method: ${req.method}`);
-  console.log(`🆘 URL: ${req.url}`);
-  console.log(`🆘 Path: ${req.path}`);
-  console.log(`🆘 Content-Type: ${req.headers['content-type'] || 'none'}`);
-  console.log(`🆘 Origin: ${req.headers['origin'] || 'none'}`);
-  console.log(`🆘 Content-Length: ${req.headers['content-length'] || 'none'}`);
-  console.log('🆘🆘🆘');
-  next();
-});
-
 // Enhanced Security Middleware - Enterprise Grade
 app.use(helmet({
   // Content Security Policy - Prevent XSS and injection attacks
@@ -195,18 +179,25 @@ app.use(apiLimiter);
 
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
-console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+if (enableRequestLogging()) {
+  console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+}
+
 app.use(cors({
   origin: (origin, callback) => {
-    console.log('🔍 CORS - Request from origin:', origin);
-    
+    if (enableRequestLogging()) {
+      console.log('🔍 CORS - Request from origin:', origin);
+    }
+
     // In development, be more permissive
     if (getEnvironment() === 'development') {
-      console.log('✅ CORS - Development mode, allowing all origins');
+      if (enableRequestLogging()) {
+        console.log('✅ CORS - Development mode, allowing all origins');
+      }
       callback(null, true);
       return;
     }
-    
+
     // SECURITY: Strict origin validation using regex to prevent subdomain hijacking
     // Allow: www.unitedwerise.org, dev.unitedwerise.org, admin.unitedwerise.org, etc.
     // Block: evil.unitedwerise.org.attacker.com, unitedwerise.org-phishing.com
@@ -217,10 +208,12 @@ app.use(cors({
         allowedOrigins.includes(origin) ||
         isAzureStaticApp ||
         isUnitedWeRiseOrigin) {
-      console.log('✅ CORS - Origin allowed');
+      if (enableRequestLogging()) {
+        console.log('✅ CORS - Origin allowed');
+      }
       callback(null, true);
     } else {
-      // SECURITY FIX: Properly block unauthorized origins
+      // SECURITY EVENT: Always log blocked origins (potential attack/misconfiguration)
       console.log('❌ CORS - Origin blocked:', origin);
       callback(new Error('Not allowed by CORS'));
     }
@@ -229,23 +222,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
-
-// 🚨 CRITICAL DEBUG: Log ALL incoming requests (REMOVE AFTER DEBUGGING)
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
-  console.log(`📥 INCOMING REQUEST: ${timestamp}`);
-  console.log(`📥 Method: ${req.method}`);
-  console.log(`📥 URL: ${req.url}`);
-  console.log(`📥 Path: ${req.path}`);
-  console.log(`📥 Content-Type: ${req.headers['content-type'] || 'none'}`);
-  console.log(`📥 Content-Length: ${req.headers['content-length'] || 'none'}`);
-  console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
-  console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
-
-  console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
-  next();
-});
 
 // Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {

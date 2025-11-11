@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import { isProduction } from '../utils/environment';
+import { isProduction, enableRequestLogging } from '../utils/environment';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
@@ -28,8 +28,10 @@ export class WebSocketService {
       'http://localhost:8080'                // Alternative local port
     ];
 
-    console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
-    console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+    if (enableRequestLogging()) {
+      console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
+      console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+    }
 
     this.io = new Server(httpServer, {
       cors: {
@@ -115,12 +117,14 @@ export class WebSocketService {
 
       // Parse cookies once for both access and refresh tokens
       const cookieHeader = socket.handshake.headers.cookie;
-      console.log('🍪 Cookie header present:', !!cookieHeader);
 
       let cookies: any = {};
       if (cookieHeader) {
-        console.log('🍪 Cookie header length:', cookieHeader.length);
-        console.log('🍪 All cookies:', cookieHeader.split(';').map((c: string) => c.trim().split('=')[0]));
+        if (enableRequestLogging()) {
+          console.log('🍪 Cookie header present:', !!cookieHeader);
+          console.log('🍪 Cookie header length:', cookieHeader.length);
+          console.log('🍪 All cookies:', cookieHeader.split(';').map((c: string) => c.trim().split('=')[0]));
+        }
 
         // Parse cookie header to extract tokens
         cookies = cookieHeader.split(';').reduce((acc: any, cookie: string) => {
@@ -136,9 +140,13 @@ export class WebSocketService {
       // Fallback for explicit token in auth or header
       if (!accessToken) {
         accessToken = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-        console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
+        if (enableRequestLogging()) {
+          console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
+        }
       } else {
-        console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
+        if (enableRequestLogging()) {
+          console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
+        }
       }
 
       // Try to verify access token
@@ -148,30 +156,42 @@ export class WebSocketService {
           // Check if access token is blacklisted
           const tokenId = crypto.createHash('sha256').update(accessToken).digest('hex');
           if (await sessionManager.isTokenBlacklisted(tokenId)) {
-            console.log('⚠️ Access token blacklisted, will try refresh token');
+            if (enableRequestLogging()) {
+              console.log('⚠️ Access token blacklisted, will try refresh token');
+            }
           } else {
             userId = decoded.userId;
             authMethod = 'access_token';
-            console.log('✅ Access token valid, userId:', userId);
+            if (enableRequestLogging()) {
+              console.log('✅ Access token valid, userId:', userId);
+            }
           }
         } else {
-          console.log('⚠️ Access token invalid or expired, will try refresh token');
+          if (enableRequestLogging()) {
+            console.log('⚠️ Access token invalid or expired, will try refresh token');
+          }
         }
       }
 
       // FALLBACK AUTHENTICATION: Try refresh token for long-lived connections (30-90 days)
       if (!userId) {
         const refreshToken = cookies.refreshToken;
-        console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
+        if (enableRequestLogging()) {
+          console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
+        }
 
         if (refreshToken) {
           const tokenData = await sessionManager.validateRefreshToken(refreshToken);
           if (tokenData) {
             userId = tokenData.userId;
             authMethod = 'refresh_token';
-            console.log('✅ Refresh token valid, userId:', userId);
+            if (enableRequestLogging()) {
+              console.log('✅ Refresh token valid, userId:', userId);
+            }
           } else {
-            console.log('❌ Refresh token invalid or expired');
+            if (enableRequestLogging()) {
+              console.log('❌ Refresh token invalid or expired');
+            }
           }
         }
       }
