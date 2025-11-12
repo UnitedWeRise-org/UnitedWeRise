@@ -483,7 +483,9 @@ export class PhotoPipeline {
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     await blockBlobClient.uploadData(buffer, {
       blobHTTPHeaders: {
-        blobContentType: mimeType
+        blobContentType: mimeType,
+        blobContentDisposition: 'inline', // Photos safe to display in browser
+        blobCacheControl: 'public, max-age=31536000' // 1 year cache
       }
     });
 

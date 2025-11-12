@@ -12,6 +12,8 @@ import '../utils/performance.js';
 import '../utils/error-handler.js';
 import '../utils/advanced-caching.js';
 import '../utils/smart-loader.js';
+import { initializeGoogleAds } from './google-ads-init.js';
+import { initLoadingOverlayFailsafe } from './loading-overlay-failsafe.js';
 
 // Phase 1a: Admin debug system (used by many modules, loaded early)
 import '../../js/adminDebugger.js';
@@ -138,6 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize payment systems
     initializeDonationSystem();
+
+    // Initialize Google Ads tracking
+    initializeGoogleAds();
+
+    // Initialize loading overlay failsafe
+    initLoadingOverlayFailsafe();
 
     // Wrap apiCall with performance optimization if available
     if (window.createOptimizedApiCall && window.apiCall) {

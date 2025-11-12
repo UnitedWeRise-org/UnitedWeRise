@@ -98,10 +98,16 @@ router.post('/documents', requireAuth, requireCandidate, upload.single('document
     
     const blobName = `${candidate.id}/${documentType}_${uuidv4()}_${req.file.originalname}`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    
+
+    // SECURITY: Force download for PDFs to prevent XSS attacks, allow inline for images
+    const isPDF = req.file.mimetype === 'application/pdf';
+    const contentDisposition = isPDF ? 'attachment' : 'inline';
+
     await blockBlobClient.upload(req.file.buffer, req.file.size, {
       blobHTTPHeaders: {
-        blobContentType: req.file.mimetype
+        blobContentType: req.file.mimetype,
+        blobContentDisposition: contentDisposition,
+        blobCacheControl: 'private, max-age=86400' // 24 hour cache (sensitive documents)
       }
     });
     

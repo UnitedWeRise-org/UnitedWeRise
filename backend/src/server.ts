@@ -88,85 +88,24 @@ export { webSocketService };
 
 // Enhanced Security Middleware - Enterprise Grade
 app.use(helmet({
-  // Content Security Policy - Prevent XSS and injection attacks
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'", "data:", "blob:", "local.adguard.org"],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "'unsafe-eval'",
-        "data:",
-        "blob:",
-        "https://unpkg.com",
-        "https://js.stripe.com",
-        "local.adguard.org"
-      ],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "'unsafe-eval'", // Required for dynamic imports and MapLibre
-        "https://unpkg.com",
-        "https://js.stripe.com",
-        "https://js.hcaptcha.com",
-        "https://www.googletagmanager.com",
-        "https://www.google-analytics.com",
-        "https://googleads.g.doubleclick.net",
-        "local.adguard.org"
-      ],
-      styleSrcElem: [
-        "'self'",
-        "'unsafe-inline'",
-        "https://unpkg.com",
-        "https://js.stripe.com",
-        "local.adguard.org"
-      ],
-      imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
-      connectSrc: [
-        "'self'",
-        "https://api.unitedwerise.org", // Production API
-        "https://dev-api.unitedwerise.org", // Staging API
-        "ws:", "wss:", // WebSocket connections
-        "wss://api.unitedwerise.org", // Production WebSocket
-        "wss://dev-api.unitedwerise.org", // Staging WebSocket
-        "https://js.stripe.com", // Stripe API
-        "*.azurecontainerapps.io", // Azure backend
-        "https://uwrstorage2425.blob.core.windows.net", // SECURITY: Specific Azure Blob Storage (was wildcard)
-        "https://hcaptcha.com", // hCaptcha API
-        "https://api.hcaptcha.com",
-        "https://www.google-analytics.com", // Google Analytics
-        "https://googleads.g.doubleclick.net", // Google Ads
-        "https://www.google.com", // Google services
-        "https://*.cartocdn.com", // Map tiles
-        "local.adguard.org", // AdGuard
-        "ws://local.adguard.org", // AdGuard WS
-        "wss://local.adguard.org" // AdGuard WSS
-      ],
-      fontSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"], // Block dangerous plugins
-      mediaSrc: ["'self'", "https:"],
-      frameSrc: [
-        "'self'",
-        "https://js.stripe.com", // Stripe checkout frames
-        "https://newassets.hcaptcha.com", // hCaptcha frames
-        "https://www.googletagmanager.com" // Google Tag Manager
-      ],
-      workerSrc: ["'self'", "blob:", "data:"], // Required for MapLibre workers
-      // SECURITY FIX: Enable HTTPS enforcement (null enables the directive)
-      upgradeInsecureRequests: null, // Force HTTPS in production
-    },
-  },
-  // Additional security headers
+  // ARCHITECTURE NOTE: Content Security Policy disabled in backend
+  // Rationale: Frontend served by Azure Static Web Apps (separate deployment)
+  // Backend CSP only applies to API responses (JSON), not user-facing HTML
+  // CSP protection provided by frontend meta tag in index.html
+  // See: .claude/scratchpads/SECURITY-AUDIT-TRACKING.md for details
+  contentSecurityPolicy: false,
+
+  // Keep all other security headers (these DO protect API responses)
   hsts: {
-    maxAge: 31536000, // 1 year
+    maxAge: 31536000,
     includeSubDomains: true,
     preload: true
   },
-  frameguard: { action: 'deny' }, // Prevent clickjacking
-  noSniff: true, // Prevent MIME type sniffing
-  xssFilter: true, // XSS protection
-  referrerPolicy: { policy: 'same-origin' }, // Control referrer info
-  crossOriginEmbedderPolicy: false, // Keep false for compatibility
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'same-origin' },
+  crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: { policy: 'same-origin' },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
