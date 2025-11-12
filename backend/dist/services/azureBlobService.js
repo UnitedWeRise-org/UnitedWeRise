@@ -62,7 +62,8 @@ class AzureBlobService {
             await blockBlobClient.uploadData(buffer, {
                 blobHTTPHeaders: {
                     blobContentType: mimeType,
-                    blobCacheControl: 'public, max-age=31536000' // Cache for 1 year
+                    blobCacheControl: 'public, max-age=31536000', // Cache for 1 year
+                    blobContentDisposition: 'inline' // Photos safe to display
                 }
             });
             // Return the public URL

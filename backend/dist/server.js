@@ -81,102 +81,25 @@ const PORT = process.env.PORT || 3001;
 // Initialize unified WebSocket service
 const webSocketService = new WebSocketService_1.default(httpServer);
 exports.webSocketService = webSocketService;
-// 🚨 ABSOLUTE FIRST MIDDLEWARE - LOGS EVERY REQUEST BEFORE ANYTHING ELSE
-// This MUST be before helmet, rate limiters, CORS, body parsers - EVERYTHING
-app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log('🆘🆘🆘 FAILSAFE: Request received before all middleware');
-    console.log(`🆘 Time: ${timestamp}`);
-    console.log(`🆘 Method: ${req.method}`);
-    console.log(`🆘 URL: ${req.url}`);
-    console.log(`🆘 Path: ${req.path}`);
-    console.log(`🆘 Content-Type: ${req.headers['content-type'] || 'none'}`);
-    console.log(`🆘 Origin: ${req.headers['origin'] || 'none'}`);
-    console.log(`🆘 Content-Length: ${req.headers['content-length'] || 'none'}`);
-    console.log('🆘🆘🆘');
-    next();
-});
 // Enhanced Security Middleware - Enterprise Grade
 app.use((0, helmet_1.default)({
-    // Content Security Policy - Prevent XSS and injection attacks
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'", "data:", "blob:", "local.adguard.org"],
-            styleSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "'unsafe-eval'",
-                "data:",
-                "blob:",
-                "https://unpkg.com",
-                "https://js.stripe.com",
-                "local.adguard.org"
-            ],
-            scriptSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "'unsafe-eval'", // Required for dynamic imports and MapLibre
-                "https://unpkg.com",
-                "https://js.stripe.com",
-                "https://js.hcaptcha.com",
-                "https://www.googletagmanager.com",
-                "https://www.google-analytics.com",
-                "https://googleads.g.doubleclick.net",
-                "local.adguard.org"
-            ],
-            styleSrcElem: [
-                "'self'",
-                "'unsafe-inline'",
-                "https://unpkg.com",
-                "https://js.stripe.com",
-                "local.adguard.org"
-            ],
-            imgSrc: ["'self'", "data:", "https:", "*.azurestaticapps.net", "*.unitedwerise.org"],
-            connectSrc: [
-                "'self'",
-                "https://api.unitedwerise.org", // Production API
-                "https://dev-api.unitedwerise.org", // Staging API
-                "ws:", "wss:", // WebSocket connections
-                "wss://api.unitedwerise.org", // Production WebSocket
-                "wss://dev-api.unitedwerise.org", // Staging WebSocket
-                "https://js.stripe.com", // Stripe API
-                "*.azurecontainerapps.io", // Azure backend
-                "https://uwrstorage2425.blob.core.windows.net", // SECURITY: Specific Azure Blob Storage (was wildcard)
-                "https://hcaptcha.com", // hCaptcha API
-                "https://api.hcaptcha.com",
-                "https://www.google-analytics.com", // Google Analytics
-                "https://googleads.g.doubleclick.net", // Google Ads
-                "https://www.google.com", // Google services
-                "https://*.cartocdn.com", // Map tiles
-                "local.adguard.org", // AdGuard
-                "ws://local.adguard.org", // AdGuard WS
-                "wss://local.adguard.org" // AdGuard WSS
-            ],
-            fontSrc: ["'self'", "https:", "data:"],
-            objectSrc: ["'none'"], // Block dangerous plugins
-            mediaSrc: ["'self'", "https:"],
-            frameSrc: [
-                "'self'",
-                "https://js.stripe.com", // Stripe checkout frames
-                "https://newassets.hcaptcha.com", // hCaptcha frames
-                "https://www.googletagmanager.com" // Google Tag Manager
-            ],
-            workerSrc: ["'self'", "blob:", "data:"], // Required for MapLibre workers
-            // SECURITY FIX: Enable HTTPS enforcement (null enables the directive)
-            upgradeInsecureRequests: null, // Force HTTPS in production
-        },
-    },
-    // Additional security headers
+    // ARCHITECTURE NOTE: Content Security Policy disabled in backend
+    // Rationale: Frontend served by Azure Static Web Apps (separate deployment)
+    // Backend CSP only applies to API responses (JSON), not user-facing HTML
+    // CSP protection provided by frontend meta tag in index.html
+    // See: .claude/scratchpads/SECURITY-AUDIT-TRACKING.md for details
+    contentSecurityPolicy: false,
+    // Keep all other security headers (these DO protect API responses)
     hsts: {
-        maxAge: 31536000, // 1 year
+        maxAge: 31536000,
         includeSubDomains: true,
         preload: true
     },
-    frameguard: { action: 'deny' }, // Prevent clickjacking
-    noSniff: true, // Prevent MIME type sniffing
-    xssFilter: true, // XSS protection
-    referrerPolicy: { policy: 'same-origin' }, // Control referrer info
-    crossOriginEmbedderPolicy: false, // Keep false for compatibility
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: 'same-origin' },
+    crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin' },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
@@ -186,13 +109,19 @@ app.use(rateLimiting_1.burstLimiter);
 app.use(rateLimiting_1.apiLimiter);
 // CORS Configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
-console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+if ((0, environment_1.enableRequestLogging)()) {
+    console.log('🔒 CORS - Allowed Origins:', allowedOrigins);
+}
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        console.log('🔍 CORS - Request from origin:', origin);
+        if ((0, environment_1.enableRequestLogging)()) {
+            console.log('🔍 CORS - Request from origin:', origin);
+        }
         // In development, be more permissive
         if ((0, environment_1.getEnvironment)() === 'development') {
-            console.log('✅ CORS - Development mode, allowing all origins');
+            if ((0, environment_1.enableRequestLogging)()) {
+                console.log('✅ CORS - Development mode, allowing all origins');
+            }
             callback(null, true);
             return;
         }
@@ -205,11 +134,13 @@ app.use((0, cors_1.default)({
             allowedOrigins.includes(origin) ||
             isAzureStaticApp ||
             isUnitedWeRiseOrigin) {
-            console.log('✅ CORS - Origin allowed');
+            if ((0, environment_1.enableRequestLogging)()) {
+                console.log('✅ CORS - Origin allowed');
+            }
             callback(null, true);
         }
         else {
-            // SECURITY FIX: Properly block unauthorized origins
+            // SECURITY EVENT: Always log blocked origins (potential attack/misconfiguration)
             console.log('❌ CORS - Origin blocked:', origin);
             callback(new Error('Not allowed by CORS'));
         }
@@ -218,21 +149,6 @@ app.use((0, cors_1.default)({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'X-TOTP-Verified', 'X-TOTP-Token', 'X-Recent-Auth', 'X-Dismissal-Token', 'X-CSRF-Token']
 }));
-// 🚨 CRITICAL DEBUG: Log ALL incoming requests (REMOVE AFTER DEBUGGING)
-app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
-    console.log(`📥 INCOMING REQUEST: ${timestamp}`);
-    console.log(`📥 Method: ${req.method}`);
-    console.log(`📥 URL: ${req.url}`);
-    console.log(`📥 Path: ${req.path}`);
-    console.log(`📥 Content-Type: ${req.headers['content-type'] || 'none'}`);
-    console.log(`📥 Content-Length: ${req.headers['content-length'] || 'none'}`);
-    console.log(`📥 Origin: ${req.headers['origin'] || 'none'}`);
-    console.log(`📥 User-Agent: ${req.headers['user-agent']?.substring(0, 50) || 'none'}`);
-    console.log('📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥📥');
-    next();
-});
 // Basic middleware - Apply body parsing only for appropriate content types
 app.use((req, res, next) => {
     const contentType = req.headers['content-type'] || '';

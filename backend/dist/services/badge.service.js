@@ -32,7 +32,11 @@ class BadgeService {
         const containerClient = this.storageClient.getContainerClient(this.containerName);
         const blockBlobClient = containerClient.getBlockBlobClient(filename);
         await blockBlobClient.uploadData(file.buffer, {
-            blobHTTPHeaders: { blobContentType: file.mimetype }
+            blobHTTPHeaders: {
+                blobContentType: file.mimetype,
+                blobContentDisposition: 'inline', // Badge images safe to display
+                blobCacheControl: 'public, max-age=31536000' // 1 year cache
+            }
         });
         return blockBlobClient.url;
     }

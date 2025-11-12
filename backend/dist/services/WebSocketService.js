@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebSocketService = void 0;
 const socket_io_1 = require("socket.io");
+const environment_1 = require("../utils/environment");
 const crypto_1 = __importDefault(require("crypto"));
 const client_1 = require("@prisma/client");
 const messaging_1 = require("../types/messaging");
@@ -26,8 +27,10 @@ class WebSocketService {
             'http://localhost:5173', // Vite dev server
             'http://localhost:8080' // Alternative local port
         ];
-        console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
-        console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+        if ((0, environment_1.enableRequestLogging)()) {
+            console.log('🔌 WebSocket CORS - Allowed Origins:', allowedOrigins);
+            console.log('🌍 WebSocket CORS - NODE_ENV:', process.env.NODE_ENV);
+        }
         this.io = new socket_io_1.Server(httpServer, {
             cors: {
                 origin: allowedOrigins,
@@ -97,11 +100,13 @@ class WebSocketService {
             let authMethod = 'none';
             // Parse cookies once for both access and refresh tokens
             const cookieHeader = socket.handshake.headers.cookie;
-            console.log('🍪 Cookie header present:', !!cookieHeader);
             let cookies = {};
             if (cookieHeader) {
-                console.log('🍪 Cookie header length:', cookieHeader.length);
-                console.log('🍪 All cookies:', cookieHeader.split(';').map((c) => c.trim().split('=')[0]));
+                if ((0, environment_1.enableRequestLogging)()) {
+                    console.log('🍪 Cookie header present:', !!cookieHeader);
+                    console.log('🍪 Cookie header length:', cookieHeader.length);
+                    console.log('🍪 All cookies:', cookieHeader.split(';').map((c) => c.trim().split('=')[0]));
+                }
                 // Parse cookie header to extract tokens
                 cookies = cookieHeader.split(';').reduce((acc, cookie) => {
                     const [key, value] = cookie.trim().split('=');
@@ -114,10 +119,14 @@ class WebSocketService {
             // Fallback for explicit token in auth or header
             if (!accessToken) {
                 accessToken = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-                console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
+                if ((0, environment_1.enableRequestLogging)()) {
+                    console.log('🔑 Token from auth.token or Bearer header:', accessToken ? '[REDACTED]' : 'not found');
+                }
             }
             else {
-                console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
+                if ((0, environment_1.enableRequestLogging)()) {
+                    console.log('🔑 authToken from cookie:', accessToken ? '[REDACTED]' : 'not found');
+                }
             }
             // Try to verify access token
             if (accessToken) {
@@ -126,31 +135,43 @@ class WebSocketService {
                     // Check if access token is blacklisted
                     const tokenId = crypto_1.default.createHash('sha256').update(accessToken).digest('hex');
                     if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
-                        console.log('⚠️ Access token blacklisted, will try refresh token');
+                        if ((0, environment_1.enableRequestLogging)()) {
+                            console.log('⚠️ Access token blacklisted, will try refresh token');
+                        }
                     }
                     else {
                         userId = decoded.userId;
                         authMethod = 'access_token';
-                        console.log('✅ Access token valid, userId:', userId);
+                        if ((0, environment_1.enableRequestLogging)()) {
+                            console.log('✅ Access token valid, userId:', userId);
+                        }
                     }
                 }
                 else {
-                    console.log('⚠️ Access token invalid or expired, will try refresh token');
+                    if ((0, environment_1.enableRequestLogging)()) {
+                        console.log('⚠️ Access token invalid or expired, will try refresh token');
+                    }
                 }
             }
             // FALLBACK AUTHENTICATION: Try refresh token for long-lived connections (30-90 days)
             if (!userId) {
                 const refreshToken = cookies.refreshToken;
-                console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
+                if ((0, environment_1.enableRequestLogging)()) {
+                    console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
+                }
                 if (refreshToken) {
                     const tokenData = await sessionManager_1.sessionManager.validateRefreshToken(refreshToken);
                     if (tokenData) {
                         userId = tokenData.userId;
                         authMethod = 'refresh_token';
-                        console.log('✅ Refresh token valid, userId:', userId);
+                        if ((0, environment_1.enableRequestLogging)()) {
+                            console.log('✅ Refresh token valid, userId:', userId);
+                        }
                     }
                     else {
-                        console.log('❌ Refresh token invalid or expired');
+                        if ((0, environment_1.enableRequestLogging)()) {
+                            console.log('❌ Refresh token invalid or expired');
+                        }
                     }
                 }
             }
