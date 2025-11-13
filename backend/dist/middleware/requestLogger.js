@@ -52,13 +52,8 @@ exports.requestLoggingMiddleware = (0, pino_http_1.default)({
             },
             remoteAddress: req.ip,
         }),
-        res: (res) => ({
-            statusCode: res.statusCode,
-            headers: {
-                'content-type': res.getHeader('content-type'),
-                'content-length': res.getHeader('content-length'),
-            },
-        }),
+        // Use default res serializer (res object is already serialized by pino-http)
+        // Custom serializer was causing TypeError: res.getHeader is not a function
     },
     // Redact sensitive data
     redact: {
