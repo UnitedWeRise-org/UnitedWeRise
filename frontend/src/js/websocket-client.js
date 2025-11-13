@@ -1,5 +1,6 @@
 // Unified WebSocket messaging client for both USER_USER and ADMIN_CANDIDATE messaging
 import { getWebSocketUrl } from '../utils/environment.js';
+import { COOKIE_NAMES } from '../utils/cookies.js';
 
 /**
  * Extract cookie value by name
@@ -128,7 +129,7 @@ class UnifiedMessagingClient {
 
             // Try to read auth cookie directly (won't work for httpOnly, but check)
             if (!authToken) {
-                authToken = getCookie('authToken');
+                authToken = getCookie(COOKIE_NAMES.AUTH_TOKEN);
                 if (authToken) {
                     adminDebugLog('WebSocket', '✅ Read authToken from non-httpOnly cookie');
                 }

@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { MessageType, WebSocketMessagePayload, UnifiedMessage } from '../types/messaging';
 import { sessionManager } from './sessionManager';
 import { verifyToken } from '../utils/auth';
+import { COOKIE_NAMES } from '../utils/cookies';
 
 const prisma = new PrismaClient();
 
@@ -135,7 +136,7 @@ export class WebSocketService {
       }
 
       // PRIMARY AUTHENTICATION: Try access token first (short-lived, 30 min)
-      let accessToken = cookies.authToken;
+      let accessToken = cookies[COOKIE_NAMES.AUTH_TOKEN];
 
       // Fallback for explicit token in auth or header
       if (!accessToken) {
@@ -175,7 +176,7 @@ export class WebSocketService {
 
       // FALLBACK AUTHENTICATION: Try refresh token for long-lived connections (30-90 days)
       if (!userId) {
-        const refreshToken = cookies.refreshToken;
+        const refreshToken = cookies[COOKIE_NAMES.REFRESH_TOKEN];
         if (enableRequestLogging()) {
           console.log('🔑 refreshToken from cookie:', refreshToken ? '[REDACTED]' : 'not found');
         }

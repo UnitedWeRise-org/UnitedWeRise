@@ -9,6 +9,7 @@ const auth_1 = require("../middleware/auth");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const metricsService_1 = require("../services/metricsService");
 const environment_1 = require("../utils/environment");
+const cookies_1 = require("../utils/cookies");
 const router = express_1.default.Router();
 // OAuth Configuration endpoint
 router.get('/config', async (req, res) => {
@@ -104,7 +105,7 @@ router.post('/google', rateLimiting_1.authLimiter, async (req, res) => {
             is_new_user: result.user.isNewUser ? 'true' : 'false'
         });
         // Set authToken cookie (30 minutes)
-        res.cookie('authToken', result.token, {
+        res.cookie(cookies_1.COOKIE_NAMES.AUTH_TOKEN, result.token, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none',
@@ -113,7 +114,7 @@ router.post('/google', rateLimiting_1.authLimiter, async (req, res) => {
             domain: '.unitedwerise.org'
         });
         // Set refreshToken cookie (30 days for OAuth logins)
-        res.cookie('refreshToken', result.refreshToken, {
+        res.cookie(cookies_1.COOKIE_NAMES.REFRESH_TOKEN, result.refreshToken, {
             httpOnly: true,
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none',
@@ -124,7 +125,7 @@ router.post('/google', rateLimiting_1.authLimiter, async (req, res) => {
         // Generate and set CSRF token
         const crypto = require('crypto');
         const csrfToken = crypto.randomBytes(32).toString('hex');
-        res.cookie('csrf-token', csrfToken, {
+        res.cookie(cookies_1.COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
             httpOnly: false,
             secure: (0, environment_1.requireSecureCookies)(),
             sameSite: 'none',

@@ -7,6 +7,7 @@ exports.warnCsrf = exports.verifyCsrf = void 0;
 const metricsService_1 = require("../services/metricsService");
 const crypto_1 = __importDefault(require("crypto"));
 const environment_1 = require("../utils/environment");
+const cookies_1 = require("../utils/cookies");
 /**
  * CSRF Protection Middleware
  * Implements double-submit cookie pattern for CSRF protection
@@ -22,7 +23,7 @@ const verifyCsrf = (req, res, next) => {
             timestamp: new Date().toISOString(),
             hasHeaderToken: !!req.headers['x-csrf-token'],
             hasBodyToken: !!(req.body && req.body._csrf),
-            hasCookie: !!req.cookies['csrf-token']
+            hasCookie: !!req.cookies[cookies_1.COOKIE_NAMES.CSRF_TOKEN]
         });
     }
     // Skip CSRF verification for GET requests (they should be safe by design)
@@ -67,7 +68,7 @@ const verifyCsrf = (req, res, next) => {
     // Note: req.body might be undefined for multipart/form-data before body parsing
     const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
     // Get CSRF token from cookie
-    const cookie = req.cookies['csrf-token'];
+    const cookie = req.cookies[cookies_1.COOKIE_NAMES.CSRF_TOKEN];
     if ((0, environment_1.enableRequestLogging)()) {
         console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
             hasHeaderToken: !!token,
@@ -136,7 +137,7 @@ const warnCsrf = (req, res, next) => {
         return next();
     }
     const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
-    const cookie = req.cookies['csrf-token'];
+    const cookie = req.cookies[cookies_1.COOKIE_NAMES.CSRF_TOKEN];
     if (!token || !cookie || token !== cookie) {
         console.warn(`⚠️  CSRF Warning: ${req.method} ${req.path} - Missing or mismatched CSRF token`);
         // Continue with request but log the warning

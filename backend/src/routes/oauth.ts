@@ -4,6 +4,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiting';
 import { metricsService } from '../services/metricsService';
 import { requireSecureCookies } from '../utils/environment';
+import { COOKIE_NAMES } from '../utils/cookies';
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     // Set authToken cookie (30 minutes)
-    res.cookie('authToken', result.token, {
+    res.cookie(COOKIE_NAMES.AUTH_TOKEN, result.token, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -117,7 +118,7 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     // Set refreshToken cookie (30 days for OAuth logins)
-    res.cookie('refreshToken', result.refreshToken, {
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, result.refreshToken, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -129,7 +130,7 @@ router.post('/google', authLimiter, async (req, res) => {
     // Generate and set CSRF token
     const crypto = require('crypto');
     const csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, {
+    res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false,
       secure: requireSecureCookies(),
       sameSite: 'none',

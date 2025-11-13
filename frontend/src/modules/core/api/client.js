@@ -9,6 +9,7 @@
  */
 
 import { adminDebugLog } from '../../../../js/adminDebugger.js';
+import { COOKIE_NAMES } from '../../../utils/cookies.js';
 
 const API_CONFIG = {
     get BASE_URL() {
@@ -101,7 +102,7 @@ class APIClient {
             }
             
             // Add CSRF token if available - check instance → global → cookie (defense in depth)
-            const csrfToken = this.csrfToken || window.csrfToken || getCookie('csrf-token');
+            const csrfToken = this.csrfToken || window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
             if (csrfToken) {
                 fetchOptions.headers['X-CSRF-Token'] = csrfToken;
                 // Sync the tokens bidirectionally (including when read from cookie)
@@ -113,7 +114,7 @@ class APIClient {
                     console.warn(`⚠️ CSRF token missing for ${fetchOptions.method} request to ${url}`);
                     console.warn(`⚠️ this.csrfToken:`, this.csrfToken);
                     console.warn(`⚠️ window.csrfToken:`, window.csrfToken);
-                    console.warn(`⚠️ document.cookie (csrf-token):`, getCookie('csrf-token'));
+                    console.warn(`⚠️ document.cookie (csrf-token):`, getCookie(COOKIE_NAMES.CSRF_TOKEN));
                 }
             }
             
@@ -405,7 +406,7 @@ class APIClient {
             xhr.open('POST', url);
             xhr.withCredentials = true;
 
-            const csrfToken = this.csrfToken || window.csrfToken || getCookie('csrf-token');
+            const csrfToken = this.csrfToken || window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRF-Token', csrfToken);
                 // Sync the tokens bidirectionally

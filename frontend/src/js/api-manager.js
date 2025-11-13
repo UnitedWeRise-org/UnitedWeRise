@@ -12,6 +12,8 @@
  * Bug fix: apiCall now uses apiManager.request() instead of raw fetch()
  */
 
+import { COOKIE_NAMES } from '../utils/cookies.js';
+
 // Advanced API Request Manager for United We Rise
 // Implements request deduplication, caching, and intelligent batching
 
@@ -303,9 +305,9 @@ class APIRequestManager {
     getCSRFToken() {
         // Try memory first
         if (window.csrfToken) return window.csrfToken;
-        
+
         // Try cookie (non-httpOnly)
-        const match = document.cookie.match(/csrf-token=([^;]+)/);
+        const match = document.cookie.match(new RegExp(`${COOKIE_NAMES.CSRF_TOKEN}=([^;]+)`));
         return match ? match[1] : null;
     }
 

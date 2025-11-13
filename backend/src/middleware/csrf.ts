@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { metricsService } from '../services/metricsService';
 import crypto from 'crypto';
 import { enableRequestLogging } from '../utils/environment';
+import { COOKIE_NAMES } from '../utils/cookies';
 
 /**
  * CSRF Protection Middleware
@@ -19,7 +20,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
       timestamp: new Date().toISOString(),
       hasHeaderToken: !!req.headers['x-csrf-token'],
       hasBodyToken: !!(req.body && req.body._csrf),
-      hasCookie: !!req.cookies['csrf-token']
+      hasCookie: !!req.cookies[COOKIE_NAMES.CSRF_TOKEN]
     });
   }
 
@@ -70,7 +71,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
 
   // Get CSRF token from cookie
-  const cookie = req.cookies['csrf-token'];
+  const cookie = req.cookies[COOKIE_NAMES.CSRF_TOKEN];
 
   if (enableRequestLogging()) {
     console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
@@ -145,7 +146,7 @@ export const warnCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
 
   const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
-  const cookie = req.cookies['csrf-token'];
+  const cookie = req.cookies[COOKIE_NAMES.CSRF_TOKEN];
 
   if (!token || !cookie || token !== cookie) {
     console.warn(`⚠️  CSRF Warning: ${req.method} ${req.path} - Missing or mismatched CSRF token`);

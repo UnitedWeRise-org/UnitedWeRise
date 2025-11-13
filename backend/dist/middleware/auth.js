@@ -10,6 +10,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const sessionManager_1 = require("../services/sessionManager");
 const metricsService_1 = require("../services/metricsService");
 const environment_1 = require("../utils/environment");
+const cookies_1 = require("../utils/cookies");
 const requireAuth = async (req, res, next) => {
     // Generate unique request ID for tracing
     const requestId = crypto_1.default.randomBytes(4).toString('hex');
@@ -19,12 +20,12 @@ const requireAuth = async (req, res, next) => {
                 path: req.path,
                 method: req.method,
                 timestamp: new Date().toISOString(),
-                hasCookie: !!req.cookies?.authToken,
+                hasCookie: !!req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN],
                 hasAuthHeader: !!req.header('Authorization')
             });
         }
         // Get token from cookie first, fallback to header for transition period
-        let token = req.cookies?.authToken;
+        let token = req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN];
         // Fallback for migration period
         if (!token) {
             token = req.header('Authorization')?.replace('Bearer ', '');
@@ -114,7 +115,7 @@ const requireAuth = async (req, res, next) => {
         }
         // Record successful authentication
         metricsService_1.metricsService.incrementCounter('auth_middleware_success_total', {
-            method: req.cookies?.authToken ? 'cookie' : 'header'
+            method: req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN] ? 'cookie' : 'header'
         });
         // Update user's lastSeenAt, but only if it's been more than 5 minutes since last update to avoid database spam
         const now = new Date();

@@ -13,6 +13,7 @@ import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
 import { requiresCaptcha, requireSecureCookies, enableRequestLogging, isDevelopment } from '../utils/environment';
 import { normalizeEmail } from '../utils/emailNormalization';
+import { COOKIE_NAMES } from '../utils/cookies';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
@@ -255,7 +256,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     );
 
     // Set httpOnly authentication cookie (30 minutes)
-    res.cookie('authToken', token, {
+    res.cookie(COOKIE_NAMES.AUTH_TOKEN, token, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
@@ -265,7 +266,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     });
 
     // Set httpOnly refresh token cookie (30 days)
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -276,7 +277,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
 
     // Generate and set CSRF token
     const csrfToken = require('crypto').randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, {
+    res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false, // CSRF token needs to be readable by JavaScript
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -488,7 +489,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       );
 
       // Set httpOnly cookie for auth token (30 minutes)
-      res.cookie('authToken', token, {
+      res.cookie(COOKIE_NAMES.AUTH_TOKEN, token, {
         httpOnly: true,
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
@@ -498,7 +499,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       });
 
       // Set httpOnly refresh token cookie
-      res.cookie('refreshToken', refreshToken, {
+      res.cookie(COOKIE_NAMES.REFRESH_TOKEN, refreshToken, {
         httpOnly: true,
         secure: requireSecureCookies(),
         sameSite: 'none',
@@ -506,10 +507,10 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         path: '/',
         domain: '.unitedwerise.org'
       });
-      
+
       // Generate and set CSRF token
       const csrfToken = require('crypto').randomBytes(32).toString('hex');
-      res.cookie('csrf-token', csrfToken, {
+      res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
         httpOnly: false, // Needs to be readable by JS
         secure: requireSecureCookies(),
         sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
@@ -555,7 +556,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     );
 
     // Set httpOnly cookie for auth token (30 minutes)
-    res.cookie('authToken', token, {
+    res.cookie(COOKIE_NAMES.AUTH_TOKEN, token, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
@@ -565,7 +566,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
     });
 
     // Set httpOnly refresh token cookie
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -573,10 +574,10 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       path: '/',
       domain: '.unitedwerise.org'
     });
-    
+
     // Generate and set CSRF token
     const csrfToken = require('crypto').randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, {
+    res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false, // Needs to be readable by JS
       secure: requireSecureCookies(),
       sameSite: 'none', // Required for cross-subdomain auth (dev.unitedwerise.org → dev-api.unitedwerise.org)
@@ -726,13 +727,13 @@ router.post('/reset-password', async (req, res) => {
 router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
   try {
     // Get token from cookie first, fallback to header for transition period
-    let token = req.cookies?.authToken;
+    let token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];
     if (!token) {
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
 
     const sessionId = req.header('X-Session-ID');
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
 
     if (token) {
       const decoded = verifyToken(token);
@@ -776,9 +777,9 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
       domain: '.unitedwerise.org'
     };
 
-    res.clearCookie('authToken', httpOnlyCookieOptions);
-    res.clearCookie('refreshToken', httpOnlyCookieOptions);
-    res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.AUTH_TOKEN, httpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, httpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.CSRF_TOKEN, nonHttpOnlyCookieOptions);
 
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
@@ -821,7 +822,7 @@ router.post('/logout-all', requireAuth, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
 
     // Get current auth token for blacklisting
-    let token = req.cookies?.authToken;
+    let token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];
     if (!token) {
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
@@ -858,9 +859,9 @@ router.post('/logout-all', requireAuth, async (req: AuthRequest, res) => {
       domain: '.unitedwerise.org'
     };
 
-    res.clearCookie('authToken', httpOnlyCookieOptions);
-    res.clearCookie('refreshToken', httpOnlyCookieOptions);
-    res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.AUTH_TOKEN, httpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, httpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.CSRF_TOKEN, nonHttpOnlyCookieOptions);
 
     res.json({ message: 'Logged out from all devices successfully' });
   } catch (error) {
@@ -972,7 +973,7 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
     await sessionManager.revokeAllUserRefreshTokens(userId);
 
     // Blacklist current access token
-    const token = req.cookies?.authToken;
+    const token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];
     if (token) {
       const decoded = verifyToken(token);
       if (decoded) {
@@ -999,9 +1000,9 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
       domain: '.unitedwerise.org'
     };
 
-    res.clearCookie('authToken', cookieOptions);
-    res.clearCookie('refreshToken', cookieOptions);
-    res.clearCookie('csrf-token', nonHttpOnlyCookieOptions);
+    res.clearCookie(COOKIE_NAMES.AUTH_TOKEN, cookieOptions);
+    res.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, cookieOptions);
+    res.clearCookie(COOKIE_NAMES.CSRF_TOKEN, nonHttpOnlyCookieOptions);
 
     // Log successful password change
     await SecurityService.logEvent({
@@ -1109,7 +1110,7 @@ router.post('/refresh', async (req, res) => {
 
   try {
     // Get refreshToken from cookies (not authToken)
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
 
     if (!refreshToken) {
       console.log(`🔄 Token refresh failed: No refresh token provided (IP: ${ipAddress})`);
@@ -1155,7 +1156,7 @@ router.post('/refresh', async (req, res) => {
     }
 
     // Set new authToken cookie (30 minute expiration)
-    res.cookie('authToken', newAccessToken, {
+    res.cookie(COOKIE_NAMES.AUTH_TOKEN, newAccessToken, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -1169,7 +1170,7 @@ router.post('/refresh', async (req, res) => {
       ? 90 * 24 * 60 * 60 * 1000  // 90 days
       : 30 * 24 * 60 * 60 * 1000; // 30 days
 
-    res.cookie('refreshToken', newRefreshToken, {
+    res.cookie(COOKIE_NAMES.REFRESH_TOKEN, newRefreshToken, {
       httpOnly: true,
       secure: requireSecureCookies(),
       sameSite: 'none',
@@ -1180,7 +1181,7 @@ router.post('/refresh', async (req, res) => {
 
     // Generate and set new CSRF token
     const csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, {
+    res.cookie(COOKIE_NAMES.CSRF_TOKEN, csrfToken, {
       httpOnly: false,
       secure: requireSecureCookies(),
       sameSite: 'none',

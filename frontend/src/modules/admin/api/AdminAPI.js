@@ -7,6 +7,7 @@
  */
 
 import { getApiBaseUrl } from '../../../utils/environment.js';
+import { COOKIE_NAMES } from '../../../utils/cookies.js';
 
 class AdminAPI {
     constructor() {
@@ -74,7 +75,7 @@ class AdminAPI {
 
         // Add CSRF token for state-changing requests
         // Fallback to reading from cookie if window.csrfToken not set
-        const csrfToken = window.csrfToken || getCookie('csrf-token');
+        const csrfToken = window.csrfToken || getCookie(COOKIE_NAMES.CSRF_TOKEN);
         if (csrfToken && options.method && options.method !== 'GET') {
             headers['X-CSRF-Token'] = csrfToken;
         }

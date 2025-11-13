@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { sessionManager } from '../services/sessionManager';
 import { metricsService } from '../services/metricsService';
 import { isDevelopment, enableRequestLogging } from '../utils/environment';
+import { COOKIE_NAMES } from '../utils/cookies';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -38,13 +39,13 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
         path: req.path,
         method: req.method,
         timestamp: new Date().toISOString(),
-        hasCookie: !!req.cookies?.authToken,
+        hasCookie: !!req.cookies?.[COOKIE_NAMES.AUTH_TOKEN],
         hasAuthHeader: !!req.header('Authorization')
       });
     }
 
     // Get token from cookie first, fallback to header for transition period
-    let token = req.cookies?.authToken;
+    let token = req.cookies?.[COOKIE_NAMES.AUTH_TOKEN];
 
     // Fallback for migration period
     if (!token) {
@@ -146,8 +147,8 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Record successful authentication
-    metricsService.incrementCounter('auth_middleware_success_total', { 
-      method: req.cookies?.authToken ? 'cookie' : 'header' 
+    metricsService.incrementCounter('auth_middleware_success_total', {
+      method: req.cookies?.[COOKIE_NAMES.AUTH_TOKEN] ? 'cookie' : 'header'
     });
     
     // Update user's lastSeenAt, but only if it's been more than 5 minutes since last update to avoid database spam
