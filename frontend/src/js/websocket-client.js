@@ -37,15 +37,15 @@ class UnifiedMessagingClient {
     initializeWhenAuthenticated() {
         if (window.currentUser && window.csrfToken) {
             // User already authenticated, connect now
-            console.log('WebSocket: User authenticated, connecting...');
+            adminDebugLog('WebSocket', 'User authenticated, connecting...');
             this.connect();
         } else {
             // Wait for authentication
-            console.log('WebSocket: Waiting for authentication before connecting...');
+            adminDebugLog('WebSocket', 'Waiting for authentication before connecting...');
             window.addEventListener('userLoggedIn', () => {
                 // Small delay to ensure csrfToken is set
                 setTimeout(() => {
-                    console.log('WebSocket: Authentication complete, connecting...');
+                    adminDebugLog('WebSocket', 'Authentication complete, connecting...');
                     this.connect();
                 }, 500);
             }, { once: true });
@@ -102,12 +102,13 @@ class UnifiedMessagingClient {
             : getWebSocketUrl(); // Use centralized environment detection
         
         try {
-            // DIAGNOSTIC LOGGING - Understanding auth token availability
-            console.log('🔍 WebSocket Auth Diagnostic:');
-            console.log('  - localStorage.authToken:', localStorage.getItem('authToken'));
-            console.log('  - document.cookie:', document.cookie);
-            console.log('  - window.currentUser:', window.currentUser ? 'EXISTS' : 'NULL');
-            console.log('  - window.csrfToken:', window.csrfToken ? 'EXISTS' : 'NULL');
+            // DIAGNOSTIC LOGGING - Understanding auth token availability (admin-only)
+            adminDebugSensitive('WebSocket', 'Auth diagnostic', {
+                hasLocalStorageToken: !!localStorage.getItem('authToken'),
+                hasCookie: !!document.cookie,
+                hasCurrentUser: !!window.currentUser,
+                hasCsrfToken: !!window.csrfToken
+            });
 
             // WebSocket auth challenge: authToken is httpOnly cookie (can't access from JS)
             // Socket.IO withCredentials SHOULD send it automatically, but if that fails,
@@ -122,14 +123,14 @@ class UnifiedMessagingClient {
             const legacyToken = localStorage.getItem('authToken');
             if (legacyToken && legacyToken !== 'null' && legacyToken !== 'None') {
                 authToken = legacyToken;
-                console.log('✅ WebSocket: Found legacy localStorage token');
+                adminDebugLog('WebSocket', '✅ Found legacy localStorage token');
             }
 
             // Try to read auth cookie directly (won't work for httpOnly, but check)
             if (!authToken) {
                 authToken = getCookie('authToken');
                 if (authToken) {
-                    console.log('✅ WebSocket: Read authToken from non-httpOnly cookie');
+                    adminDebugLog('WebSocket', '✅ Read authToken from non-httpOnly cookie');
                 }
             }
 
@@ -152,10 +153,10 @@ class UnifiedMessagingClient {
             // If we have explicit token, pass it (backend checks socket.handshake.auth.token)
             if (authToken) {
                 socketConfig.auth = { token: authToken };
-                console.log('✅ WebSocket: Passing explicit auth token');
+                adminDebugLog('WebSocket', '✅ Passing explicit auth token');
             } else {
-                console.warn('⚠️ WebSocket: No explicit token - relying on httpOnly cookie transmission via withCredentials');
-                console.warn('⚠️ If auth fails, httpOnly cookie is not being sent by Socket.IO');
+                adminDebugWarn('WebSocket', '⚠️ No explicit token - relying on httpOnly cookie transmission via withCredentials');
+                adminDebugWarn('WebSocket', '⚠️ If auth fails, httpOnly cookie is not being sent by Socket.IO');
             }
 
             this.socket = io(socketUrl, socketConfig);

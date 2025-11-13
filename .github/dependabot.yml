@@ -1,0 +1,86 @@
+# Dependabot Configuration for UnitedWeRise
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Backend npm dependencies (TypeScript, Prisma, Express, etc.)
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+
+    # Limit number of open PRs to avoid noise
+    open-pull-requests-limit: 10
+
+    # Group related updates to reduce PR count
+    groups:
+      # Production dependencies (excluding type definitions and Prisma)
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@types/*"
+          - "@prisma/*"
+          - "prisma"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Development dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Type definitions
+      type-definitions:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Prisma ecosystem (ORM, client, CLI)
+      prisma:
+        patterns:
+          - "@prisma/*"
+          - "prisma"
+        update-types:
+          - "minor"
+          - "patch"
+
+    # Auto-label PRs for easy filtering
+    labels:
+      - "dependencies"
+      - "security"
+      - "backend"
+
+    # Commit message prefix
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+    # Allow Dependabot to open PRs for security updates even if limit reached
+    open-pull-requests-limit: 15
+
+  # GitHub Actions workflow dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    commit-message:
+      prefix: "chore(ci)"

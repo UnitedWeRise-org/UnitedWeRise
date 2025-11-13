@@ -64,6 +64,8 @@ const csrf_1 = require("./middleware/csrf");
 const auth_2 = require("./middleware/auth");
 const visitTracking_1 = __importDefault(require("./middleware/visitTracking"));
 const logger_1 = __importDefault(require("./utils/logger"));
+const logger_2 = require("./services/logger");
+const requestLogger_1 = require("./middleware/requestLogger");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Configure trust proxy for Azure Container Apps (1 proxy layer)
@@ -172,7 +174,9 @@ app.use((req, res, next) => {
 });
 // Cookie parsing middleware
 app.use((0, cookie_parser_1.default)());
-// Request logging (only in development)
+// Pino request logging middleware (environment-aware)
+app.use(requestLogger_1.requestLoggingMiddleware);
+// Legacy request logging (only in development)
 if ((0, environment_1.enableRequestLogging)()) {
     app.use(errorHandler_1.requestLogger);
 }
@@ -443,10 +447,10 @@ async function startServer() {
         analyticsCleanup_1.default.start();
         // Start server only after all services are ready
         httpServer.listen(PORT, () => {
-            console.log(`✅ Server running on port ${PORT}`);
-            console.log(`✅ WebSocket server active`);
-            console.log(`✅ Health check: http://localhost:${PORT}/health`);
-            console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
+            logger_2.logger.info(`Server running on port ${PORT}`);
+            logger_2.logger.info(`WebSocket server active`);
+            logger_2.logger.info(`Health check: http://localhost:${PORT}/health`);
+            logger_2.logger.info(`Database connection pool: 10 connections max, 20s timeout`);
         });
     }
     catch (error) {

@@ -1,0 +1,28 @@
+name: Validate Schema Changes in PR
+
+on:
+  pull_request:
+    paths:
+      - 'backend/prisma/schema.prisma'
+
+jobs:
+  validate-migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for migration files
+        run: |
+          if git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -q "prisma/migrations/.*\.sql"; then
+            echo "✅ Migration files found"
+            exit 0
+          else
+            echo "❌ Schema changed without migration"
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⚠️ Schema changed without migration. Run: \`npx prisma migrate dev --name describe_changes\`"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

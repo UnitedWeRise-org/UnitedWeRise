@@ -58,6 +58,8 @@ import { verifyCsrf } from './middleware/csrf';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import visitTrackingMiddleware from './middleware/visitTracking';
 import logger from './utils/logger';
+import { logger as pinoLogger } from './services/logger';
+import { requestLoggingMiddleware } from './middleware/requestLogger';
 
 dotenv.config();
 
@@ -189,7 +191,10 @@ app.use((req, res, next) => {
 // Cookie parsing middleware
 app.use(cookieParser());
 
-// Request logging (only in development)
+// Pino request logging middleware (environment-aware)
+app.use(requestLoggingMiddleware);
+
+// Legacy request logging (only in development)
 if (enableRequestLogging()) {
   app.use(requestLogger);
 }
@@ -493,10 +498,10 @@ async function startServer() {
 
     // Start server only after all services are ready
     httpServer.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`✅ WebSocket server active`);
-      console.log(`✅ Health check: http://localhost:${PORT}/health`);
-      console.log(`✅ Database connection pool: 10 connections max, 20s timeout`);
+      pinoLogger.info(`Server running on port ${PORT}`);
+      pinoLogger.info(`WebSocket server active`);
+      pinoLogger.info(`Health check: http://localhost:${PORT}/health`);
+      pinoLogger.info(`Database connection pool: 10 connections max, 20s timeout`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
