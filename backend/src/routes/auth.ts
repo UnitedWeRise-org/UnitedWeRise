@@ -11,7 +11,7 @@ import { emailService } from '../services/emailService';
 import { captchaService } from '../services/captchaService';
 import { metricsService } from '../services/metricsService';
 import { SecurityService } from '../services/securityService';
-import { requiresCaptcha, requireSecureCookies, enableRequestLogging, isDevelopment } from '../utils/environment';
+import { requiresCaptcha, requireSecureCookies } from '../utils/environment';
 import { normalizeEmail } from '../utils/emailNormalization';
 import { COOKIE_NAMES } from '../utils/cookies';
 import crypto from 'crypto';
@@ -20,16 +20,6 @@ import * as speakeasy from 'speakeasy';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
-
-/**
- * Debug logging helper - only logs in development/staging environments
- * Prevents verbose debugging logs in production
- */
-const debugLog = (...args: any[]) => {
-    if (isDevelopment()) {
-        console.log(...args);
-    }
-};
 
 /**
  * @swagger
@@ -116,14 +106,13 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     if (requiresCaptcha()) {
       const captchaResult = await captchaService.verifyCaptcha(hcaptchaToken, req.ip);
       if (!captchaResult.success) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Captcha verification failed. Please try again.',
-          captchaError: captchaResult.error 
+          captchaError: captchaResult.error
         });
       }
-    } else if (enableRequestLogging()) {
-      console.log('🔧 Development environment detected: Bypassing hCaptcha verification');
-      console.log(`   IP: ${req.ip}`);
+    } else {
+      req.log.debug({ ip: req.ip }, 'Development environment detected: Bypassing hCaptcha verification');
     }
 
     // Process device fingerprint for anti-bot protection
@@ -140,14 +129,16 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
         ip: req.ip,
         timestamp: new Date()
       };
-      
+
       // Log high-risk registrations for review
       if (riskScore > 30) {
-        console.warn(`High-risk registration attempt: ${email}, risk score: ${riskScore}`, {
+        req.log.warn({
+          email,
+          riskScore,
           fingerprint: deviceFingerprint.fingerprint,
           ip: req.ip,
           userAgent: req.get('User-Agent')
-        });
+        }, 'High-risk registration attempt detected');
       }
     }
 
@@ -235,7 +226,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
     
     const emailSent = await emailService.sendEmail(emailTemplate);
     if (!emailSent) {
-      console.error('Failed to send verification email to:', email);
+      req.log.error({ email }, 'Failed to send verification email');
       // Don't fail registration if email fails, but log it
     }
 
@@ -302,7 +293,7 @@ router.post('/register', authLimiter, validateRegistration, async (req: express.
       csrfToken // Return CSRF token for frontend use (not JWT token)
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    req.log.error({ error, email: req.body?.email }, 'Registration error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -411,7 +402,7 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
         totpBackupCodes: true
       }
     });
-    debugLog(`🔍 Status endpoint style query result:`, statusCheck);
+    req.log.debug({ statusCheck }, 'Status endpoint style query result');
 
     // Debug: Add TOTP status to response for testing
     const totpDebug = {
@@ -422,22 +413,25 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       hasSecret: !!userData?.totpSecret,
       totpLastUsedAt: userData?.totpLastUsedAt
     };
-    debugLog(`🔍 TOTP Debug for ${user.email}:`, totpDebug);
-    debugLog(`🔍 Raw userData query result:`, userData);
+    req.log.debug({ totpDebug, email: user.email }, 'TOTP Debug information');
+    req.log.debug({ userData }, 'Raw userData query result');
 
-    debugLog(`🔍 TOTP Check: userData exists=${!!userData}, totpEnabled=${userData?.totpEnabled}`);
-    
+    req.log.debug({
+      userDataExists: !!userData,
+      totpEnabled: userData?.totpEnabled
+    }, 'TOTP Check');
+
     // Use statusCheck result as authoritative since that logic works
     const actualTotpEnabled = statusCheck?.totpEnabled || false;
-    debugLog(`🔍 Using statusCheck result: totpEnabled=${actualTotpEnabled}`);
+    req.log.debug({ totpEnabled: actualTotpEnabled }, 'Using statusCheck result');
 
     if (actualTotpEnabled && userData?.totpSecret) {
-      debugLog(`🔍 TOTP Required: User ${user.email} has TOTP enabled`);
+      req.log.debug({ email: user.email }, 'TOTP Required: User has TOTP enabled');
       const { totpToken } = req.body;
 
       // Require TOTP verification
       if (!totpToken) {
-        debugLog(`🔍 TOTP Token Missing: Requiring TOTP for user ${user.email}`);
+        req.log.debug({ email: user.email }, 'TOTP Token Missing: Requiring TOTP');
         return res.status(200).json({
           requiresTOTP: true,
           message: 'Two-factor authentication required',
@@ -602,8 +596,8 @@ router.post('/login', authLimiter, async (req: express.Request, res: express.Res
       // Token is in httpOnly cookie only (not exposed to JavaScript)
     });
   } catch (error) {
-    console.error('Login error:', error);
-    
+    req.log.error({ error, email: req.body?.email }, 'Login error');
+
     // Log system error
     await SecurityService.logEvent({
       eventType: 'SYSTEM_ERROR',
@@ -667,7 +661,7 @@ router.post('/forgot-password', async (req, res) => {
     const emailSent = await emailService.sendEmail(emailTemplate);
     if (!emailSent) {
       // Log failure but don't expose to user (prevents email enumeration)
-      console.error('Failed to send password reset email to:', email);
+      req.log.error({ email }, 'Failed to send password reset email');
     } else {
       // Track successful email send
       metricsService.trackEmailSent('password_reset', email);
@@ -675,7 +669,7 @@ router.post('/forgot-password', async (req, res) => {
 
     res.json({ message: 'If the email exists, a reset link has been sent' });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    req.log.error({ error, email: req.body?.email }, 'Forgot password error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -718,7 +712,7 @@ router.post('/reset-password', async (req, res) => {
 
     res.json({ message: 'Password reset successful' });
   } catch (error) {
-    console.error('Reset password error:', error);
+    req.log.error({ error }, 'Reset password error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -783,7 +777,7 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
 
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
+    req.log.error({ error, userId: req.user?.id }, 'Logout error');
     res.status(500).json({ error: 'Logout failed' });
   }
 });
@@ -865,7 +859,7 @@ router.post('/logout-all', requireAuth, async (req: AuthRequest, res) => {
 
     res.json({ message: 'Logged out from all devices successfully' });
   } catch (error) {
-    console.error('Logout all error:', error);
+    req.log.error({ error, userId: req.user?.id }, 'Logout all error');
     res.status(500).json({ error: 'Logout from all devices failed' });
   }
 });
@@ -1017,14 +1011,19 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
       riskScore: 0
     });
 
-    console.log(`✅ Password changed successfully for user ${user.username || user.email} (userId: ${userId}). All sessions revoked.`);
+    req.log.warn({
+      userId,
+      username: user.username,
+      email: user.email,
+      allSessionsRevoked: true
+    }, 'Password changed successfully');
 
     res.json({
       message: 'Password changed successfully. Please log in again.',
       requiresReLogin: true
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    req.log.error({ error, userId: req.user?.id }, 'Change password error');
 
     await SecurityService.logEvent({
       userId: req.user?.id,
@@ -1113,7 +1112,7 @@ router.post('/refresh', async (req, res) => {
     const refreshToken = req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
 
     if (!refreshToken) {
-      console.log(`🔄 Token refresh failed: No refresh token provided (IP: ${ipAddress})`);
+      req.log.debug({ ipAddress }, 'Token refresh failed: No refresh token provided');
       return res.status(401).json({
         error: 'Invalid refresh token',
         code: 'REFRESH_TOKEN_INVALID'
@@ -1124,7 +1123,7 @@ router.post('/refresh', async (req, res) => {
     const tokenData = await sessionManager.validateRefreshToken(refreshToken);
 
     if (!tokenData) {
-      console.log(`🔄 Token refresh failed: Invalid or expired refresh token (IP: ${ipAddress})`);
+      req.log.debug({ ipAddress }, 'Token refresh failed: Invalid or expired refresh token');
       await SecurityService.logEvent({
         eventType: 'REFRESH_TOKEN_FAILED',
         ipAddress,
@@ -1151,7 +1150,7 @@ router.post('/refresh', async (req, res) => {
     try {
       await sessionManager.rotateRefreshToken(refreshToken, newRefreshToken, 30);
     } catch (rotationError) {
-      console.error(`🔄 Token rotation failed for user ${tokenData.user.id}:`, rotationError);
+      req.log.error({ error: rotationError, userId: tokenData.user.id }, 'Token rotation failed');
       return res.status(500).json({ error: 'Internal server error' });
     }
 
@@ -1191,7 +1190,13 @@ router.post('/refresh', async (req, res) => {
     });
 
     const duration = Date.now() - startTime;
-    console.log(`✅ Token refreshed successfully for user ${tokenData.user.username || tokenData.user.email} (userId: ${tokenData.user.id}, IP: ${ipAddress}, duration: ${duration}ms)`);
+    req.log.warn({
+      userId: tokenData.user.id,
+      username: tokenData.user.username,
+      email: tokenData.user.email,
+      ipAddress,
+      durationMs: duration
+    }, 'Token refreshed successfully');
 
     // Log successful refresh for security monitoring
     await SecurityService.logEvent({
@@ -1211,7 +1216,7 @@ router.post('/refresh', async (req, res) => {
       csrfToken
     });
   } catch (error) {
-    console.error(`❌ Token refresh error (IP: ${ipAddress}):`, error);
+    req.log.error({ error, ipAddress }, 'Token refresh error');
 
     // Log system error
     await SecurityService.logEvent({
@@ -1265,7 +1270,7 @@ router.get('/debug-test-user', async (req, res) => {
       hasLastName: !!testUser.lastName
     });
   } catch (error) {
-    console.error('Error checking test user:', error);
+    req.log.error({ error }, 'Error checking test user');
     res.status(500).json({ error: 'Failed to check test user' });
   }
 });
@@ -1305,7 +1310,7 @@ router.post('/verify-password', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Password verification error:', error);
+    req.log.error({ error, userId: req.user?.id }, 'Password verification error');
     res.status(500).json({ error: 'Failed to verify password' });
   }
 });
@@ -1349,7 +1354,7 @@ router.post('/create-test-user', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating test user:', error);
+    req.log.error({ error }, 'Error creating test user');
     res.status(500).json({ error: 'Failed to create test user' });
   }
 });
@@ -1370,7 +1375,7 @@ router.post('/check-username', async (req: express.Request, res: express.Respons
 
     res.json({ available: !existingUser });
   } catch (error) {
-    console.error('Username check error:', error);
+    req.log.error({ error, username: req.body?.username }, 'Username check error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1398,7 +1403,7 @@ router.post('/check-email', async (req: express.Request, res: express.Response) 
 
     res.json({ available: !hasDuplicate });
   } catch (error) {
-    console.error('Email check error:', error);
+    req.log.error({ error, email: req.body?.email }, 'Email check error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1453,7 +1458,7 @@ router.post('/complete-onboarding', requireAuth, async (req: AuthRequest, res: e
     });
 
   } catch (error) {
-    console.error('Complete onboarding error:', error);
+    req.log.error({ error, userId: req.user?.id }, 'Complete onboarding error');
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 });

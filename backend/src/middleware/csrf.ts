@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { metricsService } from '../services/metricsService';
 import crypto from 'crypto';
-import { enableRequestLogging } from '../utils/environment';
 import { COOKIE_NAMES } from '../utils/cookies';
 
 /**
@@ -10,33 +9,27 @@ import { COOKIE_NAMES } from '../utils/cookies';
  * Verifies that the CSRF token in the request header matches the one in the cookie
  */
 export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
-  // Generate unique request ID for tracing
-  const requestId = crypto.randomBytes(4).toString('hex');
+  // Generate unique request ID for tracing (Pino auto-generates, but keep for backwards compat)
+  const requestId = (req as any).id || crypto.randomBytes(4).toString('hex');
 
-  if (enableRequestLogging()) {
-    console.log(`[${requestId}] 🔍 CSRF Middleware Entry:`, {
-      method: req.method,
-      path: req.path,
-      timestamp: new Date().toISOString(),
-      hasHeaderToken: !!req.headers['x-csrf-token'],
-      hasBodyToken: !!(req.body && req.body._csrf),
-      hasCookie: !!req.cookies[COOKIE_NAMES.CSRF_TOKEN]
-    });
-  }
+  req.log.debug({
+    requestId,
+    method: req.method,
+    path: req.path,
+    hasHeaderToken: !!req.headers['x-csrf-token'],
+    hasBodyToken: !!(req.body && req.body._csrf),
+    hasCookie: !!req.cookies[COOKIE_NAMES.CSRF_TOKEN]
+  }, 'CSRF Middleware Entry');
 
   // Skip CSRF verification for GET requests (they should be safe by design)
   if (req.method === 'GET') {
-    if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ CSRF Skip: GET request`);
-    }
+    req.log.debug({ requestId }, 'CSRF Skip: GET request');
     return next();
   }
 
   // Skip CSRF verification for OPTIONS requests (CORS preflight)
   if (req.method === 'OPTIONS') {
-    if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ CSRF Skip: OPTIONS request`);
-    }
+    req.log.debug({ requestId }, 'CSRF Skip: OPTIONS request');
     return next();
   }
 
@@ -60,9 +53,7 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   // Check if current path is exempted
   const isExempted = exemptedPaths.some(path => req.path === path || req.path.startsWith(path));
   if (isExempted) {
-    if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ CSRF Skip: Exempted path - ${req.path}`);
-    }
+    req.log.debug({ requestId, path: req.path }, 'CSRF Skip: Exempted path');
     return next();
   }
 
@@ -73,22 +64,22 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   // Get CSRF token from cookie
   const cookie = req.cookies[COOKIE_NAMES.CSRF_TOKEN];
 
-  if (enableRequestLogging()) {
-    console.log(`[${requestId}] 🔍 CSRF Token Check:`, {
-      hasHeaderToken: !!token,
-      hasCookieToken: !!cookie,
-      tokensMatch: token && cookie ? (token === cookie) : false
-    });
-  }
+  req.log.debug({
+    requestId,
+    hasHeaderToken: !!token,
+    hasCookieToken: !!cookie,
+    tokensMatch: token && cookie ? (token === cookie) : false
+  }, 'CSRF Token Check');
 
   // Verify both tokens exist
   if (!token) {
-    // SECURITY EVENT: Always log CSRF failures
-    console.log(`[${requestId}] 🚨 CSRF 403: Missing token in request`, {
+    // SECURITY EVENT: Always log CSRF failures (warn level ensures always logged)
+    req.log.warn({
+      requestId,
       path: req.path,
       method: req.method,
       reason: 'CSRF_TOKEN_MISSING'
-    });
+    }, 'CSRF 403: Missing token in request');
     metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_token' });
     return res.status(403).json({
       error: 'CSRF token missing in request',
@@ -97,12 +88,13 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
   }
 
   if (!cookie) {
-    // SECURITY EVENT: Always log CSRF failures
-    console.log(`[${requestId}] 🚨 CSRF 403: Missing cookie`, {
+    // SECURITY EVENT: Always log CSRF failures (warn level ensures always logged)
+    req.log.warn({
+      requestId,
       path: req.path,
       method: req.method,
       reason: 'CSRF_COOKIE_MISSING'
-    });
+    }, 'CSRF 403: Missing cookie');
     metricsService.incrementCounter('csrf_failures_total', { reason: 'missing_cookie' });
     return res.status(403).json({
       error: 'CSRF token missing in cookies',
@@ -112,12 +104,13 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
 
   // Verify tokens match (double-submit cookie pattern)
   if (token !== cookie) {
-    // SECURITY EVENT: Always log CSRF failures
-    console.log(`[${requestId}] 🚨 CSRF 403: Token mismatch`, {
+    // SECURITY EVENT: Always log CSRF failures (warn level ensures always logged)
+    req.log.warn({
+      requestId,
       path: req.path,
       method: req.method,
       reason: 'CSRF_TOKEN_MISMATCH'
-    });
+    }, 'CSRF 403: Token mismatch');
     metricsService.incrementCounter('csrf_failures_total', { reason: 'token_mismatch' });
     return res.status(403).json({
       error: 'Invalid CSRF token',
@@ -125,12 +118,11 @@ export const verifyCsrf = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  if (enableRequestLogging()) {
-    console.log(`[${requestId}] ✅ CSRF Validation Passed:`, {
-      path: req.path,
-      method: req.method
-    });
-  }
+  req.log.debug({
+    requestId,
+    path: req.path,
+    method: req.method
+  }, 'CSRF Validation Passed');
   metricsService.incrementCounter('csrf_validations_total', { status: 'success' });
   next();
 };
@@ -149,7 +141,10 @@ export const warnCsrf = (req: Request, res: Response, next: NextFunction) => {
   const cookie = req.cookies[COOKIE_NAMES.CSRF_TOKEN];
 
   if (!token || !cookie || token !== cookie) {
-    console.warn(`⚠️  CSRF Warning: ${req.method} ${req.path} - Missing or mismatched CSRF token`);
+    req.log.warn({
+      method: req.method,
+      path: req.path
+    }, 'CSRF Warning: Missing or mismatched CSRF token');
     // Continue with request but log the warning
   }
 

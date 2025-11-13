@@ -13,19 +13,18 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  // Log error details
-  console.error('Error occurred:', {
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    url: req.url,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
+  // Log error details using Pino
+  req.log.error({
     error: {
       message: err.message,
       stack: err.stack,
       statusCode: err.statusCode
-    }
-  });
+    },
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  }, 'Error occurred');
 
   // Determine status code
   const statusCode = err.statusCode || 500;
@@ -62,55 +61,46 @@ export const notFoundHandler = (req: Request, res: Response) => {
     timestamp: new Date().toISOString()
   };
 
-  console.warn('404 - Route not found:', {
+  // Security event: Log 404s to detect scanning/probing
+  req.log.warn({
     method: req.method,
     url: req.url,
     ip: req.ip,
     userAgent: req.get('User-Agent')
-  });
+  }, '404 - Route not found');
 
   res.status(404).json(error);
 };
 
-// Request logger middleware
+// Request logger middleware - DEPRECATED
+// NOTE: Request logging now handled by pino-http middleware (registered in server.ts)
+// This function kept for backwards compatibility but no longer used
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-
-  // Log request
-  console.log(`${req.method} ${req.url}`, {
-    timestamp: new Date().toISOString(),
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    contentLength: req.get('Content-Length') || '0'
-  });
-
-  // Log response when finished
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    const logLevel = res.statusCode >= 400 ? 'warn' : 'info';
-    
-    console[logLevel](`${req.method} ${req.url} - ${res.statusCode}`, {
-      timestamp: new Date().toISOString(),
-      duration: `${duration}ms`,
-      statusCode: res.statusCode,
-      contentLength: res.get('Content-Length') || '0'
-    });
-  });
-
+  // No-op - pino-http handles all request logging
   next();
 };
 
 // Security event logger
+// Uses Pino structured logging for security events
 export const securityLogger = (event: string, details: any, req?: Request) => {
-  console.warn('SECURITY EVENT:', {
-    event,
-    timestamp: new Date().toISOString(),
-    ip: req?.ip,
-    userAgent: req?.get('User-Agent'),
-    url: req?.url,
-    method: req?.method,
-    details
-  });
+  if (req) {
+    // Use request logger if available
+    req.log.warn({
+      event,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      url: req.url,
+      method: req.method,
+      ...details
+    }, 'SECURITY EVENT');
+  } else {
+    // Fallback to global logger if no request context
+    const { logger } = require('../services/logger');
+    logger.warn({
+      event,
+      ...details
+    }, 'SECURITY EVENT');
+  }
 };
 
 // Create custom error
