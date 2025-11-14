@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { logger } from './logger';
 
 interface MetricData {
   name: string;
@@ -88,7 +89,7 @@ class MetricsService {
 
       this.gauges.set('uptime_seconds', Math.floor((Date.now() - this.startTime) / 1000));
     } catch (error) {
-      console.error('Failed to collect system metrics:', error);
+      logger.error({ error }, 'Failed to collect system metrics');
     }
   }
 
@@ -112,7 +113,7 @@ class MetricsService {
       this.gauges.set('active_users', activeUsers);
 
     } catch (error) {
-      console.error('Failed to collect database metrics:', error);
+      logger.error({ error }, 'Failed to collect database metrics');
     }
   }
 
@@ -134,7 +135,7 @@ class MetricsService {
       this.gauges.set('suspended_users', suspendedUsers);
 
     } catch (error) {
-      console.error('Failed to collect application metrics:', error);
+      logger.error({ error }, 'Failed to collect application metrics');
     }
   }
 
@@ -241,17 +242,17 @@ class MetricsService {
   // Business logic metrics
   trackUserRegistration(userId: string) {
     this.incrementCounter('users_registered_total');
-    console.log(`[METRICS] User registered: ${userId}`);
+    logger.info({ userId }, '[METRICS] User registered');
   }
 
   trackPostCreated(postId: string, userId: string) {
     this.incrementCounter('posts_created_total');
-    console.log(`[METRICS] Post created: ${postId} by ${userId}`);
+    logger.info({ postId, userId }, '[METRICS] Post created');
   }
 
   trackCommentCreated(commentId: string, postId: string, userId: string) {
     this.incrementCounter('comments_created_total');
-    console.log(`[METRICS] Comment created: ${commentId} on ${postId} by ${userId}`);
+    logger.info({ commentId, postId, userId }, '[METRICS] Comment created');
   }
 
   trackReportSubmitted(reportId: string, targetType: string, reason: string) {
@@ -259,7 +260,7 @@ class MetricsService {
       target_type: targetType,
       reason: reason.toLowerCase()
     });
-    console.log(`[METRICS] Report submitted: ${reportId} for ${targetType} (${reason})`);
+    logger.info({ reportId, targetType, reason }, '[METRICS] Report submitted');
   }
 
   trackAuthAttempt(email: string, success: boolean) {
@@ -267,17 +268,17 @@ class MetricsService {
     if (!success) {
       this.incrementCounter('auth_failures_total');
     }
-    console.log(`[METRICS] Auth attempt for ${email}: ${success ? 'success' : 'failed'}`);
+    logger.info({ email, success }, '[METRICS] Auth attempt');
   }
 
   trackEmailSent(type: string, recipient: string) {
     this.incrementCounter('emails_sent_total', { type });
-    console.log(`[METRICS] Email sent: ${type} to ${recipient}`);
+    logger.info({ type, recipient }, '[METRICS] Email sent');
   }
 
   trackSMSSent(phoneNumber: string) {
     this.incrementCounter('sms_sent_total');
-    console.log(`[METRICS] SMS sent to ${phoneNumber}`);
+    logger.info({ phoneNumber }, '[METRICS] SMS sent');
   }
 
   trackModerationAction(action: string, targetType: string, moderatorId: string) {
@@ -285,7 +286,7 @@ class MetricsService {
       action: action.toLowerCase(),
       target_type: targetType.toLowerCase()
     });
-    console.log(`[METRICS] Moderation action: ${action} on ${targetType} by ${moderatorId}`);
+    logger.info({ action, targetType, moderatorId }, '[METRICS] Moderation action');
   }
 
   // Database query tracking

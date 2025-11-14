@@ -4,6 +4,7 @@ exports.sessionManager = void 0;
 const ioredis_1 = require("ioredis");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../utils/auth");
+const logger_1 = require("./logger");
 // In-memory fallback if Redis isn't available
 class MemoryStore {
     constructor() {
@@ -38,18 +39,18 @@ class SessionManager {
             if (process.env.REDIS_URL) {
                 this.store = new ioredis_1.Redis(process.env.REDIS_URL);
                 this.isRedis = true;
-                console.log('SessionManager: Using Redis for session storage');
+                logger_1.logger.info('SessionManager: Using Redis for session storage');
             }
             else {
                 this.store = new MemoryStore();
                 this.isRedis = false;
-                console.warn('SessionManager: Using memory storage (not recommended for production)');
+                logger_1.logger.warn('SessionManager: Using memory storage (not recommended for production)');
             }
         }
         catch (error) {
             this.store = new MemoryStore();
             this.isRedis = false;
-            console.warn('SessionManager: Redis unavailable, falling back to memory storage');
+            logger_1.logger.warn({ error }, 'SessionManager: Redis unavailable, falling back to memory storage');
         }
     }
     // Blacklist a JWT token (for logout/security)
@@ -133,7 +134,7 @@ class SessionManager {
         else {
             // For memory store, we'd need to track sessions differently
             // This is a limitation of the fallback implementation
-            console.warn('Memory store: Cannot revoke all user sessions efficiently');
+            logger_1.logger.warn({ userId }, 'Memory store: Cannot revoke all user sessions efficiently');
         }
     }
     // Rate limiting
@@ -171,13 +172,13 @@ class SessionManager {
     async cleanup() {
         if (this.isRedis) {
             // Redis handles TTL automatically
-            console.log('SessionManager: Redis handles cleanup automatically');
+            logger_1.logger.info('SessionManager: Redis handles cleanup automatically');
         }
         else {
             // Manual cleanup for memory store
             const memStore = this.store;
             memStore.clear(); // Simple cleanup - remove all expired items
-            console.log('SessionManager: Memory store cleaned up');
+            logger_1.logger.info('SessionManager: Memory store cleaned up');
         }
     }
     // ========================================
@@ -319,7 +320,7 @@ class SessionManager {
                 ]
             }
         });
-        console.log(`SessionManager: Cleaned up ${result.count} expired refresh tokens`);
+        logger_1.logger.info({ count: result.count }, 'SessionManager: Cleaned up expired refresh tokens');
         return result.count;
     }
 }

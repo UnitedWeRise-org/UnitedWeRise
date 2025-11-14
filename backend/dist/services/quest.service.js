@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const prisma_1 = require("../lib/prisma");
 const badge_service_1 = __importDefault(require("./badge.service"));
+const logger_1 = require("./logger");
 class QuestService {
     /**
      * Generates or retrieves daily quests for a user
@@ -358,7 +359,7 @@ class QuestService {
                     await badge_service_1.default.awardBadge(userId, badgeId, undefined, `Earned from quest: ${quest.title}`);
                 }
                 catch (error) {
-                    console.error(`Error awarding badge ${badgeId}:`, error);
+                    logger_1.logger.error({ error, badgeId, userId, questId }, 'Error awarding badge from quest');
                 }
             }
         }

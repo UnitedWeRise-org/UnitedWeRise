@@ -3,23 +3,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AzureBlobService = void 0;
 const storage_blob_1 = require("@azure/storage-blob");
 const uuid_1 = require("uuid");
+const logger_1 = require("./logger");
 class AzureBlobService {
     /**
      * Initialize Azure Blob Storage
      */
     static async initialize() {
         try {
-            console.log('🔧 Initializing Azure Blob Storage...');
+            logger_1.logger.info('Initializing Azure Blob Storage');
             const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
             if (!connectionString) {
-                console.error('❌ AZURE_STORAGE_CONNECTION_STRING environment variable is not set');
+                logger_1.logger.error('AZURE_STORAGE_CONNECTION_STRING environment variable is not set');
                 throw new Error('AZURE_STORAGE_CONNECTION_STRING environment variable not set');
             }
-            console.log('🔧 Creating BlobServiceClient...');
+            logger_1.logger.info('Creating BlobServiceClient');
             this.blobServiceClient = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
             this.containerClient = this.blobServiceClient.getContainerClient(this.CONTAINER_NAME);
             // Create container if it doesn't exist
-            console.log('🔧 Creating/verifying container exists...');
+            logger_1.logger.info('Creating/verifying container exists');
             // ⚠️ SECURITY DESIGN DECISION: Public blob access
             // Current implementation: Photos are publicly accessible via URL
             // Rationale: Simplifies sharing and reduces server load for public content
@@ -40,15 +41,16 @@ class AzureBlobService {
                 access: 'blob' // Allow public read access to blobs
             });
             // Ensure public blob access is set (in case container existed with different policy)
-            console.log('🔧 Setting container access policy to public blob access...');
+            logger_1.logger.info('Setting container access policy to public blob access');
             await this.containerClient.setAccessPolicy('blob');
-            console.log('✅ Azure Blob Storage initialized successfully');
+            logger_1.logger.info('Azure Blob Storage initialized successfully');
         }
         catch (error) {
-            console.error('❌❌❌ FAILED TO INITIALIZE AZURE BLOB STORAGE ❌❌❌');
-            console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
-            console.error('Error message:', error instanceof Error ? error.message : String(error));
-            console.error('Full error:', error);
+            logger_1.logger.error({
+                error,
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorMessage: error instanceof Error ? error.message : String(error)
+            }, 'FAILED TO INITIALIZE AZURE BLOB STORAGE');
             throw error;
         }
     }
@@ -70,7 +72,7 @@ class AzureBlobService {
             return blockBlobClient.url;
         }
         catch (error) {
-            console.error('Failed to upload file to Azure Blob Storage:', error);
+            logger_1.logger.error({ error, filename, mimeType }, 'Failed to upload file to Azure Blob Storage');
             throw error;
         }
     }
@@ -83,7 +85,7 @@ class AzureBlobService {
             await blockBlobClient.deleteIfExists();
         }
         catch (error) {
-            console.error('Failed to delete file from Azure Blob Storage:', error);
+            logger_1.logger.error({ error, blobName }, 'Failed to delete file from Azure Blob Storage');
             throw error;
         }
     }
@@ -103,7 +105,7 @@ class AzureBlobService {
             return true;
         }
         catch (error) {
-            console.error('Azure Blob Storage not available:', error);
+            logger_1.logger.error({ error }, 'Azure Blob Storage not available');
             return false;
         }
     }

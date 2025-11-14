@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.googleCivicService = exports.GeolocationService = void 0;
 const prisma_1 = require("../lib/prisma");
 const apiCache_1 = require("./apiCache");
+const logger_1 = require("./logger");
 ;
 // Using singleton prisma from lib/prisma.ts
 const GEOCODIO_API_KEY = process.env.GEOCODIO_API_KEY;
@@ -13,7 +14,7 @@ class GeolocationService {
      */
     static async getOfficialsByAddress(address, zipCode, state, forceRefresh = false) {
         if (!GEOCODIO_API_KEY) {
-            console.warn('Geocodio API key not configured');
+            logger_1.logger.warn('Geocodio API key not configured');
             return null;
         }
         // Generate cache key (prefer zip/state if available for better caching)
@@ -36,7 +37,8 @@ class GeolocationService {
             });
             const response = await fetch(`${url}?${params}`);
             if (!response.ok) {
-                console.error('Geocodio API error:', response.status, await response.text());
+                const errorText = await response.text();
+                logger_1.logger.error({ status: response.status, error: errorText }, 'Geocodio API error');
                 return null;
             }
             const data = await response.json();
@@ -51,7 +53,7 @@ class GeolocationService {
             return civicResponse;
         }
         catch (error) {
-            console.error('Geocodio API request failed:', error);
+            logger_1.logger.error({ error }, 'Geocodio API request failed');
             return null;
         }
     }
@@ -165,7 +167,7 @@ class GeolocationService {
             }
         }
         catch (error) {
-            console.error('Error storing officials in database:', error);
+            logger_1.logger.error({ error }, 'Error storing officials in database');
             // Don't throw - this is enhancement, not critical
         }
     }
@@ -201,7 +203,7 @@ class GeolocationService {
             }));
         }
         catch (error) {
-            console.error('Error fetching cached officials:', error);
+            logger_1.logger.error({ error }, 'Error fetching cached officials');
             return [];
         }
     }

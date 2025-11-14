@@ -7,6 +7,7 @@ exports.StripeService = void 0;
 const stripe_1 = __importDefault(require("stripe"));
 const client_1 = require("@prisma/client");
 const prisma_1 = require("../lib/prisma");
+const logger_1 = require("./logger");
 // Using singleton prisma from lib/prisma.ts
 // Initialize Stripe with nonprofit account
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || '', {
@@ -435,10 +436,10 @@ class StripeService {
                     await this.handlePaymentFailed(event.data.object);
                     break;
                 case 'invoice.payment_succeeded':
-                    console.log('Payment Link invoice payment succeeded:', event.data.object);
+                    logger_1.logger.info({ invoiceId: event.data.object.id }, 'Payment Link invoice payment succeeded');
                     break;
                 case 'invoice.payment_failed':
-                    console.log('Payment Link invoice payment failed:', event.data.object);
+                    logger_1.logger.warn({ invoiceId: event.data.object.id }, 'Payment Link invoice payment failed');
                     break;
                 case 'customer.subscription.created':
                 case 'customer.subscription.updated':
@@ -448,7 +449,7 @@ class StripeService {
                     await this.handleSubscriptionCancelled(event.data.object);
                     break;
                 default:
-                    console.log(`Unhandled event type: ${event.type}`);
+                    logger_1.logger.debug({ eventType: event.type }, 'Unhandled webhook event type');
             }
             // Mark webhook as processed
             await prisma_1.prisma.paymentWebhook.update({
@@ -552,14 +553,14 @@ class StripeService {
      */
     static async handleSubscriptionUpdate(subscription) {
         // Handle recurring donation updates
-        console.log('Subscription updated:', subscription.id);
+        logger_1.logger.info({ subscriptionId: subscription.id }, 'Subscription updated');
     }
     /**
      * Handle subscription cancellation
      */
     static async handleSubscriptionCancelled(subscription) {
         // Handle recurring donation cancellation
-        console.log('Subscription cancelled:', subscription.id);
+        logger_1.logger.info({ subscriptionId: subscription.id }, 'Subscription cancelled');
     }
     /**
      * Generate tax-compliant receipt for payment
@@ -602,11 +603,11 @@ class StripeService {
             // TODO: Send email with receipt and tax information
             if (payment.taxDeductible) {
                 // Include 501(c)(3) information in receipt
-                console.log(`Tax-deductible receipt generated for payment ${paymentId}`);
+                logger_1.logger.info({ paymentId, receiptNumber }, 'Tax-deductible receipt generated');
             }
             else {
                 // Standard receipt for non-deductible fees
-                console.log(`Standard receipt generated for payment ${paymentId}`);
+                logger_1.logger.info({ paymentId, receiptNumber }, 'Standard receipt generated');
             }
         }
     }

@@ -4,6 +4,7 @@ exports.TopicAggregationService = void 0;
 const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
+const logger_1 = require("./logger");
 class TopicAggregationService {
     /**
      * Generate aggregated topics with dual-vector stance detection
@@ -14,15 +15,15 @@ class TopicAggregationService {
         const cacheKey = `${geographicScope}_${userState}_${userCity}`;
         const cached = this.getCachedTopics(cacheKey);
         if (cached) {
-            console.log('Returning cached topics for:', cacheKey);
+            logger_1.logger.info({ cacheKey }, 'Returning cached topics');
             return cached;
         }
-        console.log(`Aggregating topics - Scope: ${geographicScope}, State: ${userState}, City: ${userCity}`);
+        logger_1.logger.info({ geographicScope, userState, userCity }, 'Aggregating topics');
         try {
             // Step 1: Fetch relevant posts with embeddings
             const posts = await this.fetchRelevantPosts(timeframeHours, geographicScope, userState, userCity);
             if (posts.length < minPostsPerTopic) {
-                console.log('Not enough posts for topic aggregation');
+                logger_1.logger.info({ postsCount: posts.length, minRequired: minPostsPerTopic }, 'Not enough posts for topic aggregation');
                 return [];
             }
             // Step 2: Initial clustering to identify topic groups
@@ -75,7 +76,7 @@ class TopicAggregationService {
             return finalTopics;
         }
         catch (error) {
-            console.error('Error aggregating topics:', error);
+            logger_1.logger.error({ error, geographicScope, userState, userCity }, 'Error aggregating topics');
             return [];
         }
     }
@@ -214,7 +215,7 @@ Post: "${post.content}"`;
             }
         }
         catch (error) {
-            console.error('Error determining stance:', error);
+            logger_1.logger.error({ error, postId: post.id }, 'Error determining stance');
         }
         // Default to neutral if analysis fails
         return 'neutral';
@@ -248,7 +249,7 @@ ${opposeSample}`;
             return { title, supportSummary, opposeSummary };
         }
         catch (error) {
-            console.error('Error generating topic metadata:', error);
+            logger_1.logger.error({ error }, 'Error generating topic metadata');
             return {
                 title: 'Trending Discussion',
                 supportSummary: 'Supporting this position',

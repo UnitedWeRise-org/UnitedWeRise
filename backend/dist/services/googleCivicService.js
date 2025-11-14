@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleCivicService = void 0;
 const apiCache_1 = require("./apiCache");
+const logger_1 = require("./logger");
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
 class GoogleCivicService {
     /**
@@ -9,7 +10,7 @@ class GoogleCivicService {
      */
     static async getRepresentativesByAddress(address, includeOffices = true) {
         if (!GOOGLE_API_KEY) {
-            console.warn('Google API key not configured');
+            logger_1.logger.warn('Google API key not configured');
             return null;
         }
         // Generate cache key
@@ -29,7 +30,7 @@ class GoogleCivicService {
             const response = await fetch(`https://www.googleapis.com/civicinfo/v2/representatives?${params}`);
             if (!response.ok) {
                 const error = await response.json();
-                console.error('Google Civic API error:', error);
+                logger_1.logger.error({ error }, 'Google Civic API error');
                 return null;
             }
             const data = await response.json();
@@ -40,7 +41,7 @@ class GoogleCivicService {
             return { ...transformed, source: 'google_civic' };
         }
         catch (error) {
-            console.error('Failed to fetch from Google Civic API:', error);
+            logger_1.logger.error({ error }, 'Failed to fetch from Google Civic API');
             return null;
         }
     }
@@ -49,14 +50,14 @@ class GoogleCivicService {
      */
     static async getElectionInfo(address) {
         if (!GOOGLE_API_KEY) {
-            console.warn('Google API key not configured');
+            logger_1.logger.warn('Google API key not configured');
             return null;
         }
         try {
             // First get the elections list
             const electionsResponse = await fetch(`https://www.googleapis.com/civicinfo/v2/elections?key=${GOOGLE_API_KEY}`);
             if (!electionsResponse.ok) {
-                console.error('Failed to fetch elections');
+                logger_1.logger.error({ status: electionsResponse.status }, 'Failed to fetch elections');
                 return null;
             }
             const elections = await electionsResponse.json();
@@ -81,7 +82,7 @@ class GoogleCivicService {
             return { elections: elections.elections, source: 'google_civic' };
         }
         catch (error) {
-            console.error('Failed to fetch election info:', error);
+            logger_1.logger.error({ error }, 'Failed to fetch election info');
             return null;
         }
     }

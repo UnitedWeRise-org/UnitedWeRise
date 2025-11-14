@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SentenceTransformersService = void 0;
+const logger_1 = require("./logger");
 // Dynamic import to handle ESM compatibility
 let transformersModule = null;
 async function getTransformersModule() {
@@ -45,7 +46,7 @@ async function getTransformersModule() {
             transformersModule.env.allowRemoteModels = true;
         }
         catch (error) {
-            console.warn('Failed to load transformers module:', error);
+            logger_1.logger.warn({ error }, 'Failed to load transformers module');
             transformersModule = null;
         }
     }
@@ -61,15 +62,15 @@ class SentenceTransformersService {
                 const transformers = await getTransformersModule();
                 if (transformers?.pipeline) {
                     this.embeddingPipeline = await transformers.pipeline('feature-extraction', this.MODEL_NAME);
-                    console.log('✓ Local embedding pipeline initialized');
+                    logger_1.logger.info({ model: this.MODEL_NAME }, 'Local embedding pipeline initialized');
                 }
                 else {
-                    console.warn('Transformers module not available');
+                    logger_1.logger.warn('Transformers module not available');
                     this.embeddingPipeline = null;
                 }
             }
             catch (error) {
-                console.warn('Failed to initialize local pipeline, will use fallback:', error);
+                logger_1.logger.warn({ error }, 'Failed to initialize local pipeline, will use fallback');
                 this.embeddingPipeline = null;
             }
         }
@@ -106,15 +107,15 @@ class SentenceTransformersService {
                         throw new Error('Unexpected pipeline output format');
                     }
                     const processingTime = Date.now() - startTime;
-                    console.log(`✓ Generated local embedding in ${processingTime}ms`);
+                    logger_1.logger.info({ processingTime }, 'Generated local embedding');
                     return { embedding, processingTime };
                 }
             }
             catch (pipelineError) {
-                console.warn('Local pipeline failed, using semantic fallback:', pipelineError);
+                logger_1.logger.warn({ error: pipelineError }, 'Local pipeline failed, using semantic fallback');
             }
             // Fallback to semantic embedding analysis
-            console.info('Using semantic embedding generation (analyzing political content)');
+            logger_1.logger.info('Using semantic embedding generation (analyzing political content)');
             const fallbackEmbedding = this.generateSemanticEmbedding(cleanText);
             return {
                 embedding: fallbackEmbedding,
@@ -122,7 +123,7 @@ class SentenceTransformersService {
             };
         }
         catch (error) {
-            console.warn('All embedding methods failed, using basic fallback:', error);
+            logger_1.logger.warn({ error }, 'All embedding methods failed, using basic fallback');
             const fallbackEmbedding = this.generateFallbackEmbedding(text);
             return {
                 embedding: fallbackEmbedding,
@@ -137,7 +138,7 @@ class SentenceTransformersService {
         const results = [];
         for (let i = 0; i < texts.length; i += batchSize) {
             const batch = texts.slice(i, i + batchSize);
-            console.log(`Processing embedding batch ${i + 1}-${Math.min(i + batchSize, texts.length)} of ${texts.length}`);
+            logger_1.logger.info({ batchStart: i + 1, batchEnd: Math.min(i + batchSize, texts.length), total: texts.length }, 'Processing embedding batch');
             // Process batch in parallel
             const batchPromises = batch.map(text => this.generateEmbedding(text));
             const batchResults = await Promise.all(batchPromises);

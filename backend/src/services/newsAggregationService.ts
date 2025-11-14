@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { ApiCacheService } from './apiCache';
 import { NewsApiRateLimiter } from './newsApiRateLimiter';
 import { azureOpenAI } from './azureOpenAIService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -50,18 +51,18 @@ export class NewsAggregationService {
   ): Promise<OfficialNews> {
     // First check historical database cache (permanent storage)
     const historicalArticles = await this.getHistoricalArticles(officialName, limit, daysBack);
-    
+
     // If we have recent articles in historical cache, use them
     if (historicalArticles.length >= limit / 2) {
-      console.log(`📚 Using ${historicalArticles.length} historical articles for ${officialName}`);
+      logger.info({ officialName, articleCount: historicalArticles.length }, 'Using historical articles');
       return this.formatOfficialNews(officialName, officialId, historicalArticles);
     }
-    
+
     // Check short-term API cache (15 minutes for fresh data)
     const cacheKey = `fresh_news_${officialName.replace(/\s+/g, '_')}_${limit}_${daysBack}`;
     const cached = await ApiCacheService.get('politician_news', cacheKey);
     if (cached) {
-      console.log(`⚡ Using cached API results for ${officialName}`);
+      logger.info({ officialName }, 'Using cached API results');
       return cached as OfficialNews;
     }
 
@@ -79,7 +80,7 @@ export class NewsAggregationService {
       articles.push(...theNewsApiArticles);
     } else if (THE_NEWS_API_KEY) {
       const status = await NewsApiRateLimiter.getStatus();
-      console.log(`⚠️ The News API daily limit reached: ${status.current}/${status.limit}, resets at ${status.resetTime}`);
+      logger.warn({ status }, 'The News API daily limit reached');
     }
 
     // Remove duplicates based on URL
@@ -313,7 +314,7 @@ Summary:`;
       });
       return summary.trim();
     } catch (error) {
-      console.error('Azure OpenAI summary generation failed:', error);
+      logger.error({ error }, 'Azure OpenAI summary generation failed');
       // Fallback to extractive summary
       return this.generateExtractiveSummary(title, description, content);
     }
@@ -510,7 +511,7 @@ Summary:`;
       });
 
       if (!response.ok) {
-        console.error(`NewsAPI error: ${response.status}`);
+        logger.error({ status: response.status }, 'NewsAPI error');
         return [];
       }
 
@@ -528,7 +529,7 @@ Summary:`;
         keywords: this.extractKeywords(article.title + ' ' + (article.description || ''))
       }));
     } catch (error) {
-      console.error('NewsAPI search failed:', error);
+      logger.error({ error }, 'NewsAPI search failed');
       return [];
     }
   }
@@ -551,7 +552,7 @@ Summary:`;
       const response = await fetch(url.toString());
 
       if (!response.ok) {
-        console.error(`The News API error: ${response.status}`);
+        logger.error({ status: response.status }, 'The News API error');
         return [];
       }
 
@@ -569,7 +570,7 @@ Summary:`;
         keywords: this.extractKeywords(article.title + ' ' + (article.description || ''))
       }));
     } catch (error) {
-      console.error('The News API search failed:', error);
+      logger.error({ error }, 'The News API search failed');
       return [];
     }
   }
@@ -586,7 +587,7 @@ Summary:`;
       });
 
       if (existing) {
-        console.log(`📰 Article already cached: ${article.title}`);
+        logger.info({ title: article.title }, 'Article already cached');
         return; // Article already in permanent historical cache
       }
 
@@ -644,7 +645,7 @@ Summary:`;
         }
       });
 
-      console.log(`✅ Cached article for historical tracking: ${article.title.substring(0, 50)}...`);
+      logger.info({ articleId: storedArticle.id, title: article.title.substring(0, 50) }, 'Cached article for historical tracking');
 
       // Create official mention if applicable
       if (officialName && storedArticle) {
@@ -669,7 +670,7 @@ Summary:`;
     } catch (error) {
       // Likely a duplicate URL - that's OK
       if (!error.message?.includes('Unique constraint')) {
-        console.error('Failed to store article:', error);
+        logger.error({ error }, 'Failed to store article');
       }
     }
   }

@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 ;
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -64,9 +65,9 @@ export class SecurityService {
         await this.handleHighRiskEvent(eventData, riskScore);
       }
 
-      console.log(`Security event logged: ${eventData.eventType} (Risk: ${riskScore})`);
+      logger.info({ eventType: eventData.eventType, riskScore }, 'Security event logged');
     } catch (error) {
-      console.error('Failed to log security event:', error);
+      logger.error({ error }, 'Failed to log security event');
       // Don't throw - security logging failures shouldn't break the app
     }
   }
@@ -116,7 +117,7 @@ export class SecurityService {
       });
 
     } catch (error) {
-      console.error('Failed to handle failed login:', error);
+      logger.error({ error, userId }, 'Failed to handle failed login');
     }
   }
 
@@ -152,7 +153,7 @@ export class SecurityService {
       });
 
     } catch (error) {
-      console.error('Failed to handle successful login:', error);
+      logger.error({ error, userId }, 'Failed to handle successful login');
     }
   }
 
@@ -168,7 +169,7 @@ export class SecurityService {
 
       return user?.lockedUntil ? new Date() < user.lockedUntil : false;
     } catch (error) {
-      console.error('Failed to check account lock status:', error);
+      logger.error({ error, userId }, 'Failed to check account lock status');
       return false;
     }
   }
@@ -227,7 +228,7 @@ export class SecurityService {
         skip: offset
       });
     } catch (error) {
-      console.error('Failed to get security events:', error);
+      logger.error({ error }, 'Failed to get security events');
       return [];
     }
   }
@@ -293,7 +294,7 @@ export class SecurityService {
         generatedAt: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Failed to get security stats:', error);
+      logger.error({ error }, 'Failed to get security stats');
       return {
         totalEvents: 0,
         failedLogins: 0,
@@ -385,7 +386,7 @@ export class SecurityService {
 
       return Math.min(riskScore, 100);
     } catch (error) {
-      console.error('Failed to assess login risk:', error);
+      logger.error({ error, userId }, 'Failed to assess login risk');
       return 5;
     }
   }
@@ -395,16 +396,17 @@ export class SecurityService {
    */
   private static async handleHighRiskEvent(eventData: SecurityEventData, riskScore: number): Promise<void> {
     try {
-      console.warn(`HIGH RISK SECURITY EVENT: ${eventData.eventType} (Score: ${riskScore})`);
-      
+      logger.warn({ eventType: eventData.eventType, riskScore }, 'HIGH RISK SECURITY EVENT');
+
       // Additional logging for critical events
       if (riskScore >= this.RISK_THRESHOLDS.CRITICAL) {
-        console.error(`CRITICAL SECURITY EVENT: ${eventData.eventType}`, {
+        logger.error({
+          eventType: eventData.eventType,
           userId: eventData.userId,
           ipAddress: eventData.ipAddress,
           details: eventData.details,
           timestamp: new Date().toISOString()
-        });
+        }, 'CRITICAL SECURITY EVENT');
 
         // TODO: Implement additional security measures:
         // - Send email alerts to admins
@@ -412,7 +414,7 @@ export class SecurityService {
         // - Create security incident ticket
       }
     } catch (error) {
-      console.error('Failed to handle high-risk event:', error);
+      logger.error({ error }, 'Failed to handle high-risk event');
     }
   }
 
@@ -430,10 +432,10 @@ export class SecurityService {
         }
       });
 
-      console.log(`Cleaned up ${result.count} old security events`);
+      logger.info({ count: result.count }, 'Cleaned up old security events');
       return result.count;
     } catch (error) {
-      console.error('Failed to cleanup old security events:', error);
+      logger.error({ error }, 'Failed to cleanup old security events');
       return 0;
     }
   }

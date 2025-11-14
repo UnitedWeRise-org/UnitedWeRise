@@ -6,6 +6,7 @@ const prisma_1 = require("../lib/prisma");
 const apiCache_1 = require("./apiCache");
 const newsApiRateLimiter_1 = require("./newsApiRateLimiter");
 const azureOpenAIService_1 = require("./azureOpenAIService");
+const logger_1 = require("./logger");
 // Using singleton prisma from lib/prisma.ts
 // API Configuration
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
@@ -20,14 +21,14 @@ class NewsAggregationService {
         const historicalArticles = await this.getHistoricalArticles(officialName, limit, daysBack);
         // If we have recent articles in historical cache, use them
         if (historicalArticles.length >= limit / 2) {
-            console.log(`📚 Using ${historicalArticles.length} historical articles for ${officialName}`);
+            logger_1.logger.info({ officialName, articleCount: historicalArticles.length }, 'Using historical articles');
             return this.formatOfficialNews(officialName, officialId, historicalArticles);
         }
         // Check short-term API cache (15 minutes for fresh data)
         const cacheKey = `fresh_news_${officialName.replace(/\s+/g, '_')}_${limit}_${daysBack}`;
         const cached = await apiCache_1.ApiCacheService.get('politician_news', cacheKey);
         if (cached) {
-            console.log(`⚡ Using cached API results for ${officialName}`);
+            logger_1.logger.info({ officialName }, 'Using cached API results');
             return cached;
         }
         const articles = [];
@@ -43,7 +44,7 @@ class NewsAggregationService {
         }
         else if (THE_NEWS_API_KEY) {
             const status = await newsApiRateLimiter_1.NewsApiRateLimiter.getStatus();
-            console.log(`⚠️ The News API daily limit reached: ${status.current}/${status.limit}, resets at ${status.resetTime}`);
+            logger_1.logger.warn({ status }, 'The News API daily limit reached');
         }
         // Remove duplicates based on URL
         const uniqueArticles = articles.filter((article, index, self) => index === self.findIndex(a => a.url === article.url));
@@ -233,7 +234,7 @@ Summary:`;
             return summary.trim();
         }
         catch (error) {
-            console.error('Azure OpenAI summary generation failed:', error);
+            logger_1.logger.error({ error }, 'Azure OpenAI summary generation failed');
             // Fallback to extractive summary
             return this.generateExtractiveSummary(title, description, content);
         }
@@ -397,7 +398,7 @@ Summary:`;
                 }
             });
             if (!response.ok) {
-                console.error(`NewsAPI error: ${response.status}`);
+                logger_1.logger.error({ status: response.status }, 'NewsAPI error');
                 return [];
             }
             const data = await response.json();
@@ -414,7 +415,7 @@ Summary:`;
             }));
         }
         catch (error) {
-            console.error('NewsAPI search failed:', error);
+            logger_1.logger.error({ error }, 'NewsAPI search failed');
             return [];
         }
     }
@@ -432,7 +433,7 @@ Summary:`;
             url.searchParams.set('limit', Math.min(limit, 100).toString());
             const response = await fetch(url.toString());
             if (!response.ok) {
-                console.error(`The News API error: ${response.status}`);
+                logger_1.logger.error({ status: response.status }, 'The News API error');
                 return [];
             }
             const data = await response.json();
@@ -449,7 +450,7 @@ Summary:`;
             }));
         }
         catch (error) {
-            console.error('The News API search failed:', error);
+            logger_1.logger.error({ error }, 'The News API search failed');
             return [];
         }
     }
@@ -460,7 +461,7 @@ Summary:`;
                 where: { url: article.url }
             });
             if (existing) {
-                console.log(`📰 Article already cached: ${article.title}`);
+                logger_1.logger.info({ title: article.title }, 'Article already cached');
                 return; // Article already in permanent historical cache
             }
             // Generate AI summary (200-400 chars for historical accountability)
@@ -499,7 +500,7 @@ Summary:`;
                     embedding: article.embedding || []
                 }
             });
-            console.log(`✅ Cached article for historical tracking: ${article.title.substring(0, 50)}...`);
+            logger_1.logger.info({ articleId: storedArticle.id, title: article.title.substring(0, 50) }, 'Cached article for historical tracking');
             // Create official mention if applicable
             if (officialName && storedArticle) {
                 const mentionContext = this.extractMentionContext(article.title + ' ' + (article.description || ''), officialName);
@@ -520,7 +521,7 @@ Summary:`;
         catch (error) {
             // Likely a duplicate URL - that's OK
             if (!error.message?.includes('Unique constraint')) {
-                console.error('Failed to store article:', error);
+                logger_1.logger.error({ error }, 'Failed to store article');
             }
         }
     }

@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import { PrismaClient } from '@prisma/client';
 import { emailService } from './emailService';
 import { azureOpenAI, AzureOpenAIService } from './azureOpenAIService';
-import logger from '../utils/logger';
+import { logger } from './logger';
 
 /**
  * Content moderation service using AI-powered analysis and automated flagging
@@ -185,15 +185,15 @@ Respond with JSON only:
       }
 
       const analysis = JSON.parse(analysisMatch[0]);
-      logger.debug('Toxicity analysis completed', { 
-        score: analysis.toxicityScore, 
-        categories: analysis.categories 
-      });
-      
+      logger.debug({
+        score: analysis.toxicityScore,
+        categories: analysis.categories
+      }, 'Toxicity analysis completed');
+
       return Math.min(Math.max(analysis.toxicityScore || 0, 0), 1.0);
-      
+
     } catch (error) {
-      logger.warn('Azure OpenAI toxicity detection failed, using fallback:', error);
+      logger.warn({ error }, 'Azure OpenAI toxicity detection failed, using fallback');
       
       // Fallback to simple keyword matching
       const toxicWords = [
@@ -241,15 +241,15 @@ Respond with JSON only:
       }
 
       const analysis = JSON.parse(analysisMatch[0]);
-      logger.debug('Hate speech analysis completed', { 
-        score: analysis.hateSpeechScore, 
-        targetedGroups: analysis.targetedGroups 
-      });
-      
+      logger.debug({
+        score: analysis.hateSpeechScore,
+        targetedGroups: analysis.targetedGroups
+      }, 'Hate speech analysis completed');
+
       return Math.min(Math.max(analysis.hateSpeechScore || 0, 0), 1.0);
-      
+
     } catch (error) {
-      logger.warn('Azure OpenAI hate speech detection failed, using fallback:', error);
+      logger.warn({ error }, 'Azure OpenAI hate speech detection failed, using fallback');
       
       // Fallback to pattern detection
       const lowerContent = content.toLowerCase();
@@ -303,20 +303,20 @@ Respond with JSON only:
           
           // High similarity threshold for duplicate detection
           if (similarity > 0.95) {
-            logger.info('Potential duplicate content detected', {
+            logger.info({
               similarity,
               originalPostId: post.id,
               originalContent: post.content.slice(0, 100)
-            });
+            }, 'Potential duplicate content detected');
             return true;
           }
         }
       }
-      
+
       return false;
-      
+
     } catch (error) {
-      logger.warn('Semantic duplicate detection failed, using exact match fallback:', error);
+      logger.warn({ error }, 'Semantic duplicate detection failed, using exact match fallback');
       
       // Fallback to exact content matching
       const recentContent = await this.prisma.post.findMany({
@@ -373,7 +373,7 @@ Respond with JSON only:
         // Mark content as hidden/deleted based on severity
         if (contentType === 'POST') {
           // Would implement content hiding logic
-          console.log(`Auto-moderating post ${contentId} due to high-confidence violations`);
+          logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-moderating post due to high-confidence violations');
         }
       }
     }
@@ -451,7 +451,7 @@ Respond with JSON only:
 
   // Escalate urgent reports
   private async escalateReport(reportId: string): Promise<void> {
-    console.log(`URGENT: Report ${reportId} requires immediate attention`);
+    logger.warn({ reportId }, 'URGENT: Report requires immediate attention');
     // In production: send notifications to moderators, create alerts, etc.
   }
 
@@ -576,7 +576,7 @@ Respond with JSON only:
         await emailService.sendEmail(emailTemplate);
       }
     } catch (error) {
-      console.error('Failed to send warning email:', error);
+      logger.error({ error, userId }, 'Failed to send warning email');
     }
 
     // Auto-suspend on final warning
@@ -665,7 +665,7 @@ Respond with JSON only:
         await emailService.sendEmail(emailTemplate);
       }
     } catch (error) {
-      console.error('Failed to send suspension email:', error);
+      logger.error({ error, userId }, 'Failed to send suspension email');
     }
   }
 

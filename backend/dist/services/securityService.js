@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SecurityService = void 0;
 const prisma_1 = require("../lib/prisma");
 ;
+const logger_1 = require("./logger");
 class SecurityService {
     /**
      * Log a security event
@@ -24,10 +25,10 @@ class SecurityService {
             if (riskScore >= this.RISK_THRESHOLDS.HIGH) {
                 await this.handleHighRiskEvent(eventData, riskScore);
             }
-            console.log(`Security event logged: ${eventData.eventType} (Risk: ${riskScore})`);
+            logger_1.logger.info({ eventType: eventData.eventType, riskScore }, 'Security event logged');
         }
         catch (error) {
-            console.error('Failed to log security event:', error);
+            logger_1.logger.error({ error }, 'Failed to log security event');
             // Don't throw - security logging failures shouldn't break the app
         }
     }
@@ -71,7 +72,7 @@ class SecurityService {
             });
         }
         catch (error) {
-            console.error('Failed to handle failed login:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to handle failed login');
         }
     }
     /**
@@ -103,7 +104,7 @@ class SecurityService {
             });
         }
         catch (error) {
-            console.error('Failed to handle successful login:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to handle successful login');
         }
     }
     /**
@@ -118,7 +119,7 @@ class SecurityService {
             return user?.lockedUntil ? new Date() < user.lockedUntil : false;
         }
         catch (error) {
-            console.error('Failed to check account lock status:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to check account lock status');
             return false;
         }
     }
@@ -161,7 +162,7 @@ class SecurityService {
             });
         }
         catch (error) {
-            console.error('Failed to get security events:', error);
+            logger_1.logger.error({ error }, 'Failed to get security events');
             return [];
         }
     }
@@ -218,7 +219,7 @@ class SecurityService {
             };
         }
         catch (error) {
-            console.error('Failed to get security stats:', error);
+            logger_1.logger.error({ error }, 'Failed to get security stats');
             return {
                 totalEvents: 0,
                 failedLogins: 0,
@@ -305,7 +306,7 @@ class SecurityService {
             return Math.min(riskScore, 100);
         }
         catch (error) {
-            console.error('Failed to assess login risk:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to assess login risk');
             return 5;
         }
     }
@@ -314,15 +315,16 @@ class SecurityService {
      */
     static async handleHighRiskEvent(eventData, riskScore) {
         try {
-            console.warn(`HIGH RISK SECURITY EVENT: ${eventData.eventType} (Score: ${riskScore})`);
+            logger_1.logger.warn({ eventType: eventData.eventType, riskScore }, 'HIGH RISK SECURITY EVENT');
             // Additional logging for critical events
             if (riskScore >= this.RISK_THRESHOLDS.CRITICAL) {
-                console.error(`CRITICAL SECURITY EVENT: ${eventData.eventType}`, {
+                logger_1.logger.error({
+                    eventType: eventData.eventType,
                     userId: eventData.userId,
                     ipAddress: eventData.ipAddress,
                     details: eventData.details,
                     timestamp: new Date().toISOString()
-                });
+                }, 'CRITICAL SECURITY EVENT');
                 // TODO: Implement additional security measures:
                 // - Send email alerts to admins
                 // - Temporarily increase rate limiting for the IP
@@ -330,7 +332,7 @@ class SecurityService {
             }
         }
         catch (error) {
-            console.error('Failed to handle high-risk event:', error);
+            logger_1.logger.error({ error }, 'Failed to handle high-risk event');
         }
     }
     /**
@@ -345,11 +347,11 @@ class SecurityService {
                     riskScore: { lt: this.RISK_THRESHOLDS.HIGH } // Keep high-risk events longer
                 }
             });
-            console.log(`Cleaned up ${result.count} old security events`);
+            logger_1.logger.info({ count: result.count }, 'Cleaned up old security events');
             return result.count;
         }
         catch (error) {
-            console.error('Failed to cleanup old security events:', error);
+            logger_1.logger.error({ error }, 'Failed to cleanup old security events');
             return 0;
         }
     }

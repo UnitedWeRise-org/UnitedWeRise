@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { isProduction } from '../utils/environment';
+import { logger } from './logger';
 
 export interface EmailTemplate {
   to: string;
@@ -55,15 +56,15 @@ class EmailService {
             rejectUnauthorized: isProduction()
           }
         });
-        console.log('Email service initialized with SMTP');
+        logger.info('Email service initialized with SMTP');
         return;
       }
 
       // Fallback configurations can be added here for SendGrid, AWS SES, etc.
-      console.warn('No email service configured. Please set SMTP or other email service credentials.');
-      
+      logger.warn('No email service configured. Please set SMTP or other email service credentials.');
+
     } catch (error) {
-      console.error('Failed to initialize email service:', error);
+      logger.error({ error }, 'Failed to initialize email service');
     }
   }
 
@@ -87,7 +88,7 @@ class EmailService {
    */
   async sendEmail(template: EmailTemplate): Promise<boolean> {
     if (!this.transporter) {
-      console.error('Email service not configured');
+      logger.error('Email service not configured');
       return false;
     }
 
@@ -101,10 +102,10 @@ class EmailService {
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', result.messageId);
+      logger.info({ messageId: result.messageId, to: template.to }, 'Email sent successfully');
       return true;
     } catch (error) {
-      console.error('Failed to send email:', error);
+      logger.error({ error, to: template.to }, 'Failed to send email');
       return false;
     }
   }
@@ -1036,16 +1037,16 @@ The United We Rise Moderation Team`,
    */
   async testConnection(): Promise<boolean> {
     if (!this.transporter) {
-      console.error('Email service not configured');
+      logger.error('Email service not configured');
       return false;
     }
 
     try {
       await this.transporter.verify();
-      console.log('Email service connection successful');
+      logger.info('Email service connection successful');
       return true;
     } catch (error) {
-      console.error('Email service connection failed:', error);
+      logger.error({ error }, 'Email service connection failed');
       return false;
     }
   }

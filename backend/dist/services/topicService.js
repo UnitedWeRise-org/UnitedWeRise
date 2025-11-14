@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TopicService = void 0;
 const prisma_1 = require("../lib/prisma");
 const embeddingService_1 = require("./embeddingService");
+const logger_1 = require("./logger");
 class TopicService {
     /**
      * Analyze recent posts and generate topic clusters
@@ -10,7 +11,7 @@ class TopicService {
     static async generateTopicClusters(timeframe = 24, // hours
     maxPosts = 500) {
         try {
-            console.log(`Analyzing posts from last ${timeframe} hours...`);
+            logger_1.logger.info({ timeframe, maxPosts }, 'Analyzing posts from last N hours');
             // Get recent posts with embeddings
             const cutoffDate = new Date(Date.now() - timeframe * 60 * 60 * 1000);
             const posts = await prisma_1.prisma.post.findMany({
@@ -36,7 +37,7 @@ class TopicService {
                 },
                 take: maxPosts
             });
-            console.log(`Found ${posts.length} posts with embeddings`);
+            logger_1.logger.info({ postCount: posts.length }, 'Found posts with embeddings');
             if (posts.length < this.MIN_POSTS_PER_TOPIC) {
                 return { topics: [], uncategorizedPosts: posts };
             }
@@ -47,11 +48,11 @@ class TopicService {
             // Find uncategorized posts
             const clusteredPostIds = new Set(clusters.flatMap(cluster => cluster.posts.map(p => p.id)));
             const uncategorizedPosts = posts.filter(p => !clusteredPostIds.has(p.id));
-            console.log(`Generated ${topics.length} topics, ${uncategorizedPosts.length} uncategorized posts`);
+            logger_1.logger.info({ topicCount: topics.length, uncategorizedCount: uncategorizedPosts.length }, 'Generated topics');
             return { topics, uncategorizedPosts };
         }
         catch (error) {
-            console.error('Topic clustering failed:', error);
+            logger_1.logger.error({ error }, 'Topic clustering failed');
             throw error;
         }
     }
@@ -60,7 +61,7 @@ class TopicService {
      */
     static async saveTopicsToDB(analysis) {
         try {
-            console.log('Saving topics to database...');
+            logger_1.logger.info({ topicCount: analysis.topics.length }, 'Saving topics to database');
             for (const cluster of analysis.topics) {
                 // Create or update topic
                 const topic = await prisma_1.prisma.topic.create({
@@ -89,12 +90,12 @@ class TopicService {
                         }
                     });
                 }
-                console.log(`✓ Saved topic: ${topic.title} with ${cluster.posts.length} posts`);
+                logger_1.logger.info({ topicId: topic.id, title: topic.title, postCount: cluster.posts.length }, 'Saved topic');
             }
             return analysis.topics.length;
         }
         catch (error) {
-            console.error('Failed to save topics to database:', error);
+            logger_1.logger.error({ error }, 'Failed to save topics to database');
             throw error;
         }
     }
@@ -322,7 +323,7 @@ class TopicService {
      */
     static async updateTrendingScores() {
         try {
-            console.log('Updating trending scores...');
+            logger_1.logger.info('Updating trending scores');
             const topics = await prisma_1.prisma.topic.findMany({
                 where: { isActive: true },
                 include: {
@@ -351,10 +352,10 @@ class TopicService {
                     data: { trendingScore: score }
                 });
             }
-            console.log(`Updated trending scores for ${topics.length} topics`);
+            logger_1.logger.info({ topicCount: topics.length }, 'Updated trending scores');
         }
         catch (error) {
-            console.error('Failed to update trending scores:', error);
+            logger_1.logger.error({ error }, 'Failed to update trending scores');
             throw error;
         }
     }
@@ -446,7 +447,7 @@ class TopicService {
             return cluster;
         }
         catch (error) {
-            console.error('Failed to generate topic summary:', error);
+            logger_1.logger.error({ error }, 'Failed to generate topic summary');
             cluster.title = 'Discussion Topic';
             return cluster;
         }

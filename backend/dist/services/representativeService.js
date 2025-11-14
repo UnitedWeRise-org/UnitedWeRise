@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RepresentativeService = void 0;
 const prisma_1 = require("../lib/prisma");
 const apiCache_1 = require("./apiCache");
+const logger_1 = require("./logger");
 ;
 const googleCivicService_1 = require("./googleCivicService");
 // Using singleton prisma from lib/prisma.ts
@@ -35,7 +36,7 @@ class RepresentativeService {
                 googleResult = await googleCivicService_1.GoogleCivicService.getRepresentativesByAddress(address);
             }
             catch (error) {
-                console.error('Google Civic API failed:', error);
+                logger_1.logger.error({ error, address }, 'Google Civic API failed');
             }
         }
         // Try Geocodio (good for districts, school boards, additional data)
@@ -44,7 +45,7 @@ class RepresentativeService {
                 geocodioResult = await this.fetchFromGeocodio(address);
             }
             catch (error) {
-                console.error('Geocodio API failed:', error);
+                logger_1.logger.error({ error, address }, 'Geocodio API failed');
             }
         }
         // Merge results from both sources for comprehensive data
@@ -80,10 +81,10 @@ class RepresentativeService {
                 }
             }
             catch (error) {
-                console.error('FEC API failed:', error);
+                logger_1.logger.error({ error, zipCode, state }, 'FEC API failed');
             }
         }
-        console.warn('No API keys configured for representative lookup');
+        logger_1.logger.warn('No API keys configured for representative lookup');
         return null;
     }
     /**
@@ -405,7 +406,7 @@ class RepresentativeService {
             }
         }
         catch (error) {
-            console.error('Error storing representatives in database:', error);
+            logger_1.logger.error({ error, zipCode, state }, 'Error storing representatives in database');
         }
     }
     /**
@@ -441,7 +442,7 @@ class RepresentativeService {
             }));
         }
         catch (error) {
-            console.error('Error fetching cached representatives:', error);
+            logger_1.logger.error({ error, zipCode, state }, 'Error fetching cached representatives');
             return [];
         }
     }

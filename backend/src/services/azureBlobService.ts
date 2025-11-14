@@ -1,5 +1,6 @@
 import { BlobServiceClient, ContainerClient, BlockBlobClient } from '@azure/storage-blob';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from './logger';
 
 export class AzureBlobService {
   private static blobServiceClient: BlobServiceClient;
@@ -11,19 +12,19 @@ export class AzureBlobService {
    */
   static async initialize(): Promise<void> {
     try {
-      console.log('🔧 Initializing Azure Blob Storage...');
+      logger.info('Initializing Azure Blob Storage');
       const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
       if (!connectionString) {
-        console.error('❌ AZURE_STORAGE_CONNECTION_STRING environment variable is not set');
+        logger.error('AZURE_STORAGE_CONNECTION_STRING environment variable is not set');
         throw new Error('AZURE_STORAGE_CONNECTION_STRING environment variable not set');
       }
 
-      console.log('🔧 Creating BlobServiceClient...');
+      logger.info('Creating BlobServiceClient');
       this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
       this.containerClient = this.blobServiceClient.getContainerClient(this.CONTAINER_NAME);
 
       // Create container if it doesn't exist
-      console.log('🔧 Creating/verifying container exists...');
+      logger.info('Creating/verifying container exists');
 
       // ⚠️ SECURITY DESIGN DECISION: Public blob access
       // Current implementation: Photos are publicly accessible via URL
@@ -46,15 +47,16 @@ export class AzureBlobService {
       });
 
       // Ensure public blob access is set (in case container existed with different policy)
-      console.log('🔧 Setting container access policy to public blob access...');
+      logger.info('Setting container access policy to public blob access');
       await this.containerClient.setAccessPolicy('blob');
 
-      console.log('✅ Azure Blob Storage initialized successfully');
+      logger.info('Azure Blob Storage initialized successfully');
     } catch (error) {
-      console.error('❌❌❌ FAILED TO INITIALIZE AZURE BLOB STORAGE ❌❌❌');
-      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
-      console.error('Error message:', error instanceof Error ? error.message : String(error));
-      console.error('Full error:', error);
+      logger.error({
+        error,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      }, 'FAILED TO INITIALIZE AZURE BLOB STORAGE');
       throw error;
     }
   }
@@ -83,7 +85,7 @@ export class AzureBlobService {
       // Return the public URL
       return blockBlobClient.url;
     } catch (error) {
-      console.error('Failed to upload file to Azure Blob Storage:', error);
+      logger.error({ error, filename, mimeType }, 'Failed to upload file to Azure Blob Storage');
       throw error;
     }
   }
@@ -96,7 +98,7 @@ export class AzureBlobService {
       const blockBlobClient = this.containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.deleteIfExists();
     } catch (error) {
-      console.error('Failed to delete file from Azure Blob Storage:', error);
+      logger.error({ error, blobName }, 'Failed to delete file from Azure Blob Storage');
       throw error;
     }
   }
@@ -117,7 +119,7 @@ export class AzureBlobService {
       await this.containerClient.getProperties();
       return true;
     } catch (error) {
-      console.error('Azure Blob Storage not available:', error);
+      logger.error({ error }, 'Azure Blob Storage not available');
       return false;
     }
   }

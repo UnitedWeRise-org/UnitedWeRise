@@ -1,13 +1,10 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.moderationService = void 0;
 const prisma_1 = require("../lib/prisma");
 const emailService_1 = require("./emailService");
 const azureOpenAIService_1 = require("./azureOpenAIService");
-const logger_1 = __importDefault(require("../utils/logger"));
+const logger_1 = require("./logger");
 /**
  * Content moderation service using AI-powered analysis and automated flagging
  *
@@ -169,14 +166,14 @@ Respond with JSON only:
                 throw new Error('No JSON found in response');
             }
             const analysis = JSON.parse(analysisMatch[0]);
-            logger_1.default.debug('Toxicity analysis completed', {
+            logger_1.logger.debug({
                 score: analysis.toxicityScore,
                 categories: analysis.categories
-            });
+            }, 'Toxicity analysis completed');
             return Math.min(Math.max(analysis.toxicityScore || 0, 0), 1.0);
         }
         catch (error) {
-            logger_1.default.warn('Azure OpenAI toxicity detection failed, using fallback:', error);
+            logger_1.logger.warn({ error }, 'Azure OpenAI toxicity detection failed, using fallback');
             // Fallback to simple keyword matching
             const toxicWords = [
                 'hate', 'kill', 'die', 'stupid', 'idiot', 'moron', 'retard',
@@ -215,14 +212,14 @@ Respond with JSON only:
                 throw new Error('No JSON found in response');
             }
             const analysis = JSON.parse(analysisMatch[0]);
-            logger_1.default.debug('Hate speech analysis completed', {
+            logger_1.logger.debug({
                 score: analysis.hateSpeechScore,
                 targetedGroups: analysis.targetedGroups
-            });
+            }, 'Hate speech analysis completed');
             return Math.min(Math.max(analysis.hateSpeechScore || 0, 0), 1.0);
         }
         catch (error) {
-            logger_1.default.warn('Azure OpenAI hate speech detection failed, using fallback:', error);
+            logger_1.logger.warn({ error }, 'Azure OpenAI hate speech detection failed, using fallback');
             // Fallback to pattern detection
             const lowerContent = content.toLowerCase();
             let score = 0;
@@ -265,11 +262,11 @@ Respond with JSON only:
                     const similarity = azureOpenAIService_1.AzureOpenAIService.calculateSimilarity(contentEmbedding.embedding, post.embedding);
                     // High similarity threshold for duplicate detection
                     if (similarity > 0.95) {
-                        logger_1.default.info('Potential duplicate content detected', {
+                        logger_1.logger.info({
                             similarity,
                             originalPostId: post.id,
                             originalContent: post.content.slice(0, 100)
-                        });
+                        }, 'Potential duplicate content detected');
                         return true;
                     }
                 }
@@ -277,7 +274,7 @@ Respond with JSON only:
             return false;
         }
         catch (error) {
-            logger_1.default.warn('Semantic duplicate detection failed, using exact match fallback:', error);
+            logger_1.logger.warn({ error }, 'Semantic duplicate detection failed, using exact match fallback');
             // Fallback to exact content matching
             const recentContent = await this.prisma.post.findMany({
                 where: {
@@ -323,7 +320,7 @@ Respond with JSON only:
                 // Mark content as hidden/deleted based on severity
                 if (contentType === 'POST') {
                     // Would implement content hiding logic
-                    console.log(`Auto-moderating post ${contentId} due to high-confidence violations`);
+                    logger_1.logger.info({ contentId, contentType, flags: severeFlags.length }, 'Auto-moderating post due to high-confidence violations');
                 }
             }
         }
@@ -391,7 +388,7 @@ Respond with JSON only:
     }
     // Escalate urgent reports
     async escalateReport(reportId) {
-        console.log(`URGENT: Report ${reportId} requires immediate attention`);
+        logger_1.logger.warn({ reportId }, 'URGENT: Report requires immediate attention');
         // In production: send notifications to moderators, create alerts, etc.
     }
     /**
@@ -494,7 +491,7 @@ Respond with JSON only:
             }
         }
         catch (error) {
-            console.error('Failed to send warning email:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to send warning email');
         }
         // Auto-suspend on final warning
         if (severity === 'FINAL') {
@@ -565,7 +562,7 @@ Respond with JSON only:
             }
         }
         catch (error) {
-            console.error('Failed to send suspension email:', error);
+            logger_1.logger.error({ error, userId }, 'Failed to send suspension email');
         }
     }
     /**

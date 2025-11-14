@@ -1,6 +1,7 @@
 import { Topic, Post, TopicPost } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { EmbeddingService } from './embeddingService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -32,11 +33,11 @@ export class TopicService {
     maxPosts: number = 500
   ): Promise<TopicAnalysis> {
     try {
-      console.log(`Analyzing posts from last ${timeframe} hours...`);
+      logger.info({ timeframe, maxPosts }, 'Analyzing posts from last N hours');
 
       // Get recent posts with embeddings
       const cutoffDate = new Date(Date.now() - timeframe * 60 * 60 * 1000);
-      
+
       const posts = await prisma.post.findMany({
         where: {
           createdAt: { gte: cutoffDate },
@@ -61,7 +62,7 @@ export class TopicService {
         take: maxPosts
       });
 
-      console.log(`Found ${posts.length} posts with embeddings`);
+      logger.info({ postCount: posts.length }, 'Found posts with embeddings');
 
       if (posts.length < this.MIN_POSTS_PER_TOPIC) {
         return { topics: [], uncategorizedPosts: posts };
@@ -81,11 +82,11 @@ export class TopicService {
       );
       const uncategorizedPosts = posts.filter(p => !clusteredPostIds.has(p.id));
 
-      console.log(`Generated ${topics.length} topics, ${uncategorizedPosts.length} uncategorized posts`);
+      logger.info({ topicCount: topics.length, uncategorizedCount: uncategorizedPosts.length }, 'Generated topics');
 
       return { topics, uncategorizedPosts };
     } catch (error) {
-      console.error('Topic clustering failed:', error);
+      logger.error({ error }, 'Topic clustering failed');
       throw error;
     }
   }
@@ -95,7 +96,7 @@ export class TopicService {
    */
   static async saveTopicsToDB(analysis: TopicAnalysis) {
     try {
-      console.log('Saving topics to database...');
+      logger.info({ topicCount: analysis.topics.length }, 'Saving topics to database');
 
       for (const cluster of analysis.topics) {
         // Create or update topic
@@ -127,12 +128,12 @@ export class TopicService {
           });
         }
 
-        console.log(`✓ Saved topic: ${topic.title} with ${cluster.posts.length} posts`);
+        logger.info({ topicId: topic.id, title: topic.title, postCount: cluster.posts.length }, 'Saved topic');
       }
 
       return analysis.topics.length;
     } catch (error) {
-      console.error('Failed to save topics to database:', error);
+      logger.error({ error }, 'Failed to save topics to database');
       throw error;
     }
   }
@@ -376,7 +377,7 @@ export class TopicService {
    */
   static async updateTrendingScores() {
     try {
-      console.log('Updating trending scores...');
+      logger.info('Updating trending scores');
 
       const topics = await prisma.topic.findMany({
         where: { isActive: true },
@@ -402,16 +403,16 @@ export class TopicService {
 
       for (const topic of topics) {
         const score = this.calculateTrendingScore(topic as any);
-        
+
         await prisma.topic.update({
           where: { id: topic.id },
           data: { trendingScore: score }
         });
       }
 
-      console.log(`Updated trending scores for ${topics.length} topics`);
+      logger.info({ topicCount: topics.length }, 'Updated trending scores');
     } catch (error) {
-      console.error('Failed to update trending scores:', error);
+      logger.error({ error }, 'Failed to update trending scores');
       throw error;
     }
   }
@@ -529,7 +530,7 @@ export class TopicService {
 
       return cluster;
     } catch (error) {
-      console.error('Failed to generate topic summary:', error);
+      logger.error({ error }, 'Failed to generate topic summary');
       cluster.title = 'Discussion Topic';
       return cluster;
     }
