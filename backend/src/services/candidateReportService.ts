@@ -1,6 +1,9 @@
 import { prisma } from '../lib/prisma';
 import { ReportReason, ReportTargetType, ReportPriority } from '@prisma/client';
 import { azureOpenAI } from './azureOpenAIService';
+import { logger } from './logger';
+
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 interface GeographicInfo {
   district: string;
@@ -133,8 +136,8 @@ export class CandidateReportService {
         analysisNotes: assessment.analysisNotes || 'AI assessment completed'
       };
     } catch (error) {
-      console.error('AI urgency assessment failed:', error);
-      
+      logger.error({ error, candidateName, officeTitle, reason }, 'AI urgency assessment failed');
+
       // Fallback assessment based on reason
       const highUrgencyReasons = [
         'FRAUDULENT_CANDIDACY',
@@ -434,7 +437,11 @@ export class CandidateReportService {
     // Send email notification to candidate
     if (candidate.user?.email) {
       // TODO: Implement email notification
-      console.log(`Document verification requested for ${candidate.user.email}`);
+      logger.info({
+        candidateId,
+        email: candidate.user.email,
+        documentTypes
+      }, 'Document verification requested for candidate');
     }
 
     return documentRequests;

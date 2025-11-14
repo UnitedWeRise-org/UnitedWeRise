@@ -1,7 +1,9 @@
 import { ApiCacheService } from './apiCache';
+import { logger } from './logger';
 
 /**
  * Rate limiter specifically for The News API (100 requests/day limit)
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 export class NewsApiRateLimiter {
   private static readonly THE_NEWS_API_DAILY_LIMIT = 100;
@@ -36,9 +38,13 @@ export class NewsApiRateLimiter {
     const minutesUntilMidnight = Math.ceil((endOfDay.getTime() - now.getTime()) / (1000 * 60));
     
     await ApiCacheService.set('rate_limiting', this.CACHE_KEY, newCount, minutesUntilMidnight);
-    
-    console.log(`📊 The News API requests today: ${newCount}/${this.THE_NEWS_API_DAILY_LIMIT}`);
-    
+
+    logger.info({
+      current: newCount,
+      limit: this.THE_NEWS_API_DAILY_LIMIT,
+      minutesUntilReset: minutesUntilMidnight
+    }, 'The News API request counter incremented');
+
     return newCount;
   }
 
@@ -81,6 +87,6 @@ export class NewsApiRateLimiter {
    */
   static async resetCounter(): Promise<void> {
     await ApiCacheService.delete('rate_limiting', this.CACHE_KEY);
-    console.log('🔄 The News API daily counter reset');
+    logger.info('The News API daily counter reset');
   }
 }

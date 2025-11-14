@@ -2,8 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NewsApiRateLimiter = void 0;
 const apiCache_1 = require("./apiCache");
+const logger_1 = require("./logger");
 /**
  * Rate limiter specifically for The News API (100 requests/day limit)
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 class NewsApiRateLimiter {
     /**
@@ -31,7 +33,11 @@ class NewsApiRateLimiter {
         const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
         const minutesUntilMidnight = Math.ceil((endOfDay.getTime() - now.getTime()) / (1000 * 60));
         await apiCache_1.ApiCacheService.set('rate_limiting', this.CACHE_KEY, newCount, minutesUntilMidnight);
-        console.log(`📊 The News API requests today: ${newCount}/${this.THE_NEWS_API_DAILY_LIMIT}`);
+        logger_1.logger.info({
+            current: newCount,
+            limit: this.THE_NEWS_API_DAILY_LIMIT,
+            minutesUntilReset: minutesUntilMidnight
+        }, 'The News API request counter incremented');
         return newCount;
     }
     /**
@@ -63,7 +69,7 @@ class NewsApiRateLimiter {
      */
     static async resetCounter() {
         await apiCache_1.ApiCacheService.delete('rate_limiting', this.CACHE_KEY);
-        console.log('🔄 The News API daily counter reset');
+        logger_1.logger.info('The News API daily counter reset');
     }
 }
 exports.NewsApiRateLimiter = NewsApiRateLimiter;

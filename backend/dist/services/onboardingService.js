@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onboardingService = exports.OnboardingService = void 0;
 const prisma_1 = require("../lib/prisma");
-;
 const metricsService_1 = require("./metricsService");
+const logger_1 = require("./logger");
 // Political terms to subtly filter from search (without showing errors)
 const FILTERED_POLITICAL_TERMS = [
     'republican', 'democrat', 'democratic', 'gop', 'liberal', 'conservative',
@@ -206,12 +206,14 @@ class OnboardingService {
             event,
             step: stepId || 'unknown'
         });
-        // Log detailed analytics
-        console.log(`[ONBOARDING] User ${userId}: ${event}`, {
+        // Log detailed analytics using Pino
+        logger_1.logger.info({
+            component: 'onboarding',
+            userId,
+            event,
             stepId,
-            metadata,
-            timestamp: new Date().toISOString()
-        });
+            metadata
+        }, `Onboarding event: ${event}`);
     }
     async getOnboardingAnalytics() {
         // This would typically query analytics data

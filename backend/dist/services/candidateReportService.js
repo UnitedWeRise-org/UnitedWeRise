@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.candidateReportService = exports.CandidateReportService = void 0;
 const prisma_1 = require("../lib/prisma");
 const azureOpenAIService_1 = require("./azureOpenAIService");
+const logger_1 = require("./logger");
 class CandidateReportService {
     /**
      * Calculate geographic weight based on reporter location vs candidate district
@@ -106,7 +107,7 @@ class CandidateReportService {
             };
         }
         catch (error) {
-            console.error('AI urgency assessment failed:', error);
+            logger_1.logger.error({ error, candidateName, officeTitle, reason }, 'AI urgency assessment failed');
             // Fallback assessment based on reason
             const highUrgencyReasons = [
                 'FRAUDULENT_CANDIDACY',
@@ -358,7 +359,11 @@ class CandidateReportService {
         // Send email notification to candidate
         if (candidate.user?.email) {
             // TODO: Implement email notification
-            console.log(`Document verification requested for ${candidate.user.email}`);
+            logger_1.logger.info({
+                candidateId,
+                email: candidate.user.email,
+                documentTypes
+            }, 'Document verification requested for candidate');
         }
         return documentRequests;
     }

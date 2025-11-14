@@ -1,5 +1,6 @@
 /**
  * Rate limiter specifically for The News API (100 requests/day limit)
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 export declare class NewsApiRateLimiter {
     private static readonly THE_NEWS_API_DAILY_LIMIT;

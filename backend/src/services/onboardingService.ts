@@ -1,8 +1,9 @@
 import { prisma } from '../lib/prisma';
-;
 import { metricsService } from './metricsService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 interface OnboardingStep {
   id: string;
@@ -287,12 +288,14 @@ export class OnboardingService {
       step: stepId || 'unknown'
     });
 
-    // Log detailed analytics
-    console.log(`[ONBOARDING] User ${userId}: ${event}`, {
+    // Log detailed analytics using Pino
+    logger.info({
+      component: 'onboarding',
+      userId,
+      event,
       stepId,
-      metadata,
-      timestamp: new Date().toISOString()
-    });
+      metadata
+    }, `Onboarding event: ${event}`);
   }
 
   async getOnboardingAnalytics(): Promise<{
