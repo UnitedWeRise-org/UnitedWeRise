@@ -8,6 +8,8 @@
  * - Cleans up expired IPRateLimit blocks
  *
  * Schedule: 0 3 * * * (Every day at 3:00 AM UTC)
+ *
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 declare class AnalyticsCleanupJob {
     private job;

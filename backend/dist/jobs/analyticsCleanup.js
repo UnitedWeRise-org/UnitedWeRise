@@ -9,6 +9,8 @@
  * - Cleans up expired IPRateLimit blocks
  *
  * Schedule: 0 3 * * * (Every day at 3:00 AM UTC)
+ *
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -17,6 +19,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyticsCleanupJob = void 0;
 const node_cron_1 = __importDefault(require("node-cron"));
 const visitorAnalytics_1 = __importDefault(require("../services/visitorAnalytics"));
+const logger_1 = require("../services/logger");
+// Create child logger for analytics cleanup job
+const jobLogger = logger_1.logger.child({ component: 'analytics-cleanup-job' });
 class AnalyticsCleanupJob {
     constructor() {
         this.job = null;
@@ -28,7 +33,7 @@ class AnalyticsCleanupJob {
     start() {
         // Schedule: "0 3 * * *" = Every day at 3:00 AM UTC
         this.job = node_cron_1.default.schedule('0 3 * * *', async () => {
-            console.log('[AnalyticsCleanup] Starting daily cleanup job at', new Date().toISOString());
+            jobLogger.info({ startTime: new Date().toISOString() }, 'Starting daily cleanup job');
             try {
                 // 1. Aggregate yesterday's data
                 await visitorAnalytics_1.default.aggregateDailyStats();
@@ -36,13 +41,13 @@ class AnalyticsCleanupJob {
                 await visitorAnalytics_1.default.cleanupOldData();
                 // 3. Rotate daily IP salt
                 await visitorAnalytics_1.default.rotateDailySalt();
-                console.log('[AnalyticsCleanup] Daily cleanup job completed successfully');
+                jobLogger.info('Daily cleanup job completed successfully');
             }
             catch (error) {
-                console.error('[AnalyticsCleanup] Error during daily cleanup:', error);
+                jobLogger.error({ error }, 'Error during daily cleanup');
             }
         });
-        console.log('[AnalyticsCleanup] Cron job started - runs daily at 3:00 AM UTC');
+        jobLogger.info({ schedule: '0 3 * * *' }, 'Cron job started - runs daily at 3:00 AM UTC');
     }
     /**
      * Stop the cron job (for graceful shutdown)
@@ -50,23 +55,23 @@ class AnalyticsCleanupJob {
     stop() {
         if (this.job) {
             this.job.stop();
-            console.log('[AnalyticsCleanup] Cron job stopped');
+            jobLogger.info('Cron job stopped');
         }
     }
     /**
      * Manually trigger the cleanup job (for testing/admin tools)
      */
     async runNow() {
-        console.log('[AnalyticsCleanup] Manually triggering cleanup job');
+        jobLogger.info('Manually triggering cleanup job');
         try {
             await visitorAnalytics_1.default.aggregateDailyStats();
             await visitorAnalytics_1.default.cleanupOldData();
             await visitorAnalytics_1.default.rotateDailySalt();
-            console.log('[AnalyticsCleanup] Manual cleanup completed successfully');
+            jobLogger.info('Manual cleanup completed successfully');
             return { success: true, message: 'Cleanup completed successfully' };
         }
         catch (error) {
-            console.error('[AnalyticsCleanup] Error during manual cleanup:', error);
+            jobLogger.error({ error }, 'Error during manual cleanup');
             return {
                 success: false,
                 message: 'Cleanup failed',

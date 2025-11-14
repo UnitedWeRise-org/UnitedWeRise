@@ -8,10 +8,16 @@
  * - Cleans up expired IPRateLimit blocks
  *
  * Schedule: 0 3 * * * (Every day at 3:00 AM UTC)
+ *
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 
 import cron, { ScheduledTask } from 'node-cron';
 import visitorAnalytics from '../services/visitorAnalytics';
+import { logger } from '../services/logger';
+
+// Create child logger for analytics cleanup job
+const jobLogger = logger.child({ component: 'analytics-cleanup-job' });
 
 class AnalyticsCleanupJob {
   private job: ScheduledTask | null = null;
@@ -23,7 +29,7 @@ class AnalyticsCleanupJob {
   start() {
     // Schedule: "0 3 * * *" = Every day at 3:00 AM UTC
     this.job = cron.schedule('0 3 * * *', async () => {
-      console.log('[AnalyticsCleanup] Starting daily cleanup job at', new Date().toISOString());
+      jobLogger.info({ startTime: new Date().toISOString() }, 'Starting daily cleanup job');
 
       try {
         // 1. Aggregate yesterday's data
@@ -35,13 +41,13 @@ class AnalyticsCleanupJob {
         // 3. Rotate daily IP salt
         await visitorAnalytics.rotateDailySalt();
 
-        console.log('[AnalyticsCleanup] Daily cleanup job completed successfully');
+        jobLogger.info('Daily cleanup job completed successfully');
       } catch (error) {
-        console.error('[AnalyticsCleanup] Error during daily cleanup:', error);
+        jobLogger.error({ error }, 'Error during daily cleanup');
       }
     });
 
-    console.log('[AnalyticsCleanup] Cron job started - runs daily at 3:00 AM UTC');
+    jobLogger.info({ schedule: '0 3 * * *' }, 'Cron job started - runs daily at 3:00 AM UTC');
   }
 
   /**
@@ -50,7 +56,7 @@ class AnalyticsCleanupJob {
   stop() {
     if (this.job) {
       this.job.stop();
-      console.log('[AnalyticsCleanup] Cron job stopped');
+      jobLogger.info('Cron job stopped');
     }
   }
 
@@ -58,17 +64,17 @@ class AnalyticsCleanupJob {
    * Manually trigger the cleanup job (for testing/admin tools)
    */
   async runNow() {
-    console.log('[AnalyticsCleanup] Manually triggering cleanup job');
+    jobLogger.info('Manually triggering cleanup job');
 
     try {
       await visitorAnalytics.aggregateDailyStats();
       await visitorAnalytics.cleanupOldData();
       await visitorAnalytics.rotateDailySalt();
 
-      console.log('[AnalyticsCleanup] Manual cleanup completed successfully');
+      jobLogger.info('Manual cleanup completed successfully');
       return { success: true, message: 'Cleanup completed successfully' };
     } catch (error) {
-      console.error('[AnalyticsCleanup] Error during manual cleanup:', error);
+      jobLogger.error({ error }, 'Error during manual cleanup');
       return {
         success: false,
         message: 'Cleanup failed',
