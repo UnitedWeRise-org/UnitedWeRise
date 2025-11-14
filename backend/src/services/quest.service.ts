@@ -1,6 +1,7 @@
 import { Quest, UserQuestProgress, UserQuestStreak, QuestType, QuestCategory, QuestTimeframe, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import badgeService from './badge.service';
+import { logger } from './logger';
 
 interface QuestRequirement {
   type: 'LOGIN' | 'READ_POSTS' | 'CIVIC_ACTION' | 'SOCIAL_INTERACTION' | 'COMPLETE_QUESTS';
@@ -425,7 +426,7 @@ class QuestService {
         try {
           await badgeService.awardBadge(userId, badgeId, undefined, `Earned from quest: ${quest.title}`);
         } catch (error) {
-          console.error(`Error awarding badge ${badgeId}:`, error);
+          logger.error({ error, badgeId, userId, questId }, 'Error awarding badge from quest');
         }
       }
     }

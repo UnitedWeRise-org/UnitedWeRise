@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { PaymentType, PaymentStatus, FeeType, DonationType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -469,13 +470,14 @@ export class StripeService {
         case 'payment_intent.payment_failed':
           await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
           break;
-        
+
+
         case 'invoice.payment_succeeded':
-          console.log('Payment Link invoice payment succeeded:', event.data.object);
+          logger.info({ invoiceId: (event.data.object as any).id }, 'Payment Link invoice payment succeeded');
           break;
-        
+
         case 'invoice.payment_failed':
-          console.log('Payment Link invoice payment failed:', event.data.object);
+          logger.warn({ invoiceId: (event.data.object as any).id }, 'Payment Link invoice payment failed');
           break;
         
         case 'customer.subscription.created':
@@ -486,9 +488,9 @@ export class StripeService {
         case 'customer.subscription.deleted':
           await this.handleSubscriptionCancelled(event.data.object as Stripe.Subscription);
           break;
-        
+
         default:
-          console.log(`Unhandled event type: ${event.type}`);
+          logger.debug({ eventType: event.type }, 'Unhandled webhook event type');
       }
 
       // Mark webhook as processed
@@ -603,7 +605,7 @@ export class StripeService {
    */
   private static async handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     // Handle recurring donation updates
-    console.log('Subscription updated:', subscription.id);
+    logger.info({ subscriptionId: subscription.id }, 'Subscription updated');
   }
 
   /**
@@ -611,7 +613,7 @@ export class StripeService {
    */
   private static async handleSubscriptionCancelled(subscription: Stripe.Subscription) {
     // Handle recurring donation cancellation
-    console.log('Subscription cancelled:', subscription.id);
+    logger.info({ subscriptionId: subscription.id }, 'Subscription cancelled');
   }
 
 
@@ -660,10 +662,10 @@ export class StripeService {
       // TODO: Send email with receipt and tax information
       if (payment.taxDeductible) {
         // Include 501(c)(3) information in receipt
-        console.log(`Tax-deductible receipt generated for payment ${paymentId}`);
+        logger.info({ paymentId, receiptNumber }, 'Tax-deductible receipt generated');
       } else {
         // Standard receipt for non-deductible fees
-        console.log(`Standard receipt generated for payment ${paymentId}`);
+        logger.info({ paymentId, receiptNumber }, 'Standard receipt generated');
       }
     }
   }

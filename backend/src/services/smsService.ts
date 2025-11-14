@@ -1,4 +1,5 @@
 import { Twilio } from 'twilio';
+import { logger } from './logger';
 
 class SMSService {
   private client: Twilio | null = null;
@@ -16,18 +17,18 @@ class SMSService {
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         );
-        console.log('SMS service initialized with Twilio');
+        logger.info('SMS service initialized with Twilio');
       } else {
-        console.warn('SMS service not configured. Please set Twilio credentials.');
+        logger.warn('SMS service not configured. Please set Twilio credentials.');
       }
     } catch (error) {
-      console.error('Failed to initialize SMS service:', error);
+      logger.error({ error }, 'Failed to initialize SMS service');
     }
   }
 
   async sendSMS(to: string, message: string): Promise<boolean> {
     if (!this.client) {
-      console.error('SMS service not configured');
+      logger.error('SMS service not configured');
       return false;
     }
 
@@ -41,10 +42,10 @@ class SMSService {
         to: formattedPhone
       });
 
-      console.log('SMS sent successfully:', result.sid);
+      logger.info({ sid: result.sid, to: formattedPhone }, 'SMS sent successfully');
       return true;
     } catch (error) {
-      console.error('Failed to send SMS:', error);
+      logger.error({ error, to }, 'Failed to send SMS');
       return false;
     }
   }
@@ -110,17 +111,17 @@ UnitedWeRise.com`;
   // Test SMS service
   async testService(): Promise<boolean> {
     if (!this.client) {
-      console.error('SMS service not configured');
+      logger.error('SMS service not configured');
       return false;
     }
 
     try {
       // Test by getting account info (doesn't send SMS)
       const account = await this.client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
-      console.log('SMS service connection successful, account:', account.friendlyName);
+      logger.info({ accountName: account.friendlyName }, 'SMS service connection successful');
       return true;
     } catch (error) {
-      console.error('SMS service connection failed:', error);
+      logger.error({ error }, 'SMS service connection failed');
       return false;
     }
   }
