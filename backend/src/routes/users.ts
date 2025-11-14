@@ -8,6 +8,7 @@ import { FollowService } from '../services/relationshipService';
 import { ActivityTracker } from '../services/activityTracker';
 import { ActivityType } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -154,7 +155,7 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
 
         res.json({ user });
     } catch (error) {
-        console.error('Get profile error:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Get profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -244,7 +245,7 @@ router.put('/profile', requireAuth, validateProfileUpdate, async (req: AuthReque
             user: updatedUser
         });
     } catch (error) {
-        console.error('Update profile error:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Update profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -458,7 +459,7 @@ router.get('/:userId', async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Get user profile error:', error);
+        logger.error({ err: error, userId: req.params.userId, viewerId: req.user?.id }, 'Get user profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -512,7 +513,7 @@ router.post('/follow/:userId', requireAuth, async (req: AuthRequest, res) => {
             res.status(400).json({ error: result.message });
         }
     } catch (error) {
-        console.error('Follow user error:', error);
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user!.id }, 'Follow user error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -566,7 +567,7 @@ router.delete('/follow/:userId', requireAuth, async (req: AuthRequest, res) => {
             res.status(400).json({ error: result.message });
         }
     } catch (error) {
-        console.error('Unfollow user error:', error);
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user!.id }, 'Unfollow user error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -726,7 +727,7 @@ router.get('/search', requireAuth, async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Search users error:', error);
+        logger.error({ err: error, searchQuery: req.query.q, currentUserId: req.user!.id }, 'Search users error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -958,7 +959,7 @@ router.get('/:userId/complete', async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Get complete user profile error:', error);
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user?.id }, 'Get complete user profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1043,7 +1044,7 @@ router.get('/by-username/:username', async (req, res) => {
 
         res.json({ user: userWithCandidate });
     } catch (error) {
-        console.error('Get user profile error:', error);
+        logger.error({ err: error, username: req.params.username }, 'Get user profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1123,7 +1124,7 @@ router.get('/:userId/followers', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get followers error:', error);
+        logger.error({ err: error, userId: req.params.userId }, 'Get followers error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1203,7 +1204,7 @@ router.get('/:userId/following', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get following error:', error);
+        logger.error({ err: error, userId: req.params.userId }, 'Get following error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1246,7 +1247,7 @@ router.get('/follow-status/:userId', requireAuth, async (req: AuthRequest, res) 
         const status = await FollowService.getFollowStatus(currentUserId, userId);
         res.json(status);
     } catch (error) {
-        console.error('Check follow status error:', error);
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user!.id }, 'Check follow status error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1272,7 +1273,7 @@ router.delete('/background-image', requireAuth, async (req: AuthRequest, res) =>
         });
 
     } catch (error) {
-        console.error('Background image removal error:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Background image removal error');
         res.status(500).json({ error: 'Failed to remove background image' });
     }
 });
@@ -1293,7 +1294,7 @@ router.get('/friend-status/:userId', requireAuth, async (req: AuthRequest, res) 
             isFollowing: followStatus.isFollowing
         });
     } catch (error) {
-        console.error('Friend status error:', error);
+        logger.error({ err: error, userId: req.params.userId, currentUserId: req.user!.id }, 'Friend status error');
         // Return safe default instead of 500 error
         res.json({
             isFriend: false,
@@ -1309,7 +1310,7 @@ router.post('/activity', requireAuth, async (req: AuthRequest, res) => {
     try {
         res.json({ success: true, message: 'Activity recorded' });
     } catch (error) {
-        console.error('Activity tracking error:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Activity tracking error');
         res.status(500).json({ error: 'Failed to track activity' });
     }
 });
@@ -1388,7 +1389,7 @@ router.get('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching profile privacy settings:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Error fetching profile privacy settings');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch profile privacy settings'
@@ -1512,7 +1513,7 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
             data: updateData
         });
 
-        console.log(`Updated profile privacy settings for user ${userId}:`, privacySettings);
+        logger.info({ userId, privacySettings }, 'Updated profile privacy settings');
 
         res.json({
             success: true,
@@ -1522,7 +1523,7 @@ router.put('/profile-privacy', requireAuth, async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating profile privacy settings:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Error updating profile privacy settings');
         res.status(500).json({
             success: false,
             error: 'Failed to update profile privacy settings'
@@ -1599,7 +1600,7 @@ router.get('/notification-preferences', requireAuth, async (req: AuthRequest, re
             data: preferences
         });
     } catch (error) {
-        console.error('Error fetching notification preferences:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Error fetching notification preferences');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch notification preferences'
@@ -1709,14 +1710,14 @@ router.put('/notification-preferences', requireAuth, async (req: AuthRequest, re
             }
         });
 
-        console.log(`Updated notification preferences for user ${userId}:`, updates);
+        logger.info({ userId, updates }, 'Updated notification preferences');
 
         res.json({
             success: true,
             data: updatedPreferences
         });
     } catch (error) {
-        console.error('Error updating notification preferences:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Error updating notification preferences');
         res.status(500).json({
             success: false,
             error: 'Failed to update notification preferences'
@@ -1821,7 +1822,7 @@ router.get('/activity/me', requireAuth, async (req: AuthRequest, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching user activity:', error);
+        logger.error({ err: error, userId: req.user!.id }, 'Error fetching user activity');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch activity log'
@@ -1929,7 +1930,7 @@ router.get('/activity/:userId', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching public user activity:', error);
+        logger.error({ err: error, userId: req.params.userId }, 'Error fetching public user activity');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch activity log'
