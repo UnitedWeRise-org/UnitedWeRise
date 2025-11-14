@@ -8,7 +8,26 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/api/*"]
+    "exclude": [
+      "/api/*",
+      "/images/*",
+      "/css/*",
+      "/js/*",
+      "/fonts/*",
+      "/assets/*",
+      "/*.js",
+      "/*.css",
+      "/*.png",
+      "/*.jpg",
+      "/*.jpeg",
+      "/*.gif",
+      "/*.svg",
+      "/*.ico",
+      "/*.woff",
+      "/*.woff2",
+      "/*.ttf",
+      "/*.eot"
+    ]
   },
   "mimeTypes": {
     ".js": "application/javascript",
