@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApiCacheService = void 0;
 const prisma_1 = require("../lib/prisma");
-;
+const logger_1 = require("./logger");
 class ApiCacheService {
     /**
      * Get cached data or return null if not found/expired
@@ -23,7 +23,7 @@ class ApiCacheService {
             // Check if expired
             if (new Date() > cached.expiresAt) {
                 // Clean up expired cache in background
-                this.delete(provider, cacheKey).catch(console.error);
+                this.delete(provider, cacheKey).catch((error) => logger_1.logger.error({ error, provider, cacheKey }, 'Failed to delete expired cache'));
                 return null;
             }
             // Increment hit count
@@ -34,7 +34,7 @@ class ApiCacheService {
             return cached.responseData;
         }
         catch (error) {
-            console.error('Cache get error:', error);
+            logger_1.logger.error({ error, provider, cacheKey }, 'Cache get error');
             return null;
         }
     }
@@ -66,7 +66,7 @@ class ApiCacheService {
             });
         }
         catch (error) {
-            console.error('Cache set error:', error);
+            logger_1.logger.error({ error, provider, cacheKey, ttlMinutes }, 'Cache set error');
             // Don't throw - caching should fail gracefully
         }
     }
@@ -103,7 +103,7 @@ class ApiCacheService {
             return result.count;
         }
         catch (error) {
-            console.error('Clear expired cache error:', error);
+            logger_1.logger.error({ error }, 'Clear expired cache error');
             return 0;
         }
     }
@@ -134,7 +134,7 @@ class ApiCacheService {
             };
         }
         catch (error) {
-            console.error('Cache stats error:', error);
+            logger_1.logger.error({ error, provider }, 'Cache stats error');
             return { total: 0, active: 0, expired: 0, totalHits: 0, avgHits: 0 };
         }
     }

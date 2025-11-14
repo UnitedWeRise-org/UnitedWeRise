@@ -1,9 +1,16 @@
 /**
  * Admin-only debugging utilities for secure logging
- * Following CLAUDE.md security standards - no console.log for debugging
+ * Following CLAUDE.md security standards - using Pino structured logging
+ *
+ * Migration: Phase 3-4 Pino structured logging
+ * Date: 2025-11-13
  */
 
 import { getEnvironment } from './environment.js';
+import { logger } from '../services/logger.js';
+
+// Create admin child logger for all admin debug operations
+const adminLogger = logger.child({ component: 'admin-debug' });
 
 /**
  * Admin-only debug logging function
@@ -14,19 +21,11 @@ import { getEnvironment } from './environment.js';
 export async function adminDebugLog(service, message, data = {}) {
   // Only log in development/staging environments
   if (getEnvironment() !== 'production') {
-    const timestamp = new Date().toISOString();
-    const logEntry = {
-      timestamp,
-      level: 'DEBUG',
+    adminLogger.debug({
       service,
-      message,
       data: sanitizeLogData(data),
       environment: getEnvironment()
-    };
-
-    // Use structured logging instead of console.log
-    // This follows CLAUDE.md requirement for proper logging framework
-    console.info(`[ADMIN-DEBUG] ${JSON.stringify(logEntry)}`);
+    }, `[ADMIN-DEBUG] ${message}`);
   }
 }
 
@@ -37,22 +36,16 @@ export async function adminDebugLog(service, message, data = {}) {
  * @param {Error|object} error - Error object or data
  */
 export async function adminDebugError(service, message, error = {}) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level: 'ERROR',
+  // Always log errors, even in production (but sanitized)
+  adminLogger.error({
     service,
-    message,
     error: error instanceof Error ? {
       name: error.name,
       message: error.message,
       stack: getEnvironment() !== 'production' ? error.stack : undefined
     } : sanitizeLogData(error),
     environment: getEnvironment()
-  };
-
-  // Always log errors, even in production (but sanitized)
-  console.error(`[ADMIN-ERROR] ${JSON.stringify(logEntry)}`);
+  }, `[ADMIN-ERROR] ${message}`);
 }
 
 /**
@@ -62,17 +55,11 @@ export async function adminDebugError(service, message, error = {}) {
  * @param {object} data - Optional data to log
  */
 export async function adminDebugWarn(service, message, data = {}) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level: 'WARN',
+  adminLogger.warn({
     service,
-    message,
     data: sanitizeLogData(data),
     environment: getEnvironment()
-  };
-
-  console.warn(`[ADMIN-WARN] ${JSON.stringify(logEntry)}`);
+  }, `[ADMIN-WARN] ${message}`);
 }
 
 /**
@@ -83,12 +70,12 @@ export async function adminDebugWarn(service, message, data = {}) {
  */
 export async function adminDebugTable(service, message, tableData) {
   if (getEnvironment() !== 'production') {
-    await adminDebugLog(service, message, { tableData: sanitizeLogData(tableData) });
-
-    // In development, also show console.table for better readability
-    if (Array.isArray(tableData) || typeof tableData === 'object') {
-      console.table(sanitizeLogData(tableData));
-    }
+    // Log table data as structured JSON (Azure Log Analytics can query this)
+    adminLogger.info({
+      service,
+      tableData: sanitizeLogData(tableData),
+      environment: getEnvironment()
+    }, `[ADMIN-TABLE] ${message}`);
   }
 }
 

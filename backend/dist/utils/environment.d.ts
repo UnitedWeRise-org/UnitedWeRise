@@ -51,7 +51,8 @@ export declare function enableApiDocs(): boolean;
  */
 export declare function getDatabaseLogLevel(): ('query' | 'info' | 'warn' | 'error')[];
 /**
- * Log environment information to console
+ * Log environment information using Pino structured logging
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 export declare function logEnvironmentInfo(): void;
 declare const _default: {

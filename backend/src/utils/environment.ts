@@ -90,15 +90,23 @@ export function getDatabaseLogLevel(): ('query' | 'info' | 'warn' | 'error')[] {
 }
 
 /**
- * Log environment information to console
+ * Log environment information using Pino structured logging
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 export function logEnvironmentInfo(): void {
+    // Import logger dynamically to avoid circular dependency
+    // (environment.ts is imported by services/logger.ts)
+    const { logger } = require('../services/logger');
+
     const env = getEnvironment();
-    console.log(`🌍 BACKEND ENVIRONMENT: ${env.toUpperCase()}`);
-    console.log(`📊 NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
-    console.log(`🔒 Captcha Required: ${requiresCaptcha()}`);
-    console.log(`🍪 Secure Cookies: ${requireSecureCookies()}`);
-    console.log(`📝 Request Logging: ${enableRequestLogging()}`);
+
+    logger.info({
+        environment: env,
+        nodeEnv: process.env.NODE_ENV || 'undefined',
+        captchaRequired: requiresCaptcha(),
+        secureCookies: requireSecureCookies(),
+        requestLogging: enableRequestLogging()
+    }, `🌍 Backend starting in ${env.toUpperCase()} mode`);
 }
 
 export default {

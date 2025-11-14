@@ -36,17 +36,22 @@ if (!(0, environment_1.isProduction)()) {
 }
 // Graceful shutdown handling
 async function cleanup() {
+    // Import logger dynamically to avoid circular dependency
+    const { logger } = require('../services/logger');
     await exports.prisma.$disconnect();
-    console.log('Prisma client disconnected');
+    logger.info('Prisma client disconnected');
 }
 // Register cleanup handlers
 process.on('beforeExit', cleanup);
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
-// Log connection info on startup
-console.log('🔗 Prisma singleton initialized with connection pooling:', {
+// Log connection info on startup using Pino structured logging
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
+// Import logger dynamically to avoid circular dependency
+const { logger } = require('../services/logger');
+logger.info({
     connectionLimit: 10,
     poolTimeout: 20,
     environment: (0, environment_1.getEnvironment)()
-});
+}, '🔗 Prisma singleton initialized with connection pooling');
 //# sourceMappingURL=prisma.js.map

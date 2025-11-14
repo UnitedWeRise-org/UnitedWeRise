@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma';
-;
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 export interface CacheOptions {
   ttlMinutes?: number;
@@ -30,7 +31,9 @@ export class ApiCacheService {
       // Check if expired
       if (new Date() > cached.expiresAt) {
         // Clean up expired cache in background
-        this.delete(provider, cacheKey).catch(console.error);
+        this.delete(provider, cacheKey).catch((error) =>
+          logger.error({ error, provider, cacheKey }, 'Failed to delete expired cache')
+        );
         return null;
       }
 
@@ -42,7 +45,7 @@ export class ApiCacheService {
 
       return cached.responseData;
     } catch (error) {
-      console.error('Cache get error:', error);
+      logger.error({ error, provider, cacheKey }, 'Cache get error');
       return null;
     }
   }
@@ -80,7 +83,7 @@ export class ApiCacheService {
         }
       });
     } catch (error) {
-      console.error('Cache set error:', error);
+      logger.error({ error, provider, cacheKey, ttlMinutes }, 'Cache set error');
       // Don't throw - caching should fail gracefully
     }
   }
@@ -117,7 +120,7 @@ export class ApiCacheService {
       });
       return result.count;
     } catch (error) {
-      console.error('Clear expired cache error:', error);
+      logger.error({ error }, 'Clear expired cache error');
       return 0;
     }
   }
@@ -151,7 +154,7 @@ export class ApiCacheService {
         avgHits: hitStats._avg.hitCount || 0
       };
     } catch (error) {
-      console.error('Cache stats error:', error);
+      logger.error({ error, provider }, 'Cache stats error');
       return { total: 0, active: 0, expired: 0, totalHits: 0, avgHits: 0 };
     }
   }
