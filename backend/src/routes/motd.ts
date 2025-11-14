@@ -2,6 +2,7 @@ import express from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import * as speakeasy from 'speakeasy';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -110,10 +111,10 @@ router.get('/current', async (req, res) => {
         } catch (viewError: any) {
             if (viewError.code === 'P2002') {
                 // View already recorded for this token - not an error
-                console.log('Duplicate view attempt ignored for token:', dismissalToken);
+                logger.debug({ dismissalToken }, 'Duplicate view attempt ignored');
             } else {
                 // Log other errors but don't fail the request
-                console.error('View recording error:', viewError);
+                logger.error({ error: viewError }, 'View recording error');
             }
         }
 
@@ -125,7 +126,7 @@ router.get('/current', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get current MOTD error:', error);
+        logger.error({ error }, 'Get current MOTD error');
         res.status(500).json({ success: false, error: 'Failed to get current MOTD' });
     }
 });
@@ -203,7 +204,7 @@ router.post('/dismiss/:id', async (req, res) => {
             // Already dismissed
             return res.json({ success: true, data: { dismissed: true } });
         }
-        console.error('Dismiss MOTD error:', error);
+        logger.error({ error, motdId: req.params.id }, 'Dismiss MOTD error');
         res.status(500).json({ success: false, error: 'Failed to dismiss MOTD' });
     }
 });
@@ -296,7 +297,7 @@ router.get('/admin/list', requireAuth, requireAdmin, async (req: AuthRequest, re
 
         res.json({ success: true, data: { motds } });
     } catch (error) {
-        console.error('Get MOTDs admin error:', error);
+        logger.error({ error }, 'Get MOTDs admin error');
         res.status(500).json({ success: false, error: 'Failed to get MOTDs' });
     }
 });
@@ -460,7 +461,7 @@ router.post('/admin/create', requireAuth, requireAdmin, async (req: AuthRequest,
 
         res.json({ success: true, data: { motd } });
     } catch (error) {
-        console.error('Create MOTD error:', error);
+        logger.error({ error, userId: req.user?.id }, 'Create MOTD error');
         res.status(500).json({ success: false, error: 'Failed to create MOTD' });
     }
 });
@@ -622,7 +623,7 @@ router.put('/admin/update/:id', requireAuth, requireAdmin, async (req: AuthReque
 
         res.json({ success: true, data: { motd: updatedMOTD } });
     } catch (error) {
-        console.error('Update MOTD error:', error);
+        logger.error({ error, motdId: req.params.id }, 'Update MOTD error');
         res.status(500).json({ success: false, error: 'Failed to update MOTD' });
     }
 });
@@ -709,7 +710,7 @@ router.post('/admin/toggle/:id', requireAuth, requireAdmin, async (req: AuthRequ
 
         res.json({ success: true, data: { motd: updatedMOTD, activated: newActiveState } });
     } catch (error) {
-        console.error('Toggle MOTD error:', error);
+        logger.error({ error, motdId: req.params.id }, 'Toggle MOTD error');
         res.status(500).json({ success: false, error: 'Failed to toggle MOTD' });
     }
 });
@@ -865,7 +866,7 @@ router.delete('/admin/delete/:id', requireAuth, requireAdmin, async (req: AuthRe
             }
         });
     } catch (error) {
-        console.error('Delete MOTD error:', error);
+        logger.error({ error, motdId: req.params.id }, 'Delete MOTD error');
         res.status(500).json({ success: false, error: 'Failed to delete MOTD' });
     }
 });
@@ -964,7 +965,7 @@ router.get('/admin/analytics/:id', requireAuth, requireAdmin, async (req: AuthRe
 
         res.json({ success: true, data: { analytics, logs } });
     } catch (error) {
-        console.error('Get MOTD analytics error:', error);
+        logger.error({ error, motdId: req.params.id }, 'Get MOTD analytics error');
         res.status(500).json({ success: false, error: 'Failed to get MOTD analytics' });
     }
 });

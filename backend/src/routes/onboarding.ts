@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { onboardingService } from '../services/onboardingService';
 import { RepresentativeService } from '../services/representativeService';
 import { metricsService } from '../services/metricsService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -50,7 +51,7 @@ router.get('/steps', requireAuth, async (req: AuthRequest, res) => {
     const steps = await onboardingService.getOnboardingSteps(userId);
     res.json({ steps });
   } catch (error) {
-    console.error('Get onboarding steps error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get onboarding steps error');
     res.status(500).json({ error: 'Failed to get onboarding steps' });
   }
 });
@@ -74,7 +75,7 @@ router.get('/progress', requireAuth, async (req: AuthRequest, res) => {
     
     res.json(progress);
   } catch (error) {
-    console.error('Get onboarding progress error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get onboarding progress error');
     res.status(500).json({ error: 'Failed to get onboarding progress' });
   }
 });
@@ -127,9 +128,9 @@ router.post('/complete-step', requireAuth, async (req: AuthRequest, res) => {
           state
         );
 
-        console.log(`Representatives fetched and cached for ${stepData.zipCode}, ${state}`);
+        logger.info({ zipCode: stepData.zipCode, state }, 'Representatives fetched and cached');
       } catch (error) {
-        console.error('Failed to fetch representatives:', error);
+        logger.error({ error }, 'Failed to fetch representatives');
         // Don't fail the onboarding step if rep fetching fails
       }
     }
@@ -140,7 +141,7 @@ router.post('/complete-step', requireAuth, async (req: AuthRequest, res) => {
       progress: await onboardingService.getOnboardingProgress(userId)
     });
   } catch (error) {
-    console.error('Complete onboarding step error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Complete onboarding step error');
     res.status(500).json({ error: 'Failed to complete step' });
   }
 });
@@ -184,7 +185,7 @@ router.post('/skip-step', requireAuth, async (req: AuthRequest, res) => {
       progress: await onboardingService.getOnboardingProgress(userId)
     });
   } catch (error) {
-    console.error('Skip onboarding step error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Skip onboarding step error');
     if (error instanceof Error && error.message.includes('Cannot skip required step')) {
       return res.status(400).json({ error: error.message });
     }
@@ -207,7 +208,7 @@ router.get('/interests', async (req, res) => {
     const interests = onboardingService.getPopularIssues();
     res.json({ interests });
   } catch (error) {
-    console.error('Get interests error:', error);
+    logger.error({ error }, 'Get interests error');
     res.status(500).json({ error: 'Failed to get interests' });
   }
 });
@@ -291,7 +292,7 @@ router.post('/location/validate', async (req, res) => {
       location: locationInfo
     });
   } catch (error) {
-    console.error('Location validation error:', error);
+    logger.error({ error }, 'Location validation error');
     res.status(400).json({
       error: 'Invalid location. Please check your ZIP code or address and try again.'
     });
@@ -322,7 +323,7 @@ router.post('/welcome', requireAuth, async (req: AuthRequest, res) => {
       profile
     });
   } catch (error) {
-    console.error('Welcome step error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Welcome step error');
     res.status(500).json({ error: 'Failed to complete welcome step' });
   }
 });
@@ -350,7 +351,7 @@ router.get('/analytics', requireAuth, async (req: AuthRequest, res) => {
     
     res.json(analytics);
   } catch (error) {
-    console.error('Get onboarding analytics error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get onboarding analytics error');
     res.status(500).json({ error: 'Failed to get analytics' });
   }
 });
@@ -384,7 +385,7 @@ router.get('/search-preview', async (req, res) => {
       message: filteredQuery !== query ? 'Showing results for related topics' : undefined
     });
   } catch (error) {
-    console.error('Search preview error:', error);
+    logger.error({ error }, 'Search preview error');
     res.status(500).json({ error: 'Search failed' });
   }
 });

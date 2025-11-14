@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { ElectionService } from '../services/electionService';
 import { EnhancedElectionService } from '../services/enhancedElectionService';
 import { metricsService } from '../services/metricsService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -68,7 +69,7 @@ router.get('/', async (req, res) => {
       });
     }
 
-    console.log(`🗳️  Election request: ${state.toUpperCase()}${zipCode ? ` (${zipCode})` : ''}`);
+    logger.info({ state, zipCode }, 'Election request');
     
     // Use enhanced multi-tier election service
     const electionData = await EnhancedElectionService.getElectionData(
@@ -95,7 +96,7 @@ router.get('/', async (req, res) => {
       source: electionData.source
     });
     
-    console.log(`✅ Returning ${filteredElections.length} elections (${electionData.source})`);
+    logger.info({ count: filteredElections.length, source: electionData.source }, 'Returning elections');
     
     res.json({
       elections: filteredElections,
@@ -105,7 +106,7 @@ router.get('/', async (req, res) => {
       message: electionData.message
     });
   } catch (error) {
-    console.error('Election search error:', error);
+    logger.error({ error }, 'Election search error');
     res.status(500).json({ error: 'Failed to retrieve elections' });
   }
 });
@@ -147,7 +148,7 @@ router.get('/:id', async (req, res) => {
     
     res.json(election);
   } catch (error) {
-    console.error('Election retrieval error:', error);
+    logger.error({ error, electionId: req.params.id }, 'Election retrieval error');
     res.status(500).json({ error: 'Failed to retrieve election details' });
   }
 });
@@ -224,7 +225,7 @@ router.get('/:id/candidates', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Candidate retrieval error:', error);
+    logger.error({ error, electionId: req.params.id }, 'Candidate retrieval error');
     res.status(500).json({ error: 'Failed to retrieve candidates' });
   }
 });
@@ -336,7 +337,7 @@ router.post('/:id/register-candidate', requireAuth, async (req: AuthRequest, res
       candidate
     });
   } catch (error: any) {
-    console.error('Candidate registration error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Candidate registration error');
     
     if (error.message.includes('already registered') || 
         error.message.includes('not found') ||
@@ -425,7 +426,7 @@ router.post('/candidates/compare', async (req, res) => {
       count: candidates.length
     });
   } catch (error) {
-    console.error('Candidate comparison error:', error);
+    logger.error({ error }, 'Candidate comparison error');
     res.status(500).json({ error: 'Failed to compare candidates' });
   }
 });
@@ -471,7 +472,7 @@ router.post('/cache/refresh', requireAuth, async (req: AuthRequest, res) => {
     
     const { state } = req.body;
     
-    console.log(`🗑️  Admin ${user.username} refreshing election cache${state ? ` for ${state}` : ''}`);
+    logger.info({ admin: user.username, state }, 'Admin refreshing election cache');
     
     await EnhancedElectionService.refreshCache(state);
     
@@ -481,7 +482,7 @@ router.post('/cache/refresh', requireAuth, async (req: AuthRequest, res) => {
     });
     
   } catch (error) {
-    console.error('Cache refresh error:', error);
+    logger.error({ error }, 'Cache refresh error');
     res.status(500).json({ error: 'Failed to refresh cache' });
   }
 });

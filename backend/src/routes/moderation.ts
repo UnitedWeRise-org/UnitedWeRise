@@ -8,6 +8,7 @@ import { validateReport, validateModerationAction } from '../middleware/validati
 import { apiLimiter } from '../middleware/rateLimiting';
 import { metricsService } from '../services/metricsService';
 import { CandidateReportService } from '../services/candidateReportService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -171,7 +172,7 @@ router.post('/reports', requireAuth, apiLimiter, validateReport, async (req: Aut
       estimatedReviewTime: '24-48 hours'
     });
   } catch (error) {
-    console.error('Submit report error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Submit report error');
     res.status(500).json({ error: 'Failed to submit report' });
   }
 });
@@ -267,7 +268,7 @@ router.get('/reports/my', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user reports error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get user reports error');
     res.status(500).json({ error: 'Failed to retrieve reports' });
   }
 });
@@ -425,7 +426,7 @@ router.get('/reports', requireAuth, requireModerator, async (req: AuthRequest, r
               break;
           }
         } catch (error) {
-          console.error(`Failed to fetch ${report.targetType} ${report.targetId}:`, error);
+          logger.error({ error, targetType: report.targetType, targetId: report.targetId }, 'Failed to fetch moderation target');
         }
 
         return {
@@ -445,7 +446,7 @@ router.get('/reports', requireAuth, requireModerator, async (req: AuthRequest, r
       }
     });
   } catch (error) {
-    console.error('Get reports queue error:', error);
+    logger.error({ error }, 'Get reports queue error');
     res.status(500).json({ error: 'Failed to retrieve reports' });
   }
 });
@@ -573,7 +574,7 @@ router.post('/reports/:reportId/action', requireAuth, requireModerator, validate
         await emailService.sendEmail(emailTemplate);
       }
     } catch (error) {
-      console.error('Failed to send report update email:', error);
+      logger.error({ error, reportId }, 'Failed to send report update email');
       // Don't fail the request if email fails
     }
 
@@ -583,7 +584,7 @@ router.post('/reports/:reportId/action', requireAuth, requireModerator, validate
       reportId
     });
   } catch (error) {
-    console.error('Report action error:', error);
+    logger.error({ error, reportId: req.params.reportId }, 'Report action error');
     res.status(500).json({ error: 'Failed to process report action' });
   }
 });
@@ -749,7 +750,7 @@ router.get('/stats', requireAuth, requireModerator, async (req: AuthRequest, res
       averageResolutionTime: '2.3 hours' // Would calculate from actual data
     });
   } catch (error) {
-    console.error('Get moderation stats error:', error);
+    logger.error({ error }, 'Get moderation stats error');
     res.status(500).json({ error: 'Failed to retrieve statistics' });
   }
 });
@@ -818,7 +819,7 @@ router.post('/users/:userId/promote', requireStagingAuth, requireAdmin, async (r
       userId
     });
   } catch (error) {
-    console.error('Promote user error:', error);
+    logger.error({ error, targetUserId: req.params.userId }, 'Promote user error');
     res.status(500).json({ error: 'Failed to promote user' });
   }
 });
@@ -873,7 +874,7 @@ router.get('/health', requireAuth, requireModerator, async (req: AuthRequest, re
 
     res.json(health);
   } catch (error) {
-    console.error('Moderation health check error:', error);
+    logger.error({ error }, 'Moderation health check error');
     res.status(500).json({ 
       status: 'unhealthy',
       error: 'System check failed'

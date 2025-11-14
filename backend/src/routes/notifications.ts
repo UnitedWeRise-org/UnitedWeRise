@@ -13,7 +13,7 @@ const getWebSocketService = async () => {
       const serverModule = await import('../server');
       webSocketService = serverModule.webSocketService;
     } catch (error) {
-      console.warn('WebSocket service not available:', error);
+      logger.warn({ error }, 'WebSocket service not available');
     }
   }
   return webSocketService;

@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { LegislativeDataService } from '../services/legislativeDataService';
 import { NewsAggregationService } from '../services/newsAggregationService';
 import { NewsApiRateLimiter } from '../services/newsApiRateLimiter';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -34,7 +35,7 @@ router.get('/voting-records/:bioguideId', async (req, res) => {
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching voting records:', error);
+    logger.error({ error, bioguideId: req.params.bioguideId }, 'Error fetching voting records');
     res.status(500).json({ error: 'Failed to fetch voting records' });
   }
 });
@@ -54,7 +55,7 @@ router.get('/news/:officialName', async (req, res) => {
     
     res.json(newsData);
   } catch (error) {
-    console.error('Error fetching news coverage:', error);
+    logger.error({ error, officialName: req.params.officialName }, 'Error fetching news coverage');
     res.status(500).json({ error: 'Failed to fetch news coverage' });
   }
 });
@@ -79,7 +80,7 @@ router.post('/sync/federal', requireAuth, async (req: AuthRequest, res) => {
       status: 'success'
     });
   } catch (error) {
-    console.error('Error syncing federal legislators:', error);
+    logger.error({ error }, 'Error syncing federal legislators');
     res.status(500).json({ error: 'Failed to sync federal legislators' });
   }
 });
@@ -106,7 +107,7 @@ router.post('/sync/state/:stateCode', requireAuth, async (req: AuthRequest, res)
       status: 'success'
     });
   } catch (error) {
-    console.error('Error syncing state legislators:', error);
+    logger.error({ error, stateCode: req.params.stateCode }, 'Error syncing state legislators');
     res.status(500).json({ error: 'Failed to sync state legislators' });
   }
 });
@@ -126,7 +127,7 @@ router.get('/news/trending', async (req, res) => {
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching trending news:', error);
+    logger.error({ error }, 'Error fetching trending news');
     res.status(500).json({ error: 'Failed to fetch trending news' });
   }
 });
@@ -155,7 +156,7 @@ router.get('/news/stored', async (req, res) => {
       offset: parseInt(offset.toString())
     });
   } catch (error) {
-    console.error('Error fetching stored articles:', error);
+    logger.error({ error }, 'Error fetching stored articles');
     res.status(500).json({ error: 'Failed to fetch stored articles' });
   }
 });
@@ -187,7 +188,7 @@ router.post('/voting-statistics', async (req, res) => {
       count: statistics.length
     });
   } catch (error) {
-    console.error('Error fetching voting statistics:', error);
+    logger.error({ error }, 'Error fetching voting statistics');
     res.status(500).json({ error: 'Failed to fetch voting statistics' });
   }
 });
@@ -236,7 +237,7 @@ router.get('/bills/:bioguideId', async (req, res) => {
       count: bills.length
     });
   } catch (error) {
-    console.error('Error fetching bills:', error);
+    logger.error({ error, bioguideId: req.params.bioguideId }, 'Error fetching bills');
     res.status(500).json({ error: 'Failed to fetch bills' });
   }
 });
@@ -265,7 +266,7 @@ router.get('/health', async (req, res) => {
       ]
     });
   } catch (error) {
-    console.error('Legislative health check failed:', error);
+    logger.error({ error }, 'Legislative health check failed');
     res.status(500).json({ 
       status: 'unhealthy',
       error: error.message,
@@ -292,7 +293,7 @@ router.get('/news-api-status', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('News API status check failed:', error);
+    logger.error({ error }, 'News API status check failed');
     res.status(500).json({ 
       error: 'Failed to get news API status',
       timestamp: new Date().toISOString()
