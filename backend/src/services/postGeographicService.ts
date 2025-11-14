@@ -1,5 +1,8 @@
 import { prisma } from '../lib/prisma';
 import { generatePrivacyDisplacedCoordinates, coordinatesToH3, formatFullAddress } from '../utils/geospatial';
+import { logger } from './logger';
+
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 export interface PostGeographicData {
   h3Index?: string;
@@ -66,7 +69,7 @@ export class PostGeographicService {
       };
 
     } catch (error) {
-      console.error('Error generating post geographic data:', error);
+      logger.error({ error, userId }, 'Error generating post geographic data');
       return null; // Graceful fallback on any error
     }
   }
@@ -122,7 +125,7 @@ export class PostGeographicService {
       }));
 
     } catch (error) {
-      console.error('Error fetching posts for map:', error);
+      logger.error({ error, scope, count }, 'Error fetching posts for map');
       return []; // Return empty array for graceful fallback to dummy data
     }
   }
@@ -136,7 +139,7 @@ export class PostGeographicService {
       const { gridRingUnsafe } = await import('h3-js');
       return gridRingUnsafe(h3Index, ringSize);
     } catch (error) {
-      console.error('Error getting H3 neighbors:', error);
+      logger.error({ error, h3Index, ringSize }, 'Error getting H3 neighbors');
       return [];
     }
   }

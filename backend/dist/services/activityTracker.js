@@ -2,6 +2,7 @@
 /**
  * Activity Tracker Service
  * Automatically tracks user activities for accountability and activity logs
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -11,6 +12,7 @@ exports.ActivityTracker = void 0;
 const prisma_1 = require("../lib/prisma");
 const client_1 = require("@prisma/client");
 const quest_service_1 = __importDefault(require("./quest.service"));
+const logger_1 = require("./logger");
 class ActivityTracker {
     /**
      * Track a user activity
@@ -26,18 +28,18 @@ class ActivityTracker {
                     metadata: metadata,
                 },
             });
-            console.log(`📊 Activity tracked: ${activityType} by user ${userId}`);
+            logger_1.logger.debug({ userId, activityType, targetType, targetId }, 'Activity tracked');
             // Update quest progress based on activity type
             try {
                 await quest_service_1.default.updateQuestProgress(userId, activityType, metadata);
             }
             catch (questError) {
-                console.error('Failed to update quest progress:', questError);
+                logger_1.logger.error({ questError, userId, activityType }, 'Failed to update quest progress');
                 // Don't throw - quest tracking shouldn't break main functionality
             }
         }
         catch (error) {
-            console.error('Failed to track activity:', error);
+            logger_1.logger.error({ error, userId, activityType, targetType, targetId }, 'Failed to track activity');
             // Don't throw - activity tracking shouldn't break main functionality
         }
     }

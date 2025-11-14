@@ -5,11 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OAuthService = void 0;
 const prisma_1 = require("../lib/prisma");
-;
 const auth_1 = require("../utils/auth");
 const emailNormalization_1 = require("../utils/emailNormalization");
 const sessionManager_1 = require("./sessionManager");
 const crypto_1 = __importDefault(require("crypto"));
+const logger_1 = require("./logger");
 class OAuthService {
     /**
      * Handle OAuth login/registration flow
@@ -178,7 +178,7 @@ class OAuthService {
             };
         }
         catch (error) {
-            console.error('OAuth login error:', error);
+            logger_1.logger.error({ error, provider: profile.provider, email: profile.email }, 'OAuth login error');
             throw new Error('OAuth authentication failed');
         }
     }
@@ -241,7 +241,7 @@ class OAuthService {
             }
         }
         catch (error) {
-            console.error('Link OAuth provider error:', error);
+            logger_1.logger.error({ error, userId, provider: profile.provider }, 'Link OAuth provider error');
             throw error;
         }
     }
@@ -270,7 +270,7 @@ class OAuthService {
             });
         }
         catch (error) {
-            console.error('Unlink OAuth provider error:', error);
+            logger_1.logger.error({ error, userId, provider }, 'Unlink OAuth provider error');
             throw error;
         }
     }
@@ -292,7 +292,7 @@ class OAuthService {
             return providers;
         }
         catch (error) {
-            console.error('Get OAuth providers error:', error);
+            logger_1.logger.error({ error, userId }, 'Get OAuth providers error');
             throw error;
         }
     }

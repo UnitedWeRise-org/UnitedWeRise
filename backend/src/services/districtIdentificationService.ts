@@ -1,10 +1,11 @@
 import { prisma } from '../lib/prisma';
-;
 import { ApiCacheService } from './apiCache';
 import { GoogleCivicService } from './googleCivicService';
 import { addressToH3, geocodeAddress } from '../utils/geospatial';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 export interface AddressComponents {
   streetAddress: string;
@@ -183,7 +184,7 @@ export class DistrictIdentificationService {
           return this.transformGoogleCivicResponse(civicData, address);
         }
       } catch (error) {
-        console.error('Google Civic API failed for district lookup:', error);
+        logger.error({ error, fullAddress }, 'Google Civic API failed for district lookup');
       }
     }
 
@@ -195,7 +196,7 @@ export class DistrictIdentificationService {
           return geocodioData;
         }
       } catch (error) {
-        console.error('Geocodio API failed for district lookup:', error);
+        logger.error({ error, fullAddress }, 'Geocodio API failed for district lookup');
       }
     }
 
@@ -401,7 +402,7 @@ export class DistrictIdentificationService {
         });
       }
     } catch (error) {
-      console.error('Error storing districts in database:', error);
+      logger.error({ error, districtsCount: identification.districts.length }, 'Error storing districts in database');
     }
   }
 

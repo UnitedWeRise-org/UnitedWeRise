@@ -1,6 +1,7 @@
 /**
  * Activity Tracker Service
  * Automatically tracks user activities for accountability and activity logs
+ * Migration: Phase 3-4 Pino structured logging (2025-11-13)
  */
 import { ActivityType } from '@prisma/client';
 interface ActivityMetadata {

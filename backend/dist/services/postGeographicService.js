@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostGeographicService = void 0;
 const prisma_1 = require("../lib/prisma");
 const geospatial_1 = require("../utils/geospatial");
+const logger_1 = require("./logger");
 class PostGeographicService {
     /**
      * Generate geographic data for a post based on user's address
@@ -86,7 +87,7 @@ class PostGeographicService {
             };
         }
         catch (error) {
-            console.error('Error generating post geographic data:', error);
+            logger_1.logger.error({ error, userId }, 'Error generating post geographic data');
             return null; // Graceful fallback on any error
         }
     }
@@ -139,7 +140,7 @@ class PostGeographicService {
             }));
         }
         catch (error) {
-            console.error('Error fetching posts for map:', error);
+            logger_1.logger.error({ error, scope, count }, 'Error fetching posts for map');
             return []; // Return empty array for graceful fallback to dummy data
         }
     }
@@ -153,7 +154,7 @@ class PostGeographicService {
             return gridRingUnsafe(h3Index, ringSize);
         }
         catch (error) {
-            console.error('Error getting H3 neighbors:', error);
+            logger_1.logger.error({ error, h3Index, ringSize }, 'Error getting H3 neighbors');
             return [];
         }
     }

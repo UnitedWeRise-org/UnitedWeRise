@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DistrictIdentificationService = void 0;
 const prisma_1 = require("../lib/prisma");
-;
 const apiCache_1 = require("./apiCache");
 const googleCivicService_1 = require("./googleCivicService");
 const geospatial_1 = require("../utils/geospatial");
+const logger_1 = require("./logger");
 class DistrictIdentificationService {
     /**
      * Identify all electoral districts for a given address
@@ -123,7 +123,7 @@ class DistrictIdentificationService {
                 }
             }
             catch (error) {
-                console.error('Google Civic API failed for district lookup:', error);
+                logger_1.logger.error({ error, fullAddress }, 'Google Civic API failed for district lookup');
             }
         }
         // Try Geocodio API
@@ -135,7 +135,7 @@ class DistrictIdentificationService {
                 }
             }
             catch (error) {
-                console.error('Geocodio API failed for district lookup:', error);
+                logger_1.logger.error({ error, fullAddress }, 'Geocodio API failed for district lookup');
             }
         }
         return null;
@@ -319,7 +319,7 @@ class DistrictIdentificationService {
             }
         }
         catch (error) {
-            console.error('Error storing districts in database:', error);
+            logger_1.logger.error({ error, districtsCount: identification.districts.length }, 'Error storing districts in database');
         }
     }
     /**

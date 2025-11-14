@@ -1,11 +1,12 @@
 import { prisma } from '../lib/prisma';
-;
 import { generateToken, hashPassword, generateRefreshToken } from '../utils/auth';
 import { normalizeEmail } from '../utils/emailNormalization';
 import { sessionManager } from './sessionManager';
 import crypto from 'crypto';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
+// Migration: Phase 3-4 Pino structured logging (2025-11-13)
 
 export interface OAuthProfile {
   id: string;
@@ -230,7 +231,7 @@ export class OAuthService {
       };
 
     } catch (error) {
-      console.error('OAuth login error:', error);
+      logger.error({ error, provider: profile.provider, email: profile.email }, 'OAuth login error');
       throw new Error('OAuth authentication failed');
     }
   }
@@ -295,7 +296,7 @@ export class OAuthService {
         });
       }
     } catch (error) {
-      console.error('Link OAuth provider error:', error);
+      logger.error({ error, userId, provider: profile.provider }, 'Link OAuth provider error');
       throw error;
     }
   }
@@ -328,7 +329,7 @@ export class OAuthService {
         }
       });
     } catch (error) {
-      console.error('Unlink OAuth provider error:', error);
+      logger.error({ error, userId, provider }, 'Unlink OAuth provider error');
       throw error;
     }
   }
@@ -351,7 +352,7 @@ export class OAuthService {
 
       return providers;
     } catch (error) {
-      console.error('Get OAuth providers error:', error);
+      logger.error({ error, userId }, 'Get OAuth providers error');
       throw error;
     }
   }
