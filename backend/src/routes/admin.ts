@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -76,14 +77,16 @@ router.get('/dashboard', requireStagingAuth, requireAdmin, async (req: AuthReque
   const crypto = require('crypto');
   const requestId = crypto.randomBytes(4).toString('hex');
 
-  console.log(`[${requestId}] 🎯 ENDPOINT: /api/admin/dashboard REACHED`, {
-    timestamp: new Date().toISOString(),
-    userId: req.user?.id,
-    username: req.user?.username,
+  logger.info({
+    requestId,
+    endpoint: '/api/admin/dashboard',
+    action: 'dashboard_access',
+    adminId: req.user?.id,
+    adminUsername: req.user?.username,
     isAdmin: req.user?.isAdmin,
     totpVerified: req.user?.totpVerified,
-    message: 'Dashboard endpoint handler executing - ALL MIDDLEWARE PASSED'
-  });
+    status: 'middleware_passed'
+  }, 'Admin dashboard endpoint accessed');
 
   try {
     const [
@@ -137,11 +140,17 @@ router.get('/dashboard', requireStagingAuth, requireAdmin, async (req: AuthReque
     // Get performance metrics
     const performanceData = getPerformanceMetrics();
 
-    console.log(`[${requestId}] ✅ ENDPOINT: /api/admin/dashboard - Sending 200 response`, {
-      userId: req.user?.id,
-      username: req.user?.username,
-      dataKeys: ['overview', 'growth', 'recentActivity', 'performance']
-    });
+    logger.info({
+      requestId,
+      endpoint: '/api/admin/dashboard',
+      action: 'dashboard_success',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      dataKeys: ['overview', 'growth', 'recentActivity', 'performance'],
+      totalUsers,
+      activeUsers,
+      pendingReports
+    }, 'Admin dashboard data retrieved successfully');
 
     res.json({
       overview: {
@@ -171,7 +180,14 @@ router.get('/dashboard', requireStagingAuth, requireAdmin, async (req: AuthReque
       }
     });
   } catch (error) {
-    console.error(`[${requestId}] ❌ ENDPOINT: /api/admin/dashboard - Error:`, error);
+    logger.error({
+      error,
+      requestId,
+      endpoint: '/api/admin/dashboard',
+      action: 'dashboard_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username
+    }, 'Failed to load admin dashboard');
     res.status(500).json({ error: 'Failed to load dashboard' });
   }
 });
@@ -393,7 +409,13 @@ router.get('/batch/dashboard-init', requireStagingAuth, requireAdmin, async (req
       }
     });
   } catch (error) {
-    console.error('Admin batch initialization error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/batch/dashboard-init',
+      action: 'batch_init_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username
+    }, 'Admin batch dashboard initialization failed');
     res.status(500).json({
       success: false,
       error: 'Failed to load dashboard data'
@@ -508,7 +530,16 @@ router.get('/users', requireStagingAuth, requireAdmin, async (req: AuthRequest, 
       }
     });
   } catch (error) {
-    console.error('Admin users error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/users',
+      action: 'get_users_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      search: req.query.search,
+      status: req.query.status,
+      role: req.query.role
+    }, 'Failed to retrieve admin users list');
     res.status(500).json({ error: 'Failed to retrieve users' });
   }
 });
@@ -625,7 +656,14 @@ router.get('/users/:userId', requireStagingAuth, requireAdmin, async (req: AuthR
       }
     });
   } catch (error) {
-    console.error('Admin user detail error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/users/:userId',
+      action: 'get_user_detail_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      targetUserId: req.params.userId
+    }, 'Failed to retrieve user details');
     res.status(500).json({ error: 'Failed to retrieve user details' });
   }
 });
@@ -672,7 +710,16 @@ router.post('/users/:userId/suspend',
         }
       });
     } catch (error) {
-      console.error('Suspend user error:', error);
+      logger.error({
+        error,
+        endpoint: '/api/admin/users/:userId/suspend',
+        action: 'suspend_user_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        targetUserId: req.params.userId,
+        suspensionType: req.body.type,
+        reason: req.body.reason
+      }, 'Failed to suspend user');
       res.status(500).json({ error: 'Failed to suspend user' });
     }
   }
@@ -697,7 +744,14 @@ router.post('/users/:userId/unsuspend', requireStagingAuth, requireAdmin, async 
 
     res.json({ message: 'User suspension lifted successfully' });
   } catch (error) {
-    console.error('Unsuspend user error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/users/:userId/unsuspend',
+      action: 'unsuspend_user_error',
+      adminId: req.user?.id,
+      adminUsername: req.user?.username,
+      targetUserId: req.params.userId
+    }, 'Failed to lift user suspension');
     res.status(500).json({ error: 'Failed to lift suspension' });
   }
 });
@@ -771,7 +825,15 @@ router.post('/users/:userId/role',
         newRole: role
       });
     } catch (error) {
-      console.error('Update user role error:', error);
+      logger.error({
+        error,
+        endpoint: '/api/admin/users/:userId/role',
+        action: 'update_role_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        targetUserId: req.params.userId,
+        newRole: req.body.role
+      }, 'Failed to update user role');
       res.status(500).json({ error: 'Failed to update user role' });
     }
   }
@@ -853,7 +915,16 @@ router.delete('/users/:userId',
         });
 
         // Log the deletion action
-        console.log(`Admin ${req.sensitiveAction?.adminUsername} soft-deleted user ${user.username} (${userId}). Reason: ${reason}. Impact: ${JSON.stringify(impact)}`);
+        logger.warn({
+          action: 'user_soft_delete',
+          adminId: req.user?.id,
+          adminUsername: req.sensitiveAction?.adminUsername,
+          targetUserId: userId,
+          targetUsername: user.username,
+          deletionType: 'soft',
+          reason,
+          impact
+        }, `Admin soft-deleted user ${user.username}`);
 
         res.json({
           message: 'User account soft deleted successfully',
@@ -870,7 +941,16 @@ router.delete('/users/:userId',
         });
 
         // Log the deletion action
-        console.log(`Admin ${req.sensitiveAction?.adminUsername} hard-deleted user ${user.username} (${userId}). Reason: ${reason}. Impact: ${JSON.stringify(impact)}`);
+        logger.error({
+          action: 'user_hard_delete',
+          adminId: req.user?.id,
+          adminUsername: req.sensitiveAction?.adminUsername,
+          targetUserId: userId,
+          targetUsername: user.username,
+          deletionType: 'hard',
+          reason,
+          impact
+        }, `Admin permanently deleted user ${user.username}`);
 
         res.json({
           message: 'User account permanently deleted',
@@ -881,7 +961,15 @@ router.delete('/users/:userId',
       }
 
     } catch (error) {
-      console.error('Delete user error:', error);
+      logger.error({
+        error,
+        endpoint: '/api/admin/users/:userId',
+        action: 'delete_user_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        targetUserId: req.params.userId,
+        deletionType: req.body.deletionType
+      }, 'Failed to delete user account');
       res.status(500).json({ error: 'Failed to delete user account' });
     }
   }
@@ -964,15 +1052,22 @@ router.delete('/messages/:messageId',
       });
 
       // Log the deletion action with full audit trail
-      console.log(`🔥 PERMANENT MESSAGE DELETION by Super-Admin ${auditData.deletedBy} (${adminId})`);
-      console.log(`   Message ID: ${messageId}`);
-      console.log(`   Sender: ${auditData.senderUsername} (${message.senderId})`);
-      console.log(`   Conversation: ${message.conversationId}`);
-      console.log(`   Participants: ${auditData.participants}`);
-      console.log(`   Content Length: ${auditData.contentLength} chars`);
-      console.log(`   Created: ${message.createdAt.toISOString()}`);
-      console.log(`   Reason: ${reason}`);
-      console.log(`   Audit ID: admin_msg_delete_${messageId}_${Date.now()}`);
+      logger.error({
+        action: 'message_permanent_delete',
+        adminId,
+        adminUsername: auditData.deletedBy,
+        messageId,
+        senderId: message.senderId,
+        senderUsername: auditData.senderUsername,
+        conversationId: message.conversationId,
+        participantCount: auditData.participantCount,
+        participants: auditData.participants,
+        contentLength: auditData.contentLength,
+        messageType: auditData.messageType,
+        messageCreatedAt: message.createdAt,
+        reason,
+        auditId: `admin_msg_delete_${messageId}_${Date.now()}`
+      }, `Super-Admin ${auditData.deletedBy} permanently deleted message`);
 
       res.json({
         message: 'Message permanently deleted',
@@ -989,7 +1084,14 @@ router.delete('/messages/:messageId',
       });
 
     } catch (error) {
-      console.error('Delete message error:', error);
+      logger.error({
+        error,
+        endpoint: '/api/admin/messages/:messageId',
+        action: 'delete_message_error',
+        adminId: req.user?.id,
+        adminUsername: req.user?.username,
+        messageId: req.params.messageId
+      }, 'Failed to delete message');
       res.status(500).json({ error: 'Failed to delete message' });
     }
   }
@@ -1046,7 +1148,13 @@ router.get('/content/flagged', requireStagingAuth, requireAdmin, async (req: Aut
               break;
           }
         } catch (error) {
-          console.error(`Failed to fetch ${flag.contentType} ${flag.contentId}:`, error);
+          logger.error({
+            error,
+            action: 'fetch_flagged_content',
+            contentType: flag.contentType,
+            contentId: flag.contentId,
+            flagId: flag.id
+          }, `Failed to fetch flagged ${flag.contentType}`);
         }
 
         return {
@@ -1066,7 +1174,14 @@ router.get('/content/flagged', requireStagingAuth, requireAdmin, async (req: Aut
       }
     });
   } catch (error) {
-    console.error('Get flagged content error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/content/flagged',
+      action: 'get_flagged_content_error',
+      adminId: req.user?.id,
+      flagType: req.query.flagType,
+      minConfidence: req.query.minConfidence
+    }, 'Failed to retrieve flagged content');
     res.status(500).json({ error: 'Failed to retrieve flagged content' });
   }
 });
@@ -1088,7 +1203,13 @@ router.post('/content/flags/:flagId/resolve', requireStagingAuth, requireAdmin, 
 
     res.json({ message: 'Flag resolved successfully' });
   } catch (error) {
-    console.error('Resolve flag error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/content/flags/:flagId/resolve',
+      action: 'resolve_flag_error',
+      adminId: req.user?.id,
+      flagId: req.params.flagId
+    }, 'Failed to resolve content flag');
     res.status(500).json({ error: 'Failed to resolve flag' });
   }
 });
@@ -1326,7 +1447,13 @@ router.get('/analytics', requireStagingAuth, requireAdmin, async (req: AuthReque
       }
     });
   } catch (error) {
-    console.error('Analytics error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics',
+      action: 'analytics_error',
+      adminId: req.user?.id,
+      days: req.query.days
+    }, 'Failed to generate admin analytics');
     res.status(500).json({ error: 'Failed to generate analytics' });
   }
 });
@@ -1361,7 +1488,12 @@ router.get('/settings', requireStagingAuth, requireAdmin, async (req: AuthReques
 
     res.json({ settings });
   } catch (error) {
-    console.error('Get settings error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/settings',
+      action: 'get_settings_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve admin settings');
     res.status(500).json({ error: 'Failed to retrieve settings' });
   }
 });
@@ -1401,7 +1533,14 @@ router.get('/security/events', requireStagingAuth, requireAdmin, async (req: Aut
       }
     });
   } catch (error) {
-    console.error('Security events error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/security/events',
+      action: 'security_events_error',
+      adminId: req.user?.id,
+      eventType: req.query.eventType,
+      minRiskScore: req.query.minRiskScore
+    }, 'Failed to retrieve security events');
     res.status(500).json({ error: 'Failed to retrieve security events' });
   }
 });
@@ -1414,7 +1553,13 @@ router.get('/security/stats', requireStagingAuth, requireAdmin, async (req: Auth
     
     res.json(stats);
   } catch (error) {
-    console.error('Security stats error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/security/stats',
+      action: 'security_stats_error',
+      adminId: req.user?.id,
+      timeframe: req.query.timeframe
+    }, 'Failed to retrieve security statistics');
     res.status(500).json({ error: 'Failed to retrieve security statistics' });
   }
 });
@@ -1469,7 +1614,12 @@ router.get('/dashboard/enhanced', requireStagingAuth, requireAdmin, async (req: 
       lastUpdated: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Enhanced dashboard error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/dashboard/enhanced',
+      action: 'enhanced_dashboard_error',
+      adminId: req.user?.id
+    }, 'Failed to load enhanced dashboard');
     res.status(500).json({ error: 'Failed to load enhanced dashboard' });
   }
 });
@@ -1541,7 +1691,14 @@ router.get('/errors', requireStagingAuth, requireAdmin, async (req: AuthRequest,
       note: 'Error tracking shows aggregated metrics. Detailed error logging requires enhanced backend implementation.'
     });
   } catch (error) {
-    console.error('Error tracking endpoint error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/errors',
+      action: 'error_tracking_error',
+      adminId: req.user?.id,
+      severity: req.query.severity,
+      timeframe: req.query.timeframe
+    }, 'Error tracking endpoint failed');
     res.status(500).json({ error: 'Failed to retrieve error data' });
   }
 });
@@ -1656,7 +1813,14 @@ router.get('/ai-insights/suggestions', requireStagingAuth, requireAdmin, async (
         `Showing ${suggestions.length} of ${totalCount} total feedback items from real users.`
     });
   } catch (error) {
-    console.error('AI insights suggestions error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/ai-insights/suggestions',
+      action: 'ai_suggestions_error',
+      adminId: req.user?.id,
+      category: req.query.category,
+      status: req.query.status
+    }, 'Failed to retrieve AI suggestions');
     res.status(500).json({ error: 'Failed to retrieve AI suggestions' });
   }
 });
@@ -1739,7 +1903,12 @@ router.get('/ai-insights/analysis', requireStagingAuth, requireAdmin, async (req
       note: 'AI analysis based on real platform data. Timestamps reflect actual post creation dates.'
     });
   } catch (error) {
-    console.error('AI insights analysis error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/ai-insights/analysis',
+      action: 'ai_analysis_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve AI analysis');
     res.status(500).json({ error: 'Failed to retrieve AI analysis' });
   }
 });
@@ -1816,7 +1985,12 @@ router.get('/schema', requireStagingAuth, requireAdmin, requireSuperAdmin, async
       note: 'Read-only view of the Prisma database schema. Changes must be made via migrations.'
     });
   } catch (error) {
-    console.error('Schema retrieval error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/schema',
+      action: 'schema_retrieval_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve database schema');
     res.status(500).json({ error: 'Failed to retrieve database schema' });
   }
 });
@@ -1901,7 +2075,14 @@ router.get('/candidates', requireStagingAuth, requireAdmin, async (req: AuthRequ
     });
 
   } catch (error) {
-    console.error('Error fetching candidate registrations:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates',
+      action: 'get_candidates_error',
+      adminId: req.user?.id,
+      status: req.query.status,
+      search: req.query.search
+    }, 'Failed to fetch candidate registrations');
     res.status(500).json({ error: 'Failed to fetch candidate registrations' });
   }
 });
@@ -2002,7 +2183,13 @@ router.get('/candidates/profiles', requireStagingAuth, requireAdmin, async (req:
     });
 
   } catch (error) {
-    console.error('Error fetching candidate profiles:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/profiles',
+      action: 'get_candidate_profiles_error',
+      adminId: req.user?.id,
+      status: req.query.status
+    }, 'Failed to retrieve candidate profiles');
     res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
   }
 });
@@ -2041,7 +2228,13 @@ router.get('/candidates/:id', requireStagingAuth, requireAdmin, async (req: Auth
     });
 
   } catch (error) {
-    console.error('Error fetching candidate registration:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:id',
+      action: 'get_candidate_detail_error',
+      adminId: req.user?.id,
+      registrationId: req.params.id
+    }, 'Failed to fetch candidate registration details');
     res.status(500).json({ error: 'Failed to fetch candidate registration details' });
   }
 });
@@ -2173,10 +2366,23 @@ router.post('/candidates/:id/approve', requireStagingAuth, requireAdmin, async (
         }
       });
 
-      console.log(`✅ Created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+      logger.info({
+        action: 'candidate_profile_created',
+        adminId: req.user?.id,
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        userId: registration.userId,
+        officeId: office.id
+      }, `Created candidate profile for ${candidate.name}`);
 
     } catch (profileError) {
-      console.error('Error creating candidate profile:', profileError);
+      logger.error({
+        error: profileError,
+        action: 'create_candidate_profile_error',
+        adminId: req.user?.id,
+        registrationId,
+        userId: registration.userId
+      }, 'Error creating candidate profile');
       // Don't fail the whole approval if profile creation fails
       // The registration is still approved, profile can be created manually later
     }
@@ -2201,10 +2407,21 @@ router.post('/candidates/:id/approve', requireStagingAuth, requireAdmin, async (
         );
 
         await emailService.sendEmail(emailTemplate);
-        console.log(`Approval email sent to ${user.email} for candidate ${candidateName}`);
+        logger.info({
+          action: 'candidate_approval_email_sent',
+          adminId: req.user?.id,
+          recipientEmail: user.email,
+          candidateName,
+          registrationId
+        }, `Approval email sent to ${user.email}`);
       }
     } catch (emailError) {
-      console.error('Failed to send approval email:', emailError);
+      logger.error({
+        error: emailError,
+        action: 'approval_email_error',
+        adminId: req.user?.id,
+        registrationId
+      }, 'Failed to send approval email');
       // Don't fail the entire approval if email fails
     }
 
@@ -2215,7 +2432,13 @@ router.post('/candidates/:id/approve', requireStagingAuth, requireAdmin, async (
     });
 
   } catch (error) {
-    console.error('Error approving candidate registration:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:id/approve',
+      action: 'approve_candidate_error',
+      adminId: req.user?.id,
+      registrationId: req.params.id
+    }, 'Failed to approve candidate registration');
     res.status(500).json({ error: 'Failed to approve candidate registration' });
   }
 });
@@ -2270,10 +2493,22 @@ router.post('/candidates/:id/reject', requireStagingAuth, requireAdmin, async (r
         );
 
         await emailService.sendEmail(emailTemplate);
-        console.log(`Rejection email sent to ${user.email} for candidate ${candidateName}`);
+        logger.info({
+          action: 'candidate_rejection_email_sent',
+          adminId: req.user?.id,
+          recipientEmail: user.email,
+          candidateName,
+          registrationId,
+          reason
+        }, `Rejection email sent to ${user.email}`);
       }
     } catch (emailError) {
-      console.error('Failed to send rejection email:', emailError);
+      logger.error({
+        error: emailError,
+        action: 'rejection_email_error',
+        adminId: req.user?.id,
+        registrationId
+      }, 'Failed to send rejection email');
       // Don't fail the entire rejection if email fails
     }
 
@@ -2286,7 +2521,13 @@ router.post('/candidates/:id/reject', requireStagingAuth, requireAdmin, async (r
     });
 
   } catch (error) {
-    console.error('Error rejecting candidate registration:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:id/reject',
+      action: 'reject_candidate_error',
+      adminId: req.user?.id,
+      registrationId: req.params.id
+    }, 'Failed to reject candidate registration');
     res.status(500).json({ error: 'Failed to reject candidate registration' });
   }
 });
@@ -2370,10 +2611,21 @@ router.post('/candidates/:id/waiver', requireStagingAuth, requireAdmin, async (r
         }
         
         await emailService.sendEmail(emailTemplate);
-        console.log(`Waiver ${action} email sent to ${user.email}`);
+        logger.info({
+          action: 'waiver_decision_email_sent',
+          adminId: req.user?.id,
+          recipientEmail: user.email,
+          waiverAction: action,
+          registrationId
+        }, `Waiver ${action} email sent to ${user.email}`);
       }
     } catch (emailError) {
-      console.error('Failed to send waiver decision email:', emailError);
+      logger.error({
+        error: emailError,
+        action: 'waiver_email_error',
+        adminId: req.user?.id,
+        registrationId
+      }, 'Failed to send waiver decision email');
       // Don't fail the entire request if email fails
     }
     
@@ -2384,7 +2636,14 @@ router.post('/candidates/:id/waiver', requireStagingAuth, requireAdmin, async (r
     });
 
   } catch (error) {
-    console.error('Error processing fee waiver:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:id/waiver',
+      action: 'process_waiver_error',
+      adminId: req.user?.id,
+      registrationId: req.params.id,
+      waiverAction: req.body.action
+    }, 'Failed to process fee waiver');
     res.status(500).json({ error: 'Failed to process fee waiver request' });
   }
 });
@@ -2519,7 +2778,15 @@ router.put('/candidates/profiles/:id/status', requireStagingAuth, requireAdmin, 
       });
     }
 
-    console.log(`✅ Updated candidate ${candidate.name} status to ${status} by admin ${req.user!.id}`);
+    logger.info({
+      action: 'candidate_status_updated',
+      adminId: req.user!.id,
+      candidateId: id,
+      candidateName: candidate.name,
+      previousStatus: candidate.status,
+      newStatus: status,
+      reason
+    }, `Updated candidate ${candidate.name} status to ${status}`);
 
     // Send notification email to candidate about status change
     try {
@@ -2535,10 +2802,22 @@ router.put('/candidates/profiles/:id/status', requireStagingAuth, requireAdmin, 
         );
 
         await emailService.sendEmail(emailTemplate);
-        console.log(`Status change email sent to ${candidate.user.email} for candidate ${candidate.name} (${candidate.status} → ${status})`);
+        logger.info({
+          action: 'status_change_email_sent',
+          adminId: req.user!.id,
+          recipientEmail: candidate.user.email,
+          candidateName: candidate.name,
+          previousStatus: candidate.status,
+          newStatus: status
+        }, `Status change email sent for ${candidate.name}`);
       }
     } catch (emailError) {
-      console.error('Failed to send status change email:', emailError);
+      logger.error({
+        error: emailError,
+        action: 'status_change_email_error',
+        adminId: req.user!.id,
+        candidateId: id
+      }, 'Failed to send status change email');
       // Don't fail the entire status update if email fails
     }
 
@@ -2551,7 +2830,14 @@ router.put('/candidates/profiles/:id/status', requireStagingAuth, requireAdmin, 
     });
 
   } catch (error) {
-    console.error('Error updating candidate status:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/profiles/:id/status',
+      action: 'update_candidate_status_error',
+      adminId: req.user?.id,
+      candidateId: req.params.id,
+      newStatus: req.body.status
+    }, 'Failed to update candidate status');
     res.status(500).json({ error: 'Failed to update candidate status' });
   }
 });
@@ -2702,7 +2988,14 @@ router.post('/candidates/profiles/:registrationId/create', requireStagingAuth, r
         }
       });
 
-      console.log(`✅ Manually created candidate profile for ${candidate.name} (ID: ${candidate.id})`);
+      logger.info({
+        action: 'candidate_profile_manual_create',
+        adminId: req.user?.id,
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        registrationId,
+        userId: registration.userId
+      }, `Manually created candidate profile for ${candidate.name}`);
 
       res.json({
         success: true,
@@ -2711,12 +3004,24 @@ router.post('/candidates/profiles/:registrationId/create', requireStagingAuth, r
       });
 
     } catch (profileError) {
-      console.error('Error creating candidate profile:', profileError);
+      logger.error({
+        error: profileError,
+        endpoint: '/api/admin/candidates/profiles/:registrationId/create',
+        action: 'create_candidate_profile_error',
+        adminId: req.user?.id,
+        registrationId: req.params.registrationId
+      }, 'Error creating candidate profile');
       res.status(500).json({ error: 'Failed to create candidate profile' });
     }
 
   } catch (error) {
-    console.error('Error creating candidate profile:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/profiles/:registrationId/create',
+      action: 'create_candidate_profile_outer_error',
+      adminId: req.user?.id,
+      registrationId: req.params.registrationId
+    }, 'Error creating candidate profile (outer catch)');
     res.status(500).json({ error: 'Failed to create candidate profile' });
   }
 });
@@ -2827,7 +3132,13 @@ router.get('/candidates/:candidateId/messages', requireStagingAuth, requireAdmin
     });
 
   } catch (error) {
-    console.error('Error fetching admin messages:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:candidateId/messages',
+      action: 'get_admin_messages_error',
+      adminId: req.user?.id,
+      candidateId: req.params.candidateId
+    }, 'Failed to retrieve admin messages');
     res.status(500).json({ error: 'Failed to retrieve messages' });
   }
 });
@@ -2931,7 +3242,16 @@ router.post('/candidates/:candidateId/messages', requireStagingAuth, requireAdmi
       }
     });
 
-    console.log(`✅ Admin message sent from ${req.user!.firstName} to candidate ${candidate.name}`);
+    logger.info({
+      action: 'admin_message_sent',
+      adminId: req.user!.id,
+      adminName: req.user!.firstName,
+      candidateId,
+      candidateName: candidate.name,
+      messageType,
+      priority,
+      threadId
+    }, `Admin message sent to candidate ${candidate.name}`);
 
     // Send email notification to candidate about new admin message
     try {
@@ -2950,10 +3270,22 @@ router.post('/candidates/:candidateId/messages', requireStagingAuth, requireAdmi
         );
 
         await emailService.sendEmail(emailTemplate);
-        console.log(`Admin message email sent to ${message.candidate.user.email} for candidate ${message.candidate.name}`);
+        logger.info({
+          action: 'admin_message_email_sent',
+          adminId: req.user!.id,
+          recipientEmail: message.candidate.user.email,
+          candidateName: message.candidate.name,
+          messageType,
+          priority
+        }, `Admin message email sent to ${message.candidate.user.email}`);
       }
     } catch (emailError) {
-      console.error('Failed to send admin message email:', emailError);
+      logger.error({
+        error: emailError,
+        action: 'admin_message_email_error',
+        adminId: req.user!.id,
+        candidateId
+      }, 'Failed to send admin message email');
       // Don't fail the entire message send if email fails
     }
 
@@ -2966,7 +3298,13 @@ router.post('/candidates/:candidateId/messages', requireStagingAuth, requireAdmi
     });
 
   } catch (error) {
-    console.error('Error sending admin message:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/candidates/:candidateId/messages',
+      action: 'send_admin_message_error',
+      adminId: req.user?.id,
+      candidateId: req.params.candidateId
+    }, 'Failed to send admin message');
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -3060,7 +3398,12 @@ router.get('/messages/overview', requireStagingAuth, requireAdmin, async (req: A
     });
 
   } catch (error) {
-    console.error('Error fetching messaging overview:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/messages/overview',
+      action: 'messaging_overview_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve messaging overview');
     res.status(500).json({ error: 'Failed to retrieve messaging overview' });
   }
 });
@@ -3098,7 +3441,14 @@ router.post('/merge-accounts',
         return res.status(404).json({ error: 'One or both accounts not found' });
       }
 
-      console.log(`🔄 Merging accounts: ${duplicateAccount.email} → ${primaryAccount.email}`);
+      logger.info({
+        action: 'account_merge_start',
+        adminId: req.user?.id,
+        primaryAccountId,
+        duplicateAccountId,
+        primaryEmail: primaryAccount.email,
+        duplicateEmail: duplicateAccount.email
+      }, `Merging accounts: ${duplicateAccount.email} → ${primaryAccount.email}`);
 
       // Start transaction to merge accounts
       await prisma.$transaction(async (tx) => {
@@ -3108,7 +3458,13 @@ router.post('/merge-accounts',
             where: { userId: duplicateAccountId },
             data: { userId: primaryAccountId }
           });
-          console.log(`✅ Transferred ${duplicateAccount.oauthProviders.length} OAuth provider(s)`);
+          logger.info({
+            action: 'oauth_providers_transferred',
+            adminId: req.user?.id,
+            count: duplicateAccount.oauthProviders.length,
+            fromAccountId: duplicateAccountId,
+            toAccountId: primaryAccountId
+          }, `Transferred ${duplicateAccount.oauthProviders.length} OAuth provider(s)`);
         }
 
         // 2. Transfer posts
@@ -3117,7 +3473,13 @@ router.post('/merge-accounts',
             where: { authorId: duplicateAccountId },
             data: { authorId: primaryAccountId }
           });
-          console.log(`✅ Transferred ${duplicateAccount.posts.length} post(s)`);
+          logger.info({
+            action: 'posts_transferred',
+            adminId: req.user?.id,
+            count: duplicateAccount.posts.length,
+            fromAccountId: duplicateAccountId,
+            toAccountId: primaryAccountId
+          }, `Transferred ${duplicateAccount.posts.length} post(s)`);
         }
 
         // 3. Transfer comments
@@ -3126,7 +3488,13 @@ router.post('/merge-accounts',
             where: { userId: duplicateAccountId },
             data: { userId: primaryAccountId }
           });
-          console.log(`✅ Transferred ${duplicateAccount.comments.length} comment(s)`);
+          logger.info({
+            action: 'comments_transferred',
+            adminId: req.user?.id,
+            count: duplicateAccount.comments.length,
+            fromAccountId: duplicateAccountId,
+            toAccountId: primaryAccountId
+          }, `Transferred ${duplicateAccount.comments.length} comment(s)`);
         }
 
         // 4. Transfer other user data (followers, following, etc.)
@@ -3157,7 +3525,14 @@ router.post('/merge-accounts',
           where: { id: duplicateAccountId }
         });
 
-        console.log(`✅ Successfully merged and deleted duplicate account ${duplicateAccountId}`);
+        logger.info({
+          action: 'account_merge_complete',
+          adminId: req.user?.id,
+          primaryAccountId,
+          deletedAccountId: duplicateAccountId,
+          primaryUsername: primaryAccount.username,
+          deletedUsername: duplicateAccount.username
+        }, `Successfully merged and deleted duplicate account ${duplicateAccountId}`);
       });
 
       res.json({ 
@@ -3171,7 +3546,14 @@ router.post('/merge-accounts',
       });
 
     } catch (error) {
-      console.error('Account merge error:', error);
+      logger.error({
+        error,
+        endpoint: '/api/admin/merge-accounts',
+        action: 'merge_accounts_error',
+        adminId: req.user?.id,
+        primaryAccountId: req.body.primaryAccountId,
+        duplicateAccountId: req.body.duplicateAccountId
+      }, 'Failed to merge accounts');
       res.status(500).json({ error: 'Failed to merge accounts' });
     }
   }
@@ -3247,7 +3629,13 @@ router.get('/volunteers', requireStagingAuth, requireAdmin, async (req: AuthRequ
     });
 
   } catch (error) {
-    console.error('Get volunteer inquiries error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/volunteers',
+      action: 'get_volunteers_error',
+      adminId: req.user?.id,
+      status: req.query.status
+    }, 'Failed to get volunteer inquiries');
     res.status(500).json({ error: 'Failed to get volunteer inquiries' });
   }
 });
@@ -3307,7 +3695,13 @@ router.post('/users/:userId/resend-verification', requireStagingAuth, requireAdm
     }
 
     // Log admin action
-    console.log(`Admin ${adminId} resent verification email for user ${userId} (@${user.username})`);
+    logger.info({
+      action: 'resend_verification_email',
+      adminId,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email
+    }, `Admin resent verification email for user @${user.username}`);
 
     res.json({
       success: true,
@@ -3318,7 +3712,13 @@ router.post('/users/:userId/resend-verification', requireStagingAuth, requireAdm
     });
 
   } catch (error) {
-    console.error('Admin resend verification error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/users/:userId/resend-verification',
+      action: 'resend_verification_error',
+      adminId: req.user?.id,
+      targetUserId: req.params.userId
+    }, 'Failed to resend verification email');
     res.status(500).json({ error: 'Failed to resend verification email' });
   }
 });
@@ -3351,7 +3751,12 @@ router.get('/analytics/visitors/overview', requireStagingAuth, requireAdmin, asy
     const overview = await visitorAnalytics.getOverview();
     res.json(overview);
   } catch (error) {
-    console.error('Visitor analytics overview error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics/visitors/overview',
+      action: 'visitor_analytics_overview_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve visitor analytics overview');
     res.status(500).json({ error: 'Failed to retrieve visitor analytics overview' });
   }
 });
@@ -3399,7 +3804,14 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
     const stats = await visitorAnalytics.getStats(startDate, endDate);
     res.json(stats);
   } catch (error) {
-    console.error('Visitor analytics daily stats error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics/visitors/daily',
+      action: 'visitor_analytics_daily_error',
+      adminId: req.user?.id,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate
+    }, 'Failed to retrieve daily visitor statistics');
     res.status(500).json({ error: 'Failed to retrieve daily visitor statistics' });
   }
 });
@@ -3431,12 +3843,18 @@ router.get('/analytics/visitors/daily', requireStagingAuth, requireAdmin, async 
  *         description: Server error
  */
 router.get('/analytics/visitors/suspicious', requireStagingAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const days = req.query.days ? parseInt(req.query.days as string) : 7;
   try {
-    const days = req.query.days ? parseInt(req.query.days as string) : 7;
     const suspiciousIPs = await visitorAnalytics.getSuspiciousIPs(days);
     res.json({ suspiciousIPs, days });
   } catch (error) {
-    console.error('Visitor analytics suspicious IPs error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics/visitors/suspicious',
+      action: 'visitor_analytics_suspicious_error',
+      adminId: req.user?.id,
+      days
+    }, 'Failed to retrieve suspicious IPs');
     res.status(500).json({ error: 'Failed to retrieve suspicious IPs' });
   }
 });
@@ -3467,7 +3885,12 @@ router.get('/analytics/visitors/config', requireStagingAuth, requireAdmin, async
     const { currentDailySalt, ...safeConfig } = config;
     res.json(safeConfig);
   } catch (error) {
-    console.error('Visitor analytics config error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/analytics/visitors/config',
+      action: 'visitor_analytics_config_error',
+      adminId: req.user?.id
+    }, 'Failed to retrieve analytics configuration');
     res.status(500).json({ error: 'Failed to retrieve analytics configuration' });
   }
 });
@@ -3583,7 +4006,12 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
     });
 
     if (!userWithTOTP?.totpEnabled || !userWithTOTP?.totpSecret) {
-      console.warn(`[ADMIN] User ${adminUser.username} attempting batch activity delete without TOTP configured`);
+      logger.warn({
+        action: 'batch_delete_no_totp',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        securityEvent: 'totp_not_configured'
+      }, `Admin ${adminUser.username} attempting batch activity delete without TOTP`);
       return res.status(400).json({ error: 'TOTP not configured for this account' });
     }
 
@@ -3596,7 +4024,12 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
     });
 
     if (!validTOTP) {
-      console.log(`[ADMIN] Invalid TOTP for batch activity deletion by ${adminUser.username}`);
+      logger.warn({
+        action: 'batch_delete_invalid_totp',
+        adminId: adminUser.id,
+        adminUsername: adminUser.username,
+        securityEvent: 'invalid_totp'
+      }, `Invalid TOTP for batch activity deletion by ${adminUser.username}`);
       return res.status(400).json({ error: 'Invalid TOTP token' });
     }
 
@@ -3657,24 +4090,26 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
               await prisma.post.delete({ where: { id: targetId } });
               cascadeDeleted.push('post', 'comments', 'reactions', 'notifications', 'activity_log');
 
-              console.log(`[ADMIN] Post permanently deleted by admin:`, {
+              logger.error({
+                action: 'post_permanently_deleted',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 postId: post.id,
+                postAuthorId: post.authorId,
                 postAuthor: post.author.username,
                 reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                cascaded: ['post', 'comments', 'reactions', 'notifications', 'activity_log']
+              }, `Admin permanently deleted post by ${post.author.username}`);
             } else {
               // Post already deleted, but activity records cleaned up successfully
               cascadeDeleted.push('activity_log');
-              console.log(`[ADMIN] Post already deleted, cleaned up orphaned activity records:`, {
+              logger.info({
+                action: 'orphaned_post_activity_cleaned',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 postId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Cleaned up orphaned activity records for deleted post`);
             }
             break;
 
@@ -3698,24 +4133,26 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
               await prisma.comment.delete({ where: { id: targetId } });
               cascadeDeleted.push('comment', 'reactions', 'notifications', 'activity_log');
 
-              console.log(`[ADMIN] Comment permanently deleted by admin:`, {
+              logger.error({
+                action: 'comment_permanently_deleted',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 commentId: comment.id,
+                commentAuthorId: comment.userId,
                 commentAuthor: comment.user.username,
                 reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                cascaded: ['comment', 'reactions', 'notifications', 'activity_log']
+              }, `Admin permanently deleted comment by ${comment.user.username}`);
             } else {
               // Comment already deleted, but activity records cleaned up successfully
               cascadeDeleted.push('activity_log');
-              console.log(`[ADMIN] Comment already deleted, cleaned up orphaned activity records:`, {
+              logger.info({
+                action: 'orphaned_comment_activity_cleaned',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 commentId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Cleaned up orphaned activity records for deleted comment`);
             }
             break;
 
@@ -3738,23 +4175,23 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
               await prisma.reaction.delete({ where: { id: targetId } });
               cascadeDeleted.push('reaction', 'activity_log');
 
-              console.log(`[ADMIN] Reaction permanently deleted by admin:`, {
+              logger.error({
+                action: 'reaction_permanently_deleted',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 reactionId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Admin permanently deleted reaction`);
             } else {
               // Reaction already deleted, but activity records cleaned up successfully
               cascadeDeleted.push('activity_log');
-              console.log(`[ADMIN] Reaction already deleted, cleaned up orphaned activity records:`, {
+              logger.info({
+                action: 'orphaned_reaction_activity_cleaned',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 reactionId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Cleaned up orphaned activity records for deleted reaction`);
             }
             break;
 
@@ -3777,23 +4214,23 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
               await prisma.follow.delete({ where: { id: targetId } });
               cascadeDeleted.push('follow', 'activity_log');
 
-              console.log(`[ADMIN] Follow relationship permanently deleted by admin:`, {
+              logger.error({
+                action: 'follow_permanently_deleted',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 followId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Admin permanently deleted follow relationship`);
             } else {
               // Follow already deleted, but activity records cleaned up successfully
               cascadeDeleted.push('activity_log');
-              console.log(`[ADMIN] Follow already deleted, cleaned up orphaned activity records:`, {
+              logger.info({
+                action: 'orphaned_follow_activity_cleaned',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 followId: targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Cleaned up orphaned activity records for deleted follow`);
             }
             break;
 
@@ -3811,14 +4248,14 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
 
             if (deletedActivity.count > 0) {
               cascadeDeleted.push('activity_log');
-              console.log(`[ADMIN] Activity log entry deleted:`, {
+              logger.info({
+                action: 'activity_log_deleted',
                 adminId: adminUser.id,
                 adminUsername: adminUser.username,
                 activityType,
                 targetId,
-                reason: reason.trim(),
-                timestamp: new Date().toISOString()
-              });
+                reason: reason.trim()
+              }, `Admin deleted activity log entry`);
             } else {
               results.push({ activityType, targetId, status: 'failed', error: 'Activity log entry not found' });
               failedCount++;
@@ -3836,7 +4273,13 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
         deletedCount++;
 
       } catch (activityError) {
-        console.error(`[ADMIN] Failed to delete activity ${activityType}:${targetId}:`, activityError);
+        logger.error({
+          error: activityError,
+          action: 'activity_deletion_failed',
+          adminId: adminUser.id,
+          activityType,
+          targetId
+        }, `Failed to delete activity ${activityType}:${targetId}`);
         results.push({
           activityType,
           targetId,
@@ -3848,15 +4291,15 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
     }
 
     // Log batch operation summary
-    console.log(`[ADMIN] Batch activity deletion completed:`, {
+    logger.warn({
+      action: 'batch_activity_deletion_completed',
       adminId: adminUser.id,
       adminUsername: adminUser.username,
       totalRequested: activities.length,
       deleted: deletedCount,
       failed: failedCount,
-      reason: reason.trim(),
-      timestamp: new Date().toISOString()
-    });
+      reason: reason.trim()
+    }, `Batch activity deletion completed: ${deletedCount} deleted, ${failedCount} failed`);
 
     return res.status(200).json({
       message: 'Batch deletion completed',
@@ -3866,7 +4309,13 @@ router.delete('/activity/batch-delete', requireAuth, requireAdmin, async (req: A
     });
 
   } catch (error) {
-    console.error('Batch activity deletion error:', error);
+    logger.error({
+      error,
+      endpoint: '/api/admin/activity/batch-delete',
+      action: 'batch_delete_error',
+      adminId: req.user?.id,
+      activitiesCount: req.body.activities?.length
+    }, 'Failed to process batch activity deletion');
     res.status(500).json({ error: 'Failed to process batch activity deletion' });
   }
 });
