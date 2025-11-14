@@ -6,6 +6,7 @@ import { ElectionService } from '../services/electionService';
 import { EnhancedCandidateService } from '../services/enhancedCandidateService';
 import { azureOpenAI } from '../services/azureOpenAIService';
 import { metricsService } from '../services/metricsService';
+import { logger } from '../services/logger';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -129,7 +130,7 @@ router.get('/', async (req, res) => {
       count: candidates.length
     });
   } catch (error) {
-    console.error('Candidate search error:', error);
+    logger.error({ error, query: req.query }, 'Candidate search error');
     res.status(500).json({ error: 'Failed to search candidates' });
   }
 });
@@ -333,7 +334,7 @@ router.get('/:id', async (req, res) => {
     
     res.json(candidate);
   } catch (error) {
-    console.error('Candidate profile error:', error);
+    logger.error({ error, candidateId: req.params.id }, 'Candidate profile error');
     res.status(500).json({ error: 'Failed to retrieve candidate profile' });
   }
 });
@@ -429,12 +430,12 @@ router.post('/:id/endorse', requireAuth, async (req: AuthRequest, res) => {
       endorsement
     });
   } catch (error: any) {
-    console.error('Endorsement error:', error);
-    
+    logger.error({ error, candidateId: req.params.id, userId: req.user?.id }, 'Endorsement error');
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
-    
+
     res.status(500).json({ error: 'Failed to create endorsement' });
   }
 });
@@ -473,12 +474,12 @@ router.delete('/:id/endorse', requireAuth, async (req: AuthRequest, res) => {
     
     res.json({ message: 'Endorsement removed successfully' });
   } catch (error: any) {
-    console.error('Remove endorsement error:', error);
-    
+    logger.error({ error, candidateId: req.params.id, userId: req.user?.id }, 'Remove endorsement error');
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
-    
+
     res.status(500).json({ error: 'Failed to remove endorsement' });
   }
 });
@@ -544,7 +545,7 @@ router.get('/my-candidacy', requireAuth, async (req: AuthRequest, res) => {
       count: candidates.length
     });
   } catch (error) {
-    console.error('My candidacy error:', error);
+    logger.error({ error, userId: req.user?.id }, 'My candidacy error');
     res.status(500).json({ error: 'Failed to retrieve candidate profiles' });
   }
 });
@@ -626,13 +627,13 @@ router.put('/:id/update-platform', requireAuth, async (req: AuthRequest, res) =>
       candidate
     });
   } catch (error: any) {
-    console.error('Platform update error:', error);
-    
+    logger.error({ error, candidateId: req.params.id, userId: req.user?.id }, 'Platform update error');
+
     if (error.message.includes('not found') || error.message.includes('access denied')) {
       return res.status(error.message.includes('access denied') ? 403 : 404)
         .json({ error: error.message });
     }
-    
+
     res.status(500).json({ error: 'Failed to update platform' });
   }
 });
@@ -686,13 +687,13 @@ router.post('/:id/withdraw', requireAuth, async (req: AuthRequest, res) => {
     
     res.json({ message: 'Candidacy withdrawn successfully' });
   } catch (error: any) {
-    console.error('Withdrawal error:', error);
-    
+    logger.error({ error, candidateId: req.params.id, userId: req.user?.id }, 'Withdrawal error');
+
     if (error.message.includes('not found') || error.message.includes('access denied')) {
       return res.status(error.message.includes('access denied') ? 403 : 404)
         .json({ error: error.message });
     }
-    
+
     res.status(500).json({ error: 'Failed to withdraw candidacy' });
   }
 });
@@ -762,7 +763,7 @@ router.get('/:id/enhanced', async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(`🤖 Loading enhanced profile for candidate ${id}`);
+    logger.info({ candidateId: id }, 'Loading enhanced profile for candidate');
 
     const candidate = await EnhancedCandidateService.getCandidateProfile(id);
 
@@ -786,7 +787,7 @@ router.get('/:id/enhanced', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Enhanced candidate profile error:', error);
+    logger.error({ error, candidateId: req.params.id }, 'Enhanced candidate profile error');
     res.status(500).json({ error: 'Failed to load enhanced candidate profile' });
   }
 });
@@ -885,7 +886,7 @@ router.post('/compare', async (req, res) => {
       });
     }
 
-    console.log(`🤖 Starting AI-powered comparison of ${candidateIds.length} candidates`);
+    logger.info({ candidateCount: candidateIds.length, officeId }, 'Starting AI-powered comparison of candidates');
 
     const comparison = await EnhancedCandidateService.compareCandidates(candidateIds, officeId);
 
@@ -911,8 +912,8 @@ router.post('/compare', async (req, res) => {
     });
 
   } catch (error: any) {
-    console.error('Candidate comparison error:', error);
-    
+    logger.error({ error, candidateIds: req.body.candidateIds }, 'Candidate comparison error');
+
     if (error.message.includes('At least 2 candidates')) {
       return res.status(400).json({
         error: 'Invalid request',
@@ -973,7 +974,7 @@ router.get('/office/:officeId/enhanced', async (req, res) => {
 
     const includeAI = includeAnalysis !== 'false';
 
-    console.log(`📋 Loading enhanced candidates for office ${officeId} (AI: ${includeAI})`);
+    logger.info({ officeId, aiEnabled: includeAI }, 'Loading enhanced candidates for office');
 
     const candidates = await EnhancedCandidateService.getCandidatesByOffice(officeId, includeAI);
 
@@ -992,7 +993,7 @@ router.get('/office/:officeId/enhanced', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Enhanced office candidates error:', error);
+    logger.error({ error, officeId: req.params.officeId }, 'Enhanced office candidates error');
     res.status(500).json({ error: 'Failed to load enhanced candidates for office' });
   }
 });
@@ -1031,7 +1032,7 @@ router.get('/office/:officeId/enhanced', async (req, res) => {
  */
 router.get('/ai/health', async (req, res) => {
   try {
-    console.log('🤖 Checking AI analysis system health...');
+    logger.info('Checking AI analysis system health');
 
     // Azure OpenAI health check
     const azureAIHealth = { status: 'healthy', model: 'Azure OpenAI GPT-3.5-turbo' };
@@ -1059,7 +1060,7 @@ router.get('/ai/health', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('AI health check error:', error);
+    logger.error({ error }, 'AI health check error');
     res.status(503).json({
       qwen3: { status: 'unhealthy', error: 'Health check failed' },
       capabilities: [],
@@ -1337,7 +1338,7 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Error registering candidate:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error registering candidate');
     res.status(500).json({
       success: false,
       message: 'Failed to register candidate'
@@ -1461,7 +1462,7 @@ router.post('/registration/:id/verify-idme', requireAuth, async (req: AuthReques
       });
     }
   } catch (error) {
-    console.error('Error processing ID.me verification:', error);
+    logger.error({ error, registrationId: req.params.id, userId: req.user?.id }, 'Error processing ID.me verification');
     res.status(500).json({
       success: false,
       message: 'Failed to process verification'
@@ -1586,7 +1587,7 @@ router.post('/registration/:id/payment', requireAuth, async (req: AuthRequest, r
       });
     }
   } catch (error) {
-    console.error('Error processing payment:', error);
+    logger.error({ error, registrationId: req.params.id, userId: req.user?.id }, 'Error processing payment');
     res.status(500).json({
       success: false,
       message: 'Failed to process payment'
@@ -1754,7 +1755,7 @@ router.post('/registration/:id/withdraw', requireAuth, async (req: AuthRequest, 
       });
     }
   } catch (error) {
-    console.error('Error withdrawing registration:', error);
+    logger.error({ error, registrationId: req.params.id, userId: req.user?.id }, 'Error withdrawing registration');
     res.status(500).json({
       success: false,
       message: 'Failed to process withdrawal'
@@ -1864,7 +1865,7 @@ router.post('/request-waiver', requireAuth, async (req: AuthRequest, res) => {
       contact: 'waivers@unitedwerise.org'
     });
   } catch (error) {
-    console.error('Error requesting waiver:', error);
+    logger.error({ error, registrationId: req.body.registrationId, userId: req.user?.id }, 'Error requesting waiver');
     res.status(500).json({
       success: false,
       message: 'Failed to submit waiver request'
@@ -1945,7 +1946,7 @@ router.get('/my-registrations', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching registrations:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error fetching registrations');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch registrations'
