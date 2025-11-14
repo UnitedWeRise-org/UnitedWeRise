@@ -5,6 +5,7 @@ import { CandidateReportService } from '../services/candidateReportService';
 import { BlobServiceClient } from '@azure/storage-blob';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.get('/status', requireAuth, requireCandidate, async (req: AuthRequest, re
       }))
     });
   } catch (error) {
-    console.error('Get verification status error:', error);
+    logger.error({ error, candidateId: req.candidate?.id }, 'Get verification status error');
     res.status(500).json({ error: 'Failed to retrieve verification status' });
   }
 });
@@ -161,7 +162,7 @@ router.post('/documents', requireAuth, requireCandidate, upload.single('document
       documentType: document.documentType
     });
   } catch (error) {
-    console.error('Document upload error:', error);
+    logger.error({ error, candidateId: req.candidate?.id, documentType: req.body.documentType }, 'Document upload error');
     res.status(500).json({ error: 'Failed to upload document' });
   }
 });
@@ -189,7 +190,7 @@ router.get('/requested-documents', requireAuth, requireCandidate, async (req: Au
       }))
     });
   } catch (error) {
-    console.error('Get requested documents error:', error);
+    logger.error({ error, candidateId: req.candidate?.id }, 'Get requested documents error');
     res.status(500).json({ error: 'Failed to retrieve requested documents' });
   }
 });
@@ -231,7 +232,7 @@ router.get('/admin/due-verification', requireStagingAuth, requireAdmin, async (r
     
     res.json(categorized);
   } catch (error) {
-    console.error('Get verification due candidates error:', error);
+    logger.error({ error }, 'Get verification due candidates error');
     res.status(500).json({ error: 'Failed to retrieve candidates' });
   }
 });
@@ -256,7 +257,7 @@ router.post('/admin/request-documents', requireStagingAuth, requireAdmin, async 
       documentsRequested: documents.length
     });
   } catch (error) {
-    console.error('Request documents error:', error);
+    logger.error({ error, candidateId: req.body.candidateId, adminId: req.user?.id }, 'Request documents error');
     res.status(500).json({ error: 'Failed to request documents' });
   }
 });
@@ -316,7 +317,7 @@ router.post('/admin/verify-document', requireStagingAuth, requireAdmin, async (r
       isValid: document.isValid
     });
   } catch (error) {
-    console.error('Verify document error:', error);
+    logger.error({ error, documentId: req.body.documentId, adminId: req.user?.id }, 'Verify document error');
     res.status(500).json({ error: 'Failed to verify document' });
   }
 });

@@ -7,6 +7,7 @@ const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
 ;
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -571,7 +572,7 @@ router.get('/unified', auth_1.requireAuth, async (req, res) => {
         res.json(response);
     }
     catch (error) {
-        console.error('Unified search error:', error);
+        logger_1.logger.error({ error, query: req.query.q, types: req.query.types }, 'Unified search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -721,7 +722,7 @@ router.get('/users', auth_1.requireAuth, async (req, res) => {
         res.json({ users: usersWithFollowStatus });
     }
     catch (error) {
-        console.error('User search error:', error);
+        logger_1.logger.error({ error, query: req.query.q }, 'User search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -831,7 +832,7 @@ router.get('/posts', auth_1.requireAuth, async (req, res) => {
         res.json({ posts });
     }
     catch (error) {
-        console.error('Post search error:', error);
+        logger_1.logger.error({ error, query: req.query.q }, 'Post search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -988,7 +989,7 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
         res.json({ officials });
     }
     catch (error) {
-        console.error('Officials search error:', error);
+        logger_1.logger.error({ error, query: req.query.q }, 'Officials search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1092,7 +1093,7 @@ router.get('/topics', auth_1.requireAuth, async (req, res) => {
         res.json({ topics: topics.slice(0, limitNum) });
     }
     catch (error) {
-        console.error('Topics search error:', error);
+        logger_1.logger.error({ error, query: req.query.q }, 'Topics search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

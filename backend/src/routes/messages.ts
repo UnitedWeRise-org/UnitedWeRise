@@ -4,6 +4,7 @@ import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { validateMessage } from '../middleware/validation';
 import { messageLimiter } from '../middleware/rateLimiting';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -171,7 +172,7 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get conversations error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -377,7 +378,7 @@ router.post('/conversations', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Create conversation error:', error);
+    logger.error({ error, userId: req.user?.id, participantId: req.body.participantId }, 'Create conversation error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -558,7 +559,7 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
       }
     });
   } catch (error) {
-    console.error('Get messages error:', error);
+    logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Get messages error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -722,7 +723,7 @@ router.post('/conversations/:conversationId/messages', requireAuth, messageLimit
       data: message
     });
   } catch (error) {
-    console.error('Send message error:', error);
+    logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Send message error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

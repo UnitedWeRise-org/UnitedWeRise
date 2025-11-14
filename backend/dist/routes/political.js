@@ -10,6 +10,7 @@ const auth_1 = require("../middleware/auth");
 const geospatial_1 = require("../utils/geospatial");
 const representativeService_1 = require("../services/representativeService");
 const validation_1 = require("../middleware/validation");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -185,7 +186,7 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
         if (streetAddress && city && state && zipCode) {
             // Background task - don't wait for it
             representativeService_1.RepresentativeService.getRepresentativesByAddress(`${streetAddress}, ${city}, ${state} ${zipCode}`, zipCode, state).catch(error => {
-                console.error('Background representative loading failed:', error);
+                logger_1.logger.error({ error, userId, address: `${streetAddress}, ${city}, ${state} ${zipCode}` }, 'Background representative loading failed');
             });
         }
         res.json({
@@ -194,7 +195,7 @@ router.put('/profile', auth_1.requireAuth, validation_1.validatePoliticalProfile
         });
     }
     catch (error) {
-        console.error('Update political profile error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Update political profile error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -324,7 +325,7 @@ router.get('/officials', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get representatives error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get representatives error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -453,7 +454,7 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get representatives error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get representatives error (alias)');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -565,7 +566,7 @@ router.get('/representatives/lookup', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get representatives by address error:', error);
+        logger_1.logger.error({ error, address: req.query.address }, 'Get representatives by address error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -629,7 +630,7 @@ router.post('/officials/refresh', auth_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Refresh representatives error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Refresh representatives error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -731,7 +732,7 @@ router.get('/officials/:zipCode/:state', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get representatives by location error:', error);
+        logger_1.logger.error({ error, zipCode: req.params.zipCode, state: req.params.state }, 'Get representatives by location error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

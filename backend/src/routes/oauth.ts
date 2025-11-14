@@ -5,6 +5,7 @@ import { authLimiter } from '../middleware/rateLimiting';
 import { metricsService } from '../services/metricsService';
 import { requireSecureCookies } from '../utils/environment';
 import { COOKIE_NAMES } from '../utils/cookies';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.get('/config', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('OAuth config error:', error);
+    logger.error({ error }, 'OAuth config error');
     res.status(500).json({ error: 'Failed to get OAuth configuration' });
   }
 });
@@ -148,7 +149,7 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google OAuth error:', error);
+    logger.error({ error }, 'Google OAuth error');
     metricsService.incrementCounter('oauth_errors_total', { provider: 'google' });
     res.status(500).json({ error: 'Google authentication failed' });
   }
@@ -219,7 +220,7 @@ router.post('/link/:provider', requireAuth, authLimiter, async (req: AuthRequest
     res.json({ message: `${provider} account linked successfully` });
 
   } catch (error) {
-    console.error('Link OAuth provider error:', error);
+    logger.error({ error, userId: req.user?.id, provider: req.params.provider }, 'Link OAuth provider error');
     if (error.message.includes('already linked')) {
       return res.status(400).json({ error: error.message });
     }
@@ -264,7 +265,7 @@ router.delete('/unlink/:provider', requireAuth, authLimiter, async (req: AuthReq
     res.json({ message: `${provider} account unlinked successfully` });
 
   } catch (error) {
-    console.error('Unlink OAuth provider error:', error);
+    logger.error({ error, userId: req.user?.id, provider: req.params.provider }, 'Unlink OAuth provider error');
     if (error.message.includes('last authentication method')) {
       return res.status(400).json({ error: error.message });
     }
@@ -311,7 +312,7 @@ router.get('/linked', requireAuth, async (req: AuthRequest, res) => {
     res.json({ providers });
 
   } catch (error) {
-    console.error('Get linked providers error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get linked providers error');
     res.status(500).json({ error: 'Failed to get linked providers' });
   }
 });
@@ -347,7 +348,7 @@ async function verifyGoogleToken(idToken: string): Promise<OAuthProfile | null> 
       provider: 'GOOGLE'
     };
   } catch (error) {
-    console.error('Google token verification error:', error);
+    logger.error({ error }, 'Google token verification error');
     return null;
   }
 }

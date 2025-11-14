@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const googleCivicService_1 = require("../services/googleCivicService");
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 /**
  * Get representatives using Google Civic API
@@ -23,7 +24,7 @@ router.get('/representatives', auth_1.requireAuth, async (req, res) => {
         res.json(representatives);
     }
     catch (error) {
-        console.error('Error fetching representatives:', error);
+        logger_1.logger.error({ error, address: req.query.address }, 'Error fetching representatives');
         res.status(500).json({ error: 'Failed to fetch representatives' });
     }
 });
@@ -43,7 +44,7 @@ router.get('/elections', auth_1.requireAuth, async (req, res) => {
         res.json(elections);
     }
     catch (error) {
-        console.error('Error fetching election info:', error);
+        logger_1.logger.error({ error, address: req.query.address }, 'Error fetching election info');
         res.status(500).json({ error: 'Failed to fetch election information' });
     }
 });

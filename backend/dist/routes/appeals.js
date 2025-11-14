@@ -10,6 +10,7 @@ const auth_1 = require("../middleware/auth");
 const express_validator_1 = require("express-validator");
 const rateLimiting_1 = require("../middleware/rateLimiting");
 const emailService_1 = require("../services/emailService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 // Validation middleware
@@ -84,7 +85,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
             }
         });
         // Notify moderators about new appeal (in a real system, this would send notifications)
-        console.log(`New appeal submitted: ${appeal.id} for user ${userId}`);
+        logger_1.logger.info({ appealId: appeal.id, userId }, 'New appeal submitted');
         res.json({
             message: 'Appeal submitted successfully',
             appealId: appeal.id,
@@ -93,7 +94,7 @@ router.post('/', auth_1.requireAuth, rateLimiting_1.apiLimiter, validateAppeal, 
         });
     }
     catch (error) {
-        console.error('Submit appeal error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Submit appeal error');
         res.status(500).json({ error: 'Failed to submit appeal' });
     }
 });
@@ -138,7 +139,7 @@ router.get('/my', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get user appeals error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get user appeals error');
         res.status(500).json({ error: 'Failed to retrieve appeals' });
     }
 });
@@ -175,7 +176,7 @@ router.get('/:appealId', auth_1.requireAuth, async (req, res) => {
         res.json({ appeal });
     }
     catch (error) {
-        console.error('Get appeal error:', error);
+        logger_1.logger.error({ error, appealId: req.params.appealId, userId: req.user?.id }, 'Get appeal error');
         res.status(500).json({ error: 'Failed to retrieve appeal' });
     }
 });
@@ -235,7 +236,7 @@ router.get('/queue/all', auth_1.requireAuth, requireModerator, async (req, res) 
         });
     }
     catch (error) {
-        console.error('Get appeals queue error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get appeals queue error');
         res.status(500).json({ error: 'Failed to retrieve appeals queue' });
     }
 });
@@ -338,7 +339,7 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
             }
         }
         catch (error) {
-            console.error('Failed to send appeal result email:', error);
+            logger_1.logger.error({ error, appealId, email: appeal.user?.email }, 'Failed to send appeal result email');
         }
         res.json({
             message: `Appeal ${decision.toLowerCase()} successfully`,
@@ -347,7 +348,7 @@ router.post('/:appealId/review', auth_1.requireAuth, requireModerator, [
         });
     }
     catch (error) {
-        console.error('Review appeal error:', error);
+        logger_1.logger.error({ error, appealId: req.params.appealId, reviewerId: req.user?.id }, 'Review appeal error');
         res.status(500).json({ error: 'Failed to review appeal' });
     }
 });

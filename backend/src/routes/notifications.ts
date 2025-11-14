@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -175,7 +176,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Get notifications error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get notifications error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -246,7 +247,7 @@ router.put('/:notificationId/read', requireAuth, async (req: AuthRequest, res) =
 
     res.json({ message: 'Notification marked as read' });
   } catch (error) {
-    console.error('Mark notification read error:', error);
+    logger.error({ error, userId: req.user?.id, notificationId: req.params.notificationId }, 'Mark notification read error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -363,7 +364,7 @@ router.put('/mark-read-batch', requireAuth, async (req: AuthRequest, res) => {
       optimized: true // Flag to indicate this is the batched endpoint
     });
   } catch (error) {
-    console.error('Batch mark notifications read error:', error);
+    logger.error({ error, userId: req.user?.id, notificationCount: req.body.notificationIds?.length }, 'Batch mark notifications read error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -408,7 +409,7 @@ router.put('/read-all', requireAuth, async (req: AuthRequest, res) => {
 
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
-    console.error('Mark all notifications read error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Mark all notifications read error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -499,7 +500,7 @@ export const createNotification = async (
 
     return notification;
   } catch (error) {
-    console.error('Create notification error:', error);
+    logger.error({ error, type, senderId, receiverId }, 'Create notification error');
   }
 };
 

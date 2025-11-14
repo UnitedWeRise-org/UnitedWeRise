@@ -10,6 +10,7 @@ const candidateReportService_1 = require("../services/candidateReportService");
 const storage_blob_1 = require("@azure/storage-blob");
 const multer_1 = __importDefault(require("multer"));
 const uuid_1 = require("uuid");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Configure multer for file uploads
 const upload = (0, multer_1.default)({
@@ -65,7 +66,7 @@ router.get('/status', auth_1.requireAuth, requireCandidate, async (req, res) => 
         });
     }
     catch (error) {
-        console.error('Get verification status error:', error);
+        logger_1.logger.error({ error, candidateId: req.candidate?.id }, 'Get verification status error');
         res.status(500).json({ error: 'Failed to retrieve verification status' });
     }
 });
@@ -146,7 +147,7 @@ router.post('/documents', auth_1.requireAuth, requireCandidate, upload.single('d
         });
     }
     catch (error) {
-        console.error('Document upload error:', error);
+        logger_1.logger.error({ error, candidateId: req.candidate?.id, documentType: req.body.documentType }, 'Document upload error');
         res.status(500).json({ error: 'Failed to upload document' });
     }
 });
@@ -172,7 +173,7 @@ router.get('/requested-documents', auth_1.requireAuth, requireCandidate, async (
         });
     }
     catch (error) {
-        console.error('Get requested documents error:', error);
+        logger_1.logger.error({ error, candidateId: req.candidate?.id }, 'Get requested documents error');
         res.status(500).json({ error: 'Failed to retrieve requested documents' });
     }
 });
@@ -204,7 +205,7 @@ router.get('/admin/due-verification', auth_1.requireStagingAuth, requireAdmin, a
         res.json(categorized);
     }
     catch (error) {
-        console.error('Get verification due candidates error:', error);
+        logger_1.logger.error({ error }, 'Get verification due candidates error');
         res.status(500).json({ error: 'Failed to retrieve candidates' });
     }
 });
@@ -222,7 +223,7 @@ router.post('/admin/request-documents', auth_1.requireStagingAuth, requireAdmin,
         });
     }
     catch (error) {
-        console.error('Request documents error:', error);
+        logger_1.logger.error({ error, candidateId: req.body.candidateId, adminId: req.user?.id }, 'Request documents error');
         res.status(500).json({ error: 'Failed to request documents' });
     }
 });
@@ -276,7 +277,7 @@ router.post('/admin/verify-document', auth_1.requireStagingAuth, requireAdmin, a
         });
     }
     catch (error) {
-        console.error('Verify document error:', error);
+        logger_1.logger.error({ error, documentId: req.body.documentId, adminId: req.user?.id }, 'Verify document error');
         res.status(500).json({ error: 'Failed to verify document' });
     }
 });

@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { Router } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { logger } from '../services/logger';
 ;
 
 const router = Router();
@@ -263,7 +264,7 @@ router.get('/initialize', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Batch initialization error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Batch initialization error');
     res.status(500).json({
       success: false,
       error: 'Failed to initialize application data'

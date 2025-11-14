@@ -1,6 +1,7 @@
 import express from 'express';
 import { GoogleCivicService } from '../services/googleCivicService';
 import { requireAuth } from '../middleware/auth';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ router.get('/representatives', requireAuth, async (req, res) => {
 
         res.json(representatives);
     } catch (error) {
-        console.error('Error fetching representatives:', error);
+        logger.error({ error, address: req.query.address }, 'Error fetching representatives');
         res.status(500).json({ error: 'Failed to fetch representatives' });
     }
 });
@@ -49,7 +50,7 @@ router.get('/elections', requireAuth, async (req, res) => {
 
         res.json(elections);
     } catch (error) {
-        console.error('Error fetching election info:', error);
+        logger.error({ error, address: req.query.address }, 'Error fetching election info');
         res.status(500).json({ error: 'Failed to fetch election information' });
     }
 });

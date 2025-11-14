@@ -5,10 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verificationLimiter = exports.messageLimiter = exports.postLimiter = exports.burstLimiter = exports.apiLimiter = exports.passwordResetLimiter = exports.authLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const logger_1 = require("../services/logger");
 // Custom key generator for Azure Container Apps - strips port numbers from IPs
 const azureKeyGenerator = (request) => {
     if (!request.ip) {
-        console.error('Warning: request.ip is missing!');
+        logger_1.logger.error({ socketRemoteAddress: request.socket?.remoteAddress }, 'Warning: request.ip is missing');
         return request.socket.remoteAddress || 'unknown';
     }
     // Strip port number from IP for Azure Container Apps compatibility
@@ -69,7 +70,14 @@ exports.apiLimiter = (0, express_rate_limit_1.default)({
     handler: (req, res) => {
         const isAuthenticated = !!req.user;
         const retryAfter = Math.ceil(req.rateLimit.resetTime / 1000);
-        console.warn(`Rate limit exceeded for ${isAuthenticated ? 'user' : 'IP'}: ${req.user?.id || req.ip}`);
+        logger_1.logger.warn({
+            userId: req.user?.id,
+            ip: req.ip,
+            isAuthenticated,
+            retryAfter,
+            path: req.path,
+            event: 'rate_limit_exceeded'
+        }, 'Rate limit exceeded');
         res.status(429).json({
             error: isAuthenticated
                 ? 'You are making requests too quickly. Please wait a moment before trying again.'

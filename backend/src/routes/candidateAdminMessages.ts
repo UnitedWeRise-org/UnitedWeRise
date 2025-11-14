@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
+import { logger } from '../services/logger';
 
 const router = Router();
 
@@ -109,7 +110,7 @@ router.get('/admin-messages', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching candidate admin messages:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error fetching candidate admin messages');
     res.status(500).json({ error: 'Failed to retrieve messages' });
   }
 });
@@ -214,7 +215,12 @@ router.post('/admin-messages', requireAuth, async (req: AuthRequest, res) => {
       }
     });
 
-    console.log(`✅ Candidate message sent from ${candidate.name} to admin (${messageType})`);
+    logger.info({
+      candidateId: candidate.id,
+      candidateName: candidate.name,
+      messageType,
+      priority
+    }, 'Candidate message sent to admin');
 
     // TODO: Send notification to admin about new candidate message
     // TODO: Send email notification to admin if urgent priority
@@ -226,7 +232,7 @@ router.post('/admin-messages', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Error sending candidate admin message:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error sending candidate admin message');
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -275,7 +281,7 @@ router.get('/admin-messages/unread-count', requireAuth, async (req: AuthRequest,
     });
 
   } catch (error) {
-    console.error('Error fetching unread count:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error fetching unread count');
     res.status(500).json({ error: 'Failed to get unread count' });
   }
 });

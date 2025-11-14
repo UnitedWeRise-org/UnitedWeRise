@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const prisma_1 = require("../lib/prisma");
+const logger_1 = require("../services/logger");
 const router = (0, express_1.Router)();
 /**
  * @swagger
@@ -102,7 +103,7 @@ router.get('/admin-messages', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching candidate admin messages:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error fetching candidate admin messages');
         res.status(500).json({ error: 'Failed to retrieve messages' });
     }
 });
@@ -201,7 +202,12 @@ router.post('/admin-messages', auth_1.requireAuth, async (req, res) => {
                 candidate: { select: { name: true, office: { select: { title: true, state: true } } } }
             }
         });
-        console.log(`✅ Candidate message sent from ${candidate.name} to admin (${messageType})`);
+        logger_1.logger.info({
+            candidateId: candidate.id,
+            candidateName: candidate.name,
+            messageType,
+            priority
+        }, 'Candidate message sent to admin');
         // TODO: Send notification to admin about new candidate message
         // TODO: Send email notification to admin if urgent priority
         res.status(201).json({
@@ -211,7 +217,7 @@ router.post('/admin-messages', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error sending candidate admin message:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error sending candidate admin message');
         res.status(500).json({ error: 'Failed to send message' });
     }
 });
@@ -256,7 +262,7 @@ router.get('/admin-messages/unread-count', auth_1.requireAuth, async (req, res) 
         });
     }
     catch (error) {
-        console.error('Error fetching unread count:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error fetching unread count');
         res.status(500).json({ error: 'Failed to get unread count' });
     }
 });

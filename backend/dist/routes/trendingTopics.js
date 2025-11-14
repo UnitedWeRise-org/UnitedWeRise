@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const logger_1 = require("../services/logger");
 ;
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -163,7 +164,7 @@ router.get('/topics', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching trending topics:', error);
+        logger_1.logger.error({ error, scope: req.query.scope, limit: req.query.limit }, 'Error fetching trending topics');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch trending topics'
@@ -288,7 +289,7 @@ router.get('/map-topics', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching map topics:', error);
+        logger_1.logger.error({ error, count: req.query.count }, 'Error fetching map topics');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch map topics'

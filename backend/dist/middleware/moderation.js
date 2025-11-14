@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addContentWarnings = exports.contentFilter = exports.logModerationAction = exports.reportRateLimit = exports.moderateContent = exports.checkUserSuspension = void 0;
 const moderationService_1 = require("../services/moderationService");
+const logger_1 = require("../services/logger");
 // Middleware to check user suspension status
 const checkUserSuspension = async (req, res, next) => {
     if (!req.user) {
@@ -57,7 +58,7 @@ const checkUserSuspension = async (req, res, next) => {
         next();
     }
     catch (error) {
-        console.error('Suspension check error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, path: req.path }, 'Suspension check error');
         next(); // Don't block on errors, but log them
     }
 };
@@ -99,13 +100,13 @@ const moderateContent = (contentType) => {
                     if (content && contentId) {
                         moderationService_1.moderationService.analyzeContent(content, contentType, contentId)
                             .catch(error => {
-                            console.error('Content moderation error:', error);
+                            logger_1.logger.error({ error, contentType, contentId }, 'Content moderation error');
                         });
                     }
                 }
             }
             catch (error) {
-                console.error('Moderation middleware error:', error);
+                logger_1.logger.error({ error }, 'Moderation middleware error');
             }
             // Call original send method
             return originalSend.call(this, data);
@@ -128,7 +129,11 @@ const logModerationAction = (action) => {
         const originalSend = res.send;
         res.send = function (data) {
             if (res.statusCode >= 200 && res.statusCode < 300) {
-                console.log(`Moderation action: ${action} by user ${req.user?.id} at ${new Date().toISOString()}`);
+                logger_1.logger.info({
+                    action,
+                    userId: req.user?.id,
+                    path: req.path
+                }, 'Moderation action');
             }
             return originalSend.call(this, data);
         };
@@ -208,7 +213,7 @@ const addContentWarnings = (req, res, next) => {
             }
         }
         catch (error) {
-            console.error('Content warning middleware error:', error);
+            logger_1.logger.error({ error }, 'Content warning middleware error');
         }
         return originalSend.call(this, data);
     };

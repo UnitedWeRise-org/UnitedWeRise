@@ -19,6 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.visitTrackingMiddleware = visitTrackingMiddleware;
 const visitorAnalytics_1 = __importDefault(require("../services/visitorAnalytics"));
+const logger_1 = require("../services/logger");
 /**
  * Extract client IP address from request
  * Handles X-Forwarded-For header from Azure Container Apps proxy
@@ -94,7 +95,7 @@ async function visitTrackingMiddleware(req, res, next) {
     })
         .catch(err => {
         // Log error but don't fail the request
-        console.error('[VisitTracking] Error tracking pageview:', err.message);
+        logger_1.logger.error({ error: err, path, userId, ip }, 'VisitTracking: Error tracking pageview');
     });
     // Continue processing request immediately
     next();

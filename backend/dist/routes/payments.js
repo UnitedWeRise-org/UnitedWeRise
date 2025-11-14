@@ -38,6 +38,7 @@ const auth_1 = require("../middleware/auth");
 const stripeService_1 = require("../services/stripeService");
 const prisma_1 = require("../lib/prisma");
 const express_validator_1 = require("express-validator");
+const logger_1 = require("../services/logger");
 const router = (0, express_1.Router)();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -126,7 +127,7 @@ router.post('/donation', auth_1.requireAuth, [
         });
     }
     catch (error) {
-        console.error('Donation creation error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, amount: req.body.amount }, 'Donation creation error');
         res.status(500).json({
             success: false,
             error: 'Failed to create donation'
@@ -213,7 +214,7 @@ router.post('/fee', auth_1.requireAuth, [
         });
     }
     catch (error) {
-        console.error('Fee payment creation error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, feeType: req.body.feeType }, 'Fee payment creation error');
         res.status(500).json({
             success: false,
             error: 'Failed to create payment'
@@ -306,7 +307,7 @@ router.get('/history', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Payment history error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Payment history error');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch payment history'
@@ -360,7 +361,7 @@ router.get('/campaigns', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Campaign fetch error:', error);
+        logger_1.logger.error({ error }, 'Campaign fetch error');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch campaigns'
@@ -466,7 +467,7 @@ router.get('/receipt/:paymentId', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Receipt fetch error:', error);
+        logger_1.logger.error({ error, paymentId: req.params.paymentId, userId: req.user?.id }, 'Receipt fetch error');
         res.status(500).json({
             success: false,
             error: 'Failed to fetch receipt'
@@ -575,7 +576,7 @@ router.get('/tax-summary/:year', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Tax summary error:', error);
+        logger_1.logger.error({ error, year: req.params.year, userId: req.user?.id }, 'Tax summary error');
         res.status(500).json({
             success: false,
             error: 'Failed to generate tax summary'
@@ -631,7 +632,7 @@ async (req, res) => {
         res.json({ received: true });
     }
     catch (error) {
-        console.error('Webhook error:', error);
+        logger_1.logger.error({ error, signature: !!signature }, 'Webhook error');
         res.status(400).json({
             error: error instanceof Error ? error.message : 'Webhook processing failed'
         });

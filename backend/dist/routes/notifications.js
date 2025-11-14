@@ -40,6 +40,7 @@ exports.createNotification = void 0;
 const prisma_1 = require("../lib/prisma");
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Import webSocketService for real-time notifications
 let webSocketService = null;
@@ -208,7 +209,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get notifications error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get notifications error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -275,7 +276,7 @@ router.put('/:notificationId/read', auth_1.requireAuth, async (req, res) => {
         res.json({ message: 'Notification marked as read' });
     }
     catch (error) {
-        console.error('Mark notification read error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, notificationId: req.params.notificationId }, 'Mark notification read error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -386,7 +387,7 @@ router.put('/mark-read-batch', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Batch mark notifications read error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, notificationCount: req.body.notificationIds?.length }, 'Batch mark notifications read error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -429,7 +430,7 @@ router.put('/read-all', auth_1.requireAuth, async (req, res) => {
         res.json({ message: 'All notifications marked as read' });
     }
     catch (error) {
-        console.error('Mark all notifications read error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Mark all notifications read error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -511,7 +512,7 @@ const createNotification = async (type, senderId, receiverId, message, postId, c
         return notification;
     }
     catch (error) {
-        console.error('Create notification error:', error);
+        logger_1.logger.error({ error, type, senderId, receiverId }, 'Create notification error');
     }
 };
 exports.createNotification = createNotification;

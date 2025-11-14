@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPerformanceMetrics = exports.performanceMiddleware = exports.performanceMonitor = void 0;
+const logger_1 = require("../services/logger");
 class PerformanceMonitor {
     constructor() {
         this.metrics = [];
@@ -15,11 +16,14 @@ class PerformanceMonitor {
         }
         // Log slow requests
         if (metric.duration > this.slowRequestThreshold) {
-            console.warn(`⚠️ Slow request: ${metric.method} ${metric.path} took ${metric.duration}ms`, {
+            logger_1.logger.warn({
+                method: metric.method,
+                path: metric.path,
                 duration: metric.duration,
                 statusCode: metric.statusCode,
-                userId: metric.userId
-            });
+                userId: metric.userId,
+                event: 'slow_request'
+            }, 'Slow request detected');
         }
     }
     getMetrics() {

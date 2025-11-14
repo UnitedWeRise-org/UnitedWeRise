@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -594,7 +595,7 @@ router.get('/unified', requireAuth, async (req: AuthRequest, res) => {
 
         res.json(response);
     } catch (error) {
-        console.error('Unified search error:', error);
+        logger.error({ error, query: req.query.q, types: req.query.types }, 'Unified search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -749,7 +750,7 @@ router.get('/users', requireAuth, async (req: AuthRequest, res) => {
 
         res.json({ users: usersWithFollowStatus });
     } catch (error) {
-        console.error('User search error:', error);
+        logger.error({ error, query: req.query.q }, 'User search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -863,7 +864,7 @@ router.get('/posts', requireAuth, async (req: AuthRequest, res) => {
 
         res.json({ posts });
     } catch (error) {
-        console.error('Post search error:', error);
+        logger.error({ error, query: req.query.q }, 'Post search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1024,7 +1025,7 @@ router.get('/officials', requireAuth, async (req: AuthRequest, res) => {
 
         res.json({ officials });
     } catch (error) {
-        console.error('Officials search error:', error);
+        logger.error({ error, query: req.query.q }, 'Officials search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1134,7 +1135,7 @@ router.get('/topics', requireAuth, async (req: AuthRequest, res) => {
 
         res.json({ topics: topics.slice(0, limitNum) });
     } catch (error) {
-        console.error('Topics search error:', error);
+        logger.error({ error, query: req.query.q }, 'Topics search error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

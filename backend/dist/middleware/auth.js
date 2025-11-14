@@ -11,18 +11,19 @@ const sessionManager_1 = require("../services/sessionManager");
 const metricsService_1 = require("../services/metricsService");
 const environment_1 = require("../utils/environment");
 const cookies_1 = require("../utils/cookies");
+const logger_1 = require("../services/logger");
 const requireAuth = async (req, res, next) => {
     // Generate unique request ID for tracing
     const requestId = crypto_1.default.randomBytes(4).toString('hex');
     try {
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] 🔍 AUTH Middleware Entry:`, {
+            logger_1.logger.info({
+                requestId,
                 path: req.path,
                 method: req.method,
-                timestamp: new Date().toISOString(),
                 hasCookie: !!req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN],
                 hasAuthHeader: !!req.header('Authorization')
-            });
+            }, 'AUTH Middleware Entry');
         }
         // Get token from cookie first, fallback to header for transition period
         let token = req.cookies?.[cookies_1.COOKIE_NAMES.AUTH_TOKEN];
@@ -32,41 +33,49 @@ const requireAuth = async (req, res, next) => {
         }
         if (!token) {
             // Keep error logs unconditional (401 response)
-            console.log(`[${requestId}] ❌ AUTH 401: No token provided`, {
+            logger_1.logger.info({
+                requestId,
                 path: req.path,
-                method: req.method
-            });
+                method: req.method,
+                reason: 'no_token'
+            }, 'AUTH 401: No token provided');
             metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
             return res.status(401).json({ error: 'Access denied. No token provided.' });
         }
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] 🔍 AUTH Token Verification: Verifying JWT token...`);
+            logger_1.logger.info({ requestId }, 'AUTH Token Verification: Verifying JWT token');
         }
         const decoded = (0, auth_1.verifyToken)(token);
         if (!decoded) {
             // Keep error logs unconditional (401 response)
-            console.log(`[${requestId}] ❌ AUTH 401: Token verification failed`);
+            logger_1.logger.info({
+                requestId,
+                reason: 'invalid_token'
+            }, 'AUTH 401: Token verification failed');
             metricsService_1.metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
             return res.status(401).json({ error: 'Invalid token.', code: 'ACCESS_TOKEN_EXPIRED' });
         }
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] ✅ AUTH Token Decoded:`, {
+            logger_1.logger.info({
+                requestId,
                 userId: decoded.userId,
                 totpVerified: decoded.totpVerified || false
-            });
+            }, 'AUTH Token Decoded');
         }
         // SECURITY FIX: Check if token is blacklisted using secure hash
         // Use SHA-256 hash of full token to prevent collisions and improve security
         const tokenId = crypto_1.default.createHash('sha256').update(token).digest('hex');
         if (await sessionManager_1.sessionManager.isTokenBlacklisted(tokenId)) {
             // SECURITY EVENT: Always log blacklisted tokens
-            console.log(`[${requestId}] ❌ AUTH 401: Token blacklisted`, {
-                userId: decoded.userId
-            });
+            logger_1.logger.warn({
+                requestId,
+                userId: decoded.userId,
+                event: 'token_blacklisted'
+            }, 'AUTH 401: Token blacklisted');
             return res.status(401).json({ error: 'Token has been revoked.' });
         }
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] 🔍 AUTH Database Lookup: Querying user from database...`);
+            logger_1.logger.info({ requestId }, 'AUTH Database Lookup: Querying user from database');
         }
         const user = await prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
@@ -74,19 +83,22 @@ const requireAuth = async (req, res, next) => {
         });
         if (!user) {
             // Keep error logs unconditional (401 response)
-            console.log(`[${requestId}] ❌ AUTH 401: User not found in database`, {
-                userId: decoded.userId
-            });
+            logger_1.logger.info({
+                requestId,
+                userId: decoded.userId,
+                reason: 'user_not_found'
+            }, 'AUTH 401: User not found in database');
             return res.status(401).json({ error: 'User not found.' });
         }
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] ✅ AUTH User Found:`, {
+            logger_1.logger.info({
+                requestId,
                 userId: user.id,
                 username: user.username,
                 dbIsAdmin: user.isAdmin,
                 dbIsModerator: user.isModerator,
                 dbIsSuperAdmin: user.isSuperAdmin
-            });
+            }, 'AUTH User Found');
         }
         // Add TOTP verification status from JWT to user object
         req.user = {
@@ -95,23 +107,25 @@ const requireAuth = async (req, res, next) => {
             totpVerifiedAt: decoded.totpVerifiedAt || null
         };
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] 🔍 AUTH req.user Assigned:`, {
+            logger_1.logger.info({
+                requestId,
                 userId: user.id,
                 username: user.username,
-                'req.user.isAdmin': req.user.isAdmin,
-                'req.user.isModerator': req.user.isModerator,
-                'req.user.isSuperAdmin': req.user.isSuperAdmin,
-                'req.user.totpVerified': req.user.totpVerified,
+                reqUserIsAdmin: req.user.isAdmin,
+                reqUserIsModerator: req.user.isModerator,
+                reqUserIsSuperAdmin: req.user.isSuperAdmin,
+                reqUserTotpVerified: req.user.totpVerified,
                 rawDatabaseUser: {
                     isAdmin: user.isAdmin,
                     isModerator: user.isModerator,
                     isSuperAdmin: user.isSuperAdmin
                 }
-            });
-            console.log(`[${requestId}] ✅ AUTH Basic Auth Successful:`, {
+            }, 'AUTH req.user Assigned');
+            logger_1.logger.info({
+                requestId,
                 userId: user.id,
                 username: user.username
-            });
+            }, 'AUTH Basic Auth Successful');
         }
         // Record successful authentication
         metricsService_1.metricsService.incrementCounter('auth_middleware_success_total', {
@@ -131,7 +145,7 @@ const requireAuth = async (req, res, next) => {
             }
             catch (error) {
                 // Log but don't fail the request if lastSeenAt update fails
-                console.error('Failed to update lastSeenAt:', error);
+                logger_1.logger.error({ error, userId: user.id }, 'Failed to update lastSeenAt');
             }
         }
         // Update session activity if available
@@ -142,7 +156,7 @@ const requireAuth = async (req, res, next) => {
             }
             catch (error) {
                 // Log but don't fail the request if session update fails
-                console.error('Failed to update session activity:', error);
+                logger_1.logger.error({ error, sessionId, userId: user.id }, 'Failed to update session activity');
             }
         }
         // SECURITY FIX: Always enforce admin access for admin routes (not just in staging)
@@ -152,58 +166,63 @@ const requireAuth = async (req, res, next) => {
         ];
         const requiresAdminAccess = adminOnlyRoutes.some(route => req.path.startsWith(route));
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] 🔍 AUTH Admin Route Check:`, {
+            logger_1.logger.info({
+                requestId,
                 path: req.path,
                 requiresAdminAccess,
                 adminOnlyRoutes,
                 matchedRoute: adminOnlyRoutes.find(route => req.path.startsWith(route)) || 'none'
-            });
+            }, 'AUTH Admin Route Check');
             // Show admin access check for admin routes
             if (requiresAdminAccess) {
-                console.log(`[${requestId}] 🔍 AUTH Admin Access Evaluation:`, {
+                logger_1.logger.info({
+                    requestId,
                     path: req.path,
                     requiresAdminAccess,
-                    'req.user?.isAdmin': req.user?.isAdmin,
-                    'user.isAdmin': user.isAdmin,
-                    'req.user?.isSuperAdmin': req.user?.isSuperAdmin,
-                    'req.user?.totpVerified': req.user?.totpVerified,
+                    reqUserIsAdmin: req.user?.isAdmin,
+                    userIsAdmin: user.isAdmin,
+                    reqUserIsSuperAdmin: req.user?.isSuperAdmin,
+                    reqUserTotpVerified: req.user?.totpVerified,
                     willReturn403: !req.user?.isAdmin
-                });
+                }, 'AUTH Admin Access Evaluation');
             }
         }
         if (requiresAdminAccess && !req.user?.isAdmin) {
             // SECURITY EVENT: Always log admin access denials
-            console.error(`[${requestId}] 🚨 AUTH 403: Admin access denied`, {
+            logger_1.logger.error({
+                requestId,
                 path: req.path,
                 method: req.method,
                 userId: req.user?.id,
                 username: req.user?.username,
-                'req.user.isAdmin': req.user?.isAdmin,
-                'req.user.isSuperAdmin': req.user?.isSuperAdmin,
-                'req.user.totpVerified': req.user?.totpVerified,
+                reqUserIsAdmin: req.user?.isAdmin,
+                reqUserIsSuperAdmin: req.user?.isSuperAdmin,
+                reqUserTotpVerified: req.user?.totpVerified,
                 rawDatabaseUser: {
                     isAdmin: user.isAdmin,
                     isSuperAdmin: user.isSuperAdmin
                 },
-                reason: 'USER_NOT_ADMIN'
-            });
+                reason: 'USER_NOT_ADMIN',
+                event: 'admin_access_denied'
+            }, 'AUTH 403: Admin access denied');
             return res.status(403).json({
                 error: 'Admin access required for this endpoint.',
                 requiredRole: 'admin'
             });
         }
         if ((0, environment_1.enableRequestLogging)()) {
-            console.log(`[${requestId}] ✅ AUTH Middleware Complete: Passing to next()`, {
+            logger_1.logger.info({
+                requestId,
                 path: req.path,
                 userId: user.id,
                 username: user.username,
                 isAdmin: req.user.isAdmin
-            });
+            }, 'AUTH Middleware Complete: Passing to next()');
         }
         next();
     }
     catch (error) {
-        console.error(`[${requestId}] ❌ AUTH Error in middleware:`, error);
+        logger_1.logger.error({ error, requestId }, 'AUTH Error in middleware');
         res.status(401).json({ error: 'Invalid token.' });
     }
 };
@@ -212,50 +231,56 @@ const requireAdmin = async (req, res, next) => {
     // Generate unique request ID for tracing
     const requestId = crypto_1.default.randomBytes(4).toString('hex');
     if ((0, environment_1.enableRequestLogging)()) {
-        console.log(`[${requestId}] 🔍 requireAdmin Middleware Entry:`, {
+        logger_1.logger.info({
+            requestId,
             path: req.path,
             method: req.method,
             hasUser: !!req.user,
-            'req.user?.isAdmin': req.user?.isAdmin,
-            'req.user?.totpVerified': req.user?.totpVerified
-        });
+            reqUserIsAdmin: req.user?.isAdmin,
+            reqUserTotpVerified: req.user?.totpVerified
+        }, 'requireAdmin Middleware Entry');
     }
     if (!req.user?.isAdmin) {
         // SECURITY EVENT: Always log admin access denials
-        console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - User not admin`, {
+        logger_1.logger.error({
+            requestId,
             path: req.path,
             method: req.method,
             userId: req.user?.id,
             username: req.user?.username,
-            'req.user.isAdmin': req.user?.isAdmin,
-            reason: 'NOT_ADMIN'
-        });
+            reqUserIsAdmin: req.user?.isAdmin,
+            reason: 'NOT_ADMIN',
+            event: 'admin_access_denied'
+        }, 'AUTH 403: requireAdmin - User not admin');
         return res.status(403).json({ error: 'Admin access required.' });
     }
     // Check TOTP verification for admin users
     // Admin users must have TOTP verified in their JWT token
     if (!req.user?.totpVerified) {
         // SECURITY EVENT: Always log TOTP verification failures for admin access
-        console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - TOTP not verified`, {
+        logger_1.logger.error({
+            requestId,
             path: req.path,
             method: req.method,
             userId: req.user?.id,
             username: req.user?.username,
-            'req.user.totpVerified': req.user?.totpVerified,
-            'req.user.totpVerifiedAt': req.user?.totpVerifiedAt,
-            reason: 'TOTP_NOT_VERIFIED'
-        });
+            reqUserTotpVerified: req.user?.totpVerified,
+            reqUserTotpVerifiedAt: req.user?.totpVerifiedAt,
+            reason: 'TOTP_NOT_VERIFIED',
+            event: 'totp_required'
+        }, 'AUTH 403: requireAdmin - TOTP not verified');
         return res.status(403).json({
             error: 'TOTP_REQUIRED',
             message: 'Two-factor authentication required for admin access. Please log in with TOTP.'
         });
     }
     if ((0, environment_1.enableRequestLogging)()) {
-        console.log(`[${requestId}] ✅ requireAdmin Passed:`, {
+        logger_1.logger.info({
+            requestId,
             path: req.path,
             userId: req.user.id,
             username: req.user.username
-        });
+        }, 'requireAdmin Passed');
     }
     next();
 };

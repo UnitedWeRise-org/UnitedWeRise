@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../services/logger';
 
 const router = Router();
 
@@ -90,7 +91,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
         return res.json({ success: true, galleries });
     } catch (error) {
-        console.error('[GET /api/photos/galleries] error:', error);
+        logger.error({ error, userId: req.user?.id }, 'Error retrieving galleries');
         res.status(500).json({ success: false, error: 'Failed to retrieve galleries' });
     }
 });
@@ -177,7 +178,7 @@ router.put('/:photoId/gallery', requireAuth, async (req: AuthRequest, res: Respo
 
         return res.json({ success: true, photo });
     } catch (error) {
-        console.error('[PUT /api/photos/:photoId/gallery] error:', error);
+        logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error moving photo to gallery');
         res.status(500).json({ success: false, error: 'Failed to move photo to gallery' });
     }
 });
@@ -250,7 +251,7 @@ router.delete('/:photoId', requireAuth, async (req: AuthRequest, res: Response) 
 
         return res.json({ success: true });
     } catch (error) {
-        console.error('[DELETE /api/photos/:photoId] error:', error);
+        logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error deleting photo');
         res.status(500).json({ success: false, error: 'Failed to delete photo' });
     }
 });
@@ -340,7 +341,7 @@ router.post('/:photoId/set-profile', requireAuth, async (req: AuthRequest, res: 
 
         return res.json({ success: true, avatarUrl: photo.url });
     } catch (error) {
-        console.error('[POST /api/photos/:photoId/set-profile] error:', error);
+        logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error setting profile photo');
         res.status(500).json({ success: false, error: 'Failed to set profile photo' });
     }
 });

@@ -6,6 +6,7 @@ import crypto from 'crypto';
 ;
 import { requireAuth } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
+import { logger } from '../services/logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -61,7 +62,7 @@ router.post('/setup', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('TOTP setup error:', error);
+    logger.error({ error, userId: req.user?.id }, 'TOTP setup error');
     res.status(500).json({ error: 'Failed to setup TOTP' });
   }
 });
@@ -130,7 +131,7 @@ router.post('/verify-setup', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('TOTP verification error:', error);
+    logger.error({ error, userId: req.user?.id }, 'TOTP setup verification error');
     res.status(500).json({ error: 'Failed to verify TOTP' });
   }
 });
@@ -220,14 +221,14 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
         verified: true,
         verificationToken: verificationToken, // Send this for admin access
         usedBackupCode: usedBackupCode,
-        remainingBackupCodes: usedBackupCode ? 
-          user.totpBackupCodes.length - 1 : 
+        remainingBackupCodes: usedBackupCode ?
+          user.totpBackupCodes.length - 1 :
           user.totpBackupCodes.length
       }
     });
 
   } catch (error) {
-    console.error('TOTP verification error:', error);
+    logger.error({ error, userId: req.user?.id }, 'TOTP auth verification error');
     res.status(500).json({ error: 'Failed to verify TOTP' });
   }
 });
@@ -283,7 +284,7 @@ router.post('/disable', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('TOTP disable error:', error);
+    logger.error({ error, userId: req.user?.id }, 'TOTP disable error');
     res.status(500).json({ error: 'Failed to disable TOTP' });
   }
 });
@@ -318,7 +319,7 @@ router.get('/status', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('TOTP status error:', error);
+    logger.error({ error, userId: req.user?.id }, 'TOTP status error');
     res.status(500).json({ error: 'Failed to get TOTP status' });
   }
 });
@@ -389,7 +390,7 @@ router.post('/regenerate-backup-codes', requireAuth, async (req: AuthRequest, re
     });
 
   } catch (error) {
-    console.error('Backup codes regeneration error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Backup codes regeneration error');
     res.status(500).json({ error: 'Failed to regenerate backup codes' });
   }
 });

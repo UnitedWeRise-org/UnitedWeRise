@@ -9,6 +9,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const validation_1 = require("../middleware/validation");
 const rateLimiting_1 = require("../middleware/rateLimiting");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -170,7 +171,7 @@ router.get('/conversations', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get conversations error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get conversations error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -368,7 +369,7 @@ router.post('/conversations', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Create conversation error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, participantId: req.body.participantId }, 'Create conversation error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -542,7 +543,7 @@ router.get('/conversations/:conversationId/messages', auth_1.requireAuth, async 
         });
     }
     catch (error) {
-        console.error('Get messages error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Get messages error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -700,7 +701,7 @@ router.post('/conversations/:conversationId/messages', auth_1.requireAuth, rateL
         });
     }
     catch (error) {
-        console.error('Send message error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, conversationId: req.params.conversationId }, 'Send message error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

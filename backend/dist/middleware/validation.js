@@ -2,11 +2,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateModerationAction = exports.validateReport = exports.validateMessage = exports.validatePoliticalProfile = exports.validateProfileUpdate = exports.validateComment = exports.validatePost = exports.validateLogin = exports.validateEmailVerification = exports.validatePhoneCode = exports.validatePhoneVerification = exports.validateRegistration = exports.handleValidationErrors = void 0;
 const express_validator_1 = require("express-validator");
+const logger_1 = require("../services/logger");
 // Validation error handler
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
-        console.log('🚨 Validation errors:', JSON.stringify(errors.array(), null, 2));
+        logger_1.logger.info({
+            path: req.path,
+            method: req.method,
+            errors: errors.array()
+        }, 'Validation errors');
         // Extract the first error message for user-friendly display
         const firstError = errors.array()[0];
         const userFriendlyMessage = firstError ? firstError.msg : 'Validation failed';

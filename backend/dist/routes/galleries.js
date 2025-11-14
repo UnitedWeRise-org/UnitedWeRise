@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_js_1 = require("../middleware/auth.js");
 const prisma_js_1 = require("../lib/prisma.js");
+const logger_1 = require("../services/logger");
 const router = (0, express_1.Router)();
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.get('/', auth_js_1.requireAuth, async (req, res) => {
         return res.json({ success: true, galleries });
     }
     catch (error) {
-        console.error('[GET /api/photos/galleries] error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Error retrieving galleries');
         res.status(500).json({ success: false, error: 'Failed to retrieve galleries' });
     }
 });
@@ -172,7 +173,7 @@ router.put('/:photoId/gallery', auth_js_1.requireAuth, async (req, res) => {
         return res.json({ success: true, photo });
     }
     catch (error) {
-        console.error('[PUT /api/photos/:photoId/gallery] error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error moving photo to gallery');
         res.status(500).json({ success: false, error: 'Failed to move photo to gallery' });
     }
 });
@@ -243,7 +244,7 @@ router.delete('/:photoId', auth_js_1.requireAuth, async (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('[DELETE /api/photos/:photoId] error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error deleting photo');
         res.status(500).json({ success: false, error: 'Failed to delete photo' });
     }
 });
@@ -329,7 +330,7 @@ router.post('/:photoId/set-profile', auth_js_1.requireAuth, async (req, res) => 
         return res.json({ success: true, avatarUrl: photo.url });
     }
     catch (error) {
-        console.error('[POST /api/photos/:photoId/set-profile] error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id, photoId: req.params.photoId }, 'Error setting profile photo');
         res.status(500).json({ success: false, error: 'Failed to set profile photo' });
     }
 });

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const prisma_1 = require("../lib/prisma");
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../services/logger");
 ;
 const router = (0, express_1.Router)();
 // Using singleton prisma from lib/prisma.ts
@@ -253,7 +254,7 @@ router.get('/initialize', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Batch initialization error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Batch initialization error');
         res.status(500).json({
             success: false,
             error: 'Failed to initialize application data'

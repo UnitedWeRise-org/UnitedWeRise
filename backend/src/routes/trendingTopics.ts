@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { logger } from '../services/logger';
 ;
 
 const router = express.Router();
@@ -164,7 +165,7 @@ router.get('/topics', async (req, res) => {
       message: `Showing ${topics.length} trending topics (demo data)`
     });
   } catch (error) {
-    console.error('Error fetching trending topics:', error);
+    logger.error({ error, scope: req.query.scope, limit: req.query.limit }, 'Error fetching trending topics');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch trending topics'
@@ -292,7 +293,7 @@ router.get('/map-topics', async (req, res) => {
       message: `Showing ${topics.length} map topics (demo data)`
     });
   } catch (error) {
-    console.error('Error fetching map topics:', error);
+    logger.error({ error, count: req.query.count }, 'Error fetching map topics');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch map topics'

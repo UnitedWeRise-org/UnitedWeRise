@@ -43,6 +43,7 @@ const QRCode = __importStar(require("qrcode"));
 const crypto_1 = __importDefault(require("crypto"));
 ;
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../services/logger");
 // Using singleton prisma from lib/prisma.ts
 const router = express_1.default.Router();
 /**
@@ -88,7 +89,7 @@ router.post('/setup', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('TOTP setup error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'TOTP setup error');
         res.status(500).json({ error: 'Failed to setup TOTP' });
     }
 });
@@ -147,7 +148,7 @@ router.post('/verify-setup', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('TOTP verification error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'TOTP setup verification error');
         res.status(500).json({ error: 'Failed to verify TOTP' });
     }
 });
@@ -231,7 +232,7 @@ router.post('/verify', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('TOTP verification error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'TOTP auth verification error');
         res.status(500).json({ error: 'Failed to verify TOTP' });
     }
 });
@@ -279,7 +280,7 @@ router.post('/disable', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('TOTP disable error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'TOTP disable error');
         res.status(500).json({ error: 'Failed to disable TOTP' });
     }
 });
@@ -310,7 +311,7 @@ router.get('/status', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('TOTP status error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'TOTP status error');
         res.status(500).json({ error: 'Failed to get TOTP status' });
     }
 });
@@ -373,7 +374,7 @@ router.post('/regenerate-backup-codes', auth_1.requireAuth, async (req, res) => 
         });
     }
     catch (error) {
-        console.error('Backup codes regeneration error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Backup codes regeneration error');
         res.status(500).json({ error: 'Failed to regenerate backup codes' });
     }
 });

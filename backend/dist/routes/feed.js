@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const probabilityFeedService_1 = require("../services/probabilityFeedService");
 const engagementScoringService_1 = require("../services/engagementScoringService");
+const logger_1 = require("../services/logger");
 const router = express_1.default.Router();
 // Using singleton prisma from lib/prisma.ts
 /**
@@ -124,16 +125,14 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             _count: undefined
         }));
         // DIAGNOSTIC: Log photo data being sent to frontend
-        console.log(`📸 FEED API - Sending ${postsWithLikeStatus.length} posts`);
-        const postsWithPhotos = postsWithLikeStatus.filter(p => p.photos && p.photos.length > 0);
-        console.log(`📸 FEED API - ${postsWithPhotos.length} posts have photos`);
-        if (postsWithPhotos.length > 0) {
-            console.log(`📸 FEED API - Sample post with photos:`, {
-                postId: postsWithPhotos[0].id,
-                photoCount: postsWithPhotos[0].photos.length,
-                photoUrls: postsWithPhotos[0].photos.map(p => p.url)
-            });
-        }
+        logger_1.logger.debug({
+            totalPosts: postsWithLikeStatus.length,
+            postsWithPhotos: postsWithLikeStatus.filter(p => p.photos && p.photos.length > 0).length,
+            samplePost: postsWithLikeStatus.find(p => p.photos?.length > 0) ? {
+                postId: postsWithLikeStatus.find(p => p.photos?.length > 0).id,
+                photoCount: postsWithLikeStatus.find(p => p.photos?.length > 0).photos.length
+            } : null
+        }, 'Feed API photo data');
         res.json({
             posts: postsWithLikeStatus,
             algorithm: feedResult.algorithm,
@@ -148,7 +147,7 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Feed error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Feed error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -336,7 +335,7 @@ router.get('/following', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Following feed error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Following feed error');
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -522,7 +521,7 @@ router.get('/trending', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get trending posts error:', error);
+        logger_1.logger.error({ error }, 'Get trending posts error');
         // Return safe fallback instead of 500 error
         const { limit = 20, offset = 0 } = req.query;
         const limitNum = Math.max(1, parseInt(limit.toString()) || 20);
@@ -581,7 +580,7 @@ router.get('/filters', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get feed filters error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Get feed filters error');
         res.status(500).json({
             success: false,
             error: 'Failed to retrieve filters'
@@ -632,7 +631,7 @@ router.post('/filters', auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Create feed filter error:', error);
+        logger_1.logger.error({ error, userId: req.user?.id }, 'Create feed filter error');
         res.status(500).json({
             success: false,
             error: 'Failed to create filter'
