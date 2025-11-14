@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { ApiCacheService } from './apiCache';
+import { logger } from './logger';
 ;
 import { GoogleCivicService } from './googleCivicService';
 
@@ -103,7 +104,7 @@ export class RepresentativeService {
             try {
                 googleResult = await GoogleCivicService.getRepresentativesByAddress(address);
             } catch (error) {
-                console.error('Google Civic API failed:', error);
+                logger.error({ error, address }, 'Google Civic API failed');
             }
         }
 
@@ -112,7 +113,7 @@ export class RepresentativeService {
             try {
                 geocodioResult = await this.fetchFromGeocodio(address);
             } catch (error) {
-                console.error('Geocodio API failed:', error);
+                logger.error({ error, address }, 'Geocodio API failed');
             }
         }
 
@@ -153,11 +154,11 @@ export class RepresentativeService {
                     return { ...fecResult, source: 'fec' };
                 }
             } catch (error) {
-                console.error('FEC API failed:', error);
+                logger.error({ error, zipCode, state }, 'FEC API failed');
             }
         }
 
-        console.warn('No API keys configured for representative lookup');
+        logger.warn('No API keys configured for representative lookup');
         return null;
     }
 
@@ -517,7 +518,7 @@ export class RepresentativeService {
                 });
             }
         } catch (error) {
-            console.error('Error storing representatives in database:', error);
+            logger.error({ error, zipCode, state }, 'Error storing representatives in database');
         }
     }
 
@@ -557,7 +558,7 @@ export class RepresentativeService {
                 level: 'federal' as const
             }));
         } catch (error) {
-            console.error('Error fetching cached representatives:', error);
+            logger.error({ error, zipCode, state }, 'Error fetching cached representatives');
             return [];
         }
     }

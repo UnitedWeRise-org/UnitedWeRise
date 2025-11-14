@@ -1,4 +1,5 @@
 import { ApiCacheService } from './apiCache';
+import { logger } from './logger';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
 
@@ -51,7 +52,7 @@ export class GoogleCivicService {
         includeOffices: boolean = true
     ): Promise<any> {
         if (!GOOGLE_API_KEY) {
-            console.warn('Google API key not configured');
+            logger.warn('Google API key not configured');
             return null;
         }
 
@@ -78,7 +79,7 @@ export class GoogleCivicService {
 
             if (!response.ok) {
                 const error = await response.json();
-                console.error('Google Civic API error:', error);
+                logger.error({ error }, 'Google Civic API error');
                 return null;
             }
 
@@ -89,10 +90,10 @@ export class GoogleCivicService {
             
             // Cache for 7 days
             await ApiCacheService.set('representatives', cacheKey, transformed, 7 * 24 * 60);
-            
+
             return { ...transformed, source: 'google_civic' };
         } catch (error) {
-            console.error('Failed to fetch from Google Civic API:', error);
+            logger.error({ error }, 'Failed to fetch from Google Civic API');
             return null;
         }
     }
@@ -102,7 +103,7 @@ export class GoogleCivicService {
      */
     static async getElectionInfo(address: string): Promise<any> {
         if (!GOOGLE_API_KEY) {
-            console.warn('Google API key not configured');
+            logger.warn('Google API key not configured');
             return null;
         }
 
@@ -113,7 +114,7 @@ export class GoogleCivicService {
             );
 
             if (!electionsResponse.ok) {
-                console.error('Failed to fetch elections');
+                logger.error({ status: electionsResponse.status }, 'Failed to fetch elections');
                 return null;
             }
 
@@ -145,7 +146,7 @@ export class GoogleCivicService {
 
             return { elections: elections.elections, source: 'google_civic' };
         } catch (error) {
-            console.error('Failed to fetch election info:', error);
+            logger.error({ error }, 'Failed to fetch election info');
             return null;
         }
     }

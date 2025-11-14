@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { ApiCacheService } from './apiCache';
+import { logger } from './logger';
 ;
 
 // Using singleton prisma from lib/prisma.ts
@@ -48,7 +49,7 @@ export class GeolocationService {
         forceRefresh: boolean = false
     ): Promise<CivicResponse | null> {
         if (!GEOCODIO_API_KEY) {
-            console.warn('Geocodio API key not configured');
+            logger.warn('Geocodio API key not configured');
             return null;
         }
 
@@ -76,7 +77,8 @@ export class GeolocationService {
             const response = await fetch(`${url}?${params}`);
 
             if (!response.ok) {
-                console.error('Geocodio API error:', response.status, await response.text());
+                const errorText = await response.text();
+                logger.error({ status: response.status, error: errorText }, 'Geocodio API error');
                 return null;
             }
 
@@ -95,7 +97,7 @@ export class GeolocationService {
 
             return civicResponse;
         } catch (error) {
-            console.error('Geocodio API request failed:', error);
+            logger.error({ error }, 'Geocodio API request failed');
             return null;
         }
     }
@@ -223,7 +225,7 @@ export class GeolocationService {
                 });
             }
         } catch (error) {
-            console.error('Error storing officials in database:', error);
+            logger.error({ error }, 'Error storing officials in database');
             // Don't throw - this is enhancement, not critical
         }
     }
@@ -263,7 +265,7 @@ export class GeolocationService {
                 channels: (official.contactInfo as any)?.channels || []
             }));
         } catch (error) {
-            console.error('Error fetching cached officials:', error);
+            logger.error({ error }, 'Error fetching cached officials');
             return [];
         }
     }

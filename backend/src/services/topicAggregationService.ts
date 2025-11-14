@@ -2,6 +2,7 @@ import { Post } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { EmbeddingService } from './embeddingService';
 import { azureOpenAI } from './azureOpenAIService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -66,18 +67,18 @@ export class TopicAggregationService {
     const cacheKey = `${geographicScope}_${userState}_${userCity}`;
     const cached = this.getCachedTopics(cacheKey);
     if (cached) {
-      console.log('Returning cached topics for:', cacheKey);
+      logger.info({ cacheKey }, 'Returning cached topics');
       return cached;
     }
 
-    console.log(`Aggregating topics - Scope: ${geographicScope}, State: ${userState}, City: ${userCity}`);
+    logger.info({ geographicScope, userState, userCity }, 'Aggregating topics');
 
     try {
       // Step 1: Fetch relevant posts with embeddings
       const posts = await this.fetchRelevantPosts(timeframeHours, geographicScope, userState, userCity);
-      
+
       if (posts.length < minPostsPerTopic) {
-        console.log('Not enough posts for topic aggregation');
+        logger.info({ postsCount: posts.length, minRequired: minPostsPerTopic }, 'Not enough posts for topic aggregation');
         return [];
       }
 
@@ -149,7 +150,7 @@ export class TopicAggregationService {
       return finalTopics;
 
     } catch (error) {
-      console.error('Error aggregating topics:', error);
+      logger.error({ error, geographicScope, userState, userCity }, 'Error aggregating topics');
       return [];
     }
   }
@@ -314,7 +315,7 @@ Post: "${post.content}"`;
         return stanceLower as 'support' | 'oppose' | 'neutral';
       }
     } catch (error) {
-      console.error('Error determining stance:', error);
+      logger.error({ error, postId: post.id }, 'Error determining stance');
     }
 
     // Default to neutral if analysis fails
@@ -357,7 +358,7 @@ ${opposeSample}`;
 
       return { title, supportSummary, opposeSummary };
     } catch (error) {
-      console.error('Error generating topic metadata:', error);
+      logger.error({ error }, 'Error generating topic metadata');
       return {
         title: 'Trending Discussion',
         supportSummary: 'Supporting this position',

@@ -1,12 +1,14 @@
+import { logger } from './logger';
+
 class CaptchaService {
   private secretKey: string;
 
   constructor() {
     this.secretKey = process.env.HCAPTCHA_SECRET_KEY || '';
     if (!this.secretKey) {
-      console.warn('hCaptcha service not configured. Please set HCAPTCHA_SECRET_KEY.');
+      logger.warn('hCaptcha service not configured. Please set HCAPTCHA_SECRET_KEY.');
     } else {
-      console.log('hCaptcha service initialized');
+      logger.info('hCaptcha service initialized');
     }
   }
 
@@ -41,12 +43,12 @@ class CaptchaService {
 
       const result = await response.json() as any;
 
-      console.log('hCaptcha verification result:', {
+      logger.info({
         success: result.success,
         challenge_ts: result.challenge_ts,
         hostname: result.hostname,
         score: result.score
-      });
+      }, 'hCaptcha verification result');
 
       if (!result.success) {
         const errors = result['error-codes']?.join(', ') || 'Unknown error';
@@ -62,10 +64,10 @@ class CaptchaService {
       };
 
     } catch (error) {
-      console.error('hCaptcha verification error:', error);
-      return { 
-        success: false, 
-        error: 'Captcha verification service unavailable' 
+      logger.error({ error }, 'hCaptcha verification error');
+      return {
+        success: false,
+        error: 'Captcha verification service unavailable'
       };
     }
   }
@@ -79,7 +81,7 @@ class CaptchaService {
   // Test the service configuration
   async testConfiguration(): Promise<boolean> {
     if (!this.secretKey) {
-      console.error('hCaptcha secret key not configured');
+      logger.error('hCaptcha secret key not configured');
       return false;
     }
 
@@ -87,10 +89,10 @@ class CaptchaService {
       // Test with an invalid token to see if the service responds
       const result = await this.verifyCaptcha('test-token');
       // We expect this to fail, but if we get a structured response, the service is working
-      console.log('hCaptcha service test - connection successful');
+      logger.info('hCaptcha service test - connection successful');
       return true;
     } catch (error) {
-      console.error('hCaptcha service test failed:', error);
+      logger.error({ error }, 'hCaptcha service test failed');
       return false;
     }
   }

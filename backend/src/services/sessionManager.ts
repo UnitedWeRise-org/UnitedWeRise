@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis';
 import { prisma } from '../lib/prisma';
 import { hashRefreshToken } from '../utils/auth';
+import { logger } from './logger';
 
 // In-memory fallback if Redis isn't available
 class MemoryStore {
@@ -42,16 +43,16 @@ class SessionManager {
       if (process.env.REDIS_URL) {
         this.store = new Redis(process.env.REDIS_URL);
         this.isRedis = true;
-        console.log('SessionManager: Using Redis for session storage');
+        logger.info('SessionManager: Using Redis for session storage');
       } else {
         this.store = new MemoryStore();
         this.isRedis = false;
-        console.warn('SessionManager: Using memory storage (not recommended for production)');
+        logger.warn('SessionManager: Using memory storage (not recommended for production)');
       }
     } catch (error) {
       this.store = new MemoryStore();
       this.isRedis = false;
-      console.warn('SessionManager: Redis unavailable, falling back to memory storage');
+      logger.warn({ error }, 'SessionManager: Redis unavailable, falling back to memory storage');
     }
   }
 
@@ -140,7 +141,7 @@ class SessionManager {
     } else {
       // For memory store, we'd need to track sessions differently
       // This is a limitation of the fallback implementation
-      console.warn('Memory store: Cannot revoke all user sessions efficiently');
+      logger.warn({ userId }, 'Memory store: Cannot revoke all user sessions efficiently');
     }
   }
 
@@ -185,12 +186,12 @@ class SessionManager {
   async cleanup(): Promise<void> {
     if (this.isRedis) {
       // Redis handles TTL automatically
-      console.log('SessionManager: Redis handles cleanup automatically');
+      logger.info('SessionManager: Redis handles cleanup automatically');
     } else {
       // Manual cleanup for memory store
       const memStore = this.store as MemoryStore;
       memStore.clear(); // Simple cleanup - remove all expired items
-      console.log('SessionManager: Memory store cleaned up');
+      logger.info('SessionManager: Memory store cleaned up');
     }
   }
 
@@ -369,7 +370,7 @@ class SessionManager {
       }
     });
 
-    console.log(`SessionManager: Cleaned up ${result.count} expired refresh tokens`);
+    logger.info({ count: result.count }, 'SessionManager: Cleaned up expired refresh tokens');
     return result.count;
   }
 }
