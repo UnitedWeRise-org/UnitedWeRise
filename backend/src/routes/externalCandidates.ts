@@ -4,6 +4,7 @@ import { ExternalCandidateService } from '../services/externalCandidateService';
 import { metricsService } from '../services/metricsService';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { prisma } from '../lib/prisma';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.post('/import-address', requireAuth, apiLimiter, async (req: AuthRequest,
     });
 
   } catch (error) {
-    console.error('Import candidates error:', error);
+    logger.error({ error, address: req.body.address, userId: req.user?.id }, 'Import candidates error');
     res.status(500).json({ error: 'Failed to import candidates' });
   }
 });
@@ -63,7 +64,7 @@ router.post('/bulk-import', requireAuth, apiLimiter, async (req: AuthRequest, re
     });
 
   } catch (error) {
-    console.error('Bulk import error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Bulk import error');
     res.status(500).json({ error: 'Failed to perform bulk import' });
   }
 });
@@ -118,7 +119,7 @@ router.get('/for-address', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Get candidates for address error:', error);
+    logger.error({ error, address: req.query.address, userId: req.user?.id }, 'Get candidates for address error');
     res.status(500).json({ error: 'Failed to get candidates for address' });
   }
 });
@@ -139,7 +140,7 @@ router.get('/claimable', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Get claimable candidates error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get claimable candidates error');
     res.status(500).json({ error: 'Failed to get claimable candidates' });
   }
 });
@@ -173,8 +174,8 @@ router.post('/:id/claim', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error: any) {
-    console.error('Claim candidate error:', error);
-    
+    logger.error({ error, candidateId: req.params.id, userId: req.user?.id }, 'Claim candidate error');
+
     if (error.message.includes('not found') || 
         error.message.includes('already claimed') ||
         error.message.includes('not externally sourced')) {
@@ -206,7 +207,7 @@ router.get('/search', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Search external candidates error:', error);
+    logger.error({ error, query: req.query.q }, 'Search external candidates error');
     res.status(500).json({ error: 'Failed to search external candidates' });
   }
 });
@@ -240,8 +241,8 @@ router.get('/health', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('External candidate health check error:', error);
-    res.status(500).json({ 
+    logger.error({ error }, 'External candidate health check error');
+    res.status(500).json({
       status: 'error',
       error: 'Health check failed'
     });
@@ -275,7 +276,7 @@ router.post('/cache/clear', requireAuth, async (req: AuthRequest, res) => {
     }
 
   } catch (error) {
-    console.error('Cache clear error:', error);
+    logger.error({ error, provider: req.body.provider, userId: req.user?.id }, 'Cache clear error');
     res.status(500).json({ error: 'Failed to clear cache' });
   }
 });

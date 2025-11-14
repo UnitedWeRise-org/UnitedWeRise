@@ -4,6 +4,7 @@ import { StripeService } from '../services/stripeService';
 import { DonationType, FeeType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { body, validationResult } from 'express-validator';
+import { logger } from '../services/logger';
 
 const router = Router();
 // Using singleton prisma from lib/prisma.ts
@@ -99,7 +100,7 @@ router.post('/donation',
         data: result
       });
     } catch (error) {
-      console.error('Donation creation error:', error);
+      logger.error({ error, userId: req.user?.id, amount: req.body.amount }, 'Donation creation error');
       res.status(500).json({
         success: false,
         error: 'Failed to create donation'
@@ -193,7 +194,7 @@ router.post('/fee',
         data: result
       });
     } catch (error) {
-      console.error('Fee payment creation error:', error);
+      logger.error({ error, userId: req.user?.id, feeType: req.body.feeType }, 'Fee payment creation error');
       res.status(500).json({
         success: false,
         error: 'Failed to create payment'
@@ -291,7 +292,7 @@ router.get('/history', requireAuth, async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Payment history error:', error);
+    logger.error({ error, userId: (req as AuthRequest).user?.id }, 'Payment history error');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch payment history'
@@ -346,7 +347,7 @@ router.get('/campaigns', async (req: Request, res: Response) => {
       data: campaigns
     });
   } catch (error) {
-    console.error('Campaign fetch error:', error);
+    logger.error({ error }, 'Campaign fetch error');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch campaigns'
@@ -458,7 +459,7 @@ router.get('/receipt/:paymentId', requireAuth, async (req: Request, res: Respons
       }
     });
   } catch (error) {
-    console.error('Receipt fetch error:', error);
+    logger.error({ error, paymentId: req.params.paymentId, userId: (req as AuthRequest).user?.id }, 'Receipt fetch error');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch receipt'
@@ -571,7 +572,7 @@ router.get('/tax-summary/:year', requireAuth, async (req: Request, res: Response
       }
     });
   } catch (error) {
-    console.error('Tax summary error:', error);
+    logger.error({ error, year: req.params.year, userId: (req as AuthRequest).user?.id }, 'Tax summary error');
     res.status(500).json({
       success: false,
       error: 'Failed to generate tax summary'
@@ -629,9 +630,9 @@ router.post('/webhook',
       await StripeService.handleWebhook(signature, req.body);
       res.json({ received: true });
     } catch (error) {
-      console.error('Webhook error:', error);
-      res.status(400).json({ 
-        error: error instanceof Error ? error.message : 'Webhook processing failed' 
+      logger.error({ error, signature: !!signature }, 'Webhook error');
+      res.status(400).json({
+        error: error instanceof Error ? error.message : 'Webhook processing failed'
       });
     }
   }

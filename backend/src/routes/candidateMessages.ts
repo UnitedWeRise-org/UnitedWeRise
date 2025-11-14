@@ -4,6 +4,7 @@ import express from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { CandidateInboxService } from '../services/candidateInboxService';
 import { metricsService } from '../services/metricsService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -130,8 +131,8 @@ router.post('/:candidateId/inquiry', async (req, res) => {
     });
 
   } catch (error: any) {
-    console.error('Submit inquiry error:', error);
-    
+    logger.error({ error, candidateId: req.params.candidateId, userId: (req as any).user?.id }, 'Submit inquiry error');
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
@@ -246,8 +247,8 @@ router.get('/:candidateId/inbox', requireAuth, async (req: AuthRequest, res) => 
     res.json(inboxData);
 
   } catch (error: any) {
-    console.error('Get candidate inbox error:', error);
-    
+    logger.error({ error, candidateId: req.params.candidateId, userId: req.user?.id }, 'Get candidate inbox error');
+
     if (error.message.includes('Access denied')) {
       return res.status(403).json({ error: error.message });
     }
@@ -411,8 +412,8 @@ router.post('/inquiry/:inquiryId/respond', requireAuth, async (req: AuthRequest,
     });
 
   } catch (error: any) {
-    console.error('Respond to inquiry error:', error);
-    
+    logger.error({ error, inquiryId: req.params.inquiryId, userId: req.user?.id }, 'Respond to inquiry error');
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
@@ -517,7 +518,7 @@ router.get('/:candidateId/public-qa', async (req, res) => {
     res.json(qaData);
 
   } catch (error) {
-    console.error('Get public Q&A error:', error);
+    logger.error({ error, candidateId: req.params.candidateId }, 'Get public Q&A error');
     res.status(500).json({ error: 'Failed to retrieve public Q&A' });
   }
 });
@@ -634,7 +635,7 @@ router.post('/:candidateId/public-qa/:qaId/vote', requireAuth, async (req: AuthR
     });
 
   } catch (error) {
-    console.error('Vote on Q&A error:', error);
+    logger.error({ error, qaId: req.params.qaId, userId: req.user?.id }, 'Vote on Q&A error');
     res.status(500).json({ error: 'Failed to record vote' });
   }
 });
@@ -725,8 +726,8 @@ router.post('/:candidateId/staff', requireAuth, async (req: AuthRequest, res) =>
     });
 
   } catch (error: any) {
-    console.error('Add staff member error:', error);
-    
+    logger.error({ error, candidateId: req.params.candidateId, userId: req.user?.id }, 'Add staff member error');
+
     if (error.message.includes('Permission denied')) {
       return res.status(403).json({ error: error.message });
     }
@@ -834,7 +835,7 @@ router.get('/:candidateId/staff', requireAuth, async (req: AuthRequest, res) => 
     });
 
   } catch (error) {
-    console.error('Get staff members error:', error);
+    logger.error({ error, candidateId: req.params.candidateId, userId: req.user?.id }, 'Get staff members error');
     res.status(500).json({ error: 'Failed to retrieve staff members' });
   }
 });

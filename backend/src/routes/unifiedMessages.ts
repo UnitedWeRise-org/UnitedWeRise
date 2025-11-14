@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { MessageType } from '../types/messaging';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -54,7 +55,7 @@ router.get('/conversations', requireAuth, async (req: AuthRequest, res) => {
       data: conversationsWithMessages
     });
   } catch (error) {
-    console.error('Error fetching conversations:', error);
+    logger.error({ error, userId: req.user?.id, type: req.query.type }, 'Error fetching conversations');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch conversations'
@@ -102,7 +103,7 @@ router.get('/conversations/:conversationId/messages', requireAuth, async (req: A
       }
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logger.error({ error, conversationId: req.params.conversationId, userId: req.user?.id }, 'Error fetching messages');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch messages'
@@ -198,7 +199,7 @@ router.post('/send', requireAuth, async (req: AuthRequest, res) => {
       data: message
     });
   } catch (error) {
-    console.error('Error sending message:', error);
+    logger.error({ error, senderId: req.user?.id, type: req.body.type }, 'Error sending message');
     res.status(500).json({
       success: false,
       error: 'Failed to send message'
@@ -255,7 +256,7 @@ router.post('/mark-read', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Error marking messages as read:', error);
+    logger.error({ error, userId: req.user?.id, conversationId: req.body.conversationId }, 'Error marking messages as read');
     res.status(500).json({
       success: false,
       error: 'Failed to mark messages as read'
@@ -287,7 +288,7 @@ router.get('/unread-count', requireAuth, async (req: AuthRequest, res) => {
       data: { unreadCount }
     });
   } catch (error) {
-    console.error('Error fetching unread count:', error);
+    logger.error({ error, userId: req.user?.id, type: req.query.type }, 'Error fetching unread count');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch unread count'
@@ -362,7 +363,7 @@ router.get('/admin/candidate/:candidateId', requireAuth, async (req: AuthRequest
       }
     });
   } catch (error) {
-    console.error('Error fetching admin-candidate messages:', error);
+    logger.error({ error, candidateId: req.params.candidateId, userId: req.user?.id }, 'Error fetching admin-candidate messages');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch messages'
@@ -424,7 +425,7 @@ router.get('/candidate/admin-messages', requireAuth, async (req: AuthRequest, re
       }
     });
   } catch (error) {
-    console.error('Error fetching candidate admin messages:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error fetching candidate admin messages');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch messages'
@@ -519,7 +520,7 @@ router.get('/candidate/user-messages', requireAuth, async (req: AuthRequest, res
       }
     });
   } catch (error) {
-    console.error('Error fetching candidate user messages:', error);
+    logger.error({ error, userId: req.user?.id }, 'Error fetching candidate user messages');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user messages'

@@ -2,10 +2,10 @@ import { prisma } from '../lib/prisma';
 import express from 'express';
 ;
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { 
-  validateEmailVerification, 
-  validatePhoneVerification, 
-  validatePhoneCode 
+import {
+  validateEmailVerification,
+  validatePhoneVerification,
+  validatePhoneCode
 } from '../middleware/validation';
 import { verificationLimiter } from '../middleware/rateLimiting';
 import { emailService } from '../services/emailService';
@@ -13,6 +13,7 @@ import { smsService } from '../services/smsService';
 import { captchaService } from '../services/captchaService';
 import crypto from 'crypto';
 import { isDevelopment } from '../utils/environment';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -77,7 +78,7 @@ router.post('/email/send', requireAuth, verificationLimiter, async (req: AuthReq
     });
 
   } catch (error) {
-    console.error('Send email verification error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Send email verification error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -134,7 +135,7 @@ router.post('/email/verify', validateEmailVerification, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Email verification error:', error);
+    logger.error({ error, token: req.body.token?.substring(0, 10) }, 'Email verification error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -149,14 +150,9 @@ router.post('/phone/send', requireAuth, verificationLimiter, validatePhoneVerifi
     const demoPhones = ['+15551234567', '+15559876543', '+11234567890'];
     const isDevEnvironment = isDevelopment();
     const isDemoPhone = demoPhones.includes(phoneNumber);
-    
+
     if (isDevEnvironment || isDemoPhone) {
-      console.log(`📱 DEMO MODE: Phone verification for ${phoneNumber}`);
-      console.log(`📱 Use verification code: 123456`);
-      
-      // Store demo code (in production, this would be stored in a phoneVerification table)
-      // For now, just log it since the table doesn't exist yet
-      console.log(`📱 Storing demo code for user ${userId}: 123456`);
+      logger.info({ phoneNumber, userId }, 'DEMO MODE: Phone verification - use code 123456');
       
       return res.json({ 
         message: 'Demo mode: Use code 123456',
@@ -241,7 +237,7 @@ router.post('/phone/send', requireAuth, verificationLimiter, validatePhoneVerifi
     });
 
   } catch (error) {
-    console.error('Send phone verification error:', error);
+    logger.error({ error, userId: req.user?.id, phoneNumber: req.body.phoneNumber }, 'Send phone verification error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -303,7 +299,7 @@ router.post('/phone/verify', requireAuth, validatePhoneCode, async (req: AuthReq
     });
 
   } catch (error) {
-    console.error('Phone verification error:', error);
+    logger.error({ error, userId: req.user?.id, phoneNumber: req.body.phoneNumber }, 'Phone verification error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -341,7 +337,7 @@ router.get('/status', requireAuth, async (req: AuthRequest, res) => {
     });
 
   } catch (error) {
-    console.error('Get verification status error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get verification status error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { TopicService } from '../services/topicService';
 import { EmbeddingService } from '../services/embeddingService';
 import { metricsService } from '../services/metricsService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -99,7 +100,7 @@ router.get('/trending', async (req, res) => {
       count: topics.length
     });
   } catch (error) {
-    console.error('Trending topics error:', error);
+    logger.error({ error, category: req.query.category }, 'Trending topics error');
     res.status(500).json({ error: 'Failed to retrieve trending topics' });
   }
 });
@@ -200,7 +201,7 @@ router.get('/:id', async (req, res) => {
     
     res.json(topic);
   } catch (error) {
-    console.error('Topic details error:', error);
+    logger.error({ error, topicId: req.params.id }, 'Topic details error');
     res.status(500).json({ error: 'Failed to retrieve topic details' });
   }
 });
@@ -363,7 +364,7 @@ router.post('/:id/comment', requireAuth, async (req: AuthRequest, res) => {
       comment
     });
   } catch (error) {
-    console.error('Topic comment error:', error);
+    logger.error({ error, topicId: req.params.id, userId: req.user?.id }, 'Topic comment error');
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });
@@ -516,7 +517,7 @@ router.post('/:id/subtopics/:subTopicId/comment', requireAuth, async (req: AuthR
       comment
     });
   } catch (error) {
-    console.error('Sub-topic comment error:', error);
+    logger.error({ error, subTopicId: req.params.subTopicId, userId: req.user?.id }, 'Sub-topic comment error');
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });
@@ -599,9 +600,9 @@ router.post('/analyze/recent', requireAuth, async (req: AuthRequest, res) => {
     }
     
     const { timeframe = 24, maxPosts = 500 } = req.body;
-    
-    console.log(`Starting topic analysis: ${timeframe}h timeframe, max ${maxPosts} posts`);
-    
+
+    logger.info({ timeframe, maxPosts, userId: user.id }, 'Starting topic analysis');
+
     // Generate topic clusters
     const analysis = await TopicService.generateTopicClusters(timeframe, maxPosts);
     
@@ -620,7 +621,7 @@ router.post('/analyze/recent', requireAuth, async (req: AuthRequest, res) => {
       postsAnalyzed: analysis.topics.reduce((sum, topic) => sum + topic.posts.length, 0) + analysis.uncategorizedPosts.length
     });
   } catch (error) {
-    console.error('Topic analysis error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Topic analysis error');
     res.status(500).json({ error: 'Topic analysis failed' });
   }
 });
@@ -783,7 +784,7 @@ router.get('/search', async (req, res) => {
       category: category || null
     });
   } catch (error) {
-    console.error('Topic search error:', error);
+    logger.error({ error, query: req.query.q, category: req.query.category }, 'Topic search error');
     res.status(500).json({ error: 'Topic search failed' });
   }
 });

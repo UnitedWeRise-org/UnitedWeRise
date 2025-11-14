@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
 import { apiLimiter } from '../middleware/rateLimiting';
 import { emailService } from '../services/emailService';
+import { logger } from '../services/logger';
 
 const router = express.Router();
 // Using singleton prisma from lib/prisma.ts
@@ -92,7 +93,7 @@ router.post('/', requireAuth, apiLimiter, validateAppeal, async (req: AuthReques
     });
 
     // Notify moderators about new appeal (in a real system, this would send notifications)
-    console.log(`New appeal submitted: ${appeal.id} for user ${userId}`);
+    logger.info({ appealId: appeal.id, userId }, 'New appeal submitted');
 
     res.json({
       message: 'Appeal submitted successfully',
@@ -101,7 +102,7 @@ router.post('/', requireAuth, apiLimiter, validateAppeal, async (req: AuthReques
       estimatedReviewTime: '3-5 business days'
     });
   } catch (error) {
-    console.error('Submit appeal error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Submit appeal error');
     res.status(500).json({ error: 'Failed to submit appeal' });
   }
 });
@@ -149,7 +150,7 @@ router.get('/my', requireAuth, async (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user appeals error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get user appeals error');
     res.status(500).json({ error: 'Failed to retrieve appeals' });
   }
 });
@@ -189,7 +190,7 @@ router.get('/:appealId', requireAuth, async (req: AuthRequest, res) => {
 
     res.json({ appeal });
   } catch (error) {
-    console.error('Get appeal error:', error);
+    logger.error({ error, appealId: req.params.appealId, userId: req.user?.id }, 'Get appeal error');
     res.status(500).json({ error: 'Failed to retrieve appeal' });
   }
 });
@@ -253,7 +254,7 @@ router.get('/queue/all', requireAuth, requireModerator, async (req: AuthRequest,
       }
     });
   } catch (error) {
-    console.error('Get appeals queue error:', error);
+    logger.error({ error, userId: req.user?.id }, 'Get appeals queue error');
     res.status(500).json({ error: 'Failed to retrieve appeals queue' });
   }
 });
@@ -373,7 +374,7 @@ router.post('/:appealId/review',
           await emailService.sendEmail(emailTemplate);
         }
       } catch (error) {
-        console.error('Failed to send appeal result email:', error);
+        logger.error({ error, appealId, email: appeal.user?.email }, 'Failed to send appeal result email');
       }
 
       res.json({
@@ -382,7 +383,7 @@ router.post('/:appealId/review',
         appealId
       });
     } catch (error) {
-      console.error('Review appeal error:', error);
+      logger.error({ error, appealId: req.params.appealId, reviewerId: req.user?.id }, 'Review appeal error');
       res.status(500).json({ error: 'Failed to review appeal' });
     }
   }
