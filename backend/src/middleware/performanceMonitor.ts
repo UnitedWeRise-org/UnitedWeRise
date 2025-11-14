@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../services/logger';
 
 interface PerformanceMetrics {
   path: string;
@@ -25,11 +26,14 @@ class PerformanceMonitor {
 
     // Log slow requests
     if (metric.duration > this.slowRequestThreshold) {
-      console.warn(`⚠️ Slow request: ${metric.method} ${metric.path} took ${metric.duration}ms`, {
+      logger.warn({
+        method: metric.method,
+        path: metric.path,
         duration: metric.duration,
         statusCode: metric.statusCode,
-        userId: metric.userId
-      });
+        userId: metric.userId,
+        event: 'slow_request'
+      }, 'Slow request detected');
     }
   }
 

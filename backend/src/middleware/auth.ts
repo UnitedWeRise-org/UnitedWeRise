@@ -6,6 +6,7 @@ import { sessionManager } from '../services/sessionManager';
 import { metricsService } from '../services/metricsService';
 import { isDevelopment, enableRequestLogging } from '../utils/environment';
 import { COOKIE_NAMES } from '../utils/cookies';
+import { logger } from '../services/logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -35,13 +36,13 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
   try {
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] 🔍 AUTH Middleware Entry:`, {
+      logger.info({
+        requestId,
         path: req.path,
         method: req.method,
-        timestamp: new Date().toISOString(),
         hasCookie: !!req.cookies?.[COOKIE_NAMES.AUTH_TOKEN],
         hasAuthHeader: !!req.header('Authorization')
-      });
+      }, 'AUTH Middleware Entry');
     }
 
     // Get token from cookie first, fallback to header for transition period
@@ -55,30 +56,36 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     if (!token) {
       // Keep error logs unconditional (401 response)
-      console.log(`[${requestId}] ❌ AUTH 401: No token provided`, {
+      logger.info({
+        requestId,
         path: req.path,
-        method: req.method
-      });
+        method: req.method,
+        reason: 'no_token'
+      }, 'AUTH 401: No token provided');
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'no_token' });
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] 🔍 AUTH Token Verification: Verifying JWT token...`);
+      logger.info({ requestId }, 'AUTH Token Verification: Verifying JWT token');
     }
     const decoded = verifyToken(token);
     if (!decoded) {
       // Keep error logs unconditional (401 response)
-      console.log(`[${requestId}] ❌ AUTH 401: Token verification failed`);
+      logger.info({
+        requestId,
+        reason: 'invalid_token'
+      }, 'AUTH 401: Token verification failed');
       metricsService.incrementCounter('auth_middleware_failures_total', { reason: 'invalid_token' });
       return res.status(401).json({ error: 'Invalid token.', code: 'ACCESS_TOKEN_EXPIRED' });
     }
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ AUTH Token Decoded:`, {
+      logger.info({
+        requestId,
         userId: decoded.userId,
         totpVerified: decoded.totpVerified || false
-      });
+      }, 'AUTH Token Decoded');
     }
 
     // SECURITY FIX: Check if token is blacklisted using secure hash
@@ -86,14 +93,16 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     const tokenId = crypto.createHash('sha256').update(token).digest('hex');
     if (await sessionManager.isTokenBlacklisted(tokenId)) {
       // SECURITY EVENT: Always log blacklisted tokens
-      console.log(`[${requestId}] ❌ AUTH 401: Token blacklisted`, {
-        userId: decoded.userId
-      });
+      logger.warn({
+        requestId,
+        userId: decoded.userId,
+        event: 'token_blacklisted'
+      }, 'AUTH 401: Token blacklisted');
       return res.status(401).json({ error: 'Token has been revoked.' });
     }
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] 🔍 AUTH Database Lookup: Querying user from database...`);
+      logger.info({ requestId }, 'AUTH Database Lookup: Querying user from database');
     }
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -102,20 +111,23 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     if (!user) {
       // Keep error logs unconditional (401 response)
-      console.log(`[${requestId}] ❌ AUTH 401: User not found in database`, {
-        userId: decoded.userId
-      });
+      logger.info({
+        requestId,
+        userId: decoded.userId,
+        reason: 'user_not_found'
+      }, 'AUTH 401: User not found in database');
       return res.status(401).json({ error: 'User not found.' });
     }
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ AUTH User Found:`, {
+      logger.info({
+        requestId,
         userId: user.id,
         username: user.username,
         dbIsAdmin: user.isAdmin,
         dbIsModerator: user.isModerator,
         dbIsSuperAdmin: user.isSuperAdmin
-      });
+      }, 'AUTH User Found');
     }
 
     // Add TOTP verification status from JWT to user object
@@ -126,24 +138,26 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     };
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] 🔍 AUTH req.user Assigned:`, {
+      logger.info({
+        requestId,
         userId: user.id,
         username: user.username,
-        'req.user.isAdmin': req.user.isAdmin,
-        'req.user.isModerator': req.user.isModerator,
-        'req.user.isSuperAdmin': req.user.isSuperAdmin,
-        'req.user.totpVerified': req.user.totpVerified,
+        reqUserIsAdmin: req.user.isAdmin,
+        reqUserIsModerator: req.user.isModerator,
+        reqUserIsSuperAdmin: req.user.isSuperAdmin,
+        reqUserTotpVerified: req.user.totpVerified,
         rawDatabaseUser: {
           isAdmin: user.isAdmin,
           isModerator: user.isModerator,
           isSuperAdmin: user.isSuperAdmin
         }
-      });
+      }, 'AUTH req.user Assigned');
 
-      console.log(`[${requestId}] ✅ AUTH Basic Auth Successful:`, {
+      logger.info({
+        requestId,
         userId: user.id,
         username: user.username
-      });
+      }, 'AUTH Basic Auth Successful');
     }
 
     // Record successful authentication
@@ -165,7 +179,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
         });
       } catch (error) {
         // Log but don't fail the request if lastSeenAt update fails
-        console.error('Failed to update lastSeenAt:', error);
+        logger.error({ error, userId: user.id }, 'Failed to update lastSeenAt');
       }
     }
     
@@ -176,7 +190,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
         await sessionManager.updateSessionActivity(sessionId);
       } catch (error) {
         // Log but don't fail the request if session update fails
-        console.error('Failed to update session activity:', error);
+        logger.error({ error, sessionId, userId: user.id }, 'Failed to update session activity');
       }
     }
 
@@ -191,43 +205,47 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     );
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] 🔍 AUTH Admin Route Check:`, {
+      logger.info({
+        requestId,
         path: req.path,
         requiresAdminAccess,
         adminOnlyRoutes,
         matchedRoute: adminOnlyRoutes.find(route => req.path.startsWith(route)) || 'none'
-      });
+      }, 'AUTH Admin Route Check');
 
       // Show admin access check for admin routes
       if (requiresAdminAccess) {
-        console.log(`[${requestId}] 🔍 AUTH Admin Access Evaluation:`, {
+        logger.info({
+          requestId,
           path: req.path,
           requiresAdminAccess,
-          'req.user?.isAdmin': req.user?.isAdmin,
-          'user.isAdmin': user.isAdmin,
-          'req.user?.isSuperAdmin': req.user?.isSuperAdmin,
-          'req.user?.totpVerified': req.user?.totpVerified,
+          reqUserIsAdmin: req.user?.isAdmin,
+          userIsAdmin: user.isAdmin,
+          reqUserIsSuperAdmin: req.user?.isSuperAdmin,
+          reqUserTotpVerified: req.user?.totpVerified,
           willReturn403: !req.user?.isAdmin
-        });
+        }, 'AUTH Admin Access Evaluation');
       }
     }
 
     if (requiresAdminAccess && !req.user?.isAdmin) {
       // SECURITY EVENT: Always log admin access denials
-      console.error(`[${requestId}] 🚨 AUTH 403: Admin access denied`, {
+      logger.error({
+        requestId,
         path: req.path,
         method: req.method,
         userId: req.user?.id,
         username: req.user?.username,
-        'req.user.isAdmin': req.user?.isAdmin,
-        'req.user.isSuperAdmin': req.user?.isSuperAdmin,
-        'req.user.totpVerified': req.user?.totpVerified,
+        reqUserIsAdmin: req.user?.isAdmin,
+        reqUserIsSuperAdmin: req.user?.isSuperAdmin,
+        reqUserTotpVerified: req.user?.totpVerified,
         rawDatabaseUser: {
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin
         },
-        reason: 'USER_NOT_ADMIN'
-      });
+        reason: 'USER_NOT_ADMIN',
+        event: 'admin_access_denied'
+      }, 'AUTH 403: Admin access denied');
       return res.status(403).json({
         error: 'Admin access required for this endpoint.',
         requiredRole: 'admin'
@@ -235,17 +253,18 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     if (enableRequestLogging()) {
-      console.log(`[${requestId}] ✅ AUTH Middleware Complete: Passing to next()`, {
+      logger.info({
+        requestId,
         path: req.path,
         userId: user.id,
         username: user.username,
         isAdmin: req.user.isAdmin
-      });
+      }, 'AUTH Middleware Complete: Passing to next()');
     }
 
     next();
   } catch (error) {
-    console.error(`[${requestId}] ❌ AUTH Error in middleware:`, error);
+    logger.error({ error, requestId }, 'AUTH Error in middleware');
     res.status(401).json({ error: 'Invalid token.' });
   }
 };
@@ -255,25 +274,28 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
   const requestId = crypto.randomBytes(4).toString('hex');
 
   if (enableRequestLogging()) {
-    console.log(`[${requestId}] 🔍 requireAdmin Middleware Entry:`, {
+    logger.info({
+      requestId,
       path: req.path,
       method: req.method,
       hasUser: !!req.user,
-      'req.user?.isAdmin': req.user?.isAdmin,
-      'req.user?.totpVerified': req.user?.totpVerified
-    });
+      reqUserIsAdmin: req.user?.isAdmin,
+      reqUserTotpVerified: req.user?.totpVerified
+    }, 'requireAdmin Middleware Entry');
   }
 
   if (!req.user?.isAdmin) {
     // SECURITY EVENT: Always log admin access denials
-    console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - User not admin`, {
+    logger.error({
+      requestId,
       path: req.path,
       method: req.method,
       userId: req.user?.id,
       username: req.user?.username,
-      'req.user.isAdmin': req.user?.isAdmin,
-      reason: 'NOT_ADMIN'
-    });
+      reqUserIsAdmin: req.user?.isAdmin,
+      reason: 'NOT_ADMIN',
+      event: 'admin_access_denied'
+    }, 'AUTH 403: requireAdmin - User not admin');
     return res.status(403).json({ error: 'Admin access required.' });
   }
 
@@ -281,15 +303,17 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
   // Admin users must have TOTP verified in their JWT token
   if (!req.user?.totpVerified) {
     // SECURITY EVENT: Always log TOTP verification failures for admin access
-    console.error(`[${requestId}] 🚨 AUTH 403: requireAdmin - TOTP not verified`, {
+    logger.error({
+      requestId,
       path: req.path,
       method: req.method,
       userId: req.user?.id,
       username: req.user?.username,
-      'req.user.totpVerified': req.user?.totpVerified,
-      'req.user.totpVerifiedAt': req.user?.totpVerifiedAt,
-      reason: 'TOTP_NOT_VERIFIED'
-    });
+      reqUserTotpVerified: req.user?.totpVerified,
+      reqUserTotpVerifiedAt: req.user?.totpVerifiedAt,
+      reason: 'TOTP_NOT_VERIFIED',
+      event: 'totp_required'
+    }, 'AUTH 403: requireAdmin - TOTP not verified');
     return res.status(403).json({
       error: 'TOTP_REQUIRED',
       message: 'Two-factor authentication required for admin access. Please log in with TOTP.'
@@ -297,11 +321,12 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
   }
 
   if (enableRequestLogging()) {
-    console.log(`[${requestId}] ✅ requireAdmin Passed:`, {
+    logger.info({
+      requestId,
       path: req.path,
       userId: req.user.id,
       username: req.user.username
-    });
+    }, 'requireAdmin Passed');
   }
 
   next();

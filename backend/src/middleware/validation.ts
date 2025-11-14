@@ -1,16 +1,21 @@
 import { body, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../services/logger';
 
 // Validation error handler
 export const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('🚨 Validation errors:', JSON.stringify(errors.array(), null, 2));
-    
+    logger.info({
+      path: req.path,
+      method: req.method,
+      errors: errors.array()
+    }, 'Validation errors');
+
     // Extract the first error message for user-friendly display
     const firstError = errors.array()[0];
     const userFriendlyMessage = firstError ? firstError.msg : 'Validation failed';
-    
+
     return res.status(400).json({
       error: userFriendlyMessage,
       details: errors.array()

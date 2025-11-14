@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { moderationService } from '../services/moderationService';
 import { AuthRequest } from './auth';
+import { logger } from '../services/logger';
 
 // Middleware to check user suspension status
 export const checkUserSuspension = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -64,7 +65,7 @@ export const checkUserSuspension = async (req: AuthRequest, res: Response, next:
     
     next();
   } catch (error) {
-    console.error('Suspension check error:', error);
+    logger.error({ error, userId: req.user?.id, path: req.path }, 'Suspension check error');
     next(); // Don't block on errors, but log them
   }
 };
@@ -108,12 +109,12 @@ export const moderateContent = (contentType: 'POST' | 'COMMENT' | 'MESSAGE') => 
           if (content && contentId) {
             moderationService.analyzeContent(content, contentType, contentId)
               .catch(error => {
-                console.error('Content moderation error:', error);
+                logger.error({ error, contentType, contentId }, 'Content moderation error');
               });
           }
         }
       } catch (error) {
-        console.error('Moderation middleware error:', error);
+        logger.error({ error }, 'Moderation middleware error');
       }
       
       // Call original send method
@@ -139,7 +140,11 @@ export const logModerationAction = (action: string) => {
     
     res.send = function(data: any) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        console.log(`Moderation action: ${action} by user ${req.user?.id} at ${new Date().toISOString()}`);
+        logger.info({
+          action,
+          userId: req.user?.id,
+          path: req.path
+        }, 'Moderation action');
       }
       return originalSend.call(this, data);
     };
@@ -230,7 +235,7 @@ export const addContentWarnings = (req: Request, res: Response, next: NextFuncti
         return originalSend.call(this, typeof data === 'string' ? JSON.stringify(parsedData) : parsedData);
       }
     } catch (error) {
-      console.error('Content warning middleware error:', error);
+      logger.error({ error }, 'Content warning middleware error');
     }
     
     return originalSend.call(this, data);

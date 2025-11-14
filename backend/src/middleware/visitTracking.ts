@@ -15,6 +15,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import visitorAnalytics from '../services/visitorAnalytics';
+import { logger } from '../services/logger';
 
 /**
  * Extract client IP address from request
@@ -106,7 +107,7 @@ export async function visitTrackingMiddleware(
     })
     .catch(err => {
       // Log error but don't fail the request
-      console.error('[VisitTracking] Error tracking pageview:', err.message);
+      logger.error({ error: err, path, userId, ip }, 'VisitTracking: Error tracking pageview');
     });
 
   // Continue processing request immediately
