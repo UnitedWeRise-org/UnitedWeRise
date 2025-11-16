@@ -288,7 +288,7 @@ export class NewsAggregationService {
       // Fallback to extractive summary
       return this.generateExtractiveSummary(title, description, content);
     } catch (error) {
-      console.error('AI summary generation failed:', error);
+      logger.error({ error }, 'AI summary generation failed');
       // Fallback to truncated description
       return this.generateExtractiveSummary(title, description, content);
     }

@@ -2,6 +2,7 @@ import { Election, Candidate, Office, BallotMeasure } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import axios from 'axios';
 import { ElectionService } from './electionService';
+import { logger } from './logger';
 
 // Using singleton prisma from lib/prisma.ts
 
@@ -70,12 +71,12 @@ export class EnhancedElectionService {
     message?: string;
   }> {
     try {
-      console.log(`🗳️  Fetching election data for ${state}${zipCode ? ` (${zipCode})` : ''}`);
+      logger.info({ state, zipCode }, 'Fetching election data');
 
       // Tier 1: Check cache
       const cachedData = await this.getCachedData(state);
       if (cachedData && this.isCacheValid(cachedData)) {
-        console.log('✅ Using cached election data');
+        logger.info('Using cached election data');
         return {
           elections: cachedData.elections,
           source: 'cache',
@@ -87,7 +88,7 @@ export class EnhancedElectionService {
       // Tier 2: Try external APIs
       const apiData = await this.fetchFromExternalAPIs(state, zipCode);
       if (apiData && apiData.length > 0) {
-        console.log('✅ Retrieved election data from external API');
+        logger.info('Retrieved election data from external API');
         await this.setCachedData(state, apiData, 'api');
         return {
           elections: apiData,
@@ -98,10 +99,10 @@ export class EnhancedElectionService {
       }
 
       // Tier 3: Use fallback with typical election cycles
-      console.log('⚠️  Using fallback election data (typical cycles)');
+      logger.warn('Using fallback election data (typical cycles)');
       const fallbackData = await this.generateFallbackData(state);
       await this.setCachedData(state, fallbackData, 'fallback');
-      
+
       return {
         elections: fallbackData,
         source: 'fallback',
@@ -110,7 +111,7 @@ export class EnhancedElectionService {
       };
 
     } catch (error) {
-      console.error('Election data retrieval failed:', error);
+      logger.error({ error }, 'Election data retrieval failed');
       
       // Last resort - return basic fallback
       const basicFallback = await this.getBasicFallback(state);
@@ -128,19 +129,19 @@ export class EnhancedElectionService {
    */
   static async getInternalElectionData(state: string): Promise<any[]> {
     try {
-      const elections = await ElectionService.getElectionsByLocation({ 
+      const elections = await ElectionService.getElectionsByLocation({
         state: state.toUpperCase(),
-        includeUpcoming: true 
+        includeUpcoming: true
       });
-      
+
       if (elections && elections.length > 0) {
-        console.log(`✅ Found ${elections.length} internal elections for ${state}`);
+        logger.info({ state, count: elections.length }, 'Found internal elections');
         return elections;
       }
-      
+
       return [];
     } catch (error) {
-      console.error('Internal election data query failed:', error);
+      logger.error({ error }, 'Internal election data query failed');
       return [];
     }
   }
@@ -166,7 +167,7 @@ export class EnhancedElectionService {
         refreshInterval: this.CACHE_DURATION_HOURS
       };
     } catch (error) {
-      console.error('Cache retrieval failed:', error);
+      logger.error({ error }, 'Cache retrieval failed');
       return null;
     }
   }
@@ -187,9 +188,9 @@ export class EnhancedElectionService {
           lastUpdated: new Date()
         }
       });
-      console.log(`💾 Cached election data for ${state} (${source})`);
+      logger.debug({ state, source }, 'Cached election data');
     } catch (error) {
-      console.error('Cache storage failed:', error);
+      logger.error({ error }, 'Cache storage failed');
     }
   }
 
@@ -216,7 +217,7 @@ export class EnhancedElectionService {
           return data;
         }
       } catch (error) {
-        console.warn(`${api.name} API failed:`, error);
+        logger.warn({ error, apiName: api.name }, 'API failed');
         continue;
       }
     }
@@ -226,18 +227,18 @@ export class EnhancedElectionService {
 
   private static async fetchFromAPI(api: ExternalElectionAPI, state: string, zipCode?: string): Promise<any[] | null> {
     try {
-      console.log(`🔄 Trying ${api.name} API for ${state}`);
+      logger.info({ apiName: api.name, state }, 'Trying API for state');
 
       if (api.name === 'Google Civic Info') {
         return await this.fetchFromGoogleCivic(state, zipCode);
       }
-      
+
       // Other APIs would be implemented here when keys are available
-      console.log(`⚠️  ${api.name} integration not yet implemented`);
+      logger.warn({ apiName: api.name }, 'API integration not yet implemented');
       return null;
 
     } catch (error) {
-      console.error(`${api.name} API error:`, error);
+      logger.error({ error, apiName: api.name }, 'API error');
       return null;
     }
   }
@@ -276,7 +277,7 @@ export class EnhancedElectionService {
 
       return null;
     } catch (error) {
-      console.error('Google Civic API error:', error);
+      logger.error({ error }, 'Google Civic API error');
       return null;
     }
   }
@@ -487,13 +488,13 @@ export class EnhancedElectionService {
         await prisma.electionCache.delete({
           where: { stateCode: state.toUpperCase() }
         });
-        console.log(`🗑️  Cleared cache for ${state}`);
+        logger.info({ state }, 'Cleared cache for state');
       } else {
         await prisma.electionCache.deleteMany({});
-        console.log('🗑️  Cleared all election cache');
+        logger.info('Cleared all election cache');
       }
     } catch (error) {
-      console.error('Cache refresh failed:', error);
+      logger.error({ error }, 'Cache refresh failed');
     }
   }
 }

@@ -3,13 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CandidateInboxService = void 0;
 const prisma_1 = require("../lib/prisma");
 ;
+const logger_1 = require("./logger");
 class CandidateInboxService {
     /**
      * Initialize candidate inbox (automatically created when candidate registers)
      */
     static async createInbox(candidateId, settings) {
         try {
-            console.log(`📬 Creating inbox for candidate ${candidateId}`);
+            logger_1.logger.info({ candidateId }, 'Creating inbox for candidate');
             const inbox = await prisma_1.prisma.candidateInbox.create({
                 data: {
                     candidateId,
@@ -34,7 +35,7 @@ class CandidateInboxService {
             return inbox;
         }
         catch (error) {
-            console.error(`Failed to create inbox for candidate ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to create inbox for candidate');
             throw new Error('Failed to create candidate inbox');
         }
     }
@@ -43,7 +44,7 @@ class CandidateInboxService {
      */
     static async submitInquiry(inquiryData) {
         try {
-            console.log(`📝 Submitting inquiry to candidate ${inquiryData.candidateId}`);
+            logger_1.logger.info({ candidateId: inquiryData.candidateId }, 'Submitting inquiry to candidate');
             // Validate candidate exists and has active inbox
             const candidate = await prisma_1.prisma.candidate.findUnique({
                 where: { id: inquiryData.candidateId },
@@ -101,11 +102,11 @@ class CandidateInboxService {
             }
             // Notify staff via email
             await this.notifyStaff(candidate.inbox, inquiry);
-            console.log(`✅ Inquiry submitted successfully: ${inquiry.id}`);
+            logger_1.logger.info({ inquiryId: inquiry.id }, 'Inquiry submitted successfully');
             return inquiry;
         }
         catch (error) {
-            console.error('Failed to submit inquiry:', error);
+            logger_1.logger.error({ error }, 'Failed to submit inquiry');
             throw error;
         }
     }
@@ -217,7 +218,7 @@ class CandidateInboxService {
             };
         }
         catch (error) {
-            console.error(`Failed to get candidate inbox ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to get candidate inbox');
             throw error;
         }
     }
@@ -226,7 +227,7 @@ class CandidateInboxService {
      */
     static async respondToInquiry(responseData) {
         try {
-            console.log(`💬 Responding to inquiry ${responseData.inquiryId}`);
+            logger_1.logger.info({ inquiryId: responseData.inquiryId }, 'Responding to inquiry');
             const inquiry = await prisma_1.prisma.politicalInquiry.findUnique({
                 where: { id: responseData.inquiryId },
                 include: {
@@ -280,11 +281,11 @@ class CandidateInboxService {
             else if (inquiry.contactEmail && inquiry.isAnonymous) {
                 await this.notifyAnonymousInquirer(inquiry, response);
             }
-            console.log(`✅ Response sent successfully: ${response.id}`);
+            logger_1.logger.info({ responseId: response.id }, 'Response sent successfully');
             return response;
         }
         catch (error) {
-            console.error('Failed to respond to inquiry:', error);
+            logger_1.logger.error({ error }, 'Failed to respond to inquiry');
             throw error;
         }
     }
@@ -310,11 +311,11 @@ class CandidateInboxService {
                     isVisible: true
                 }
             });
-            console.log(`📢 Created public Q&A: ${publicQA.id}`);
+            logger_1.logger.info({ publicQAId: publicQA.id }, 'Created public Q&A');
             return publicQA;
         }
         catch (error) {
-            console.error('Failed to convert to public Q&A:', error);
+            logger_1.logger.error({ error }, 'Failed to convert to public Q&A');
             throw error;
         }
     }
@@ -364,7 +365,7 @@ class CandidateInboxService {
             };
         }
         catch (error) {
-            console.error(`Failed to get public Q&A for candidate ${candidateId}:`, error);
+            logger_1.logger.error({ error, candidateId }, 'Failed to get public Q&A for candidate');
             throw error;
         }
     }
@@ -403,11 +404,11 @@ class CandidateInboxService {
                     }
                 }
             });
-            console.log(`👥 Added staff member ${userId} to candidate ${candidateId}`);
+            logger_1.logger.info({ userId, candidateId }, 'Added staff member to candidate');
             return staffMember;
         }
         catch (error) {
-            console.error('Failed to add staff member:', error);
+            logger_1.logger.error({ error }, 'Failed to add staff member');
             throw error;
         }
     }
@@ -426,21 +427,21 @@ class CandidateInboxService {
     }
     static async sendAutoResponse(inquiryId, autoResponseMessage) {
         // This would integrate with email service to send auto-response
-        console.log(`📧 Sending auto-response for inquiry ${inquiryId}`);
+        logger_1.logger.debug({ inquiryId }, 'Sending auto-response for inquiry');
         // Implementation depends on email service setup
     }
     static async notifyStaff(inbox, inquiry) {
         if (inbox.staffEmails.length > 0) {
-            console.log(`📧 Notifying ${inbox.staffEmails.length} staff members of new inquiry`);
+            logger_1.logger.info({ staffCount: inbox.staffEmails.length }, 'Notifying staff members of new inquiry');
             // Implementation would send emails to staff members
         }
     }
     static async notifyInquirer(inquiry, response) {
-        console.log(`📧 Notifying inquirer ${inquiry.inquirer.username} of response`);
+        logger_1.logger.debug({ username: inquiry.inquirer.username }, 'Notifying inquirer of response');
         // Implementation would send email notification
     }
     static async notifyAnonymousInquirer(inquiry, response) {
-        console.log(`📧 Notifying anonymous inquirer at ${inquiry.contactEmail} of response`);
+        logger_1.logger.debug({ contactEmail: inquiry.contactEmail }, 'Notifying anonymous inquirer of response');
         // Implementation would send email to contactEmail
     }
     static async verifyInboxAccess(candidateId, userId) {
@@ -465,7 +466,7 @@ class CandidateInboxService {
             return !!staffMember;
         }
         catch (error) {
-            console.error('Failed to verify inbox access:', error);
+            logger_1.logger.error({ error }, 'Failed to verify inbox access');
             return false;
         }
     }
@@ -486,7 +487,7 @@ class CandidateInboxService {
             return staffMember.permissions.includes(permission);
         }
         catch (error) {
-            console.error('Failed to verify staff permission:', error);
+            logger_1.logger.error({ error }, 'Failed to verify staff permission');
             return false;
         }
     }
@@ -515,7 +516,7 @@ class CandidateInboxService {
             };
         }
         catch (error) {
-            console.error('Failed to get inbox stats:', error);
+            logger_1.logger.error({ error }, 'Failed to get inbox stats');
             return {
                 total: 0,
                 open: 0,
